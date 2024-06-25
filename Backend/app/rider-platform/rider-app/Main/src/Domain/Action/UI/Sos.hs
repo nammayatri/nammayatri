@@ -374,3 +374,78 @@ buildSosDetails person req ticketId = do
         createdAt = now,
         updatedAt = now
       }
+
+postSosCallPolice :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> CallPoliceAPI -> Flow APISuccess.APISuccess
+postSosCallPolice (mbPersonId, _) CallPoliceAPI {..} = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  now <- getCurrentTime
+  return APISuccess.Success
+
+-- data IncidentReportReq = IncidentReportReq
+--   { type_ :: Text,
+--     mobileNo :: Integer,
+--     travellerName :: Text,
+--     gender :: Text, -- String (“M” / “F”)
+--     age :: Maybe Int,
+--     address :: Maybe Text, -- Traveller Registered address
+--     incidentId :: Text,
+--     incidentDateTime :: Integer, -- Incident date time in milliseconds
+--     incidentInfo :: Text,
+--     tripInfo :: Maybe TripInfo,
+--     latitude :: Double,
+--     longitude :: Double,
+--     gpsPacketTime :: Text,
+--     routeMap :: Maybe [RouteMap],
+--     incidentLocation :: Text,
+--     district :: Text,
+--     state :: Text
+--   }
+
+createIncidentReportReq :: DRide.Ride -> Person.Person -> UTCTime -> IncidentReportReq
+createIncidentReportReq ride person now =
+  IncidentReportReq
+    { type_ = "TAXI_SOS",
+      mobileNo = read $ person.mobileNumber,
+      travellerName = SLP.getName person,
+      gender = gender,
+      age = Nothing,
+      address = Nothing,
+      incidentId = ride.id.getId,
+      incidentDateTime = round $ utcToMilliseconds now,
+      incidentInfo = "SOS Alert",
+      tripInfo = Nothing,
+      latitude = 0,
+      longitude = 0,
+      gpsPacketTime = "",
+      routeMap = Nothing,
+      incidentLocation = "",
+      district = "",
+      state = ""
+    }
+  where
+    gender = case person.gender of
+      MALE -> "M"
+      FEMALE -> "F"
+      _ -> "" -- TO Check
+
+-- data TripInfo = TripInfo
+--   { origin :: Text,
+--     destination :: Text,
+--     bookingTime :: Text,
+--     vehicleRegNo :: Text,
+--     driverName :: Text,
+--     driverMobNo :: Text
+--   }
+
+createTripInfo :: DRide.Ride -> TripInfo
+createTripInfo ride =
+  TripInfo
+    { origin = ride.fromLocation.address.street,
+      destination = ride.toLocation.address.street,
+      bookingTime = show ride.createdAt,
+      vehicleRegNo = ride.vehicleNumber,
+      driverName = ride.driverName,
+      driverMobNo = ride.driverMobileNumber
+    }

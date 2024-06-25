@@ -59,7 +59,9 @@ import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -363,7 +365,11 @@ onUpdate = \case
     QPFS.clearCache searchReq.riderId
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
-  OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
+  OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
+    maxShards <- asks (.maxShards)
+    let safetyIvrJobData = SendSafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
+    createJobIn @_ @'SendSafetyIVR (5 * 60) maxShards (safetyIvrJobData :: SendSafetyIVRJobData)
+    Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing
     Notify.notifyOnStopReached booking ride

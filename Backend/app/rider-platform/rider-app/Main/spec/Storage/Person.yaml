@@ -90,6 +90,7 @@ Person:
     clientDevice : Maybe Device
     backendAppVersion : Maybe Text
     blockedCount : Maybe Int
+    safetyMpin : Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -276,6 +277,11 @@ Person:
     findPersonByCustomerReferralCode:
       kvFunction: findOneWithKV
       where: customerReferralCode
+
+    updateSafetyMpin :
+      kvFunction: updateWithKV
+      params: [safetyMpin, updatedAt]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

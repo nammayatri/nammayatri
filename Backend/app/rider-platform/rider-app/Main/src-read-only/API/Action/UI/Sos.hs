@@ -23,14 +23,14 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "sos" :> "getDetails" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.SosDetailsRes
       :<|> TokenAuth
       :> "sos"
       :> "create"
-      :> ReqBody '[JSON] API.Types.UI.Sos.SosReq
+      :> ReqBody ('[JSON]) API.Types.UI.Sos.SosReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.SosRes
       :<|> TokenAuth
       :> "sos"
@@ -39,10 +39,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
       :> "status"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.SosUpdateReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "sos"
@@ -51,24 +51,33 @@ type API =
            "sosId"
            (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.MarkAsSafeReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "sos"
       :> "createMockSos"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.Sos.MockSosReq
       :> Post
-           '[JSON]
+           ('[JSON])
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "sos"
+      :> "callPolice"
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.Sos.CallPoliceAPI
+      :> Post
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getSosGetDetails :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos
+handler = getSosGetDetails :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice
 
 getSosGetDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -110,3 +119,12 @@ postSosCreateMockSos ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postSosCreateMockSos a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreateMockSos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postSosCallPolice ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.Sos.CallPoliceAPI ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postSosCallPolice a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCallPolice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

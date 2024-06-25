@@ -433,7 +433,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         safetyCenterDisabledOnDate = Nothing,
         referredByCustomer = Nothing,
         customerReferralCode = Nothing,
-        blockedCount = Just 0
+        blockedCount = Just 0,
+        safetyMpin = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing

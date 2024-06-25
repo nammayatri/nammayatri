@@ -20,9 +20,9 @@ import qualified Storage.Queries.Transformers.Person
 instance FromTType' Beam.Person Domain.Types.Person.Person where
   fromTType' (Beam.PersonT {..}) = do
     updateMerchantOpIdAndCity <- Storage.Queries.Transformers.Person.backfillCityAndMOCId currentCity merchantOperatingCityId merchantId
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     pure $
       Just
         Domain.Types.Person.Person
@@ -34,7 +34,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             blockedCount = blockedCount,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion),
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
             currentCity = Kernel.Prelude.snd updateMerchantOpIdAndCity,
@@ -74,6 +74,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             registrationLon = registrationLon,
             role = role,
             safetyCenterDisabledOnDate = safetyCenterDisabledOnDate,
+            safetyMpin = safetyMpin,
             shareEmergencyContacts = shareEmergencyContacts,
             shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption,
             totalRatingScore = totalRatingScore,
@@ -90,23 +91,23 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
       { Beam.aadhaarVerified = aadhaarVerified,
         Beam.backendAppVersion = backendAppVersion,
         Beam.blocked = blocked,
-        Beam.blockedAt = Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt,
+        Beam.blockedAt = (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt),
         Beam.blockedByRuleId = Kernel.Types.Id.getId <$> blockedByRuleId,
         Beam.blockedCount = blockedCount,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
         Beam.currentCity = Kernel.Prelude.Just currentCity,
         Beam.customerReferralCode = customerReferralCode,
         Beam.description = description,
         Beam.deviceToken = deviceToken,
-        Beam.emailEncrypted = email <&> unEncrypted . (.encrypted),
-        Beam.emailHash = email <&> (.hash),
+        Beam.emailEncrypted = ((email <&> unEncrypted . (.encrypted))),
+        Beam.emailHash = (email <&> (.hash)),
         Beam.enabled = enabled,
-        Beam.falseSafetyAlarmCount = Just falseSafetyAlarmCount,
+        Beam.falseSafetyAlarmCount = (Just falseSafetyAlarmCount),
         Beam.firstName = firstName,
         Beam.followsRide = followsRide,
         Beam.gender = gender,
@@ -122,11 +123,11 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.language = language,
         Beam.lastName = lastName,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = (Kernel.Prelude.Just . Kernel.Types.Id.getId) merchantOperatingCityId,
+        Beam.merchantOperatingCityId = ((Kernel.Prelude.Just . Kernel.Types.Id.getId)) merchantOperatingCityId,
         Beam.middleName = middleName,
         Beam.mobileCountryCode = mobileCountryCode,
-        Beam.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-        Beam.mobileNumberHash = mobileNumber <&> (.hash),
+        Beam.mobileNumberEncrypted = ((mobileNumber <&> unEncrypted . (.encrypted))),
+        Beam.mobileNumberHash = (mobileNumber <&> (.hash)),
         Beam.nightSafetyChecks = nightSafetyChecks,
         Beam.notificationToken = notificationToken,
         Beam.passwordHash = passwordHash,
@@ -137,6 +138,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.registrationLon = registrationLon,
         Beam.role = role,
         Beam.safetyCenterDisabledOnDate = safetyCenterDisabledOnDate,
+        Beam.safetyMpin = safetyMpin,
         Beam.shareEmergencyContacts = shareEmergencyContacts,
         Beam.shareTripWithEmergencyContactOption = shareTripWithEmergencyContactOption,
         Beam.totalRatingScore = totalRatingScore,

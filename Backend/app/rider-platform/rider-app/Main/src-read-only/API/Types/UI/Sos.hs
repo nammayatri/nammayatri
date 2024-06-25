@@ -13,6 +13,14 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
+data CallPoliceAPI = CallPoliceAPI
+  { lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    locationName :: Kernel.Prelude.Maybe Data.Text.Text,
+    lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data MarkAsSafeReq = MarkAsSafeReq {isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data MockSosReq = MockSosReq {onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, startDrill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)

@@ -33,10 +33,10 @@ data SosMockDrill = SosMockDrill {personId :: Kernel.Types.Id.Id Domain.Types.Pe
 
 data SosStatus = Resolved | NotResolved | Pending | MockPending | MockResolved deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosType = Police | CustomerCare | EmergencyContact Domain.Types.Sos.EmergencyContactId | SafetyFlow deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SosType = Police | CustomerCare | EmergencyContact Domain.Types.Sos.EmergencyContactId | SafetyFlow | PoliceAPI deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmergencyContactId)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''EmergencyContactId))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosType))

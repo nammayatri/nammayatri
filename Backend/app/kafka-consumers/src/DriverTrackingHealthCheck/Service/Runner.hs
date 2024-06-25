@@ -51,12 +51,18 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- getAllDrivers locationDelay now
+    drivers <- getAllDrivers locationDelay now "driver-last-location-update"
     case nonEmpty drivers of
       Just allDrivers -> do
         mapM_ (flip driverDevicePingService fcmNofificationSendCount) allDrivers
         log INFO ("Drivers to ping: " <> show allDrivers)
       Nothing -> log INFO "No drivers to ping"
+    -- drivers_ <- getAllDrivers locationDelay now -- for safety
+    -- case nonEmpty drivers_ of
+    --   Just allDrivers -> do
+    --     mapM_ (flip driverDevicePingService fcmNofificationSendCount) allDrivers
+    --     log INFO ("Drivers to ping for safety: " <> show allDrivers)
+    --   Nothing -> log INFO "No drivers to ping for safety"
     threadDelay (secondsToMcs serviceInterval).getMicroseconds
 
 redisKey :: Text -> Text
@@ -97,10 +103,11 @@ withLock serviceName func =
   where
     key = "beckn:" <> serviceName <> ":lock"
 
-getAllDrivers :: (Redis.HedisFlow m r, MonadReader r m) => Seconds -> UTCTime -> m [Text]
-getAllDrivers locationDelay now = do
+getAllDrivers :: (Redis.HedisFlow m r, MonadReader r m) => Seconds -> UTCTime -> Text -> m [Text]
+getAllDrivers locationDelay now key = do
+  -- configure
   let presentTime = negate (fromIntegral locationDelay) `addUTCTime` now
-  redisRes <- Redis.withCrossAppRedis $ Redis.zRangeByScore "driver-last-location-update" 0 $ utcToDouble presentTime
+  redisRes <- Redis.withCrossAppRedis $ Redis.zRangeByScore key 0 $ utcToDouble presentTime
   let mbDecodedVal = map decode redisRes
       decodedVal = catMaybes mbDecodedVal
       res = map (.driverId) decodedVal
@@ -113,3 +120,13 @@ getAllDrivers locationDelay now = do
 
 utcToDouble :: UTCTime -> Double
 utcToDouble = realToFrac . utcTimeToPOSIXSeconds
+
+-- triggerSafetyAlert :: Text -> Flow ()
+-- triggerSafetyAlert driverId = do
+--   getActiveBookingAndRideByDriverId (Id driverId) >>= \case
+--     Just (booking, ride) -> do
+--       let bookingId = booking.id
+--           rideId = ride.id
+--       log INFO $ "Safety alert triggered for driver " <> driverId <> " with booking " <> bookingId <> " and ride " <> rideId
+--       sendSafetyAlertToBAP driverId bookingId rideId
+--     Nothing -> log INFO $ "No active booking and ride found for driver " <> driverId

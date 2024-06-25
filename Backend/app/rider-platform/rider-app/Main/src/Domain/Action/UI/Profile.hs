@@ -362,7 +362,8 @@ updateDefaultEmergencyNumbers personId merchantId req = do
           shareTripWithEmergencyContacts = Nothing,
           hasCompletedSafetySetup = Nothing,
           nightSafetyChecks = Nothing,
-          shareTripWithEmergencyContactOption = if enableTripShare then Just Person.ALWAYS_SHARE else Nothing
+          shareTripWithEmergencyContactOption = if enableTripShare then Just Person.ALWAYS_SHARE else Nothing,
+          safetyMpin = Nothing
         }
 
 sendEmergencyContactAddedMessage :: Id Person.Person -> [DPDEN.PersonDefaultEmergencyNumber] -> [DPDEN.PersonDefaultEmergencyNumber] -> Flow ()
@@ -410,7 +411,8 @@ data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
     shareTripWithEmergencyContacts :: Maybe Bool,
     shareTripWithEmergencyContactOption :: Maybe Person.RideShareOptions,
     nightSafetyChecks :: Maybe Bool,
-    hasCompletedSafetySetup :: Maybe Bool
+    hasCompletedSafetySetup :: Maybe Bool,
+    safetyMpin :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -436,6 +438,7 @@ updateEmergencySettings personId req = do
       shareTripOptions
       req.nightSafetyChecks
       safetySetupCompleted
+      req.safetyMpin
   pure APISuccess.Success
 
 data EmergencySettingsRes = EmergencySettingsRes

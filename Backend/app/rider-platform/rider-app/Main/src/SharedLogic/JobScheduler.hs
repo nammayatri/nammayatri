@@ -24,6 +24,7 @@ import qualified Domain.Types.Extra.Booking as DEB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -33,6 +34,8 @@ import Lib.Scheduler
 data RiderJobType
   = CheckPNAndSendSMS
   | ScheduledRideNotificationsToRider
+  | SendSafetyIVR
+  | CallPoliceApi
   | OtherJobTypes
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -43,6 +46,8 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo :: Sing (e :: RiderJobType) -> Text -> Maybe (AnyJobInfo RiderJobType)
   restoreAnyJobInfo SCheckPNAndSendSMS jobData = AnyJobInfo <$> restoreJobInfo SCheckPNAndSendSMS jobData
   restoreAnyJobInfo SScheduledRideNotificationsToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToRider jobData
+  restoreAnyJobInfo SSendSafetyIVR jobData = AnyJobInfo <$> restoreJobInfo SSendSafetyIVR jobData
+  restoreAnyJobInfo SCallPoliceApi jobData = AnyJobInfo <$> restoreJobInfo SCallPoliceApi jobData
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
 
 data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
@@ -92,3 +97,23 @@ data OtherJobTypesJobData = OtherJobTypesJobData
 instance JobInfoProcessor 'OtherJobTypes
 
 type instance JobContent 'OtherJobTypes = OtherJobTypesJobData
+
+data SendSafetyIVRJobData = SendSafetyIVRJobData
+  { rideId :: Id DRide.Ride,
+    personId :: Id Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendSafetyIVR
+
+type instance JobContent 'SendSafetyIVR = SendSafetyIVRJobData
+
+data CallPoliceApiJobData = CallPoliceApiJobData
+  { rideId :: Id DRide.Ride,
+    personId :: Id Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CallPoliceApi
+
+type instance JobContent 'CallPoliceApi = CallPoliceApiJobData

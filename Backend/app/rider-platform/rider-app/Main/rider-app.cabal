@@ -248,8 +248,10 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
       SharedLogic.ScheduledNotifications
+      SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
+      SharedLogic.Scheduler.Jobs.SendSafetyIVR
       Storage.Beam.BecknRequest
       Storage.Beam.Common
       Storage.Beam.EstimateBreakup

@@ -177,8 +177,9 @@ updateEmergencyInfo ::
   Maybe RideShareOptions ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Text ->
   m ()
-updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContactOption nightSafetyChecks hasCompletedSafetySetup = do
+updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContactOption nightSafetyChecks hasCompletedSafetySetup safetyMpin = do
   now <- getCurrentTime
   updateWithKV
     ( [Se.Set BeamP.updatedAt now]
@@ -186,6 +187,7 @@ updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyC
         <> [Se.Set BeamP.shareTripWithEmergencyContactOption shareTripWithEmergencyContactOption | isJust shareTripWithEmergencyContactOption]
         <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
         <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
+        <> [Se.Set BeamP.safetyMpin safetyMpin | isJust safetyMpin]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
