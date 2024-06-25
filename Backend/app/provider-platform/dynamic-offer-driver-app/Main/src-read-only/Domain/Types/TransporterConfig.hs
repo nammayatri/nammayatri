@@ -91,6 +91,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableDashboardSms :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
+    enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     fakeOtpEmails :: [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
