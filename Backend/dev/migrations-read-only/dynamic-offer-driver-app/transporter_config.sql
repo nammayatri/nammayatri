@@ -164,3 +164,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arriving_pickup
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_toll_crossed_notifications boolean NOT NULL default false;

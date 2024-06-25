@@ -721,6 +721,7 @@ TransporterConfig:
     isAvoidToll: Bool
     aadhaarImageResizeConfig: Maybe AadhaarImageResizeConfig
     enableFaceVerification: Bool
+    enableTollCrossedNotifications: Bool
     specialZoneBookingOtpExpiry: Int
     isPlanMandatory: Bool
     freeTrialDays: Int
@@ -1002,6 +1003,7 @@ TransporterConfig:
     orderAndNotificationStatusCheckTimeLimit: "345600"
     canSuvDowngradeToTaxi: "false"
     enableFaceVerification: "false"
+    enableTollCrossedNotifications: "false"
     ratingAsDecimal: "false"
     refillVehicleModel: "false"
     driverFeeOverlaySendingTimeLimitInDays: "15"
