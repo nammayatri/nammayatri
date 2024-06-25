@@ -81,7 +81,8 @@ data Ride = Ride
 data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RideAPIEntity = RideAPIEntity
-  { bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
+  { allowedEditLocationAttempts :: Kernel.Prelude.Int,
+    bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     chargeableRideDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     chargeableRideDistanceWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     computedPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
