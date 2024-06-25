@@ -423,9 +423,7 @@ export const getAndroidVersion = function (unit) {
   if (window.__OS == "IOS") {
     return 0;
   } else {
-    const sessionData = window.JBridge.getSessionInfo();
-    const parsedSessionData = JSON.parse(sessionData);
-    return parsedSessionData["os_version"];
+    return window.fetchCachedSessionInfo ? window.fetchCachedSessionInfo("os_version"): JSON.parse(JBridge.getSessionInfo())["os_version"];
   }
 };
 
@@ -644,9 +642,9 @@ const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfi
     if (window.__OS == "IOS" || methodArgumentCount("drawRoute") == 11) {
       if (window.__OS == "IOS" && window.JBridge.drawRouteV2)
         return window.JBridge.drawRouteV2(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));  
-      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarkerConfig.pointerIcon, destMarkerConfig.pointerIcon, polylineWidth, type, sourceMarkerConfig.primaryText, destMarkerConfig.primaryText, JSON.stringify(mapRouteConfig), key);  
+      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarkerConfig.pointerIcon, destMarkerConfig.pointerIcon, polylineWidth, type, sourceMarkerConfig.primaryText, destMarkerConfig.primaryText, JSON.stringify(mapRouteConfig));  
     } else {
-      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig), key);
+      return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, JSON.stringify(sourceMarkerConfig), JSON.stringify(destMarkerConfig), polylineWidth, type, JSON.stringify(mapRouteConfig));
     }
   } catch (err) {
     console.log("error in draw route", err);
@@ -741,8 +739,8 @@ export const drawRouteV2 = function (drawRouteConfig){
       if (window.JBridge.drawRouteV2){
         return window.JBridge.drawRouteV2(JSON.stringify(drawRouteConfig));
       } else {
-       let filteredConfig = configs.filter(function(config){if(config.routeKey === 'DEFAULT'){return config}});
-       let configToDraw = configs[0];
+        const filteredConfig = configs.filter(function(config){if(config.routeKey === "DEFAULT"){return config}});
+        let configToDraw = configs[0];
         if (filteredConfig.length > 0) {configToDraw = filteredConfig[0];}
         const { locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig } = configToDraw
         return drawRoute(locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig);
@@ -849,6 +847,20 @@ export const scrollToEnd = function (id) {
     }
   }
 }
+
+
+function fetchCachedRemoteConfigString(key) {
+  window.cacheMap = window.cacheMap|| {};
+  if (Object.prototype.hasOwnProperty.call(window.cacheMap,key)) {
+    return window.cacheMap[key];
+  }
+  if(JBridge.fetchRemoteConfigString){
+    window.cacheMap[key] = JBridge.fetchRemoteConfigString(key);
+    return window.cacheMap[key];
+  }
+  return "";
+}
+
 
 export const saveSuggestions = function (key) {
   return function (suggestions) {
@@ -2676,18 +2688,4 @@ export const getFromUTC = (timestamp) => (val) => {
     default:
       return date.getUTCDate();
   }
-}
-
-const sessionCacheRemoteConfigs = {};
-
-function fetchCachedRemoteConfigString(key) {
-  if (sessionCacheRemoteConfigs[key]) {
-    return sessionCacheRemoteConfigs[key];
-  }
-  if(JBridge.fetchRemoteConfigString){
-    const value = JBridge.fetchRemoteConfigString(key);
-    sessionCacheRemoteConfigs[key] = value;
-    return value;
-  }
-  return "";
 }

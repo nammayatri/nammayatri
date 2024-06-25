@@ -50,9 +50,16 @@ function guid() {
     s4() + "-" + s4() + s4() + s4();
 }
 
-function loadConfig() {
-  const config = require("./output/ConfigProvider/index.js");
-  config.loadAppConfig("");
+window.fetchCachedSessionInfo = (key) => {
+  window.cacheMap = window.cacheMap || {};
+  if (Object.prototype.hasOwnProperty.call(window.cacheMap,"sessionInfo") && Object.prototype.hasOwnProperty.call(window.cacheMap,key)) {
+    return window.cacheMap.sessionInfo[key];
+  }
+  if(window.JBridge.getSessionInfo){
+    const sessionInfo = JSON.parse(window.JBridge.getSessionInfo());
+    window.cacheMap["sessionInfo"] = sessionInfo;
+    return sessionInfo[key];
+  }
 }
 
 window.session_id = guid();
@@ -64,9 +71,6 @@ console.warn("Hello World");
 const JBridge = window.JBridge;
 const JOS = window.JOS;
 
-console.log("APP_PERF INDEX_LOAD_CONFIG_START : ", new Date().getTime());
-loadConfig();
-console.log("APP_PERF INDEX_LOAD_CONFIG_END : ", new Date().getTime());
 
 window.isObject = function (object) {
   return (typeof object == "object");
