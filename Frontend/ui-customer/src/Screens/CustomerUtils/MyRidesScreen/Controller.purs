@@ -54,6 +54,7 @@ import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
+import Debug (spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -125,11 +126,9 @@ eval BackPressed state =
       continue state
     else exit $ GoBack state
 
-eval (ScrollStateChanged scrollState) state = do
-  _ <- case scrollState of
-           SCROLL_STATE_FLING -> pure $ setEnabled "2000031" false
-           _ -> pure unit
-  continue state
+eval (ScrollStateChanged scrollState) state =  case scrollState of
+           SCROLL_STATE_FLING ->  continue state { props {scrollEnable =true}}
+           _ -> continue state
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
 
 eval (IndividualRideCardActionController (IndividualRideCardController.OnRideToastAC)) state = do 
@@ -154,8 +153,9 @@ eval (Scroll value) state = do
   let totalItems = fromMaybe 0 (fromString (fromMaybe "0"((split (Pattern ",")(value))!!2)))
   let canScrollUp = fromMaybe true (strToBool (fromMaybe "true" ((split (Pattern ",")(value))!!3)))
   let loadMoreButton = if (totalItems == (firstIndex + visibleItems) && totalItems /= 0 && totalItems /= visibleItems) then true else false
-  _ <- if canScrollUp then (pure $ setEnabled "2000031" false) else  (pure $ setEnabled "2000031" true)
-  continue state { props{loaderButtonVisibility = loadMoreButton}}
+  let  enableScroll =  (firstIndex /= 0)
+  let _ =  state
+  continue state { props{loaderButtonVisibility = loadMoreButton, scrollEnable = enableScroll}}
 
 eval (IndividualRideCardActionController (IndividualRideCardController.OnClick index)) state = do 
   let selectedCard = state.itemsRides !! index
@@ -182,11 +182,11 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
                       bufferCardData = myRideListTransformer state (rideList  ^. _list)
                       loaderBtnDisabled = if(length (rideList ^. _list )== 0) then true else false
                   _ <- pure $ setRefreshing "2000031" false
-                  continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true}}
-    "listCompleted" -> continue state {data{loadMoreText = false}}
+                  continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true ,refreshLoader = false}}
+    "listCompleted" -> continue state {data{loadMoreText = false},props  {refreshLoader = false}}
     _ -> continue state{props{receivedResponse = true, apiFailure = true, loadMoreDisabled = true}}
 
-eval Refresh state = updateAndExit state{props{ receivedResponse = false, loaderButtonVisibility = false }} $  MyRidesScreen state
+eval Refresh state = updateAndExit state{props{ receivedResponse = false, loaderButtonVisibility = false ,refreshLoader = true}} $  MyRidesScreen state
 
 eval (ErrorModalActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ BookRide
 

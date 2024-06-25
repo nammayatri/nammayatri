@@ -36,7 +36,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<$>), (<>), (&&), (<<<), (==), (||), const, show, discard, bind, not, pure, unit, when, void, map)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width, textSize, fontStyle, lineHeight)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textView, visibility, weight, width, textSize, fontStyle, lineHeight, enableRefresh , setEnable)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -156,7 +156,8 @@ ridesView listItemm push state =
   ([height MATCH_PARENT
   , width MATCH_PARENT
   , onRefresh push (const Refresh)
-  ] <> if EHC.os == "IOS" then [] else [id "2000031"] )
+  , enableRefresh state.props.refreshLoader
+  ]<> if state.props.scrollEnable then [setEnable $ false] else [] )
   [ Keyed.relativeLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
