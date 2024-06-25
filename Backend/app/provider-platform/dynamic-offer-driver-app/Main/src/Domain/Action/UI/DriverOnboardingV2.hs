@@ -385,18 +385,15 @@ postDriverBackgroundVerification (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
-  driverSsn <- runInReplica $ QDriverSSN.findByDriverId personId >>= fromMaybeM (DriverSSNNotFound personId.getId)
   merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-  mbDriverLicense <- runInReplica $ QDL.findByDriverId personId
-  ssn <- decrypt driverSsn.ssn
   mbBackgroundVerification <- QBV.findByDriverId personId
   candidateId <-
     case mbBackgroundVerification of
       Just backgroundVerification -> return backgroundVerification.candidateId
       Nothing -> do
-        candidate <- BackgroundVerificationT.createCandidate merchantId merchantOpCityId =<< buildCreateCandidateReq person driverInfo merchantOpCity mbDriverLicense ssn
+        candidate <- BackgroundVerificationT.createCandidate merchantId merchantOpCityId =<< buildCreateCandidateReq person driverInfo merchantOpCity
         return candidate.id
-  invitation <- BackgroundVerificationT.createInvitation merchantId merchantOpCityId $ buildCreateInvitationReq merchantOpCity ssn candidateId
+  invitation <- BackgroundVerificationT.createInvitation merchantId merchantOpCityId $ buildCreateInvitationReq merchantOpCity candidateId
   QBV.upsert =<< buildBackgroundVerification personId candidateId invitation
   return Success
   where
@@ -418,14 +415,13 @@ postDriverBackgroundVerification (mbPersonId, merchantId, merchantOpCityId) = do
             updatedAt = now
           }
 
-    buildCreateCandidateReq person driverInfo merchantOpCity mbDriverLicense ssn = do
+    buildCreateCandidateReq person driverInfo merchantOpCity = do
       email <- person.email & fromMaybeM (DriverEmailNotFound person.id.getId)
       mobileNumber <- mapM decrypt person.mobileNumber
-      mbDriverLicenseNumber <- mapM decrypt ((.licenseNumber) <$> mbDriverLicense)
       return $
         BackgroundVerification.CreateCandidateReq
           { email = email,
-            ssn = Just ssn,
+            ssn = Nothing,
             firstName = person.firstName,
             middleName = Nothing,
             lastName = person.lastName,
@@ -434,15 +430,14 @@ postDriverBackgroundVerification (mbPersonId, merchantId, merchantOpCityId) = do
             workLocationCountry = merchantOpCity.country,
             workLocationState = merchantOpCity.state,
             workLocationCity = merchantOpCity.city,
-            driverLicenseNumber = mbDriverLicenseNumber,
+            driverLicenseNumber = Nothing,
             driverLicenseState = Nothing,
             zipCode = Nothing
           }
 
-    buildCreateInvitationReq merchantOpCity ssn candidateId =
+    buildCreateInvitationReq merchantOpCity candidateId =
       BackgroundVerification.CreateInvitationReqI
         { candidateId = candidateId,
-          ssn = ssn,
           workLocationCountry = merchantOpCity.country,
           workLocationState = merchantOpCity.state,
           workLocationCity = merchantOpCity.city
