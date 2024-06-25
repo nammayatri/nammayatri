@@ -163,11 +163,11 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
       (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments docType personId merchantId merchantOpCityId
       case mbStatus of
         Just status -> do
-          message <- documentStatusMessage status Nothing docType language
+          message <- documentStatusMessage status Nothing docType mbProcessedUrl language
           return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
         Nothing -> do
           (status, mbReason, mbUrl) <- getInProgressDriverDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
-          message <- documentStatusMessage status mbReason docType language
+          message <- documentStatusMessage status mbReason docType mbProcessedUrl language
           return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
 
   processedVehicleDocumentsWithRC <- do
@@ -184,11 +184,11 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
           (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedVehicleDocuments docType personId processedVehicle merchantId merchantOpCityId
           case mbStatus of
             Just status -> do
-              message <- documentStatusMessage status Nothing docType language
+              message <- documentStatusMessage status Nothing docType mbProcessedUrl language
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
             Nothing -> do
               (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
-              message <- documentStatusMessage status mbReason docType language
+              message <- documentStatusMessage status mbReason docType mbProcessedUrl language
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
       return $
         VehicleDocumentItem
@@ -243,7 +243,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
                 documents <-
                   vehicleDocumentTypes `forM` \docType -> do
                     (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
-                    message <- documentStatusMessage status mbReason docType language
+                    message <- documentStatusMessage status mbReason docType mbUrl language
                     return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
                 return $
                   [ VehicleDocumentItem
@@ -428,25 +428,31 @@ checkBackgroundVerificationStatus driverId merchantId merchantOpCityId = do
         then return (NO_DOC_AVAILABLE, Nothing, Nothing)
         else do
           invitation <- BackgroundVerification.getInvitation merchantId merchantOpCityId backgroundVerification.invitationId
-          if invitation.status == "completed"
-            then do
+          case invitation.status of
+            "completed" -> do
               BVQuery.updateInvitationStatus Documents.VALID driverId
               case invitation.reportId of
                 Just reportId -> do
                   BVQuery.updateReportId (Just reportId) driverId
                   report <- BackgroundVerification.getReport merchantId merchantOpCityId reportId
-                  if report.status == "complete"
-                    then
-                      if report.adjudication == Just "engaged"
-                        then do
+                  case report.status of
+                    "complete" -> do
+                      case (report.assessment, report.adjudication) of
+                        (Just "engaged", _) -> do
                           BVQuery.updateReportStatus Documents.VALID driverId
                           return (VALID, Nothing, Nothing)
-                        else do
+                        (_, Just "eligible") -> do
+                          BVQuery.updateReportStatus Documents.VALID driverId
+                          return (VALID, Nothing, Nothing)
+                        (_, Just "post_adverse_action") -> do
                           BVQuery.updateReportStatus Documents.UNAUTHORIZED driverId
                           return (UNAUTHORIZED, Nothing, Nothing)
-                    else return (PENDING, Nothing, Nothing)
+                        (_, _) -> return (PENDING, Nothing, Nothing)
+                    "pending" -> return (PENDING, Nothing, Nothing)
+                    _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
                 Nothing -> return (PENDING, Nothing, Nothing)
-            else return (PENDING, Nothing, Just invitation.invitationUrl)
+            "pending" -> return (PENDING, Nothing, Just invitation.invitationUrl)
+            _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
     Nothing -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
 getInProgressDriverDocuments :: DVC.DocumentType -> Id SP.Person -> Int -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
@@ -513,25 +519,26 @@ extractImageFailReason imageError =
     Just (ImageNotValid reason) -> Just reason -- only this because we are inserting this type only in manual reject request in update documents dashboard api
     _ -> Nothing
 
-documentStatusMessage :: ResponseStatus -> Maybe Text -> DVC.DocumentType -> Language -> Flow Text
-documentStatusMessage status mbReason docType language = do
-  case (status, docType) of
-    (VALID, _) -> toVerificationMessage DocumentValid language
-    (MANUAL_VERIFICATION_REQUIRED, _) -> toVerificationMessage UnderManualReview language
-    (PENDING, _) -> toVerificationMessage VerificationInProgress language
-    (LIMIT_EXCEED, _) -> toVerificationMessage LimitExceed language
-    (NO_DOC_AVAILABLE, _) -> toVerificationMessage NoDcoumentFound language
-    (INVALID, DVC.DriverLicense) -> do
+documentStatusMessage :: ResponseStatus -> Maybe Text -> DVC.DocumentType -> Maybe BaseUrl -> Language -> Flow Text
+documentStatusMessage status mbReason docType mbVerificationUrl language = do
+  case (status, docType, mbVerificationUrl) of
+    (VALID, _, _) -> toVerificationMessage DocumentValid language
+    (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
+    (PENDING, DVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
+    (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
+    (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
+    (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
+    (INVALID, DVC.DriverLicense, _) -> do
       msg <- toVerificationMessage DLInvalid language
       return $ fromMaybe msg mbReason
-    (INVALID, DVC.VehicleRegistrationCertificate) -> do
+    (INVALID, DVC.VehicleRegistrationCertificate, _) -> do
       msg <- toVerificationMessage RCInvalid language
       return $ fromMaybe msg mbReason
-    (INVALID, _) -> do
+    (INVALID, _, _) -> do
       msg <- toVerificationMessage DocumentInvalid language
       return $ fromMaybe msg mbReason
-    (UNAUTHORIZED, _) -> toVerificationMessage Unauthorized language
-    (FAILED, _) -> do
+    (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized language
+    (FAILED, _, _) -> do
       case mbReason of
         Just res
           | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
@@ -665,6 +672,7 @@ data VerificationMessage
   | DocumentInvalid
   | DocumentValid
   | VerificationInProgress
+  | VerificationPendingOnUserInput
   | UnderManualReview
   | Unauthorized
   | Other
