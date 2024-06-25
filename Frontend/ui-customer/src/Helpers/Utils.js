@@ -449,27 +449,11 @@ export const _generateQRCode = function (data, id, size, margin, sc) {
   }
 }
 
-const sessionCacheUtils = {};
-
-function fetchCachedDeviceInfo(key) {
-  if (sessionCacheUtils[key]) {
-    return sessionCacheUtils[key];
-  }
-  if(window.JBridge.getSessionInfo){
-    const value = window.JBridge.getSessionInfo();
-    sessionCacheUtils[key] = value;
-    return value;
-  }else {
-    const value = window.JBridge.getDensity() * 160;
-    sessionCacheUtils[key] = value;
-  }
-}
-
 export const parseSourceHashArray = function (str) {
   return JSON.parse(str);
 }
 export const getDeviceDefaultDensity = function (){
-  fetchCachedDeviceInfo("deviceDensity");
+  return window.fetchCachedSessionInfo ? window.fetchCachedSessionInfo("screen_ppi") : JSON.parse(window.JBridge.getSessionInfo())["screen_ppi"];
 }
 export const getDefaultPixels = function (){
   if(window.JBridge.getDefaultPixels)return parseFloat(window.JBridge.getDefaultPixels());

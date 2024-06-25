@@ -58,9 +58,16 @@ function guid() {
     s4() + "-" + s4() + s4() + s4();
 }
 
-function loadConfig() {
-  const config = require("./output/ConfigProvider/index.js");
-  config.loadAppConfig("");
+window.fetchCachedSessionInfo = (key) => {
+  window.cacheMap = window.cacheMap || {};
+  if (Object.prototype.hasOwnProperty.call(window.cacheMap,"sessionInfo") && Object.prototype.hasOwnProperty.call(window.cacheMap,key)) {
+    return window.cacheMap.sessionInfo[key];
+  }
+  if(window.JBridge.getSessionInfo){
+    const sessionInfo = JSON.parse(window.JBridge.getSessionInfo());
+    window.cacheMap["sessionInfo"] = sessionInfo;
+    return sessionInfo[key];
+  }
 }
 
 window.session_id = guid();

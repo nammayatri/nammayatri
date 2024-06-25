@@ -149,7 +149,9 @@ export const screenHeight = function(){
 export const getDeviceHeight = function(){
   try{
     if(window.__OS == "IOS" && JBridge.getDeviceHeight) return parseInt(JBridge.getDeviceHeight());
-    return JSON.parse(JBridge.getSessionInfo()).screen_height
+    else if(window.fetchCachedSessionInfo)
+      return window.fetchCachedSessionInfo("screen_height");
+    else return JSON.parse(JBridge.getSessionInfo()).screen_height;
   }
   catch(e){
     console.log("error in getDeviceHeight", e);
@@ -159,7 +161,8 @@ export const getDeviceHeight = function(){
 
 export const getScreenPpi = function(){
   try{
-    return Math.round(JSON.parse(JBridge.getSessionInfo()).screen_ppi);
+    const ppi = window.fetchCachedSessionInfo ? window.fetchCachedSessionInfo("screen_ppi"): JSON.parse(JBridge.getSessionInfo()).screen_ppi;
+    return Math.round(ppi);
   }
   catch(e){
     console.log("error in getScreenPpi", e);
