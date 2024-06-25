@@ -4,6 +4,7 @@ if (typeof __VERSION__ !== "undefined") {
   version = __VERSION__
 }
 
+window.configCache = window.configCache || {}
 function getAppName() {
   if (!window.configCache["appName"]) {
     let sessionInfo = JSON.parse(JBridge.getSessionInfo());
