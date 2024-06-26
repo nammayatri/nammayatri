@@ -326,7 +326,6 @@ library
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
-      Storage.Queries.PersonFlowStatusExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.QuoteExtra
@@ -542,7 +541,6 @@ library
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
-      Storage.Beam.PersonFlowStatus
       Storage.Beam.PersonStats
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
@@ -642,7 +640,6 @@ library
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.PersonDefaultEmergencyNumber
-      Storage.Queries.OrphanInstances.PersonFlowStatus
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
       Storage.Queries.OrphanInstances.Quote
@@ -662,7 +659,6 @@ library
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability
-      Storage.Queries.PersonFlowStatus
       Storage.Queries.PersonStats
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache

@@ -42,7 +42,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import Domain.Types.Person (PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
-import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
@@ -80,7 +79,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CRC
 import qualified Storage.CachedQueries.Person as CQP
-import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PDisability
@@ -594,18 +592,11 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   person <- buildPerson req identifierType notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice merchant currentCity merchantOperatingCityId mbPartnerOrgId
   createPersonStats <- makePersonStats person
   Person.create person
-  QDFS.create $ makeIdlePersonFlowStatus person
   QPS.create createPersonStats
   fork "update emergency contact id" $
     whenJust req.mobileNumber $ \mobileNumber -> updatePersonIdForEmergencyContacts person.id mobileNumber merchant.id
   pure person
   where
-    makeIdlePersonFlowStatus person =
-      DPFS.PersonFlowStatus
-        { personId = person.id,
-          flowStatus = DPFS.IDLE,
-          updatedAt = person.updatedAt
-        }
     makePersonStats :: MonadTime m => SP.Person -> m DPS.PersonStats
     makePersonStats person = do
       now <- getCurrentTime
