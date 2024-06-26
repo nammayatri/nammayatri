@@ -37,6 +37,7 @@ data SearchRequestT f = SearchRequestT
     isAdvanceBookingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isCustomerPrefferedSearchRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isReallocationEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -122,7 +122,7 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe LatLong -> m (),
-    getFarePolicyByEstOrQuoteId :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe CacKey -> m DFP.FullFarePolicy,
+    getFarePolicyByEstOrQuoteId :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe Bool -> Maybe CacKey -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> HighPrecMoney -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
@@ -322,7 +322,14 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       case req of
         CronJobReq _ -> do
           logTagInfo "cron job -> endRide : " "Do not call snapToRoad, return estimates as final values."
-          (chargeableDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance handle booking rideOld estimatedDistance thresholdConfig
+          res <- try @_ @SomeException $ recalculateFareForDistance handle booking rideOld estimatedDistance thresholdConfig
+          (chargeableDistance, finalFare, mbUpdatedFareParams) <-
+            case res of
+              Left err -> do
+                logTagError "recalculateFareForDistance" $ "Failed to recalculate fare : " <> show err
+                return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
+              Right response -> return response
+
           pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
         _ -> do
           if (DTC.isOdometerReadingsRequired booking.tripCategory)
@@ -422,7 +429,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
   tripEndTime <- getCurrentTime
-  farePolicy <- getFarePolicyByEstOrQuoteId booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just (TransactionId (Id booking.transactionId)))
+  farePolicy <- getFarePolicyByEstOrQuoteId booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

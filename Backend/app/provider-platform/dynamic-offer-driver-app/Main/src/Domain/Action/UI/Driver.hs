@@ -948,7 +948,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findById (Id searchRequest.bapId)
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
-      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) (Just (TransactionId (Id searchRequest.transactionId)))
+      farePolicy <- getFarePolicyByEstOrQuoteId searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing (Just (TransactionId (Id searchRequest.transactionId)))
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
@@ -1094,7 +1094,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId (Just (TransactionId (Id searchReq.transactionId)))
+      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId Nothing (Just (TransactionId (Id searchReq.transactionId)))
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
       whenJust reqOfferedValue $ \off ->
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->

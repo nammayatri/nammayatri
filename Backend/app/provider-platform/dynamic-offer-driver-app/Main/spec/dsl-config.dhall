@@ -15,6 +15,8 @@ let outputPath =
       { _apiRelatedTypes = outputPrefixReadOnly ++ "API/Types/UI"
       , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
+      , _cachedQueries = outputPrefixReadOnly ++ "Storage/CachedQueries"
+      , _extraCachedQueries = outputPrefix ++ "Storage/CachedQueries/"
       , _beamTable = outputPrefixReadOnly ++ "Storage/Beam"
       , _domainHandler = outputPrefix ++ "Domain/Action/UI"
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
@@ -28,6 +30,7 @@ let GeneratorType =
       | API_TYPES
       | DOMAIN_HANDLER
       | BEAM_QUERIES
+      | CACHED_QUERIES
       | BEAM_TABLE
       | DOMAIN_TYPE
       | SQL
@@ -60,6 +63,9 @@ let defaultTypeImportMapper =
       , { _1 = "Currency", _2 = "Kernel.Types.Common" }
       , { _1 = "Price", _2 = "Kernel.Types.Common" }
       , { _1 = "PriceAPIEntity", _2 = "Kernel.Types.Common" }
+      , { _1 = "Distance", _2 = "Kernel.Types.Common" }
+      , { _1 = "HighPrecDistance", _2 = "Kernel.Types.Common" }
+      , { _1 = "DistanceUnit", _2 = "Kernel.Types.Common" }
       ]
 
 let extraDefaultFields =
@@ -90,6 +96,8 @@ let sqlMapper =
       , { _1 = "Kilometers", _2 = "integer" }
       , { _1 = "Meters", _2 = "integer" }
       , { _1 = "Currency", _2 = "character varying(255)" }
+      , { _1 = "HighPrecDistance", _2 = "double precision" }
+      , { _1 = "DistanceUnit", _2 = "character varying(255)" }
       ]
 
 let defaultImports =
@@ -157,11 +165,18 @@ let defaultImports =
         , _qualifiedImports = [ "Sequelize as Se" ]
         , _generationType = GeneratorType.BEAM_QUERIES
         }
+      , { _simpleImports = [ "Kernel.Prelude", "Kernel.Utils.Common" ]
+        , _qualifiedImports = [ "Kernel.Storage.Hedis as Hedis" ]
+        , _generationType = GeneratorType.CACHED_QUERIES
+        }
       ]
 
 in  { _output = outputPath
     , _storageConfig =
-      { _sqlTypeMapper = sqlMapper, _extraDefaultFields = extraDefaultFields }
+      { _sqlTypeMapper = sqlMapper
+      , _extraDefaultFields = extraDefaultFields
+      , _defaultCachedQueryKeyPrefix = "driverOffer"
+      }
     , _defaultImports = defaultImports
     , _defaultTypeImportMapper = defaultTypeImportMapper
     , _generate =
@@ -172,5 +187,6 @@ in  { _output = outputPath
       , GeneratorType.SERVANT_API
       , GeneratorType.API_TYPES
       , GeneratorType.SQL
+      , GeneratorType.CACHED_QUERIES
       ]
     }

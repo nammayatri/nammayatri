@@ -38,6 +38,7 @@ data SearchRequest = SearchRequest
     isAdvanceBookingEnabled :: Kernel.Prelude.Bool,
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDashboardRequest :: Kernel.Prelude.Bool,
     isReallocationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

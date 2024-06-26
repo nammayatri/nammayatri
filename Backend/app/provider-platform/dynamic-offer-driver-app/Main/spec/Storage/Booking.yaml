@@ -68,6 +68,7 @@ Booking:
     roundTrip: Maybe Bool
     isScheduled: Bool
     estimateId: Maybe (Id Estimate)
+    isDashboardRequest: Bool
 
   excludedFields:
     - merchantId
@@ -84,6 +85,7 @@ Booking:
     distanceToPickup: Maybe HighPrecMeters
     isScheduled: Maybe Bool
     merchantOperatingCityId: Maybe Text
+    isDashboardRequest: Maybe Bool
   beamFields:
     tripCategory:
       tripCategory: Maybe TripCategory
@@ -111,6 +113,7 @@ Booking:
     vehicleVariant: vehicleServiceTier|E
     fareParametersId: (Kernel.Types.Id.getId $ (.id) fareParams)|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
+    isDashboardRequest: (Just isDashboardRequest)|E
 
   intermediateTransformers:
     fromTType:
@@ -130,6 +133,7 @@ Booking:
     #estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
     isScheduled: fromMaybe False isScheduled|E
     distanceToPickup: Kernel.Prelude.roundToIntegral <$> distanceToPickup|E
+    isDashboardRequest: fromMaybe False isDashboardRequest|E
 
   sqlType:
     status: character varying(255)
