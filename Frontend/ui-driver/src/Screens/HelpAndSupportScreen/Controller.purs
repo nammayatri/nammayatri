@@ -78,6 +78,7 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
                   | GoToProfileScreen HelpAndSupportScreenState
                   | GoToHomeScreen HelpAndSupportScreenState
                   | GoToTripDetailsScreen HelpAndSupportScreenState
+                  -- | UpdateRoute
 data Action = NoAction
              | BackPressed
              | SourceToDestinationAction SourceToDestinationController.Action
@@ -95,6 +96,7 @@ data Action = NoAction
              | ClearTimer
              | UpdateTimer Int String String
              | PopUpModalAction PopUpModal.Action
+             |ShowMap String String String
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
 eval AfterRender state = continue state
@@ -190,7 +192,10 @@ eval (PopUpModalAction (PopUpModal.OnSecondaryTextClick)) state = do
     else pure unit
    continue state {props{startTimerforDummyRides = false}, data {timerId = ""}}
   
+-- eval (ShowMap key lat lon) state = exit UpdateRoute
+  
 eval _ state = update state
+
 
 getIssueTitle :: IssueOptions -> String
 getIssueTitle menuOption =

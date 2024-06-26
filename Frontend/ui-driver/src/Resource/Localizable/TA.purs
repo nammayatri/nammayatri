@@ -1400,6 +1400,8 @@ getTA stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "உங்கள் நாணயங்களை தள்ளுபடிகளாக மாற்றிக்கொள்ளுங்கள்"
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION  -> "உங்கள் சந்தா மீது தள்ளுபடி பெற உங்கள் நாணயங்களை மாற்றவும்" 
         CONVERT_NOW -> "இப்போது மாற்றவும்"
+        MORE_RIDES -> "மேலும் சவாரிகள்"
+        SORT_BY -> "வரிசைப்படுத்து"
         TOLL_CHARGES_INCLUDED -> "டோல் கட்டணங்கள் சேர்க்கப்பட்டுள்ளன"
         PLEASE_DO_NOT_DEMAND_EXTRA -> "தயவுசெய்து வாடிக்கையாளரிடம் கூடுதல் கட்டணம் கேட்க வேண்டாம்"
         FINAL_FARE_EXCLUDES_TOLL -> "இறுதிக்கட்டணத்தில் டோல் கட்டணம் சேர்க்கப்படவில்லை"

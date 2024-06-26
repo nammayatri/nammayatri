@@ -1400,6 +1400,8 @@ getTE stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "డిస్కౌంట్ పొందడానికి మీ నాణేలను మార్చండి"
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION  -> "మీ సబ్‌స్క్రిప్షన్‌పై తగ్గింపు పొందడానికి మీ నాణేలను మార్చండి"
         CONVERT_NOW -> "ఇప్పుడు మార్చండి"
+        MORE_RIDES -> "మరిన్ని రైడ్‌లు"
+        SORT_BY -> "ఆమరిక"
         TOLL_CHARGES_INCLUDED -> "టోల్ ఛార్జీలు ఛార్జీలో చేర్చబడ్డాయి"
         PLEASE_DO_NOT_DEMAND_EXTRA -> "దయచేసి కస్టమర్ నుండి అదనపు డిమాండ్ చేయవద్దు"
         FINAL_FARE_EXCLUDES_TOLL -> "తుది ఛార్జీలు టోల్ ఛార్జీలను మినహాయించాయి"
