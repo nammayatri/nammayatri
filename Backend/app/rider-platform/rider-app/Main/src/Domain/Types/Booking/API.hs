@@ -96,6 +96,14 @@ data BookingAPIEntity = BookingAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+data BookingStatusAPIEntity = BookingStatusAPIEntity
+  { id :: Id Booking,
+    bookingStatus :: BookingStatus,
+    rideStatus :: Maybe DRide.RideStatus,
+    bookingDetails :: BookingAPIDetails
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 -- do not change constructor names without changing fareProductConstructorModifier
 data BookingAPIDetails
   = OneWayAPIDetails OneWayBookingAPIDetails
@@ -212,37 +220,37 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       endTime <- ride.rideEndTime
       return $ nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
 
-    mkBookingAPIDetails :: BookingDetails -> BookingAPIDetails
-    mkBookingAPIDetails = \case
-      OneWayDetails details -> OneWayAPIDetails . mkOneWayAPIDetails $ details
-      RentalDetails details -> RentalAPIDetails . mkRentalAPIDetails $ details
-      DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
-      OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
-      InterCityDetails details -> InterCityAPIDetails . mkInterCityAPIDetails $ details
-      where
-        mkOneWayAPIDetails OneWayBookingDetails {..} =
-          OneWayBookingAPIDetails
-            { toLocation = SLoc.makeLocationAPIEntity toLocation,
-              estimatedDistance = distanceToHighPrecMeters distance,
-              estimatedDistanceWithUnit = distance
-            }
-        mkRentalAPIDetails RentalBookingDetails {..} =
-          RentalBookingAPIDetails
-            { stopLocation = SLoc.makeLocationAPIEntity <$> stopLocation
-            }
-        mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
-          OneWaySpecialZoneBookingAPIDetails
-            { toLocation = SLoc.makeLocationAPIEntity toLocation,
-              estimatedDistance = distanceToHighPrecMeters distance,
-              estimatedDistanceWithUnit = distance,
-              ..
-            }
-        mkInterCityAPIDetails InterCityBookingDetails {..} =
-          InterCityBookingAPIDetails
-            { toLocation = SLoc.makeLocationAPIEntity toLocation,
-              estimatedDistance = distanceToHighPrecMeters distance,
-              estimatedDistanceWithUnit = distance
-            }
+mkBookingAPIDetails :: BookingDetails -> BookingAPIDetails
+mkBookingAPIDetails = \case
+  OneWayDetails details -> OneWayAPIDetails . mkOneWayAPIDetails $ details
+  RentalDetails details -> RentalAPIDetails . mkRentalAPIDetails $ details
+  DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
+  OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
+  InterCityDetails details -> InterCityAPIDetails . mkInterCityAPIDetails $ details
+  where
+    mkOneWayAPIDetails OneWayBookingDetails {..} =
+      OneWayBookingAPIDetails
+        { toLocation = SLoc.makeLocationAPIEntity toLocation,
+          estimatedDistance = distanceToHighPrecMeters distance,
+          estimatedDistanceWithUnit = distance
+        }
+    mkRentalAPIDetails RentalBookingDetails {..} =
+      RentalBookingAPIDetails
+        { stopLocation = SLoc.makeLocationAPIEntity <$> stopLocation
+        }
+    mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
+      OneWaySpecialZoneBookingAPIDetails
+        { toLocation = SLoc.makeLocationAPIEntity toLocation,
+          estimatedDistance = distanceToHighPrecMeters distance,
+          estimatedDistanceWithUnit = distance,
+          ..
+        }
+    mkInterCityAPIDetails InterCityBookingDetails {..} =
+      InterCityBookingAPIDetails
+        { toLocation = SLoc.makeLocationAPIEntity toLocation,
+          estimatedDistance = distanceToHighPrecMeters distance,
+          estimatedDistanceWithUnit = distance
+        }
 
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
 getActiveSos mbRide personId = do
@@ -279,6 +287,12 @@ buildBookingAPIEntity booking personId = do
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbRide
   return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon
+
+buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
+buildBookingStatusAPIEntity booking = do
+  mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
+  rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
+  return $ BookingStatusAPIEntity booking.id booking.status rideStatus (mkBookingAPIDetails booking.bookingDetails)
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity

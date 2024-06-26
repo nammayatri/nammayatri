@@ -23,7 +23,7 @@ where
 
 import qualified Domain.Action.UI.Booking as DBooking
 import qualified Domain.Types.Booking as SRB
-import Domain.Types.Booking.API (BookingAPIEntity)
+import Domain.Types.Booking.API (BookingAPIEntity, BookingStatusAPIEntity)
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
@@ -41,6 +41,10 @@ type API =
     :> ( Capture "rideBookingId" (Id SRB.Booking)
            :> TokenAuth
            :> Post '[JSON] BookingAPIEntity
+           :<|> "v2"
+             :> Capture "rideBookingId" (Id SRB.Booking)
+             :> TokenAuth
+             :> Get '[JSON] BookingStatusAPIEntity
            :<|> "list"
              :> TokenAuth
              :> QueryParam "limit" Integer
@@ -64,12 +68,16 @@ type API =
 handler :: FlowServer API
 handler =
   bookingStatus
+    :<|> bookingStatusPolling
     :<|> bookingList
     :<|> addStop
     :<|> editStop
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingAPIEntity
 bookingStatus bookingId = withFlowHandlerAPI . DBooking.bookingStatus bookingId
+
+bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingStatusAPIEntity
+bookingStatusPolling bookingId = withFlowHandlerAPI . DBooking.bookingStatusPolling bookingId
 
 addStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
 addStop bookingId (personId, merchantId) addStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DBooking.addStop (personId, merchantId) bookingId addStopReq
