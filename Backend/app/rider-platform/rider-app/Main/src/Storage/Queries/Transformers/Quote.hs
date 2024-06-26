@@ -49,6 +49,9 @@ getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOf
   DFFP.INTER_CITY -> do
     qd <- getInterCityQuote specialZoneQuoteId
     maybe (throwError (InternalError "No inter city details")) return qd
+  DFFP.AMBULANCE -> do
+    qd <- getDriverOfferDetails driverOfferId
+    maybe (throwError (InternalError "No driver offer details")) return qd
   where
     getRentalDetails rentalDetailsId' = do
       res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'

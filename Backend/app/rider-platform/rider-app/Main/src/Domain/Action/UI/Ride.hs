@@ -201,7 +201,8 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.RentalDetails _ -> Nothing
           DB.OneWaySpecialZoneDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.InterCityDetails details -> Just $ makeLocationAPIEntity details.toLocation
-          DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation,
+          DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation
+          DB.AmbulanceDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
         customer = UPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled,
         driverPosition = mbPos <&> (.currPoint)

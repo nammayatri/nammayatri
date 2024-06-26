@@ -5,6 +5,7 @@
 
 module Storage.Beam.Vehicle where
 
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle
@@ -21,6 +22,7 @@ data VehicleT f = VehicleT
     driverId :: B.C f Kernel.Prelude.Text,
     energyType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    mYManufacturing :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     make :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     model :: B.C f Kernel.Prelude.Text,

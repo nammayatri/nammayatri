@@ -19,6 +19,7 @@ imports:
   Confidence: Kernel.Types.Confidence
   PaymentIntentId: Kernel.External.Payment.Interface.Types
   AccountId: Kernel.External.Payment.Interface.Types
+  Months: Kernel.Types.Time
 
 Ride:
   tableName: ride
@@ -59,6 +60,7 @@ Ride:
       isFreeRide: Maybe Bool
       startOdometerReading: Maybe Centesimal
       endOdometerReading: Maybe Centesimal
+      vehicleAge: Maybe Months
       onlinePayment: Bool
       createdAt: UTCTime
       updatedAt: UTCTime
@@ -102,6 +104,7 @@ Ride:
     driversPreviousRideDropLoc : Maybe LatLong
     startOdometerReading: Maybe Centesimal
     endOdometerReading: Maybe Centesimal
+    vehicleAge: Maybe Months
     isFreeRide: Maybe Bool
     createdAt: UTCTime
     updatedAt: UTCTime
@@ -128,6 +131,7 @@ Ride:
     driverName: character varying(255)
     driverRating: numeric(10,2)
     endOdometerReading: double precision
+    vehicleAge: int
     fare: numeric(30,2)
     id: character(36)
     merchantId: character(36)

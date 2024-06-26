@@ -81,6 +81,7 @@ updateByPrimaryKey (Domain.Types.Vehicle.Vehicle {..}) = do
       Se.Set Beam.color color,
       Se.Set Beam.energyType energyType,
       Se.Set Beam.luggageCapacity luggageCapacity,
+      Se.Set Beam.mYManufacturing mYManufacturing,
       Se.Set Beam.make make,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.model model,

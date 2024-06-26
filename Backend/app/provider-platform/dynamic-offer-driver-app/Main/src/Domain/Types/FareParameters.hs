@@ -50,7 +50,7 @@ data CardCharge = CardCharge
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails | AmbulanceDetails FParamsAmbulanceDetails
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
 data FParamsProgressiveDetails = FParamsProgressiveDetails
@@ -65,6 +65,15 @@ data FParamsSlabDetails = FParamsSlabDetails
   { platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney,
+    currency :: Currency
+  }
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
+
+data FParamsAmbulanceDetails = FParamsAmbulanceDetails
+  { platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney,
+    distBasedFare :: HighPrecMoney,
     currency :: Currency
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
@@ -96,7 +105,9 @@ type FullFareParametersRentalDetails = (Id FareParameters, FParamsRentalDetails)
 
 type FullFareParametersInterCityDetails = (Id FareParameters, FParamsInterCityDetails)
 
-data FareParametersType = Progressive | Slab | Rental | InterCity
+type FullFareParametersAmbulanceDetails = (Id FareParameters, FParamsAmbulanceDetails)
+
+data FareParametersType = Progressive | Slab | Rental | InterCity | Ambulance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -108,3 +119,4 @@ getFareParametersType fareParams = case fareParams.fareParametersDetails of
   SlabDetails _ -> Slab
   RentalDetails _ -> Rental
   InterCityDetails _ -> InterCity
+  AmbulanceDetails _ -> Ambulance

@@ -15,6 +15,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Time
 import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
@@ -73,6 +74,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     status :: B.C f Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: B.C f Kernel.Types.Common.Meters,
     totalRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
     vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleVariant :: B.C f Domain.Types.Vehicle.Variant

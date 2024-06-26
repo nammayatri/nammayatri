@@ -353,6 +353,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           permitValidityUpto = convertTextToUTC rcVerificationResponse.permitValidityUpto,
           pucValidityUpto = convertTextToUTC rcVerificationResponse.pucValidityUpto,
           manufacturer = rcVerificationResponse.manufacturer,
+          mYManufacturing = convertTextToDay (rcVerificationResponse.mYManufacturing <> Just "-01"), -- Appending date because we receive mYManufacturing in yyyy-mm format
           manufacturerModel = rcVerificationResponse.manufacturerModel,
           bodyType = rcVerificationResponse.bodyType,
           fuelType = rcVerificationResponse.fuelType,
@@ -391,6 +392,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
             fleetOwnerId = input.fleetOwnerId,
             merchantId = Just merchantId,
+            mYManufacturing = input.mYManufacturing,
             merchantOperatingCityId = Just merchantOperatingCityId,
             userPassedVehicleCategory = input.vehicleCategory,
             airConditioned = input.airConditioned,

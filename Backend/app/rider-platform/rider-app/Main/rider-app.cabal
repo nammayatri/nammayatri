@@ -494,6 +494,7 @@ library
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
       Storage.Beam.AadhaarVerification
+      Storage.Beam.AmbulanceDetails
       Storage.Beam.AppInstalls
       Storage.Beam.BecknConfig
       Storage.Beam.BlackListOrg

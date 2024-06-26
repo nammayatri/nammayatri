@@ -91,6 +91,7 @@ data RideAssignedReq = RideAssignedReq
   { bookingDetails :: BookingDetails,
     transactionId :: Text,
     isDriverBirthDay :: Bool,
+    vehicleAge :: Maybe Months,
     isFreeRide :: Bool,
     driverAccountId :: Maybe Payment.AccountId,
     previousRideEndPos :: Maybe LatLong
@@ -108,6 +109,7 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
   { bookingDetails :: BookingDetails,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
+    vehicleAge :: Maybe Months,
     onlinePaymentParameters :: Maybe OnlinePaymentParameters,
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
@@ -286,6 +288,7 @@ rideAssignedReqHandler req = do
             DRB.DriverOfferDetails details -> Just details.toLocation
             DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
             DRB.InterCityDetails details -> Just details.toLocation
+            DRB.AmbulanceDetails details -> Just details.toLocation
       let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
       let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       let onlinePayment = maybe False (.onlinePayment) mbMerchant
@@ -327,6 +330,7 @@ rideAssignedReqHandler req = do
             distanceUnit = booking.distanceUnit,
             driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
             paymentDone = False,
+            vehicleAge = req.vehicleAge,
             ..
           }
 

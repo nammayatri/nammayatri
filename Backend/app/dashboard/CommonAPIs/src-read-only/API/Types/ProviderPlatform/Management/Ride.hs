@@ -34,7 +34,7 @@ data RideListItem = RideListItem
 data RideListRes = RideListRes {rides :: [API.Types.ProviderPlatform.Management.Ride.RideListItem], summary :: Dashboard.Common.Summary, totalItems :: Kernel.Prelude.Int}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity | Ambulance deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 type API = ("ride" :> GetRideList)
 

@@ -275,6 +275,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         Rental -> []
         OneWay -> _estimateInfo
         InterCity -> []
+        Ambulance -> _estimateInfo
 
     mkBppDetails :: Flow BppDetails
     mkBppDetails = do

@@ -76,6 +76,7 @@ data BecknTagGroup
   | SAFETY_ALERT
   | RIDE_ODOMETER_DETAILS
   | TOLL_CONFIDENCE_INFO
+  | VEHICLE_AGE_INFO
   | DRIVER_NEW_MESSAGE
   | PREVIOUS_CANCELLATION_REASONS
   | UPDATE_DETAILS
@@ -96,14 +97,124 @@ instance CompleteTagGroup BecknTagGroup where
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
-  { startDistanceThreshold :: Int,
-    endDistanceThreshold :: Maybe Int
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
   }
   deriving (Eq, Generic, ToJSON, FromJSON)
 
 instance Show EXTRA_PER_KM_STEP_FARE where
   show (EXTRA_PER_KM_STEP_FARE startDist (Just endDist)) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_" <> show endDist
   show (EXTRA_PER_KM_STEP_FARE startDist Nothing) = "EXTRA_PER_KM_STEP_FARE_" <> show startDist <> "_Above"
+
+data PLATFORM_FEE_STEP_FARE = PLATFORM_FEE_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show PLATFORM_FEE_STEP_FARE where
+  show (PLATFORM_FEE_STEP_FARE startDist (Just endDist)) = "PLATFORM_FEE_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (PLATFORM_FEE_STEP_FARE startDist Nothing) = "PLATFORM_FEE_STEP_FARE" <> show startDist <> "_Above"
+
+data CONSTANT_PLATFORM_FEE_STEP_FARE = CONSTANT_PLATFORM_FEE_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show CONSTANT_PLATFORM_FEE_STEP_FARE where
+  show (CONSTANT_PLATFORM_FEE_STEP_FARE startDist (Just endDist)) = "CONSTANT_PLATFORM_FEE_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (CONSTANT_PLATFORM_FEE_STEP_FARE startDist Nothing) = "CONSTANT_PLATFORM_FEE_STEP_FARE" <> show startDist <> "_Above"
+
+data PLATFORM_FEE_CGST_STEP_FARE = PLATFORM_FEE_CGST_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show PLATFORM_FEE_CGST_STEP_FARE where
+  show (PLATFORM_FEE_CGST_STEP_FARE startDist (Just endDist)) = "PLATFORM_FEE_CGST_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (PLATFORM_FEE_CGST_STEP_FARE startDist Nothing) = "PLATFORM_FEE_CGST_STEP_FARE" <> show startDist <> "_Above"
+
+data PLATFORM_FEE_SGST_STEP_FARE = PLATFORM_FEE_SGST_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show PLATFORM_FEE_SGST_STEP_FARE where
+  show (PLATFORM_FEE_SGST_STEP_FARE startDist (Just endDist)) = "PLATFORM_FEE_SGST_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (PLATFORM_FEE_SGST_STEP_FARE startDist Nothing) = "PLATFORM_FEE_SGST_STEP_FARE" <> show startDist <> "_Above"
+
+data PER_KM_STEP_FARE = PER_KM_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show PER_KM_STEP_FARE where
+  show (PER_KM_STEP_FARE startDist (Just endDist)) = "PER_KM_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (PER_KM_STEP_FARE startDist Nothing) = "PER_KM_STEP_FARE" <> show startDist <> "_Above"
+
+data BASE_STEP_FARE = BASE_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show BASE_STEP_FARE where
+  show (BASE_STEP_FARE startDist (Just endDist)) = "BASE_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (BASE_STEP_FARE startDist Nothing) = "BASE_STEP_FARE" <> show startDist <> "_Above"
+
+data NIGHT_SHIFT_STEP_PERCENTAGE = NIGHT_SHIFT_STEP_PERCENTAGE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show NIGHT_SHIFT_STEP_PERCENTAGE where
+  show (NIGHT_SHIFT_STEP_PERCENTAGE startDist (Just endDist)) = "NIGHT_SHIFT_STEP_PERCENTAGE" <> show startDist <> "_" <> show endDist
+  show (NIGHT_SHIFT_STEP_PERCENTAGE startDist Nothing) = "NIGHT_SHIFT_STEP_PERCENTAGE" <> show startDist <> "_Above"
+
+data CONSTANT_NIGHT_SHIFT_STEP_CHARGE = CONSTANT_NIGHT_SHIFT_STEP_CHARGE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show CONSTANT_NIGHT_SHIFT_STEP_CHARGE where
+  show (CONSTANT_NIGHT_SHIFT_STEP_CHARGE startDist (Just endDist)) = "CONSTANT_NIGHT_SHIFT_STEP_CHARGE" <> show startDist <> "_" <> show endDist
+  show (CONSTANT_NIGHT_SHIFT_STEP_CHARGE startDist Nothing) = "CONSTANT_NIGHT_SHIFT_STEP_CHARGE" <> show startDist <> "_Above"
+
+data WAITING_CHARGE_PER_MIN_STEP_FARE = WAITING_CHARGE_PER_MIN_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show WAITING_CHARGE_PER_MIN_STEP_FARE where
+  show (WAITING_CHARGE_PER_MIN_STEP_FARE startDist (Just endDist)) = "WAITING_CHARGE_PER_MIN_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (WAITING_CHARGE_PER_MIN_STEP_FARE startDist Nothing) = "WAITING_CHARGE_PER_MIN_STEP_FARE" <> show startDist <> "_Above"
+
+data CONSTANT_WAITING_CHARGE_STEP_FARE = CONSTANT_WAITING_CHARGE_STEP_FARE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show CONSTANT_WAITING_CHARGE_STEP_FARE where
+  show (CONSTANT_WAITING_CHARGE_STEP_FARE startDist (Just endDist)) = "CONSTANT_WAITING_CHARGE_STEP_FARE" <> show startDist <> "_" <> show endDist
+  show (CONSTANT_WAITING_CHARGE_STEP_FARE startDist Nothing) = "CONSTANT_WAITING_CHARGE_STEP_FARE" <> show startDist <> "_Above"
+
+data FREE_WAITING_TIME_STEP_MINUTES = FREE_WAITING_TIME_STEP_MINUTES
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show FREE_WAITING_TIME_STEP_MINUTES where
+  show (FREE_WAITING_TIME_STEP_MINUTES startDist (Just endDist)) = "FREE_WAITING_TIME_STEP_MINUTES" <> show startDist <> "_" <> show endDist
+  show (FREE_WAITING_TIME_STEP_MINUTES startDist Nothing) = "FREE_WAITING_TIME_STEP_MINUTES" <> show startDist <> "_Above"
 
 data PER_MINUTE_STEP_FARE = PER_MINUTE_STEP_FARE
   { startDurationThreshold :: Int,
@@ -171,6 +282,7 @@ data BecknTag
   | TOLL_CHARGES
   | CONGESTION_CHARGE_PERCENTAGE
   | UPDATED_ESTIMATED_DISTANCE
+  | VEHICLE_AGE
   | -- INFO
     DISTANCE_TO_NEAREST_DRIVER_METER
   | DURATION_TO_NEAREST_DRIVER_MINUTES
@@ -204,6 +316,7 @@ data BecknTag
   | PER_HOUR_DISTANCE_KM
   | PLANNED_PER_KM_CHARGE
   | PLANNED_PER_KM_CHARGE_ROUND_TRIP
+  | PER_KM_RATE
   | PER_DAY_MAX_HOUR_ALLOWANCE
   | SETTLEMENT_DETAILS
   | INSURANCE_CHARGE_PER_METER

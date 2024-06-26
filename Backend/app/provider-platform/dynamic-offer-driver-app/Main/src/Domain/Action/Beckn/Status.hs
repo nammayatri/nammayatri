@@ -37,6 +37,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideDetails
 import Tools.Error
 
 handler ::
@@ -58,12 +59,13 @@ handler transporterId req = do
         DRide.NEW -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+          rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
           resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
           let image = join (eitherToMaybe resp)
           let isDriverBirthDay = False
           let isFreeRide = False
           let driverAccountId = Nothing
-          pure $ RideAssignedReq DRideAssignedReq {..}
+          pure $ RideAssignedReq DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
         DRide.INPROGRESS -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           let tripStartLocation = bookingDetails.ride.tripStartPos

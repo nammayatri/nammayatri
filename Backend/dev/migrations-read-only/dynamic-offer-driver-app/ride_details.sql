@@ -14,3 +14,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN vehicle_model charact
 ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN vehicle_number character varying(255) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN vehicle_variant character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.ride_details ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN vehicle_age int ;

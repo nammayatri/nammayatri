@@ -210,7 +210,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs
       FarePolicyD.RentalDetails det -> mkAdditionalRentalBreakups det
       FarePolicyD.InterCityDetails det -> mkAdditionalInterCityBreakups det
-
+      FarePolicyD.AmbulanceDetails det -> mkAdditionalAmbulanceBreakups det
     mkAdditionalRentalBreakups det = do
       let minFareCaption = show Tags.MIN_FARE
           minFareItem = mkBreakupItem minFareCaption . mkValue $ show det.baseFare
@@ -339,12 +339,109 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 
+    mkAdditionalAmbulanceBreakups det = do
+      let vehicleAgeSections = NE.sortBy (comparing (.vehicleAge.getMonths)) det.slabs
+          perKmStepFareItems = mkPerKmStepFareItem [] (toList vehicleAgeSections)
+          baseStepFareItems = mkBaseStepFareItem [] (toList vehicleAgeSections)
+          nightShiftFareItems = mkNightShiftStepFareItem [] (toList vehicleAgeSections)
+          platformFeeItems = mkPlatformFeeStepFareItem [] (toList vehicleAgeSections)
+          waitingChargeItems = mkWaitingChargeStepFareItem [] (toList vehicleAgeSections)
+
+      perKmStepFareItems
+        <> baseStepFareItems
+        <> nightShiftFareItems
+        <> platformFeeItems
+        <> waitingChargeItems
+      where
+        mkPerKmStepFareItem perKmStepFareItems [] = perKmStepFareItems
+        mkPerKmStepFareItem perKmStepFareItems [s1] = do
+          let perKmStepFareItem = mkBreakupItem (show $ Tags.PER_KM_STEP_FARE s1.vehicleAge.getMonths Nothing) (mkValue $ highPrecMoneyToText s1.perKmRate)
+          perKmStepFareItems <> [perKmStepFareItem]
+        mkPerKmStepFareItem perKmStepFareItems (s1 : s2 : ss) = do
+          let perKmStepFareItem = mkBreakupItem (show $ Tags.PER_KM_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) (mkValue $ highPrecMoneyToText s1.perKmRate)
+          mkPerKmStepFareItem (perKmStepFareItems <> [perKmStepFareItem]) (s2 : ss)
+
+        mkBaseStepFareItem baseStepFareItems [] = baseStepFareItems
+        mkBaseStepFareItem baseStepFareItems [s1] = do
+          let baseStepFareItem = mkBreakupItem (show $ Tags.BASE_STEP_FARE s1.vehicleAge.getMonths Nothing) (mkValue $ highPrecMoneyToText s1.baseFare)
+          baseStepFareItems <> [baseStepFareItem]
+        mkBaseStepFareItem baseStepFareItems (s1 : s2 : ss) = do
+          let baseStepFareCaption = show $ Tags.BASE_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)
+              baseStepFareItem = mkBreakupItem baseStepFareCaption (mkValue $ highPrecMoneyToText s1.baseFare)
+          mkBaseStepFareItem (baseStepFareItems <> [baseStepFareItem]) (s2 : ss)
+
+        mkNightShiftStepFareItem nightShiftStepFareItems [] = nightShiftStepFareItems
+        mkNightShiftStepFareItem nightShiftStepFareItems [s1] = do
+          case s1.nightShiftCharge of
+            Nothing -> nightShiftStepFareItems
+            Just nightShiftCharge -> do
+              let (mbNightShiftChargePercentage, mbConstantNightShiftCharge) = getNewNightShiftCharge nightShiftCharge
+                  nightShiftPercentageStepFareItem = mkBreakupItem (show $ Tags.NIGHT_SHIFT_STEP_PERCENTAGE s1.vehicleAge.getMonths Nothing) . mkValue <$> mbNightShiftChargePercentage
+                  nightShiftConstantStepFareItem = mkBreakupItem (show $ Tags.CONSTANT_NIGHT_SHIFT_STEP_CHARGE s1.vehicleAge.getMonths Nothing) . mkValue <$> mbConstantNightShiftCharge
+
+              nightShiftStepFareItems <> catMaybes [nightShiftPercentageStepFareItem, nightShiftConstantStepFareItem]
+        mkNightShiftStepFareItem nightShiftStepFareItems (s1 : s2 : ss) = do
+          case s1.nightShiftCharge of
+            Nothing -> nightShiftStepFareItems
+            Just nightShiftCharge -> do
+              let (mbNightShiftChargePercentage, mbConstantNightShiftCharge) = getNewNightShiftCharge nightShiftCharge
+                  nightShiftPercentageStepFareItem = mkBreakupItem (show $ Tags.NIGHT_SHIFT_STEP_PERCENTAGE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) . mkValue <$> mbNightShiftChargePercentage
+                  nightShiftConstantStepFareItem = mkBreakupItem (show $ Tags.CONSTANT_NIGHT_SHIFT_STEP_CHARGE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) . mkValue <$> mbConstantNightShiftCharge
+              mkNightShiftStepFareItem (nightShiftStepFareItems <> catMaybes [nightShiftPercentageStepFareItem, nightShiftConstantStepFareItem]) (s2 : ss)
+
+        mkPlatformFeeStepFareItem platformFeeStepFareItems [] = platformFeeStepFareItems
+        mkPlatformFeeStepFareItem platformFeeStepFareItems [s1] = do
+          case s1.platformFeeInfo of
+            Nothing -> platformFeeStepFareItems
+            Just platformFeeInfo -> do
+              let (mbProgressivePlatformFee, mbConstantPlatformFee) = getPlatformFee platformFeeInfo
+
+                  mbProgressivePlatformFeeStepFareItem = mkBreakupItem (show $ Tags.PLATFORM_FEE_STEP_FARE s1.vehicleAge.getMonths Nothing) . mkValue <$> mbProgressivePlatformFee
+                  mbConstantPlatformFeeItem = mkBreakupItem (show $ Tags.CONSTANT_PLATFORM_FEE_STEP_FARE s1.vehicleAge.getMonths Nothing) . mkValue <$> mbConstantPlatformFee
+                  mbPlatformFeeCgstItem = mkBreakupItem (show $ Tags.PLATFORM_FEE_CGST_STEP_FARE s1.vehicleAge.getMonths Nothing) (mkValue $ show platformFeeInfo.cgst)
+                  mbPlatformFeeSgstItem = mkBreakupItem (show $ Tags.PLATFORM_FEE_SGST_STEP_FARE s1.vehicleAge.getMonths Nothing) (mkValue $ show platformFeeInfo.sgst)
+
+              platformFeeStepFareItems <> catMaybes [mbProgressivePlatformFeeStepFareItem, mbConstantPlatformFeeItem, Just mbPlatformFeeCgstItem, Just mbPlatformFeeSgstItem]
+        mkPlatformFeeStepFareItem platformFeeStepFareItems (s1 : s2 : ss) = do
+          case s1.platformFeeInfo of
+            Nothing -> platformFeeStepFareItems
+            Just platformFeeInfo -> do
+              let (mbProgressivePlatformFee, mbConstantPlatformFee) = getPlatformFee platformFeeInfo
+
+                  mbProgressivePlatformFeeStepFareItem = mkBreakupItem (show $ Tags.PLATFORM_FEE_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) . mkValue <$> mbProgressivePlatformFee
+                  mbConstantPlatformFeeItem = mkBreakupItem (show $ Tags.CONSTANT_PLATFORM_FEE_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) . mkValue <$> mbConstantPlatformFee
+                  mbPlatformFeeCgstItem = mkBreakupItem (show $ Tags.PLATFORM_FEE_CGST_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) (mkValue $ show platformFeeInfo.cgst)
+                  mbPlatformFeeSgstItem = mkBreakupItem (show $ Tags.PLATFORM_FEE_SGST_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) (mkValue $ show platformFeeInfo.sgst)
+
+              mkPlatformFeeStepFareItem (platformFeeStepFareItems <> catMaybes [mbProgressivePlatformFeeStepFareItem, mbConstantPlatformFeeItem, Just mbPlatformFeeCgstItem, Just mbPlatformFeeSgstItem]) (s2 : ss)
+
+        mkWaitingChargeStepFareItem waitingChargeStepFareItems [] = waitingChargeStepFareItems
+        mkWaitingChargeStepFareItem waitingChargeStepFareItems [s1] = do
+          case s1.waitingChargeInfo of
+            Nothing -> waitingChargeStepFareItems
+            Just waitingChargeInfo -> do
+              let (_, mbWaitingChargePerMinFloat, mbConstantWaitingCharges) = getWaitingCharge waitingChargeInfo
+
+                  mbWaitingChargePerMinFloatStepFareItem = mkBreakupItem (show $ Tags.WAITING_CHARGE_PER_MIN_STEP_FARE s1.vehicleAge.getMonths Nothing) . mkValue <$> mbWaitingChargePerMinFloat
+                  mbConstantWaitingChargeStepFareItem = mkBreakupItem (show $ Tags.CONSTANT_WAITING_CHARGE_STEP_FARE s1.vehicleAge.getMonths Nothing) . mkValue <$> mbConstantWaitingCharges
+                  freeWaitingTimeStepFareItem = mkBreakupItem (show $ Tags.FREE_WAITING_TIME_STEP_MINUTES s1.vehicleAge.getMonths Nothing) . mkValue . show $ waitingChargeInfo.freeWaitingTime.getMinutes
+
+              waitingChargeStepFareItems <> catMaybes [mbWaitingChargePerMinFloatStepFareItem, mbConstantWaitingChargeStepFareItem, Just freeWaitingTimeStepFareItem]
+        mkWaitingChargeStepFareItem waitingChargeStepFareItems (s1 : s2 : ss) = do
+          case s1.waitingChargeInfo of
+            Nothing -> waitingChargeStepFareItems
+            Just waitingChargeInfo -> do
+              let (_, mbWaitingChargePerMinFloat, mbConstantWaitingCharges) = getWaitingCharge waitingChargeInfo
+
+                  mbWaitingChargePerMinFloatStepFareItem = mkBreakupItem (show $ Tags.WAITING_CHARGE_PER_MIN_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) . mkValue <$> mbWaitingChargePerMinFloat
+                  mbConstantWaitingChargeStepFareItem = mkBreakupItem (show $ Tags.CONSTANT_WAITING_CHARGE_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) . mkValue <$> mbConstantWaitingCharges
+                  freeWaitingTimeStepFareItem = mkBreakupItem (show $ Tags.FREE_WAITING_TIME_STEP_MINUTES s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)) . mkValue . show $ waitingChargeInfo.freeWaitingTime.getMinutes
+
+              mkWaitingChargeStepFareItem (waitingChargeStepFareItems <> catMaybes [mbWaitingChargePerMinFloatStepFareItem, mbConstantWaitingChargeStepFareItem, Just freeWaitingTimeStepFareItem]) (s2 : ss)
+
     platformFeeBreakups Nothing = []
     platformFeeBreakups (Just platformFeeInfo) = do
-      let (mbProgressivePlatformFee, mbConstantPlatformFee) =
-            platformFeeInfo.platformFeeCharge & \case
-              FarePolicyD.ProgressivePlatformFee ppf -> (Just $ show ppf, Nothing)
-              FarePolicyD.ConstantPlatformFee cpf -> (Nothing, Just $ show cpf)
+      let (mbProgressivePlatformFee, mbConstantPlatformFee) = getPlatformFee platformFeeInfo
 
           mbProgressivePlatformFeeCaption = show Tags.PROGRESSIVE_PLATFORM_CHARGE
           mbProgressivePlatformFeeItem = mkBreakupItem mbProgressivePlatformFeeCaption . mkValue <$> mbProgressivePlatformFee
@@ -362,10 +459,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
     waitingChargeBreakups Nothing = []
     waitingChargeBreakups (Just waitingChargeInfo) = do
-      let (mbWaitingChargePerMin, mbWaitingChargePerMinFloat, mbConstantWaitingCharges) =
-            waitingChargeInfo.waitingCharge & \case
-              FarePolicyD.PerMinuteWaitingCharge hpm -> (Just $ highPrecMoneyToText hpm, Just $ show hpm, Nothing)
-              FarePolicyD.ConstantWaitingCharge mo -> (Nothing, Nothing, Just $ show mo)
+      let (mbWaitingChargePerMin, mbWaitingChargePerMinFloat, mbConstantWaitingCharges) = getWaitingCharge waitingChargeInfo
 
           waitingOrPickupChargesCaption = show Tags.WAITING_OR_PICKUP_CHARGES -- TODO :: To be deprecated
           mbWaitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption . mkValue <$> mbConstantWaitingCharges
@@ -396,10 +490,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
     newNightShiftChargeBreakups Nothing = []
     newNightShiftChargeBreakups (Just nightShiftChargeInfo) = do
-      let (mbNightShiftChargePercentage, mbConstantNightShiftCharge) =
-            nightShiftChargeInfo & \case
-              FarePolicyD.ProgressiveNightShiftCharge a -> (Just $ show ((a - 1) * 100), Nothing)
-              FarePolicyD.ConstantNightShiftCharge a -> (Nothing, Just $ show a)
+      let (mbNightShiftChargePercentage, mbConstantNightShiftCharge) = getNewNightShiftCharge nightShiftChargeInfo
 
           mbNightShiftChargePercentageCaption = show Tags.NIGHT_SHIFT_CHARGE_PERCENTAGE
           mbNightShiftChargePercentageItem = mkBreakupItem mbNightShiftChargePercentageCaption . mkValue <$> mbNightShiftChargePercentage
@@ -408,6 +499,21 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
           mbConstantNightShiftChargeItem = mkBreakupItem mbConstantNightShiftChargeCaption . mkValue <$> mbConstantNightShiftCharge
 
       catMaybes [mbNightShiftChargePercentageItem, mbConstantNightShiftChargeItem]
+
+    getNewNightShiftCharge nightShiftCharge =
+      nightShiftCharge & \case
+        FarePolicyD.ProgressiveNightShiftCharge a -> (Just $ show ((a - 1) * 100), Nothing)
+        FarePolicyD.ConstantNightShiftCharge a -> (Nothing, Just $ show a)
+
+    getWaitingCharge waitingChargeInfo =
+      waitingChargeInfo.waitingCharge & \case
+        FarePolicyD.PerMinuteWaitingCharge hpm -> (Just $ highPrecMoneyToText hpm, Just $ show hpm, Nothing)
+        FarePolicyD.ConstantWaitingCharge mo -> (Nothing, Nothing, Just $ show mo)
+
+    getPlatformFee platformFeeInfo =
+      platformFeeInfo.platformFeeCharge & \case
+        FarePolicyD.ProgressivePlatformFee ppf -> (Just $ show ppf, Nothing)
+        FarePolicyD.ConstantPlatformFee cpf -> (Nothing, Just $ show cpf)
 
     mkDriverExtraFeeBoundsMinFeeItem driverExtraFeeBoundsMinFeeItems [] _ = driverExtraFeeBoundsMinFeeItems
     mkDriverExtraFeeBoundsMinFeeItem driverExtraFeeBoundsMinFeeItems [s1] startDistance = do

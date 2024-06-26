@@ -10,6 +10,7 @@ import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import qualified Tools.Beam.UtilsTH
 
 data RideDetailsE e = RideDetails
@@ -20,6 +21,7 @@ data RideDetailsE e = RideDetails
     driverNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -45,6 +47,7 @@ instance EncryptedItem RideDetails where
           driverNumber = driverNumber_,
           fleetOwnerId = fleetOwnerId entity,
           id = id entity,
+          vehicleAge = vehicleAge entity,
           vehicleClass = vehicleClass entity,
           vehicleColor = vehicleColor entity,
           vehicleModel = vehicleModel entity,
@@ -62,6 +65,7 @@ instance EncryptedItem RideDetails where
             driverNumber = driverNumber_,
             fleetOwnerId = fleetOwnerId entity,
             id = id entity,
+            vehicleAge = vehicleAge entity,
             vehicleClass = vehicleClass entity,
             vehicleColor = vehicleColor entity,
             vehicleModel = vehicleModel entity,

@@ -508,7 +508,7 @@ data FareBreakUp = FareBreakUp
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails | AmbulanceDetails FParamsAmbulanceDetails
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -518,6 +518,15 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
     deadKmFareWithCurrency :: PriceAPIEntity,
     extraKmFareWithCurrency :: Maybe PriceAPIEntity,
     rideDurationFareWithCurrency :: Maybe PriceAPIEntity
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FParamsAmbulanceDetails = FParamsAmbulanceDetails
+  { platformFee :: Maybe PriceAPIEntity,
+    sgst :: Maybe PriceAPIEntity,
+    cgst :: Maybe PriceAPIEntity,
+    distBasedFare :: PriceAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

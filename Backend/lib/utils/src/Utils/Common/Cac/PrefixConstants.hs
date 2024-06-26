@@ -31,6 +31,7 @@ data CacPrefix
   | FarePolicySlabsDetailsSlab
   | FarePolicyRentalDetails
   | FarePolicyInterCityDetails
+  | FarePolicyAmbulanceDetailsSlab
   | FarePolicyRentalDetailsDistanceBuffers
   | MerchantServiceUsageConfig
   | Empty
@@ -49,6 +50,7 @@ instance Show CacPrefix where
   show FarePolicySlabsDetailsSlab = "farePolicySlabsDetailsSlab:"
   show FarePolicyRentalDetails = "farePolicyRentalDetails:"
   show FarePolicyInterCityDetails = "farePolicyInterCityDetails:"
+  show FarePolicyAmbulanceDetailsSlab = "farePolicyAmbulanceDetailsSlab:"
   show FarePolicyRentalDetailsDistanceBuffers = "farePolicyRentalDetailsDistanceBuffers:"
   show MerchantServiceUsageConfig = "merchantServiceUsageConfig:"
   show Empty = ""
@@ -66,6 +68,7 @@ getTableName FarePolicyProgressiveDetails = "fare_policy_progressive_details"
 getTableName FarePolicySlabsDetailsSlab = "fare_policy_slabs_details_slab"
 getTableName FarePolicyRentalDetails = "fare_policy_rental_details"
 getTableName FarePolicyInterCityDetails = "fare_policy_inter_city_details"
+getTableName FarePolicyAmbulanceDetailsSlab = "fare_policy_ambulance_details_slab"
 getTableName FarePolicyRentalDetailsDistanceBuffers = "fare_policy_rental_details_distance_buffers"
 getTableName MerchantServiceUsageConfig = "merchant_service_usage_config"
 getTableName Empty = ""

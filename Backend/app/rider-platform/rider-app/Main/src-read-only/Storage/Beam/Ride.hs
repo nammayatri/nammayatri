@@ -15,6 +15,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
+import qualified Kernel.Types.Time
 import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
@@ -70,6 +71,7 @@ data RideT f = RideT
     traveledDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     traveledDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
     vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleModel :: B.C f Kernel.Prelude.Text,
     vehicleNumber :: B.C f Kernel.Prelude.Text,

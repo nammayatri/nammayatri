@@ -7,6 +7,7 @@ where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import Domain.Types.Common
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -40,6 +41,7 @@ data NearestGoHomeDriversReq = NearestGoHomeDriversReq
     driverPositionInfoExpiry :: Maybe Seconds,
     isRental :: Bool,
     isInterCity :: Bool,
+    now :: UTCTime,
     isValueAddNP :: Bool
   }
 
@@ -60,6 +62,7 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     clientBundleVersion :: Maybe Version,
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
+    vehicleAge :: Maybe Months,
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text
   }
@@ -139,6 +142,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 clientBundleVersion = person.clientBundleVersion,
                 clientConfigVersion = person.clientConfigVersion,
                 clientDevice = person.clientDevice,
+                vehicleAge = getVehicleAge vehicle.mYManufacturing now,
                 backendConfigVersion = person.backendConfigVersion,
                 backendAppVersion = person.backendAppVersion
               }

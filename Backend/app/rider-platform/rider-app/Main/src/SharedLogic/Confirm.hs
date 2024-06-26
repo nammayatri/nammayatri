@@ -87,6 +87,7 @@ data ConfirmQuoteDetails
   | ConfirmRentalDetails Text
   | ConfirmAutoDetails Text
   | ConfirmOneWaySpecialZoneDetails Text
+  | ConfirmAmbulanceDetails Text
   deriving (Show, Generic)
 
 tryInitTriggerLock :: (Redis.HedisFlow m r) => Id DSReq.SearchRequest -> m Bool

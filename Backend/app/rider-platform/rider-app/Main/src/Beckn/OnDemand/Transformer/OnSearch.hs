@@ -18,7 +18,7 @@ import qualified Kernel.Types.App
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (type (:::))
+import Kernel.Utils.Common (logInfo, type (:::))
 import qualified Kernel.Utils.Error
 import qualified Tools.Error
 

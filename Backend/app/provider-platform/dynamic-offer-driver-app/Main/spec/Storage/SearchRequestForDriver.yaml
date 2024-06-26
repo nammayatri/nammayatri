@@ -13,6 +13,7 @@ imports:
   DriverMode: Domain.Types.DriverInformation
   DeviceType: Kernel.Types.Version
   LocalTime: Data.Time
+  Months: Kernel.Types.Time
 
 
 
@@ -40,6 +41,7 @@ SearchRequestForDriver:
     baseFare : Maybe HighPrecMoney
     startTime : UTCTime
     searchRequestValidTill : UTCTime
+    vehicleAge : Maybe Months
     driverId : Id Person
     actualDistanceToPickup : Meters
     straightLineDistanceToPickup : Meters
@@ -209,6 +211,7 @@ SearchRequestForDriver:
     acceptanceRatio: real
     driverAvailableTime: real
     estimateId: character varying (36)
+    vehicleAge: int
 
   default:
     rideRequestPopupDelayDuration: 0

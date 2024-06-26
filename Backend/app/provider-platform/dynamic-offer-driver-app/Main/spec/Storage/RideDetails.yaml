@@ -5,6 +5,7 @@ imports:
   Ride: Domain.Types.Ride
   Variant: Domain.Types.Vehicle
   DbHash: Kernel.External.Encryption
+  Months: Kernel.Types.Time
 
 RideDetails:
   tableName: ride_details
@@ -21,6 +22,7 @@ RideDetails:
     vehicleVariant : Maybe Variant
     vehicleModel : Maybe Text
     vehicleClass : Maybe Text
+    vehicleAge : Maybe Months
     fleetOwnerId : Maybe Text
     defaultServiceTierName : Maybe Text
     createdAt : Maybe UTCTime
@@ -58,6 +60,7 @@ RideDetails:
     vehicleModel: character varying(255)
     vehicleClass: character varying(255)
     vehicleVariant: character varying(255)
+    vehicleAge: int
     fleetOwnerId: character varying(36)
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

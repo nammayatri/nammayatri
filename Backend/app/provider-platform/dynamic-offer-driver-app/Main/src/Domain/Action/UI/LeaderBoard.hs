@@ -22,6 +22,7 @@ import Data.Time.Calendar ()
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Domain.Action.UI.Person
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
+import Domain.Types.Common hiding (monthDiff)
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -74,9 +75,6 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
   when (dateDiff > numberOfSets - 1 || dateDiff < 0) $
     throwError $ InvalidRequest "Date outside Range"
   getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) day day (integerToInt dateDiff) dailyLeaderBoardConfig distanceUnit
-
-getYearFromDay :: Day -> Integer
-getYearFromDay day = let (year, _, _) = toGregorian day in year
 
 getLastDayOfYear :: Integer -> Day
 getLastDayOfYear year = fromGregorian year 12 31

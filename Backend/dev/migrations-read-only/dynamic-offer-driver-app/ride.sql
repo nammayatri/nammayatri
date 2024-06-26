@@ -117,7 +117,6 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN distance_unit character varyi
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_air_conditioned boolean ;
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN online_payment boolean ;

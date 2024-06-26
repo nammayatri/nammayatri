@@ -81,6 +81,7 @@ import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRD
 import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
@@ -429,13 +430,19 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           calcPoints = True
         }
 
-recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
+recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresholdConfig = do
   let merchantId = booking.providerId
       oldDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
+  vehicleAge <-
+    if DTC.isAmbulanceTrip booking.tripCategory
+      then do
+        rideDetail <- QRD.findById ride.id -- replica?
+        pure $ maybe Nothing (.vehicleAge) rideDetail
+      else pure Nothing
   tripEndTime <- getCurrentTime
   farePolicy <- getFarePolicyByEstOrQuoteId booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
   fareParams <-
@@ -459,6 +466,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
           nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
           timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
           tollCharges = ride.tollCharges,
+          vehicleAge = vehicleAge,
           currency = booking.currency,
           distanceUnit = booking.distanceUnit
         }
@@ -548,7 +556,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
       TN.sendOverlay booking.merchantOperatingCityId driver $ TN.mkOverlayReq overlay
 
 calculateFinalValuesForFailedDistanceCalculations ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> Bool -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig = do
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation

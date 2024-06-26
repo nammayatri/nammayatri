@@ -405,6 +405,7 @@ mkFareProductType bookingDetails = case bookingDetails of
   DTB.DriverOfferDetails _ -> Common.DRIVER_OFFER
   DTB.OneWaySpecialZoneDetails _ -> Common.ONE_WAY_SPECIAL_ZONE
   DTB.InterCityDetails _ -> Common.INTER_CITY
+  DTB.AmbulanceDetails _ -> Common.AMBULANCE_FLOW
 
 timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
 timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1

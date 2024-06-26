@@ -36,3 +36,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN selected_service_tiers tex
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN ventilator boolean ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN oxygen boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN m_y_manufacturing date;

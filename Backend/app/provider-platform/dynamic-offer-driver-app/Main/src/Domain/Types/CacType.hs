@@ -8,6 +8,7 @@ import Storage.Beam.DriverIntelligentPoolConfig as DIPC
 import Storage.Beam.DriverPoolConfig as DPC
 import qualified Storage.Beam.FarePolicy as FP
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as DEFB
+import qualified Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab as FPAD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FPFB
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FPPDPEKRS
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails as FPRD
@@ -32,5 +33,6 @@ checkParseCommon (key, value) = do
         "farePolicyProgressiveDetails" -> checkParse (Proxy @FPFB.FarePolicyProgressiveDetailsT) tableColumn value
         "farePolicyRentalDetails" -> checkParse (Proxy @FPRD.FarePolicyRentalDetailsT) tableColumn value
         "farePolicy" -> checkParse (Proxy @FP.FarePolicyT) tableColumn value
+        "farePolicyAmbulanceDetails" -> checkParse (Proxy @FPAD.FarePolicyAmbulanceDetailsSlabT) tableColumn value
         _ -> True
     _ -> True
