@@ -197,11 +197,11 @@ handler ValidatedDSearchReq {..} sReq = do
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId)))) `mapM` possibleTripOption.tripCategories)
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed allFarePoliciesProduct.farePolicies
-
+  now <- getCurrentTime
   (driverPool, selectedFarePolicies) <-
     if transporterConfig.considerDriversForSearch
       then do
-        (pool, policies) <- selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies
+        (pool, policies) <- selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now
         pure (nonEmpty pool, policies)
       else return (Nothing, catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleServiceTier)) farePolicies)
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
@@ -223,7 +223,7 @@ handler ValidatedDSearchReq {..} sReq = do
   forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
   driverInfoQuotes <- addNearestDriverInfo merchantOpCityId driverPool quotes
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocationName
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocationName now
   where
     getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe HighPrecMoney)
     getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing)
@@ -255,12 +255,12 @@ handler ValidatedDSearchReq {..} sReq = do
         DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
         DTC.Rental _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
         DTC.InterCity _ _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
+        DTC.Ambulance _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
         _ -> (buildQuoteHelper False) fp >>= \quote -> pure (estimates, quote : quotes)
 
-    buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates specialLocationName = do
+    buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates specialLocationName now = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
-      now <- getCurrentTime
       return $
         DSearchRes
           { provider = merchant,
@@ -334,17 +334,17 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
               nearestDriverInfo = NearestDriverInfo {..}
           return (input, vehicleServiceTierItem, Just nearestDriverInfo)
 
-selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
-selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies = do
+selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> UTCTime -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
+selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now = do
   driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate (fromJust driverPoolCfg) [] fromLocation merchantId True Nothing False False
+  driverPoolNotOnRide <- calculateDriverPool cityServiceTiers Estimate (fromJust driverPoolCfg) [] fromLocation merchantId True Nothing False False now
   logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
       then do
         if transporterConfig.includeDriverCurrentlyOnRide && (fromJust driverPoolCfg).enableForwardBatching
-          then snd <$> calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate (fromJust driverPoolCfg) [] fromLocation merchantId Nothing False False Nothing
+          then snd <$> calculateDriverPoolCurrentlyOnRide cityServiceTiers Estimate (fromJust driverPoolCfg) [] fromLocation merchantId Nothing False False Nothing now
           else pure []
       else pure []
   let driverPool =
@@ -439,33 +439,45 @@ buildQuote ::
   m DQuote.Quote
 buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
-  fareParams <-
-    calculateFareParameters
-      CalculateFareParametersParams
-        { farePolicy = fullFarePolicy,
-          actualDistance = Just dist,
-          rideTime = pickupTime,
-          returnTime,
-          roundTrip,
-          waitingTime = Nothing,
-          actualRideDuration = Nothing,
-          avgSpeedOfVehicle = Nothing,
-          driverSelectedFare = Nothing,
-          customerExtraFee = Nothing,
-          nightShiftCharge = Nothing,
-          customerCancellationDues = Nothing,
-          nightShiftOverlapChecking = nightShiftOverlapChecking,
-          estimatedDistance = searchRequest.estimatedDistance,
-          estimatedRideDuration = searchRequest.estimatedDuration,
-          timeDiffFromUtc = Nothing,
-          tollCharges = tollCharges,
-          currency = searchRequest.currency,
-          distanceUnit = searchRequest.distanceUnit
-        }
+      isAmbulanceQuote = DTC.isAmbulanceTrip fullFarePolicy.tripCategory
+  (minFareParams, maxFareParams) <- do
+    let params =
+          CalculateFareParametersParams
+            { farePolicy = fullFarePolicy,
+              actualDistance = Just dist,
+              rideTime = pickupTime,
+              returnTime,
+              roundTrip,
+              waitingTime = Nothing,
+              actualRideDuration = Nothing,
+              vehicleAge = Nothing,
+              avgSpeedOfVehicle = Nothing,
+              driverSelectedFare = Nothing,
+              customerExtraFee = Nothing,
+              nightShiftCharge = Nothing,
+              customerCancellationDues = Nothing,
+              nightShiftOverlapChecking = nightShiftOverlapChecking,
+              estimatedDistance = searchRequest.estimatedDistance,
+              estimatedRideDuration = searchRequest.estimatedDuration,
+              timeDiffFromUtc = Nothing,
+              tollCharges = tollCharges,
+              currency = searchRequest.currency,
+              distanceUnit = searchRequest.distanceUnit
+            }
+
+    fareParamsMax <- calculateFareParameters params
+    fareParamsMin <-
+      if isAmbulanceQuote
+        then calculateFareParameters params {vehicleAge = Just 100000} -- high value
+        else return fareParamsMax
+    return (fareParamsMin, fareParamsMax)
+
   quoteId <- Id <$> generateGUID
   void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
   now <- getCurrentTime
-  let estimatedFare = fareSum fareParams
+  let minEstimatedFare = fareSum minFareParams
+      maxEstimatedFare = if isAmbulanceQuote then fareSum maxFareParams else minEstimatedFare
+      estimatedFare = maxEstimatedFare -- for backward compatibility
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -487,6 +499,9 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         updatedAt = now,
         currency = searchRequest.currency,
         distanceUnit = searchRequest.distanceUnit,
+        minEstimatedFare = Just minEstimatedFare,
+        maxEstimatedFare = Just maxEstimatedFare,
+        fareParams = maxFareParams, -- Once driver accepts ambulance ride, update booking and quote fare params?
         ..
       }
 
@@ -519,6 +534,7 @@ buildEstimate merchantOpCityId currency distanceUnit searchReqId startTime isSch
           rideTime = startTime,
           returnTime,
           roundTrip,
+          vehicleAge = Nothing,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
           avgSpeedOfVehicle = Nothing,
@@ -614,8 +630,8 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
                     [DTC.InterCity DTC.OneWayOnDemandStaticOffer destinationTravelCityName]
                       <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp destinationTravelCityName, DTC.InterCity DTC.OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
               else do
-                [DTC.OneWay DTC.OneWayOnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
-                  <> (if not isScheduled then [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp] else [])
+                [DTC.OneWay DTC.OneWayOnDemandStaticOffer, DTC.Ambulance DTC.OnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
+                  <> (if not isScheduled then [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer, DTC.Ambulance DTC.RideOtp, DTC.Rental DTC.RideOtp] else [])
           Nothing ->
             [DTC.Rental DTC.OnDemandStaticOffer]
               <> [DTC.Rental DTC.RideOtp | not isScheduled]

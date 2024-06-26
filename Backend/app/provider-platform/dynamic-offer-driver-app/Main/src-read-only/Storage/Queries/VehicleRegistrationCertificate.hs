@@ -88,6 +88,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.fleetOwnerId fleetOwnerId,
       Se.Set Beam.insuranceValidity insuranceValidity,
       Se.Set Beam.luggageCapacity luggageCapacity,
+      Se.Set Beam.mYManufacturing mYManufacturing,
       Se.Set Beam.manufacturerModel manufacturerModel,
       Se.Set Beam.oxygen oxygen,
       Se.Set Beam.permitExpiry permitExpiry,

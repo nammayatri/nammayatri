@@ -52,9 +52,9 @@ instance ToTType' FareParametersRentalDetails Domain.FullFareParametersRentalDet
     FareParametersRentalDetailsT
       { fareParametersId = fareParametersId,
         timeBasedFare = roundToIntegral $ Domain.timeBasedFare fParamsRentalDetails,
-        distBasedFare = roundToIntegral $ Domain.distBasedFare fParamsRentalDetails,
+        distBasedFare = roundToIntegral $ (Domain.distBasedFare :: Domain.FParamsRentalDetails -> HighPrecMoney) fParamsRentalDetails,
         timeBasedFareAmount = Just $ Domain.timeBasedFare fParamsRentalDetails,
-        distBasedFareAmount = Just $ Domain.distBasedFare fParamsRentalDetails,
+        distBasedFareAmount = Just $ (Domain.distBasedFare :: Domain.FParamsRentalDetails -> HighPrecMoney) fParamsRentalDetails,
         currency = Just $ (Domain.currency :: Domain.FParamsRentalDetails -> Currency) fParamsRentalDetails,
         extraDistance = Just $ Domain.extraDistance fParamsRentalDetails,
         extraDuration = Just $ Domain.extraDuration fParamsRentalDetails,

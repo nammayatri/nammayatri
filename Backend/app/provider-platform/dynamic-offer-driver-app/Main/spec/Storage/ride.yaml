@@ -99,6 +99,7 @@ Ride:
     vehicleVariant : Maybe Variant
     vehicleServiceTierName : Maybe Text
     tripCategory: TripCategory
+    vehicleAge: Maybe Double
     onlinePayment: Bool
 
   sqlType:

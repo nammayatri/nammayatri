@@ -8,6 +8,7 @@ import qualified API.Types.UI.EstimateBP
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.AmbulanceDetails as DAD
 import Domain.Types.Estimate
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant as Merchant
@@ -28,6 +29,7 @@ import Kernel.Types.Price (Price (..), PriceAPIEntity (..))
 import Kernel.Utils.Common
 import Servant
 import qualified Storage.Clickhouse.EstimateBreakup as CH
+import qualified Storage.Queries.AmbulanceQuoteBreakup as QAQB
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
@@ -45,11 +47,14 @@ getRideEstimateBreakup (_, _) rideId_ = do
       pure $ API.Types.UI.EstimateBP.EstimateDetailsRes {estimateBreakup = estimateBreakup}
     Nothing -> pure $ API.Types.UI.EstimateBP.EstimateDetailsRes {estimateBreakup = []}
 
-getEstimateBreakupFromQuote :: (EsqDBFlow m r, MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => DQuote.Quote -> m [API.Types.UI.EstimateBP.EstimateBreakup]
+getEstimateBreakupFromQuote :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => DQuote.Quote -> m [API.Types.UI.EstimateBP.EstimateBreakup]
 getEstimateBreakupFromQuote quote =
   case quote.quoteDetails of
     DQuote.OneWayDetails _ -> pure []
     DQuote.InterCityDetails interCityDetails -> pure $ transformInterCityDetails interCityDetails
+    DQuote.AmbulanceDetails ambulanceDetails -> do
+      breakup <- QAQB.findAllByQuoteIdT (Id.cast ambulanceDetails.id)
+      pure $ transformEstimateFromQuote <$> breakup
     DQuote.RentalDetails rentalDetails -> pure $ transformRentalDetails rentalDetails
     DQuote.DriverOfferDetails driverOfferDetails -> do
       breakup <- CH.findAllByEstimateIdT (Id.cast driverOfferDetails.estimateId)
@@ -68,6 +73,20 @@ transformEstimate estimate =
                 }
           },
       title = CH.title estimate
+    }
+
+transformEstimateFromQuote :: DAD.AmbulanceQuoteBreakup -> API.Types.UI.EstimateBP.EstimateBreakup
+transformEstimateFromQuote quote =
+  API.Types.UI.EstimateBP.EstimateBreakup
+    { price =
+        API.Types.UI.EstimateBP.EstimateBreakupPrice
+          { value =
+              Kernel.Types.Price.PriceAPIEntity
+                { amount = quote.price.value.amount,
+                  currency = quote.price.value.currency
+                }
+          },
+      title = quote.title
     }
 
 transformEstimate' :: API.Types.UI.EstimateBP.EstimateBreakup -> Common.EstimateBreakup

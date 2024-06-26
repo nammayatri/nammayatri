@@ -1040,7 +1040,7 @@
                   "postman.setEnvironmentVariable(\"customer_estimate_id\", estimate_id);",
                   "",
                   "let quote_id = null;",
-                  "if(body.quotes.length > 0) {",
+                  "if(body.estimates.length == 0 && body.quotes.length > 0) {",
                   "    quote_id = body.quotes.find(quote => quote.onDemandCab.vehicleVariant == vehicleVariant).onDemandCab.id;",
                   "    console.log('customer_quote_id', quote_id);",
                   "}",

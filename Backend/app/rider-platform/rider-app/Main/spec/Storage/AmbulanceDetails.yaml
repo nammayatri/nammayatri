@@ -1,0 +1,71 @@
+imports:
+  Price: Kernel.Types.Common
+  Currency: Kernel.Utils.Common
+  PriceAPIEntity: Kernel.Types.Common
+  NightShiftInfo: Domain.Types.Extra.RentalDetails
+
+AmbulanceDetails:
+  tableName: ambulance_details
+
+  derives: "Generic, Show"
+
+  types:
+    AmbulanceQuoteBreakup:
+      id : Id AmbulanceQuoteBreakup
+      quoteId : Id AmbulanceDetails
+      title : Text
+      price : AmbulanceQuoteBreakupPrice
+      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+
+    AmbulanceQuoteBreakupPrice:
+      recordType: NewType
+      value: Price
+      derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+
+  fields:
+    id: Id AmbulanceDetails
+    minEstimatedFare: Price
+    maxEstimatedFare: Price
+    ambulanceQuoteBreakupList: "[AmbulanceQuoteBreakup]"
+
+  sqlType:
+    minEstimatedFare: numeric(30, 2)
+    maxEstimatedFare: numeric(30, 2)
+    currency: character varying(255)
+
+  beamFields:
+    minEstimatedFare:
+        minEstimatedFare: HighPrecMoney
+        currency: Currency
+    ambulanceQuoteBreakupList: {}
+
+  beamType:
+    minEstimatedFare: HighPrecMoney
+    maxEstimatedFare: HighPrecMoney
+
+  toTType:
+    minEstimatedFare: (.amount)|I
+    maxEstimatedFare: (.amount)|I
+    currency: (.currency) minEstimatedFare|E
+
+  fromTType:
+    ambulanceQuoteBreakupList: Storage.Queries.AmbulanceQuoteBreakup.findAllByQuoteIdT (Kernel.Types.Id.Id id)|EM
+    minEstimatedFare: Kernel.Utils.Common.mkPrice (Just currency) minEstimatedFare|E
+    maxEstimatedFare: Kernel.Utils.Common.mkPrice (Just currency) maxEstimatedFare|E
+  excludedFields: [updatedAt,createdAt,merchantId,merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - createMany
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE

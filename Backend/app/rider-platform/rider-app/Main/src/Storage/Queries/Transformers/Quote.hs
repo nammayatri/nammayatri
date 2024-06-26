@@ -13,6 +13,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.Queries.AmbulanceDetails as QueryAD
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.RentalDetails as QueryRD
@@ -27,6 +28,7 @@ getQuoteDetails' quoteDetails =
         DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
         DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
         DQ.InterCityDetails details -> (DFFP.INTER_CITY, Nothing, Nothing, Nothing, Just $ getId details.id)
+        DQ.AmbulanceDetails details -> (DFFP.AMBULANCE, Nothing, Nothing, Nothing, Just $ getId details.id)
    in (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId)
 
 getQuoteDetails :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m) => Domain.Types.FarePolicy.FareProductType.FareProductType -> Kernel.Prelude.Maybe HighPrecMeters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Maybe DistanceUnit -> Maybe HighPrecDistance -> m Domain.Types.Quote.QuoteDetails
@@ -49,6 +51,9 @@ getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOf
   DFFP.INTER_CITY -> do
     qd <- getInterCityQuote specialZoneQuoteId
     maybe (throwError (InternalError "No inter city details")) return qd
+  DFFP.AMBULANCE -> do
+    qd <- getAmbulanceQuote specialZoneQuoteId
+    maybe (throwError (InternalError "No ambulance details")) return qd
   where
     getRentalDetails rentalDetailsId' = do
       res <- maybe (pure Nothing) (QueryRD.findById . Id) rentalDetailsId'
@@ -67,6 +72,13 @@ getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOf
         Just quoteId -> do
           mbInterCityDetails <- QueryICD.findById (Id quoteId)
           maybe (pure Nothing) (pure . Just . DQ.InterCityDetails) mbInterCityDetails
+        Nothing -> pure Nothing
+
+    getAmbulanceQuote specialZoneQuoteId' = do
+      case specialZoneQuoteId' of
+        Just quoteId -> do
+          mbAmbulanceDetails <- QueryAD.findById (Id quoteId)
+          maybe (pure Nothing) (pure . Just . DQ.AmbulanceDetails) mbAmbulanceDetails
         Nothing -> pure Nothing
 
 getTripTerms :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms)

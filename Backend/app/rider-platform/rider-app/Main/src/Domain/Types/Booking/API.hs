@@ -105,6 +105,7 @@ data BookingAPIDetails
   | DriverOfferAPIDetails OneWayBookingAPIDetails
   | OneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingAPIDetails
   | InterCityAPIDetails InterCityBookingAPIDetails
+  | AmbulanceAPIDetails AmbulanceBookingAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON BookingAPIDetails where
@@ -129,6 +130,13 @@ data OneWayBookingAPIDetails = OneWayBookingAPIDetails
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data InterCityBookingAPIDetails = InterCityBookingAPIDetails
+  { toLocation :: LocationAPIEntity,
+    estimatedDistance :: HighPrecMeters,
+    estimatedDistanceWithUnit :: Distance
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data AmbulanceBookingAPIDetails = AmbulanceBookingAPIDetails
   { toLocation :: LocationAPIEntity,
     estimatedDistance :: HighPrecMeters,
     estimatedDistanceWithUnit :: Distance
@@ -222,6 +230,7 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
       OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
       InterCityDetails details -> InterCityAPIDetails . mkInterCityAPIDetails $ details
+      AmbulanceDetails details -> AmbulanceAPIDetails . mkAmbulanceAPIDetails $ details
       where
         mkOneWayAPIDetails OneWayBookingDetails {..} =
           OneWayBookingAPIDetails
@@ -242,6 +251,12 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
             }
         mkInterCityAPIDetails InterCityBookingDetails {..} =
           InterCityBookingAPIDetails
+            { toLocation = SLoc.makeLocationAPIEntity toLocation,
+              estimatedDistance = distanceToHighPrecMeters distance,
+              estimatedDistanceWithUnit = distance
+            }
+        mkAmbulanceAPIDetails AmbulanceBookingDetails {..} =
+          AmbulanceBookingAPIDetails
             { toLocation = SLoc.makeLocationAPIEntity toLocation,
               estimatedDistance = distanceToHighPrecMeters distance,
               estimatedDistanceWithUnit = distance

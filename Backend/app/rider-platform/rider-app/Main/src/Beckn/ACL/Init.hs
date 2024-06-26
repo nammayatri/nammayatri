@@ -43,7 +43,8 @@ buildInitReqV2 res = do
         SConfirm.ConfirmRentalDetails quoteId -> (show Enums.RENTAL, Just quoteId)
         SConfirm.ConfirmInterCityDetails quoteId -> (show Enums.INTER_CITY, Just quoteId)
         SConfirm.ConfirmAutoDetails bppQuoteId -> (show Enums.DELIVERY, Just bppQuoteId)
-        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (show Enums.RIDE_OTP, Just quoteId) --need to be  checked
+        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (show Enums.RIDE_OTP, Just quoteId)
+        SConfirm.ConfirmAmbulanceDetails quoteId -> (show Enums.AMBULANCE_FLOW, Just quoteId)
   let action = Context.INIT
   let domain = Context.MOBILITY
   isValueAddNP <- VNP.isValueAddNP res.providerId

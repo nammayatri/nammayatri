@@ -18,6 +18,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
+import Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant
@@ -172,6 +173,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
   let previousRideToLocation = previousRide >>= (.toLocation)
+      vehicleAge = getVehicleAge vehicle.mYManufacturing now
   return
     DRide.Ride
       { id = guid,
@@ -236,6 +238,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         tripCategory = booking.tripCategory,
         vehicleServiceTierName = Just booking.vehicleServiceTierName,
         vehicleVariant = Just $ vehicle.variant,
+        vehicleAge = vehicleAge,
         onlinePayment = onlinePayment
       }
 

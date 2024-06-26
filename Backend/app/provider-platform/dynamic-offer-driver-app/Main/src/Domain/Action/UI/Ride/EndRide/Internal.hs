@@ -420,6 +420,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
         DFare.RentalDetails _ -> (0, 0, 0)
         DFare.InterCityDetails _ -> (0, 0, 0)
+        DFare.AmbulanceDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
   let totalDriverFee = govtCharges + platformFee + cgst + sgst
   mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft totalDriverFee
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc

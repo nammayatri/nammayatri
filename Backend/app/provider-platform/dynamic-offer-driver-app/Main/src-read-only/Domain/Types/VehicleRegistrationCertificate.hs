@@ -5,6 +5,7 @@
 module Domain.Types.VehicleRegistrationCertificate where
 
 import Data.Aeson
+import qualified Data.Time.Calendar
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -26,6 +27,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     id :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
     insuranceValidity :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     manufacturerModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -74,6 +76,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           id = id entity,
           insuranceValidity = insuranceValidity entity,
           luggageCapacity = luggageCapacity entity,
+          mYManufacturing = mYManufacturing entity,
           manufacturerModel = manufacturerModel entity,
           oxygen = oxygen entity,
           permitExpiry = permitExpiry entity,
@@ -114,6 +117,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             id = id entity,
             insuranceValidity = insuranceValidity entity,
             luggageCapacity = luggageCapacity entity,
+            mYManufacturing = mYManufacturing entity,
             manufacturerModel = manufacturerModel entity,
             oxygen = oxygen entity,
             permitExpiry = permitExpiry entity,

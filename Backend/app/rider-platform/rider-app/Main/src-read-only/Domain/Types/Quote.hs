@@ -7,6 +7,7 @@ module Domain.Types.Quote where
 import Data.Aeson
 import qualified Domain.Action.UI.DriverOffer
 import qualified Domain.Action.UI.SpecialZoneQuote
+import qualified Domain.Types.AmbulanceDetails
 import qualified Domain.Types.DriverOffer
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant
@@ -75,6 +76,7 @@ data OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails {distan
 data QuoteAPIDetails
   = OneWayAPIDetails Domain.Types.Quote.OneWayQuoteAPIDetails
   | InterCityAPIDetails Domain.Types.InterCityDetails.InterCityDetailsAPIEntity
+  | AmbulanceAPIDetails Domain.Types.AmbulanceDetails.AmbulanceDetailsAPIEntity
   | RentalAPIDetails Domain.Types.RentalDetails.RentalDetailsAPIEntity
   | DriverOfferAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails Domain.Action.UI.SpecialZoneQuote.SpecialZoneQuoteAPIEntity
@@ -84,6 +86,7 @@ data QuoteDetails
   = OneWayDetails Domain.Types.Quote.OneWayQuoteDetails
   | InterCityDetails Domain.Types.InterCityDetails.InterCityDetails
   | RentalDetails Domain.Types.RentalDetails.RentalDetails
+  | AmbulanceDetails Domain.Types.AmbulanceDetails.AmbulanceDetails
   | DriverOfferDetails Domain.Types.DriverOffer.DriverOffer
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   deriving (Generic, Show)

@@ -49,6 +49,7 @@ Vehicle:
     oxygen: Maybe Bool
     ventilator: Maybe Bool
     luggageCapacity: Maybe Int
+    mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
     selectedServiceTiers: '[ServiceTierType]'
 

@@ -323,7 +323,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
         mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
-  let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
+  let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {vehicleAge = ride.vehicleAge, ..}
   retryConfig <- asks (.shortDurationRetryCfg)
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2

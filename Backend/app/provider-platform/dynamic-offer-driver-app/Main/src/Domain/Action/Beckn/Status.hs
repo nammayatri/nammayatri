@@ -23,6 +23,7 @@ import Data.Either.Extra (eitherToMaybe)
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as Aadhaar
 import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DBooking
+import Domain.Types.Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -37,6 +38,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
 handler ::
@@ -58,6 +60,9 @@ handler transporterId req = do
         DRide.NEW -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+          vehicle <- QVeh.findById ride.driverId
+          now <- getCurrentTime
+          let vehicleAge = (\v -> getVehicleAge v.mYManufacturing now) =<< vehicle
           resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
           let image = join (eitherToMaybe resp)
           let isDriverBirthDay = False

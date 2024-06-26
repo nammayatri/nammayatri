@@ -18,7 +18,7 @@ import qualified Kernel.Types.App
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (type (:::))
+import Kernel.Utils.Common (logInfo, type (:::))
 import qualified Kernel.Utils.Error
 import qualified Tools.Error
 
@@ -52,6 +52,19 @@ buildRentalQuoteInfo item quoteId_ currency = do
   deadKmFare <- Beckn.OnDemand.Utils.OnSearch.getDeadKilometerFare itemTags currency
   let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
   Just $ Domain.Action.Beckn.OnSearch.RentalQuoteDetails {..}
+
+buildAmbulanceQuoteInfo :: (MonadFlow m) => BecknV2.OnDemand.Types.Item -> Text -> Currency -> m Domain.Action.Beckn.OnSearch.AmbulanceQuoteDetails
+buildAmbulanceQuoteInfo item quoteId_ currency = do
+  let itemTags = item.itemTags
+      id = quoteId_
+      defaultPrice = Price (Money 0) (HighPrecMoney 0.0) INR
+      baseFare = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getBaseFare itemTags currency)
+      perKmRate = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPerKmRate itemTags currency) -- plan to remove this
+  ambulanceQuoteBreakupList <- Beckn.OnDemand.Utils.OnSearch.buildAmbulanceQuoteBreakupList item currency
+  minEstimatedFare <- Beckn.OnDemand.Utils.OnSearch.getMinEstimatedFare item currency
+  maxEstimatedFare <- Beckn.OnDemand.Utils.OnSearch.getMaxEstimatedFare item currency
+  let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
+  pure Domain.Action.Beckn.OnSearch.AmbulanceQuoteDetails {..}
 
 buildInterCityQuoteInfo :: BecknV2.OnDemand.Types.Item -> Text -> Currency -> Maybe Domain.Action.Beckn.OnSearch.InterCityQuoteDetails
 buildInterCityQuoteInfo item quoteId_ currency = do
@@ -103,6 +116,10 @@ tfQuotesInfo provider fulfillments validTill item = do
     "RENTAL" -> do
       quoteInfo <- buildRentalQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
       let quoteDetails_ = Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
+      pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, isAirConditioned = isAirConditioned_, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_}
+    "AMBULANCE_FLOW" -> do
+      quoteInfo <- buildAmbulanceQuoteInfo item quoteOrEstId_ currency
+      let quoteDetails_ = Domain.Action.Beckn.OnSearch.AmbulanceDetails quoteInfo
       pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, isAirConditioned = isAirConditioned_, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_}
     "RIDE_OTP" -> do
       let quoteDetails_ = Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})

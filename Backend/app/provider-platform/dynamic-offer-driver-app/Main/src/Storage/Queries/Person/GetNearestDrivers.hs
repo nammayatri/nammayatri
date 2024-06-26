@@ -2,6 +2,7 @@ module Storage.Queries.Person.GetNearestDrivers (getNearestDrivers, NearestDrive
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import Domain.Types.Common
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -41,6 +42,7 @@ data NearestDriversResult = NearestDriversResult
     clientBundleVersion :: Maybe Version,
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
+    vehicleAge :: Maybe Double,
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text
   }
@@ -57,8 +59,9 @@ getNearestDrivers ::
   Maybe Seconds ->
   Bool ->
   Bool ->
+  UTCTime ->
   m [NearestDriversResult]
-getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry isRental isInterCity = do
+getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry isRental isInterCity now = do
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
   driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide) isRental isInterCity
   vehicle <- Int.getVehicles driverInfos
@@ -108,4 +111,4 @@ getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merc
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice person.backendConfigVersion person.backendAppVersion
+          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice (getVehicleAge vehicle.mYManufacturing now) person.backendConfigVersion person.backendAppVersion

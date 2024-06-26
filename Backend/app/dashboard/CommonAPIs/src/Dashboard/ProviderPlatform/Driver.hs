@@ -23,6 +23,7 @@ where
 import Dashboard.Common as Reexport
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import Data.Aeson
+import Data.Time (Day)
 import Kernel.External.Maps.Types
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
@@ -746,6 +747,7 @@ data AddVehicleReq = AddVehicleReq
     oxygen :: Maybe Bool,
     ventilator :: Maybe Bool,
     dateOfRegistration :: Maybe UTCTime,
+    mYManufacturing :: Maybe Day,
     vehicleModelYear :: Maybe Int
   }
   deriving stock (Show, Generic)
