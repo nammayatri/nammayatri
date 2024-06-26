@@ -48,3 +48,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_advance_booking_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_dashboard_request boolean ;

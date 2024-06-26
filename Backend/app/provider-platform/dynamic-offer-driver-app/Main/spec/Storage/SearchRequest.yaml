@@ -51,6 +51,7 @@ SearchRequest:
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
     isAdvanceBookingEnabled: Bool
+    isDashboardRequest: Bool
     startTime: UTCTime
     createdAt: UTCTime
 
@@ -63,6 +64,7 @@ SearchRequest:
     currency: Maybe Currency
     isAdvanceBookingEnabled: Maybe Bool
     distanceUnit: Maybe DistanceUnit
+    isDashboardRequest: Maybe Bool
   beamFields:
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
@@ -85,6 +87,7 @@ SearchRequest:
     driverDefaultExtraFee: roundToIntegral <$> driverDefaultExtraFee|E
     isAdvanceBookingEnabled: Just isAdvanceBookingEnabled|E
     distanceUnit: Kernel.Prelude.Just|I
+    isDashboardRequest: Just isDashboardRequest|E
 
   intermediateTransformers:
     fromTType:
@@ -105,6 +108,7 @@ SearchRequest:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     isAdvanceBookingEnabled: fromMaybe False isAdvanceBookingEnabled|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    isDashboardRequest: fromMaybe False isDashboardRequest|E
 
   constraints:
     id: PrimaryKey
