@@ -686,6 +686,7 @@ gotoRecenterAndSupport state push =
         ][ locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
             then gotoButton push state else linearLayout[][]
+          , rideRequestButton  push state
           , helpAndSupportBtnView push showReportText
           , recenterBtnView state push
         ]
@@ -1561,6 +1562,84 @@ gotoListView push state =
       ]
    ]
 
+rideRequestButton :: forall w .(Action -> Effect Unit) -> HomeScreenState ->  PrestoDOM (Effect Unit) w
+rideRequestButton push state =
+  frameLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , orientation VERTICAL
+  , margin $ MarginTop 3
+  ] [ linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , margin $ MarginVertical 5 10
+      , cornerRadius 22.0
+      , gravity CENTER
+      ][linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      , margin $ MarginLeft 12
+      , cornerRadius 22.0
+      , onClick push $ const RideRequestsList
+      , background Color.white900
+      , padding $ Padding 16 12 16 12
+      , gravity CENTER
+      , stroke $ "1,"<> Color.grey900
+      , rippleColor Color.rippleShade
+      ][ imageView
+      [ width $ V 15
+      , height $ V 15
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_location"
+     ]
+     , textView $
+     [ weight 1.0
+     , text  "Riderequest"
+     , gravity CENTER 
+     , margin $ MarginLeft 10
+     , color Color.black800
+     ] <> FontStyle.tags TypoGraphy  
+     ]],
+     linearLayout
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , layoutGravity "right"
+     ][ textView $
+     [ height $ V 20
+     , width $ V 20
+     , cornerRadius 37.0
+     , text ""
+     , color Color.white900
+     , gravity CENTER
+     , background Color.yellow900 
+     ] <> FontStyle.body9 TypoGraphy
+     ]
+     ]
+  -- linearLayout
+  -- [ width WRAP_CONTENT
+  -- , height WRAP_CONTENT
+  -- , orientation HORIZONTAL
+  -- , margin $ MarginLeft 12
+  -- , cornerRadius 22.0
+  -- , onClick push $ const RideRequestsList
+  -- , background Color.white900
+  -- , padding $ Padding 16 12 16 12
+  -- , gravity CENTER
+  -- , stroke $ "1,"<> Color.grey900
+  -- , rippleColor Color.rippleShade
+  -- ][ imageView
+  --    [ width $ V 15
+  --    , height $ V 15
+  --    , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_location"
+  --    ]
+  --  , textView $
+  --    [ weight 1.0
+  --    , text  "Riderequest"
+  --    , gravity CENTER 
+  --    , margin $ MarginLeft 10
+  --    , color Color.black800
+  --    ] <> FontStyle.tags TypoGraphy  
+  -- ]
 
 
 noGoToLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1976,12 +2055,13 @@ offlineNavigationLinks push state =
                 , color Color.black900
                 , padding $ PaddingBottom 1
                 ] <> FontStyle.tags TypoGraphy
-            ]
+            ] 
           ) navLinksArray)
     ]
     where
       navLinksArray = [ {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : ClickAddAlternateButton},
+                        {title : "Ride requests", icon : "ny_ic_location", action : RideRequestsList},
                         {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
                         {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
                       ]

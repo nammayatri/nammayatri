@@ -301,6 +301,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | GoToRideReqScreen ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
 
 data Action = NoAction
@@ -429,6 +430,7 @@ data Action = NoAction
             | RideStartRemainingTime Int String String
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
+            | RideRequestsList
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
@@ -1462,19 +1464,9 @@ eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {prop
 
 eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {props {toll {showTollChargeAmbigousPopup = false}}}
 
-eval (SwitchBookingStage stage) state = do
-  if state.props.bookingStage == stage then continue state
-  else do
-    let currentRideData = if stage == CURRENT then fromMaybe state.data.activeRide state.data.currentRideData else state.data.activeRide
-    let advancedRideData = if stage == ADVANCED then fromMaybe state.data.activeRide state.data.advancedRideData else state.data.activeRide
-    let activeRideData = if stage == CURRENT then currentRideData else advancedRideData
-    void $ pure $ setValueToLocalStore LOCAL_STAGE (show $ fetchStageFromRideStatus activeRideData)
-    exit $ UpdateRouteOnStageSwitch state {
-      data {activeRide = activeRideData, currentRideData = Just currentRideData},
-      props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
-    }
+eval RideRequestsList state = exit $ GoToRideReqScreen state  
 
-eval _ state = continue state
+eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do

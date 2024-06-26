@@ -8,6 +8,7 @@ export const removeRippleCircle = function (config) {
 }
 export const addRippleCircle = function (config) {
   if (JBridge.addRippleCircle) {
+    console.log("printing inside addRippleCircle");
     JBridge.addRippleCircle(JSON.stringify(config))
   }
 }

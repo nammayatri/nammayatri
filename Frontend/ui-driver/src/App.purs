@@ -74,6 +74,7 @@ import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
+import Screens.RideRequestScreen.ScreenData as RideRequestScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -127,6 +128,7 @@ newtype GlobalState = GlobalState {
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
   , rateCardScreen :: RateCardScreenState
+  , rideRequestScreen :: RideRequestScreenData.RideRequestScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -180,6 +182,7 @@ defaultGlobalState = GlobalState {
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
+, rideRequestScreen : RideRequestScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -243,6 +246,8 @@ data ScreenType =
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
+  | RideRequestScreenStateType (RideRequestScreenData.RideRequestScreenState ->RideRequestScreenData.RideRequestScreenState)
+ 
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -335,6 +340,7 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | GO_BACK_TO_HELP_AND_SUPPORT HelpAndSupportScreenState
                                     | GO_BACK_TO_HOME_SCREEN_FROM_HELP HelpAndSupportScreenState
                                     | GO_BACK_TO_TRIP_DETAILS HelpAndSupportScreenState
+                                    -- | UPDATE_ROUTE_11
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
@@ -371,7 +377,11 @@ data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreen
                                         | RC_ACTIVATION AddVehicleDetailsScreenState
                                         | CHANGE_VEHICLE_FROM_RC_SCREEN
                                         | CHANGE_LANG_FROM_RC_SCREEN
-
+data RIDE_REQUEST_SCREEN_OUTPUT  = GOTO_HOME
+                                  -- | UPDATE_ROUTE_1  
+                                  -- | GOTO_HELP
+                                  | RIDE_REQUEST_REFRESH_SCREEN RideRequestScreenData.RideRequestScreenState
+                                  | LOADER__OUTPUT RideRequestScreenData.RideRequestScreenState
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN
 
 data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN | LOGOUT_FROM_PERMISSIONS_SCREEN | GO_TO_REGISTERATION_SCREEN PermissionsScreenState
@@ -417,6 +427,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | UPDATE_AIR_CONDITIONED Boolean
                           | GO_TO_BOOKING_PREFERENCES
                           | UPDATE_ROUTE_ON_STAGE_SWITCH HomeScreenState
+                          | GO_TO_RIDE_REQ_SCREEN
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

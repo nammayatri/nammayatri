@@ -1401,6 +1401,9 @@ getBN stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "আপনার কয়েন ডিস্কাউন্টে রূপান্তর করুন"
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION -> "আপনার সাবস্ক্রিপশনে ডিস্কাউন্ট পেতে আপনার কয়েন রূপান্তর করুন"
         CONVERT_NOW -> "এখন রূপান্তর করুন"
+        MORE_RIDES -> "আরো রাইড"
+        SORT_BY -> "ক্রমানুসার"
+  
         TOLL_CHARGES_INCLUDED -> "ভাড়ার মধ্যে টোল চার্জ অন্তর্ভুক্ত"
         PLEASE_DO_NOT_DEMAND_EXTRA -> "অনুগ্রহ করে গ্রাহকের কাছ থেকে অতিরিক্ত দাবি করবেন না"
         FINAL_FARE_EXCLUDES_TOLL -> "চূড়ান্ত ভাড়া টোল চার্জ ব্যতীত"
