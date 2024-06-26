@@ -685,7 +685,8 @@ getTripDetailsState (RideBookingRes ride) state = do
         totalTime = show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min",
         vehicleModel = rideDetails.vehicleModel,
         rideStartTimeUTC = fromMaybe "" ride.rideStartTime,
-        rideEndTimeUTC = fromMaybe "" ride.rideEndTime
+        rideEndTimeUTC = fromMaybe "" ride.rideEndTime,
+        vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
       },
       vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
     }
