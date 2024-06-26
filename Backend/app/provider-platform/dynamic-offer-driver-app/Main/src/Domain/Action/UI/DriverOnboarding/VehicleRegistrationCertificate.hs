@@ -61,6 +61,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import Kernel.Utils.Logging ()
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
@@ -68,6 +69,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as DIQuery
+import qualified Storage.Queries.DriverLicense as QDL
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -146,6 +148,11 @@ verifyRC ::
 verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.VehicleRegistrationCertificate (fromMaybe Vehicle.CAR req.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
+  dlDocumentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.DriverLicense (fromMaybe Vehicle.CAR req.vehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.DriverLicense))
+  dlDetails <- QDL.findByDriverId personId >>= fromMaybeM (InvalidRequest "DL not found")
+  let validCOVs = getClassOfVehiclesFromDocumentVerificationConfig dlDocumentVerificationConfig.supportedVehicleClasses
+      classOfVehicles = DL.intersect validCOVs dlDetails.classOfVehicles
+  when (DL.null classOfVehicles && not (null validCOVs) && dlDocumentVerificationConfig.doStrictVerifcation) $ throwError (InvalidRequest "RC not approved as per DL")
   let checkPrefixOfRCNumber = null documentVerificationConfig.rcNumberPrefixList || prefixMatchedResult req.vehicleRegistrationCertNumber documentVerificationConfig.rcNumberPrefixList
   unless checkPrefixOfRCNumber $ throwError (InvalidRequest "RC number prefix is not valid")
   runRequestValidation validateDriverRCReq req
@@ -224,6 +231,11 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           bodyType = Nothing,
           status = Nothing
         }
+
+    getClassOfVehiclesFromDocumentVerificationConfig supportedVehicleClasses =
+      case supportedVehicleClasses of
+        ODC.DLValidClasses validCOVs -> validCOVs
+        ODC.RCValidClasses _ -> []
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Category -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow ()
 verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator = do
