@@ -18,7 +18,7 @@ module Lib.Payment.Storage.Queries.PaymentTransaction where
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (getCurrentTime)
+import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.PaymentOrder (PaymentOrder)
 import Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -56,6 +56,9 @@ updateMultiple transaction = do
 findByTxnUUID :: BeamFlow m r => Text -> m (Maybe PaymentTransaction)
 findByTxnUUID txnUUID = findOneWithKV [Se.Is BeamPT.txnUUID $ Se.Eq $ Just txnUUID]
 
+findByTxnId :: BeamFlow m r => Text -> m (Maybe PaymentTransaction)
+findByTxnId txnId = findOneWithKV [Se.Is BeamPT.txnId $ Se.Eq $ Just txnId]
+
 findById :: BeamFlow m r => Id PaymentTransaction -> m (Maybe PaymentTransaction)
 findById (Id id) = findOneWithKV [Se.Is BeamPT.id $ Se.Eq id]
 
@@ -79,6 +82,15 @@ findNewTransactionByOrderId (Id orderId) =
     (Just 1)
     Nothing
     <&> listToMaybe
+
+updateAmount :: BeamFlow m r => Id PaymentTransaction -> HighPrecMoney -> m ()
+updateAmount id amount = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPT.amount amount,
+      Se.Set BeamPT.updatedAt now
+    ]
+    [Se.Is BeamPT.id $ Se.Eq $ getId id]
 
 instance FromTType' BeamPT.PaymentTransaction PaymentTransaction where
   fromTType' BeamPT.PaymentTransactionT {..} = do

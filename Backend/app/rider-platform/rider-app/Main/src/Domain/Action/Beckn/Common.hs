@@ -242,7 +242,17 @@ rideAssignedReqHandler req = do
 
   whenJust req.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
     -- handle error flow properly
-    void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.riderId ride booking customerPaymentId paymentMethodId driverAccountId email
+    let createPaymentIntentReq =
+          Payment.CreatePaymentIntentReq
+            { amount = booking.estimatedFare.amount,
+              applicationFeeAmount = maybe 0.0 (.amount) booking.estimatedApplicationFee,
+              currency = booking.estimatedFare.currency,
+              customer = customerPaymentId,
+              paymentMethod = paymentMethodId,
+              receiptEmail = email,
+              driverAccountId
+            }
+    void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.riderId ride createPaymentIntentReq
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   let category = case booking.specialLocationTag of

@@ -126,13 +126,14 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
           paymentIntentId <- transaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId") -- should never happen
           mbClientSecret <- mapM decrypt existingOrder.clientAuthToken
           clientSecret <- mbClientSecret & fromMaybeM (InternalError "Client secret not found") -- should never happen
+          let newOrderAmount = existingOrder.amount + createPaymentIntentReq.amount
+          QOrder.updateAmountAndStatus existingOrder.id newOrderAmount paymentIntentId
+          let newTransactionAmount = transaction.amount + createPaymentIntentReq.amount
+          QTransaction.updateAmount transaction.id newTransactionAmount
           let paymentIntentStatus = Payment.caseToPaymentIntentStatus transaction.status
-          if createPaymentIntentReq.amount > transaction.amount
-            then do
-              updatePaymentIntentAmountCall paymentIntentId createPaymentIntentReq.amount createPaymentIntentReq.applicationFeeAmount
-              -- check if status will be updated in this
-              return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
-            else return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
+          updatePaymentIntentAmountCall paymentIntentId newTransactionAmount createPaymentIntentReq.applicationFeeAmount
+          -- check if status will be updated in this
+          return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
   where
     isInProgress = (`elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING])
 

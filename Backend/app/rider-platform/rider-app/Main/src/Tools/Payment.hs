@@ -98,8 +98,8 @@ updateAmountInPaymentIntent = runWithServiceConfig3 Payment.updateAmountInPaymen
 createSetupIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m CreateSetupIntentResp
 createSetupIntent = runWithServiceConfig1 Payment.createSetupIntent (.createSetupIntent)
 
-deleteCard :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> PaymentMethodId -> m ()
-deleteCard = runWithServiceConfig2 Payment.deleteCard (.deleteCard)
+deleteCard :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentMethodId -> m ()
+deleteCard = runWithServiceConfig1 Payment.deleteCard (.deleteCard)
 
 runWithServiceConfigAndServiceName ::
   ServiceFlow m r =>
