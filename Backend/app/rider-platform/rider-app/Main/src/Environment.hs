@@ -68,6 +68,7 @@ import System.Environment as SE
 import Tools.Metrics
 import Tools.Streaming.Kafka
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -138,7 +139,8 @@ data AppCfg = AppCfg
     superPositionConfig :: CF.SuperPositionConfig,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
-    isMetroTestTransaction :: Bool
+    isMetroTestTransaction :: Bool,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic, FromDhall)
 
@@ -218,7 +220,8 @@ data AppEnv = AppEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
-    isMetroTestTransaction :: Bool
+    isMetroTestTransaction :: Bool,
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
   }
   deriving (Generic)
 
