@@ -22,7 +22,6 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <uses-permission-sdk-23 android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission-sdk-23 android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
