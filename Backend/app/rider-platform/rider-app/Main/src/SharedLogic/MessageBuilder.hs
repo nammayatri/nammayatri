@@ -46,6 +46,7 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import Tools.Error
+import qualified UrlShortner.Common as UrlShortner
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
@@ -181,16 +182,27 @@ data BuildFRFSTicketBookedMessageReq = BuildFRFSTicketBookedMessageReq
   }
   deriving (Generic, Show)
 
-buildFRFSTicketBookedMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DPO.PartnerOrganization -> BuildFRFSTicketBookedMessageReq -> m (Maybe Text)
+buildFRFSTicketBookedMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DPO.PartnerOrganization -> BuildFRFSTicketBookedMessageReq -> m (Maybe Text)
 buildFRFSTicketBookedMessage pOrgId req = do
   smsPOCfg <- do
     pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.TICKET_SMS >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.TICKET_SMS)
     DPOC.getTicketSMSConfig pOrgCfg.config
 
-  pure $
-    smsPOCfg.template <&> \msg ->
+  forM smsPOCfg.template $
+    \msg -> do
       let ticketPlural = bool "tickets are" "ticket is" $ req.countOfTickets == 1
-          url = smsPOCfg.publicUrl & T.replace (templateText "FRFS_BOOKING_ID") req.bookingId.getId
-       in msg
-            & T.replace (templateText "TICKET_PLURAL") ticketPlural
-            & T.replace (templateText "URL") url
+          baseUrl = smsPOCfg.publicUrl & T.replace (templateText "FRFS_BOOKING_ID") req.bookingId.getId
+          shortUrlReq =
+            UrlShortner.GenerateShortUrlReq
+              { baseUrl,
+                customShortCode = Nothing,
+                shortCodeLength = Nothing,
+                expiryInHours = Nothing
+              }
+      res <- UrlShortner.generateShortUrl shortUrlReq
+      let url = res.shortUrl
+      logDebug $ "Generated short url: " <> url
+      pure $
+        msg
+          & T.replace (templateText "TICKET_PLURAL") ticketPlural
+          & T.replace (templateText "URL") url

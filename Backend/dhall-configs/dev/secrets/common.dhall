@@ -20,4 +20,5 @@ in  { smsUserName = "xxxxxxx"
     , googleTranslateKey = topSecret.googleTranslateKey
     , slackToken = "xxxxxxx"
     , InfoBIPConfig
+    , urlShortnerApiKey = "some-internal-api-key"
     }
