@@ -202,7 +202,20 @@ screen initialState =
   , view
   , name: "HomeScreen"
   , globalEvents:
-      [ ( \push -> do
+       [ (\push -> do
+          if initialState.props.currentStage == HomeScreen 
+            then do
+              let currLocation = runFn3 getAnyFromWindow "current_location" Nothing Just
+                  _ = removeFromWindow "current_location"
+              case currLocation of
+                Just loc -> push $ UpdateCurrentLocation loc.lat loc.lon
+                Nothing -> do
+                  if (initialState.props.sourceLat == 0.0 && initialState.props.sourceLong == 0.0) 
+                    then startTimer initialState.props.shimmerViewTimer "shimmerTimer" "1" push ShimmerTimer
+                    else pure unit
+            else pure unit
+          pure $ void $ pure $ clearTimerWithId "shimmerTimer")
+      , ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "." 
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
@@ -273,11 +286,6 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen pollingCount 3000.0 push initialState
               HomeScreen -> do
-                let currLocation = runFn3 getAnyFromWindow "current_location" Nothing Just
-                    _ = removeFromWindow "current_location"
-                case currLocation of
-                  Just loc -> push $ UpdateCurrentLocation loc.lat loc.lon
-                  Nothing -> pure unit
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
@@ -402,6 +410,7 @@ screen initialState =
         (\push -> do
             when (Arr.elem initialState.props.currentStage [RideStarted, RideAccepted]) $ push UpdateRateCardCache
             pure (pure unit))
+          
       ]
   , eval:
       \action state -> do

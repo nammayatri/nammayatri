@@ -948,6 +948,7 @@ data Action = NoAction
             | UpdateNoInternet
             | InternetCallBackCustomer String
             | MarkerLabelOnClick String 
+            | ShimmerTimer Int String String
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -2958,7 +2959,9 @@ eval (UpdateLocAndLatLong lat lng) state = do
     if os == "IOS" && state.props.currentStage == HomeScreen then
       void $ showMarkerOnMap (getCurrentLocationMarker $ getValueToLocalStore VERSION_NAME) 9.9 9.9
       else pure unit
-    pure NoAction
+    pure if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 
+          then UpdateCurrentLocation lat lng
+          else NoAction
   ]
 
 eval GoToEditProfile state = do
@@ -3490,6 +3493,12 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
     updateCurrentLocation state lat lng
   else
     continue state
+
+eval (ShimmerTimer seconds status timerID) state = do
+  if status == "EXPIRED" then do
+    void $ pure $ clearTimerWithId timerID
+    update state{props{shimmerViewTimerId = "", showShimmer = false}}
+  else update state{props{shimmerViewTimer = seconds, shimmerViewTimerId = timerID}}
 
 eval _ state = update state
 

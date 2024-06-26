@@ -931,6 +931,8 @@ type HomeScreenStateProps =
   , showScheduledRideExistsPopUp :: Boolean
   , isOffline :: Boolean
   , hasEstimateBackpoint :: Boolean
+  , shimmerViewTimer :: Int
+  , shimmerViewTimerId :: String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

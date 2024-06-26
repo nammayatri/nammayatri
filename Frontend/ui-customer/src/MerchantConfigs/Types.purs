@@ -339,7 +339,8 @@ type HomeScreen = {
   whereToButton :: WhereToButton,
   pickupLocationTextColor :: String,
   isServiceablePopupFullScreen :: Boolean,
-  showAdditionalServicesNew :: Boolean
+  showAdditionalServicesNew :: Boolean,
+  shimmerTimer :: Int
 }
 
 type HomeScreenHeader = {
