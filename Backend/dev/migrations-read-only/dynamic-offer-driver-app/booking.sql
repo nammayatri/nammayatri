@@ -71,3 +71,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN distance_unit character va
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_air_conditioned boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_dashboard_request boolean ;

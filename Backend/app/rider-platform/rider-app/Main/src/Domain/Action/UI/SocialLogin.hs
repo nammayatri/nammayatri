@@ -101,7 +101,8 @@ postSocialLogin req = do
           gender = Nothing,
           otpChannel = Nothing,
           registrationLat = req.registrationLat,
-          registrationLon = req.registrationLon
+          registrationLon = req.registrationLon,
+          enableOtpLessRide = req.enableOtpLessRide
         }
 
 makeSession ::

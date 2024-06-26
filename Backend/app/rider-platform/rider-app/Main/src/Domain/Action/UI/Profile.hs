@@ -130,7 +130,8 @@ data UpdateProfileReq = UpdateProfileReq
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     disability :: Maybe Disability,
-    hasDisability :: Maybe Bool
+    hasDisability :: Maybe Bool,
+    enableOtpLessRide :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -254,6 +255,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       mbClientConfigVersion
       (getDeviceFromText mbDevice)
       deploymentVersion.getDeploymentVersion
+      req.enableOtpLessRide
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess

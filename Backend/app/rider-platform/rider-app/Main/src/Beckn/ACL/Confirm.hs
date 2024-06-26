@@ -203,6 +203,17 @@ tfCustomer res =
                     },
               tagDisplay = Just False,
               tagValue = Just $ show res.enableFrequentLocationUpdates
+            },
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.ENABLE_OTP_LESS_RIDE,
+                      descriptorName = Just "Enable OTP Less Ride",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show res.enableOtpLessRide
             }
         ]
 
