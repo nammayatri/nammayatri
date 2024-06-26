@@ -252,7 +252,11 @@ screen initialState =
                 else if estimatesPolling.shouldPush then do
                      void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
                 else pure unit
-
+              TryAgain -> do
+                logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
+                estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
+                when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
+                pure unit
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   void $ pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
@@ -367,7 +371,7 @@ screen initialState =
               GoToConfirmLocation -> do
                 void $ pure $ enableMyLocation true
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                void $ storeCallBackLocateOnMap push UpdatePickupLocation
+                void $ storeCallBackLocateOnMap push LocateOnMapCallBack
                 void $ push $ GoToConfirmingLocationStage
               ConfirmingEditDestinationLoc -> do
                 when ((getValueToLocalStore FINDING_EDIT_LOC_RESULTS) /= "true") $ do

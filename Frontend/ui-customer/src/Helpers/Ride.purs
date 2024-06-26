@@ -35,7 +35,7 @@ import Helpers.TipConfig (setTipViewData)
 import Data.Lens ((^.))
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Accessor
-import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..))
+import Screens.Types (Stage(..), PopupType(..), FlowStatusData(..))
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -49,6 +49,7 @@ import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Screens.Types (FareProductType(..)) as FPT
 import Resources.Constants (getFareFromArray)
 import Data.Array as DA
+import Screens.Types as ST
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -76,6 +77,7 @@ checkRideStatus rideAssigned = do
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
+                    -- , currentSearchResultType = getSearchResultTypeFromFareProductType fareProductType
                     , fareProductType = fareProductType
                     , vehicleVariant = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._vehicleVariant
                     , startedAtUTC = fromMaybe "" resp.rideStartTime

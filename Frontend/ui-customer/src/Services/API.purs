@@ -18,7 +18,6 @@ module Services.API where
 import Data.Maybe
 
 import Control.Alt ((<|>))
-import Control.Monad.Except (runExcept)
 import Common.Types.App (Version(..), FeedbackAnswer)
 import Common.Types.App as CTA
 import Data.Either (Either(..))
@@ -27,7 +26,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Foreign (ForeignError(..), fail)
+import Foreign (ForeignError(..), fail, unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
@@ -35,7 +34,7 @@ import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPay
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
 import Foreign.Index (readProp)
-import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExcept, except)
 import Data.Either (Either(..))
 import Foreign.Generic.EnumEncoding (GenericEnumOptions, genericDecodeEnum, genericEncodeEnum)
 import Data.Eq.Generic (genericEq)
@@ -672,7 +671,9 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   agencyCompletedRidesCount :: Maybe Int,
   serviceTierName :: Maybe String,
   serviceTierShortDesc :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  specialLocationTag :: Maybe String,
+  isValueAddNP :: Maybe Boolean
 }
 
 newtype QuoteAPIDetails = QuoteAPIDetails {
@@ -1057,6 +1058,12 @@ newtype RideBookingAPIDetails = RideBookingAPIDetails {
   fareProductType :: String
 }
 
+data FareProductType =  ONE_WAY_FARE_PRODUCT
+                      | INTER_CITY_FARE_PRODUCT
+                      | RENTAL_FARE_PRODUCT
+                      | DRIVER_OFFER_FARE_PRODUCT
+                      | OneWaySpecialZoneAPIDetails_FARE_PRODUCT
+
 newtype RideBookingDetails = RideBookingDetails {
   toLocation :: Maybe BookingLocationAPIEntity,
   estimatedDistance :: Maybe Int,
@@ -1117,6 +1124,32 @@ instance standardEncodeRideBookingAPIDetails :: StandardEncode RideBookingAPIDet
 instance showRideBookingAPIDetails :: Show RideBookingAPIDetails where show = genericShow
 instance decodeRideBookingAPIDetails :: Decode RideBookingAPIDetails where decode = defaultDecode
 instance encodeRideBookingAPIDetails  :: Encode RideBookingAPIDetails where encode = defaultEncode
+
+derive instance genericFareProductType :: Generic FareProductType _
+instance showFareProductType :: Show FareProductType where show = genericShow
+instance decodeFareProductType :: Decode FareProductType
+  where
+    decode body = case unsafeFromForeign body of
+                    "ONE_WAY"                     -> except $ Right ONE_WAY_FARE_PRODUCT
+                    "INTER_CITY"                  -> except $ Right INTER_CITY_FARE_PRODUCT
+                    "RENTAL"                      -> except $ Right RENTAL_FARE_PRODUCT
+                    "DRIVER_OFFER"                -> except $ Right DRIVER_OFFER_FARE_PRODUCT
+                    "OneWaySpecialZoneAPIDetails" -> except $ Right OneWaySpecialZoneAPIDetails_FARE_PRODUCT
+                    _                             -> fail $ ForeignError "Unknown response"
+instance encodeFareProductType :: Encode FareProductType
+  where
+    encode ONE_WAY_FARE_PRODUCT = encode "ONE_WAY"
+    encode INTER_CITY_FARE_PRODUCT = encode "INTER_CITY"
+    encode RENTAL_FARE_PRODUCT = encode "RENTAL"
+    encode DRIVER_OFFER_FARE_PRODUCT = encode "DRIVER_OFFER"
+    encode OneWaySpecialZoneAPIDetails_FARE_PRODUCT = encode "OneWaySpecialZoneAPIDetails"
+instance standardEncodeFareProductType :: StandardEncode FareProductType
+  where
+    standardEncode ONE_WAY_FARE_PRODUCT = standardEncode "ONE_WAY"
+    standardEncode INTER_CITY_FARE_PRODUCT = standardEncode "INTER_CITY"
+    standardEncode RENTAL_FARE_PRODUCT = standardEncode "RENTAL"
+    standardEncode DRIVER_OFFER_FARE_PRODUCT = standardEncode "DRIVER_OFFER"
+    standardEncode OneWaySpecialZoneAPIDetails_FARE_PRODUCT = standardEncode "OneWaySpecialZoneAPIDetails"
 
 derive instance genericRideBookingDetails :: Generic RideBookingDetails _
 derive instance newtypeRideBookingDetails :: Newtype RideBookingDetails _

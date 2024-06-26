@@ -10,6 +10,7 @@ import Foreign.Object (empty)
 import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..))
 import Common.Types.App as CT
 import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types as ST
 
 initData :: FollowRideScreenState
 initData =
@@ -172,6 +173,7 @@ mockDriverInfo =
   , driverName: "Test Driver"
   , eta: Nothing
   , vehicleDetails: ""
+  , currentSearchResultType: ST.ESTIMATES
   , registrationNumber: "XXXXXXXXXX"
   , rating: 5.0
   , startedAt: ""

@@ -2,7 +2,7 @@ module Components.ChooseVehicle.View where
 
 import Common.Types.App
 
-import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
+import Components.ChooseVehicle.Controller (Action(..), Config, SearchResultType(..), FareProductType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/), (>), (-), (/=), (<), discard, void)
@@ -31,7 +31,7 @@ import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
-  let
+  let 
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
@@ -69,7 +69,7 @@ view push config =
             [ width MATCH_PARENT
           , height WRAP_CONTENT
           , cornerRadius 6.0
-          , id $ EHC.getNewIDWithTag config.id
+          , id $ EHC.getNewIDWithTag $ config.id <> show config.index
           , margin $ config.layoutMargin
           , padding padding'
           , orientation VERTICAL
@@ -124,7 +124,7 @@ view push config =
           , accessibility DISABLE
           , onClick push $ const $ case config.showInfo && isActiveIndex of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo then ShowRateCard config else NoAction config                        
+                                    true  -> if config.showInfo && config.searchResultType == ESTIMATES then ShowRateCard config else NoAction config                        
           ][]
        ]
     ]
@@ -296,7 +296,7 @@ priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Ef
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY"
+      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType == ESTIMATES
       isBookAny = config.vehicleVariant == "BOOK_ANY"
   in
   linearLayout

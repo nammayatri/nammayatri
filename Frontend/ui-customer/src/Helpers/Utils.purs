@@ -98,6 +98,7 @@ import Data.Argonaut.Decode.Class as AD
 import Data.Argonaut.Decode.Parser as ADP
 import Data.Argonaut.Core as AC
 import Data.Argonaut.Encode.Class as AE
+import Screens.Types as ST
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -1125,3 +1126,12 @@ getLanguageBasedCityName cityName =
     Noida -> getString NOIDA
     Gurugram -> getString GURUGRAM
     AnyCity -> ""
+
+getSearchResultTypeFromFareProductType :: ST.FareProductType -> ST.SearchResultType
+getSearchResultTypeFromFareProductType fareProductType =
+  case fareProductType of
+    ST.RENTAL -> ST.QUOTES ST.RENTAL
+    ST.INTER_CITY -> ST.QUOTES ST.INTER_CITY
+    ST.ONE_WAY -> ST.ESTIMATES
+    ST.ONE_WAY_SPECIAL_ZONE -> ST.QUOTES ST.ONE_WAY_SPECIAL_ZONE
+    ST.DRIVER_OFFER -> ST.QUOTES ST.DRIVER_OFFER

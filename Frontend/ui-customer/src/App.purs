@@ -229,7 +229,6 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | FCM_NOTIFICATION String HomeScreenState
                         | SEARCH_LOCATION String HomeScreenState
                         | UPDATE_LOCATION_NAME HomeScreenState Number Number
-                        | UPDATE_PICKUP_NAME HomeScreenState Number Number
                         | GET_LOCATION_NAME HomeScreenState
                         | GO_TO_FAVOURITES_
                         | SUBMIT_RATING HomeScreenState
@@ -285,6 +284,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GOTO_PICKUP_INSTRUCTIONS HomeScreenState Number Number String String
                         | EDIT_LOCATION_DEST_SELECTED
                         | EDIT_DEST_BACKPRESSED
+                        | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

@@ -98,7 +98,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts, getFareProductType)
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts, getFareProductType, getEstimateIdFromSelectedServices)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
@@ -1218,6 +1218,58 @@ homeScreenFlow = do
       else do
         void $ pure $ toast $ getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN
         findEstimates state
+    SELECT_ESTIMATE_AND_QUOTES state -> do
+          let selectedEstimateOrQuote = state.data.selectedEstimatesObject
+          setValueToLocalStore AUTO_SELECTING "false"
+          setValueToLocalStore FINDING_QUOTES_POLLING "false"
+          setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+
+          if state.data.iopState.showMultiProvider then do 
+            updateLocalStage ProviderSelection
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { estimateId = selectedEstimateOrQuote.id }
+                                                                                , data { iopState { providerSelectionStage = true }
+                                                                                } })
+          else do
+            setValueToLocalStore FARE_ESTIMATE_DATA selectedEstimateOrQuote.price
+            setValueToLocalStore SELECTED_VARIANT selectedEstimateOrQuote.vehicleVariant
+            case selectedEstimateOrQuote.searchResultType of
+              ChooseVehicle.ESTIMATES -> do
+                let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
+                if valid then do
+                  void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled)) selectedEstimateOrQuote.id 
+                  void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+                  setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes
+                                                                                            , estimateId = selectedEstimateOrQuote.id
+                                                                                            , isPopUp = NoPopUp
+                                                                                            , searchExpire = (getSearchExpiryTime false) }})
+                                                                                    -- , data { currentSearchResultType = selectedEstimateOrQuote.searchResultType } })
+                else do
+                  void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
+                  findEstimates state
+              ChooseVehicle.QUOTES _ -> do
+                void $ pure $ enableMyLocation false
+                updateLocalStage ConfirmingRide
+                response  <- lift $ lift $ Remote.rideConfirm selectedEstimateOrQuote.id
+                case response of
+                  Right (ConfirmRes resp) -> do
+                    let bookingId = resp.bookingId
+                    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{ currentStage = ConfirmingRide
+                                                                                            , bookingId = bookingId
+                                                                                            , isPopUp = NoPopUp }})
+                                                                                      -- , data { fareProductType =currentSearchResultType = selectedEstimateOrQuote.searchResultType } })
+                  Left err  -> do
+                    if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") then
+                      pure $ toast (getString STR.ERROR_OCCURED_TRY_AGAIN) 
+                    else 
+                      pure unit
+                    void $ setValueToLocalStore AUTO_SELECTING "false"
+                    updateLocalStage QuoteList
+                    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{  currentStage = QuoteList
+                                                                                              , selectedQuote = Nothing
+                                                                                              , expiredQuotes = snoc state.props.expiredQuotes selectedEstimateOrQuote.id }
+                                                                                      , data { quoteListModelState = [] } })
+          homeScreenFlow
     SELECT_ESTIMATE state -> do
         logStatus "setting_price" ""
         void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -1696,71 +1748,6 @@ homeScreenFlow = do
               )
       let
         _ = spy "UPDATE_LOCATION_NAME" "UPDATE_LOCATION_NAME"
-      homeScreenFlow
-    UPDATE_PICKUP_NAME state lat lon -> do
-      (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq lat lon) ORIGIN
-      let
-        srcServiceable = sourceServiceabilityResp.serviceable
-
-        (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
-
-        pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
-
-        cityName = getCityNameFromCode sourceServiceabilityResp.city
-
-        gateAddress =
-          if DS.null state.props.defaultPickUpPoint then
-            HomeScreenData.dummyLocation
-          else
-            fromMaybe HomeScreenData.dummyLocation (Arr.find (\pickupPoint -> pickupPoint.place == state.props.defaultPickUpPoint) pickUpPoints)
-      setValueToLocalStore CUSTOMER_LOCATION $ show cityName
-      checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
-      let
-        distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
-
-        isMoreThan20Meters = distanceBetweenLatLong > (state.data.config.mapConfig.locateOnMapConfig.apiTriggerRadius / 1000.0)
-      modifyScreenState
-        $ HomeScreenStateType
-            ( \homeScreen ->
-                homeScreen
-                  { props
-                    { sourceLat = lat
-                    , sourceLong = lon
-                    , confirmLocationCategory = getZoneType srcSpecialLocation.category
-                    , city = cityName
-                    }
-                  }
-            )
-      if isMoreThan20Meters || isJust gateAddress.address then do
-        fullAddress <- getPlaceName lat lon gateAddress true
-        case fullAddress of
-          Just (PlaceName address) -> do
-            void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_cpu_onDrag"
-            modifyScreenState
-              $ HomeScreenStateType
-                  ( \homeScreen ->
-                      homeScreen
-                        { data
-                          { source = address.formattedAddress
-                          , sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon
-                          }
-                        }
-                  )
-          Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-      else do
-        void $ liftFlowBT $ logEvent logField_ "ny_user_placename_cache_cpu_onDrag"
-        modifyScreenState
-          $ HomeScreenStateType
-              ( \homeScreen ->
-                  homeScreen
-                    { data
-                      { source = state.props.locateOnMapLocation.source
-                      , sourceAddress = state.props.locateOnMapLocation.sourceAddress
-                      }
-                    }
-              )
-      let
-        _ = spy "UPDATE_PICKUP_LOCATION_NAME" "UPDATE_PICKUP_LOCATION_NAME"
       homeScreenFlow
     GO_TO_FAVOURITES_ -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_addresses"
@@ -2517,6 +2504,93 @@ rideSearchFlow flowType = do
       true -> do
         let
           currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
+  -- let finalState = homeScreenModifiedState.homeScreen -- bothLocationChangedState{props{isSrcServiceable =homeScreenModifiedState.homeScreen.props.isSrcServiceable, isDestServiceable = homeScreenModifiedState.homeScreen.props.isDestServiceable, isRideServiceable = homeScreenModifiedState.homeScreen.props.isRideServiceable }}
+  -- if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.source /= "") && (finalState.data.destination /= "")
+  --   then do
+  --     let searchWithoutConfirmPickup = any (_ == finalState.props.rideSearchProps.sourceSelectType) [ST.MAP, ST.RETRY_SEARCH, ST.REPEAT_RIDE] || (finalState.props.rideSearchProps.sourceSelectType == ST.FAVOURITE && not finalState.props.isSpecialZone)
+  --     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{flowWithoutOffers = flowWithoutOffers WithoutOffers}})
+  --     case searchWithoutConfirmPickup of
+  --       false -> do
+  --         pure $ removeAllPolylines ""
+  --         liftFlowBT $ setMapPadding 0 0 0 0
+  --         if finalState.data.source == (getString STR.CURRENT_LOCATION) then void $ pure $ currentPosition "" else pure unit
+  --         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = GoToConfirmLocation, isSource = Just true}})
+  --         void $ pure $ updateLocalStage GoToConfirmLocation
+  --       true -> do
+  --         let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
+  --             currentDate =  getCurrentDate ""
+  --         void $ pure $ setCleverTapUserProp [{key : "Latest Search From", value : unsafeToForeign ("lat: " <> (show finalState.props.sourceLat) <> " long: " <> (show finalState.props.sourceLong))},
+  --                                             {key : "Latest Search", value : unsafeToForeign (currentDate <> " " <> currentTime)}]
+  --         let rideSearchReq = Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone
+  --         (SearchRes rideSearchRes) <- Remote.rideSearchBT rideSearchReq
+  --         void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
+  --         void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
+  --         void $ liftFlowBT $ setFlowStatusData 
+  --           ( FlowStatusData 
+  --             { source : 
+  --               { lat : finalState.props.sourceLat
+  --               , lng : finalState.props.sourceLong
+  --               , place : finalState.data.source
+  --               , address : Nothing
+  --               , city : getCityCodeFromCity finalState.props.city
+  --               , isSpecialPickUp : Just false
+  --               }
+  --             , destination : 
+  --               { lat : finalState.props.destinationLat
+  --               , lng : finalState.props.destinationLong
+  --               , place : finalState.data.destination
+  --               , address : Nothing
+  --               , city : Nothing
+  --               , isSpecialPickUp : Just false
+  --               }
+  --             , sourceAddress : finalState.data.sourceAddress
+  --             , destinationAddress : finalState.data.destinationAddress 
+  --             , sourceLabelIcon : Just $ zoneLabelIcon finalState.props.zoneType.sourceTag
+  --             , destLabelIcon : Just $ zoneLabelIcon finalState.props.zoneType.destinationTag
+  --             , sourceGeoJson : finalState.props.locateOnMapProps.sourceGeoJson
+  --             , sourceGates : finalState.props.locateOnMapProps.sourceGates
+  --             }
+  --           )
+  --         case finalState.props.currentStage of
+  --           TryAgain -> do
+  --             when (finalState.props.customerTip.enableTips) $ do
+  --               cancelEstimate finalState.props.estimateId
+  --             void $ pure $ updateLocalStage TryAgain
+  --             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId, currentStage = TryAgain, rideRequestFlow = true}, data{nearByDrivers = Nothing}})
+  --           _        -> do
+  --             let sourceSpecialTagIcon = zoneLabelIcon finalState.props.zoneType.sourceTag
+  --                 destSpecialTagIcon = zoneLabelIcon finalState.props.zoneType.destinationTag
+  --                 markers = Remote.normalRoute ""
+  --                 sourceAddress = if finalState.props.isSpecialZone && not (DS.null finalState.props.defaultPickUpPoint)
+  --                                   then finalState.props.defaultPickUpPoint
+  --                                   else finalState.data.source
+  --                 srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker, primaryText = sourceAddress, secondaryText = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName }
+  --                 destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = finalState.data.destination }
+  --             routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) 
+  --             case rideSearchRes.routeInfo of
+  --               Just (Route response) -> do
+  --                 let distance = if response.distance < 1000 then toStringJSON(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
+  --                     duration = (show (response.duration / 60)) <> " min"
+  --                     Snapped points = response.points
+  --                 case head points, last points of
+  --                   Just (LatLong source), Just (LatLong dest) -> do
+  --                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : finalState.data.source, address : Nothing, city : Nothing, isSpecialPickUp : Just false }, destination : { lat : dest.lat, lng : dest.lon, place : finalState.data.destination, address : Nothing, city : Nothing, isSpecialPickUp : Just false } }) } })
+  --                   _ , _ -> pure unit
+  --                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }})
+  --                 let distanceBtwCurrentAndSource = getDistanceBwCordinates finalState.props.sourceLat finalState.props.sourceLong finalState.props.currentLocation.lat finalState.props.currentLocation.lng
+  --                     isDistMoreThanThreshold = finalState.props.currentLocation.lat /= 0.0 && finalState.props.currentLocation.lng /= 0.0 && (distanceBtwCurrentAndSource > finalState.data.config.mapConfig.locateOnMapConfig.pickUpToSourceThreshold) && flowType == "NORMAL_FLOW"
+  --                 if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000 )then do
+  --                   void $ pure $ updateLocalStage DistanceOutsideLimits
+  --                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
+  --                   else if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
+  --                     let currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
+  --                     void $ pure $ updateLocalStage currentStage
+  --                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = currentStage ,rideRequestFlow = true, isSearchLocation = SearchLocation, isShorterTrip = response.distance < 500 , distance = response.distance, findingQuotesProgress = 0.0}})
+  --                   else do
+  --                     if flowType == "REPEAT_RIDE_FLOW" then liftFlowBT $ logEventWithParams logField_ "ny_user_repeat_ride_flow" "searchId" rideSearchRes.searchId else pure unit
+  --                     void $ pure $ updateLocalStage FindingEstimate
+  --                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isRepeatRide = (flowType == "REPEAT_RIDE_FLOW"), searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, isShorterTrip = false}, data {source = finalState.data.source, sourceAddress = finalState.data.sourceAddress, nearByDrivers = Nothing}})
+  --                 void $ lift $ lift $ toggleLoader false
 
           currentDate = getCurrentDate ""
         void $ pure
@@ -5697,7 +5771,7 @@ updateInvalidBookingPopUpConfig maybeInvalidBookingDetail = case maybeInvalidBoo
     modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData { data { invalidBookingId = Just invalidBookingId, invalidBookingPopUpConfig = Just $ getInvalidBookingPopUpConfig invalidBookingDetails $ RideBookingRes resp }, props { showScheduledRideExistsPopUp = true } })
   Nothing -> pure unit
   where
-  textDetailsForInvalidBookingPopUp :: FareProductType -> BookingLocationAPIEntity -> String
+  textDetailsForInvalidBookingPopUp :: ST.FareProductType -> BookingLocationAPIEntity -> String
   textDetailsForInvalidBookingPopUp fareProductType (BookingLocationAPIEntity address) = do
     let
       door = fromMaybe "" address.door

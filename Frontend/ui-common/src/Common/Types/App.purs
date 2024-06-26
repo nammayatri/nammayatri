@@ -639,3 +639,19 @@ type RateCard =
     waitingTimeInfo :: WaitingTimeInfo,
     serviceTierName :: Maybe String
   }
+
+-- data SearchResultType = QUOTES FareProductType | ESTIMATES
+
+-- derive instance genericSearchResultType :: Generic SearchResultType _
+-- instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
+-- instance showSearchResultType :: Show SearchResultType where show = genericShow
+
+-- data FareProductType =  ONE_WAY
+--                       | INTER_CITY
+--                       | RENTAL
+--                       | DRIVER_OFFER
+--                       | OneWaySpecialZoneAPIDetails
+
+-- derive instance genericFareProductType :: Generic FareProductType _
+-- instance showFareProductType :: Show FareProductType where show = genericShow
+-- instance eqFareProductType :: Eq FareProductType where eq = genericEq
