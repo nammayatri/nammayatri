@@ -22,58 +22,11 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
 -- Extra code goes here --
 data FlowStatus
   = IDLE
-  | SEARCHING
-      { requestId :: Id DSR.SearchRequest,
-        validTill :: UTCTime
-      }
-  | GOT_ESTIMATE
-      { requestId :: Id DSR.SearchRequest,
-        validTill :: UTCTime
-      }
   | WAITING_FOR_DRIVER_OFFERS
       { estimateId :: Id DE.Estimate,
         otherSelectedEstimates :: Maybe [Id DE.Estimate],
         validTill :: UTCTime,
         providerId :: Maybe Text
-      }
-  | DRIVER_OFFERED_QUOTE
-      { estimateId :: Id DE.Estimate,
-        validTill :: UTCTime,
-        providerId :: Maybe Text
-      }
-  | WAITING_FOR_DRIVER_ASSIGNMENT
-      { bookingId :: Id DB.Booking,
-        validTill :: UTCTime,
-        fareProductType :: Maybe DFPT.FareProductType
-      }
-  | RIDE_ASSIGNED -- deprecated status, kept it for backward compatibility
-      { rideId :: Id DRide.Ride
-      }
-  | RIDE_PICKUP
-      { rideId :: Id DRide.Ride,
-        bookingId :: Id DB.Booking,
-        trackingUrl :: Maybe BaseUrl,
-        otp :: Text,
-        vehicleNumber :: Text,
-        fromLocation :: Maps.LatLong,
-        driverLocation :: Maybe Maps.LatLong
-      }
-  | RIDE_STARTED
-      { rideId :: Id DRide.Ride,
-        bookingId :: Id DB.Booking,
-        trackingUrl :: Maybe BaseUrl,
-        driverLocation :: Maybe Maps.LatLong
-      }
-  | PENDING_RATING
-      { rideId :: Id DRide.Ride,
-        mbBookingId :: Maybe (Id DB.Booking)
-      }
-  | DRIVER_ARRIVED
-      { rideId :: Id DRide.Ride,
-        bookingId :: Id DB.Booking,
-        driverLocation :: Maybe Maps.LatLong,
-        trackingUrl :: Maybe BaseUrl,
-        driverArrivalTime :: Maybe UTCTime
       }
   deriving (Show, Eq, Ord, Generic)
 

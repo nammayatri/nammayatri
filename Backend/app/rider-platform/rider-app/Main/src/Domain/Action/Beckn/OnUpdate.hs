@@ -76,7 +76,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
-import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics)
@@ -378,7 +377,6 @@ onUpdate = \case
     void $ QRB.createBooking newBooking
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = searchReq.validTill, fareProductType = Just $ STB.getFareProductType booking.bookingDetails}
     QPFS.clearCache searchReq.riderId
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId

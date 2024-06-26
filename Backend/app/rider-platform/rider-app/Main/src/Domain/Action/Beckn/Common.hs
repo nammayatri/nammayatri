@@ -37,7 +37,6 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Maps as Maps
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -265,7 +264,6 @@ rideAssignedReqHandler req = do
   QFareBreakup.createMany fareBreakups
   QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
   QRide.createRide ride
-  QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   unless isInitiatedByCronJob $ do
     Notify.notifyOnRideAssigned booking ride
@@ -369,7 +367,6 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
-  _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.START_TIME
@@ -448,7 +445,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   _ <- QRide.updateMultiple updRide.id updRide
   _ <- QFareBreakup.createMany breakups
-  void $ QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id, mbBookingId = Just booking.id}
   QPFS.clearCache booking.riderId
 
   -- uncomment for update api test; booking.paymentMethodId should be present
@@ -521,7 +517,7 @@ driverArrivedReqHandler ::
 driverArrivedReqHandler ValidatedDriverArrivedReq {..} = do
   unless (isJust ride.driverArrivalTime) $ do
     void $ QRide.updateDriverArrival ride.id arrivalTime
-    void $ QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = arrivalTime}
+    QPFS.clearCache booking.riderId
 
 -- TODO (Rupak): this is being called by BPP if cancellation initiated by driver.
 --  We can make it common as `onCancel` function in  Domain.Action.Beckn.OnCancel is also doing the same thing
