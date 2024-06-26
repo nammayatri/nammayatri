@@ -35,6 +35,8 @@ initData =
       , fromNavBar: true
       , optionsVisibility: true
       , fromBanner : false
+      , refreshLoader : false
+      , scrollEnable : false
       }
   , data:
       { selectedItem: dummyIndividualCard
