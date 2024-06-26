@@ -33,11 +33,13 @@ data FlowStatus
   | WAITING_FOR_DRIVER_OFFERS
       { estimateId :: Id DE.Estimate,
         otherSelectedEstimates :: Maybe [Id DE.Estimate],
-        validTill :: UTCTime
+        validTill :: UTCTime,
+        providerId :: Maybe Text
       }
   | DRIVER_OFFERED_QUOTE
       { estimateId :: Id DE.Estimate,
-        validTill :: UTCTime
+        validTill :: UTCTime,
+        providerId :: Maybe Text
       }
   | WAITING_FOR_DRIVER_ASSIGNMENT
       { bookingId :: Id DB.Booking,

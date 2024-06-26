@@ -171,7 +171,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
-  QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill}
+  QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
   QDOffer.updateStatus DDO.INACTIVE estimateId
   QSearchRequest.updateAdvancedBookingEnabled isAdvancedBookingEnabled searchRequestId
