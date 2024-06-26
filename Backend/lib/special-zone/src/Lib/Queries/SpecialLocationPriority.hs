@@ -19,21 +19,6 @@ import Kernel.Storage.Esqueleto as Esq
 import Lib.Tabular.SpecialLocationPriority
 import qualified Lib.Types.SpecialLocationPriority as SpecialLocationPriorityD
 
-findAllByMerchantIdAndCategory ::
-  Transactionable m =>
-  Text ->
-  Text ->
-  m (Maybe SpecialLocationPriorityD.SpecialLocationPriority)
-findAllByMerchantIdAndCategory merchantId category = do
-  specialLocationPriorityRes <-
-    Esq.findAll $ do
-      specialLocationPriority <- from $ table @SpecialLocationPriorityT
-      where_ $
-        specialLocationPriority ^. SpecialLocationPriorityMerchantId ==. val merchantId
-          &&. specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
-      return specialLocationPriority
-  return $ listToMaybe specialLocationPriorityRes
-
 findByMerchantOpCityIdAndCategory ::
   Transactionable m =>
   Text ->
