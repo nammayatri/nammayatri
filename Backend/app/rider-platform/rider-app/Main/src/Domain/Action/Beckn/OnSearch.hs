@@ -39,7 +39,6 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest
@@ -243,7 +242,6 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       Redis.withLockRedis lockKey 5 $ do
         QEstimate.createMany estimates
         QQuote.createMany quotes
-        QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}
         QPFS.clearCache searchRequest.riderId
   where
     {- Author: Hemant Mangla

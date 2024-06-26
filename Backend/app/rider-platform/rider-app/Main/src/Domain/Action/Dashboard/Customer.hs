@@ -67,7 +67,6 @@ deleteCustomer merchantShortId opCity customerId = do
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
   _ <- QP.deleteById personId
   QPFS.clearCache personId
-  _ <- QPFS.deleteByPersonId personId
   _ <- QSRL.deleteAllByRiderId personId
   pure Success
 
