@@ -139,6 +139,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           driverPickUpChargesWithCurrency = Nothing,
           useSilentFCMForForwardBatch = False,
           isOnRide = False,
+          isFavouriteRider = Just False,
           ..
         }
 

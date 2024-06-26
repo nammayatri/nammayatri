@@ -82,6 +82,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.durationToPickup durationToPickup,
       Se.Set Beam.estimateId estimateId,
       Se.Set Beam.goHomeRequestId (Kernel.Types.Id.getId <$> goHomeRequestId),
+      Se.Set Beam.isFavouriteRider isFavouriteRider,
       Se.Set Beam.isForwardRequest (Kernel.Prelude.Just isForwardRequest),
       Se.Set Beam.isPartOfIntelligentPool isPartOfIntelligentPool,
       Se.Set Beam.keepHiddenForSeconds keepHiddenForSeconds,

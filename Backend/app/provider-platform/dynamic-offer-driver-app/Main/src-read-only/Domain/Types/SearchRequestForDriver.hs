@@ -48,6 +48,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     estimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
+    isFavouriteRider :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isForwardRequest :: Kernel.Prelude.Bool,
     isPartOfIntelligentPool :: Kernel.Prelude.Bool,
     keepHiddenForSeconds :: Kernel.Types.Common.Seconds,

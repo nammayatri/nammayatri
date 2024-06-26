@@ -39,6 +39,17 @@ findFavDriversForRider ::
   (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Prelude.Bool -> m [Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation])
 findFavDriversForRider riderDetailId favourite = do findAllWithKV [Se.And [Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId), Se.Is Beam.favourite $ Se.Eq favourite]]
 
+isFavouriteRider ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation))
+isFavouriteRider driverId riderDetailId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId)
+        ]
+    ]
+
 updateFavouriteDriverForRider ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())

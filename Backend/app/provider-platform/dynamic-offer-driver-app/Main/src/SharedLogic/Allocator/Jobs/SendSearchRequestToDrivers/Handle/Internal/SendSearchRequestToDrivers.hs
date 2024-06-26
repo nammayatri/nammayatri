@@ -25,6 +25,7 @@ import Domain.Types.DriverPoolConfig
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import Domain.Types.Person (Driver)
+import Domain.Types.RiderDetails as RD
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
@@ -47,6 +48,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
@@ -91,7 +93,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
 
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber validTill) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber validTill (fromMaybe "" searchReq.riderId)) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
@@ -127,9 +129,10 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
       Int ->
       UTCTime ->
+      Id RD.RiderDetails ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill dpwRes = do
+    buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill riderId dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -138,6 +141,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
       deploymentVersion <- asks (.version)
+      riderDriverRelation <- SQR.isFavouriteRider (dpRes.driverId) riderId
       let searchRequestForDriver =
             SearchRequestForDriver
               { id = guid,
@@ -188,6 +192,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                 isForwardRequest = dpwRes.isForwardRequest,
                 notificationSource = Nothing,
+                isFavouriteRider = (.favourite) <$> riderDriverRelation,
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
                 ..
               }

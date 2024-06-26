@@ -81,6 +81,7 @@ SearchRequestForDriver:
     isForwardRequest : Bool
     currency: Currency
     distanceUnit: DistanceUnit
+    isFavouriteRider: Maybe Bool
     totalRides: Int
 
   beamType:

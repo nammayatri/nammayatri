@@ -40,6 +40,11 @@ RiderDriverCorrelation:
       where:
         and: [riderDetailId, driverId]
 
+    isFavouriteRider:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, riderDetailId]
+
   sqlType:
     mobileNumberHash: bytea
 
