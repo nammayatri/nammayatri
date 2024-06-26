@@ -42,6 +42,7 @@ data Booking = Booking
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDashboardRequest :: Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

@@ -189,6 +189,7 @@ handler merchantId req validatedReq = do
             tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
             estimateId = Just $ Id req.estimateId,
             paymentId = Nothing,
+            isDashboardRequest = searchRequest.isDashboardRequest,
             ..
           }
 

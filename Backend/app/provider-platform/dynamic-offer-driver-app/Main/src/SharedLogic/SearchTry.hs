@@ -226,6 +226,7 @@ buildTripQuoteDetail ::
   DVST.ServiceTierType ->
   Maybe Text ->
   HighPrecMoney ->
+  Maybe Bool ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
@@ -234,7 +235,7 @@ buildTripQuoteDetail ::
   Maybe HighPrecMoney ->
   Text ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
@@ -245,7 +246,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
     case (mbDriverParkingCharge, mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
       (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
       _ -> do
-        farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId (Just (TransactionId (Id searchReq.transactionId)))
+        farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId isDashboardRequest (Just (TransactionId (Id searchReq.transactionId)))
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
         return $
           ( farePolicy.parkingCharge,
