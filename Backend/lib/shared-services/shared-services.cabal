@@ -65,6 +65,7 @@ library
       IssueManagement.Storage.Queries.MediaFile
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
+      UrlShortner.Common
   other-modules:
       Paths_shared_services
   hs-source-dirs:
