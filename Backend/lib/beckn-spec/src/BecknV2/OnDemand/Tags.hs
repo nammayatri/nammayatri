@@ -219,4 +219,6 @@ data Tag
   | -- rating tags
     RIDER_PHONE_NUMBER
   | SHOULD_FAVOURITE_DRIVER
+  | -- Driver Gender
+    GENDER
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

@@ -24,6 +24,7 @@ import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
+import Domain.Types.Person as DPerson
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -105,6 +106,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
       return $
         DOnSelect.QuoteInfo
           { vehicleVariant = vehicleVariant,
+            vehicleModel = vehicle.vehicleModel,
             estimatedFare = Utils.decimalValueToPrice currency estimatedFare,
             discount = Nothing,
             serviceTierName = serviceTierName,
@@ -150,6 +152,7 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
       durationToPickup = getPickupDurationV2 agentTags
       distanceToPickup' = getDistanceToNearestDriverV2 itemTags
       rating = getDriverRatingV2 agentTags
+      gender = getDriverGender agentTags
   let validTill = (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybe onSelectTtl
   logDebug $ "on_select ttl request rider: " <> show validTill
   bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
@@ -159,6 +162,12 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
         bppDriverQuoteId = bppQuoteId,
         ..
       }
+
+getDriverGender :: Maybe [Spec.TagGroup] -> Maybe DPerson.Gender
+getDriverGender tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.AGENT_INFO Tag.GENDER tagGroups
+  driverGender <- readMaybe $ T.unpack tagValue
+  Just driverGender
 
 getDriverRatingV2 :: Maybe [Spec.TagGroup] -> Maybe Centesimal
 getDriverRatingV2 tagGroups = do

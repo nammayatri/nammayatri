@@ -64,6 +64,7 @@ data ProviderInfo = ProviderInfo
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
+    vehicleModel :: Maybe Text,
     estimatedFare :: Price,
     discount :: Maybe Price,
     -- estimatedTotalFare :: Price,
@@ -79,6 +80,7 @@ data QuoteInfo = QuoteInfo
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   { driverName :: Text,
+    gender :: Maybe DPerson.Gender,
     durationToPickup :: Maybe Int, -- Seconds?
     distanceToPickup :: Maybe HighPrecMeters,
     validTill :: UTCTime,
@@ -209,6 +211,7 @@ buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
         updatedAt = now,
         distanceUnit = searchRequest.distanceUnit,
         distanceToPickup = convertHighPrecMetersToDistance searchRequest.distanceUnit <$> distanceToPickup,
+        gender = gender,
         ..
       }
 

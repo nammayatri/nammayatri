@@ -80,6 +80,7 @@ data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
     vehicleVariant :: DVST.VehicleServiceTierType,
     serviceTierName :: Maybe Text,
+    vehicleModel :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
     estimatedFare :: Money,
     estimatedTotalFare :: Money,

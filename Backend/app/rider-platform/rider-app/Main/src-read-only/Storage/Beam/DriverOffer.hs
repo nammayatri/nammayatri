@@ -7,6 +7,7 @@ module Storage.Beam.DriverOffer where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverOffer
+import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -22,6 +23,7 @@ data DriverOfferT f = DriverOfferT
     driverName :: B.C f Kernel.Prelude.Text,
     durationToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     estimateId :: B.C f Kernel.Prelude.Text,
+    gender :: B.C f (Kernel.Prelude.Maybe Domain.Types.Person.Gender),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

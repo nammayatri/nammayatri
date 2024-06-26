@@ -31,6 +31,7 @@ import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Person as DP
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
@@ -61,10 +62,12 @@ mkOnSelectMessageV2 ::
   DBC.BecknConfig ->
   DM.Merchant ->
   Maybe FarePolicyD.FullFarePolicy ->
+  Maybe Text ->
+  DP.Gender ->
   DOnSelectReq ->
   Spec.OnSelectReqMessage
-mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectReq {..} = do
-  let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP]
+mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy vehicleModel gender req@DOnSelectReq {..} = do
+  let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP vehicleModel gender]
   let paymentV2 = mkPaymentV2 bppConfig merchant driverQuote Nothing
   Spec.OnSelectReqMessage $
     Just
@@ -83,14 +86,14 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
           orderUpdatedAt = Nothing
         }
 
-mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillment
-mkFulfillmentV2 dReq quote isValueAddNP = do
+mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Maybe Text -> DP.Gender -> Spec.Fulfillment
+mkFulfillmentV2 dReq quote isValueAddNP vehicleModel gender = do
   Spec.Fulfillment
     { fulfillmentId = Just quote.id.getId,
       fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation Nothing,
-      fulfillmentVehicle = Just $ mkVehicleV2 quote,
+      fulfillmentVehicle = Just $ mkVehicleV2 quote vehicleModel,
       fulfillmentType = Just $ show Enums.DELIVERY,
-      fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,
+      fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP gender,
       fulfillmentCustomer = Nothing,
       fulfillmentState = Nothing,
       fulfillmentTags = Nothing
@@ -102,38 +105,39 @@ mkPaymentV2 bppConfig merchant driverQuote mbPaymentId = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
   mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
-mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
-mkVehicleV2 quote =
+mkVehicleV2 :: DQuote.DriverQuote -> Maybe Text -> Spec.Vehicle
+mkVehicleV2 quote vehicleModel =
   let (category, variant) = Utils.castVariant quote.vehicleVariant
    in Spec.Vehicle
         { vehicleCategory = Just category,
           vehicleVariant = Just variant,
           vehicleColor = Nothing,
           vehicleMake = Nothing,
-          vehicleModel = Nothing,
+          vehicleModel = vehicleModel,
           vehicleRegistration = Nothing,
           vehicleCapacity = Nothing
         }
 
-mkAgentV2 :: DQuote.DriverQuote -> Bool -> Spec.Agent
-mkAgentV2 quote isValueAddNP =
+mkAgentV2 :: DQuote.DriverQuote -> Bool -> DP.Gender -> Spec.Agent
+mkAgentV2 quote isValueAddNP gender =
   Spec.Agent
     { agentContact = Nothing,
-      agentPerson = Just $ mkAgentPersonV2 quote isValueAddNP
+      agentPerson = Just $ mkAgentPersonV2 quote isValueAddNP gender
     }
 
-mkAgentPersonV2 :: DQuote.DriverQuote -> Bool -> Spec.Person
-mkAgentPersonV2 quote isValueAddNP =
+mkAgentPersonV2 :: DQuote.DriverQuote -> Bool -> DP.Gender -> Spec.Person
+mkAgentPersonV2 quote isValueAddNP gender =
   Spec.Person
     { personId = Nothing,
       personImage = Nothing,
       personName = Just quote.driverName,
-      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing
+      personTags = if isValueAddNP then mkAgentTagsV2 quote gender else Nothing
     }
 
-mkAgentTagsV2 :: DQuote.DriverQuote -> Maybe [Spec.TagGroup]
-mkAgentTagsV2 quote = do
-  ratingTag <- mkDriverRatingTag quote
+mkAgentTagsV2 :: DQuote.DriverQuote -> DP.Gender -> Maybe [Spec.TagGroup]
+mkAgentTagsV2 quote gender = do
+  let ratingTag = mkDriverRatingTag quote
+  let genderTag = mkDriverGenderTag gender
   Just
     [ Spec.TagGroup
         { tagGroupDisplay = Just False,
@@ -144,7 +148,7 @@ mkAgentTagsV2 quote = do
                   descriptorName = Just "Agent Info",
                   descriptorShortDesc = Nothing
                 },
-          tagGroupList = Just ratingTag
+          tagGroupList = genderTag <> ratingTag
         }
     ]
 
@@ -165,6 +169,22 @@ mkDriverRatingTag quote
             tagValue = show . (.getCenti) <$> quote.driverRating
           }
       ]
+
+mkDriverGenderTag :: DP.Gender -> Maybe [Spec.Tag]
+mkDriverGenderTag gender =
+  Just
+    [ Spec.Tag
+        { tagDisplay = Just False,
+          tagDescriptor =
+            Just
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.GENDER,
+                  descriptorName = Just "Agent Gender",
+                  descriptorShortDesc = Nothing
+                },
+          tagValue = Just $ show gender
+        }
+    ]
 
 mkItemV2 :: Spec.Fulfillment -> DVST.VehicleServiceTier -> DQuote.DriverQuote -> Bool -> Maybe FarePolicyD.FullFarePolicy -> Spec.Item
 mkItemV2 fulfillment vehicleServiceTierItem quote isValueAddNP mbFarePolicy = do
