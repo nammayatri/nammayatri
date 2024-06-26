@@ -29,7 +29,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, getCityFromString, quoteModalVariantImage)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
+import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig, getKeyInSharedPrefKeys)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class Eq, Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard, (*), negate, (-))
@@ -51,6 +51,9 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Data.Function
 import Data.Ord
+import LocalStorage.Cache (getValueFromCache)
+import DecodeUtil (decodeForeignAny, parseJSON)
+import Common.Resources.Constants (assetDomain)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -253,7 +256,20 @@ quotesView state push =
 
 findingRidesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 findingRidesView state push =
-  let lottieRawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
+  let selectedServices = getValueFromCache (show SELECTED_SERVICES) (\key -> 
+                                                                        let value = getKeyInSharedPrefKeys key
+                                                                        in decodeForeignAny (parseJSON value) [])
+      isBookAnyAuto = length selectedServices == 1 && elem "Auto" selectedServices
+      isBookAnyCab = not $ elem "Auto" selectedServices
+      autoLottie = (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city
+      cabLottie = "https://" <> assetDomain <>  "/beckn/common/user/lottie/finding_rides_loader_cab.json" 
+      bookAnyLottie = "https://" <> assetDomain <> "/beckn/common/user/lottie/finding_rides_loader_book_any.json" 
+      lottieRawJson = case getValueToLocalStore SELECTED_VARIANT of 
+                        "AUTO_RICKSHAW" -> if state.appConfig.autoVariantEnabled then autoLottie else cabLottie
+                        "BOOK_ANY" -> if isBookAnyAuto then autoLottie
+                                      else if isBookAnyCab then cabLottie
+                                      else bookAnyLottie
+                        _ -> cabLottie
   in
     linearLayout
     [ height MATCH_PARENT

@@ -1213,6 +1213,7 @@ eval (RepeatRideCountDown seconds status timerID) state = do
     void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
     void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
+    void $ pure $ setValueToCache (show SELECTED_SERVICES) state.data.selectedEstimatesObject.selectedServices (\a -> show a)
     void $ pure $ cacheRateCard state
     let updatedState = state{data{rideHistoryTrip = Nothing}, props{repeatRideTimerId = "",repeateRideTimerStoped = true, searchExpire = (getSearchExpiryTime true)}}
     updateAndExit (updatedState) (GetQuotes updatedState)
@@ -2074,6 +2075,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
       SettingPrice -> do
                         void $ pure $ performHapticFeedback unit
                         void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
+                        void $ pure $ setValueToCache (show SELECTED_SERVICES) state.data.selectedEstimatesObject.selectedServices (\a -> show a)
                         void $ pure $ cacheRateCard state
                         let updatedState = state{data{rideHistoryTrip = Nothing}, props{ searchExpire = (getSearchExpiryTime true)}}
                         updateAndExit (updatedState) (GetQuotes updatedState)
@@ -3000,6 +3002,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
       estimateId = if config.vehicleVariant == "BOOK_ANY" then fromMaybe "" (head selectedEstimates) else config.id
       otherSelectedEstimates = fromMaybe [] $ tail $ selectedEstimates
   void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
+  void $ pure $ setValueToCache (show SELECTED_SERVICES) config.selectedServices (\a -> show a)
   let updatedSpecialZOneQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
       updatedQuoteList = map (\item -> item{activeIndex = config.index}) state.data.quoteList
@@ -3047,6 +3050,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
       (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
+  void $ pure $ setValueToCache (show SELECTED_SERVICES) state.data.selectedEstimatesObject.selectedServices (\a -> show a)
   void $ pure $ cacheRateCard state
   if any (_ == state.data.fareProductType) [FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY] then do
     _ <- pure $ updateLocalStage ConfirmingRide
@@ -3774,6 +3778,7 @@ quoteListFlow flowType estimatedQuotes state = do
     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
     void $ pure $ updateLocalStage SettingPrice
     void $ pure $ setValueToLocalStore SELECTED_VARIANT (defaultQuote.vehicleVariant)
+    void $ pure $ setValueToCache (show SELECTED_SERVICES) defaultQuote.selectedServices (\a -> show a)
     continue $ updateStateWithQuotes flowType state quoteList defaultQuote
   else do
     void $ pure $ hideKeyboardOnNavigation true
