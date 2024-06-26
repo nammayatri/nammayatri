@@ -285,11 +285,26 @@ callSupportHandler updatedState = do
 reOpenIssueHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 reOpenIssueHandler updatedState = do
   let language = fetchLanguage $ getLanguageLocale languageKey
-  let updateIssueReqBody = UpdateIssueReqBody {status : "OPEN"}
-  (UpdateIssueRes _) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
-  pure unit
-  modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState {props {isResolved = false}})
-  App.BackT $ App.NoBack <$> (pure $ IssueReportChatScreenFlow)
+      selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
+      updateIssueReqBody = UpdateIssueReqBody { status : "REOPENED" }
+  (GetOptionsRes _) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
+  (UpdateIssueRes updateIssueRes) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
+  let messages' = DA.mapWithIndex (\index (Message currMessage) -> 
+                                      makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))
+                                  ) updateIssueRes.messages
+  modifyScreenState $ ReportIssueChatScreenStateType (\_ -> 
+    updatedState { 
+      "data" = updatedState.data {
+        chatConfig = updatedState.data.chatConfig {
+          messages = updatedState.data.chatConfig.messages <> messages'
+        }
+      },
+      props = updatedState.props {
+        isResolved = false
+      }
+    }
+  )
+  App.BackT $ App.NoBack <$> pure IssueReportChatScreenFlow
 
 
 goToRideSelectionScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
