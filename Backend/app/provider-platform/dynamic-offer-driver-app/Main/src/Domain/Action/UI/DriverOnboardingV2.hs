@@ -396,7 +396,7 @@ postDriverBackgroundVerification (mbPersonId, merchantId, merchantOpCityId) = do
       Nothing -> do
         candidate <- BackgroundVerificationT.createCandidate merchantId merchantOpCityId =<< buildCreateCandidateReq person driverInfo merchantOpCity mbDriverLicense ssn
         return candidate.id
-  invitation <- BackgroundVerificationT.createInvitation merchantId merchantOpCityId $ buildCreateInvitationReq merchantOpCity ssn candidateId
+  invitation <- BackgroundVerificationT.createInvitation merchantId merchantOpCityId $ buildCreateInvitationReq merchantOpCity candidateId
   QBV.upsert =<< buildBackgroundVerification personId candidateId invitation
   return Success
   where
@@ -439,10 +439,9 @@ postDriverBackgroundVerification (mbPersonId, merchantId, merchantOpCityId) = do
             zipCode = Nothing
           }
 
-    buildCreateInvitationReq merchantOpCity ssn candidateId =
+    buildCreateInvitationReq merchantOpCity candidateId =
       BackgroundVerification.CreateInvitationReqI
         { candidateId = candidateId,
-          ssn = ssn,
           workLocationCountry = merchantOpCity.country,
           workLocationState = merchantOpCity.state,
           workLocationCity = merchantOpCity.city
