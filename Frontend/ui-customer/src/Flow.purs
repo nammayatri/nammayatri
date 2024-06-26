@@ -3834,6 +3834,8 @@ updateUserInfoToState state =
                 , sosBannerType = state.props.sosBannerType
                 , followsRide = state.props.followsRide
                 , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                , city = state.props.city
+                , showShimmer = false
                 }
               }
         )

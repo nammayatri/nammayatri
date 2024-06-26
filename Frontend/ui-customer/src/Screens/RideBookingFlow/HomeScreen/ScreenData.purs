@@ -37,7 +37,10 @@ import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
 
 initData :: HomeScreenState
-initData = {
+initData = let
+  config = getAppConfig appConfig
+  in
+  {
     data: {
       suggestedAmount : 0
     , finalAmount : 0
@@ -133,7 +136,7 @@ initData = {
         rideBookingRes : dummyRideBooking,
         wasOfferedAssistance : Nothing
     }
-    , config : getAppConfig appConfig
+    , config : config
     , currentCityConfig : MRC.defaultCityConfig
     , logField : empty
     , nearByDrivers : Nothing
@@ -367,6 +370,8 @@ initData = {
     , showScheduledRideExistsPopUp : false
     , isOffline : false
     , hasEstimateBackpoint : false
+    , shimmerViewTimer : config.homeScreen.shimmerTimer
+    , shimmerViewTimerId : ""
   }
 }
 

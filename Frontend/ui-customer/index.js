@@ -364,6 +364,7 @@ window["onEvent'"] = function (_event, args) {
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
     window.keyBoardCallback(_event);
   } else if (_event == "onLocationFetch") {
+    console.log("Location Fetch Event", args);
     window["current_location"] = JSON.parse(args);
   } else {
     purescript.onEvent(_event)();

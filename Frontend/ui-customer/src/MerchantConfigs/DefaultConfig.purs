@@ -349,7 +349,8 @@ config =
           opacity : 0.3
         }
       },
-      showAdditionalServicesNew : true
+      showAdditionalServicesNew : true,
+      shimmerTimer : 3
     }
   , appData : defaultAppData
   , navigationAppConfig : defaultNavigationAppConfig
