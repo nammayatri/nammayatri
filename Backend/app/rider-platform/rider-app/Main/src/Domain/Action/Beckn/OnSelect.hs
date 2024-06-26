@@ -106,7 +106,7 @@ onSelect OnSelectValidatedReq {..} = do
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   _ <- QQuote.createMany quotes
-  _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
+  _ <- QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill, providerId = Just providerInfo.providerId}
   void $ QEstimate.updateStatus DEstimate.GOT_DRIVER_QUOTE estimate.id
   QPFS.clearCache searchRequest.riderId
   if searchRequest.autoAssignEnabledV2 == Just True
