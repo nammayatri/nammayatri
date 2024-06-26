@@ -230,23 +230,23 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
   mobileNumberHash <- getDbHash callFrom
   exophone <-
     CQExophone.findByPhone to >>= \case
-      Nothing -> CQExophone.findByPhone callTo >>= maybe (throwCallError callSid (ExophoneDoesNotExist callTo) Nothing Nothing) pure
+      Nothing -> CQExophone.findByPhone callTo >>= maybe (throwCallError callId (ExophoneDoesNotExist callTo) Nothing Nothing) pure
       Just phone -> return phone
   (driver, dtmfNumberUsed) <-
     runInReplica (QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash exophone.merchantId Person.DRIVER) >>= \case
       Nothing -> do
-        number <- maybe (throwCallError callSid (PersonWithPhoneNotFound $ show dtmfNumber_) (Just exophone.merchantId.getId) (Just exophone.callService)) pure dtmfNumber_
+        number <- maybe (throwCallError callId (PersonWithPhoneNotFound $ show dtmfNumber_) (Just exophone.merchantId.getId) (Just exophone.callService)) pure dtmfNumber_
         let dtmfNumber = dropFirstZero $ removeQuotes number
         dtmfMobileHash <- getDbHash dtmfNumber
-        person <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" dtmfMobileHash exophone.merchantId Person.DRIVER >>= maybe (throwCallError callSid (PersonWithPhoneNotFound dtmfNumber) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+        person <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" dtmfMobileHash exophone.merchantId Person.DRIVER >>= maybe (throwCallError callId (PersonWithPhoneNotFound dtmfNumber) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
         return (person, Just dtmfNumber)
       Just entity -> return (entity, Nothing)
-  activeRide <- runInReplica (QRide.getActiveByDriverId driver.id) >>= maybe (throwCallError callSid (RideForDriverNotFound $ getId driver.id) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
-  activeBooking <- runInReplica (QRB.findById activeRide.bookingId) >>= maybe (throwCallError callSid (BookingNotFound $ getId activeRide.bookingId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+  activeRide <- runInReplica (QRide.getActiveByDriverId driver.id) >>= maybe (throwCallError callId (RideForDriverNotFound $ getId driver.id) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+  activeBooking <- runInReplica (QRB.findById activeRide.bookingId) >>= maybe (throwCallError callId (BookingNotFound $ getId activeRide.bookingId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
   riderId <-
     activeBooking.riderId
       & fromMaybeM (BookingFieldNotPresent "riderId")
-  riderDetails <- runInReplica $ QRD.findById riderId >>= maybe (throwCallError callSid (RiderDetailsNotFound riderId.getId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+  riderDetails <- runInReplica $ QRD.findById riderId >>= maybe (throwCallError callId (RiderDetailsNotFound riderId.getId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
   requestorPhone <- decrypt riderDetails.mobileNumber
   _ <- QCallStatus.updateCallStatusWithRideId (Just activeRide.id.getId) dtmfNumberUsed (Just exophone.merchantId.getId) (Just exophone.callService) callId
   DCE.sendCallDataToKafka (Just "EXOTEL") (Just activeRide.id) (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to)
@@ -278,13 +278,13 @@ throwCallError ::
     EsqDBFlow m r,
     IsBaseException e
   ) =>
-  Text ->
+  Id SCS.CallStatus ->
   e ->
   Maybe Text ->
   Maybe CallService ->
   m a
-throwCallError callSid err merchantId callService = do
-  QCallStatus.updateCallError (Just (show err)) callService merchantId (Id callSid)
+throwCallError callId err merchantId callService = do
+  QCallStatus.updateCallError (Just (show err)) callService merchantId callId
   throwError err
 
 getCallStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
