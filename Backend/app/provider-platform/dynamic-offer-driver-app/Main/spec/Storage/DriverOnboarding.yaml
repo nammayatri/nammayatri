@@ -192,6 +192,7 @@ VehicleRegistrationCertificate:
     oxygen: Maybe Bool
     ventilator: Maybe Bool
     luggageCapacity: Maybe Int
+    mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
     userPassedVehicleCategory: Maybe Category
     vehicleModelYear: Maybe Int

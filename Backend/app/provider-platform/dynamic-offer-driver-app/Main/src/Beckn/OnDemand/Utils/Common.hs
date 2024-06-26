@@ -230,6 +230,7 @@ mkFulfillmentType = \case
   DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
   DCT.Rental _ -> show Enums.RENTAL
   DCT.InterCity _ _ -> show Enums.INTER_CITY
+  DCT.Ambulance _ -> show Enums.AMBULANCE_FLOW
   _ -> show Enums.DELIVERY
 
 rationaliseMoney :: Money -> Text
@@ -250,6 +251,11 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "TAXI") -> Just Variant.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
   (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE
+  (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just Variant.AMBULANCE_TAXI
+  (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just Variant.AMBULANCE_TAXI_OXY
+  (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just Variant.AMBULANCE_AC
+  (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just Variant.AMBULANCE_AC_OXY
+  (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just Variant.AMBULANCE_VENTILATOR
   _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
@@ -785,6 +791,35 @@ mkTollConfidenceTagGroupV2 tollConfidence' =
         }
     ]
 
+mkVehicleAgeTagGroupV2 :: Maybe Months -> Maybe [Spec.TagGroup]
+mkVehicleAgeTagGroupV2 vehicleAge' =
+  vehicleAge' <&> \vehicleAge ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.VEHICLE_AGE_INFO,
+                  descriptorName = Just "Vehicle Age Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.VEHICLE_AGE,
+                            descriptorName = Just "Vehicle Age",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show vehicleAge
+                  }
+              ]
+        }
+    ]
+
 buildAddressFromText :: MonadFlow m => Text -> m OS.Address
 buildAddressFromText fullAddress = do
   let splitedAddress = T.splitOn ", " fullAddress
@@ -977,6 +1012,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
         DFParams.InterCity -> True
+        DFParams.Ambulance -> True
 
 type MerchantShortId = Text
 
@@ -1075,6 +1111,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
     mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
     mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
     mapToFulfillmentType (DTC.InterCity _ _) = show Enums.INTER_CITY
+    mapToFulfillmentType (DTC.Ambulance _) = show Enums.AMBULANCE_FLOW
     mapToFulfillmentType _ = show Enums.RIDE_OTP -- backward compatibility
 
 convertBookingToPricing :: DVST.VehicleServiceTier -> DBooking.Booking -> Pricing

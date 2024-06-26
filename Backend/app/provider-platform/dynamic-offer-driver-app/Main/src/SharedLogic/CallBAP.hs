@@ -112,6 +112,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -312,6 +313,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
       Nothing -> pure veh
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+  rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
   let bookingDetails = ACL.BookingDetails {..}
   resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   let image = join (eitherToMaybe resp)
@@ -323,7 +325,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
         mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
-  let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
+  let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   retryConfig <- asks (.shortDurationRetryCfg)
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2

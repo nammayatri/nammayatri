@@ -46,23 +46,26 @@ hour = 3600
 
 testOrder :: IO ()
 testOrder = do
+  now <- getCurrentTime
   res <-
     runARDUFlow "Test ordering" $
-      S.getNearestDrivers [] [] pickupPoint 5000 org1 False (Just hour) False False True <&> getIds
+      S.getNearestDrivers [] [] pickupPoint 5000 org1 False (Just hour) False False True now <&> getIds
   res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
 testInRadius = do
+  now <- getCurrentTime
   res <-
     runARDUFlow "Test radius filtration" $
-      S.getNearestDrivers [] [] pickupPoint 800 org1 False (Just hour) False False True <&> getIds
+      S.getNearestDrivers [] [] pickupPoint 800 org1 False (Just hour) False False True now <&> getIds
   res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
 testNotInRadius = do
+  now <- getCurrentTime
   res <-
     runARDUFlow "Test outside radius filtration" $
-      S.getNearestDrivers [] [] pickupPoint 10 org1 False (Just hour) False False True <&> getIds
+      S.getNearestDrivers [] [] pickupPoint 10 org1 False (Just hour) False False True now <&> getIds
   res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]

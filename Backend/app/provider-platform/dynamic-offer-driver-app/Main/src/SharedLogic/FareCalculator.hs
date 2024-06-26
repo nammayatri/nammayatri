@@ -127,6 +127,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
       DFParams.RentalDetails det -> mkFPRentalDetailsBreakupList det
       DFParams.InterCityDetails det -> mkFPInterCityDetailsBreakupList det
+      DFParams.AmbulanceDetails det -> mkFPAmbulanceDetailsBreakupList det
 
     mkFPProgressiveDetailsBreakupList dayPartRate det = do
       let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
@@ -159,6 +160,17 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
           mbDeadKmFare = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
       catMaybes [Just mbTimeBasedFare, Just mbDistBasedFare, Just mbDeadKmFare]
+
+    mkFPAmbulanceDetailsBreakupList det = do
+      let platformFeeCaption = show Enums.PLATFORM_FEE
+          mbPlatformFeeItem = mkBreakupItem platformFeeCaption . mkPrice <$> det.platformFee
+          sgstCaption = show Enums.SGST
+          mbSgstItem = mkBreakupItem sgstCaption . mkPrice <$> det.sgst
+          cgstCaption = show Enums.CGST
+          mbCgstItem = mkBreakupItem cgstCaption . mkPrice <$> det.cgst
+          distBasedCaption = show Enums.DIST_BASED_FARE
+          mbDistBasedFare = mkBreakupItem distBasedCaption (mkPrice det.distBasedFare)
+      catMaybes [mbPlatformFeeItem, mbSgstItem, mbCgstItem, Just mbDistBasedFare]
 
     mkFPInterCityDetailsBreakupList det = do
       let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
@@ -263,6 +275,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
     returnTime :: Maybe UTCTime,
+    vehicleAge :: Maybe Months,
     roundTrip :: Bool,
     actualRideDuration :: Maybe Seconds,
     avgSpeedOfVehicle :: Maybe AvgSpeedOfVechilePerKm,
@@ -350,7 +363,13 @@ calculateFareParameters params = do
                   params.currency
                   fareParametersDetails
               DFP.RentalDetails _ -> fareParametersDetails
-              DFP.InterCityDetails _ -> fareParametersDetails,
+              DFP.InterCityDetails _ -> fareParametersDetails
+              DFP.AmbulanceDetails det ->
+                countPlatformFee
+                  fullCompleteRideCost
+                  (DFP.findFPAmbulanceDetailsSlabByAge (fromMaybe 0 params.vehicleAge) det.slabs & (.platformFeeInfo))
+                  params.currency
+                  fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
             tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
             insuranceCharge = insuranceChargeResult,
@@ -373,6 +392,27 @@ calculateFareParameters params = do
       DFP.SlabsDetails det -> processFPSlabsDetailsSlab $ DFP.findFPSlabsDetailsSlabByDistance (fromMaybe 0 params.actualDistance) det.slabs
       DFP.RentalDetails det -> processFPRentalDetails det
       DFP.InterCityDetails det -> processFPInterCityDetails det
+      DFP.AmbulanceDetails det -> processFPAmbulanceDetailsSlab $ DFP.findFPAmbulanceDetailsSlabByAge (fromMaybe 0 params.vehicleAge) det.slabs
+
+    processFPAmbulanceDetailsSlab DFP.FPAmbulanceDetailsSlab {..} = do
+      let estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
+          estimatedDistanceInKm = estimatedDistance `div` 1000
+          actualDistance = (.getMeters) <$> params.actualDistance
+          actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
+          distBasedFare = HighPrecMoney $ perKmRate.getHighPrecMoney * toRational actualDistanceInKm
+      ( [],
+        baseFare,
+        nightShiftCharge,
+        waitingChargeInfo,
+        DFParams.AmbulanceDetails
+          DFParams.FParamsAmbulanceDetails
+            { platformFee = Nothing,
+              sgst = Nothing,
+              cgst = Nothing,
+              currency = currency,
+              distBasedFare
+            }
+        )
 
     processFPInterCityDetails DFP.FPInterCityDetails {..} = do
       let estimatedDuration = maybe 0 (.getSeconds) params.estimatedRideDuration
@@ -539,17 +579,23 @@ calculateFareParameters params = do
       (DFParams.InterCityDetails det) -> DFParams.InterCityDetails det
       (DFParams.SlabDetails det) ->
         DFParams.SlabDetails $ maybe (FParamsSlabDetails Nothing Nothing Nothing det.currency) countPlatformFeeMath platformFeeInfo
+      (DFParams.AmbulanceDetails det) ->
+        DFParams.AmbulanceDetails $ maybe (FParamsAmbulanceDetails Nothing Nothing Nothing det.distBasedFare det.currency) (countPlatformFeeAmbulance det) platformFeeInfo
       where
         countPlatformFeeMath platformFeeInfo' = do
+          let (platformFee, cgst, sgst) = getPlatformFee platformFeeInfo'
+          FParamsSlabDetails {..}
+        countPlatformFeeAmbulance det platformFeeInfo' = do
+          let (platformFee, cgst, sgst) = getPlatformFee platformFeeInfo'
+          FParamsAmbulanceDetails {distBasedFare = det.distBasedFare, currency = det.currency, ..}
+        getPlatformFee platformFeeInfo' = do
           let baseFee = case platformFeeInfo'.platformFeeCharge of
                 ProgressivePlatformFee charge -> fullCompleteRideCost * charge
                 ConstantPlatformFee charge -> charge
-          FParamsSlabDetails
-            { platformFee = Just baseFee,
-              cgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.cgst * realToFrac baseFee,
-              sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee,
-              currency
-            }
+              cgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.cgst * realToFrac baseFee
+              sgst = Just . HighPrecMoney . toRational $ platformFeeInfo'.sgst * realToFrac baseFee
+          (Just baseFee, cgst, sgst)
+
     calculateExtraTimeFare :: Meters -> Maybe HighPrecMoney -> Maybe Seconds -> ServiceTierType -> AvgSpeedOfVechilePerKm -> Maybe HighPrecMoney
     calculateExtraTimeFare distance perMinuteRideExtraTimeCharge actualRideDuration serviceTier avgSpeedOfVehicle = do
       let actualRideDurationInMinutes = secondsToMinutes <$> actualRideDuration
@@ -600,6 +646,7 @@ countFullFareOfParamsDetails = \case
   DFParams.SlabDetails det -> (0.0, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
   DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare + det.deadKmFare, 0.0)
   DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare, 0.0)
+  DFParams.AmbulanceDetails det -> (det.distBasedFare, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
 
 addMaybes :: Num a => Maybe a -> Maybe a -> Maybe a
 addMaybes Nothing y = y

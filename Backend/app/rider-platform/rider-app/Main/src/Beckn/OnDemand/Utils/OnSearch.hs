@@ -115,7 +115,7 @@ getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
 getEstimatedFare item currency = do
   price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")
   let value = price.priceValue
-  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: tagValue")
+  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: priceValue")
   return $ decimalValueToPrice currency tagValue
 
 getItemId :: MonadFlow m => Spec.Item -> m Text
@@ -145,33 +145,40 @@ getTotalFareRange item currency = do
 
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.EstimateBreakupInfo]
 buildEstimateBreakupList item currency = do
+  let tagListRateCard = getTagListRateCardFromItem item
+      breakups = maybe [] (map (buildEstimateBreakUpItem currency)) tagListRateCard
+  return (catMaybes breakups)
+
+getTagListRateCardFromItem :: Spec.Item -> Maybe [Spec.Tag]
+getTagListRateCardFromItem item = do
   let tagGroups = item.itemTags
       tagGroupRateCard = find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just (show Tag.FARE_POLICY)) =<< tagGroups -- consume this from now on
-      tagListRateCard = (.tagGroupList) =<< tagGroupRateCard
-  let breakups = maybe [] (map (buildEstimateBreakUpItem currency)) tagListRateCard
-  return (catMaybes breakups)
-  where
-    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
-    descriptorCode (Just desc) = desc.descriptorCode
-    descriptorCode Nothing = Nothing
+  (.tagGroupList) =<< tagGroupRateCard
+
+descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
+descriptorCode (Just desc) = desc.descriptorCode
+descriptorCode Nothing = Nothing
 
 buildEstimateBreakUpItem ::
   Currency ->
   Spec.Tag ->
   Maybe OnSearch.EstimateBreakupInfo
 buildEstimateBreakUpItem currency tag = do
-  descriptor <- tag.tagDescriptor
-  value <- tag.tagValue
-  tagValue <- DecimalValue.valueFromString value
-  title <- descriptor.descriptorCode
+  (title, value) <- getDetailsFromTag tag currency
   pure
     OnSearch.EstimateBreakupInfo
       { title = title,
-        price =
-          OnSearch.BreakupPriceInfo
-            { value = decimalValueToPrice currency tagValue
-            }
+        price = OnSearch.BreakupPriceInfo {..}
       }
+
+getDetailsFromTag :: Spec.Tag -> Currency -> Maybe (Text, Price)
+getDetailsFromTag tag currency = do
+  value <- tag.tagValue
+  descriptor <- tag.tagDescriptor
+  tagValue <- DecimalValue.valueFromString value
+  title <- descriptor.descriptorCode
+  let price = decimalValueToPrice currency tagValue
+  pure (title, price)
 
 buildTollChargesInfo :: Spec.Item -> Currency -> Maybe OnSearch.TollChargesInfo
 buildTollChargesInfo item currency = do

@@ -387,6 +387,7 @@ castTripCategory = \case
   DTC.RideShare _ -> Common.RideShare
   DTC.InterCity _ _ -> Common.InterCity
   DTC.CrossCity _ _ -> Common.CrossCity
+  DTC.Ambulance _ -> Common.Ambulance
 
 timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
 timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1
@@ -582,6 +583,14 @@ makeFareParam (DFP.ProgressiveDetails DFP.FParamsProgressiveDetails {..}) =
         deadKmFareWithCurrency = PriceAPIEntity deadKmFare currency,
         extraKmFareWithCurrency = flip PriceAPIEntity currency <$> extraKmFare,
         rideDurationFareWithCurrency = flip PriceAPIEntity currency <$> rideDurationFare
+      }
+makeFareParam (DFP.AmbulanceDetails DFP.FParamsAmbulanceDetails {..}) =
+  Common.AmbulanceDetails
+    Common.FParamsAmbulanceDetails
+      { platformFee = flip PriceAPIEntity currency <$> platformFee,
+        sgst = flip PriceAPIEntity currency <$> sgst,
+        distBasedFare = PriceAPIEntity distBasedFare currency,
+        cgst = flip PriceAPIEntity currency <$> cgst
       }
 makeFareParam (DFP.SlabDetails DFP.FParamsSlabDetails {..}) =
   Common.SlabDetails

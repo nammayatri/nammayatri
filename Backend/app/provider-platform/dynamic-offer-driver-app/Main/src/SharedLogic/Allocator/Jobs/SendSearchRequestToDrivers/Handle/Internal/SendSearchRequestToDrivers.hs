@@ -21,7 +21,9 @@ import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import Domain.Types.Person (Driver)
@@ -29,7 +31,9 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TransporterConfig as DTR
 import Kernel.Beam.Functions
+import qualified Kernel.External.Maps as EMaps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -42,6 +46,8 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.DriverPool as SDP
+import qualified SharedLogic.FareCalculator as Fare
+import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
@@ -91,14 +97,14 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
         batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       }
 
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber validTill) driverPool
+  transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber validTill transporterConfig) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-    transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let needTranslation = language `elem` transporterConfig.languagesToBeTranslated
     let translatedSearchReq =
           if needTranslation
@@ -113,6 +119,47 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
     let fallBackCity = Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId
     Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity sReqFD.driverId notificationData
   where
+    getBaseFare ::
+      ( MonadFlow m,
+        Redis.HedisFlow m r,
+        HasFlowEnv m r '["version" ::: DeploymentVersion],
+        EsqDBFlow m r,
+        Esq.EsqDBReplicaFlow m r,
+        CacheFlow m r
+      ) =>
+      DFP.FullFarePolicy ->
+      Maybe Months ->
+      SDP.TripQuoteDetail ->
+      DTR.TransporterConfig ->
+      m HighPrecMoney
+    getBaseFare farePolicy vehicleAge tripQuoteDetail transporterConfig = do
+      fareParams <-
+        Fare.calculateFareParameters
+          Fare.CalculateFareParametersParams
+            { farePolicy = farePolicy,
+              actualDistance = searchReq.estimatedDistance,
+              sourceLatLong = Just $ EMaps.getCoordinates searchReq.fromLocation,
+              estimatedDistance = searchReq.estimatedDistance,
+              rideTime = searchReq.startTime,
+              returnTime = searchReq.returnTime,
+              roundTrip = fromMaybe False searchReq.roundTrip,
+              waitingTime = Nothing,
+              actualRideDuration = Nothing,
+              estimatedRideDuration = searchReq.estimatedDuration,
+              avgSpeedOfVehicle = transporterConfig.avgSpeedOfVehicle,
+              driverSelectedFare = Nothing,
+              customerExtraFee = Nothing,
+              nightShiftCharge = Nothing,
+              customerCancellationDues = Nothing,
+              nightShiftOverlapChecking = DTC.isFixedNightCharge tripQuoteDetail.tripCategory,
+              timeDiffFromUtc = Just transporterConfig.timeDiffFromUtc,
+              tollCharges = Nothing,
+              vehicleAge = vehicleAge,
+              currency = searchReq.currency,
+              distanceUnit = searchReq.distanceUnit
+            }
+      pure $ Fare.fareSum fareParams
+
     getSearchRequestValidTill = do
       now <- getCurrentTime
       let singleBatchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
@@ -122,14 +169,16 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
         Redis.HedisFlow m r,
         HasFlowEnv m r '["version" ::: DeploymentVersion],
         EsqDBFlow m r,
+        Esq.EsqDBReplicaFlow m r,
         CacheFlow m r
       ) =>
       HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
       Int ->
       UTCTime ->
+      DTR.TransporterConfig ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill dpwRes = do
+    buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -137,6 +186,11 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       driverStats <- runInReplica $ QDriverStats.findById dpRes.driverId
       tripQuoteDetail <- HashMap.lookup dpRes.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dpRes.serviceTier)
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
+      baseFare <- case tripQuoteDetail.tripCategory of
+        DTC.Ambulance _ -> do
+          farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing (Just (TransactionId (Id searchReq.transactionId)))
+          getBaseFare farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
+        _ -> pure tripQuoteDetail.baseFare
       deploymentVersion <- asks (.version)
       let searchRequestForDriver =
             SearchRequestForDriver
@@ -146,6 +200,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 estimateId = Just tripQuoteDetail.estimateOrQuoteId,
                 startTime = searchTry.startTime,
                 merchantId = Just searchReq.providerId,
+                vehicleAge = dpRes.vehicleAge,
                 merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
                 driverId = cast dpRes.driverId,
@@ -166,7 +221,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 driverStepFee = tripQuoteDetail.driverStepFee,
                 driverDefaultStepFee = tripQuoteDetail.driverDefaultStepFee,
                 rideRequestPopupDelayDuration = dpwRes.intelligentScores.rideRequestPopupDelayDuration,
-                baseFare = Just tripQuoteDetail.baseFare,
+                baseFare = Just baseFare,
                 currency,
                 distanceUnit = searchReq.distanceUnit,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,

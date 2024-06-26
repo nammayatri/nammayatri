@@ -976,6 +976,7 @@
                           "        console.log('customer_estimate_id', estimate_id)",
                           "    }",
                           "    if(body.quotes.length > 0) {",
+                          "        console.log(body.quotes)",
                           "        const quote_id = body.quotes.find(quote => quote.onDemandCab.vehicleVariant == vehicleVariant).onDemandCab.id",
                           "        postman.setEnvironmentVariable(\"customer_quote_id\", quote_id);",
                           "        console.log('customer_quote_id', estimate_id)",

@@ -101,6 +101,7 @@ onInit req = do
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DRB.InterCityDetails details -> Just details.toLocation
+        DRB.AmbulanceDetails details -> Just details.toLocation
   let onInitRes =
         OnInitRes
           { bookingId = booking.id,

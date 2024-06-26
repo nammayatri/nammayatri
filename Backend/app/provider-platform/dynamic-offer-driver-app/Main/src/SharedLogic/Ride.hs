@@ -18,6 +18,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
+import Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant
@@ -149,6 +150,7 @@ buildRideDetails ride driver vehicle = do
         vehicleVariant = Just vehicle.variant,
         vehicleModel = Just vehicle.model,
         vehicleClass = Nothing,
+        vehicleAge = getVehicleAge vehicle.mYManufacturing now,
         fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId),
         defaultServiceTierName = defaultServiceTierName,
         createdAt = Just now

@@ -45,4 +45,4 @@ types:
     enum: "UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, COMPLETED, CANCELLED"
     derive: "Read, Kernel.Prelude.ToParamSchema"
   TripCategory:
-    enum: "OneWay, Rental, RideShare, InterCity, CrossCity"
+    enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"

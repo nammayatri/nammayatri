@@ -78,6 +78,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             status = status,
             straightLineDistanceToPickup = straightLineDistanceToPickup,
             totalRides = Kernel.Prelude.fromMaybe 0 totalRides,
+            vehicleAge = vehicleAge,
             vehicleServiceTier = Kernel.Prelude.fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
             vehicleServiceTierName = vehicleServiceTierName,
             vehicleVariant = vehicleVariant
@@ -140,6 +141,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.status = status,
         Beam.straightLineDistanceToPickup = straightLineDistanceToPickup,
         Beam.totalRides = Kernel.Prelude.Just totalRides,
+        Beam.vehicleAge = vehicleAge,
         Beam.vehicleServiceTier = Kernel.Prelude.Just vehicleServiceTier,
         Beam.vehicleServiceTierName = vehicleServiceTierName,
         Beam.vehicleVariant = vehicleVariant

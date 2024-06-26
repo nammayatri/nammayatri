@@ -49,10 +49,4 @@ handler = callSearch
 callSearch :: ShortId DM.Merchant -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchResp
 callSearch merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  let req' = parseReq req
-  SH.search (personId, m.id) req' Nothing Nothing Nothing Nothing Nothing (Just True)
-
-parseReq :: SH.SearchReq -> SH.SearchReq
-parseReq (SH.OneWaySearch oneWaySearchReq) = SH.OneWaySearch oneWaySearchReq
-parseReq (SH.RentalSearch rentalSearchReq) = SH.RentalSearch rentalSearchReq
-parseReq (SH.InterCitySearch interCitySearchReq) = SH.InterCitySearch interCitySearchReq
+  SH.search (personId, m.id) req Nothing Nothing Nothing Nothing Nothing (Just True)

@@ -216,6 +216,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     actualDistance = Just estimatedDistance,
                     rideTime = booking.startTime,
                     returnTime = booking.returnTime,
+                    vehicleAge = Nothing,
                     roundTrip = fromMaybe False booking.roundTrip,
                     waitingTime = Nothing,
                     actualRideDuration = Nothing,

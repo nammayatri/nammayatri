@@ -29,9 +29,11 @@ import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy as BeamFP
+import qualified Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab as BeamFPAD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
+import qualified Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab as QueriesFPAD
 import qualified Storage.Queries.FarePolicy.FarePolicyInterCityDetails as QueriesFPICD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyRentalDetails as QueriesFPRD
@@ -77,6 +79,7 @@ update' farePolicy = do
     SlabsDetails (FPSlabsDetails _slabs) -> pure ()
     RentalDetails _ -> pure ()
     InterCityDetails _ -> pure ()
+    AmbulanceDetails _ -> pure ()
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
 create farePolicy = do
@@ -87,6 +90,7 @@ create farePolicy = do
     ProgressiveDetails fPPD ->
       QueriesFPPD.create (farePolicy.id, fPPD)
     SlabsDetails _ -> pure () -- will do later :(
+    AmbulanceDetails _ -> pure () -- can be done with slabs
     RentalDetails fPRD -> do
       QueriesFPRD.create (farePolicy.id, fPRD)
     InterCityDetails fPICD ->
@@ -136,7 +140,8 @@ data FarePolicyHandler m = FarePolicyHandler
     findProgressiveDetails :: m (Maybe Domain.FullFarePolicyProgressiveDetails),
     findAllSlabDetailsSlabs :: m [BeamFPSS.FullFarePolicySlabsDetailsSlab],
     findRentalDetails :: m (Maybe Domain.FullFarePolicyRentalDetails),
-    findInterCityDetails :: m (Maybe Domain.FullFarePolicyInterCityDetails)
+    findInterCityDetails :: m (Maybe Domain.FullFarePolicyInterCityDetails),
+    findAllAmbulanceDetailsSlabs :: m [BeamFPAD.FullFarePolicyAmbulanceDetailsSlab]
   }
 
 mkBeamFarePolicyHandler ::
@@ -149,7 +154,8 @@ mkBeamFarePolicyHandler BeamFP.FarePolicyT {..} =
       findProgressiveDetails = QueriesFPPD.findById' (Id id),
       findAllSlabDetailsSlabs = QueriesFPSDS.findAll' (Id id),
       findRentalDetails = QueriesFPRD.findById' (Id id),
-      findInterCityDetails = QueriesFPICD.findById' (Id id)
+      findInterCityDetails = QueriesFPICD.findById' (Id id),
+      findAllAmbulanceDetailsSlabs = QueriesFPAD.findById' (Id id)
     }
 
 fromTTypeFarePolicy ::
@@ -182,6 +188,12 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
         mFPICD <- handler.findInterCityDetails
         case mFPICD of
           Just (_, fPICD) -> return $ Just (InterCityDetails fPICD)
+          Nothing -> return Nothing
+      Ambulance -> do
+        fullAmbulanceSlabs <- handler.findAllAmbulanceDetailsSlabs
+        let slabs = snd <$> fullAmbulanceSlabs
+        case nonEmpty slabs of
+          Just nESlabs -> return $ Just (AmbulanceDetails (FPAmbulanceDetails nESlabs))
           Nothing -> return Nothing
   case mFarePolicyDetails of
     Just farePolicyDetails -> do

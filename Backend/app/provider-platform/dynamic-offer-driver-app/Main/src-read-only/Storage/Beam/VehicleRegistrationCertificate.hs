@@ -5,6 +5,7 @@
 
 module Storage.Beam.VehicleRegistrationCertificate where
 
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import qualified Domain.Types.Vehicle
 import Kernel.External.Encryption
@@ -26,6 +27,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     id :: B.C f Kernel.Prelude.Text,
     insuranceValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    mYManufacturing :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     manufacturerModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     permitExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

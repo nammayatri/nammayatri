@@ -181,7 +181,6 @@ Booking:
     - findByPrimaryKey
     - updateByPrimaryKey
 
-
 BookingLocation:
   derives: "Generic,Show,Eq,Kernel.External.Maps.HasCoordinates.HasCoordinates"
 

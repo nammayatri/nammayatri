@@ -93,6 +93,7 @@ tfFulfillments res =
       DRB.OneWaySpecialZoneDetails _ -> show Enums.RIDE_OTP
       DRB.RentalDetails _ -> show Enums.RENTAL
       DRB.InterCityDetails _ -> show Enums.INTER_CITY
+      DRB.AmbulanceDetails _ -> show Enums.AMBULANCE_FLOW
       _ -> show Enums.DELIVERY
 
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]

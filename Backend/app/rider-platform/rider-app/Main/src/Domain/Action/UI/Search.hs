@@ -79,7 +79,7 @@ import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 
-data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -117,6 +117,7 @@ fareProductConstructorModifier = \case
   "OneWaySearch" -> "ONE_WAY"
   "RentalSearch" -> "RENTAL"
   "InterCitySearch" -> "INTER_CITY"
+  "AmbulanceSearch" -> "AMBULANCE"
   x -> x
 
 data OneWaySearchReq = OneWaySearchReq
@@ -288,17 +289,9 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   searchRequestId <- generateGUID
   (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, multipleRoutes) <-
     case req of
-      OneWaySearch oneWayReq -> do
-        riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
-        autoCompleteEvent riderConfig searchRequestId oneWayReq.sessionToken oneWayReq.isSourceManuallyMoved oneWayReq.isDestinationManuallyMoved now
-        destinationLatLong <- listToMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
-        calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId [sourceLatLong, destinationLatLong] now
-      InterCitySearch rentalReq -> do
-        riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
-        autoCompleteEvent riderConfig searchRequestId rentalReq.sessionToken rentalReq.isSourceManuallyMoved rentalReq.isDestinationManuallyMoved now
-        destinationLatLong <- listToMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
-        let latLongs = if roundTrip then [sourceLatLong, destinationLatLong, sourceLatLong] else [sourceLatLong, destinationLatLong]
-        calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now
+      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq stopsLatLong now sourceLatLong roundTrip
+      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq stopsLatLong now sourceLatLong roundTrip
+      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq stopsLatLong now sourceLatLong roundTrip
       RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
 
   fromLocation <- buildSearchReqLoc origin
@@ -392,6 +385,22 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
             stops = fromMaybe [] stops,
             ..
           }
+      AmbulanceSearch OneWaySearchReq {..} ->
+        SearchDetails
+          { riderPreferredOption = SearchRequest.Ambulance,
+            roundTrip = False,
+            stops = [destination],
+            startTime = fromMaybe now startTime,
+            returnTime = Nothing,
+            ..
+          }
+
+    processOneWaySearch person merchant merchantOperatingCity searchRequestId sReq stopsLatLong now sourceLatLong roundTrip = do
+      riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
+      autoCompleteEvent riderConfig searchRequestId sReq.sessionToken sReq.isSourceManuallyMoved sReq.isDestinationManuallyMoved now
+      destinationLatLong <- listToMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
+      let latLongs = if roundTrip then [sourceLatLong, destinationLatLong, sourceLatLong] else [sourceLatLong, destinationLatLong]
+      calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now
 
     updateRideSearchHotSpot :: DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> Flow ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do

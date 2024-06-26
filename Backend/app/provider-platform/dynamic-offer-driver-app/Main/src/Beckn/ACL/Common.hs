@@ -186,6 +186,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "CANCELLATION_CHARGES",
                  "PARKING_CHARGE"
                ]
+    DFParams.Ambulance -> True
 
 -- Fix these tage properly
 mkFulfillmentType :: DCT.TripCategory -> Text
@@ -194,6 +195,7 @@ mkFulfillmentType = \case
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
   DCT.Rental _ -> "RENTAL"
   DCT.InterCity _ _ -> "INTER_CITY"
+  DCT.Ambulance _ -> "AMBULANCE_FLOW"
   _ -> "DELIVERY"
 
 tfContact :: Maybe Text -> Maybe Spec.Contact

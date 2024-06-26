@@ -6,6 +6,7 @@ where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import Domain.Types.Common
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
@@ -49,6 +50,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     clientBundleVersion :: Maybe Version,
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
+    vehicleAge :: Maybe Months,
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text
   }
@@ -67,8 +69,9 @@ getNearestDriversCurrentlyOnRide ::
   Bool ->
   Bool ->
   Bool ->
+  UTCTime ->
   m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry _reduceRadiusValue currentRideTripCategoryValidForForwardBatching isRental isInterCity isValueAddNP = do
+getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry _reduceRadiusValue currentRideTripCategoryValidForForwardBatching isRental isInterCity isValueAddNP now = do
   let onRideRadius = radiusMeters
   logDebug $ "On Ride radius " <> show onRideRadius
   logDebug $ "lat long" <> show fromLocLatLong
@@ -157,6 +160,7 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
                 clientSdkVersion = person.clientSdkVersion,
                 clientBundleVersion = person.clientBundleVersion,
                 clientConfigVersion = person.clientConfigVersion,
+                vehicleAge = getVehicleAge vehicle.mYManufacturing now,
                 clientDevice = person.clientDevice,
                 backendConfigVersion = person.backendConfigVersion,
                 backendAppVersion = person.backendAppVersion

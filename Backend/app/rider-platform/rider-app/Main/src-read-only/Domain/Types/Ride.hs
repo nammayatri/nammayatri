@@ -18,6 +18,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
@@ -71,6 +72,7 @@ data Ride = Ride
     trackingUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     traveledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
@@ -111,6 +113,7 @@ data RideAPIEntity = RideAPIEntity
     tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
     traveledRideDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleColor :: Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,

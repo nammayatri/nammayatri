@@ -11,6 +11,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Time
 import Tools.Beam.UtilsTH
 
 data RideDetailsT f = RideDetailsT
@@ -22,6 +23,7 @@ data RideDetailsT f = RideDetailsT
     driverNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
     vehicleClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

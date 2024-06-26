@@ -47,6 +47,7 @@ data DRideAssignedReq = DRideAssignedReq
   { bookingDetails :: BookingDetails,
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
+    vehicleAge :: Maybe Months,
     isFreeRide :: Bool,
     driverAccountId :: Maybe Payment.AccountId,
     estimateId :: Maybe Text

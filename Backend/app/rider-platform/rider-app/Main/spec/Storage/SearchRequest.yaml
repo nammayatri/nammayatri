@@ -63,7 +63,7 @@ SearchRequest:
       enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
       derive: "HttpInstance"
     RiderPreferredOption:
-      enum: "Rental, OneWay, InterCity"
+      enum: "Rental, OneWay, InterCity, Ambulance"
       derive: "HttpInstance"
 
   beamType:

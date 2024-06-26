@@ -1034,6 +1034,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
+              DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
           QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource sReqFD.id
           return pullList
@@ -1142,6 +1143,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               rideTime = sReqFD.startTime,
               returnTime = searchReq.returnTime,
               roundTrip = fromMaybe False searchReq.roundTrip,
+              vehicleAge = sReqFD.vehicleAge,
               waitingTime = Nothing,
               actualRideDuration = Nothing,
               avgSpeedOfVehicle = Nothing,
@@ -1158,7 +1160,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               distanceUnit = searchReq.distanceUnit,
               ..
             }
-      QFP.updateFareParameters fareParams
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
@@ -1214,6 +1215,7 @@ getStats (driverId, _, merchantOpCityId) date = do
               SlabDetails _ -> Nothing
               RentalDetails det -> Just ((deadKmFare :: Fare.FParamsRentalDetails -> HighPrecMoney) det)
               InterCityDetails det -> Just (pickupCharge det)
+              AmbulanceDetails _ -> Nothing
           )
           fareParameters
   let bonusEarning = GHCL.sum driverSelFares + GHCL.sum customerExtFees + GHCL.sum deadKmFares

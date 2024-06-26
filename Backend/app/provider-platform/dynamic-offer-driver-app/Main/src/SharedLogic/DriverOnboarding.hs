@@ -282,6 +282,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       ventilator = rc.ventilator,
       luggageCapacity = rc.luggageCapacity,
       vehicleRating = rc.vehicleRating,
+      mYManufacturing = rc.mYManufacturing,
       selectedServiceTiers = [],
       createdAt = now,
       updatedAt = now
@@ -304,6 +305,7 @@ data CreateRCInput = CreateRCInput
     pucValidityUpto :: Maybe UTCTime,
     manufacturer :: Maybe Text,
     manufacturerModel :: Maybe Text,
+    mYManufacturing :: Maybe Day,
     airConditioned :: Maybe Bool,
     oxygen :: Maybe Bool,
     ventilator :: Maybe Bool,
@@ -355,6 +357,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now certificateNu
       reviewedAt = Nothing,
       reviewRequired,
       insuranceValidity = input.insuranceValidity,
+      mYManufacturing = input.mYManufacturing,
       verificationStatus,
       fleetOwnerId = input.fleetOwnerId,
       merchantId = Just merchantId,
@@ -472,6 +475,11 @@ removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do
+  a_ <- a
+  parseTimeM True defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
+
+convertTextToDay :: Maybe Text -> Maybe Day
+convertTextToDay a = do
   a_ <- a
   parseTimeM True defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 

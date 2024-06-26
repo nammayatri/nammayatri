@@ -17,6 +17,7 @@ import qualified Domain.Types.Vehicle
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import qualified Kernel.Types.Version
 import qualified Tools.Beam.UtilsTH
 
@@ -69,6 +70,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     status :: Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: Kernel.Types.Common.Meters,
     totalRides :: Kernel.Prelude.Int,
+    vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.Vehicle.Variant
