@@ -40,7 +40,7 @@ getPickupSpecialLocation ::
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
 getPickupSpecialLocation merchantOpCityId pickupSpecialLocation = do
-  pickupSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findAllByMerchantIdAndCategory merchantOpCityId.getId pickupSpecialLocation.category
+  pickupSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findByMerchantOpCityIdAndCategory merchantOpCityId.getId pickupSpecialLocation.category
   return (pickupSpecialLocation, maybe 999 (.pickupPriority) pickupSpecialLocationPriority)
 
 getDropSpecialLocation ::
@@ -49,7 +49,7 @@ getDropSpecialLocation ::
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
 getDropSpecialLocation merchantOpCityId dropSpecialLocation = do
-  dropSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findAllByMerchantIdAndCategory merchantOpCityId.getId dropSpecialLocation.category
+  dropSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findByMerchantOpCityIdAndCategory merchantOpCityId.getId dropSpecialLocation.category
   return (dropSpecialLocation, maybe 999 (.dropPriority) dropSpecialLocationPriority)
 
 getSearchSources :: Bool -> [DFareProduct.SearchSource]
