@@ -425,7 +425,7 @@ postDriverBackgroundVerification (mbPersonId, merchantId, merchantOpCityId) = do
       return $
         BackgroundVerification.CreateCandidateReq
           { email = email,
-            ssn = ssn,
+            ssn = Just ssn,
             firstName = person.firstName,
             middleName = Nothing,
             lastName = person.lastName,

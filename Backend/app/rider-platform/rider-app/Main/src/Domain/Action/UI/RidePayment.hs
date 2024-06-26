@@ -6,6 +6,7 @@ module Domain.Action.UI.RidePayment where
 import qualified API.Types.UI.RidePayment
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
@@ -15,14 +16,17 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified SharedLogic.Payment as Payment
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
@@ -116,8 +120,7 @@ deletePaymentMethodsDelete ::
 deletePaymentMethodsDelete (mbPersonId, _) paymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  customerId <- getCustomerPaymentId person
-  Payment.deleteCard person.merchantId person.merchantOperatingCityId customerId paymentMethodId
+  Payment.deleteCard person.merchantId person.merchantOperatingCityId paymentMethodId
   return Success
 
 postPaymentAddTip ::
@@ -129,14 +132,48 @@ postPaymentAddTip ::
     Environment.Flow APISuccess
   )
 postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
-  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
-  paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
-  driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-  email <- mapM decrypt person.email
-  paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride booking customerPaymentId paymentMethodId driverAccountId email
-  Payment.capturePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId tipRequest.amount.amount (HighPrecMoney 0.0)
+  Redis.whenWithLockRedis addTipLockKey 60 $ do
+    personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    unless (ride.status == Domain.Types.Ride.COMPLETED) $
+      throwError $ RideInvalidStatus "Ride is not completed yet."
+    fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
+    if any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups
+      then throwError $ InvalidRequest "Tip already added"
+      else do
+        id <- generateGUID
+        let tipFareBreakup =
+              Domain.Types.FareBreakup.FareBreakup
+                { id,
+                  entityId = rideId.getId,
+                  entityType = Domain.Types.FareBreakup.RIDE,
+                  description = tipFareBreakupTitle,
+                  amount = mkPriceFromAPIEntity tipRequest.amount
+                }
+        QFareBreakup.create tipFareBreakup
+    customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
+    paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+    driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+    email <- mapM decrypt person.email
+    -- handle error flow properly
+    let createPaymentIntentReq =
+          Payment.CreatePaymentIntentReq
+            { amount = tipRequest.amount.amount,
+              applicationFeeAmount = 0.0,
+              currency = tipRequest.amount.currency,
+              customer = customerPaymentId,
+              paymentMethod = paymentMethodId,
+              receiptEmail = email,
+              driverAccountId
+            }
+    paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
+    transaction <- runInReplica $ QPaymentTransaction.findByTxnId paymentIntentResp.paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found: " <> paymentIntentResp.paymentIntentId)
+    Payment.capturePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId transaction.amount (HighPrecMoney 0.0)
   return Success
+  where
+    tipFareBreakupTitle :: Text
+    tipFareBreakupTitle = "Post Ride Tip"
+
+    addTipLockKey :: Text
+    addTipLockKey = "Driver:AddTip:RideId-" <> rideId.getId
