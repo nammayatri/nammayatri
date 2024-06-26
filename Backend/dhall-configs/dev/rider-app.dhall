@@ -302,4 +302,5 @@ in  { esqDBCfg
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , isMetroTestTransaction = False
+    , urlShortnerConfig = common.urlShortnerConfig
     }

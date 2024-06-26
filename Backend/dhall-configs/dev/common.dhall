@@ -28,6 +28,9 @@ let internalEndPointMap =
 
 let SchedulerType = < RedisBased | DbBased >
 
+let urlShortnerConfig =
+      { url = "http://localhost:9023/", apiKey = sec.urlShortnerApiKey }
+
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
     , loggerConfig =
@@ -57,4 +60,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
     , internalEndPointMap
+    , urlShortnerConfig
     }
