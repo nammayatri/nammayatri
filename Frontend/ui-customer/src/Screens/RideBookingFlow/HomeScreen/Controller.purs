@@ -1193,7 +1193,7 @@ eval (KeyboardCallback keyBoardState) state = do
   if isLocalStageOn ChatWithDriver && isOpen then
     void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true 
   else pure unit
-  continue state
+  continue state {props {isKeyBoardOpen = isOpen}}
 
 eval (NotifyDriverStatusCountDown seconds status timerID) state = do 
   if status == "EXPIRED" then do

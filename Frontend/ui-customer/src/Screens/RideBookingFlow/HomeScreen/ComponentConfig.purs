@@ -1076,6 +1076,7 @@ messagingViewConfig state =
         , peekHeight = if state.data.infoCardPeekHeight == 0 then getDefaultPeekHeight state else state.data.infoCardPeekHeight
         , otp = state.data.driverInfoCardState.otp
         , suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
+        , isKeyBoardOpen = state.props.isKeyBoardOpen
         }
   in
     messagingViewConfig'

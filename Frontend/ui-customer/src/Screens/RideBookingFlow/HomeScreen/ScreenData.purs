@@ -367,6 +367,7 @@ initData = {
     , showScheduledRideExistsPopUp : false
     , isOffline : false
     , hasEstimateBackpoint : false
+    , isKeyBoardOpen : false
   }
 }
 
