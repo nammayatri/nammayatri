@@ -75,7 +75,7 @@ endAssociationForRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person 
 endAssociationForRC (Id driverId) (Id rcId) = do
   now <- getCurrentTime
   updateWithKV
-    [Se.Set BeamDRCA.associatedTill $ Just now]
+    [Se.Set BeamDRCA.associatedTill $ Just now, Se.Set BeamDRCA.isRcActive False]
     [Se.And [Se.Is BeamDRCA.driverId (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamDRCA.rcId (Se.Eq rcId)]]
 
 activateRCForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> UTCTime -> m ()
