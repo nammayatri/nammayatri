@@ -39,11 +39,11 @@ createQuote' quote = do
 createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Quote] -> m ()
 createMany = traverse_ createQuote'
 
-findByBppIdAndBPPQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Quote)
-findByBppIdAndBPPQuoteId bppId bppQuoteId = do
-  dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
-  quoteList <- findAllWithKV [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId, Se.Is BeamQ.driverOfferId $ Se.In (map (Just . getId . DDO.id) dOffer)]]
-  let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quoteList
+findByBppIdAndBPPQuoteIdAndEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Id Estimate -> m (Maybe Quote)
+findByBppIdAndBPPQuoteIdAndEstimateId bppId bppQuoteId estimateId = do
+  dOffer <- QueryDO.findByEstimateIdAndBppQuoteId estimateId bppQuoteId
+  quote <- findOneWithKV [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId, Se.Is BeamQ.driverOfferId $ Se.In (map (Just . getId . DDO.id) dOffer)]]
+  let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quote
   pure $ listToMaybe quoteWithDoOfferId
   where
     getQuoteWithDOffer dOffer res quote = do

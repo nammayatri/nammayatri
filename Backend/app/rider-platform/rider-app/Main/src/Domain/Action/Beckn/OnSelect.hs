@@ -74,7 +74,8 @@ data QuoteInfo = QuoteInfo
     serviceTierShortDesc :: Maybe Text,
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
-    quoteValidTill :: UTCTime
+    quoteValidTill :: UTCTime,
+    fulfillmentId :: Text
   }
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
@@ -83,7 +84,8 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
     distanceToPickup :: Maybe HighPrecMeters,
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
-    bppDriverQuoteId :: Text
+    bppDriverQuoteId :: Text,
+    fulfillmentId :: Text
   }
   deriving (Generic, Show)
 
@@ -220,14 +222,14 @@ validateRequest DOnSelectReq {..} = do
       >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
   let personId = searchRequest.riderId
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
+  whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId estimate.id) $
     throwError $ InvalidRequest "Duplicate OnSelect quote"
   return $
     OnSelectValidatedReq
       { ..
       }
   where
-    duplicateCheckCond :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> m Bool
-    duplicateCheckCond [] _ = return False
-    duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-      isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_)
+    duplicateCheckCond :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> Id DEstimate.Estimate -> m Bool
+    duplicateCheckCond [] _ _ = return False
+    duplicateCheckCond (bppQuoteId_ : _) bppId_ estimateId =
+      isJust <$> runInReplica (QQuote.findByBppIdAndBPPQuoteIdAndEstimateId bppId_ bppQuoteId_ estimateId)

@@ -86,8 +86,9 @@ buildQuoteInfoV2 ::
   m DOnSelect.QuoteInfo
 buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   fulfillmentType <- fulfillment.fulfillmentType & fromMaybeM (InvalidRequest "Missing fulfillmentType")
+  fulfillmentId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
   quoteDetails <- case fulfillmentType of
-    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill
+    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill fulfillmentId
     "RIDE_OTP" -> throwError $ InvalidRequest "select not supported for ride otp trip"
     _ -> throwError $ InvalidRequest "Invalid fulfillmentType"
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
@@ -142,8 +143,9 @@ buildDriverOfferQuoteDetailsV2 ::
   Spec.Quotation ->
   UTCTime ->
   UTCTime ->
+  Text ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
+buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl fulfillmentId = do
   let agentTags = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personTags)
       itemTags = item.itemTags
       driverName = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personName) & fromMaybe "Driver"
@@ -152,7 +154,7 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
       rating = getDriverRatingV2 agentTags
   let validTill = (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybe onSelectTtl
   logDebug $ "on_select ttl request rider: " <> show validTill
-  bppQuoteId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest $ "Missing fulfillmentId, fulfillment:-" <> show fulfillment)
+  bppQuoteId <- item.itemId & fromMaybeM (InvalidRequest "Missing itemId")
   pure $
     DOnSelect.DriverOfferQuoteDetails
       { distanceToPickup = realToFrac <$> distanceToPickup',

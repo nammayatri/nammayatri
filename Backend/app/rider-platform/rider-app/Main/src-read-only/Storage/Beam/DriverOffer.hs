@@ -22,6 +22,7 @@ data DriverOfferT f = DriverOfferT
     driverName :: B.C f Kernel.Prelude.Text,
     durationToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     estimateId :: B.C f Kernel.Prelude.Text,
+    fulfillmentId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -38,6 +39,6 @@ instance B.Table DriverOfferT where
 
 type DriverOffer = DriverOfferT Identity
 
-$(enableKVPG ''DriverOfferT ['id] [['bppQuoteId], ['estimateId]])
+$(enableKVPG ''DriverOfferT ['id] [['estimateId]])
 
 $(mkTableInstances ''DriverOfferT "driver_offer")

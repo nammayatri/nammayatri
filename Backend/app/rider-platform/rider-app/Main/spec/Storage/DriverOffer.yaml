@@ -26,6 +26,7 @@ DriverOffer:
     bppQuoteId : Text
     rating : Maybe Centesimal
     status : DriverOfferStatus
+    fulfillmentId : Text
     createdAt: UTCTime
     updatedAt : UTCTime
 
@@ -53,7 +54,6 @@ DriverOffer:
 
   constraints:
     id: PrimaryKey
-    bppQuoteId: SecondaryKey
     estimateId: SecondaryKey
 
   sqlType:
@@ -71,9 +71,10 @@ DriverOffer:
       kvFunction: findOneWithKV
       where: id
 
-    findByBPPQuoteId:
+    findByEstimateIdAndBppQuoteId:
       kvFunction: findAllWithKV
-      where: bppQuoteId
+      where:
+        and: [estimateId, bppQuoteId]
 
     updateStatus:
       kvFunction: updateWithKV

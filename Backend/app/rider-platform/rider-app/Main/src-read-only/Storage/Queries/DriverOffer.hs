@@ -23,8 +23,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverOffer.DriverOffer] -> m ())
 createMany = traverse_ create
 
-findByBPPQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.DriverOffer.DriverOffer])
-findByBPPQuoteId bppQuoteId = do findAllWithKV [Se.Is Beam.bppQuoteId $ Se.Eq bppQuoteId]
+findByEstimateIdAndBppQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Kernel.Prelude.Text -> m [Domain.Types.DriverOffer.DriverOffer])
+findByEstimateIdAndBppQuoteId estimateId bppQuoteId = do findAllWithKV [Se.And [Se.Is Beam.estimateId $ Se.Eq (Kernel.Types.Id.getId estimateId), Se.Is Beam.bppQuoteId $ Se.Eq bppQuoteId]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer -> m (Maybe Domain.Types.DriverOffer.DriverOffer))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -47,6 +47,7 @@ updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
       Se.Set Beam.driverName driverName,
       Se.Set Beam.durationToPickup durationToPickup,
       Se.Set Beam.estimateId (Kernel.Types.Id.getId estimateId),
+      Se.Set Beam.fulfillmentId fulfillmentId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.rating rating,
@@ -68,6 +69,7 @@ instance FromTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
             driverName = driverName,
             durationToPickup = durationToPickup,
             estimateId = Kernel.Types.Id.Id estimateId,
+            fulfillmentId = fulfillmentId,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -88,6 +90,7 @@ instance ToTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
         Beam.driverName = driverName,
         Beam.durationToPickup = durationToPickup,
         Beam.estimateId = Kernel.Types.Id.getId estimateId,
+        Beam.fulfillmentId = fulfillmentId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

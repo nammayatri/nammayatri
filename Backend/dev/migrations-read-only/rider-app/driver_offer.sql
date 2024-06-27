@@ -16,3 +16,8 @@ ALTER TABLE atlas_app.driver_offer ADD COLUMN status character varying(255) NOT 
 ALTER TABLE atlas_app.driver_offer ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.driver_offer ADD COLUMN valid_till timestamp with time zone NOT NULL;
 ALTER TABLE atlas_app.driver_offer ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.driver_offer ADD COLUMN fulfillment_id text NOT NULL;

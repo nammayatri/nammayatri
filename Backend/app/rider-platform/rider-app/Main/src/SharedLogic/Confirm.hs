@@ -79,7 +79,8 @@ data DConfirmRes = DConfirmRes
     merchant :: DM.Merchant,
     city :: Context.City,
     maxEstimatedDistance :: Maybe Distance,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    fulfillmentId :: Maybe Text
   }
   deriving (Show, Generic)
 
@@ -122,7 +123,7 @@ confirm DConfirmReq {..} = do
         when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
         when (driverOffer.validTill < now) $
           throwError $ QuoteExpired quote.id.getId
-        pure (Just driverOffer.bppQuoteId)
+        pure (Just driverOffer.fulfillmentId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
       DQuote.InterCityDetails details -> pure (Just details.id.getId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)

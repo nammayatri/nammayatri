@@ -21,6 +21,7 @@ data DriverOffer = DriverOffer
     driverName :: Kernel.Prelude.Text,
     durationToPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
+    fulfillmentId :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
