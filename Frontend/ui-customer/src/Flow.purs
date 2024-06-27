@@ -314,7 +314,7 @@ handleWidgetData urlData =
       updateLocalStage SearchLocationModel
       checkAndUpdateLocations
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= (getString STR.CURRENT_LOCATION) }})
-    _ -> currentFlowStatus
+    _ -> pure unit
 
 
 handleExternalLocations :: Maybe GlobalPayload -> FlowBT String Unit
