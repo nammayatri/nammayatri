@@ -590,6 +590,7 @@ getVehicleVariantImage variant =
                           case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
                             "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                            "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
                         _ -> fetchImage FF_ASSET "ic_vehicle_front"
 

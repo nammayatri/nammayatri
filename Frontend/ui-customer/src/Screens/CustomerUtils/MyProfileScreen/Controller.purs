@@ -15,7 +15,7 @@ import Components.GenericRadioButton as GenericRadioButton
 import Components.SelectListModal as SelectListModal
 import Resources.Constants as Constants
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, ($), discard, bind, not, void, (<>), (<), (==), (&&), (/=), (||), (>=))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
@@ -172,7 +172,9 @@ eval (GenericRadioButtonAC (GenericRadioButton.OnSelect idx)) state = do
 eval (SpecialAssistanceListAC action) state = do 
   let editedDisabilityOptions = state.data.editedDisabilityOptions
   case action of
-    SelectListModal.OnGoBack -> continue state{props{isSpecialAssistList = false}}
+    SelectListModal.OnGoBack -> do
+      void $ pure $ toggleBtnLoader "" false
+      continue state{props{isSpecialAssistList = false}}
     SelectListModal.UpdateIndex idx -> continue state { data{editedDisabilityOptions{specialAssistActiveIndex = idx , editedDisabilityReason = fromMaybe "" editedDisabilityOptions.otherDisabilityReason } }}
     SelectListModal.TextChanged id input -> continue state {data{editedDisabilityOptions{otherDisabilityReason = Just input}}}
     SelectListModal.Button2 (PrimaryButton.OnClick) -> do 

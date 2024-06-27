@@ -593,7 +593,7 @@ config =
               , customerAppId : "in.juspay.nammayatri"
               , driverAppId : "in.juspay.nammayatripartner"
             },
-            waitingCharges : 1.50,
+            waitingCharges : 1.00,
             waitingChargesConfig : defWaitingChargesConfig,
             rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
             rateCardConfig : defRateCardConfig,
