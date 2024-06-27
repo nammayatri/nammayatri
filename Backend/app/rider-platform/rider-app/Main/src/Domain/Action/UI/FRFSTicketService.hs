@@ -279,7 +279,13 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById mPrice mPrice booking.id
       when (paymentBookingStatus == FRFSTicketService.SUCCESS) do
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
-      buildFRFSTicketBookingStatusAPIRes booking Nothing
+      let paymentStatusAPI =
+            case paymentBookingStatus of
+              FRFSTicketService.FAILURE -> Just $ mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
+              FRFSTicketService.SUCCESS -> Just $ mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
+              _ -> Nothing
+      let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing}
+      buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.CONFIRMING -> do
       if booking.validTill < now
         then do
@@ -373,7 +379,9 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                   buildFRFSTicketBookingStatusAPIRes booking paymentObj
     DFRFSTicketBooking.CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
-      buildFRFSTicketBookingStatusAPIRes booking Nothing
+      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
+      let mbPaymentObj = paymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = mkTBPStatusAPI tbp.status, paymentOrder = Nothing}
+      buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
       buildFRFSTicketBookingStatusAPIRes booking Nothing
@@ -429,6 +437,14 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         [] -> throwError $ InvalidRequest "No successful transaction found"
         [transaction] -> return transaction.id
         _ -> throwError $ InvalidRequest "Multiple successful transactions found"
+
+    mkTBPStatusAPI :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> FRFSTicketService.FRFSBookingPaymentStatusAPI
+    mkTBPStatusAPI = \case
+      DFRFSTicketBookingPayment.PENDING -> FRFSTicketService.PENDING
+      DFRFSTicketBookingPayment.SUCCESS -> FRFSTicketService.SUCCESS
+      DFRFSTicketBookingPayment.FAILED -> FRFSTicketService.FAILURE
+      DFRFSTicketBookingPayment.REFUND_PENDING -> FRFSTicketService.REFUND_PENDING
+      DFRFSTicketBookingPayment.REFUNDED -> FRFSTicketService.REFUNDED
 
 updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
 updateTotalOrderValueAndSettlementAmount booking bapConfig = do
