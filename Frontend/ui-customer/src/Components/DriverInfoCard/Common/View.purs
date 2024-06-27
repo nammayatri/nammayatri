@@ -63,7 +63,6 @@ driverDetailsView config uid nid =
   , background Color.white900
   , cornerRadius 8.0
   , visibility $  boolToVisibility $ if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then config.rideStarted else true
-  , gravity BOTTOM
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
