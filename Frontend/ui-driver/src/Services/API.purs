@@ -1998,6 +1998,7 @@ instance encodeOnCallRes :: Encode OnCallRes where encode = defaultEncode
 
 data LeaderBoardReq = DailyRequest String
                     | WeeklyRequest String String
+                    | MonthlyRequest Int
 
 newtype LeaderBoardRes = LeaderBoardRes {
     lastUpdatedAt :: Maybe String
@@ -2017,6 +2018,7 @@ newtype DriversInfo = DriversInfo
 instance makeLeaderBoardReq :: RestEndpoint LeaderBoardReq LeaderBoardRes where
     makeRequest reqBody@(DailyRequest date) headers = defaultMakeRequest GET (EP.leaderBoardDaily date) headers reqBody Nothing
     makeRequest reqBody@(WeeklyRequest fromDate toDate) headers = defaultMakeRequest GET (EP.leaderBoardWeekly fromDate toDate) headers reqBody Nothing
+    makeRequest reqBody@(MonthlyRequest month) headers = defaultMakeRequest GET (EP.leaderBoardMonthly month) headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 
@@ -2026,6 +2028,7 @@ instance standardEncodeLeaderBoardReq :: StandardEncode LeaderBoardReq
   where
     standardEncode (DailyRequest _) = standardEncode {}
     standardEncode (WeeklyRequest _ _) = standardEncode {}
+    standardEncode (MonthlyRequest _) = standardEncode {}
 instance decodeLeaderBoardReq :: Decode LeaderBoardReq where decode = defaultDecode
 instance encodeLeaderBoardReq :: Encode LeaderBoardReq where encode = defaultEncode
 

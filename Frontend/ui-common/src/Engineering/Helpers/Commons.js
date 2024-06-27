@@ -308,6 +308,22 @@ export const getPastWeeks = function (count) {
   }
 };
 
+export const getPastMonths = function (count) {
+  try { 
+    const result = []
+    const currentDate = new Date(), month = currentDate.getMonth();
+    for(let i = 0; i < count; i++) {
+      const newDate = new Date(); newDate.setMonth(month - i);
+      const obj = { utcDate : newDate, month: month - i + 1};
+      result.push(obj);
+    }
+    return result.reverse();
+  } catch (e) {
+    console.log("error in getPastMonths", e);
+    return [];
+  }
+}
+
 export const getDayName = function (dateString) {
   const date = new Date(dateString);
   const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];

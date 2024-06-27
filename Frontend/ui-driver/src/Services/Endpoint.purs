@@ -179,6 +179,9 @@ leaderBoardDaily date = (getBaseUrl "") <> "/driver/leaderBoard/daily?date=" <> 
 leaderBoardWeekly :: String -> String -> String
 leaderBoardWeekly fromDate toDate = (getBaseUrl "") <> "/driver/leaderBoard/weekly?fromDate=" <> fromDate <> "&toDate=" <> toDate
 
+leaderBoardMonthly :: Int -> String
+leaderBoardMonthly month = (getBaseUrl "") <> "/driver/leaderBoard/monthly?month=" <> show month
+
 referredDrivers :: String -> String
 referredDrivers dummy = (getBaseUrl "") <> "/driver/referral/getReferredDrivers"
 

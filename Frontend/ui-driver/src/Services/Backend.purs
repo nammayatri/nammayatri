@@ -1066,10 +1066,13 @@ leaderBoardBT request = do
             withAPIResultBT (EP.leaderBoardDaily date) identity errorHandler (lift $ lift $ callAPI headers request)
         (WeeklyRequest fromDate toDate) ->
             withAPIResultBT (EP.leaderBoardWeekly fromDate toDate) identity errorHandler (lift $ lift $ callAPI headers request)
+        (MonthlyRequest month) ->
+            withAPIResultBT (EP.leaderBoardMonthly month) identity errorHandler (lift $ lift $ callAPI headers request)
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
+leaderBoard :: LeaderBoardReq -> Flow GlobalState (Either ErrorResponse LeaderBoardRes)
 leaderBoard request = do
     headers <- getHeaders "" true
     case request of
@@ -1077,6 +1080,8 @@ leaderBoard request = do
             withAPIResult (EP.leaderBoardDaily date) unwrapResponse (callAPI headers request)
         (WeeklyRequest fromDate toDate) ->
             withAPIResult (EP.leaderBoardWeekly fromDate toDate) unwrapResponse (callAPI headers request)
+        (MonthlyRequest month) ->
+            withAPIResult (EP.leaderBoardMonthly month) unwrapResponse (callAPI headers request)
     where
         unwrapResponse (x) = x
 
