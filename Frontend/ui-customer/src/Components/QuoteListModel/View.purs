@@ -586,32 +586,6 @@ quoteListView state push =
             QuoteListItem.view (push <<< QuoteListItemActionController) item{appConfig = state.appConfig}) state.quoteListModel)
     ]
 
----------------------------- primaryButtonView ---------------------------------
-primaryButtonView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-primaryButtonView state push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , weight 1.0
-    , alignParentBottom "true,-1"
-    , background Color.white900 -- TODO : change to white900 once shadow is fixed
-    -- --, visibility GONE-- $ checkVisibility state
-    , padding (Padding 0 16 0 30)
-    ][ homeOrTryAgain state push ]
-
----------------------------- homeOrTryAgainView ---------------------------------
-homeOrTryAgain :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-homeOrTryAgain state push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation HORIZONTAL
-    , visibility $ boolToVisibility $ state.selectedQuote == Nothing && (null state.quoteListModel) && isLocalStageOn QuoteList
-    ][ PrimaryButton.view (push <<< HomeButtonActionController) (homeButtonConfig state)
-     , PrimaryButton.view (push <<< TryAgainButtonActionController) (tryAgainButtonConfig state)
-    ]
-
 -- buttonView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 -- buttonView state push =
 --   linearLayout

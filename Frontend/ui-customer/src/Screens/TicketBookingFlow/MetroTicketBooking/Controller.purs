@@ -102,8 +102,8 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
     updateAndExit updatedState $ Refresh updatedState
   else do
     let updatedTicketCount = case ticketType of
-          ST.ONE_WAY_TRIP -> if state.data.ticketCount > metroBookingConfigResp.oneWayTicketLimit then metroBookingConfigResp.oneWayTicketLimit else state.data.ticketCount
-          ST.ROUND_TRIP -> if state.data.ticketCount > metroBookingConfigResp.roundTripTicketLimit then metroBookingConfigResp.roundTripTicketLimit else state.data.ticketCount
+          ST.ONE_WAY_TICKET -> if state.data.ticketCount > metroBookingConfigResp.oneWayTicketLimit then metroBookingConfigResp.oneWayTicketLimit else state.data.ticketCount
+          ST.ROUND_TRIP_TICKET -> if state.data.ticketCount > metroBookingConfigResp.roundTripTicketLimit then metroBookingConfigResp.roundTripTicketLimit else state.data.ticketCount
     continue state { data {ticketType = ticketType, ticketCount = updatedTicketCount}, props {currentStage  = ST.MetroTicketSelection}}
 
 eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.MetroTicketSelection}} $ SelectSrcDest loc state{props{currentStage  = ST.MetroTicketSelection}}
@@ -151,6 +151,6 @@ getquoteData state  metroQuote =
   where
     getTicketType :: String -> ST.TicketType
     getTicketType quoteType = case quoteType of 
-      "SingleJourney" -> ST.ONE_WAY_TRIP
-      "ReturnJourney" -> ST.ROUND_TRIP
-      _ -> ST.ONE_WAY_TRIP
+      "SingleJourney" -> ST.ONE_WAY_TICKET
+      "ReturnJourney" -> ST.ROUND_TRIP_TICKET
+      _ -> ST.ONE_WAY_TICKET

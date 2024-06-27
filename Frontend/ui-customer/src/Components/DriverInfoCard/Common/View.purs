@@ -31,7 +31,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (rippleColor, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -47,7 +47,7 @@ import Mobility.Prelude (boolToVisibility, spaceSeparatedPascalCase)
 import Data.Function.Uncurried(runFn1)
 import Components.ServiceTierCard.View as ServiceTierCard
 import Resources.Constants (getVehicleCapacity)
- 
+import Screens.Types as ST
 import Screens.Types (FareProductType(..)) as FPT
 
 ---------------------------------- driverDetailsView ---------------------------------------
