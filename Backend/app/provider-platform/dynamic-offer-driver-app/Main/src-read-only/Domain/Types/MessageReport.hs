@@ -29,4 +29,4 @@ data MessageReport = MessageReport
 
 data DeliveryStatus = Success | Failed | Queued | Sending deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DeliveryStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DeliveryStatus)

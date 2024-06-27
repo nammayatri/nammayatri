@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.Admin where
+module API.Action.UI.Admin
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.Admin
 import qualified API.Types.UI.Suspect

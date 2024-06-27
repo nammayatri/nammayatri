@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.FareCalculator where
+module API.Action.UI.FareCalculator
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.FareCalculator
 import qualified Control.Lens
@@ -25,7 +29,7 @@ type API =
            "dropLatLon"
            Kernel.External.Maps.Types.LatLong
       :> MandatoryQueryParam "pickupLatLon" Kernel.External.Maps.Types.LatLong
-      :> Get ('[JSON]) API.Types.UI.FareCalculator.FareResponse
+      :> Get '[JSON] API.Types.UI.FareCalculator.FareResponse
   )
 
 handler :: Environment.FlowServer API

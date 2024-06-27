@@ -27,7 +27,7 @@ finishWithStatus ::
   (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m ())
 finishWithStatus status mbReachedHome (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.reachedHome (mbReachedHome), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.reachedHome mbReachedHome, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
 updateCancellationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest -> m ())
 updateCancellationCount numCancellation (Kernel.Types.Id.Id id) = do
@@ -45,9 +45,9 @@ updateByPrimaryKey (Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest {..}) =
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
-      Se.Set Beam.lat (lat),
-      Se.Set Beam.lon (lon),
-      Se.Set Beam.reachedHome (mbReachedHome),
+      Se.Set Beam.lat lat,
+      Se.Set Beam.lon lon,
+      Se.Set Beam.reachedHome mbReachedHome,
       Se.Set Beam.numCancellation numCancellation,
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now

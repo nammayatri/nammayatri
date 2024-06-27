@@ -14,19 +14,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MessageT f = MessageT
-  { messageType :: (B.C f Domain.Types.Message.MessageType),
-    alwaysTriggerOnOnboarding :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    createdAt :: (B.C f Data.Time.LocalTime),
-    description :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    label :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    likeCount :: (B.C f Kernel.Prelude.Int),
-    mediaFiles :: (B.C f [Kernel.Prelude.Text]),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    shortDescription :: (B.C f Kernel.Prelude.Text),
-    title :: (B.C f Kernel.Prelude.Text),
-    viewCount :: (B.C f Kernel.Prelude.Int)
+  { messageType :: B.C f Domain.Types.Message.MessageType,
+    alwaysTriggerOnOnboarding :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    createdAt :: B.C f Data.Time.LocalTime,
+    description :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    label :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    likeCount :: B.C f Kernel.Prelude.Int,
+    mediaFiles :: B.C f [Kernel.Prelude.Text],
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    shortDescription :: B.C f Kernel.Prelude.Text,
+    title :: B.C f Kernel.Prelude.Text,
+    viewCount :: B.C f Kernel.Prelude.Int
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table MessageT where
 
 type Message = MessageT Identity
 
-$(enableKVPG (''MessageT) [('id)] [])
+$(enableKVPG ''MessageT ['id] [])
 
-$(mkTableInstancesWithTModifier (''MessageT) "message" [("messageType", "type")])
+$(mkTableInstancesWithTModifier ''MessageT "message" [("messageType", "type")])

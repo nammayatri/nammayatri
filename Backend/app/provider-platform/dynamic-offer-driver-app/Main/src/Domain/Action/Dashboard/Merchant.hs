@@ -13,7 +13,7 @@
 -}
 
 module Domain.Action.Dashboard.Merchant
-  ( mapsServiceConfigUpdate,
+  ( postMerchantServiceConfigMapsUpdate,
     mapsServiceUsageConfigUpdate,
     merchantCommonConfig,
     merchantCommonConfigUpdate,
@@ -25,7 +25,7 @@ module Domain.Action.Dashboard.Merchant
     documentVerificationConfig,
     documentVerificationConfigUpdate,
     documentVerificationConfigCreate,
-    merchantUpdate,
+    postMerchantUpdate,
     serviceUsageConfig,
     smsServiceConfigUpdate,
     smsServiceUsageConfigUpdate,
@@ -137,8 +137,8 @@ import qualified Storage.Queries.Geometry as QGEO
 import Tools.Error
 
 ---------------------------------------------------------------------
-merchantUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantUpdateReq -> Flow Common.MerchantUpdateRes
-merchantUpdate merchantShortId opCity req = do
+postMerchantUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantUpdateReq -> Flow Common.MerchantUpdateRes
+postMerchantUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -172,7 +172,7 @@ merchantUpdate merchantShortId opCity req = do
     let oldExophones = filter (\exophone -> exophone.merchantOperatingCityId == merchantOpCityId) allExophones
     CQExophone.clearCache merchantOpCityId oldExophones
   whenJust req.fcmConfig $ \_ -> CQTC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantUpdate : " (show merchant.id)
   return $ mkMerchantUpdateRes updMerchant
   where
     getAllPhones es = (es <&> (.primaryPhone)) <> (es <&> (.backupPhone))
@@ -722,12 +722,12 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
       }
 
 ---------------------------------------------------------------------
-mapsServiceConfigUpdate ::
+postMerchantServiceConfigMapsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
-mapsServiceConfigUpdate merchantShortId city req = do
+postMerchantServiceConfigMapsUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
@@ -735,7 +735,7 @@ mapsServiceConfigUpdate merchantShortId city req = do
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
   CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
   CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
-  logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceConfigMapsUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------

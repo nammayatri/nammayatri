@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.DriverOnboardingV2 where
+module API.Action.UI.DriverOnboardingV2
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Control.Lens

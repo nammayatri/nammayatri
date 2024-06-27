@@ -23,7 +23,7 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Message.Message -> m ())
 updateByPrimaryKey (Domain.Types.Message.Message {..}) = do
   updateWithKV
-    [ Se.Set Beam.messageType (_type),
+    [ Se.Set Beam.messageType _type,
       Se.Set Beam.alwaysTriggerOnOnboarding (Kernel.Prelude.Just alwaysTriggerOnOnboarding),
       Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc createdAt),
       Se.Set Beam.description description,

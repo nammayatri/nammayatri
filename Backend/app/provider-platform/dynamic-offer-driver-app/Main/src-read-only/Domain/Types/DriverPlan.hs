@@ -38,4 +38,4 @@ data DriverPlan = DriverPlan
     totalCoinsConvertedCash :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (Eq), (Ord))
+  deriving (Generic, Show, Eq, Ord)

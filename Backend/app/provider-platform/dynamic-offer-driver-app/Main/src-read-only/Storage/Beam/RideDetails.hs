@@ -14,19 +14,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RideDetailsT f = RideDetailsT
-  { createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    defaultServiceTierName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    driverCountryCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    driverName :: (B.C f Kernel.Prelude.Text),
-    driverNumberEncrypted :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    driverNumberHash :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash)),
-    fleetOwnerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    vehicleClass :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleColor :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleModel :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleNumber :: (B.C f Kernel.Prelude.Text),
-    vehicleVariant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant))
+  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    defaultServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverCountryCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverName :: B.C f Kernel.Prelude.Text,
+    driverNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    vehicleClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleNumber :: B.C f Kernel.Prelude.Text,
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table RideDetailsT where
 
 type RideDetails = RideDetailsT Identity
 
-$(enableKVPG (''RideDetailsT) [('id)] [])
+$(enableKVPG ''RideDetailsT ['id] [])
 
-$(mkTableInstances (''RideDetailsT) "ride_details")
+$(mkTableInstances ''RideDetailsT "ride_details")

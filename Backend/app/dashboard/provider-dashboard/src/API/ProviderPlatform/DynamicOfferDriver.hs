@@ -22,6 +22,9 @@ module API.ProviderPlatform.DynamicOfferDriver
   )
 where
 
+import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Merchant as MerchantDSL
+import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Revenue as RevenueDSL
+import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Ride as RideDSL
 import qualified API.ProviderPlatform.DynamicOfferDriver.Booking as Booking
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
@@ -33,7 +36,6 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Maps as Maps
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
-import qualified API.ProviderPlatform.DynamicOfferDriver.Revenue as Revenue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
 import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscription
 import qualified API.ProviderPlatform.DynamicOfferDriver.Volunteer as Volunteer
@@ -71,9 +73,11 @@ type API' =
     :<|> DriverCoin.API
     :<|> Issue.API
     :<|> Volunteer.API
-    :<|> Revenue.API
     :<|> Overlay.API
     :<|> Maps.API
+    :<|> MerchantDSL.API
+    :<|> RevenueDSL.API
+    :<|> RideDSL.API
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -90,9 +94,11 @@ handler merchantId = do
     :<|> DriverCoin.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Volunteer.handler merchantId city
-    :<|> Revenue.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
+    :<|> MerchantDSL.handler merchantId city
+    :<|> RevenueDSL.handler merchantId city
+    :<|> RideDSL.handler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI_PARTNER" -> City.Bangalore
@@ -113,9 +119,11 @@ handlerV2 merchantId city =
     :<|> DriverCoin.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Volunteer.handler merchantId city
-    :<|> Revenue.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
+    :<|> MerchantDSL.handler merchantId city
+    :<|> RevenueDSL.handler merchantId city
+    :<|> RideDSL.handler merchantId city
 
 handlerV3 :: FlowServer CacAPI
 handlerV3 = CacAuth.handler

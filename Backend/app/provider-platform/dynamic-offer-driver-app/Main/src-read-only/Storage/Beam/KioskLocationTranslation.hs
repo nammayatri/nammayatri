@@ -13,10 +13,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data KioskLocationTranslationT f = KioskLocationTranslationT
-  { address :: (B.C f Kernel.Prelude.Text),
-    kioskLocationId :: (B.C f Kernel.Prelude.Text),
-    landmark :: (B.C f Kernel.Prelude.Text),
-    language :: (B.C f Kernel.External.Types.Language)
+  { address :: B.C f Kernel.Prelude.Text,
+    kioskLocationId :: B.C f Kernel.Prelude.Text,
+    landmark :: B.C f Kernel.Prelude.Text,
+    language :: B.C f Kernel.External.Types.Language
   }
   deriving (Generic, B.Beamable)
 
@@ -26,6 +26,6 @@ instance B.Table KioskLocationTranslationT where
 
 type KioskLocationTranslation = KioskLocationTranslationT Identity
 
-$(enableKVPG (''KioskLocationTranslationT) [('kioskLocationId)] [[('language)]])
+$(enableKVPG ''KioskLocationTranslationT ['kioskLocationId] [['language]])
 
-$(mkTableInstances (''KioskLocationTranslationT) "kiosk_location_translation")
+$(mkTableInstances ''KioskLocationTranslationT "kiosk_location_translation")

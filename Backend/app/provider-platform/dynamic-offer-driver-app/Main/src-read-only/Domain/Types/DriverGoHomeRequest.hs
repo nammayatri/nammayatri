@@ -22,8 +22,8 @@ data DriverGoHomeRequest = DriverGoHomeRequest
     status :: Domain.Types.DriverGoHomeRequest.DriverGoHomeRequestStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Kernel.External.Maps.HasCoordinates.HasCoordinates), (Show))
+  deriving (Generic, Kernel.External.Maps.HasCoordinates.HasCoordinates, Show)
 
 data DriverGoHomeRequestStatus = ACTIVE | SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverGoHomeRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverGoHomeRequestStatus)

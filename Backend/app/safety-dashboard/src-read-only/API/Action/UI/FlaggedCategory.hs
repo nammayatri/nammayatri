@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.FlaggedCategory where
+module API.Action.UI.FlaggedCategory
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.FlaggedCategory
 import qualified Domain.Action.UI.FlaggedCategory as Domain.Action.UI.FlaggedCategory

@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.CustomerReferral where
+module API.Action.UI.CustomerReferral
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.CustomerReferral
 import qualified Control.Lens
