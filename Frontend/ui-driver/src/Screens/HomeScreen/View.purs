@@ -963,12 +963,6 @@ popupModelSilentAsk push state =
 
 driverDetail :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverDetail push state =
-  let driverImage = case state.data.gender of
-                      "MALE" | (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory -> "ny_ic_new_avatar_profile"
-                      "MALE" | (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory -> "ny_ic_white_avatar_profile"
-                      "FEMALE" -> "ny_ic_profile_female"
-                      _ -> "ny_ic_generic_mascot"
-  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -1010,11 +1004,12 @@ driverDetail push state =
 
 driverProfile :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverProfile push state = 
-  let 
-    driverImage = case state.data.gender of
-      "MALE" -> "ny_ic_new_avatar_profile"
-      "FEMALE" -> "ny_ic_profile_female"
-      _ -> "ny_ic_generic_mascot"
+  let driverImage = 
+        case state.data.gender of
+          "MALE" | (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory -> "ny_ic_new_avatar_profile"
+          "MALE" | (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory -> "ny_ic_white_avatar_profile"
+          "FEMALE" -> "ny_ic_profile_female"
+          _ -> "ny_ic_generic_mascot"
   in
    linearLayout
     [ width WRAP_CONTENT
@@ -1834,7 +1829,7 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_vehicle_side_active"
+             , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET activeVehicleImage
              ]
            , imageView
              [ width (V 35)
@@ -1845,7 +1840,7 @@ goOfflineModal push state =
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ic_vehicle_side_inactive"
+             , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET inActiveVehicleImage
              ]
           ]
         , linearLayout
@@ -1905,6 +1900,16 @@ goOfflineModal push state =
           ]
       ]
   ]
+  where activeVehicleImage = 
+          case (RC.getCategoryFromVariant state.data.vehicleType) of
+            Just ST.AutoCategory -> "ic_vehicle_side_active_auto"
+            Just ST.CarCategory -> "ic_vehicle_side_active_car"
+            _ -> ""
+        inActiveVehicleImage = 
+          case (RC.getCategoryFromVariant state.data.vehicleType) of
+            Just ST.AutoCategory -> "ic_vehicle_side_inactive_auto"
+            Just ST.CarCategory -> "ic_vehicle_side_inactive_car"
+            _ -> ""
 
 
 addAadhaarNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Boolean -> PrestoDOM (Effect Unit) w
