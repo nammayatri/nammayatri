@@ -99,7 +99,6 @@ view push state =
           [ scaleYAnimWithDelay 10] $ linearLayout
   [ height WRAP_CONTENT
   , width $ V (screenWidth unit)
-  , background Color.transparent
   , orientation VERTICAL
   , id $ getNewIDWithTag "BottomSheetLayout"
   , onAnimationEnd push $ const $ NoAction
@@ -108,7 +107,7 @@ view push state =
       , width MATCH_PARENT
       ][  linearLayout
           [ height WRAP_CONTENT
-          , width WRAP_CONTENT
+          , width MATCH_PARENT
           , accessibility ENABLE
           , id $ getNewIDWithTag "DriverInfoCardActionView"
           , clickable true
@@ -336,7 +335,7 @@ otpAndWaitView push state =
   , accessibility DISABLE
   ][ linearLayout
      [ height$ V 56
-     , width MATCH_PARENT
+     , width WRAP_CONTENT
      , orientation HORIZONTAL
      , clipChildren false
      , clickable true
@@ -441,8 +440,8 @@ shineAnimation height' width' =
 waitTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 waitTimeView push state =
   linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
   , cornerRadius 16.0
   , margin $ Margin 0 4 4 4
   , background $ colorForWaitTime state

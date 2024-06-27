@@ -615,6 +615,9 @@ type MarkerConfig = {
   , usePosition :: Boolean
   , useMarkerSize :: Boolean
   , animationConfig :: AnimationConfig
+  , useAnchorConfig :: Boolean
+  , markerSizeWidth :: Number
+  , markerSizeHeight :: Number
   , anchorV :: Number
   , anchorU :: Number
 }
@@ -644,6 +647,9 @@ defaultMarkerConfig = {
   , markerSize : 90.0
   , useMarkerSize : false
   , useSourcePoint : false
+  , useAnchorConfig : false --- use in case of ios
+  , markerSizeWidth : 30.0  --- use in case of ios
+  , markerSizeHeight : 40.0 --- use in case of ios
   , useDestPoints : true
   , usePosition : false
 }

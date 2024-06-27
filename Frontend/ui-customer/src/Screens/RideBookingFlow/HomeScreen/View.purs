@@ -3061,7 +3061,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             routeDurationAdvanced = fromMaybe 0 routeDuration
                             srcMarkerConfig = defaultMarkerConfig{ markerId = markers'.srcMarker, pointerIcon = markers'.srcMarker }
                             srcMarkerConfig' = defaultMarkerConfig{ markerId = "dummy_src", pointerIcon = "" , primaryText = "", anchorV = 1.0  }
-                            destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "Completing ride nearby" , anchorV = 0.8, markerSize = 70.0, labelMaxWidth = 350, useMarkerSize = true }
+                            destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "Completing ride nearby" , anchorV = 0.8, markerSize = if os == "IOS" then 30.0 else 70.0, labelMaxWidth = 350, useMarkerSize = true, useAnchorConfig = true, markerSizeWidth = 30.0  --- use in case of ios
+  , markerSizeHeight = 30.0}
                             destMarkerConfig' = defaultMarkerConfig{ markerId = markers'.destMarker, pointerIcon = markers'.destMarker, primaryText = getMarkerPrimaryText (routes.distance + routesAdvanced.distance) , anchorV = 1.0 }
                             normalRoutePoints = fromMaybe {points : []} newPoints
                             normalAdvRoutePoints = fromMaybe {points : []} newPointsAdv
