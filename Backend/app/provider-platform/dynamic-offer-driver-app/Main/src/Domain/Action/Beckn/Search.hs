@@ -33,6 +33,7 @@ import Data.Ord
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Maps as DMaps
 import Domain.Types.BapMetadata
+import qualified Domain.Types.Beckn.Status as DST
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
@@ -180,7 +181,11 @@ handler ValidatedDSearchReq {..} sReq = do
   let merchantId = merchant.id
   sessiontoken <- generateGUIDText
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-
+  let scheduledInfo =
+        DST.ScheduledInfo
+          { routeDistance = sReq.routeDistance,
+            dropLocation = sReq.dropLocation
+          }
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbIsAutoRickshawAllowed) <-
     case sReq.dropLocation of
       Just dropLoc -> do

@@ -33,7 +33,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Predicate
+import Kernel.Types.Predicate (UniqueField (UniqueField))
 import Kernel.Utils.JSON (constructorsWithLowerCase)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation

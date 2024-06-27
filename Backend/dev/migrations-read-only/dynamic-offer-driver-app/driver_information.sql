@@ -85,6 +85,23 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN forward_batchin
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN latest_scheduled_pickup text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN latest_scheduled_booking timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN latest_scheduled_pickup_lon double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN latest_scheduled_pickup_lat double precision ;
+
+--- Drop columns section begins. Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.driver_information DROP COLUMN latest_scheduled_pickup;
+--- Drop columns section ends ---
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_vpa text ;
 
 

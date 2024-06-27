@@ -12,6 +12,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DriverInformation as Beam
+import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverInformation where
   fromTType' (Beam.DriverInformationT {..}) = do
@@ -45,6 +46,8 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             isInteroperable = Kernel.Prelude.fromMaybe Kernel.Prelude.False isInteroperable,
             lastACStatusCheckedAt = lastACStatusCheckedAt,
             lastEnabledOn = lastEnabledOn,
+            latestScheduledBooking = latestScheduledBooking,
+            latestScheduledPickup = Storage.Queries.Transformers.Ride.mkLatLong latestScheduledPickupLat latestScheduledPickupLon,
             mode = mode,
             numOfLocks = numOfLocks,
             onRide = onRide,
@@ -94,6 +97,9 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.isInteroperable = Kernel.Prelude.Just isInteroperable,
         Beam.lastACStatusCheckedAt = lastACStatusCheckedAt,
         Beam.lastEnabledOn = lastEnabledOn,
+        Beam.latestScheduledBooking = latestScheduledBooking,
+        Beam.latestScheduledPickupLat = Kernel.Prelude.fmap (.lat) latestScheduledPickup,
+        Beam.latestScheduledPickupLon = Kernel.Prelude.fmap (.lon) latestScheduledPickup,
         Beam.mode = mode,
         Beam.numOfLocks = numOfLocks,
         Beam.onRide = onRide,

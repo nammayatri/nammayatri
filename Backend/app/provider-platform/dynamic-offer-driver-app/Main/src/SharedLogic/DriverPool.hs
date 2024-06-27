@@ -57,6 +57,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
 import Data.Tuple.Extra (snd3)
 import Domain.Action.UI.Route as DRoute
+import qualified Domain.Types.Beckn.Status as DST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
@@ -714,8 +715,9 @@ calculateDriverPoolWithActualDist ::
   Bool ->
   Bool ->
   Bool ->
+  DST.ScheduledInfo ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental isInterCity isValueAddNP = do
+calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental isInterCity isValueAddNP scheduledInfo = do
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
   now <- getCurrentTime
   driverPool <- calculateDriverPool cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental isInterCity isValueAddNP now
