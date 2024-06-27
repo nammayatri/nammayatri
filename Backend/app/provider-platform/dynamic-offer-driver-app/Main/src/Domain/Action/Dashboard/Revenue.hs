@@ -13,13 +13,13 @@
 -}
 
 module Domain.Action.Dashboard.Revenue
-  ( getCollectionHistory,
-    getAllDriverFeeHistory,
+  ( getRevenueCollectionHistory,
+    getRevenueAllFeeHistory,
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Revenue as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Revenue as Common
 import Data.Maybe
 import Data.Text hiding (drop, elem, filter, length, map)
 import Data.Time hiding (getCurrentTime)
@@ -37,8 +37,8 @@ import qualified Storage.Clickhouse.DriverFee as CHDriverFee
 import Storage.Queries.Volunteer (findAllByPlace)
 import Tools.Error
 
-getAllDriverFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
-getAllDriverFeeHistory merchantShortId opCity mbFrom mbTo = do
+getRevenueAllFeeHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe UTCTime -> Flow [Common.AllFees]
+getRevenueAllFeeHistory merchantShortId opCity mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -57,8 +57,8 @@ getAllFeeFromDriverFee CHDriverFee.DriverFeeAggregated {..} = do
       pure $ Common.AllFees {status, numRides, numDrivers, totalAmount = round totalAmount_, specialZoneAmount = round specialZoneAmount_, openMarketAmount = round (totalAmount_ - specialZoneAmount_)}
     _ -> throwError $ InvalidRequest "Couldn't find driver fee"
 
-getCollectionHistory :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CollectionList
-getCollectionHistory merchantShortId opCity volunteerId place mbFrom mbTo = do
+getRevenueCollectionHistory :: ShortId DM.Merchant -> Context.City -> Maybe UTCTime -> Maybe Text -> Maybe UTCTime -> Maybe Text -> Flow Common.CollectionList
+getRevenueCollectionHistory merchantShortId opCity mbFrom place mbTo volunteerId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)

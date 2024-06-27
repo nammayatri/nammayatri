@@ -42,8 +42,7 @@ import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   "merchant"
-    :> ( MerchantUpdateAPI
-           :<|> MerchantCommonConfigAPI
+    :> ( MerchantCommonConfigAPI
            :<|> MerchantCommonConfigUpdateAPI
            :<|> DriverPoolConfigAPI
            :<|> DriverPoolConfigUpdateAPI
@@ -54,7 +53,6 @@ type API =
            :<|> DocumentVerificationConfigUpdateAPI
            :<|> DocumentVerificationConfigCreateAPI
            :<|> ServiceUsageConfigAPI
-           :<|> MapsServiceConfigUpdateAPI
            :<|> MapsServiceUsageConfigUpdateAPI
            :<|> SmsServiceConfigUpdateAPI
            :<|> SmsServiceUsageConfigUpdateAPI
@@ -72,10 +70,6 @@ type API =
            :<|> UpsertSpecialLocationGateAPI
            :<|> DeleteSpecialLocationGatesAPI
        )
-
-type MerchantUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE
-    :> Common.MerchantUpdateAPI
 
 type MerchantCommonConfigAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'MERCHANT_COMMON_CONFIG
@@ -120,10 +114,6 @@ type DocumentVerificationConfigCreateAPI =
 type ServiceUsageConfigAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SERVICE_USAGE_CONFIG
     :> Common.ServiceUsageConfigAPI
-
-type MapsServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
-    :> Common.MapsServiceConfigUpdateAPI
 
 type MapsServiceUsageConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
@@ -191,8 +181,7 @@ type DeleteSpecialLocationGatesAPI =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  merchantUpdate merchantId city
-    :<|> merchantCommonConfig merchantId city
+  merchantCommonConfig merchantId city
     :<|> merchantCommonConfigUpdate merchantId city
     :<|> driverPoolConfig merchantId city
     :<|> driverPoolConfigUpdate merchantId city
@@ -203,7 +192,6 @@ handler merchantId city =
     :<|> documentVerificationConfigUpdate merchantId city
     :<|> documentVerificationConfigCreate merchantId city
     :<|> serviceUsageConfig merchantId city
-    :<|> mapsServiceConfigUpdate merchantId city
     :<|> mapsServiceUsageConfigUpdate merchantId city
     :<|> smsServiceConfigUpdate merchantId city
     :<|> smsServiceUsageConfigUpdate merchantId city
@@ -231,19 +219,6 @@ buildTransaction ::
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.MerchantAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
-
-merchantUpdate ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.MerchantUpdateReq ->
-  FlowHandler Common.MerchantUpdateRes
-merchantUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  runRequestValidation Common.validateMerchantUpdateReq req
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.MerchantUpdateEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.merchantUpdate) req
 
 merchantCommonConfig ::
   ShortId DM.Merchant ->
@@ -398,18 +373,6 @@ serviceUsageConfig ::
 serviceUsageConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.serviceUsageConfig)
-
-mapsServiceConfigUpdate ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.MapsServiceConfigUpdateReq ->
-  FlowHandler APISuccess
-mapsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.MapsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.mapsServiceConfigUpdate) req
 
 mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->

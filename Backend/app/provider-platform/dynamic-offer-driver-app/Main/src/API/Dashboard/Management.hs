@@ -14,13 +14,15 @@
 
 module API.Dashboard.Management where
 
+import qualified API.Action.Dashboard.Merchant as MerchantDSL
+import qualified API.Action.Dashboard.Revenue as RevenueDSL
+import qualified API.Action.Dashboard.Ride as RideDSL
 import qualified API.Dashboard.Management.Booking as Booking
 import qualified API.Dashboard.Management.Driver as Driver
 import qualified API.Dashboard.Management.Issue as Issue
 import qualified API.Dashboard.Management.Merchant as Merchant
 import qualified API.Dashboard.Management.Message as Message
 import qualified API.Dashboard.Management.Overlay as Overlay
-import qualified API.Dashboard.Management.Revenue as Revenue
 import qualified API.Dashboard.Management.Ride as Ride
 import qualified API.Dashboard.Management.Subscription as Subscription
 import qualified Domain.Types.Merchant as DM
@@ -34,23 +36,27 @@ type API =
   DashboardTokenAuth
     :> ( Subscription.API
            :<|> Ride.API
-           :<|> Revenue.API
            :<|> Overlay.API
            :<|> Message.API
            :<|> Merchant.API
            :<|> Issue.API
            :<|> Driver.API
            :<|> Booking.API
+           :<|> MerchantDSL.API
+           :<|> RevenueDSL.API
+           :<|> RideDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
-handler merchantId city _ = do
+handler merchantId city _ =
   Subscription.handler merchantId city
     :<|> Ride.handler merchantId city
-    :<|> Revenue.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Message.handler merchantId city
     :<|> Merchant.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Driver.handler merchantId city
     :<|> Booking.handler merchantId city
+    :<|> MerchantDSL.handler merchantId city
+    :<|> RevenueDSL.handler merchantId city
+    :<|> RideDSL.handler merchantId city

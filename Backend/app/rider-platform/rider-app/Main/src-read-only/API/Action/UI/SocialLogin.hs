@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.SocialLogin where
+module API.Action.UI.SocialLogin
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.SocialLogin
 import qualified Control.Lens

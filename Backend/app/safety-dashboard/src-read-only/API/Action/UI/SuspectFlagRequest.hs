@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.SuspectFlagRequest where
+module API.Action.UI.SuspectFlagRequest
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.SuspectFlagRequest
 import qualified Data.Text
