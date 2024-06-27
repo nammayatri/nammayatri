@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -42,6 +43,8 @@ data DriverInformation = DriverInformation
     isInteroperable :: Kernel.Prelude.Bool,
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    latestScheduledBooking :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    latestScheduledPickup :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     mode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode,
     numOfLocks :: Kernel.Prelude.Int,
     onRide :: Kernel.Prelude.Bool,

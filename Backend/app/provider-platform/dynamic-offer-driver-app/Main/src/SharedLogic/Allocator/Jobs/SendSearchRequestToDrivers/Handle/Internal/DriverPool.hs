@@ -26,6 +26,7 @@ import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as Map
+import qualified Domain.Types.Beckn.Status as DTS
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -407,7 +408,11 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               merchantId = searchReq.providerId
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverPoolWithActualDist DriverSelection poolType driverPoolCfg serviceTiers pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isInterCityTrip searchTry.tripCategory) isValueAddNP
+          mbDropLocation <- searchReq.toLocation & fromMaybeM (InternalError "drop location not exist")
+          let dropLocation = Just (LatLong mbDropLocation.lat mbDropLocation.lon)
+              routeDistance = searchReq.estimatedDistance
+          let scheduledInfo = DTS.ScheduledInfo {..}
+          calculateDriverPoolWithActualDist DriverSelection poolType driverPoolCfg serviceTiers pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isInterCityTrip searchTry.tripCategory) isValueAddNP scheduledInfo
         calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId batchNum' = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && driverPoolCfg.enableForwardBatching && radiusStep > 0

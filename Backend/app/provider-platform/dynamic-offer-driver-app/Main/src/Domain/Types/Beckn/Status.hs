@@ -18,7 +18,9 @@ module Domain.Types.Beckn.Status where
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
+import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
 import SharedLogic.Beckn.Common as Common
 
@@ -55,3 +57,9 @@ data DBookingReallocationBuildReq = DBookingReallocationBuildReq
   { bookingReallocationInfo :: BookingReallocationInfo,
     bookingDetails :: Common.BookingDetails
   }
+
+data ScheduledInfo = ScheduledInfo
+  { routeDistance :: Maybe Meters,
+    dropLocation :: Maybe LatLong
+  }
+  deriving (Generic, Show)
