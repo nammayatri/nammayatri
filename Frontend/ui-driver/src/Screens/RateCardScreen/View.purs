@@ -195,7 +195,7 @@ serviceTierItem push state service index =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , gravity CENTER_VERTICAL
-            , onClick push $ const $ ShowRateCard index
+            , onClick push $ const $ ShowRateCard service
             ][ textView $
                 [ height WRAP_CONTENT
                 , text service.name

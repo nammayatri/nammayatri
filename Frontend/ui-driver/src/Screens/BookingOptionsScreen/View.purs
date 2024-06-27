@@ -330,7 +330,7 @@ serviceTierItem state push service enabled opacity index =
            [ width MATCH_PARENT
            , height WRAP_CONTENT
            , gravity CENTER_VERTICAL
-           , onClick push $ const $ ShowRateCard index
+           , onClick push $ const $ ShowRateCard service
            , clickable state.props.rateCardLoaded
            ][ textView
               [ height WRAP_CONTENT
