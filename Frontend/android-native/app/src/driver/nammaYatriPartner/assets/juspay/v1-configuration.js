@@ -1004,8 +1004,8 @@ window.getMerchantConfig = function () {
       }
   ]
   , "coinsConfig" : {
-    "minCoinSliderValue" : 250,
-    "stepFunctionForCoinConversion" : 250,
+    "minCoinSliderValue" : 50,
+    "stepFunctionForCoinConversion" : 10,
     "eightPlusRidesCoins" : "+25",
     "purpleRideCoins" : "+5",
     "customerReferralCoins" : "+200",
@@ -1017,9 +1017,9 @@ window.getMerchantConfig = function () {
     "eightRideCoinEvent" : true,
     "prupleRideCoinEvent" : true,
     "driverToCustomerRefCoinEvent" : true,
-    "coinConversionPopupLottie" : "ny_coin_conversion.json",
-    "driverToCustomerRefPopupEndDate" : "2024-06-01T00:00:00",
-    "monsoonOfferDate" : "2024-07-01T00:00:00"
+    "coinConversionPopupLottie" : "https://assets.moving.tech/beckn/nammayatri/driver/lottie/ny_coin_conversion_v2.json",
+    "driverToCustomerRefPopupEndDate" : "2024-08-01T00:00:00",
+    "monsoonOfferDate" : "2024-08-01T00:00:00"
   }
   , "dashboard" : {
         "enable" : true,
