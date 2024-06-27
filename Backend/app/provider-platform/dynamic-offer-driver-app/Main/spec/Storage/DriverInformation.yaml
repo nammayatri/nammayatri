@@ -4,6 +4,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
+  LatLong: Kernel.External.Maps
 
 DriverInformation:
   tableName: driver_information
@@ -75,6 +76,8 @@ DriverInformation:
     hasAdvanceBooking: Bool
     tollRelatedIssueCount: Maybe Int
     forwardBatchingEnabled: Bool
+    latestScheduledPickup: Maybe LatLong
+    latestScheduledBooking : Maybe UTCTime
 
   default:
     active: "false"
@@ -97,6 +100,12 @@ DriverInformation:
   constraints:
     driverId: PrimaryKey
 
+  beamFields:
+    latestScheduledPickup:
+      latestScheduledPickupLat: Maybe Double
+      latestScheduledPickupLon: Maybe Double
+
+
   beamType:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
@@ -110,6 +119,7 @@ DriverInformation:
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
     hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    latestScheduledPickup: Storage.Queries.Transformers.Ride.mkLatLong|I
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -117,6 +127,8 @@ DriverInformation:
     acUsageRestrictionType: Kernel.Prelude.Just|I
     hasAdvanceBooking: Kernel.Prelude.Just|I
     forwardBatchingEnabled: Kernel.Prelude.Just|I
+    latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
+    latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -193,4 +205,8 @@ DriverInformation:
     updateForwardBatchingEnabled:
       kvFunction: updateOneWithKV
       params: [forwardBatchingEnabled]
+      where: driverId
+    updateLatestScheduledBookingAndPickup:
+      kvFunction: updateOneWithKV
+      params: [latestScheduledBooking, latestScheduledPickup]
       where: driverId

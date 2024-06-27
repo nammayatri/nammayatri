@@ -257,7 +257,9 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             lastACStatusCheckedAt = Nothing,
             hasAdvanceBooking = False,
             tollRelatedIssueCount = Nothing,
-            forwardBatchingEnabled = False
+            forwardBatchingEnabled = False,
+            latestScheduledPickup = Nothing,
+            latestScheduledBooking = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

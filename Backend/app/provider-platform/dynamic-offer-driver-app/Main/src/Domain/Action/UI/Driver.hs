@@ -1176,6 +1176,10 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
   whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
+  let scheduledPickup = booking.fromLocation
+      scheduledTime = booking.startTime
+      pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
+  void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
   (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing Nothing clientId --stop here
   driverFCMPulledList <-
     case mbSearchTry of

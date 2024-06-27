@@ -57,6 +57,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
 import Data.Tuple.Extra (snd3)
 import Domain.Action.UI.Route as DRoute
+import qualified Domain.Types.Beckn.Status as DST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
@@ -667,8 +668,9 @@ calculateDriverPool ::
   Maybe PoolRadiusStep ->
   Bool ->
   Bool ->
+  DST.ScheduledInfo ->
   m [DriverPoolResult]
-calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental isInterCity = do
+calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental isInterCity scheduledInfo = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
   now <- getCurrentTime
@@ -684,6 +686,9 @@ calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup
         driverPoolCfg.driverPositionInfoExpiry
         isRental
         isInterCity
+        scheduledInfo
+        driverPoolCfg.merchantOperatingCityId
+
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -727,10 +732,11 @@ calculateDriverPoolWithActualDist ::
   Maybe PoolRadiusStep ->
   Bool ->
   Bool ->
+  DST.ScheduledInfo ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental isInterCity = do
+calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental isInterCity scheduledInfo = do
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  driverPool <- calculateDriverPool cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental isInterCity
+  driverPool <- calculateDriverPool cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental isInterCity scheduledInfo
   case driverPool of
     [] -> return []
     (a : pprox) -> do
