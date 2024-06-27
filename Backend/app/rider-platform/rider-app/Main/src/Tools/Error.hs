@@ -538,6 +538,29 @@ instance IsHTTPError PaymentError where
 
 instance IsAPIError PaymentError
 
+data FRFSTicketBookingPaymentError
+  = FRFSTicketBookingPaymentNotFound Text
+  | FRFSTicketBookingPaymentDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FRFSTicketBookingPaymentError
+
+instance IsBaseError FRFSTicketBookingPaymentError where
+  toMessage = \case
+    FRFSTicketBookingPaymentNotFound ticketBookingId -> Just $ "FRFS Ticket Booking Payment with ticketBookingId:" +|| ticketBookingId ||+ " not found."
+    FRFSTicketBookingPaymentDoesNotExist ticketBookingId -> Just $ "FRFS Ticket Booking Payment with ticketBookingId:" +|| ticketBookingId ||+ " does not exist."
+
+instance IsHTTPError FRFSTicketBookingPaymentError where
+  toErrorCode = \case
+    FRFSTicketBookingPaymentNotFound _ -> "FRFS_TICKET_BOOKING_PAYMENT_NOT_FOUND"
+    FRFSTicketBookingPaymentDoesNotExist _ -> "FRFS_TICKET_BOOKING_PAYMENT_DOES_NOT_EXIST"
+
+  toHttpCode = \case
+    FRFSTicketBookingPaymentNotFound _ -> E500
+    FRFSTicketBookingPaymentDoesNotExist _ -> E400
+
+instance IsAPIError FRFSTicketBookingPaymentError
+
 ------------------ CAC ---------------------
 -- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
 data CacAuthError = CacAuthError | CacInvalidToken
