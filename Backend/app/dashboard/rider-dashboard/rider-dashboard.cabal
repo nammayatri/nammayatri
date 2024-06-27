@@ -51,10 +51,12 @@ library
       RiderPlatformClient.RiderApp.Operations
       RiderPlatformClient.RiderApp.RideBooking
       Storage.Beam.CommonInstances
+      API.Action.RiderPlatform.Merchant
   other-modules:
       Paths_rider_dashboard
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds

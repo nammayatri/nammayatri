@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.EstimateBP where
+module API.Action.UI.EstimateBP
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.EstimateBP
 import qualified Control.Lens

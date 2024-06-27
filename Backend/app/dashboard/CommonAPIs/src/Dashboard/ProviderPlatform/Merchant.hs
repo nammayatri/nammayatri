@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.ProviderPlatform.Merchant
   ( module Dashboard.ProviderPlatform.Merchant,
@@ -20,6 +21,7 @@ module Dashboard.ProviderPlatform.Merchant
   )
 where
 
+import API.Types.ProviderPlatform.Merchant as Reexport
 import qualified Dashboard.Common as Common
 import Dashboard.Common.Merchant as Reexport
 import Data.Aeson
@@ -41,21 +43,6 @@ import Servant
 
 ---------------------------------------------------------
 -- merchant update --------------------------------------
-
-type MerchantUpdateAPI =
-  "update"
-    :> ReqBody '[JSON] MerchantUpdateReq
-    :> Post '[JSON] MerchantUpdateRes
-
-data MerchantUpdateReq = MerchantUpdateReq
-  { name :: Maybe Text,
-    description :: Maybe Text,
-    enabled :: Maybe Bool,
-    exoPhones :: Maybe (NonEmpty ExophoneReq),
-    fcmConfig :: Maybe FCMConfigUpdateReq
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MerchantUpdateTReq = MerchantUpdateTReq
   { name :: Maybe Text,
@@ -81,20 +68,6 @@ validateMerchantUpdateReq MerchantUpdateReq {..} =
         validateObject "exoPhones" exophoneReq validateExophoneReq,
       whenJust fcmConfig $ \cfg -> validateObject "fcmConfig" cfg validateFCMConfigUpdateReq
     ]
-
-data MerchantUpdateRes = MerchantUpdateRes
-  { name :: Text,
-    description :: Maybe Text,
-    contactNumber :: Maybe Text,
-    status :: Status,
-    enabled :: Bool
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data Status = PENDING_VERIFICATION | APPROVED | REJECTED
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets MerchantUpdateReq where
   type ReqWithoutSecrets MerchantUpdateReq = MerchantUpdateTReq

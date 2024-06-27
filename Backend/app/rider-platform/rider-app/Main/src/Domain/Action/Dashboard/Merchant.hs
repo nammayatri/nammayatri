@@ -13,9 +13,9 @@
 -}
 
 module Domain.Action.Dashboard.Merchant
-  ( mapsServiceConfigUpdate,
+  ( postMerchantServiceConfigMapsUpdate,
     mapsServiceUsageConfigUpdate,
-    merchantUpdate,
+    postMerchantUpdate,
     serviceUsageConfig,
     smsServiceConfigUpdate,
     smsServiceUsageConfigUpdate,
@@ -71,8 +71,8 @@ import qualified Storage.Queries.Geometry as QGEO
 import Tools.Error
 
 ---------------------------------------------------------------------
-merchantUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantUpdateReq -> Flow APISuccess
-merchantUpdate merchantShortId city req = do
+postMerchantUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantUpdateReq -> Flow APISuccess
+postMerchantUpdate merchantShortId city req = do
   runRequestValidation Common.validateMerchantUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
@@ -163,12 +163,12 @@ buildMerchantServiceConfig merchantId merchantOperatingCityId serviceConfig = do
         createdAt = now
       }
 
-mapsServiceConfigUpdate ::
+postMerchantServiceConfigMapsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
-mapsServiceConfigUpdate merchantShortId city req = do
+postMerchantServiceConfigMapsUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
@@ -178,7 +178,7 @@ mapsServiceConfigUpdate merchantShortId city req = do
   merchantServiceConfig <- buildMerchantServiceConfig merchant.id merchantOperatingCity.id serviceConfig
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id merchantOperatingCity.id serviceName
-  logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceConfigMapsUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------

@@ -9,6 +9,7 @@ let migrationPath = rootDir ++ "/Backend/dev/migrations-read-only/rider-app/"
 
 let outputPath =
       { _apiRelatedTypes = outputPrefixReadOnly ++ "API/Types/UI"
+      , _extraApiRelatedTypes = ""
       , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
       , _cachedQueries = outputPrefixReadOnly ++ "Storage/CachedQueries"
@@ -17,12 +18,14 @@ let outputPath =
       , _domainHandler = outputPrefix ++ "Domain/Action/UI"
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixReadOnly ++ "API/Action/UI"
+      , _servantApiDashboard = ""
       , _sql = [ { _1 = migrationPath, _2 = "atlas_app" } ]
       , _purescriptFrontend = ""
       }
 
 let GeneratorType =
       < SERVANT_API
+      | SERVANT_API_DASHBOARD
       | API_TYPES
       | DOMAIN_HANDLER
       | BEAM_QUERIES
@@ -33,9 +36,18 @@ let GeneratorType =
       | PURE_SCRIPT_FRONTEND
       >
 
+let ImportType = < SIMPLE | QUALIFIED >
+
+let PackageImport =
+      { _importType : ImportType
+      , _importPackageName : Text
+      , _importModuleName : Text
+      }
+
 let DefaultImports =
       { _qualifiedImports : List Text
       , _simpleImports : List Text
+      , _packageImports : List PackageImport
       , _generationType : GeneratorType
       }
 
@@ -103,6 +115,7 @@ let defaultImports =
           , "Environment"
           , "Kernel.Types.Id"
           ]
+        , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.SERVANT_API
         }
       , { _simpleImports =
@@ -118,6 +131,7 @@ let defaultImports =
           , "Environment"
           , "Kernel.Types.Id"
           ]
+        , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.API_TYPES
         }
       , { _simpleImports =
@@ -133,10 +147,12 @@ let defaultImports =
           , "Environment"
           , "Kernel.Types.Id"
           ]
+        , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_HANDLER
         }
       , { _simpleImports = [ "Data.Aeson" ] : List Text
         , _qualifiedImports = [ "!Tools.Beam.UtilsTH" ]
+        , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_TYPE
         }
       , { _simpleImports =
@@ -145,6 +161,7 @@ let defaultImports =
           , "Kernel.External.Encryption"
           ]
         , _qualifiedImports = [ "Database.Beam as B" ]
+        , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.BEAM_TABLE
         }
       , { _simpleImports =
@@ -155,13 +172,19 @@ let defaultImports =
           , "Kernel.Types.Error"
           ]
         , _qualifiedImports = [ "Sequelize as Se" ]
+        , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.BEAM_QUERIES
         }
       , { _simpleImports = [ "Kernel.Prelude", "Kernel.Utils.Common" ]
         , _qualifiedImports = [ "!Kernel.Storage.Hedis as Hedis" ]
+        , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.CACHED_QUERIES
         }
       ]
+
+let ApiKind = < UI | DASHBOARD >
+
+let ClientName = < OPERATIONS | FLEET | RIDE_BOOKING >
 
 in  { _output = outputPath
     , _storageConfig =
@@ -181,4 +204,6 @@ in  { _output = outputPath
       , GeneratorType.SQL
       , GeneratorType.CACHED_QUERIES
       ]
+    , _apiKind = ApiKind.UI
+    , _clientMapper = [] : List { _1 : ClientName, _2 : Text }
     }

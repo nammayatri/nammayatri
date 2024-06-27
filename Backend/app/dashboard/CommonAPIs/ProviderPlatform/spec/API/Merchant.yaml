@@ -1,0 +1,44 @@
+imports:
+  ExophoneReq: Dashboard.Common.Merchant
+  FCMConfigUpdateReq: Dashboard.Common.Merchant
+  MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
+
+clientName: OPERATIONS # TODO create nested folder structure for spec and generated modules
+module: Merchant
+
+apis:
+  - POST:
+      endpoint: /update
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_UPDATE
+      request:
+        type: MerchantUpdateReq
+      response:
+        type: MerchantUpdateRes
+      validation: Dashboard.ProviderPlatform.Merchant.validateMerchantUpdateReq
+  - POST:
+      endpoint: /serviceConfig/maps/update
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
+      request:
+        type: MapsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+
+types:
+  MerchantUpdateReq:
+    name: Maybe Text
+    description: Maybe Text
+    enabled: Maybe Bool
+    exoPhones: Maybe (NonEmpty ExophoneReq)
+    fcmConfig: Maybe FCMConfigUpdateReq
+  MerchantUpdateRes:
+    name: Text
+    description: Maybe Text
+    contactNumber: Maybe Text
+    status: Status
+    enabled: Bool
+  Status:
+    enum: "PENDING_VERIFICATION, APPROVED, REJECTED"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

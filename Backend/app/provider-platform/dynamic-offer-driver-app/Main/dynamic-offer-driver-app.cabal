@@ -54,7 +54,6 @@ library
       API.Dashboard.Management.Merchant
       API.Dashboard.Management.Message
       API.Dashboard.Management.Overlay
-      API.Dashboard.Management.Revenue
       API.Dashboard.Management.Ride
       API.Dashboard.Management.Subscription
       API.Dashboard.RideBooking
@@ -554,6 +553,9 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.Dashboard.Merchant
+      API.Action.Dashboard.Revenue
+      API.Action.Dashboard.Ride
       API.Action.UI.Cac
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfileQuestions

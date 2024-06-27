@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.Cac where
+module API.Action.UI.Cac
+  ( API,
+    handler,
+  )
+where
 
 import qualified Control.Lens
 import qualified Data.Aeson

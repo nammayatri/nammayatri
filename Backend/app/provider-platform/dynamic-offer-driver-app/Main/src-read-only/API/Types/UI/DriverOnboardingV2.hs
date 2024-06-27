@@ -109,7 +109,7 @@ data FarePolicyHour = Peak | NonPeak | Night deriving (Eq, Show, Generic, ToJSON
 newtype GetLiveSelfieResp = GetLiveSelfieResp {image :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data RateCardResp = RateCardResp
   { farePolicyHour :: API.Types.UI.DriverOnboardingV2.FarePolicyHour,
