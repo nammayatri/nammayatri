@@ -14,8 +14,6 @@ import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
   { buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    cancellationFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    cancellationFeePercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
     domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,

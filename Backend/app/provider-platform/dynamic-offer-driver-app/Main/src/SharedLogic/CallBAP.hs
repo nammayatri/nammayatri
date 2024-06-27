@@ -466,6 +466,7 @@ sendBookingCancelledUpdateToBAP ::
   SRBCR.CancellationSource ->
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
+  let cancellationFee = Nothing
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing

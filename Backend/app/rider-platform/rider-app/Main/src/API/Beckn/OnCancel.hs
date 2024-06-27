@@ -47,22 +47,26 @@ onCancel _ req = withFlowHandlerBecknAPI do
     cancelStatus' <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidBecknSchema "Missing order.status in on_cancel message")
     logDebug $ "cancelStatus in bpp " <> cancelStatus'
     cancelStatus <- readMaybe (T.unpack cancelStatus') & fromMaybeM (InvalidBecknSchema $ "Invalid order.status:-" <> cancelStatus')
-
     case cancelStatus of
-      Enums.CANCELLED -> do
-        mbDOnCancelReq <- ACL.buildOnCancelReq req
-        messageId <- Utils.getMessageIdText req.onCancelReqContext
-
-        whenJust mbDOnCancelReq $ \onCancelReq ->
-          Redis.whenWithLockRedis (onCancelLockKey messageId) 60 $ do
-            validatedOnCancelReq <- DOnCancel.validateRequest onCancelReq
-            fork "on cancel processing" $ do
-              Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
-                DOnCancel.onCancel validatedOnCancelReq
-                fork "on cancel received pushing ondc logs" do
-                  void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantId.getId
-      _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED, received:-" <> cancelStatus'
+      Enums.CANCELLED -> processCancellationRequest DOnCancel.onCancel
+      Enums.SOFT_CANCEL -> processCancellationRequest DOnCancel.onSoftCancel
+      _ -> throwError . InvalidBecknSchema $ "on_cancel order.status expected:-CANCELLED|SOFT_CANCEL, received:-" <> cancelStatus'
   pure Ack
+  where
+    processCancellationRequest ::
+      (DOnCancel.ValidatedOnCancelReq -> Flow ()) ->
+      Flow ()
+    processCancellationRequest domainOnCancelAction = do
+      mbDOnCancelReq <- ACL.buildOnCancelReq req
+      messageId <- Utils.getMessageIdText req.onCancelReqContext
+      whenJust mbDOnCancelReq $ \onCancelReq ->
+        Redis.whenWithLockRedis (onCancelLockKey messageId) 60 $ do
+          validatedOnCancelReq <- DOnCancel.validateRequest onCancelReq
+          fork "on cancel processing" $ do
+            Redis.whenWithLockRedis (onCancelProcessingLockKey messageId) 60 $ do
+              domainOnCancelAction validatedOnCancelReq
+              fork "on cancel received pushing ondc logs" do
+                void $ pushLogs "on_cancel" (toJSON req) validatedOnCancelReq.booking.merchantId.getId
 
 onCancelLockKey :: Text -> Text
 onCancelLockKey id = "Customer:OnCancel:MessageId-" <> id
