@@ -1824,15 +1824,16 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
 
 getCity :: (CacheFlow m r, EsqDBFlow m r) => GetCityReq -> m GetCityResp
 getCity req = do
-  let latlng = LatLong {lat = req.lat, lon = req.lon}
-  geometry <-
-    runInReplica $
-      QGeometry.findGeometriesContainingGps latlng >>= \case
-        [] -> do
-          pure Nothing
-        (g : _) -> pure $ Just g
-  let city = (.city) <$> geometry
-  pure $ GetCityResp {city = show <$> city, status = APISuccess.Success}
+  let latLng = LatLong {lat = req.lat, lon = req.lon}
+  geometry <- runInReplica $ QGeometry.findGeometriesContainingGps latLng
+  case filter (\geom -> geom.city /= Context.AnyCity) geometry of
+    [] ->
+      find (\geom -> geom.city == Context.AnyCity) geometry & \case
+        Just anyCityGeom -> return GetCityResp {city = Just $ show anyCityGeom.city, status = APISuccess.Success}
+        Nothing -> do
+          logError $ "No geometry found for latLong: " <> show latLng
+          throwError LocationUnserviceable
+    (g : _) -> return GetCityResp {city = Just $ show g.city, status = APISuccess.Success}
 
 data DriverFeeResp = DriverFeeResp
   { createdAt :: UTCTime, -- window start day
