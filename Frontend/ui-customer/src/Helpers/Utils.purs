@@ -757,12 +757,9 @@ quoteModalVariantImage variant =
 
 getCancellationImage :: String -> Int -> String
 getCancellationImage vehicleVariant distance = 
-  let 
-    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-  in
-    if distance <= 500 
-      then if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawNearImage  else "ny_ic_driver_near"
-      else if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawStartedImage else "ny_ic_driver_started"
+  if distance <= 500 
+  then if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawNearImage  else "ny_ic_driver_near"
+  else if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawStartedImage else "ny_ic_driver_started"
 
 getAutoRickshawNearImage :: String
 getAutoRickshawNearImage  = 

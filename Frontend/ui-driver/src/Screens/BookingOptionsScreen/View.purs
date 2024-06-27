@@ -124,7 +124,8 @@ acCheckForDriversView push state =
 
     callSupportVisibility = not airConditionedData.isWorking && airConditionedData.usageRestrictionType == API.ToggleNotAllowed
 
-    canUpgradeOrDowngradeVariant = (not airConditionedData.isWorking && airConditionedData.usageRestrictionType /= API.ToggleNotAllowed) || airConditionedData.isWorking
+    -- TODO : enable when backend sends correct usageRestrictionType
+    -- canUpgradeOrDowngradeVariant = (not airConditionedData.isWorking && airConditionedData.usageRestrictionType /= API.ToggleNotAllowed) || airConditionedData.isWorking
   in
     linearLayout
       [ width MATCH_PARENT
@@ -173,7 +174,7 @@ acCheckForDriversView push state =
               , cornerRadius 100.0
               , background backgroundColor
               , stroke $ "1," <> backgroundColor
-              , clickable canUpgradeOrDowngradeVariant
+              -- , clickable canUpgradeOrDowngradeVariant -- TODO : enable when backend sends correct usageRestrictionType
               , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
               , gravity CENTER_VERTICAL
               ]

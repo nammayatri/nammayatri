@@ -49,7 +49,7 @@ window.getMerchantConfig = function () {
     "showBookingPreference": "false",
     "showRateCard": "false",
     "showDashboard": "false",
-    "enableShareRide": "false",
+    "enableShareRide": "true",
     "autoVariantEnabled": true,
     "shareAppTitle": "Share Yatri!",
     "shareAppContent": "Hey there!\n\nCheck out Yatri, India's first open mobility cab hailing app built for commuters in Kochi.\n100% Open Source\n\nDownload Yatri now! \n" + (getAppLink(window.__OS)) + "\n\n#beOpen #chooseOpen",
@@ -286,7 +286,7 @@ window.getMerchantConfig = function () {
     , "showDisabilityBanner" : false
     
     , "estimateAndQuoteConfig" : {
-      "enableBookingPreference" : false,
+      "enableBookingPreference" : true,
       "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ],
       "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"],
       "variantInfo" : {
@@ -321,7 +321,7 @@ window.getMerchantConfig = function () {
       }
     }
     , "feature" : {
-      "enableShareRide" : false
+      "enableShareRide" : true
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "termsLink" :"https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
