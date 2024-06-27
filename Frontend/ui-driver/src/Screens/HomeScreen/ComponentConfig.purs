@@ -674,6 +674,14 @@ driverRCPopUpConfig state = let
 ------------------------------------ chatViewConfig -----------------------------
 chatViewConfig :: ST.HomeScreenState -> ChatView.Config
 chatViewConfig state = let
+  suggestionList = 
+    if showSuggestions state 
+      then  if ( state.data.activeRide.tripType == ST.Rental && state.props.currentStage == ST.ChatWithCustomer) 
+              then getSuggestionsfromKey chatSuggestion "dsRentalInitial" 
+            else if (state.data.activeRide.notifiedCustomer) 
+              then getSuggestionsfromKey chatSuggestion "driverInitialAP" 
+            else getSuggestionsfromKey chatSuggestion "driverInitialBP" 
+    else state.data.chatSuggestionsList
   config = ChatView.config
   chatViewConfig' = config {
     userConfig {
@@ -684,7 +692,7 @@ chatViewConfig state = let
     , messagesSize = state.data.messagesSize
     , sendMessageActive = state.props.sendMessageActive
     , vehicleNo = ""
-    , chatSuggestionsList = if showSuggestions state then if (state.data.activeRide.notifiedCustomer) then getSuggestionsfromKey chatSuggestion "driverInitialAP" else getSuggestionsfromKey chatSuggestion "driverInitialBP" else state.data.chatSuggestionsList
+    , chatSuggestionsList = suggestionList
     , hint = (getString MESSAGE)
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)

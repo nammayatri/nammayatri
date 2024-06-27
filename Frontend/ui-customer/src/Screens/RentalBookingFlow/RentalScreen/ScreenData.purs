@@ -28,8 +28,8 @@ initData =
   { data : {
       rentalBookingData : { 
           startTimeUTC : ""
-        , baseDuration : 2
-        , baseDistance : 20
+        , baseDuration : 1
+        , baseDistance : 10
         , finalDuration : 0
         , finalDistance : 0
         , startOdometer : ""
@@ -61,9 +61,9 @@ initData =
     }
   , props : {
       maxDuration : 12
-    , minDuration : 2
-    , minDistance : 20
-    , maxDistance : 40
+    , minDuration : 1
+    , minDistance : 10
+    , maxDistance : 30
     , farePerKm : ""
     , maxDateBooking : 5
     , showRateCard : false

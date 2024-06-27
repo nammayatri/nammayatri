@@ -372,6 +372,7 @@ initData = let
     , hasEstimateBackpoint : false
     , shimmerViewTimer : config.homeScreen.shimmerTimer
     , shimmerViewTimerId : ""
+    , isKeyBoardOpen : false
   }
 }
 

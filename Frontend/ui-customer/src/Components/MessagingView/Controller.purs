@@ -44,6 +44,7 @@ type Config =
   , otp :: String
   , feature :: Feature
   , suggestionKey :: String
+  , isKeyBoardOpen :: Boolean
   }
 
 type Feature = 
@@ -94,6 +95,7 @@ config =
   , peekHeight : 0
   , otp : ""
   , suggestionKey : chatSuggestion
+  , isKeyBoardOpen : false
   }
 
 
