@@ -85,6 +85,7 @@ data DConfirmResp = DConfirmResp
     transporter :: DM.Merchant,
     vehicleVariant :: DVeh.Variant,
     quoteType :: ValidatedQuote,
+    cancellationFee :: Maybe PriceAPIEntity,
     paymentId :: Maybe Text
   }
 
@@ -184,6 +185,7 @@ handler merchant req validatedQuote = do
           toLocation = uBooking.toLocation,
           vehicleVariant = req.vehicleVariant,
           quoteType = validatedQuote,
+          cancellationFee = Nothing,
           paymentId = req.paymentId
         }
 

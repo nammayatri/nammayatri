@@ -15,7 +15,6 @@
 module Domain.Action.UI.Cancel
   ( cancel,
     softCancel,
-    disputeCancellationDues,
     CancelReq (..),
     CancelRes (..),
     CancelSearch (..),
@@ -48,7 +47,6 @@ import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -100,9 +98,8 @@ data CancelSearch = CancelSearch
   }
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
-  { cancellationDues :: HighPrecMoney,
-    cancellationDuesWithCurrency :: Maybe PriceAPIEntity,
-    disputeChancesUsed :: Int,
+  { cancellationDues :: Maybe PriceAPIEntity,
+    disputeChancesUsed :: Maybe Int,
     canBlockCustomer :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -282,21 +279,22 @@ driverDistanceToPickup booking merchantOperatingCityId tripStartPos tripEndPos =
         }
   return distRes.distance
 
-disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
-disputeCancellationDues (personId, merchantId) = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  case (person.mobileNumber, person.mobileCountryCode) of
-    (Just mobileNumber, Just countryCode) -> do
-      CallBPPInternal.disputeCancellationDues merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
-    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+-- disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
+-- disputeCancellationDues (personId, merchantId) = do
+--   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+--   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+--   case (person.mobileNumber, person.mobileCountryCode) of
+--     (Just mobileNumber, Just countryCode) -> do
+--       CallBPPInternal.disputeCancellationDues merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
+--     _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
 
 getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
 getCancellationDuesDetails (personId, merchantId) = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  -- TODO (Rupak): Add the logic to get the cancellation dues from fare parameters instead of BPP
   case (person.mobileNumber, person.mobileCountryCode) of
     (Just mobileNumber, Just countryCode) -> do
       res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
-      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDues, cancellationDuesWithCurrency = res.customerCancellationDuesWithCurrency, disputeChancesUsed = res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
+      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDuesWithCurrency, disputeChancesUsed = Just res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
     _ -> throwError (PersonMobileNumberIsNULL person.id.getId)

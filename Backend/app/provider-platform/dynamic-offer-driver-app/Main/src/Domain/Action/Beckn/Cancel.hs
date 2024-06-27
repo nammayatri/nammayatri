@@ -15,6 +15,7 @@
 module Domain.Action.Beckn.Cancel
   ( cancel,
     CancelReq (..),
+    CancelRideReq (..),
     CancelSearchReq (..),
     validateCancelRequest,
     validateCancelSearchRequest,
@@ -67,7 +68,10 @@ import Tools.Event
 import qualified Tools.Notifications as Notify
 import Utils.Common.Cac.KeyNameConstants
 
-data CancelReq = CancelReq
+data CancelReq = CancelSearch CancelSearchReq | CancelRide CancelRideReq
+  deriving (Show)
+
+data CancelRideReq = CancelRideReq
   { bookingId :: Id SRB.Booking,
     cancelStatus :: Maybe Text,
     userReallocationEnabled :: Maybe Bool
@@ -80,7 +84,7 @@ newtype CancelSearchReq = CancelSearchReq
   deriving (Show)
 
 cancel ::
-  CancelReq ->
+  CancelRideReq ->
   DM.Merchant ->
   SRB.Booking ->
   Maybe ST.SearchTry ->
@@ -210,7 +214,7 @@ validateCancelRequest ::
   ) =>
   Id DM.Merchant ->
   SignatureAuthResult ->
-  CancelReq ->
+  CancelRideReq ->
   m (DM.Merchant, SRB.Booking)
 validateCancelRequest merchantId _ req = do
   merchant <-

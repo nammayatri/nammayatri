@@ -37,17 +37,23 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  CancelAPI
-    :<|> "rideBooking"
-      :> Capture "rideBookingId" (Id SRB.Booking)
-      :> "softCancel"
-      :> TokenAuth
-      :> Post '[JSON] APISuccess
-    :<|> "dispute"
-      :> "cancellationDues"
-      :> TokenAuth
-      :> Post '[JSON] APISuccess
+  SoftCancelAPI
     :<|> GetCancellationDuesDetailsAPI
+    :<|> CancelAPI
+
+type GetCancellationDuesDetailsAPI =
+  "rideBooking"
+    :> Capture "rideBookingId" (Id SRB.Booking)
+    :> "cancellationDues"
+    :> TokenAuth
+    :> Get '[JSON] DCancel.CancellationDuesDetailsRes
+
+type SoftCancelAPI =
+  "rideBooking"
+    :> Capture "rideBookingId" (Id SRB.Booking)
+    :> "softCancel"
+    :> TokenAuth
+    :> Post '[JSON] APISuccess
 
 type CancelAPI =
   "rideBooking"
@@ -57,30 +63,13 @@ type CancelAPI =
     :> ReqBody '[JSON] DCancel.CancelReq
     :> Post '[JSON] APISuccess
 
-type GetCancellationDuesDetailsAPI =
-  "getCancellationDuesDetails"
-    :> TokenAuth
-    :> Get '[JSON] DCancel.CancellationDuesDetailsRes
-
 -------- Cancel Flow----------
 
 handler :: FlowServer API
 handler =
-  cancel
-    :<|> softCancel
-    :<|> disputeCancellationDues
+  softCancel
     :<|> getCancellationDuesDetails
-
-cancel ::
-  Id SRB.Booking ->
-  (Id Person.Person, Id Merchant.Merchant) ->
-  DCancel.CancelReq ->
-  FlowHandler APISuccess
-cancel bookingId (personId, merchantId) req =
-  withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
-    void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
-    return Success
+    :<|> cancel
 
 softCancel ::
   Id SRB.Booking ->
@@ -93,8 +82,21 @@ softCancel bookingId (personId, merchantId) =
     void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl cancelBecknReq
     return Success
 
-disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
-disputeCancellationDues = withFlowHandlerAPI . DCancel.disputeCancellationDues
+getCancellationDuesDetails ::
+  Id SRB.Booking ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  FlowHandler DCancel.CancellationDuesDetailsRes
+getCancellationDuesDetails _bookingId (personId, merchantId) =
+  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+    DCancel.getCancellationDuesDetails (personId, merchantId)
 
-getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCancel.CancellationDuesDetailsRes
-getCancellationDuesDetails = withFlowHandlerAPI . DCancel.getCancellationDuesDetails
+cancel ::
+  Id SRB.Booking ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  DCancel.CancelReq ->
+  FlowHandler APISuccess
+cancel bookingId (personId, merchantId) req =
+  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+    dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
+    void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
+    return Success
