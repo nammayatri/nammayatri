@@ -523,6 +523,9 @@ driverArrivedReqHandler ValidatedDriverArrivedReq {..} = do
     void $ QRide.updateDriverArrival ride.id arrivalTime
     void $ QPFS.updateStatus booking.riderId DPFS.DRIVER_ARRIVED {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, driverLocation = Nothing, driverArrivalTime = arrivalTime}
 
+-- TODO (Rupak): this is being called by BPP if cancellation initiated by driver.
+--  We can make it common as `onCancel` function in  Domain.Action.Beckn.OnCancel is also doing the same thing
+-- Also add stripe function call in this
 bookingCancelledReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,

@@ -27,7 +27,7 @@ import Kernel.Utils.Common
 buildCancelReqV2 ::
   (HasFlowEnv m r '["_version" ::: Text]) =>
   Spec.CancelReq ->
-  m (Either DCancel.CancelReq DCancel.CancelSearchReq)
+  m DCancel.CancelReq
 buildCancelReqV2 req = do
   ContextV2.validateContext Context.CANCEL req.cancelReqContext
   if isJust (req.cancelReqMessage.cancelReqMessageDescriptor)
@@ -36,15 +36,15 @@ buildCancelReqV2 req = do
       let descriptor = fromJust $ req.cancelReqMessage.cancelReqMessageDescriptor
       let userReallocationEnabled = req.cancelReqMessage.cancelReqMessageReallocate
       return $
-        Left $
-          DCancel.CancelReq
+        DCancel.CancelRide $
+          DCancel.CancelRideReq
             { cancelStatus = descriptor.descriptorCode,
               ..
             }
     else do
       let transactionId = req.cancelReqMessage.cancelReqMessageOrderId
       return $
-        Right $
+        DCancel.CancelSearch $
           DCancel.CancelSearchReq
             { ..
             }

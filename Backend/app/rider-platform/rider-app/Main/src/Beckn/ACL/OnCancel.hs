@@ -20,6 +20,7 @@ where
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import Data.Maybe (listToMaybe)
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -56,8 +57,12 @@ bookingCancelledEvent :: (MonadFlow m) => Spec.Order -> m DOnCancel.OnCancelReq
 bookingCancelledEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in BookingCancelled Event.")
   let cancellationSource = order.orderCancellation >>= (.cancellationCancelledBy)
+  let mbCancellationFee = order.orderCancellationTerms >>= listToMaybe >>= (.cancellationTermCancellationFee) >>= (.feeAmount)
+  let cancellationFeeAmount = mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText
+  let cancellationFeeCurrency :: Maybe Currency = mbCancellationFee >>= (.priceCurrency) >>= readMaybe @Currency
   return $
     DOnCancel.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
-        cancellationSource = cancellationSource
+        cancellationSource = cancellationSource,
+        cancellationFee = cancellationFeeAmount <&> \feeAmount -> PriceAPIEntity feeAmount (fromMaybe INR cancellationFeeCurrency)
       }

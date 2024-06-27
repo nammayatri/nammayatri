@@ -46,7 +46,7 @@ tfOrder res pricing bppConfig mbFarePolicy = do
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
-      orderCancellationTerms = Just $ tfCancellationTerms bppConfig res,
+      orderCancellationTerms = Just $ tfCancellationTerms res,
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy res.paymentId,
@@ -114,11 +114,11 @@ tfCustomer res =
               }
       }
 
-tfCancellationTerms :: DBC.BecknConfig -> DConfirm.DConfirmResp -> [Spec.CancellationTerm]
-tfCancellationTerms becknConfig res =
+tfCancellationTerms :: DConfirm.DConfirmResp -> [Spec.CancellationTerm]
+tfCancellationTerms res =
   L.singleton
     Spec.CancellationTerm
-      { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount,
+      { cancellationTermCancellationFee = Utils.tfCancellationFee res.cancellationFee,
         cancellationTermFulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }

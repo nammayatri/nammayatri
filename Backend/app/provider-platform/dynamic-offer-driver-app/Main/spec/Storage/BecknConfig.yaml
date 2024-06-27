@@ -21,8 +21,6 @@ BecknConfig:
     vehicleCategory: VehicleCategory
     collectedBy: PaymentCollectedBy
     staticTermsUrl: Maybe BaseUrl
-    cancellationFeeAmount: Maybe Int
-    cancellationFeePercentage: Maybe Int
     buyerFinderFee: Maybe Text
     settlementWindow: Maybe Text
     onSearchTTLSec: Maybe Int

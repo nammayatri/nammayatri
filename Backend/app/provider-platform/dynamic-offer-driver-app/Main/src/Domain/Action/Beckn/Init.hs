@@ -83,6 +83,7 @@ data InitRes = InitRes
     riderName :: Maybe Text,
     vehicleVariant :: Veh.Variant,
     paymentId :: Text,
+    cancellationFee :: Maybe PriceAPIEntity,
     estimateId :: Text
   }
 
@@ -118,8 +119,9 @@ handler merchantId req validatedReq = do
         return (booking, Nothing, Nothing)
 
   let paymentMethodInfo = req.paymentMethodInfo
-  let bppSubscriberId = req.bppSubscriberId
+      bppSubscriberId = req.bppSubscriberId
       estimateId = req.estimateId
+      cancellationFee = Nothing
   pure InitRes {vehicleVariant = req.vehicleVariant, ..}
   where
     buildBooking ::

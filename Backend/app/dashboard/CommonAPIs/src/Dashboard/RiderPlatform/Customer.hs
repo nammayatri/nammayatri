@@ -144,9 +144,8 @@ type GetCancellationDuesDetailsAPI =
     :> Get '[JSON] CancellationDuesDetailsRes
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
-  { cancellationDues :: HighPrecMoney,
-    cancellationDuesWithCurrency :: Maybe PriceAPIEntity,
-    disputeChancesUsed :: Int,
+  { cancellationDues :: Maybe PriceAPIEntity,
+    disputeChancesUsed :: Maybe Int,
     canBlockCustomer :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
