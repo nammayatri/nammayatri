@@ -196,3 +196,12 @@ if response.status_code == 200:
 else:
     print("Failed to fetch JSON data from the URL Error: {response.text}")
     sys.exit(1)
+
+# Run juspay assets commandd
+dirName = sys.argv[2]
+os.chdir('..')
+if dirName in ("NY", "MY", "Y"): # add here if any other user is added
+    os.system(f'bash userJuspayAssets.sh {dirName}')
+else:
+    os.system(f'bash driverJuspayAssets.sh {dirName}')
+os.chdir('/android-native')

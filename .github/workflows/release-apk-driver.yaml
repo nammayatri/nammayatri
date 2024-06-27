@@ -19,6 +19,7 @@ jobs:
             local_properties: LOCAL_PROPERTIES_NYP
             config_path: app/src/driver/nammaYatriPartner/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json'
+            asset_directory: nammaYatriPartner
           - name: ManaYatri
             keystore: ANDROID_KEYSTORE_FILE_MYP
             fastlane_cm: MYP
@@ -26,6 +27,7 @@ jobs:
             local_properties: LOCAL_PROPERTIES_MYP
             config_path: app/src/driver/manaYatriPartner/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json'
+            asset_directory: manaYatriPartner
           - name: Yatri
             keystore: ANDROID_KEYSTORE_FILE_YP
             fastlane_cm: YP
@@ -33,6 +35,7 @@ jobs:
             local_properties: LOCAL_PROPERTIES_YP
             config_path: app/src/driver/yatriPartner/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json'
+            asset_directory: yatriPartner
           # Add more variants as needed
     defaults:
       run:
@@ -79,9 +82,10 @@ jobs:
           pip install requests
 
       - name: Run Python script to extract JSA files
-        run: python bundleFetch.py "$FASTLANE_CMD"
+        run: python bundleFetch.py "$FASTLANE_CMD" "$ASSET_DIR"
         env: 
           FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
+          ASSET_DIR : ${{ matrix.variant.asset_directory }}
 
       - name: Move JSA files to specific path
         run: |
