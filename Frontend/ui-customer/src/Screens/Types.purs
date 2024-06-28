@@ -295,7 +295,8 @@ type TripDetailsScreenProps =
     showConfirmationPopUp :: Boolean,
     canConnectWithDriver :: Boolean,
     triggerUIUpdate :: Boolean,
-    showIssueOptions :: Boolean
+    showIssueOptions :: Boolean,
+    isContactSupportPopUp :: Boolean
   }
 
 data TripDetailsGoBackType = Home | MyRides | HelpAndSupport
@@ -973,6 +974,7 @@ type HomeScreenStateProps =
   , showIntercityUnserviceablePopUp :: Boolean
   , showNormalRideNotSchedulablePopUp :: Boolean
   , zoneOtpExpired :: Boolean
+  , isContactSupportPopUp :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

@@ -1017,3 +1017,5 @@ getHI stringKey =
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "अनुमान समाप्त हो गया है। फिर से ले रहे हैं, कृपया कुछ क्षण"
         CHARGEABLE -> "चार्ज योग्य"
         BOOKED -> "बुक किया गया"
+        PLACE_A_CALL -> "कॉल करें"
+        YOU_CAN_WRITE_TO_US_AT -> "आप हमें लिख सकते हैं"
