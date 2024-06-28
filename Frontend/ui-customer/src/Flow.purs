@@ -872,6 +872,7 @@ homeScreenFlow = do
             void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
             setValueToLocalStore TRACKING_DRIVER "False"
+            void $ lift $ lift $ toggleLoader true
             checkRideStatus true
             else do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingEditDestinationLoc, bookingUpdateRequestId = editDestinationSoftResp.bookingUpdateRequestId}})
@@ -879,6 +880,7 @@ homeScreenFlow = do
           void $ pure $ toast (decodeError err.response.errorMessage "errorMessage")
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
           setValueToLocalStore TRACKING_DRIVER "False"
+          void $ lift $ lift $ toggleLoader true
           checkRideStatus true
       homeScreenFlow
     
@@ -887,6 +889,7 @@ homeScreenFlow = do
       let state = globalState.homeScreen
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
       setValueToLocalStore TRACKING_DRIVER "False"
+      void $ lift $ lift $ toggleLoader true
       checkRideStatus true
       homeScreenFlow
 
@@ -1183,6 +1186,7 @@ homeScreenFlow = do
         Nothing -> void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
       setValueToLocalStore TRACKING_DRIVER "False"
+      void $ lift $ lift $ toggleLoader true
       checkRideStatus true
       homeScreenFlow
 
@@ -2488,6 +2492,7 @@ editDestinationFlow = do
     callCheckRideStatus homeScreenState = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = homeScreenState.data.driverInfoCardState.destination, destinationAddress = homeScreenState.data.driverInfoCardState.destinationAddress}, props{destinationLat = homeScreenState.data.driverInfoCardState.destinationLat, destinationLong = homeScreenState.data.driverInfoCardState.destinationLng}})
       setValueToLocalStore TRACKING_DRIVER "False"
+      void $ lift $ lift $ toggleLoader true
       checkRideStatus true
 
 
