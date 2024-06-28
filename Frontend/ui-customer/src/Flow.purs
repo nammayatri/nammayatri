@@ -2227,7 +2227,7 @@ findEstimates updatedState = do
     state = globalState.homeScreen
   liftFlowBT $ logEventWithTwoParams logField_ "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
   (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong) ORIGIN
-  if (not sourceServiceabilityResp.serviceable || (state.data.fareProductType == FPT.INTER_CITY)) then do
+  if (not sourceServiceabilityResp.serviceable) then do
     updateLocalStage SearchLocationModel
     setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showIntercityUnserviceablePopUp = true, currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false, city = getCityNameFromCode sourceServiceabilityResp.city } })
@@ -2262,10 +2262,6 @@ findEstimates updatedState = do
   let
     isIntercity = any (_ == (Just "*")) [ sourceServiceabilityResp.currentCity, sourceServiceabilityRespDest.currentCity ] || (isJust sourceServiceabilityResp.currentCity && isJust sourceServiceabilityRespDest.currentCity && sourceServiceabilityResp.currentCity /= sourceServiceabilityRespDest.currentCity)
   modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { fareProductType = if isIntercity then FPT.INTER_CITY else homeScreen.data.fareProductType } })
-  when ((fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)) do
-    modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData { props { showIntercityUnserviceablePopUp = true } })
-    updateLocalStage HomeScreen
-    homeScreenFlow
   when (state.data.startTimeUTC /= "" && not isIntercity) do
     modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData { props { showNormalRideNotSchedulablePopUp = true } })
     updateLocalStage HomeScreen
