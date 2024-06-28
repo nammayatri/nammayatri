@@ -301,6 +301,7 @@ initData = {
     , showIntercityUnserviceablePopUp : false
     , showNormalRideNotSchedulablePopUp : false
     , zoneOtpExpired : false
+    , isContactSupportPopUp : false
     }
 }
 

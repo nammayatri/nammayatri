@@ -1017,3 +1017,5 @@ getBN stringKey =
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "অনুমান মেয়াদ শেষ হয়েছে। আবার তথ্য নিতে, দয়া করে"
         CHARGEABLE -> "চার্জযোগ্য"
         BOOKED -> "বুক করা হয়েছে"
+        PLACE_A_CALL -> "একটি কল করুন"
+        YOU_CAN_WRITE_TO_US_AT -> "আপনি আমাদের লিখতে পারেন"
