@@ -45,6 +45,7 @@ import Styles.Colors as Color
 import Debug (spy)
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import Components.CommonComponentConfig as CommonComponentConfig
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -82,7 +83,7 @@ view push state =
       , reportIssueView state push
       ]
     ]
-  ]
+  ]<> (if state.props.isContactSupportPopUp then [PopUpModal.view (push <<< ContactSupportPopUpAction) (CommonComponentConfig.contactSupportPopUpConfig state.data.config)] else [])
 
 tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tripDetailsLayout state push =

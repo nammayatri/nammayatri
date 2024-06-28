@@ -355,3 +355,6 @@ dummyCancelReason =
   , textBoxRequired: false
   , subtext: Nothing
   }
+
+mailToLink :: String
+mailToLink = "mailto:" 
