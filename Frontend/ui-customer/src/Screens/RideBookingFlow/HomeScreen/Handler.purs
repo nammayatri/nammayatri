@@ -23,13 +23,13 @@ import Engineering.Helpers.Commons (markPerformance)
 import ModifyScreenState (modifyScreenState)
 import Prelude (bind, discard, ($), (<$>), pure, void)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
 import Screens.Types (BottomNavBarIcon(..))
 import Screens.HomeScreen.Transformer(getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Debug
+import Screens.HomeScreen.Controllers.Types
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
@@ -266,3 +266,6 @@ homeScreen = do
     ExitToPickupInstructions updatedState lat lon ward spLocationName -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GOTO_PICKUP_INSTRUCTIONS updatedState lat lon ward spLocationName)
+    ExitAndEnterHomeScreen state -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> (pure $ EXIT_AND_ENTER_HOME_SCREEN)
