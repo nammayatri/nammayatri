@@ -30,7 +30,7 @@ import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 
-view :: forall w .  (Action  -> Effect Unit) -> SelectVehicleTypeModalState -> PrestoDOM (Effect Unit) w
+view :: forall w . (Action  -> Effect Unit) -> SelectVehicleTypeModalState -> PrestoDOM (Effect Unit) w
 view push state =
   linearLayout
   [ width MATCH_PARENT
@@ -110,6 +110,13 @@ imageSection item =
           SUV       -> "ic_suv"
           Hatchback -> "ic_hatchback"
           Auto      -> "ic_auto"
+          Bike      -> "ic_bike"
+          Ambulance_Taxi -> "ic_bike_ambulance"
+          Ambulance_AC -> "ic_bike_ambulance"
+          Ambulance_AC_Oxy -> "ic_bike_ambulance"
+          Ambulance_Taxi_Oxy -> "ic_bike_ambulance"
+          Ambulance_Ventilator -> "ic_bike_ambulance"
+
       ]
   ]
 
@@ -135,6 +142,12 @@ textList item =
               SUV       -> "SUV"
               Hatchback -> "Hatchback"
               Auto      -> "Auto"
+              Bike      -> "Bike"
+              Ambulance_Taxi -> "Ambulance_Taxi"
+              Ambulance_AC -> "Ambulance_AC"
+              Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
+              Ambulance_Taxi_Oxy -> "Ambulance_Taxi_Oxy"
+              Ambulance_Ventilator -> "Ambulance_Ventilator"
           ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout

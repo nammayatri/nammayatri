@@ -123,6 +123,8 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "rcLimit" : 3
+    , "acExplanation" : true
     , "showGenderBanner" : true
     , "defaultLanguage" : "EN_US"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
@@ -749,6 +751,10 @@ let defWaitingChargesConfig = {
   "auto" : {
     "freeSeconds" : 180,
     "perMinCharges" : 1.50
+  },
+  "bike" : {
+    "freeSeconds" : 300,
+    "perMinCharges" : 1.0
   }
 }
 
@@ -758,6 +764,10 @@ let rentalWaitingChargesConfig = {
     "perMinCharges" : 2.0
   },
   "auto" : {
+    "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  },
+  "bike" : {
     "freeSeconds" : 180,
     "perMinCharges" : 2.0
   }

@@ -52,6 +52,8 @@ window.getMerchantConfig = function () {
     , "showGenderBanner" : false
     , "defaultLanguage" : "FR_FR"
     , "allowAllMobileNumber" : true
+    , "acExplanation" : true
+    , "rcLimit" : 3
     , "navigationAppConfig" : {
       "android" : {
         "query" : "https://waze.com/ul?ll=%f,%f"

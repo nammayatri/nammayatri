@@ -111,10 +111,10 @@ decodeOfferPlan str = do
     let strArray = split (Pattern "-*@*-") str
     {plan : (decodeOfferDescription $ fromMaybe "" (strArray !! 0)), offer : (decodeOfferDescription $ fromMaybe "" (strArray !! 1))}
 
-freeRideOfferConfig :: LazyCheck -> PromoConfig
-freeRideOfferConfig lazy = 
+freeRideOfferConfig :: Int -> PromoConfig
+freeRideOfferConfig count = 
     {  
-    title : Just $ getString FIRST_FREE_RIDE,
+    title : Just $ getString $ (if count > 1 then FIRST_RIDE_FREE else FIRST_RIDES_FREE) $ show count,
     isGradient : false,
     gradient : [],
     hasImage : false,
@@ -215,7 +215,7 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory  config =
             description : planData.description ,
             isSelected : false ,
             offers : (if planEntity.freeRideCount > 0 
-                        then [freeRideOfferConfig Language] 
+                        then [freeRideOfferConfig planEntity.freeRideCount] 
                         else if isIntroductory then [introductoryOfferConfig config ""] else []) <> getPromoConfig planEntity.offers config.gradientConfig,
             priceBreakup : planEntity.planFareBreakup,
             frequency : planEntity.frequency,
@@ -328,7 +328,7 @@ fetchIntroductoryPlans subsConfig cityConfig = do
                                 then "AutoCategory"
                                 else
                                     case vehicleCategory of
-                                        _ | vehicleCategory == "CarCategory" || vehicleCategory == "AutoCategory" -> vehicleCategory
+                                        _ | vehicleCategory == "CarCategory" || vehicleCategory == "AutoCategory" || vehicleCategory == "BikeCategory" -> vehicleCategory
                                         _ -> "AutoCategory"
         plans = cityConfig.variantSubscriptionConfig.staticViewPlans
     map (\planConfig -> introductoryPlanConfig subsConfig planConfig) $ DA.filter (\planConfig -> planConfig.variantCategory == finalVehicleCategory) plans

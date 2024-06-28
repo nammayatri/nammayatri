@@ -1305,3 +1305,4 @@ getML stringKey =
         NOIDA -> "നോയിഡ"
         GURUGRAM -> "ഗുരുഗ്രാം"
         WAITING_CHARGES -> "കാത്തിരിക്കൽ ചാർജുകൾ"
+        SILIGURI -> "സിലിഗുരി"
