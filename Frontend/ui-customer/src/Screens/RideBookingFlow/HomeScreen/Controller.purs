@@ -88,7 +88,7 @@ import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, di
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
-import PrestoDOM.Types.Core (class Loggable)
+
 import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, cancelReasons, dummyCancelReason,  emergencyContactInitialChatSuggestionId, DecodeAddress(..))
 import Constants (defaultDensity)
 import Screens (ScreenName(..), getScreen)
@@ -146,12 +146,14 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.TipConfig
 import Helpers.Utils as HU
+import Screens.HomeScreen.Controllers.Types
+import Data.Show.Generic 
 
-instance showAction :: Show Action where
-  show _ = ""
+-- Controllers 
+import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
 
-instance loggableAction :: Loggable Action where
-  performLog = defaultPerformLog
+
+
   -- performLog action appId = case action of
   --   AfterRender -> trackAppScreenRender appId "screen" (getScreen HOME_SCREEN)
   --   BackPressed -> trackAppBackPress appId (getScreen HOME_SCREEN)
@@ -672,283 +674,21 @@ instance loggableAction :: Loggable Action where
   --         ChooseVehicleController.OnImageClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnImageClick" 
   --         ChooseVehicleController.OnSelect arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnSelect"
 
-data ScreenOutput = LogoutUser
-                  | RefreshHomeScreen HomeScreenState
-                  | GoToHelp HomeScreenState
-                  | ConfirmRide HomeScreenState
-                  | GoToAbout HomeScreenState
-                  | GoToNammaSafety HomeScreenState Boolean Boolean
-                  | PastRides HomeScreenState Boolean
-                  | GoToMyProfile HomeScreenState Boolean
-                  | ChangeLanguage HomeScreenState
-                  | Retry HomeScreenState
-                  | GetQuotes HomeScreenState
-                  | ConfirmFare HomeScreenState
-                  | UpdatedState HomeScreenState Boolean
-                  | CancelRide HomeScreenState CancelSearchType
-                  | NotificationHandler String HomeScreenState
-                  | GetSelectList HomeScreenState
-                  | RideConfirmed HomeScreenState
-                  | SelectEstimate HomeScreenState
-                  | LocationSelected LocationListItemState Boolean HomeScreenState
-                  | EditDestLocationSelected LocationListItemState Boolean HomeScreenState
-                  | EditDestinationSoft HomeScreenState
-                  | SearchPlace String HomeScreenState
-                  | UpdateLocationName HomeScreenState Number Number
-                  | UpdatePickupName HomeScreenState Number Number
-                  | GoToHome HomeScreenState
-                  | GoToFavourites HomeScreenState
-                  | SubmitRating HomeScreenState
-                  | UpdatedSource HomeScreenState
-                  | OpenGoogleMaps HomeScreenState
-                  | InAppTrackStatus HomeScreenState
-                  | UpdateSavedLocation HomeScreenState
-                  | CheckLocServiceability HomeScreenState Number Number
-                  | GoToInvoice HomeScreenState
-                  | CheckFavDistance HomeScreenState
-                  | SaveFavourite HomeScreenState
-                  | GoToReferral ReferralType HomeScreenState
-                  | CallDriver HomeScreenState CallType String
-                  | CallContact HomeScreenState
-                  | CallSupport HomeScreenState
-                  | CallPolice HomeScreenState
-                  | UpdateSosStatus HomeScreenState
-                  | FetchContacts HomeScreenState
-                  | CheckCurrentStatus
-                  | CheckFlowStatus HomeScreenState
-                  | ExitToPermissionFlow PermissionScreenStage
-                  | RetryFindingQuotes Boolean HomeScreenState
-                  | RideDetailsScreen HomeScreenState
-                  | GoToTicketBookingFlow HomeScreenState
-                  | GoToMyTickets HomeScreenState
-                  | RepeatTrip HomeScreenState Trip
-                  | ExitToTicketing HomeScreenState
-                  | GoToHelpAndSupport HomeScreenState
-                  | ReAllocateRide HomeScreenState
-                  | GoToRentalsFlow HomeScreenState
-                  | GoToScheduledRides
-                  | Add_Stop HomeScreenState
-                  | SafetySupport HomeScreenState Boolean
-                  | GoToShareRide HomeScreenState
-                  | GoToNotifyRideShare HomeScreenState
-                  | ExitToFollowRide HomeScreenState
-                  | GoToReportSafetyIssue HomeScreenState
-                  | GoToMyMetroTickets HomeScreenState
-                  | GoToMetroTicketBookingFlow HomeScreenState
-                  | GoToSafetyEducation HomeScreenState
-                  | RepeatSearch HomeScreenState
-                  | ChangeVehicleVarient HomeScreenState
-                  | ExitToConfirmingLocationStage HomeScreenState
-                  | UpdateReferralCode HomeScreenState String
-                  | GoToSafetySettingScreen 
-                  | GoToRideRelatedIssues HomeScreenState
-                  | Go_To_Search_Location_Flow HomeScreenState Boolean
-                  | RideSearchSO
-                  | ConfirmRentalRideSO HomeScreenState
-                  | StayInHomeScreenSO HomeScreenState
-                  | GoToIssueReportChatScreenWithIssue HomeScreenState CTP.CustomerIssueTypes
-                  | ReloadFlowStatus HomeScreenState
-                  | ExitToPickupInstructions HomeScreenState Number Number String String
-                  | EditDestLocSelected HomeScreenState
-                  | EditDestBackPressed
 
-data Action = NoAction
-            | BackPressed
-            | CancelSearch
-            | RideSearchAction
-            | RecenterCurrentLocation
-            | ConfirmRentalRideAction
-            | ChangeToRideAcceptedAction
-            | ChangeToRideStartedAction
-            | SidebarCloseAnimationCompleted
-            | RideDurationTimer String String Int
-            | NotificationListener String
-            | OpenSettings
-            | ContinueCmd
-            | OpenPricingTutorial
-            | OpenSearchLocation
-            | GetEstimates GetQuotesRes Int
-            | GetRideConfirmation RideBookingRes
-            | GetQuotesList SelectListRes
-            | GetEditLocResult GetEditLocResultResp
-            | MAPREADY String String String
-            | AfterRender
-            | UpdateSource Number Number String
-            | Restart ErrorResponse
-            | CurrentLocation String String
-            | PrimaryButtonActionController PrimaryButtonController.Action
-            | SettingSideBarActionController SettingSideBarController.Action
-            | PricingTutorialModelActionController PricingTutorialModelController.Action
-            | SourceToDestinationActionController SourceToDestinationController.Action
-            | SearchLocationModelActionController SearchLocationModelController.Action
-            | EditDestSearchLocationModelActionController SearchLocationModelController.Action
-            | QuoteListModelActionController QuoteListModelController.Action
-            | DriverInfoCardActionController DriverInfoCardController.Action
-            | RatingCardAC RatingCard.Action
-            | UpdateLocation String String String
-            | CancelRidePopUpAction CancelRidePopUp.Action
-            | PopUpModalAction PopUpModal.Action
-            | TrackDriver GetDriverLocationResp
-            | HandleCallback
-            | UpdatePickupLocation String String String
-            | CloseLocationTracking
-            | ShowCallDialer CallType
-            | CloseShowCallDialer
-            | StartLocationTracking String
-            | ExitLocationSelected LocationListItemState Boolean
-            | DistanceOutsideLimitsActionController PopUpModal.Action
-            | ShortDistanceActionController PopUpModal.Action
-            | PickUpFarFromCurrentLocAC PopUpModal.Action
-            | SourceUnserviceableActionController ErrorModalController.Action
-            | UpdateCurrentLocation String String
-            | UpdateCurrentStage String RideBookingRes
-            | GoBackToSearchLocationModal
-            | SkipButtonActionController PrimaryButtonController.Action
-            | SearchExpireCountDown Int String String
-            | EstimatesTryAgain GetQuotesRes Int
-            | EstimateChangedPopUpController PopUpModal.Action
-            | RateCardAction RateCard.Action
-            | ShowRateCard
-            | ShowRevisedFareDetails
-            | UpdateETA Int Int
-            | WaitingTimeAction String String Int
-            | DriverArrivedAction String
-            | PredictionClickedAction LocationListItemController.Action
-            | SavedAddressClicked LocationTagBarController.Action
-            | FavouriteLocationModelAC FavouriteLocationModelController.Action
-            | UpdateSourceName Number Number String
-            | SaveFavouriteCardAction SaveFavouriteCardController.Action
-            | TagClick CardType (Maybe LocationListItemState)
-            | ContinueWithoutOffers SelectListRes
-            | CheckBoxClick Boolean
-            | PreferencesDropDown
-            | PopUpModalShareAppAction PopUpModal.Action
-            | CallSupportAction PopUpModal.Action
-            | RequestInfoCardAction RequestInfoCard.Action
-            | OnIconClick Boolean
-            | ReferralFlowAction
-            | NewUser
-            | MapReadyAction
-            | CheckAndAskNotificationPermission
-            | TrackLiveLocationAction
-            | LottieLoaderAction
-            | ReferralFlowNoAction
-            | UpdateSourceFromPastLocations
-            | UpdateLocAndLatLong String String
-            | UpdateSavedLoc (Array LocationListItemState)
-            | UpdateMessages String String String String
-            | InitializeChat
-            | RemoveChat
-            | OpenChatScreen
-            | MessagingViewActionController MessagingView.Action
-            | HideLiveDashboard String
-            | LiveDashboardAction
-            | OnResumeCallback
-            | CheckFlowStatusAction
-            | GoToEditProfile
-            | IsMockLocation String
-            | MenuButtonActionController MenuButtonController.Action
-            | ChooseYourRideAction ChooseYourRideController.Action
-            | SearchForSelectedLocation
-            | GenderBannerModal Banner.Action
-            | CancelSearchAction PopUpModal.Action
-            | RequestEditAction PopUpModal.Action
-            | TriggerPermissionFlow PermissionScreenStage
-            | PopUpModalCancelConfirmationAction PopUpModal.Action
-            | ScrollToBottom
-            | RateClick Int
-            | Support
-            | RideDetails
-            | TerminateApp
-            | DirectSearch
-            | ZoneTimerExpired PopUpModal.Action
-            | ScheduledRideExistsAction PopUpModal.Action
-            | DisabilityBannerAC Banner.Action
-            | DisabilityPopUpAC PopUpModal.Action
-            | RideCompletedAC RideCompletedCard.Action
-            | LoadMessages
-            | KeyboardCallback String
-            | NotifyDriverStatusCountDown Int String String
-            | UpdateProfileButtonAC PrimaryButtonController.Action 
-            | SkipAccessibilityUpdateAC PrimaryButtonController.Action
-            | SpecialZoneOTPExpiryAction Int String String
-            | TicketBookingFlowBannerAC Banner.Action
-            | MetroTicketBookingBannerAC Banner.Action
-            | ScrollStateChanged String
-            | RemoveNotification
-            | MessageDriver
-            | SendQuickMessage String
-            | MessageExpiryTimer Int String String
-            | NotificationAnimationEnd
-            | ShareRide
-            | OpenEmergencyHelp
-            | OpenOffUsSOS
-            | MessageViewAnimationEnd
-            | RepeatRide Int Trip
-            | Scroll Number
-            | WhereToClick 
-            | ShowMoreSuggestions 
-            | SuggestedDestinationClicked LocationListItemState Boolean
-            | RepeatRideCountDown Int String String
-            | StopRepeatRideTimer 
-            | OpenLiveDashboard
-            | UpdatePeekHeight 
-            | ReAllocate
-            | AutoScrollCountDown Int String String 
-            | StopAutoScrollTimer 
-            | UpdateRepeatTrips RideBookingListRes 
-            | RemoveShimmer 
-            | ReportIssueClick
-            | DateTimePickerAction String Int Int Int String Int Int
-            | ChooseSingleVehicleAction ChooseVehicleController.Action
-            | LocationTagBarAC LocationTagBarV2Controller.Action
-            | UpdateSheetState BottomSheetState
-            | BottomNavBarAction BottomNavBarIcon
-            | BannerCarousel BannerCarousel.Action
-            | SetBannerItem ListItem
-            | UpdateBanner
-            | BannerChanged String
-            | BannerStateChanged String
-            | MetroTicketBannerClickAC Banner.Action
-            | SafetyBannerAction Banner.Action
-            | SafetyAlertAction PopUpModal.Action
-            | ContactAction ContactCircle.Action
-            | NotifyRideShare PrimaryButtonController.Action
-            | ToggleShare Int
-            | UpdateFollowers FollowRideRes
-            | GoToFollowRide
-            | ShowBookingPreference
-            | UpdateBookingDetails RideBookingRes
-            | UpdateContacts (Array NewContacts)
-            | UpdateChatWithEM Boolean
-            | ShareRideAction PopupWithCheckboxController.Action
-            | AllChatsLoaded
-            | GoToSafetyEducationScreen
-            | SpecialZoneInfoTag
-            | GoToConfirmingLocationStage
-            | ReferralComponentAction ReferralComponent.Action
-            | GoToHomeScreen
-            | ShowMultipleProvider Boolean
-            | ShowPref
-            | ProviderAutoSelected Int String String
-            | ShowProviderInfo Boolean
-            | AcWorkingPopupAction PopUpModal.Action
-            | NoRender
-            | UpdateRateCardCache
-            | BannerCarousal BannerCarousel.Action
-            | ShowEndOTP
-            | RentalInfoAction PopUpModal.Action
-            | IntercitySpecialZone PopUpModal.Action
-            | StartScheduledRidePolling 
-            | RentalBannerClick 
-            | SetIssueReportBannerItems ListItem
-            | UpdateNextIssueBannerPage Int
-            | UpdateNextIssueBanneerSwipe Int 
-            | TollChargeAmbigousPopUpAction PopUpModal.Action
-            | UpdateNoInternet
-            | InternetCallBackCustomer String
-            | MarkerLabelOnClick String 
-            | ShimmerTimer Int String String
+eval2 :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+eval2 action  = 
+  case action of 
+    BannerCarousel a -> CarouselBannerController.bannerCarouselAC a 
+    MetroTicketBannerClickAC a -> CarouselBannerController.metroTicketBannerClickAC a
+    DisabilityBannerAC a -> CarouselBannerController.disabilityBannerAC a
+    TicketBookingFlowBannerAC a -> CarouselBannerController.ticketBookingFlowBannerAC a
+    MetroTicketBookingBannerAC a -> CarouselBannerController.metroTicketBannerClickAC a
+    GenderBannerModal a -> CarouselBannerController.genderBannerModal a
+    SafetyBannerAction a -> CarouselBannerController.safetyBannerAction a
+    UpdateBanner -> CarouselBannerController.updateBanner
+    _ -> eval action 
+
+
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1122,14 +862,6 @@ eval (SetIssueReportBannerItems bannerItem) state = continue state {
   }
 }
 
-eval UpdateBanner state = do
-  if state.data.bannerData.bannerScrollState == "1" then continue state
-  else do
-    let nextBanner = state.data.bannerData.currentBanner + 1
-        bannerArray = if state.props.currentStage == HomeScreen then getBannerConfigs state BannerCarousel else getDriverInfoCardBanners state BannerCarousel
-        updatedIdx = if nextBanner >= (length bannerArray) then 0 else nextBanner
-        newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
-    continue newState
 
 eval (BannerChanged item) state = do
   let currentBanner = fromString item
@@ -1145,34 +877,6 @@ eval (BannerStateChanged item) state = do
   let newState = state{data {bannerData{bannerScrollState = item}}}
   continue newState
 
-eval (BannerCarousel (BannerCarousel.OnClick idx)) state = 
-  continueWithCmd state [do
-    let banners = if state.props.currentStage == HomeScreen then getBannerConfigs state BannerCarousel else getDriverInfoCardBanners state BannerCarousel
-    case index banners idx of
-      Just config -> do
-        let _ = runFn2 updatePushInIdMap "bannerCarousel" false
-        case config.type of
-          BannerCarousel.Gender -> pure $ GenderBannerModal $ Banner.OnClick
-          BannerCarousel.Disability -> pure $ DisabilityBannerAC $ Banner.OnClick
-          BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
-          BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
-          BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
-          BannerCarousel.CabLaunch -> pure $ WhereToClick
-          BannerCarousel.Remote link ->
-            if link == "search" then 
-              pure $ WhereToClick 
-            else if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link then  -- To be removed after deep links are added in iOS
-              pure GoToSafetyEducationScreen
-            else if not $ STR.null link then do
-              void $ openUrlInApp link
-              pure NoAction
-            else
-              pure NoAction
-          _ -> pure NoAction
-      Nothing -> pure NoAction
-  ] 
-
-eval (MetroTicketBannerClickAC Banner.OnClick) state =  exit $ GoToMetroTicketBookingFlow state
 
 eval GoToSafetyEducationScreen state = exit $ GoToSafetyEducation state
 
@@ -2841,18 +2545,12 @@ eval (RentalInfoAction PopUpModal.OnButton2Click) state = continue state { props
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
-eval (GenderBannerModal Banner.OnClick) state = exit $ GoToMyProfile state true
 
 eval (UpdateProfileButtonAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit
   let newState = state{props{showEducationalCarousel = false}} 
   updateAndExit newState $ GoToMyProfile newState true
 
-eval (DisabilityBannerAC Banner.OnClick) state = if (addCarouselWithVideoExists unit ) then continue state{props{showEducationalCarousel = true}} else exit $ GoToMyProfile state true
-
-eval (TicketBookingFlowBannerAC Banner.OnClick) state = exit $ GoToTicketBookingFlow state
-
-eval (MetroTicketBookingBannerAC Banner.OnClick) state = exit $ GoToMetroTicketBookingFlow state
 
 eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit
@@ -2863,12 +2561,6 @@ eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
 
-eval (SafetyBannerAction Banner.OnClick) state = do 
-  if state.props.isOffline then do  
-    void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
-    continue state
-  else do 
-    exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
@@ -3156,7 +2848,6 @@ eval CheckAndAskNotificationPermission state = do
 
 eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowType
 
-eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
 
 eval ReportIssueClick state = exit $  GoToHelp state
 
