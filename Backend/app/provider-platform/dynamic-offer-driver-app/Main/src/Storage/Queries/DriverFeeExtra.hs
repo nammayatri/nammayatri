@@ -415,7 +415,7 @@ updateFee ::
   Bool ->
   SRB.Booking ->
   m ()
-updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd booking = do
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd _booking = do
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
     Just df -> do
@@ -446,7 +446,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd boo
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
   where
-    toUpdateSpecialZoneMetricsInDriverFee = DTC.isRideOtpBooking booking.tripCategory
+    toUpdateSpecialZoneMetricsInDriverFee = platformFee + cgst + sgst > 0
 
 resetFee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
