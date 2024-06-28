@@ -394,7 +394,7 @@ config =
           { cityName = "Bangalore",
             cityCode = "std:080",
             geoCodeConfig
-              { radius = 170000,
+              { radius = 250000,
                 strictBounds = true
               },
             featureConfig {
@@ -414,7 +414,7 @@ config =
               enableCabBanner = true
             },
             geoCodeConfig
-              { radius = 170000
+              { radius = 250000
               , strictBounds = true
               },
             enableAcViews = true
@@ -426,7 +426,7 @@ config =
               enableCabBanner = true
             },
             geoCodeConfig
-              { radius = 170000
+              { radius = 250000
               , strictBounds = true
               },
             enableAcViews = true
@@ -435,7 +435,7 @@ config =
           {   cityName = "Chennai"
             , cityCode = "std:044"
             , geoCodeConfig
-                { radius = 170000
+                { radius = 50000
                 , strictBounds = true
                 }
             , enableCabs = true
