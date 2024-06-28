@@ -159,6 +159,7 @@ instance loggableAction :: Loggable Action where
       AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
       AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
     SkipButton -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "skip_button_click"
+    ListExpandAinmationEnd -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "list_expand_animation_end"
     _ -> pure unit
 
 data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
@@ -172,6 +173,8 @@ data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | ActivateRC AddVehicleDetailsScreenState
                     | ChangeVehicle AddVehicleDetailsScreenState
                     | SelectLang AddVehicleDetailsScreenState
+                    
+                    
 
 
 data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction PrimarySelectItem.Action | NoAction
@@ -214,6 +217,13 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | SelectButton Int
   | OpenAcModal
   | RequestInfoCardAction RequestInfoCard.Action
+  | SelectAmbulanceFacility
+  | ListExpandAinmationEnd
+  | SelectAmbulanceVarient String
+  | OpenAmbulanceFacilityModal
+  | RequestAmbulanceFacility RequestInfoCard.Action
+  | AgreePopUp PopUpModal.Action
+  | ButtonClick
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
@@ -310,7 +320,12 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         SUV       -> "SUV"
                         Hatchback -> "Hatchback"
                         Auto      -> "Auto"
-                        Bike      -> "Bike")
+                        Bike      -> "Bike"
+                        Ambulance_Taxi -> "Ambulance_Taxi"
+                        Ambulance_Taxi_Oxy -> "Ambulance_Taxi_Oxy"
+                        Ambulance_AC -> "Ambulance_AC"
+                        Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
+                        Ambulance_Ventilator -> "Ambulance_Ventilator")
       }
     }
 
@@ -351,13 +366,23 @@ eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryEditText
                                         , data = state.data { referral_mobile_number = if length newVal <= 10 then newVal else state.data.referral_mobile_number}}
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
+  let agreeTermsModalValue = state.data.vehicleCategory ==  Just (ST.AmbulanceCategory)
+  if agreeTermsModalValue && not state.props.openHowToUploadManual then continue state { props { agreeTermsModal = agreeTermsModalValue }}
+  else if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
   else if (state.props.openHowToUploadManual == false) then 
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
      _ <- liftEffect $ uploadFile false
      pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModalController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit ApplicationSubmittedScreen
+
+eval ButtonClick state = do
+  if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
+  else if (state.props.openHowToUploadManual == false) then 
+    continue state {props {openHowToUploadManual = true}}
+  else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
+     _ <- liftEffect $ uploadFile false
+     pure NoAction]
 
 eval SkipButton state = exit $ ValidateDataAPICall state
 
@@ -374,6 +399,10 @@ eval PreviewImageAction state = continue state
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+
+eval (AgreePopUp (PopUpModal.OnButton2Click)) state = continue $ (state {props {agreeTermsModal= false}})
+
+eval (AgreePopUp (PopUpModal.OnButton1Click)) state = continueWithCmd state{props{ agreeTermsModal = false}} [pure $ ButtonClick]
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -470,6 +499,34 @@ eval OpenAcModal state = continue state { props { acModal = true}}
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval OpenAmbulanceFacilityModal state = continue state {props {ambulanceModal = true}}
+
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { acModal = false}}
+
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { acModal = false}}
+
+eval (RequestAmbulanceFacility RequestInfoCard.Close) state = continue state { props { ambulanceModal = false}}
+
+eval (RequestAmbulanceFacility RequestInfoCard.BackPressed) state = continue state { props { ambulanceModal = false}}
+
+eval (SelectAmbulanceVarient varient) state = do
+  let {airConditioned , ventilator , oxygen} = case varient of
+                                                "AMBULANCE_TAXI" -> { airConditioned: Just false , ventilator: Just false , oxygen: Just false}
+                                                "AMBULANCE_TAXI_OXY" -> {airConditioned: Just false , ventilator: Just false , oxygen: Just true}
+                                                "AMBULANCE_AC" -> {airConditioned: Just true , ventilator: Just false , oxygen: Just false}
+                                                "AMBULANCE_AC_OXY" ->{ airConditioned: Just true , ventilator: Just false , oxygen: Just true}
+                                                "AMBULANCE_VENTILATOR" -> {airConditioned: Just true , ventilator: Just true , oxygen: Just true}
+                                                _ -> {airConditioned: Nothing , ventilator: Nothing , oxygen: Nothing}
+  continue state{data{airConditioned =  airConditioned  , ventilator = ventilator , oxygen = oxygen} , props{isvariant = varient , facilities = not state.props.facilities , showIssueOptions = true}}
+
+eval SelectAmbulanceFacility state = do
+  let old = state.props.facilities
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state{props{facilities = not old , showIssueOptions = true}}
+
+
+eval ListExpandAinmationEnd state = continue state {props {showIssueOptions = false }}
 
 eval _ state = update state
 

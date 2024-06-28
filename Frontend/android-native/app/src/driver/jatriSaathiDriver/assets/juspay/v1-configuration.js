@@ -214,6 +214,8 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "acExplanation" : false
+    , "rcLimit" : 3
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
     , "navigationAppConfig" : {
@@ -319,8 +321,13 @@ window.getMerchantConfig = function () {
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
+  , "rateCardScreen" :{
+    "showYoutubeVideo" : false,
+    "showRateCard" : true,
+    "showTollCharges" : false
+  }
   , "waitTimeConfig" : {
-    "enableWaitTime" : false
+    "enableWaitTime" : true
   }
   , "coinsConfig" : {
     "minCoinSliderValue" : 200,
@@ -351,13 +358,13 @@ window.getMerchantConfig = function () {
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 22.5354064,
       "cityLong" : 88.2649516,
-      "supportNumber" : "",
+      "supportNumber" : "08069724949",
       "languageKey" : "BN_IN",
       "showDriverReferral" : true,
       "showCustomerReferral" : true,
       "uploadRCandDL" : true, 
-      "enableYatriCoins" : true,
-      "vehicleNSImg" : "",
+      "enableYatriCoins" : false,
+      "vehicleNSImg" : "ny_ic_ambulance_image",
       "showEarningSection" : true,
       "registration" : {
           "supportWAN" : "",
@@ -365,9 +372,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : false
       },
       "variantSubscriptionConfig" : {
-        "enableVariantBasedSubscription" : false,
-        "variantList" : [],
-        "enableCabsSubscriptionView" : false,
+        "enableVariantBasedSubscription" : true,
+        "variantList" : ["CarCategory"],
+        "enableCabsSubscriptionView" : true,
         "staticViewPlans" : []
       },
       "referral" : {
@@ -420,12 +427,12 @@ window.getMerchantConfig = function () {
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 26.708845,
       "cityLong" : 88.434362,
-      "supportNumber" : "",
+      "supportNumber" : "08069724949",
       "languageKey" : "BN_IN",
       "showDriverReferral" : true,
       "showCustomerReferral" : true,
       "uploadRCandDL" : true,
-      "enableYatriCoins" : true,
+      "enableYatriCoins" : false,
       "vehicleNSImg" : "",
       "registration" : {
           "supportWAN" : "918618963188",
@@ -487,3 +494,9 @@ let defRateCardConfig = {
     "showLearnMore" : false,
     "learnMoreVideoLink" : ""
   }
+
+let staticSubscriptionConfig = [
+  {"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
+  {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
+]

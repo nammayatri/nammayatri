@@ -40,7 +40,11 @@ type AppConfigDriver a =
     coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
     chooseCity :: ChooseCityScreenConfig,
-    safetyRide :: SafetyRideConfig
+    safetyRide :: SafetyRideConfig,
+    clientName :: String,
+    rateCardScreen :: RateCardScreenConfig,
+    rcLimit :: Int,
+    acExplanation :: Boolean
     | a
   } 
 
@@ -262,4 +266,9 @@ type ChooseCityScreenConfig = {
 type SafetyRideConfig = {
   startTime :: String
 , endTime :: String
+}
+type RateCardScreenConfig = {
+  showYoutubeVideo :: Boolean,
+  showRateCard :: Boolean,
+  showTollCharges :: Boolean
 }

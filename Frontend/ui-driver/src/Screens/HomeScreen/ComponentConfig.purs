@@ -2030,11 +2030,11 @@ vehicleNotSupportedPopup state =
       buttonLayoutMargin = Margin 16 0 16 20,
       margin = MarginHorizontal 25 25, 
       primaryText {
-        text = getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE
+        text = if state.data.cityConfig.cityName == "Kolkata" then getString AMBULANCE_IS_NOT_SUPPORTED_YET else getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE
       , textStyle = Heading2
       , margin = Margin 16 0 16 10},
       secondaryText{
-        text = getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC
+        text = if state.data.cityConfig.cityName == "Kolkata" then getString WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE else getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC
       , textStyle = Body5
       , margin = Margin 16 0 16 15 },
       option1 {
@@ -2350,6 +2350,7 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     optionButtonOrientation = "HORIZONTAL",
     buttonLayoutMargin = MarginBottom 10,
     dismissPopup = true,
+    isVisible = not (state.data.linkedVehicleCategory `elem` ["BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]),
     margin = MarginHorizontal 25 25, 
     primaryText {
       text = getString IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING,
