@@ -134,7 +134,7 @@ import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Localizable.EN (getEN)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
+import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType)
@@ -195,6 +195,7 @@ import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils (decodeBookingTimeList, getCityFromString, getLanguageBasedCityName)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
+import Screens.HomeScreen.Controllers.Types
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -416,7 +417,7 @@ screen initialState =
       \action state -> do
         let _ = spy "HomeScreen action " action
         let _ = spy "HomeScreen state " state
-        eval action state
+        eval2 action state
   }
 
 

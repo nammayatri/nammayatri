@@ -28,7 +28,7 @@ import Screens.Types (Gender)
 import Styles.Colors as Color
 import Common.RemoteConfig (RCCarousel(..))
 import Data.String as DS
-
+import Common.RemoteConfig.Types
 
 data Action = OnClick Int
             | NoAction
@@ -83,6 +83,7 @@ type Config a = {
   actionArrowIconVisibility :: Boolean,
   actionBottomArrowIconVisibility :: Boolean
 , imageBannerUrl :: String
+, dynamicAction :: Maybe RemoteAC
 }
 
 config :: forall a. a -> Config a
@@ -120,6 +121,7 @@ config action = {
     actionArrowIconVisibility : true,
     actionBottomArrowIconVisibility : false
 , imageBannerUrl : ""
+, dynamicAction : Nothing
 }
 
 
@@ -205,6 +207,7 @@ remoteConfigTransformer remoteConfig action =
         actionTextVisibility = DS.null remoteConfig.cta_image_url ,
         actionArrowIconVisibility = DS.null remoteConfig.cta_image_url,
         actionBottomArrowIconVisibility = DS.null remoteConfig.cta_image_url,
-        imageBannerUrl = fromMaybe "" remoteConfig.image_banner
+        imageBannerUrl = fromMaybe "" remoteConfig.image_banner,
+        dynamicAction = remoteConfig.dynamic_action
       }
     in config'') remoteConfig
