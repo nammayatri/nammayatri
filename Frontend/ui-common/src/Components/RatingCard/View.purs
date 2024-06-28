@@ -182,9 +182,7 @@ editTextView state push =
       , pattern "[^\n]*,255"
       , singleLine false 
       , onChange push FeedbackChanged 
-      , text state.data.feedback
       ] <> FontStyle.body3 LanguageStyle
-
   ]
 
 ------------------------starRatingView--------------------------

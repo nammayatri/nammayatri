@@ -1187,7 +1187,7 @@ ratingCardViewState state =
         }
   , showProfileImg: true
   , title: getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
-  , feedbackPlaceHolder : if not $ DS.null state.data.rideRatingState.feedback then "" else getString ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US
+  , feedbackPlaceHolder : getString ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US
   , showFeedbackPill: true
   , overallFeedbackArray: [ (getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE), (getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING) ]
   , accessibility: ENABLE
