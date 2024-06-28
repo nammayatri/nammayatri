@@ -59,6 +59,7 @@ baseAppStorage = do
     setValueToLocalStore RATING_SKIPPED "false"
     setValueToLocalStore POINTS_FACTOR "3"
     setValueToLocalStore TRACKING_DRIVER "False"
+    setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
     setValueToLocalStore ACCURACY_THRESHOLD "23.0"
     setValueToLocalStore BUNDLE_TIME_OUT "1000"
     setValueToLocalStore MESSAGES_DELAY "0"

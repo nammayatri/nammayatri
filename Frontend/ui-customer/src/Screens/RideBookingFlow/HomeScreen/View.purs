@@ -2866,6 +2866,7 @@ getEditLocResults pollingId action exitAction count duration push state = do
                 codeMessage = decodeError errResp.errorMessage "errorMessage"
             if err.code == 400 && codeMessage == "EDIT_LOCATION_ATTEMPTS_EXHAUSTED" then do
               void $ pure $ toast "TRIP UPDATE REQUEST LIMIT EXCEEDED."
+              void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
               doAff do liftEffect $ push $ exitAction
             else do
               void $ delay $ Milliseconds duration

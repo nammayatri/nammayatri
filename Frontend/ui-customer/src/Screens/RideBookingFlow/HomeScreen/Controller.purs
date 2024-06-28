@@ -1244,8 +1244,8 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
   _ <- pure $ spy "updateCurrentStage" stage
   let fareProductType = getFareProductType $ resp.bookingDetails ^._fareProductType
       stopLocation = if fareProductType == FPT.RENTAL then _stopLocation else _toLocation
-      (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
-      stopLocationDetails = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^._stopLocation)
+      stopLocationDetails = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
+      (BookingLocationAPIEntity toLocation) = stopLocationDetails
       otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
       (RideAPIEntity rideList) = (fromMaybe dummyRideAPIEntity (head resp.rideList))
       searchResultType = if (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || otpCode /= Nothing) then QUOTES 
@@ -1253,6 +1253,8 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                                 else if fareProductType == FPT.RENTAL then RENTALS 
                                 else ESTIMATES
       otp = if (( any (_ == fareProductType) [ FPT.RENTAL , FPT.INTER_CITY] ) && state.props.currentStage == RideStarted) then fromMaybe "" rideList.endOtp else if searchResultType == QUOTES then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
+      destAddress = getAddressFromBooking stopLocationDetails
+      dest = decodeAddress (Booking stopLocationDetails)
       newState = state{data{driverInfoCardState 
                               { otp = otp, 
                                 rentalData {
@@ -1262,15 +1264,21 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                                   baseDuration = (fromMaybe 0 resp.estimatedDuration) / 3600, 
                                   baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000 
                                 },
-                                destination =  decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))),
+                                destination = dest,
                                 price = resp.estimatedTotalFare,
-                                destinationLat = toLocation.lat , destinationLng = toLocation.lon , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)),
+                                destinationLat = toLocation.lat , destinationLng = toLocation.lon , destinationAddress = destAddress,
                                 driversPreviousRideDropLocLat = resp.driversPreviousRideDropLocLat,
                                 driversPreviousRideDropLocLon = resp.driversPreviousRideDropLocLon
                               }
                         , fareProductType = fareProductType
+                        , destinationAddress = destAddress
+                        , destination = dest
                         }
-                      , props{stopLoc = Just {lat : stopLocationDetails^._lat, lng : stopLocationDetails^._lon, stopLocAddress : decodeAddress (Booking stopLocationDetails) }}}
+                      , props{ stopLoc = Just {lat : stopLocationDetails^._lat,
+                                                lng : stopLocationDetails^._lon,
+                                                stopLocAddress : decodeAddress (Booking stopLocationDetails) }
+                              , destinationLat = toLocation.lat
+                              , destinationLong = toLocation.lon}}
       isDestChanged = not (state.data.driverInfoCardState.destinationLat == toLocation.lat && state.data.driverInfoCardState.destinationLng == toLocation.lon)
   if isDestChanged then do
     void $ pure $ setValueToLocalStore TRACKING_DRIVER "False"

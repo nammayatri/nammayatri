@@ -82,7 +82,7 @@ view push state =
                 , height $ V 105 
                 , width MATCH_PARENT
                  ][ if not state.headerVisibility then backPressView state push else textView[]
-                  , sourceDestinationImageView state
+                  , if not state.isEditDestination then sourceDestinationImageView state else textView[]
                   , sourceDestinationEditTextView state push
                   ]]
                   , linearLayout
