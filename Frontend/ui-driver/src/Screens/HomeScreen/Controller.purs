@@ -240,7 +240,6 @@ instance loggableAction :: Loggable Action where
       -- PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_cancel_confirmation" "image_onclick"
       -- PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "tip_clicked"
       -- PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_action" "popup_dismissed"
-    ClickAddAlternateButton -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "add-alternate_btn"
     ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
     TriggerMaps -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "trigger_maps"
     RemoveGenderBanner -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "gender_banner"
@@ -342,7 +341,6 @@ data Action = NoAction
             | PopUpModalSilentAction PopUpModal.Action
             | LinkAadhaarPopupAC PopUpModal.Action
             | GoToProfile
-            | ClickAddAlternateButton
             | ZoneOtpAction
             | TriggerMaps
             | GenderBannerModal Banner.Action
@@ -433,6 +431,7 @@ data Action = NoAction
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
+            | AddAlternateNumberAction
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1230,19 +1229,15 @@ eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
   _ <- pure $ hideKeyboardOnNavigation true
   exit $ GoToProfileScreen state
-
-eval ClickAddAlternateButton state = do
-    if state.props.showlinkAadhaarPopup then
-      exit $ AadhaarVerificationFlow state
-    else do
-      let curr_time = getCurrentUTC ""
-      let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-      let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
-      if(time_diff <= 600 && time_diff > 0) then do
-        pure $ toast $ getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER
-        continue state
-      else do
-        exit $ AddAlternateNumber state
+eval AddAlternateNumberAction state = do
+  let curr_time = getCurrentUTC ""
+  let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
+  let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
+  if(time_diff <= 600 && time_diff > 0) then do
+    pure $ toast $ getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER
+    continue state
+  else do
+    exit $ AddAlternateNumber state
 
 eval LinkAadhaarAC state = exit $ AadhaarVerificationFlow state
 

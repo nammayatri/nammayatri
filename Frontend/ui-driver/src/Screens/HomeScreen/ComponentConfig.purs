@@ -62,7 +62,7 @@ import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
 import Screens.Types as ST
 import Services.API as SA
-import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..), BookingTypes(..))
+import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..), BookingTypes(..),AmbulanceType(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
@@ -2025,6 +2025,7 @@ accountBlockedPopup state = PopUpModal.config {
 vehicleNotSupportedPopup :: ST.HomeScreenState -> PopUpModal.Config
 vehicleNotSupportedPopup state = 
   let cityConfig = state.data.cityConfig
+      vehicleTypeIsAmbulance = isJust $ HU.stringToAmbulanceType state.data.vehicleType
   in PopUpModal.config {
       gravity = CENTER,
       backgroundClickable = false,
@@ -2032,11 +2033,13 @@ vehicleNotSupportedPopup state =
       buttonLayoutMargin = Margin 16 0 16 20,
       margin = MarginHorizontal 25 25, 
       primaryText {
-        text = getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE
+        text = if vehicleTypeIsAmbulance 
+               then getString AMBULANCE_IS_NOT_SUPPORTED_YET 
+               else getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE
       , textStyle = Heading2
       , margin = Margin 16 0 16 10},
       secondaryText{
-        text = getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC
+        text = if vehicleTypeIsAmbulance then getString WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE else getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC
       , textStyle = Body5
       , margin = Margin 16 0 16 15 },
       option1 {
@@ -2352,6 +2355,7 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     optionButtonOrientation = "HORIZONTAL",
     buttonLayoutMargin = MarginBottom 10,
     dismissPopup = true,
+    isVisible = not (state.data.linkedVehicleCategory `elem` ["BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]),
     margin = MarginHorizontal 25 25, 
     primaryText {
       text = getString IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING,

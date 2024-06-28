@@ -73,7 +73,7 @@ import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo)
+import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, AmbulanceType(..))
 import Services.API as SA
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
@@ -290,11 +290,21 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "SUV"   -> ["SEDAN", "HATCHBACK"]
                                                 "SEDAN" -> ["TAXI", "HATCHBACK"] 
                                                 "BIKE"  -> []
+                                                "AMBULANCE_TAXI" -> []
+                                                "AMBULANCE_TAXI_OXY" -> []
+                                                "AMBULANCE_AC" -> []
+                                                "AMBULANCE_AC_OXY" -> []
+                                                "AMBULANCE_VENTILATOR" -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
                                         "BIKE"  -> []
+                                        "AMBULANCE_TAXI" -> []
+                                        "AMBULANCE_TAXI_OXY" -> []
+                                        "AMBULANCE_AC" -> []
+                                        "AMBULANCE_AC_OXY" -> []
+                                        "AMBULANCE_VENTILATOR" -> []
                                         _       -> []
 
 
@@ -321,11 +331,21 @@ getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "BIKE"  -> []
                                                 "SUV"   -> ["SEDAN"]
                                                 "SEDAN" -> ["TAXI"] 
+                                                "AMBULANCE_TAXI" -> []
+                                                "AMBULANCE_TAXI_OXY" -> []
+                                                "AMBULANCE_AC" -> []
+                                                "AMBULANCE_AC_OXY" -> []
+                                                "AMBULANCE_VENTILATOR" -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
                                         "BIKE"  -> []
+                                        "AMBULANCE_TAXI" -> []
+                                        "AMBULANCE_TAXI_OXY" -> []
+                                        "AMBULANCE_AC" -> []
+                                        "AMBULANCE_AC_OXY" -> []
+                                        "AMBULANCE_VENTILATOR" -> []
                                         _       -> []
   
 getVehicleType :: String -> String
@@ -338,6 +358,11 @@ getVehicleType vehicleType =
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     "BIKE" -> "Bike"
+    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
+    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
+    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
+    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
+    "AMBULANCE_VENTILATOR" -> getString VENTILATOR
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -474,7 +499,7 @@ instance decodeFetchImageFrom :: Decode FetchImageFrom where decode = defaultEnu
 foreign import isDateGreaterThan :: String -> Boolean
 
 getNegotiationUnit :: String -> MCT.NegotiationUnit -> String
-getNegotiationUnit varient negotiationUnit = case varient of
+getNegotiationUnit variant negotiationUnit = case variant of
   "AUTO_RICKSHAW" -> negotiationUnit.auto
   _ -> negotiationUnit.cab
   
@@ -530,6 +555,11 @@ getCategorizedVariant variant = case variant of
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "AC Taxi"
       "BIKE" -> "Bike"
+      "AMBULANCE_TAXI" -> "Ambulance_Taxi"
+      "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
+      "AMBULANCE_AC" -> "Ambulance_AC" 
+      "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
+      "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
       _ -> "Non AC"
     _ -> case var of
       "SEDAN"  -> "Sedan"
@@ -538,6 +568,11 @@ getCategorizedVariant variant = case variant of
       "SUV" -> "Suv"
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
       "BIKE" -> "Bike"
+      "AMBULANCE_TAXI" -> "Ambulance_Taxi"
+      "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
+      "AMBULANCE_AC" -> "Ambulance_AC" 
+      "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
+      "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
       _ -> var
   Nothing -> ""
 
@@ -579,6 +614,11 @@ getVehicleVariantImage variant =
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
                         "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _ -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
@@ -601,6 +641,11 @@ getVehicleVariantImage variant =
                             "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
                         "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
                         _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 getVariantRideType :: String -> String
@@ -610,6 +655,11 @@ getVariantRideType variant =
                     "TAXI" -> getString TAXI
                     "SUV"  -> getString AC_SUV
                     "BIKE" -> getString BIKE_TAXI
+                    "AMBULANCE_TAXI" -> "Ambulance_Taxi"
+                    "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
+                    "AMBULANCE_AC" -> "Ambulance_AC"
+                    "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
+                    "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
                     _      -> getString AC_CAB
     _          -> case variant of
                     "TAXI"          -> getString TAXI
@@ -619,6 +669,11 @@ getVariantRideType variant =
                     "SUV"           -> getString SUV
                     "AUTO_RICKSHAW" -> getString AUTO_RICKSHAW
                     "BIKE"          -> getString BIKE_TAXI
+                    "AMBULANCE_TAXI" -> "Ambulance_Taxi"
+                    "AMBULANCE_TAXI_OXY" -> "Ambulance_Taxi_Oxy"
+                    "AMBULANCE_AC" -> "Ambulance_AC"
+                    "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
+                    "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
                     _               -> variant
                     
 getStatus :: String -> PaymentStatus
@@ -986,3 +1041,30 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+
+variantToString :: SA.VehicleVariant -> String
+variantToString variant = 
+  case variant of
+    SA.AMBULANCE ambulanceType -> show ambulanceType
+    _ -> ""
+
+getVehicleCapacity :: String -> String
+getVehicleCapacity vehicleType = case vehicleType of
+  "TAXI" -> getString ECONOMICAL <> " · " <> "4 " <> getString PEOPLE
+  "SUV" -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
+  "BIKE" -> getString ECONOMICAL <> " · " <> "1 " <> getString PEOPLE
+  "AMBULANCE_TAXI" -> "Ambulance Taxi" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_TAXI_OXY" -> "Ambulance Taxi Oxy" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_AC" -> "Ambulance AC" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_AC_OXY" -> "Ambulance AC Oxy" <> " · " <> "4 " <> getString PEOPLE
+  "AMBULANCE_VENTILATOR" -> "Ambulance Ventilator" <> " · " <> "4 " <> getString PEOPLE
+  _ -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
+
+stringToAmbulanceType :: String -> Maybe AmbulanceType
+stringToAmbulanceType str = case str of
+  "AMBULANCE_TAXI" -> Just AMBULANCE_TAXI
+  "AMBULANCE_TAXI_OXY" -> Just AMBULANCE_TAXI_OXY
+  "AMBULANCE_AC" -> Just AMBULANCE_AC
+  "AMBULANCE_AC_OXY" -> Just AMBULANCE_AC_OXY
+  "AMBULANCE_VENTILATOR" -> Just AMBULANCE_VENTILATOR
+  _ -> Nothing

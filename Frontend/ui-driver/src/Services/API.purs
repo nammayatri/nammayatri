@@ -482,7 +482,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Boolean
     , checkIfACWorking      :: Maybe Boolean
-    , canSwitchToIntercity  :: Maybe Boolean
+    , canSwitchToInterCity  :: Maybe Boolean
     }
 
 
@@ -576,6 +576,10 @@ instance encodeGetDriverInfoResp :: Encode GetDriverInfoResp where encode = defa
 -----------------------------------------------GET RIDES HISTORY---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 data GetRidesHistoryReq = GetRidesHistoryReq String String String String String
+
+data AmbulanceType = AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR
+
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE AmbulanceType
 
 newtype GetRidesHistoryResp = GetRidesHistoryResp
     {
@@ -758,19 +762,25 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE
-
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
-instance decodeVehicleVariant :: Decode VehicleVariant where decode = defaultDecode
+instance decodeVehicleVariant :: Decode VehicleVariant 
+  where decode body = 
+          case unsafeFromForeign body of
+            "AMBULANCE_TAXI" -> except $ Right $ AMBULANCE AMBULANCE_TAXI
+            "AMBULANCE_TAXI_OXY" -> except $ Right $ AMBULANCE AMBULANCE_TAXI_OXY
+            "AMBULANCE_AC" -> except $ Right $ AMBULANCE AMBULANCE_AC
+            "AMBULANCE_AC_OXY" -> except $ Right $ AMBULANCE AMBULANCE_AC_OXY
+            "AMBULANCE_VENTILATOR" -> except $ Right $ AMBULANCE AMBULANCE_VENTILATOR
+            _ -> defaultDecode body
 instance encodeVehicleVariant :: Encode VehicleVariant where encode = defaultEncode
-instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
-  where
- standardEncode SEDAN = standardEncode {}
- standardEncode SUV = standardEncode {}
- standardEncode HATCHBACK = standardEncode {}
- standardEncode AUTO_VARIANT = standardEncode {}
- standardEncode BIKE = standardEncode {}
+instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant where standardEncode vehicleVariant = standardEncode {}
+
+derive instance genericAmbulanceType :: Generic AmbulanceType _
+instance standardEncodeAmbulanceType :: StandardEncode AmbulanceType where standardEncode _ = standardEncode {}
+instance showAmbulanceType :: Show AmbulanceType where show = genericShow
+instance decodeAmbulanceType :: Decode AmbulanceType where decode = defaultDecode
+instance encodeAmbulanceType :: Encode AmbulanceType where encode = defaultEncode
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
 
@@ -882,7 +892,7 @@ newtype UpdateDriverInfoReq
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
-  , canSwitchToIntercity :: Maybe Boolean
+  , canSwitchToInterCity :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
@@ -1033,7 +1043,9 @@ newtype DriverRCReq = DriverRCReq {
   imageId :: String,
   dateOfRegistration :: Maybe String,
   vehicleCategory :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  ventilator :: Maybe Boolean,
+  oxygen :: Maybe Boolean
 }
 
 newtype DriverRCResp = DriverRCResp ApiSuccessResult
@@ -4461,7 +4473,8 @@ data OnboardingDocsReq = OnboardingDocsReq String
 newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
   cabs :: Maybe (Array OnboardingDoc),
-  bikes :: Maybe (Array OnboardingDoc)
+  bikes :: Maybe (Array OnboardingDoc),
+  ambulances :: Maybe (Array OnboardingDoc)
 }
 
 newtype OnboardingDoc = OnboardingDoc {

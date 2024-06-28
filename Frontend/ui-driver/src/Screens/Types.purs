@@ -159,7 +159,10 @@ type AddVehicleDetailsScreenData =  {
   cityConfig :: CityConfig,
   vehicleCategory :: Maybe VehicleCategory,
   config :: AppConfig,
-  rcNumberPrefixList :: Array String
+  rcNumberPrefixList :: Array String,
+  ventilator :: Maybe Boolean,
+  airConditioned :: Maybe Boolean,
+  oxygen :: Maybe Boolean
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -195,7 +198,12 @@ type AddVehicleDetailsScreenProps =  {
   confirmChangeVehicle :: Boolean,
   contactSupportModal :: AnimType,
   buttonIndex :: Maybe Int,
-  acModal :: Boolean
+  acModal :: Boolean,
+  facilities :: Boolean,
+  showIssueOptions :: Boolean,
+  isvariant :: String,
+  ambulanceModal :: Boolean,
+  agreeTermsModal :: Boolean
  }
 
 data ValidationStatus  =  Success | Failure | InProgress | None
@@ -205,7 +213,9 @@ instance showValidationStatus :: Show ValidationStatus where show = genericShow
 instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike
+data AmbulanceVariant = Taxi | Taxi_Oxy | AC | AC_Oxy | Ventilator
+
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance AmbulanceVariant
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
@@ -269,6 +279,7 @@ type RegistrationScreenData = {
   registerationStepsAuto :: Array StepProgress,
   registerationStepsCabs :: Array StepProgress,
   registerationStepsBike :: Array StepProgress,
+  registerationStepsAmbulance :: Array StepProgress,
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
@@ -359,7 +370,7 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
-data VehicleCategory = AutoCategory | CarCategory | BikeCategory | UnKnown
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | UnKnown
 
 derive instance genericVehicleCategory :: Generic VehicleCategory _
 instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
@@ -533,7 +544,7 @@ type DriverProfileScreenProps = {
   enableGoto :: Boolean,
   isRideActive :: Boolean,
   canSwitchToRental :: Boolean,
-  canSwitchToIntercity :: Maybe Boolean
+  canSwitchToInterCity :: Maybe Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1921,7 +1932,7 @@ type BookingOptionsScreenProps = {
   canSwitchToRental :: Boolean,
   acExplanationPopup :: Boolean,
   fromDeepLink :: Boolean,
-  canSwitchToIntercity :: Maybe Boolean,
+  canSwitchToInterCity :: Maybe Boolean,
   showRateCard :: Boolean,
   rateCardLoaded :: Boolean,
   peakTime :: Boolean
@@ -2780,7 +2791,10 @@ type RateCardScreenState = {
 type RateCardScreenData = {
   ridePreferences :: Array RidePreference,
   rateCard :: Common.RateCard,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  config :: AppConfig
+
+
 }
 
 type RateCardScreenProps = {
