@@ -25,6 +25,13 @@ config =
       showSavedCommission : false,
       lottieQRAnim : false
     }
+   , rateCardScreen : {
+      showYoutubeVideo : true,
+      showRateCard : true,
+      showTollCharges : true
+    },
+    rcLimit : 3
+  , acExplanation : true
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,
@@ -725,6 +732,7 @@ config =
     startTime : "21:00:00"
   , endTime : "06:00:00"
   }
+  , clientName : ""
 }
 
 registrationConfig :: CTC.RegistrationConfig
