@@ -1304,3 +1304,5 @@ getKN stringKey =
         NOIDA -> "ನೋಯ್ಡಾ"
         GURUGRAM -> "ಗುರುಗ್ರಾಮ"
         WAITING_CHARGES -> "ನಿರೀಕ್ಷಣಾ ಶುಲ್ಕಗಳು"
+        PLACE_A_CALL -> "ಕರೆ ಇಟ್ಟುಕೊಳ್ಳಿ"
+        YOU_CAN_WRITE_TO_US_AT -> "ನೀವು ನಮಗೆ ಬರೆಯಬಹುದು"
