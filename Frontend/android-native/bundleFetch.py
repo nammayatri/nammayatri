@@ -89,6 +89,11 @@ elif param == "Y":
     url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json"
     appName = "in.yatri.consumer"
     print(f"URL Y :::::: " + url)
+elif param == "YS":
+    # Default URL if no match is found
+    url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathiconsumer/android/cug/config.json"
+    appName = "in.yatri.consumer"
+    print(f"URL YS :::::: " + url)
 elif param == "NYP":
     # Default URL if no match is found
     url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
@@ -99,6 +104,11 @@ elif param == "MYP":
     url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json"
     appName = "in.yatri.provider"
     print(f"URL MYP :::::: " + url)
+elif param == "YSP":
+    # Default URL if no match is found
+    url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathiprovider/android/cug/config.json"
+    appName = "in.yatri.provider"
+    print(f"URL YSP :::::: " + url)
 elif param == "YP":
     # Default URL if no match is found
     url = "https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json"

@@ -33,6 +33,13 @@ jobs:
             local_properties: LOCAL_PROPERTIES_Y 
             config_path: app/src/user/yatri/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriconsumer/android/cug/config.json'
+          - name: YatriSathi
+            keystore: ANDROID_KEYSTORE_FILE_YS 
+            fastlane_cm: YS
+            key_alias: KEYSTORE_KEY_ALIAS_YS
+            local_properties: LOCAL_PROPERTIES_YS 
+            config_path: app/src/user/jatriSaathi/assets/juspay
+            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathiconsumer/android/cug/config.json'
           # Add more variants as needed
     defaults:
       run:

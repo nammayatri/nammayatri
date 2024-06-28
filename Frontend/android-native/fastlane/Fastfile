@@ -21,6 +21,8 @@ flavorsY = ["yatriUserProd"]
 flavorsYP = ["yatriDriverProd"]
 flavoursNYP = ["nyDriverProd"]
 flavorsMYP = ["myDriverProd"]
+flavorsYSP = ["ysDriverProd"]
+flavourYS = ["ysUserProd"]
 
 platform :android do
   desc "Runs all the tests"
@@ -190,5 +192,56 @@ platform :android do
       )
     }
   end
+
+  desc "Yatri Sathi Partner Release"
+  lane :release_ysp do
+    flavorsYSP.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.juspay.jatrisaathidriver',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "ysDriver-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
+  desc "Yatri Sathi User Release"
+  lane :release_ys do
+    flavourYS.each { |flavor|
+      # Generate AAB
+      gradle(
+        task: 'bundle' + flavor + 'Release'
+      )
+  
+      # Supply metadata and AAB to Google Play
+      supply(
+        track: 'internal',
+        json_key: 'play_config.json',
+        package_name: 'in.juspay.jatrisaathi',
+        metadata_path: 'fastlane/metadata/',
+        aab: "./app/build/outputs/bundle/" + flavor + "Release/app-" + "ysUser-prod" + "-release.aab",
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_changelogs: true,
+        skip_upload_screenshots: true,
+        timeout: 600
+      )
+    }
+  end
+
 
 end

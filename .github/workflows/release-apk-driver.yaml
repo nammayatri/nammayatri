@@ -19,20 +19,27 @@ jobs:
             local_properties: LOCAL_PROPERTIES_NYP
             config_path: app/src/driver/nammaYatriPartner/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json'
-          - name: ManaYatri
+          - name: ManaYatriPartner
             keystore: ANDROID_KEYSTORE_FILE_MYP
             fastlane_cm: MYP
             key_alias: KEYSTORE_KEY_ALIAS_MYP
             local_properties: LOCAL_PROPERTIES_MYP
             config_path: app/src/driver/manaYatriPartner/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/nammayatriprovider/android/cug/config.json'
-          - name: Yatri
+          - name: YatriPartner
             keystore: ANDROID_KEYSTORE_FILE_YP
             fastlane_cm: YP
             key_alias: KEYSTORE_KEY_ALIAS_YP
             local_properties: LOCAL_PROPERTIES_YP
             config_path: app/src/driver/yatriPartner/assets/juspay
             config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatriprovider/android/cug/config.json'
+          - name: YatriSathiPartner
+            keystore: ANDROID_KEYSTORE_FILE_YSP
+            fastlane_cm: YSP
+            key_alias: KEYSTORE_KEY_ALIAS_YSP
+            local_properties: LOCAL_PROPERTIES_YSP
+            config_path: app/src/driver/jatriSaathiPartner/assets/juspay
+            config_url: 'https://assets.juspay.in/hyper/bundles/in.juspay.merchants/yatrisathiprovider/android/cug/config.json'
           # Add more variants as needed
     defaults:
       run:
