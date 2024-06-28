@@ -1305,3 +1305,5 @@ getEN stringKey =
         NOIDA -> "Noida"
         GURUGRAM -> "Gurugram"
         WAITING_CHARGES -> "Waiting charges"
+        PLACE_A_CALL -> "Place a call"
+        YOU_CAN_WRITE_TO_US_AT -> "You can write to us at"

@@ -1303,3 +1303,5 @@ getBN stringKey =
         NOIDA -> "নয়ডা"
         GURUGRAM -> "গুরুগ্রাম"
         WAITING_CHARGES -> "অপেক্ষার খরচ"
+        PLACE_A_CALL -> "একটি কল করুন"
+        YOU_CAN_WRITE_TO_US_AT -> "আপনি আমাদের লিখতে পারেন"

@@ -78,7 +78,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -89,7 +89,7 @@ import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
-import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, cancelReasons, dummyCancelReason,  emergencyContactInitialChatSuggestionId, DecodeAddress(..))
+import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, cancelReasons, dummyCancelReason,  emergencyContactInitialChatSuggestionId, DecodeAddress(..), mailToLink)
 import Constants (defaultDensity)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
@@ -146,6 +146,7 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.TipConfig
 import Helpers.Utils as HU
+import ConfigProvider
 
 instance showAction :: Show Action where
   show _ = ""
@@ -949,6 +950,7 @@ data Action = NoAction
             | InternetCallBackCustomer String
             | MarkerLabelOnClick String 
             | ShimmerTimer Int String String
+            | ContactSupportAction PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1995,7 +1997,10 @@ eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state
       updatedState = state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
   exit $ PastRides updatedState false
 
-eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = do 
+  if state.data.config.feature.enableHelpAndSupport
+    then exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+    else continue state {props{isContactSupportPopUp = true}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_language"
@@ -2552,7 +2557,21 @@ eval (QuoteListModelActionController (QuoteListModelController.ChangeTip)) state
 
 eval (Restart err) state = exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
+eval (ContactSupportAction (PopUpModal.DismissPopup)) state = continue state{props{isContactSupportPopUp = false}}
+
+eval (ContactSupportAction (PopUpModal.OnSecondaryTextClick)) state =   
+    continueWithCmd state{props{isContactSupportPopUp = false}} [do
+        void $ openUrlInMailApp $ mailToLink <> (getAppConfig appConfig).appData.supportMail
+        pure NoAction
+    ]
+
+eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = do
+    void $ pure $ showDialer (getSupportNumber "") false
+    continue state{props{isContactSupportPopUp = false}}
+
+eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = continueWithCmd state [pure $ ContactSupportAction (PopUpModal.DismissPopup)]
+
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of     
   TipsPopUp -> do
     void $ pure $ performHapticFeedback unit
     let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"

@@ -88,6 +88,7 @@ confirmLostAndFoundConfig state = let
     }
     in popUpConfig'
 
+
 sourceToDestinationConfig :: ST.TripDetailsScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
   startDate = state.data.selectedItem.rideStartTime <> " . " <> (convertUTCtoISC state.data.selectedItem.rideStartTimeUTC "DD/MM/YYYY") 

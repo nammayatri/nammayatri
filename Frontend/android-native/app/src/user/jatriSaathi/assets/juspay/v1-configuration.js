@@ -351,7 +351,8 @@ window.getMerchantConfig = function () {
       "enableShareRide" : false,
       "enableAdditionalServices" : true,
       "enableSafetyFlow" : false,
-      "enableCustomerSupportForSafety" : true 
+      "enableCustomerSupportForSafety" : true, 
+      "enableHelpAndSupport" : false
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,
