@@ -74,7 +74,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, compareDate, getCurrentDatev2, getDateAfterNDaysv2)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, showDateTimePicker)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, showDateTimePicker)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -84,7 +84,7 @@ import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
-import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress,  DecodeAddress(..), cancelReasons, dummyCancelReason)
+import Resources.Constants (encodeAddress, getAddressFromBooking, decodeAddress, cancelReasons, dummyCancelReason, DecodeAddress(..), mailToLink)
 import Constants (defaultDensity)
 import Screens (ScreenName(..), getScreen)
 import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
@@ -129,6 +129,7 @@ import Common.Types.App (RideType(..)) as RideType
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Common.Types.App as CTP
 import JBridge as JB
+import ConfigProvider
 -- import 
 
 instance showAction :: Show Action where
@@ -946,6 +947,7 @@ data Action = NoAction
             | RentalInfoAction PopUpModal.Action
             | IntercitySpecialZone PopUpModal.Action
             | GoToConfirmingLocationStage 
+            | ContactSupportAction PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1610,7 +1612,10 @@ eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_myrides_click"
   exit $ PastRides state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = do 
+  if state.data.config.feature.enableHelpAndSupport
+    then exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+    else continue state {props{isContactSupportPopUp = true}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_language"
@@ -2218,7 +2223,21 @@ eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionC
 
 eval (Restart err) state = exit $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state
 
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of
+eval (ContactSupportAction (PopUpModal.DismissPopup)) state = continue state{props{isContactSupportPopUp = false}}
+
+eval (ContactSupportAction (PopUpModal.OnSecondaryTextClick)) state =   
+    continueWithCmd state{props{isContactSupportPopUp = false}} [do
+        void $ openUrlInMailApp $ mailToLink <> (getAppConfig appConfig).appData.supportMail
+        pure NoAction
+    ]
+
+eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = do
+    void $ pure $ showDialer (getSupportNumber "") false
+    continue state{props{isContactSupportPopUp = false}}
+
+eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = continueWithCmd state [pure $ ContactSupportAction (PopUpModal.DismissPopup)]
+
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.isPopUp of     
   TipsPopUp -> do
     _ <- pure $ performHapticFeedback unit
     let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"

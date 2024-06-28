@@ -46,7 +46,8 @@ initData = {
     showConfirmationPopUp : false,
     canConnectWithDriver : true,
     triggerUIUpdate : true,
-    showIssueOptions : true
+    showIssueOptions : true,
+    isContactSupportPopUp : false
   }
 }
 
