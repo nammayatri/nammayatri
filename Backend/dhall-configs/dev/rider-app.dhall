@@ -251,6 +251,7 @@ in  { esqDBCfg
     , migrationPath =
       [ "dev/migrations-read-only/rider-app"
       , env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app"
+      , "dev/after-release-migrations/rider-app"
       ]
     , autoMigrate = True
     , coreVersion = "0.9.4"

@@ -90,6 +90,7 @@ in  { esqDBCfg
     , migrationPath =
       [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/migrations/rider-dashboard"
+      , "dev/after-release-migrations/rider-dashboard"
       ]
     , autoMigrate = True
     , loggerConfig =
