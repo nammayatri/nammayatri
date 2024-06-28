@@ -129,7 +129,7 @@ initData =
     enableGoto : false,
     isRideActive : false,
     canSwitchToRental : false,
-    canSwitchToIntercity : Nothing
+    canSwitchToInterCity : Nothing
    }
 }
 
@@ -214,7 +214,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , isVehicleSupported    : Nothing
     , canSwitchToRental     : false
     , checkIfACWorking    : Nothing
-    , canSwitchToIntercity   : Nothing
+    , canSwitchToInterCity   : Nothing
 }
 
 organizationInfo :: OrganizationInfo
