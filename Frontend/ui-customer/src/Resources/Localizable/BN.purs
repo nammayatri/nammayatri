@@ -1460,3 +1460,4 @@ getBN stringKey =
         WHERE_ARE_YOU_GOING -> "আপনি কোথায় যাচ্ছেন?"
         TAP_TO_FOLLOW -> "অনুসরণ করতে আলতো চাপুন"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " আপনার সাথে একটি রাইড শেয়ার করেছে৷ অনুসরণ করতে আলতো চাপুন" 
+        NOT_FOUND_IN_SAVED_LOCATION -> "সংরক্ষিত স্থানে পাওয়া যায়নি"

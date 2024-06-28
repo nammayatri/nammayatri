@@ -33,7 +33,7 @@ import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Transformers.Back.Trans as App
-import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq, foldl, (:))
+import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex, elem, nubByEq, foldl, (:), find)
 import Data.Array as Arr
 import Helpers.Utils as HU
 import Data.Either (Either(..), either)
@@ -345,59 +345,96 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
   liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS"
   handleExternalLocations mBGlobalPayload
   case mBGlobalPayload of
-    Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
-      Just screen -> case screen of
-        "rides" -> hideSplashAndCallFlow myRidesScreenFlow
-        "abt" -> hideSplashAndCallFlow aboutUsScreenFlow
-        "fvrts" -> hideSplashAndCallFlow savedLocationFlow
-        "help" -> hideSplashAndCallFlow $ flowRouter HelpAndSupportScreenFlow
-        "prof" -> hideSplashAndCallFlow myProfileScreenFlow
-        "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
-        "tkts" -> hideSplashAndCallFlow placeListFlow
-        "safety" -> hideSplashAndCallFlow safetySettingsFlow
-        "smd" -> do
-          modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
-          hideSplashAndCallFlow activateSafetyScreenFlow
-        "sedu" -> do
-          case globalPayload ^. _payload ^. _deepLinkJSON of
-            Just (CTA.QueryParam queryParam) -> do
-              if isJust queryParam.option then do
-                let
-                  videoList = RC.safetyBannerVideoConfigData (DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION) $ fetchLanguage $ getLanguageLocale languageKey
-                modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { data { videoList = videoList }, props { showVideoView = true, educationViewIndex = Just 0, fromBannerLink = true } })
-              else
-                modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { fromDeepLink = true } })
-            _ -> pure unit
-          hideSplashAndCallFlow safetyEducationFlow
-        "mt" -> hideSplashAndCallFlow metroTicketBookingFlow
-        "shareRide" ->  do
-          case globalPayload ^. _payload ^. _deepLinkJSON of
-            Just (CTA.QueryParam queryParam) -> do
-              case queryParam.rideId of
-                Just rId -> do
-                  res <- lift $ lift $ HelpersAPI.callApi $ GetManuallySharedDetailsReq rId
-                  case res of
-                    Right (GetManuallySharedDetailsRes rideDetails) -> do
-                      let follower = { name : Just rideDetails.customerName, bookingId : rideDetails.bookingId, mobileNumber : rideDetails.customerPhone, priority : 0 }
-                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Just [follower], manuallySharedFollowers = Just [follower] } })
-                      updateFollower false true Nothing
-                    Left _ -> currentFlowStatus
-                _ -> currentFlowStatus
-            _ -> pure unit
-        _ -> do
-          case breakPrefixAndId screen of
-            Just ( Tuple "metroBooking" bookingId )-> do
-              case bookingId of
-                Just id -> hideSplashAndCallFlow $ viewTicketDetialsFlow (Just id)
-                _ -> pure unit
-            _ -> if skipDefaultCase then pure unit else currentFlowStatus
-      Nothing -> currentFlowStatus
+    Just globalPayload -> do
+      case globalPayload ^. _payload ^._widgetData of
+                Just urlData -> handleWidgetData urlData
+                Nothing -> pure unit
+      case globalPayload ^. _payload ^. _view_param of
+        Just screen -> case screen of
+          "rides" -> hideSplashAndCallFlow myRidesScreenFlow
+          "abt" -> hideSplashAndCallFlow aboutUsScreenFlow
+          "fvrts" -> hideSplashAndCallFlow savedLocationFlow
+          "help" -> hideSplashAndCallFlow $ flowRouter HelpAndSupportScreenFlow
+          "prof" -> hideSplashAndCallFlow myProfileScreenFlow
+          "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
+          "tkts" -> hideSplashAndCallFlow placeListFlow
+          "safety" -> hideSplashAndCallFlow safetySettingsFlow
+          "smd" -> do
+            modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
+            hideSplashAndCallFlow activateSafetyScreenFlow
+          "sedu" -> do
+            case globalPayload ^. _payload ^. _deepLinkJSON of
+              Just (CTA.QueryParam queryParam) -> do
+                if isJust queryParam.option then do
+                  let
+                    videoList = RC.safetyBannerVideoConfigData (DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION) $ fetchLanguage $ getLanguageLocale languageKey
+                  modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { data { videoList = videoList }, props { showVideoView = true, educationViewIndex = Just 0, fromBannerLink = true } })
+                else
+                  modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { fromDeepLink = true } })
+              _ -> pure unit
+            hideSplashAndCallFlow safetyEducationFlow
+          "mt" -> hideSplashAndCallFlow metroTicketBookingFlow
+          "shareRide" ->  do
+            case globalPayload ^. _payload ^. _deepLinkJSON of
+              Just (CTA.QueryParam queryParam) -> do
+                case queryParam.rideId of
+                  Just rId -> do
+                    res <- lift $ lift $ HelpersAPI.callApi $ GetManuallySharedDetailsReq rId
+                    case res of
+                      Right (GetManuallySharedDetailsRes rideDetails) -> do
+                        let follower = { name : Just rideDetails.customerName, bookingId : rideDetails.bookingId, mobileNumber : rideDetails.customerPhone, priority : 0 }
+                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Just [follower], manuallySharedFollowers = Just [follower] } })
+                        updateFollower false true Nothing
+                      Left _ -> currentFlowStatus
+                  _ -> currentFlowStatus
+              _ -> pure unit
+          _ -> do
+            case breakPrefixAndId screen of
+              Just ( Tuple "metroBooking" bookingId )-> do
+                case bookingId of
+                  Just id -> hideSplashAndCallFlow $ viewTicketDetialsFlow (Just id)
+                  _ -> pure unit
+              _ -> if skipDefaultCase then pure unit else currentFlowStatus
+        Nothing -> currentFlowStatus
     Nothing -> do
       let
         mBPayload = getGlobalPayload Constants.globalPayload
       case mBPayload of
         Just _ -> handleDeepLinks mBPayload skipDefaultCase
         Nothing -> pure unit
+
+
+handleWidgetData :: String -> FlowBT String Unit
+handleWidgetData urlData = 
+  case urlData of 
+    _ | urlData == "Home" || urlData == "Work" -> do
+      (SavedLocationsListRes savedLocationResp )<- FlowCache.updateAndFetchSavedLocations true 
+      let items =  spy  "getSavedLocations" $ AddNewAddress.getSavedLocations savedLocationResp.list
+          maybeItem = find (\x -> x.tag == urlData  ) items
+      case maybeItem of 
+        Just item -> do
+          updateLocalStage GoToConfirmLocation
+          
+          let 
+              lastKnowLat =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) 
+              lastKnowLong =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) 
+          if lastKnowLat /= 0.0  && lastKnowLong /= 0.0 then do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ source = (getString STR.CURRENT_LOCATION), destination = item.description,destinationAddress = item.fullAddress},props{destinationPlaceId = item.placeId,sourceLat = lastKnowLat,sourceLong = lastKnowLong, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon, currentStage = GoToConfirmLocation , isSource = Just false}}) 
+            pure $ setText (getNewIDWithTag "DestinationEditText") item.description
+            void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+          else 
+            pure unit 
+        Nothing ->do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {homeEntryToast =  if urlData == "Home" then  Just (getString (STR.HOME) <>" " <> getString ( STR.NOT_FOUND_IN_SAVED_LOCATION))   else Just (getString (STR.WORK) <> " "<> getString (STR.NOT_FOUND_IN_SAVED_LOCATION))}})
+    "FAVOURITES" -> do
+      updateLocalStage FavouriteLocationModel
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ source = (getString STR.CURRENT_LOCATION)}, props{currentStage = FavouriteLocationModel}})
+    "WhereTo" -> do 
+      updateLocalStage SearchLocationModel
+      checkAndUpdateLocations
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, rideSearchProps{sessionId = generateSessionId unit}}, data{source= (getString STR.CURRENT_LOCATION) }})
+    _ -> pure unit
+
 
 handleExternalLocations :: Maybe GlobalPayload -> FlowBT String Unit
 handleExternalLocations mBGlobalPayload = do

@@ -1464,3 +1464,4 @@ getKN stringKey =
         WHERE_ARE_YOU_GOING -> "ನೀವು ಎಲ್ಲಿಗೆ ಹೋಗುತ್ತಿದ್ದೀರಾ?"
         TAP_TO_FOLLOW -> "ಅನುಸರಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " ನಿಮ್ಮೊಂದಿಗೆ ಸವಾರಿಯನ್ನು ಹಂಚಿಕೊಂಡಿದ್ದಾರೆ. ಅನುಸರಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ"
+        NOT_FOUND_IN_SAVED_LOCATION -> "ಸೇವ್ ಮಾಡಿದ ಸ್ಥಳದಲ್ಲಿ ಕಂಡುಬರಲಿಲ್ಲ"

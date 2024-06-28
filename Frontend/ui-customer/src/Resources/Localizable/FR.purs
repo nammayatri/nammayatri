@@ -1464,3 +1464,4 @@ getFR stringKey =
         WHERE_ARE_YOU_GOING -> "Où vas-tu?"
         TAP_TO_FOLLOW -> "Tap to follow"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " has shared a ride with you. Tap to follow"
+        NOT_FOUND_IN_SAVED_LOCATION -> "Non trouvé dans les emplacements enregistrés"

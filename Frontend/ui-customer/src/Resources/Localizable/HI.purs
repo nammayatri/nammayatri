@@ -1461,3 +1461,4 @@ getHI stringKey =
         WHERE_ARE_YOU_GOING -> "आप कहां जा रहे हैं?"
         TAP_TO_FOLLOW -> "फ़ॉलो करने के लिए टैप करें"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " ने आपके साथ एक यात्रा साझा की है। फ़ॉलो करने के लिए टैप करें"
+        NOT_FOUND_IN_SAVED_LOCATION -> "सहेजे गए स्थानों में नहीं मिला"

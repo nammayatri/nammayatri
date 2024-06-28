@@ -335,6 +335,7 @@ data Action = NoAction
   | ShakeActionCallback Int
   | UpdateShakePermission Boolean
   | ServicesOnClick RemoteConfig.Service
+  | RemoveHomeEntryToast
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

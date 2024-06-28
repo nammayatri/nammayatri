@@ -388,6 +388,7 @@ initData = let
     , isSharedLocationFlow : false
     , isOtpRideFlow : false
     , isShakeEnabled : false
+    , homeEntryToast : Nothing
   }
 }
 

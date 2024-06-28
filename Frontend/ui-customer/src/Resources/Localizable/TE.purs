@@ -1474,3 +1474,4 @@ getTE stringKey =
     WHERE_ARE_YOU_GOING -> "మీరు ఎక్కడికి వెళుతున్నారు?"
     TAP_TO_FOLLOW -> "అనుసరించడానికి నొక్కండి"
     HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " మీతో రైడ్‌ను పంచుకున్నారు. అనుసరించడానికి నొక్కండి"
+    NOT_FOUND_IN_SAVED_LOCATION -> "సేవ్ చేసిన స్థానాల్లో కనబడలేదు"

@@ -1460,3 +1460,4 @@ getML stringKey =
         WHERE_ARE_YOU_GOING -> "നിങ്ങൾ എവിടെ പോകുന്നു?"
         TAP_TO_FOLLOW -> "പിന്തുടരാൻ ടാപ്പ് ചെയ്യുക"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " നിങ്ങളുമായി ഒരു യാത്ര പങ്കിട്ടു. പിന്തുടരാൻ ടാപ്പ് ചെയ്യുക"
+        NOT_FOUND_IN_SAVED_LOCATION -> "സേവ് ചെയ്ത സ്ഥലങ്ങളിലേക്ക് കണ്ടെത്താനായില്ല"

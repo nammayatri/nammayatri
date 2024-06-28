@@ -2907,6 +2907,8 @@ eval (ServicesOnClick service) state = do
     RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow state
     _ -> continue state
 
+eval RemoveHomeEntryToast state = continue state{props{homeEntryToast = Nothing}}
+
 eval _ state = update state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState

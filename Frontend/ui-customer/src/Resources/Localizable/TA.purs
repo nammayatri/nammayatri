@@ -1479,3 +1479,4 @@ getTA stringKey =
     WHERE_ARE_YOU_GOING -> "எங்கே போகிறாய்?"
     TAP_TO_FOLLOW -> "பின்தொடர தட்டவும்"
     HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " உங்களுடன் ஒரு சவாரியைப் பகிர்ந்துள்ளார். பின்தொடர தட்டவும்"
+    NOT_FOUND_IN_SAVED_LOCATION -> "சேமிக்கப்பட்ட இடத்தில் காணப்படவில்லை"

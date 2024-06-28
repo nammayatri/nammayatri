@@ -1462,3 +1462,4 @@ getEN stringKey =
         WHERE_ARE_YOU_GOING -> "Where are you going?"
         TAP_TO_FOLLOW -> "Tap to follow"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " has shared a ride with you. Tap to follow"
+        NOT_FOUND_IN_SAVED_LOCATION -> "not found in saved locations"
