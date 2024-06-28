@@ -1303,3 +1303,4 @@ getBN stringKey =
         NOIDA -> "নয়ডা"
         GURUGRAM -> "গুরুগ্রাম"
         WAITING_CHARGES -> "অপেক্ষার খরচ"
+        NOT_FOUND_IN_SAVED_LOCATION -> "সংরক্ষিত স্থানে পাওয়া যায়নি"

@@ -1305,3 +1305,4 @@ getFR stringKey =
         NOIDA -> "Noida"
         GURUGRAM -> "Gurugram"
         WAITING_CHARGES -> "Frais d'attente"
+        NOT_FOUND_IN_SAVED_LOCATION -> "Non trouvé dans les emplacements enregistrés"

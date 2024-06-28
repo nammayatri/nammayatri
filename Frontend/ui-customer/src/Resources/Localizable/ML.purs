@@ -1305,3 +1305,4 @@ getML stringKey =
         NOIDA -> "നോയിഡ"
         GURUGRAM -> "ഗുരുഗ്രാം"
         WAITING_CHARGES -> "കാത്തിരിക്കൽ ചാർജുകൾ"
+        NOT_FOUND_IN_SAVED_LOCATION -> "സേവ് ചെയ്ത സ്ഥലങ്ങളിലേക്ക് കണ്ടെത്താനായില്ല"

@@ -933,6 +933,7 @@ type HomeScreenStateProps =
   , hasEstimateBackpoint :: Boolean
   , shimmerViewTimer :: Int
   , shimmerViewTimerId :: String
+  , homeEntryToast :: Maybe String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

@@ -949,6 +949,7 @@ data Action = NoAction
             | InternetCallBackCustomer String
             | MarkerLabelOnClick String 
             | ShimmerTimer Int String String
+            | RemoveHomeEntryToast
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -3499,6 +3500,8 @@ eval (ShimmerTimer seconds status timerID) state = do
     void $ pure $ clearTimerWithId timerID
     update state{props{shimmerViewTimerId = "", showShimmer = false}}
   else update state{props{shimmerViewTimer = seconds, shimmerViewTimerId = timerID}}
+
+eval RemoveHomeEntryToast state = continue state{props{homeEntryToast = Nothing}}
 
 eval _ state = update state
 

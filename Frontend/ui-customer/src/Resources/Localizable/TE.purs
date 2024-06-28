@@ -1318,3 +1318,4 @@ getTE stringKey =
     NOIDA -> "నోయిడా"
     GURUGRAM -> "గురుగ్రామ్"
     WAITING_CHARGES -> "వెచ్చింపు ధరలు"
+    NOT_FOUND_IN_SAVED_LOCATION -> "సేవ్ చేసిన స్థానాల్లో కనబడలేదు"

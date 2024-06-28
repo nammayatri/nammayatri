@@ -49,6 +49,7 @@ import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Screens.Types (FareProductType(..)) as FPT
 import Resources.Constants (getFareFromArray)
 import Data.Array as DA
+import Debug
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -255,9 +256,10 @@ checkRideStatus rideAssigned = do
                           }
                         })
                 updateLocalStage RideCompleted
-              when (length listResp.list == 0) $ do 
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
-                updateLocalStage HomeScreen
+                -- Uncomment this for No list Ride Edge case 
+              -- when (length listResp.list == 0) $ do 
+              --   modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+              --   updateLocalStage HomeScreen
           Left err -> do 
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
             updateLocalStage HomeScreen

@@ -203,6 +203,7 @@ screen initialState =
   , name: "HomeScreen"
   , globalEvents:
        [ (\push -> do
+          handleInitialToast initialState push 
           if initialState.props.currentStage == HomeScreen 
             then do
               let currLocation = runFn3 getAnyFromWindow "current_location" Nothing Just
@@ -418,6 +419,15 @@ screen initialState =
         let _ = spy "HomeScreen state " state
         eval action state
   }
+
+
+handleInitialToast :: HomeScreenState -> (Action -> Effect Unit)-> Effect Unit
+handleInitialToast state push = 
+  case state.props.homeEntryToast of
+    Just toastMsg -> do
+      void $ pure $ toast toastMsg
+      push $ RemoveHomeEntryToast
+    Nothing -> pure unit
 
 
 isCurrentLocationEnabled :: Boolean

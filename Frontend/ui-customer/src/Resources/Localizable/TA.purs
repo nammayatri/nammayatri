@@ -1321,3 +1321,4 @@ getTA stringKey =
     NOIDA -> "நொய்டா"
     GURUGRAM -> "குருகிராம்"
     WAITING_CHARGES -> "காத்திருப்பு கட்டணங்கள்"
+    NOT_FOUND_IN_SAVED_LOCATION -> "சேமிக்கப்பட்ட இடத்தில் காணப்படவில்லை"
