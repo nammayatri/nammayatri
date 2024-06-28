@@ -1351,3 +1351,4 @@ getML stringKey =
         UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"
         DRIVER_AVAILABLE -> "ഡ്രൈവർ ലഭ്യമാണ്"
         DRIVERS_AVAILABLE -> "ഡ്രൈവർമാർ ലഭ്യമാണ്"
+        NOT_FOUND_IN_SAVED_LOCATION -> "സേവ് ചെയ്ത സ്ഥലങ്ങളിലേക്ക് കണ്ടെത്താനായില്ല"

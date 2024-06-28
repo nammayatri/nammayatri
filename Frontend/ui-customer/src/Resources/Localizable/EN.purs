@@ -1352,3 +1352,4 @@ getEN stringKey =
         UNCOMFORTABLE_BIKE -> "Uncomfortable Bike"
         DRIVER_AVAILABLE -> "Driver available"
         DRIVERS_AVAILABLE -> "Drivers available"
+        NOT_FOUND_IN_SAVED_LOCATION -> "not found in saved locations"

@@ -944,6 +944,7 @@ type HomeScreenStateProps =
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
   , isSharedLocationFlow :: Boolean
+  , homeEntryToast :: Maybe String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
