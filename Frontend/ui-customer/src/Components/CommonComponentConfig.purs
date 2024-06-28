@@ -17,6 +17,8 @@ import Language.Types (STR(..))
 import Common.Styles.Colors as Color
 import MerchantConfig.Types 
 import JBridge as JB
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Font.Style as FontStyle
 
 type ContentConfig = 
    { primaryText :: String,
@@ -160,3 +162,47 @@ getDisabilityList =  map \item ->
     , textBoxRequired : item.tag == "OTHER"
     , subtext :  Mb.Nothing
     }
+
+contactSupportPopUpConfig :: AppConfig -> PopUpModal.Config
+contactSupportPopUpConfig appConfig =
+  let
+    config' = PopUpModal.config
+
+    popUpConfig' =
+      config'
+        { gravity = CENTER
+        , cornerRadius = (Corners 15.0 true true true true)
+        , margin = (MarginHorizontal 16 16)
+        , optionButtonOrientation = "VERTICAL"
+        , buttonLayoutMargin = (Margin 0 0 0 0)
+        , dismissPopup = true
+        , primaryText
+          { text = getString CONTACT_SUPPORT <> "?"
+          , margin = Margin 16 16 16 0
+          }
+        , secondaryText
+          { text = getString YOU_CAN_WRITE_TO_US_AT <> ": <br> <span style='color:#2194FF'>" <> appConfig.appData.supportMail <> "</span> <br> <br> OR"
+          , margin = Margin 0 16 0 16
+          }
+        , option1
+          { text = getString PLACE_A_CALL
+          , color = appConfig.primaryTextColor
+          , background = appConfig.primaryBackground
+          , strokeColor = Color.transparent
+          , textStyle = FontStyle.SubHeading1
+          , width = MATCH_PARENT
+          , enableRipple = true
+          , margin = (MarginHorizontal 16 16)
+          }
+        , option2
+          { text = getString CANCEL_
+          , textStyle = FontStyle.SubHeading1
+          , color = Color.black700
+          , background = Color.white900
+          , strokeColor = Color.transparent
+          , width = MATCH_PARENT
+          , margin = MarginBottom 10
+          }
+        }
+  in
+    popUpConfig'
