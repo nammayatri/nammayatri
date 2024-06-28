@@ -15,7 +15,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (encrypt)
+import Kernel.External.Encryption (encrypt, getDbHash)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -140,21 +140,27 @@ postSocialUpdateProfile ::
     SL.SocialUpdateProfileReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postSocialUpdateProfile (mbPersonId, _) req = do
-  case mbPersonId of
-    Nothing -> throwError $ InternalError "Not Implemented for dashboard"
-    Just personId -> do
-      encNewPhoneNumber <- encrypt `mapM` req.mobileNumber
-      person <-
-        PQ.findById personId
-          >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      let updPerson =
-            person
-              { SP.mobileCountryCode = req.mobileCountryCode,
-                SP.mobileNumber = encNewPhoneNumber,
-                SP.unencryptedMobileNumber = req.mobileNumber,
-                SP.firstName = req.firstName <|> person.firstName,
-                SP.lastName = req.lastName <|> person.lastName
-              }
-      PQ.updateByPrimaryKey updPerson
-      pure Kernel.Types.APISuccess.Success
+postSocialUpdateProfile (mbPersonId, merchantId) req = do
+  personId <- maybe (throwError $ InternalError "Not Implemented for dashboard") pure mbPersonId
+  encNewPhoneNumber <- mapM encrypt req.mobileNumber
+  person <- PQ.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  case req.mobileNumber of
+    Just mobileNumber -> do
+      mobileNumberHash <- getDbHash mobileNumber
+      let countryCode = fromMaybe "+91" req.mobileCountryCode
+      PQ.findByMobileNumberAndMerchantId countryCode mobileNumberHash merchantId >>= \case
+        Just existingPerson
+          | personId /= existingPerson.id ->
+            throwError $ InternalError $ "Mobile number " <> show req.mobileNumber <> " already exists with another user for merchant " <> show merchantId
+        _ -> return ()
+    _ -> return ()
+  let updatedPerson =
+        person
+          { SP.mobileCountryCode = req.mobileCountryCode <|> person.mobileCountryCode,
+            SP.mobileNumber = encNewPhoneNumber <|> person.mobileNumber,
+            SP.unencryptedMobileNumber = req.mobileNumber <|> person.unencryptedMobileNumber,
+            SP.firstName = req.firstName <|> person.firstName,
+            SP.lastName = req.lastName <|> person.lastName
+          }
+  PQ.updateByPrimaryKey updatedPerson
+  pure Kernel.Types.APISuccess.Success
