@@ -139,21 +139,27 @@ postSocialUpdateProfile ::
     API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postSocialUpdateProfile (mbPersonId, _, _) req = do
-  case mbPersonId of
-    Nothing -> throwError $ InternalError "Not Implemented for dashboard"
-    Just personId -> do
-      encNewPhoneNumber <- encrypt `mapM` req.mobileNumber
-      person <-
-        PQ.findById personId
-          >>= fromMaybeM (PersonDoesNotExist personId.getId)
-      let updPerson =
-            person
-              { SP.mobileCountryCode = req.mobileCountryCode,
-                SP.mobileNumber = encNewPhoneNumber,
-                SP.unencryptedMobileNumber = req.mobileNumber,
-                SP.firstName = fromMaybe person.firstName req.firstName,
-                SP.lastName = req.lastName <|> person.lastName
-              }
-      PQ.updatePersonDetails updPerson
-      pure Kernel.Types.APISuccess.Success
+postSocialUpdateProfile (mbPersonId, merchantId, _) req = do
+  personId <- maybe (throwError $ InternalError "Not Implemented for dashboard") pure mbPersonId
+  encNewPhoneNumber <- mapM encrypt req.mobileNumber
+  person <- PQ.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  case req.mobileNumber of
+    Just mobileNumber -> do
+      mobileNumberHash <- getDbHash mobileNumber
+      let countryCode = fromMaybe "+91" req.mobileCountryCode
+      PQ.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId SP.DRIVER >>= \case
+        Just existingPerson
+          | personId /= existingPerson.id ->
+            throwError $ InternalError $ "Mobile number " <> show req.mobileNumber <> " already exists with another user for merchant " <> show merchantId
+        _ -> return ()
+    _ -> return ()
+  let updatedPerson =
+        person
+          { SP.mobileCountryCode = req.mobileCountryCode <|> person.mobileCountryCode,
+            SP.mobileNumber = encNewPhoneNumber <|> person.mobileNumber,
+            SP.unencryptedMobileNumber = req.mobileNumber <|> person.unencryptedMobileNumber,
+            SP.firstName = fromMaybe person.firstName req.firstName,
+            SP.lastName = req.lastName <|> person.lastName
+          }
+  PQ.updatePersonDetails updatedPerson
+  pure Kernel.Types.APISuccess.Success
