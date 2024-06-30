@@ -207,7 +207,8 @@ createPersonViaPartner req merchant mbRegCoordinates partnerOrgId = do
           gender = Nothing,
           otpChannel = Nothing,
           registrationLat = mbRegCoordinates <&> (.lat),
-          registrationLon = mbRegCoordinates <&> (.lon)
+          registrationLon = mbRegCoordinates <&> (.lon),
+          enableOtpLessRide = Nothing
         }
 
 makeSessionViaPartner ::

@@ -97,6 +97,7 @@ Person:
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
     customerPaymentId : Maybe CustomerId
     defaultPaymentMethodId: Maybe PaymentMethodId
+    enableOtpLessRide : Maybe Bool
     deviceId : Maybe Text
 
   domainInstance:

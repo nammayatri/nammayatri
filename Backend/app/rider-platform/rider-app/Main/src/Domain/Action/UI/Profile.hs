@@ -131,6 +131,7 @@ data UpdateProfileReq = UpdateProfileReq
     clientVersion :: Maybe Version,
     disability :: Maybe Disability,
     hasDisability :: Maybe Bool,
+    enableOtpLessRide :: Maybe Bool,
     deviceId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -255,6 +256,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       mbClientConfigVersion
       (getDeviceFromText mbDevice)
       deploymentVersion.getDeploymentVersion
+      req.enableOtpLessRide
       req.deviceId
   updateDisability req.hasDisability req.disability personId
 

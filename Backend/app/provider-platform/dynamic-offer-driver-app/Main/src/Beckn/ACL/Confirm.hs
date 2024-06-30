@@ -55,6 +55,7 @@ buildConfirmReqV2 req isValueAddNP = do
   vehicleVariant <- Utils.parseVehicleVariant vehCategory vehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:-" <> show vehCategory <> ", variant:-" <> show vehVariant)
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag isValueAddNP
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
+      enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
   let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
   return $
@@ -74,4 +75,11 @@ getEnableFrequentLocationUpdatesTag = maybe False getTagValue
   where
     getTagValue tagGroups =
       let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_FREQUENT_LOCATION_UPDATES (Just tagGroups)
+       in fromMaybe False (readMaybe . T.unpack =<< tagValue)
+
+getEnableOtpLessRideTag :: Maybe [Spec.TagGroup] -> Bool
+getEnableOtpLessRideTag = maybe False getTagValue
+  where
+    getTagValue tagGroups =
+      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_OTP_LESS_RIDE (Just tagGroups)
        in fromMaybe False (readMaybe . T.unpack =<< tagValue)

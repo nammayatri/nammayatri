@@ -162,7 +162,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   (point, odometer) <- case req of
     DriverReq driverReq -> do
       when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
-      when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
+      when (not (fromMaybe False ride.enableOtpLessRide) && driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
       logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       pure (driverReq.point, driverReq.odometer)
     DashboardReq dashboardReq -> do

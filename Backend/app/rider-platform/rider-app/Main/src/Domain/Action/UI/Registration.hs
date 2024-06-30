@@ -109,7 +109,8 @@ data AuthReq = AuthReq
     gender :: Maybe SP.Gender,
     otpChannel :: Maybe OTPChannel,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double
+    registrationLon :: Maybe Double,
+    enableOtpLessRide :: Maybe Bool
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -132,6 +133,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "otpChannel"
         <*> obj .:? "registrationLat"
         <*> obj .:? "registrationLon"
+        <*> obj .:? "enableOtpLessRide"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -336,7 +338,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevic
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
       _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
-      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName Nothing mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion Nothing
+      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName Nothing mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
@@ -440,6 +442,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         registeredViaPartnerOrgId = mbPartnerOrgId,
         customerPaymentId = Nothing,
         defaultPaymentMethodId = Nothing,
+        enableOtpLessRide = req.enableOtpLessRide,
         totalRidesCount = Nothing
       }
 

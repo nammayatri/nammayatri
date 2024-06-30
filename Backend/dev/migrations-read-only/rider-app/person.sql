@@ -85,4 +85,9 @@ ALTER TABLE atlas_app.person ADD COLUMN total_rides_count integer ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.person ADD COLUMN enable_otp_less_ride boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.person ADD COLUMN device_id text ;
