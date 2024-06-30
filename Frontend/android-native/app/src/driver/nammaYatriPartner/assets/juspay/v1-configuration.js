@@ -102,6 +102,11 @@ window.getMerchantConfig = function () {
     , "allowAllMobileNumber" : false
     , "acExplanation" : true
     , "rcLimit" : 3
+    , "rateCardScreen" :{
+        "showYoutubeVideo" : false,
+        "showRateCard" : true,
+        "showTollCharges" : false
+      }
     , "showGenderBanner" : true
     , "defaultLanguage" : "EN_US"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"

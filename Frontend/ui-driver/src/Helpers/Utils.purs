@@ -22,7 +22,7 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null) as DA
+import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null,filter) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Array as DA
 import Data.String as DS
@@ -1041,3 +1041,24 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+
+ambulanceVariants :: Array String
+ambulanceVariants = map variantToString $ DA.filter isAmbulanceVariant [SA.SEDAN , SA.SUV , SA.HATCHBACK , SA.AUTO_VARIANT , SA.BIKE , SA.AMBULANCE_VENTILATOR , SA.AMBULANCE_AC_OXY , SA.AMBULANCE_AC , SA.AMBULANCE_TAXI_OXY , SA.AMBULANCE_TAXI]
+
+isAmbulanceVariant :: SA.VehicleVariant -> Boolean
+isAmbulanceVariant variant = case variant of
+  SA.AMBULANCE_TAXI -> true
+  SA.AMBULANCE_TAXI_OXY -> true
+  SA.AMBULANCE_AC -> true
+  SA.AMBULANCE_AC_OXY -> true
+  SA.AMBULANCE_VENTILATOR -> true
+  _ -> false
+
+variantToString :: SA.VehicleVariant -> String
+variantToString variant = case variant of
+  SA.AMBULANCE_TAXI -> "AMBULANCE_TAXI"
+  SA.AMBULANCE_TAXI_OXY -> "AMBULANCE_TAXI_OXY"
+  SA.AMBULANCE_AC -> "AMBULANCE_AC"
+  SA.AMBULANCE_AC_OXY -> "AMBULANCE_AC_OXY"
+  SA.AMBULANCE_VENTILATOR -> "AMBULANCE_VENTILATOR"
+  _ -> ""

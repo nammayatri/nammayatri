@@ -468,13 +468,8 @@ vehicleRegistrationNumber state push =
                     , padding (Padding 19 17 0 17)
                     , color Color.greyTextColor
                     , text state.props.input_data
-                    , textFromHtml $ if state.props.isvariant == "" then (getString SELECT_ONE) else case  state.props.isvariant of
-                                                                                                      "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
-                                                                                                      "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
-                                                                                                      "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
-                                                                                                      "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
-                                                                                                      "AMBULANCE_VENTILATOR" -> getString VENTILATOR
-                                                                                                      _ -> "Other" 
+                    , textFromHtml $ if state.props.isvariant == "" then (getString SELECT_ONE) else HU.getVehicleType state.props.isvariant
+                                                                                                       
                     , weight 4.0
                     , cornerRadius 6.0
                     , stroke ("3," <> Color.white900)
@@ -531,19 +526,12 @@ facilityListView state push  =
             , orientation HORIZONTAL
             ][  textView $
                 [ accessibilityHint $ show variant <> " : Button"
-                , textFromHtml $ case variant of
-                                    "AMBULANCE_TAXI" -> getString NON_AC <> "\x00B7" <> getString NO_OXYGEN
-                                    "AMBULANCE_TAXI_OXY" -> getString NON_AC <> "\x00B7" <> getString OXYGEN
-                                    "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
-                                    "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
-                                    "AMBULANCE_VENTILATOR" -> getString VENTILATOR
-                                    _ -> "Other" 
-
+                , textFromHtml $ HU.getVehicleType variant
                 , color Color.darkCharcoal
                 ] <> FontStyle.paragraphText LanguageStyle
 
               ]
-          ]) ["AMBULANCE_VENTILATOR","AMBULANCE_AC_OXY", "AMBULANCE_AC","AMBULANCE_TAXI_OXY" ,"AMBULANCE_TAXI" ])
+          ]) HU.ambulanceVariants)
 
 
 checkACView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
