@@ -2,7 +2,6 @@ imports:
   Day: Data.Time
   DriverFeeStatus: Dashboard.ProviderPlatform.Driver
 
-clientName: OPERATIONS
 module: Revenue
 
 types:

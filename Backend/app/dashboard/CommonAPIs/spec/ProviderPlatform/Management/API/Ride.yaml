@@ -2,7 +2,6 @@ imports:
   Ride: Dashboard.Common
   Summary: Dashboard.Common
 
-clientName: OPERATIONS
 module: Ride
 
 apis:

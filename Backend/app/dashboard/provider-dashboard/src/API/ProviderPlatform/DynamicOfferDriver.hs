@@ -22,9 +22,9 @@ module API.ProviderPlatform.DynamicOfferDriver
   )
 where
 
-import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Merchant as MerchantDSL
-import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Revenue as RevenueDSL
-import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Ride as RideDSL
+import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant as MerchantDSL
+import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Revenue as RevenueDSL
+import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Ride as RideDSL
 import qualified API.ProviderPlatform.DynamicOfferDriver.Booking as Booking
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver

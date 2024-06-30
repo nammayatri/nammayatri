@@ -11,12 +11,9 @@ let outputPath =
               defaultOutput._servantApiDashboard ++ "/RideBooking"
           }
 
-let clientMapper =
-      [ { _1 = ClientName.RIDE_BOOKING
-        , _2 =
-            "ProviderPlatformClient.DynamicOfferDriver.RideBooking.callDriverOfferBPP"
-        }
-      ]
+let clientFunction =
+      Some
+        "ProviderPlatformClient.DynamicOfferDriver.RideBooking.callDriverOfferBPP"
 
 in      common.defaultConfigs
-    //  { _output = outputPath, _clientMapper = clientMapper }
+    //  { _output = outputPath, _clientFunction = clientFunction }

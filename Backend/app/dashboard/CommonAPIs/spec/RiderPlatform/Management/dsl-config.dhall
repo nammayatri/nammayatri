@@ -10,11 +10,8 @@ let outputPath =
               defaultOutput._servantApiDashboard ++ "/Management"
           }
 
-let clientMapper =
-      [ { _1 = common.ClientName.OPERATIONS
-        , _2 = "RiderPlatformClient.RiderApp.Operations.callRiderAppOperations"
-        }
-      ]
+let clientFunction =
+      Some "RiderPlatformClient.RiderApp.Operations.callRiderAppOperations"
 
 in      common.defaultConfigs
-    //  { _output = outputPath, _clientMapper = clientMapper }
+    //  { _output = outputPath, _clientFunction = clientFunction }

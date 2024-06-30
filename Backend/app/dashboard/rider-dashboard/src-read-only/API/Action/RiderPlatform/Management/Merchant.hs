@@ -32,13 +32,13 @@ type API = ("merchant" :> (PostMerchantUpdate :<|> PostMerchantServiceConfigMaps
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = postMerchantUpdate merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city
 
-type PostMerchantUpdate = (ApiAuth ('APP_BACKEND_MANAGEMENT) ('MERCHANT) ('MERCHANT_UPDATE) :> API.Types.RiderPlatform.Management.Merchant.PostMerchantUpdate)
+type PostMerchantUpdate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE :> API.Types.RiderPlatform.Management.Merchant.PostMerchantUpdate)
 
 type PostMerchantServiceConfigMapsUpdate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('MERCHANT)
-      ('MAPS_SERVICE_CONFIG_UPDATE)
+      'APP_BACKEND_MANAGEMENT
+      'MERCHANT
+      'MAPS_SERVICE_CONFIG_UPDATE
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceConfigMapsUpdate
   )
 

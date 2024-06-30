@@ -239,12 +239,6 @@ let defaultImports =
 
 let ClientName = < OPERATIONS | FLEET | RIDE_BOOKING >
 
-let clientMapper =
-      [ { _1 = ClientName.OPERATIONS
-        , _2 = "RiderPlatformClient.RiderApp.Operations.callRiderAppOperations"
-        }
-      ]
-
 let ApiKind = < UI | DASHBOARD >
 
 let defaultConfigs =
@@ -252,7 +246,7 @@ let defaultConfigs =
       , _storageConfig =
         { _sqlTypeMapper = sqlMapper
         , _extraDefaultFields = extraDefaultFields
-        , _defaultCachedQueryKeyPrefix = "driverOffer"
+        , _defaultCachedQueryKeyPrefix = "riderDashboard"
         }
       , _defaultImports = defaultImports
       , _defaultTypeImportMapper = defaultTypeImportMapper
@@ -263,7 +257,7 @@ let defaultConfigs =
         , GeneratorType.SERVANT_API_DASHBOARD
         ]
       , _apiKind = ApiKind.DASHBOARD
-      , _clientMapper = clientMapper
+      , _clientFunction = None
       }
 
 in  { defaultConfigs, ClientName, outputPrefixRiderApp }

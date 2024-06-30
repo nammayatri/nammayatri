@@ -20,9 +20,9 @@ where
 
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified API.Dashboard.Management.Subscription as MSubscription
-import qualified API.Types.ProviderPlatform.Merchant as MerchantDSL
-import qualified API.Types.ProviderPlatform.Revenue as RevenueDSL
-import qualified API.Types.ProviderPlatform.Ride as RideDSL
+import qualified API.Types.ProviderPlatform.Management.Merchant as MerchantDSL
+import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
+import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Coin as Coins

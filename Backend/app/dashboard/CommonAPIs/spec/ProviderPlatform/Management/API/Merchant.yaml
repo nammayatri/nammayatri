@@ -3,7 +3,6 @@ imports:
   FCMConfigUpdateReq: Dashboard.Common.Merchant
   MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
 
-clientName: OPERATIONS # TODO create nested folder structure for spec and generated modules
 module: Merchant
 
 apis:

@@ -10,12 +10,9 @@ let outputPath =
               defaultOutput._servantApiDashboard ++ "/Management"
           }
 
-let clientMapper =
-      [ { _1 = common.ClientName.OPERATIONS
-        , _2 =
-            "ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations"
-        }
-      ]
+let clientFunction =
+      Some
+        "ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations"
 
 in      common.defaultConfigs
-    //  { _output = outputPath, _clientMapper = clientMapper }
+    //  { _output = outputPath, _clientFunction = clientFunction }

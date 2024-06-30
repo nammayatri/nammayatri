@@ -11,12 +11,9 @@ let outputPath =
               defaultOutput._servantApiDashboard ++ "/Fleet"
           }
 
-let clientMapper =
-      [ { _1 = ClientName.FLEET
-        , _2 =
-            "ProviderPlatformClient.DynamicOfferDriver.Fleet.callDynamicOfferDriverAppFleetApi"
-        }
-      ]
+let _clientFunction =
+      Some
+        "ProviderPlatformClient.DynamicOfferDriver.Fleet.callDynamicOfferDriverAppFleetApi"
 
 in      common.defaultConfigs
-    //  { _output = outputPath, _clientMapper = clientMapper }
+    //  { _output = outputPath, _clientFunction = clientFunction }

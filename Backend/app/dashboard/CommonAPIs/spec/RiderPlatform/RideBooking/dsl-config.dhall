@@ -11,11 +11,7 @@ let outputPath =
               defaultOutput._servantApiDashboard ++ "/RideBooking"
           }
 
-let clientMapper =
-      [ { _1 = common.ClientName.OPERATIONS
-        , _2 = "RiderPlatformClient.RiderApp.RideBooking.callRiderApp"
-        }
-      ]
+let clientMapper = Some "RiderPlatformClient.RiderApp.RideBooking.callRiderApp"
 
 in      common.defaultConfigs
-    //  { _output = outputPath, _clientMapper = clientMapper }
+    //  { _output = outputPath, _clientFunction = clientFunction }

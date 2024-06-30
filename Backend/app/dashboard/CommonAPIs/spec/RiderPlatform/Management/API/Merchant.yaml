@@ -3,7 +3,6 @@ imports:
   FCMConfigUpdateReq: Dashboard.Common.Merchant
   MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
 
-clientName: OPERATIONS
 module: Merchant
 
 apis:

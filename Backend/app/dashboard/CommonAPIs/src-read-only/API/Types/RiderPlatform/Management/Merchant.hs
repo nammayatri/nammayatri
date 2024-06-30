@@ -23,18 +23,18 @@ data MerchantUpdateReq = MerchantUpdateReq
 
 type API = ("merchant" :> (PostMerchantUpdate :<|> PostMerchantServiceConfigMapsUpdate))
 
-type PostMerchantUpdate = ("update" :> ReqBody ('[JSON]) API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostMerchantUpdate = ("update" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostMerchantServiceConfigMapsUpdate =
-  ( "serviceConfig" :> "maps" :> "update" :> ReqBody ('[JSON]) Dashboard.Common.Merchant.MapsServiceConfigUpdateReq
+  ( "serviceConfig" :> "maps" :> "update" :> ReqBody '[JSON] Dashboard.Common.Merchant.MapsServiceConfigUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 data MerchantAPIs = MerchantAPIs
-  { postMerchantUpdate :: (API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMerchantServiceConfigMapsUpdate :: (Dashboard.Common.Merchant.MapsServiceConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { postMerchantUpdate :: API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantServiceConfigMapsUpdate :: Dashboard.Common.Merchant.MapsServiceConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)
