@@ -16,6 +16,7 @@ types:
     merchantShortId: ShortId Merchant
     registrationLat: Maybe Double
     registrationLon: Maybe Double
+    enableOtpLessRide : Maybe Bool
   SocialLoginRes:
     isNew: Bool
     token: Text

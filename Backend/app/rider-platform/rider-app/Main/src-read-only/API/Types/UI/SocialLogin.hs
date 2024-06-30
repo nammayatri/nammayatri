@@ -15,6 +15,7 @@ data OAuthProvider = Google | IOS deriving (Eq, Show, Generic, ToJSON, FromJSON,
 
 data SocialLoginReq = SocialLoginReq
   { email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

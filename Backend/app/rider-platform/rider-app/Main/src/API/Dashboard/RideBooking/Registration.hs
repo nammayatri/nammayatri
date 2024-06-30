@@ -110,7 +110,8 @@ buildAuthReq merchantShortId req =
       gender = Nothing,
       otpChannel = req.otpChannel,
       registrationLat = Nothing,
-      registrationLon = Nothing
+      registrationLon = Nothing,
+      enableOtpLessRide = Nothing
     }
 
 data CustomerAuthReq = CutomerAuthReq
