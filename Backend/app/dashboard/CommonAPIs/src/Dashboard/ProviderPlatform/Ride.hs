@@ -21,7 +21,7 @@ module Dashboard.ProviderPlatform.Ride
   )
 where
 
-import API.Types.ProviderPlatform.Ride as Reexport
+import API.Types.ProviderPlatform.Management.Ride as Reexport
 import Dashboard.Common as Reexport
 import Dashboard.Common.Booking as Reexport (CancellationReasonCode (..))
 import Dashboard.Common.Ride as Reexport

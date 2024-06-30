@@ -199,5 +199,5 @@ in  { _output = outputPath
       , GeneratorType.SQL
       ]
     , _apiKind = ApiKind.UI
-    , _clientMapper = [] : List { _1 : ClientName, _2 : Text }
+    , _clientFunction = None Text
     }

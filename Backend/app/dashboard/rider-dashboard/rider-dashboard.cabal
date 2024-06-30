@@ -51,7 +51,7 @@ library
       RiderPlatformClient.RiderApp.Operations
       RiderPlatformClient.RiderApp.RideBooking
       Storage.Beam.CommonInstances
-      API.Action.RiderPlatform.Merchant
+      API.Action.RiderPlatform.Management.Merchant
   other-modules:
       Paths_rider_dashboard
   hs-source-dirs:

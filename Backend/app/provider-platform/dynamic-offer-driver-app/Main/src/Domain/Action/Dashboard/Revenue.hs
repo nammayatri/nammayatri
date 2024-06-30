@@ -18,7 +18,7 @@ module Domain.Action.Dashboard.Revenue
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Revenue as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Revenue as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Maybe
 import Data.Text hiding (drop, elem, filter, length, map)

@@ -205,5 +205,5 @@ in  { _output = outputPath
       , GeneratorType.CACHED_QUERIES
       ]
     , _apiKind = ApiKind.UI
-    , _clientMapper = [] : List { _1 : ClientName, _2 : Text }
+    , _clientFunction = None Text
     }

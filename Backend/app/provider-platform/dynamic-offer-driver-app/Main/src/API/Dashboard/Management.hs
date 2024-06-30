@@ -14,9 +14,9 @@
 
 module API.Dashboard.Management where
 
-import qualified API.Action.Dashboard.Merchant as MerchantDSL
-import qualified API.Action.Dashboard.Revenue as RevenueDSL
-import qualified API.Action.Dashboard.Ride as RideDSL
+import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
+import qualified API.Action.Dashboard.Management.Revenue as RevenueDSL
+import qualified API.Action.Dashboard.Management.Ride as RideDSL
 import qualified API.Dashboard.Management.Booking as Booking
 import qualified API.Dashboard.Management.Driver as Driver
 import qualified API.Dashboard.Management.Issue as Issue

@@ -48,10 +48,10 @@ library
       Dashboard.RiderPlatform.Message
       Dashboard.RiderPlatform.Ride
       Dashboard.SafetyPlatform
-      API.Types.ProviderPlatform.Merchant
-      API.Types.ProviderPlatform.Revenue
-      API.Types.ProviderPlatform.Ride
-      API.Types.RiderPlatform.Merchant
+      API.Types.ProviderPlatform.Management.Merchant
+      API.Types.ProviderPlatform.Management.Revenue
+      API.Types.ProviderPlatform.Management.Ride
+      API.Types.RiderPlatform.Management.Merchant
   other-modules:
       Paths_dashboard_helper_api
   hs-source-dirs:
