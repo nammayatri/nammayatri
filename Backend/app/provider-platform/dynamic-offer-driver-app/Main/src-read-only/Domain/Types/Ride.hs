@@ -45,6 +45,7 @@ data Ride = Ride
     driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enableFrequentLocationUpdates :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     endOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedTollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
