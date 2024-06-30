@@ -35,6 +35,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(..))
+import Components.PrimaryEditText as PrimaryEditText
 
 startNSOnboardingButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startNSOnboardingButtonConfig state =
@@ -309,3 +310,34 @@ sourceToDestinationConfig ride = SourceToDestination.config {
       }
     , overrideSeparatorCount = 2
     }
+
+primaryEditTextConfig :: NammaSafetyScreenState -> Boolean -> PrimaryEditText.Config
+primaryEditTextConfig state isReEnterPin = let
+    config = PrimaryEditText.config
+    marginTop = if isReEnterPin then 16 else 0
+    placeholderText = if isReEnterPin then "Confirm 4 digit MPIN" else "Set a 4 digit MPIN"
+    type_ = if isReEnterPin then "" else "password"
+    primaryEditTextConfig' = config
+      { editText
+        { color = Color.black800
+        , singleLine = true
+        , placeholder = placeholderText
+        , textStyle = FontStyle.Body1
+        , pattern = Just "[0-9,. ]*,4"
+        }
+      , background = Color.white900
+      , topLabel
+        { visibility = GONE
+        }
+      , stroke = "1,"<> Color.black500
+      , margin = Margin 0 marginTop 0 0
+      , id = (EHC.getNewIDWithTag "SaveAsEditText")
+      , errorLabel
+        { text = getString NAME_ALREADY_IN_USE
+        , margin = MarginTop 1
+        }
+      , showErrorLabel = false
+      , width = MATCH_PARENT
+      , type = type_
+      }
+    in primaryEditTextConfig'

@@ -1321,3 +1321,4 @@ getTA stringKey =
     NOIDA -> "நொய்டா"
     GURUGRAM -> "குருகிராம்"
     WAITING_CHARGES -> "காத்திருப்பு கட்டணங்கள்"
+    REQUEST_POLICE_HELP -> "காவல் உதவி கேட்க"

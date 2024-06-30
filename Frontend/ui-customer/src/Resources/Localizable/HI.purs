@@ -1303,3 +1303,4 @@ getHI stringKey =
         NOIDA -> "नोएडा"
         GURUGRAM -> "गुरुग्राम"
         WAITING_CHARGES -> "प्रतीक्षा शुल्क"
+        REQUEST_POLICE_HELP -> "पुलिस सहायता का अनुरोध करें"

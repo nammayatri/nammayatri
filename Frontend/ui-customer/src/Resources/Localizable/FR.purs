@@ -1305,3 +1305,4 @@ getFR stringKey =
         NOIDA -> "Noida"
         GURUGRAM -> "Gurugram"
         WAITING_CHARGES -> "Frais d'attente"
+        REQUEST_POLICE_HELP -> "Demander de l'aide à la police"

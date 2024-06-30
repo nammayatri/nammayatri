@@ -1318,3 +1318,4 @@ getTE stringKey =
     NOIDA -> "నోయిడా"
     GURUGRAM -> "గురుగ్రామ్"
     WAITING_CHARGES -> "వెచ్చింపు ధరలు"
+    REQUEST_POLICE_HELP -> "పోలీసు సహాయం అడుగుము"

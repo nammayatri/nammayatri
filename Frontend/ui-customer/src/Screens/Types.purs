@@ -2175,6 +2175,7 @@ type LocationInfo =
 
 data SafetySetupStage =  SetNightTimeSafetyAlert
                         | SetDefaultEmergencyContacts
+                        -- | SetupSafetyMpin
                         | SetPersonalSafetySettings
 
 derive instance genericSafetySetupStage :: Generic SafetySetupStage _
@@ -2204,7 +2205,9 @@ type NammaSafetyScreenData =  {
   videoList :: Array RC.SafetyVideoConfig,
   sosType :: Maybe SosFlow,
   config :: AppConfig,
-  lastRideDetails :: Maybe IndividualRideCardState
+  lastRideDetails :: Maybe IndividualRideCardState,
+  mpin :: String,
+  reEnteredMpin :: String
  }
 
 type NammaSafetyScreenProps =  {

@@ -2915,7 +2915,8 @@ newtype UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
     shareEmergencyContacts :: Maybe Boolean,
     shareTripWithEmergencyContactOption :: Maybe RideShareOptions,
     nightSafetyChecks :: Maybe Boolean,
-    hasCompletedSafetySetup :: Maybe Boolean
+    hasCompletedSafetySetup :: Maybe Boolean,
+    safetyMpin :: Maybe String
   }
 
 
@@ -3070,7 +3071,8 @@ newtype AskSupportRes = AskSupportRes {
 newtype AskSupportReq = AskSupportReq {
     bookingId :: String,
     isSafe :: Boolean,
-    description :: String
+    description :: String,
+    mpin :: Maybe String
   }
 
 instance makeAskSupportRequest :: RestEndpoint AskSupportReq AskSupportRes where

@@ -56,6 +56,8 @@ initData = let
       , sosType : Nothing
       , config : config
       , lastRideDetails : Nothing
+      , mpin : ""
+      , reEnteredMpin : ""
       }
   , props:
       { setupStage: SetDefaultEmergencyContacts

@@ -30,6 +30,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactList
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..))
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -56,7 +57,8 @@ data Action
   | AddContacts
   | UpdateEmergencySettings GetEmergencySettingsRes
   | DisableShimmer
-  | ContactListAction ContactList.Action
+  | ContactListAction ContactList.Action 
+  | PrimaryEditTextAC PrimaryEditTextController.Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 
@@ -159,5 +161,9 @@ eval (ContactListAction (ContactList.ContactCardClicked index)) state = do
 
 eval (ContactListAction ContactList.AddContacts) state = do
   exit $ GoToEmergencyContactScreen state
+
+eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id input)) state = do
+  continue state{data{mpin = input}}
+
 
 eval _ state = update state

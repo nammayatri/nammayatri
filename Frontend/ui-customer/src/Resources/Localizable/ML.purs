@@ -1305,3 +1305,4 @@ getML stringKey =
         NOIDA -> "നോയിഡ"
         GURUGRAM -> "ഗുരുഗ്രാം"
         WAITING_CHARGES -> "കാത്തിരിക്കൽ ചാർജുകൾ"
+        REQUEST_POLICE_HELP -> "പോലീസിന് സഹായം അഭ്യർത്ഥിക്കുക"

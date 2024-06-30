@@ -1166,11 +1166,12 @@ sendSafetySupport req = do
     where
         unwrapResponse (x) = x
 
-makeAskSupportRequest :: String -> Boolean -> String -> AskSupportReq
-makeAskSupportRequest bId isSafe description = AskSupportReq{
+makeAskSupportRequest :: String -> Boolean -> String -> Maybe String -> AskSupportReq
+makeAskSupportRequest bId isSafe description mpin = AskSupportReq{
     "bookingId" : bId,
     "isSafe" : isSafe,
-    "description" : description
+    "description" : description,
+    "mpin" : mpin
 }
 
 createMockSos :: Boolean -> Boolean -> Flow GlobalState (Either ErrorResponse CreateMockSosRes)

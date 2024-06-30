@@ -2039,18 +2039,20 @@ homeScreenFlow = do
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { isOffUs = true } })
       safetySettingsFlow
     SAFETY_SUPPORT state isSafe -> do
-      res <- lift $ lift $ Remote.sendSafetySupport $ Remote.makeAskSupportRequest state.props.bookingId isSafe $ "User need help - Ride on different route"
-      case res of
-        Right resp -> do
-          void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
-          when (isSafe)
-            $ do
-                void $ pure $ toast $ getString STR.GLAD_TO_KNOW_YOU_ARE_SAFE
-                pure unit
-        Left err -> do
-          void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-          pure unit
-      homeScreenFlow
+      if true then activateSafetyScreenFlow --validateSafetyMpinFlow 
+      else do
+        res <- lift $ lift $ Remote.sendSafetySupport $ Remote.makeAskSupportRequest state.props.bookingId isSafe "User need help - Ride on different route" Nothing
+        case res of
+          Right resp -> do
+            void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+            when (isSafe)
+              $ do
+                  void $ pure $ toast $ getString STR.GLAD_TO_KNOW_YOU_ARE_SAFE
+                  pure unit
+          Left err -> do
+            void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+            pure unit
+        homeScreenFlow
     GO_TO_SHARE_RIDE state -> do
       contacts <- getFormattedContacts
       let
@@ -5249,6 +5251,7 @@ updateEmergencySettings state = do
         , shareTripWithEmergencyContactOption: Just state.data.shareTripWithEmergencyContactOption
         , nightSafetyChecks: Just state.data.nightSafetyChecks
         , hasCompletedSafetySetup: Just true
+        , safetyMpin: Just state.data.mpin
         }
 
     wasSetupAlreadyDone = state.data.hasCompletedSafetySetup
@@ -5956,3 +5959,10 @@ pickupInstructionsScreenFlow = do
   action <- UI.pickupInstructionsScreen
   case action of 
     _ -> pickupInstructionsScreenFlow
+
+validateSafetyMpinFlow :: FlowBT String Unit
+validateSafetyMpinFlow = do
+  act <- UI.validateSafetyMpin
+  case act of
+    -- GoBack -> homeScreenFlow
+    _ -> validateSafetyMpinFlow

@@ -17,7 +17,7 @@ module Screens.NammaSafetyFlow.SetupSafetySettingsScreen.View where
 import Animation (fadeIn, screenAnimation)
 import Prelude (Unit, bind, const, discard, map, not, pure, unit, void, ($), (&&), (+), (/=), (<<<), (<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, background, color, cornerRadius, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, shimmerFrameLayout, stroke, text, textFromHtml, textView, visibility, weight, width, accessibilityHint)
-import Screens.NammaSafetyFlow.ComponentConfig (continueNextStepButtonConfig, removeContactPopUpModelConfig)
+import Screens.NammaSafetyFlow.ComponentConfig (continueNextStepButtonConfig, removeContactPopUpModelConfig, primaryEditTextConfig)
 import Screens.NammaSafetyFlow.Components.HelperViews (emptyTextView, recommendContactsToInstallView, shimmerView)
 import Common.Types.App (LazyCheck(..))
 import Components.PopUpModal as PopUpModal
@@ -49,6 +49,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Data.Either (Either(..))
+import Components.PrimaryEditText as PrimaryEditText
 
 screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -211,6 +212,7 @@ settingUpContentView config state push =
                       ]
                       [ recommendContactsToInstallView state.props.appName
                       ]
+                  , mpinView state push
                   ]
                 ]
               ]
@@ -373,4 +375,23 @@ measureView text' showBullet isCorrect color' marginBottom style =
           , gravity LEFT
           ]
         <> (FontStyle.getFontStyle style LanguageStyle)
+    ]
+
+mpinView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+mpinView state push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginTop 16
+    , visibility $ boolToVisibility $ state.props.setupStage == ST.SetNightTimeSafetyAlert
+    ]
+    [ textView
+        $ [ text "MPIN for safety checks"
+          , color Color.black900
+          , margin $ MarginBottom 8
+          ]
+        <> FontStyle.subHeading1 TypoGraphy
+    , PrimaryEditText.view (push <<< PrimaryEditTextAC ) (primaryEditTextConfig state false)
+    , PrimaryEditText.view (push <<< PrimaryEditTextAC ) (primaryEditTextConfig state true)
     ]

@@ -168,6 +168,7 @@ activateSafetyView state push =
             ]
             [ sosButtonView state push true
             , emergencyContactsView state push
+            , policeActionView state push
             , otherActionsView state push
             ]
         ]
@@ -1090,12 +1091,12 @@ dialPoliceView state push =
         , margin $ MarginBottom 16
         ]
         [ safetyPartnerView Language
-        , callPoliceView state push
+        , callPoliceView state push CallPolice DIAL_NOW
         ]
     ]
 
-callPoliceView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-callPoliceView state push =
+callPoliceView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Action -> STR -> forall w. PrestoDOM (Effect Unit) w
+callPoliceView state push action text' =
   linearLayout
     ( [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -1105,7 +1106,7 @@ callPoliceView state push =
       , background Color.redOpacity20
       , accessibilityHint "Call Police Button"
       ]
-        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const $ CallPolice ]
+        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const action ]
     )
     [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_police"
@@ -1113,10 +1114,58 @@ callPoliceView state push =
         , width $ V 26
         ]
     , textView
-        $ [ text $ getString DIAL_NOW
+        $ [ text $ getString text'
           , gravity CENTER
           , color Color.white900
           , margin $ MarginLeft 6
           ]
         <> FontStyle.subHeading2 TypoGraphy
     ]
+
+policeActionView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+policeActionView state push =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , stroke $ "1," <> Color.black700
+    , background Color.blackOpacity12
+    , orientation VERTICAL
+    , margin $ Margin 16 16 16 16
+    , padding $ Padding 16 16 16 16
+    , cornerRadius 12.0
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginBottom 16
+        ]
+        [ imageWithTextView configDescOne
+        , imageWithTextView configDescTwo
+        ]
+      , callPoliceView state push CallPoliceAPI REQUEST_POLICE_HELP
+    ]
+  where
+    configDescOne =
+      { text': getString $ SAFETY_TEAM_WILL_BE_ALERTED state.props.appName
+      , isActive: true
+      , textColor: Color.white900
+      , useMargin: false
+      , useFullWidth: true
+      , usePadding: false
+      , image: Nothing
+      , visibility: true
+      , textStyle: FontStyle.Tags
+      }
+    configDescTwo =
+      { text': getString $ EMERGENCY_CONTACTS_CAN_TAKE_ACTION state.props.appName
+      , isActive: true
+      , textColor: Color.white900
+      , useMargin: true
+      , useFullWidth: true
+      , usePadding: false
+      , image: Nothing
+      , visibility: true
+      , textStyle: FontStyle.Tags
+      }
+    

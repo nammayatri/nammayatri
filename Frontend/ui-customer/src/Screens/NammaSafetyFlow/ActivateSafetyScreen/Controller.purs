@@ -76,6 +76,7 @@ data Action
   | CallSupport
   | SourceToDestinationAC SourceToDestination.Action
   | AlertSafetyTeam
+  | CallPoliceAPI
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
