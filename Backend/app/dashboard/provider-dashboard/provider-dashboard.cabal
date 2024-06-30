@@ -54,9 +54,9 @@ library
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
-      API.Action.ProviderPlatform.DynamicOfferDriver.Merchant
-      API.Action.ProviderPlatform.DynamicOfferDriver.Revenue
-      API.Action.ProviderPlatform.DynamicOfferDriver.Ride
+      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant
+      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Revenue
+      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Ride
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:

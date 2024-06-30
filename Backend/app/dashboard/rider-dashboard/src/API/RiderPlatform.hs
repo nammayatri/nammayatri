@@ -20,7 +20,7 @@ module API.RiderPlatform
   )
 where
 
-import qualified API.Action.RiderPlatform.Merchant as MerchantDSL
+import qualified API.Action.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified API.RiderPlatform.Booking as Booking
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.HotSpot as HotSpot

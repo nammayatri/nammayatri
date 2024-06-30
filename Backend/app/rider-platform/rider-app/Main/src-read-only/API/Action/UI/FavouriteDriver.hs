@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.FavouriteDriver where
+module API.Action.UI.FavouriteDriver
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.FavouriteDriver
 import qualified Control.Lens

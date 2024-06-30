@@ -20,7 +20,7 @@ module Dashboard.RiderPlatform.Merchant
   )
 where
 
-import API.Types.RiderPlatform.Merchant as Reexport
+import API.Types.RiderPlatform.Management.Merchant as Reexport
 import Dashboard.Common.Merchant as Reexport
 import Kernel.Prelude
 import Kernel.Types.Predicate
