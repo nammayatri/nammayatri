@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.ProviderPlatform.DynamicOfferDriver.Merchant
+module API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant
   ( API,
     handler,
   )
 where
 
-import qualified API.Types.ProviderPlatform.Merchant
+import qualified API.Types.ProviderPlatform.Management.Merchant
 import qualified Dashboard.Common.Merchant
 import qualified Dashboard.ProviderPlatform.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -32,11 +32,17 @@ type API = ("merchant" :> (PostMerchantUpdate :<|> PostMerchantServiceConfigMaps
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = postMerchantUpdate merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city
 
-type PostMerchantUpdate = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE :> API.Types.ProviderPlatform.Merchant.PostMerchantUpdate)
+type PostMerchantUpdate = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantUpdate)
 
-type PostMerchantServiceConfigMapsUpdate = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE :> API.Types.ProviderPlatform.Merchant.PostMerchantServiceConfigMapsUpdate)
+type PostMerchantServiceConfigMapsUpdate =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'MERCHANT
+      'MAPS_SERVICE_CONFIG_UPDATE
+      :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantServiceConfigMapsUpdate
+  )
 
-postMerchantUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Merchant.MerchantUpdateReq -> Environment.FlowHandler API.Types.ProviderPlatform.Merchant.MerchantUpdateRes)
+postMerchantUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateRes)
 postMerchantUpdate merchantShortId opCity apiTokenInfo req =
   withFlowHandlerAPI' $
     ( do

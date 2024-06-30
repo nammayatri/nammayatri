@@ -1,7 +1,7 @@
 let rootDir = env:GIT_ROOT_PATH
 
 let outputPrefixDashboardReadOnly =
-      rootDir ++ "/Backend/app/dashboard/rider-dashboard/src-read-only/"
+      rootDir ++ "/Backend/app/dashboard/provider-dashboard/src-read-only/"
 
 let outputPrefixCommonApisReadOnly =
       rootDir ++ "/Backend/app/dashboard/CommonAPIs/src-read-only/"
@@ -9,19 +9,21 @@ let outputPrefixCommonApisReadOnly =
 let outputPrefixCommonApis = rootDir ++ "/Backend/app/dashboard/CommonAPIs/src/"
 
 let outputPrefixDriverAppReadOnly =
-      rootDir ++ "/Backend/app/rider-platform/rider-app/Main/src-read-only/"
+          rootDir
+      ++  "/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only/"
 
 let outputPrefixDriverApp =
-      rootDir ++ "/Backend/app/rider-platform/rider-app/Main/src/"
+          rootDir
+      ++  "/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/"
 
 let migrationPath =
-      rootDir ++ "/Backend/dev/migrations-read-only/rider-dashboard/"
+      rootDir ++ "/Backend/dev/migrations-read-only/provider-dashboard/"
 
 let outputPath =
       { _apiRelatedTypes =
-          outputPrefixCommonApisReadOnly ++ "API/Types/RiderPlatform"
+          outputPrefixCommonApisReadOnly ++ "API/Types/ProviderPlatform"
       , _extraApiRelatedTypes =
-          outputPrefixCommonApis ++ "Dashboard/RiderPlatform"
+          outputPrefixCommonApis ++ "Dashboard/ProviderPlatform"
       , _beamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
       , _cachedQueries =
@@ -33,7 +35,8 @@ let outputPath =
       , _domainType = outputPrefixDashboardReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixDriverAppReadOnly ++ "API/Action/Dashboard"
       , _servantApiDashboard =
-          outputPrefixDashboardReadOnly ++ "API/Action/RiderPlatform"
+              outputPrefixDashboardReadOnly
+          ++  "API/Action/ProviderPlatform/DynamicOfferDriver"
       , _sql = [ { _1 = migrationPath, _2 = "atlas_driver_offer_bpp" } ]
       , _purescriptFrontend = ""
       }
@@ -78,7 +81,6 @@ let defaultTypeImportMapper =
       , { _1 = "Id", _2 = "Kernel.Types.Id" }
       , { _1 = "ShortId", _2 = "Kernel.Types.Id" }
       , { _1 = "UTCTime", _2 = "Kernel.Prelude" }
-      , { _1 = "BaseUrl", _2 = "Kernel.Prelude" }
       , { _1 = "Meters", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMeters", _2 = "Kernel.Types.Common" }
       , { _1 = "Kilometers", _2 = "Kernel.Types.Common" }
@@ -155,7 +157,6 @@ let defaultImports =
           , "Control.Lens"
           , "Kernel.Types.Id"
           , "Kernel.Types.Beckn.Context"
-          , "RiderPlatformClient.DynamicOfferDriver"
           , "SharedLogic.Transaction"
           ]
         , _packageImports =
@@ -237,33 +238,34 @@ let defaultImports =
         }
       ]
 
+let ApiKind = < UI | DASHBOARD >
+
 let ClientName = < OPERATIONS | FLEET | RIDE_BOOKING >
 
 let clientMapper =
       [ { _1 = ClientName.OPERATIONS
-        , _2 = "RiderPlatformClient.RiderApp.Operations.callRiderAppOperations"
-        }
-      , { _1 = ClientName.RIDE_BOOKING
-        , _2 = "RiderPlatformClient.RiderApp.RideBooking.callRiderApp"
+        , _2 =
+            "ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations"
         }
       ]
 
-let ApiKind = < UI | DASHBOARD >
-
-in  { _output = outputPath
-    , _storageConfig =
-      { _sqlTypeMapper = sqlMapper
-      , _extraDefaultFields = extraDefaultFields
-      , _defaultCachedQueryKeyPrefix = "driverOffer"
+let defaultConfigs =
+      { _output = outputPath
+      , _storageConfig =
+        { _sqlTypeMapper = sqlMapper
+        , _extraDefaultFields = extraDefaultFields
+        , _defaultCachedQueryKeyPrefix = "driverOffer"
+        }
+      , _defaultImports = defaultImports
+      , _defaultTypeImportMapper = defaultTypeImportMapper
+      , _generate =
+        [ GeneratorType.DOMAIN_HANDLER
+        , GeneratorType.API_TYPES
+        , GeneratorType.SERVANT_API
+        , GeneratorType.SERVANT_API_DASHBOARD
+        ]
+      , _apiKind = ApiKind.DASHBOARD
+      , _clientMapper = clientMapper
       }
-    , _defaultImports = defaultImports
-    , _defaultTypeImportMapper = defaultTypeImportMapper
-    , _generate =
-      [ GeneratorType.DOMAIN_HANDLER
-      , GeneratorType.API_TYPES
-      , GeneratorType.SERVANT_API
-      , GeneratorType.SERVANT_API_DASHBOARD
-      ]
-    , _apiKind = ApiKind.DASHBOARD
-    , _clientMapper = clientMapper
-    }
+
+in  { defaultConfigs, ClientName, outputPrefixDriverApp }

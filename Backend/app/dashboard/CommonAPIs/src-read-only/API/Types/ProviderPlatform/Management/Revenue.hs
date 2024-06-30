@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Types.ProviderPlatform.Revenue where
+module API.Types.ProviderPlatform.Management.Revenue where
 
 import qualified Dashboard.ProviderPlatform.Driver
 import Data.OpenApi (ToSchema)
@@ -22,7 +22,7 @@ data AllFees = AllFees
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data CollectionList = CollectionList {offlineCollection :: [API.Types.ProviderPlatform.Revenue.CollectionListElem], onlineCollection :: [API.Types.ProviderPlatform.Revenue.CollectionListElem]}
+data CollectionList = CollectionList {offlineCollection :: [API.Types.ProviderPlatform.Management.Revenue.CollectionListElem], onlineCollection :: [API.Types.ProviderPlatform.Management.Revenue.CollectionListElem]}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data CollectionListElem = CollectionListElem
@@ -44,14 +44,21 @@ type GetRevenueCollectionHistory =
            "to"
            Kernel.Prelude.UTCTime
       :> QueryParam "volunteerId" Kernel.Prelude.Text
-      :> Get '[JSON] API.Types.ProviderPlatform.Revenue.CollectionList
+      :> Get
+           '[JSON]
+           API.Types.ProviderPlatform.Management.Revenue.CollectionList
   )
 
-type GetRevenueAllFeeHistory = ("allFeeHistory" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime :> Get '[JSON] [API.Types.ProviderPlatform.Revenue.AllFees])
+type GetRevenueAllFeeHistory =
+  ( "allFeeHistory" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime
+      :> Get
+           '[JSON]
+           [API.Types.ProviderPlatform.Management.Revenue.AllFees]
+  )
 
 data RevenueAPIs = RevenueAPIs
-  { getRevenueCollectionHistory :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Revenue.CollectionList,
-    getRevenueAllFeeHistory :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Revenue.AllFees]
+  { getRevenueCollectionHistory :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Revenue.CollectionList,
+    getRevenueAllFeeHistory :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Revenue.AllFees]
   }
 
 mkRevenueAPIs :: (Client EulerHS.Types.EulerClient API -> RevenueAPIs)

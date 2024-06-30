@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Types.ProviderPlatform.Ride where
+module API.Types.ProviderPlatform.Management.Ride where
 
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
@@ -16,7 +16,7 @@ import Servant.Client
 data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema, Read, Kernel.Prelude.ToParamSchema)
 
 data RideListItem = RideListItem
-  { bookingStatus :: API.Types.ProviderPlatform.Ride.BookingStatus,
+  { bookingStatus :: API.Types.ProviderPlatform.Management.Ride.BookingStatus,
     customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerPhoneNo :: Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Text,
@@ -26,12 +26,12 @@ data RideListItem = RideListItem
     rideCreatedAt :: Kernel.Prelude.UTCTime,
     rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride,
     rideShortId :: Kernel.Types.Id.ShortId Dashboard.Common.Ride,
-    tripCategory :: API.Types.ProviderPlatform.Ride.TripCategory,
+    tripCategory :: API.Types.ProviderPlatform.Management.Ride.TripCategory,
     vehicleNo :: Kernel.Prelude.Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data RideListRes = RideListRes {rides :: [API.Types.ProviderPlatform.Ride.RideListItem], summary :: Dashboard.Common.Summary, totalItems :: Kernel.Prelude.Int}
+data RideListRes = RideListRes {rides :: [API.Types.ProviderPlatform.Management.Ride.RideListItem], summary :: Dashboard.Common.Summary, totalItems :: Kernel.Prelude.Int}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -39,7 +39,7 @@ data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity deriving
 type API = ("ride" :> GetRideList)
 
 type GetRideList =
-  ( "list" :> QueryParam "bookingStatus" API.Types.ProviderPlatform.Ride.BookingStatus :> QueryParam "currency" Kernel.Types.Common.Currency
+  ( "list" :> QueryParam "bookingStatus" API.Types.ProviderPlatform.Management.Ride.BookingStatus :> QueryParam "currency" Kernel.Types.Common.Currency
       :> QueryParam
            "customerPhoneNo"
            Kernel.Prelude.Text
@@ -64,10 +64,10 @@ type GetRideList =
            Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Ride.RideListRes
+           API.Types.ProviderPlatform.Management.Ride.RideListRes
   )
 
-newtype RideAPIs = RideAPIs {getRideList :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Ride.BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Ride.RideListRes}
+newtype RideAPIs = RideAPIs {getRideList :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Ride.BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideListRes}
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})

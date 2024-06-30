@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.RiderPlatform.Merchant
+module API.Action.RiderPlatform.Management.Merchant
   ( API,
     handler,
   )
 where
 
-import qualified API.Types.RiderPlatform.Merchant
+import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified Dashboard.Common.Merchant
 import qualified Dashboard.RiderPlatform.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -32,11 +32,17 @@ type API = ("merchant" :> (PostMerchantUpdate :<|> PostMerchantServiceConfigMaps
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = postMerchantUpdate merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city
 
-type PostMerchantUpdate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE :> API.Types.RiderPlatform.Merchant.PostMerchantUpdate)
+type PostMerchantUpdate = (ApiAuth ('APP_BACKEND_MANAGEMENT) ('MERCHANT) ('MERCHANT_UPDATE) :> API.Types.RiderPlatform.Management.Merchant.PostMerchantUpdate)
 
-type PostMerchantServiceConfigMapsUpdate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE :> API.Types.RiderPlatform.Merchant.PostMerchantServiceConfigMapsUpdate)
+type PostMerchantServiceConfigMapsUpdate =
+  ( ApiAuth
+      ('APP_BACKEND_MANAGEMENT)
+      ('MERCHANT)
+      ('MAPS_SERVICE_CONFIG_UPDATE)
+      :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceConfigMapsUpdate
+  )
 
-postMerchantUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Merchant.MerchantUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMerchantUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantUpdate merchantShortId opCity apiTokenInfo req =
   withFlowHandlerAPI' $
     ( do

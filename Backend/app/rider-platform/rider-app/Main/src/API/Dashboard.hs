@@ -14,7 +14,7 @@
 
 module API.Dashboard where
 
-import qualified API.Action.Dashboard.Merchant as MerchantDSL
+import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
 import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Customer as Customer
 import qualified API.Dashboard.Exotel as Exotel

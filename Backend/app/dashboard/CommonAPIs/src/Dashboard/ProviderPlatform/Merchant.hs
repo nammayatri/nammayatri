@@ -21,7 +21,7 @@ module Dashboard.ProviderPlatform.Merchant
   )
 where
 
-import API.Types.ProviderPlatform.Merchant as Reexport
+import API.Types.ProviderPlatform.Management.Merchant as Reexport
 import qualified Dashboard.Common as Common
 import Dashboard.Common.Merchant as Reexport
 import Data.Aeson

@@ -363,7 +363,7 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
-      API.Action.Dashboard.Merchant
+      API.Action.Dashboard.Management.Merchant
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
