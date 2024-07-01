@@ -116,7 +116,7 @@ appOnboardingNavBarConfig state =
   AppOnboardingNavBar.config
   { genericHeaderConfig = genericHeaderConfig state,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{ 
-      text = if state.props.isSSNView then "Background Verification" else if state.props.isProfileView then "Profile Details" else getVarString UPLOAD_DOC [Constant.transformDocText state.data.docType]
+      text = if state.props.isSSNView then "Social Security Number" else if state.props.isProfileView then "Profile Details" else getVarString UPLOAD_DOC [Constant.transformDocText state.data.docType]
       },
     rightButton = AppOnboardingNavBar.config.rightButton{
       text = getString HELP_FAQ

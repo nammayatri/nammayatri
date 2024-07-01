@@ -1486,4 +1486,9 @@ getHI stringKey =
         VIEW_FARE_BREAKDOWN -> "किराया विवरण देखें"
         TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "शुल्क सहित कुल राशि : " <> amount
         FARE_BREAKDOWN -> "किराया टूटना"
-
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge

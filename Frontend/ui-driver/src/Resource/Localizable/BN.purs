@@ -1488,3 +1488,9 @@ getBN stringKey =
         VIEW_FARE_BREAKDOWN -> "ভাড়া ব্রেকডাউন দেখুন"
         TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "মোট পরিমাণ (চার্জ সহ): " <> amount
         FARE_BREAKDOWN -> "ভাড়া ভাঙ্গন"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge

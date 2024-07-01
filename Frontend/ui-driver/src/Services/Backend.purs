@@ -682,6 +682,12 @@ getCorrespondingErrorMessage errorPayload = do
         "null" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         "" -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
         "RC_ACTIVE_ON_OTHER_ACCOUNT" -> "RC " <> getString ACTIVE_RC_ON_ANOTHER_DRIVER
+        "INVALID_SSN" -> getString INVALID_SSN
+        "SSN_ALREADY_TAKEN" -> getString SSN_ALREADY_TAKEN
+        "INVALID_ZIPCODE" -> getString INVALID_ZIPCODE
+        "INVALID_EMAIL" -> getString INVALID_EMAIL
+        "INVALID_AGE" -> getString INVALID_AGE
+        "REPORT_LIMIT_REACHED" -> getString REPORT_LIMIT_REACHED
         undefined -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
 
 registerDriverRC payload = do
@@ -1611,3 +1617,11 @@ mkSocialProfileUpdate state =
     , mobileCountryCode : Just config.defaultCountryCodeConfig.countryCode
     , mobileNumber : if isJust state.data.mobileNumber then state.data.mobileNumber else Just $ getValueToLocalStore MOBILE_NUMBER_KEY
     }
+
+
+initiateDriverBGV :: InitiateDriverBGVReq -> Flow GlobalState (Either ErrorResponse InitiateDriverBGVResp)
+initiateDriverBGV req = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.initiateDriverBGV "") unwrapResponse $ callAPI headers req
+  where
+    unwrapResponse x = x

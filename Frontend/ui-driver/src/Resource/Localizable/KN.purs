@@ -1485,3 +1485,10 @@ getKN stringKey =
         VIEW_FARE_BREAKDOWN -> "ದರ ಕುಸಿತವನ್ನು ವೀಕ್ಷಿಸಿ"
         TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "ಶುಲ್ಕಗಳು ಸೇರಿದಂತೆ ಒಟ್ಟು ಮೊತ್ತ : " <> amount
         FARE_BREAKDOWN -> "ಶುಲ್ಕ ಸ್ಥಗಿತ"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge
+
