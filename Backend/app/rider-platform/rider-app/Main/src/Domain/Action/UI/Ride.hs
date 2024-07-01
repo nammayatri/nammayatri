@@ -223,17 +223,15 @@ editLocation rideId (_, merchantId) req = do
 
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-
-  let attemptsLeft = fromMaybe merchant.numOfAllowedEditPickupLocationAttemptsThreshold ride.allowedEditLocationAttempts
-  when (attemptsLeft == 0) do
-    throwError EditLocationAttemptsExhausted
-
   let bookingId = ride.bookingId
   booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   when (not isValueAddNP) $ throwError (InvalidRequest "Edit location is not supported for non value add NP")
   case (req.origin, req.destination) of
     (Just pickup, _) -> do
+      let attemptsLeft = fromMaybe merchant.numOfAllowedEditPickupLocationAttemptsThreshold ride.allowedEditPickupLocationAttempts
+      when (attemptsLeft == 0) do
+        throwError EditLocationAttemptsExhausted
       when (ride.status /= SRide.NEW) do
         throwError (InvalidRequest $ "Customer is not allowed to change pickup as the ride is not NEW for rideId: " <> ride.id.getId)
       pickupLocationMappings <- QLM.findAllByEntityIdAndOrder ride.id.getId 0
@@ -288,6 +286,9 @@ editLocation rideId (_, merchantId) req = do
       QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
       pure $ EditLocationResp Nothing
     (_, Just destination) -> do
+      let attemptsLeft = fromMaybe merchant.numOfAllowedEditLocationAttemptsThreshold ride.allowedEditLocationAttempts
+      when (attemptsLeft == 0) do
+        throwError EditLocationAttemptsExhausted
       when (ride.status == SRide.CANCELLED || ride.status == SRide.COMPLETED) do
         throwError (InvalidRequest $ "Customer is not allowed to change destination as the ride is in terminal state for rideId: " <> ride.id.getId)
       newDropLocation <- buildLocation destination

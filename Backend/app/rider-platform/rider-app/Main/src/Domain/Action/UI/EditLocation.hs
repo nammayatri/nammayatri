@@ -58,7 +58,7 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
   destination' <- B.runInReplica $ QL.findById dropLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId: " <> dropLocMapping.locationId.getId)
   booking <- B.runInReplica $ QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Invalid booking id" <> bookingUpdateReq.bookingId.getId)
   ride <- B.runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (InvalidRequest $ "No Ride present for booking" <> booking.id.getId)
-  let attemptsLeft = fromMaybe merchant.numOfAllowedEditPickupLocationAttemptsThreshold ride.allowedEditLocationAttempts
+  let attemptsLeft = fromMaybe merchant.numOfAllowedEditLocationAttemptsThreshold ride.allowedEditLocationAttempts
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   let dUpdateReq =
         ACL.UpdateBuildReq

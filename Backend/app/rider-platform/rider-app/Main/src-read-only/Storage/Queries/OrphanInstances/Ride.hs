@@ -30,6 +30,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
       Just
         Domain.Types.Ride.Ride
           { allowedEditLocationAttempts = allowedEditLocationAttempts,
+            allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts,
             backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             bookingId = Kernel.Types.Id.Id bookingId,
@@ -87,6 +88,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
   toTType' (Domain.Types.Ride.Ride {..}) = do
     Beam.RideT
       { Beam.allowedEditLocationAttempts = allowedEditLocationAttempts,
+        Beam.allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts,
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.bookingId = Kernel.Types.Id.getId bookingId,

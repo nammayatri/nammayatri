@@ -91,3 +91,8 @@ ALTER TABLE atlas_app.ride ADD COLUMN driver_account_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN online_payment boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN allowed_edit_pickup_location_attempts int ;

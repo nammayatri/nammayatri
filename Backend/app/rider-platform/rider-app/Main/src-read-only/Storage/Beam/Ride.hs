@@ -20,6 +20,7 @@ import Tools.Beam.UtilsTH
 
 data RideT f = RideT
   { allowedEditLocationAttempts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    allowedEditPickupLocationAttempts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bookingId :: B.C f Kernel.Prelude.Text,

@@ -68,3 +68,8 @@ ALTER TABLE atlas_app.merchant ADD COLUMN arriving_pickup_threshold double preci
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN online_payment boolean NOT NULL default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN num_of_allowed_edit_location_attempts_threshold int NOT NULL default 3;
