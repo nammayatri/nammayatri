@@ -1480,3 +1480,9 @@ getML stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "നിങ്ങളുടെ അക്കൗണ്ട് ഡിലീറ്റ് ചെയ്യണമെന്ന് തീർച്ചയാണോ? നിങ്ങളുടെ എല്ലാ സ്വകാര്യ ഡാറ്റയും നഷ്ടപ്പെടും"
         REQUEST_SUBMITTED -> "അഭ്യർത്ഥന സമർപ്പിച്ചു"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "നിങ്ങൾ ഞങ്ങളുടെ പ്ലാറ്റ്‌ഫോം വിട്ടുപോകുന്നതിൽ ഞങ്ങൾക്ക് ഖേദമുണ്ട്. അടുത്ത 30 ദിവസത്തിനുള്ളിൽ നിങ്ങളുടെ അക്കൗണ്ട് ഇല്ലാതാക്കപ്പെടും. അതേസമയം, നിങ്ങളുടെ അക്കൗണ്ട് നിലനിർത്താൻ നിങ്ങൾ ആഗ്രഹിക്കുന്നുവെങ്കിൽ, ഞങ്ങളുടെ ഉപഭോക്തൃ പിന്തുണ നമ്പറിലേക്ക് വിളിക്കുക"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge

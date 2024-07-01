@@ -1486,4 +1486,9 @@ data STR = LETS_GET_STARTED
         | ONLY_3_MORE_RIDES_FOR_50_COINS
         | YOU_GOT_50_COINS
         | YOU_GOT_10_COINS
-        
+        | INVALID_SSN
+        | SSN_ALREADY_TAKEN
+        | INVALID_ZIPCODE
+        | INVALID_EMAIL
+        | INVALID_AGE
+        | REPORT_LIMIT_REACHED

@@ -1480,3 +1480,9 @@ getTA stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "உங்கள் கணக்கை நிச்சயமாக நீக்க விரும்புகிறீர்களா? உங்கள் தனிப்பட்ட தரவு அனைத்தும் இழக்கப்படும்"
         REQUEST_SUBMITTED -> "கோரிக்கை சமர்ப்பிக்கப்பட்டது"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "நீங்கள் எங்கள் தளத்தை விட்டு வெளியேறியதைக் கண்டு வருந்துகிறோம். அடுத்த 30 நாட்களுக்குள் உங்கள் கணக்கு நீக்கப்படும். இதற்கிடையில் உங்கள் கணக்கைத் தக்க வைத்துக் கொள்ள விரும்பினால், எங்கள் வாடிக்கையாளர் ஆதரவு எண்ணுக்கு அழைக்கவும்"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge

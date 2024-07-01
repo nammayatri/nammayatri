@@ -367,3 +367,6 @@ socialLogin _ = (getBaseUrl "") <> "/social/login"
 
 updateSocialProfile :: String -> String
 updateSocialProfile _ = (getBaseUrl "") <> "/social/update/profile"
+
+initiateDriverBGV :: String -> String
+initiateDriverBGV _ = (getBaseUrl "") <> "/driver/backgroundVerification"

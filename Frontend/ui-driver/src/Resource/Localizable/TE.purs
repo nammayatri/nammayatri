@@ -1482,3 +1482,9 @@ getTE stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "రు ఖచ్చితంగా మీ ఖాతాను తొలగించాలనుకుంటున్నారా? మీ వ్యక్తిగత డేటా మొత్తం పోతుంది"
         REQUEST_SUBMITTED -> "అభ్యర్థన సమర్పించబడింది"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "మీరు మా ప్లాట్‌ఫారమ్ నుండి నిష్క్రమించినందుకు మేము చింతిస్తున్నాము. మీ ఖాతా తదుపరి 30 రోజుల్లో తొలగించబడుతుంది. ఇంతలో మీరు మీ ఖాతాను నిలుపుకోవాలనుకుంటే, దయచేసి మా కస్టమర్ సపోర్ట్ నంబర్‌కు కాల్ చేయండి"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge

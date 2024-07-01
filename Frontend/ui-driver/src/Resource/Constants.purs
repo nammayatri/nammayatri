@@ -125,6 +125,7 @@ transformDocText stage =
     ST.ProfileDetails -> "Profile Details"
     ST.VehicleInspectionForm -> "Vehicle Inspection"
     ST.UploadProfile -> "Driver Profile of Another App"
+    ST.BackgroundVerification -> "Background Verification"
     ST.NO_OPTION -> ""
 
 transformToRegisterationStep :: String -> ST.RegisterationStep
@@ -145,6 +146,7 @@ transformToRegisterationStep doctype =
         "ProfileDetails" -> ST.ProfileDetails
         "VehicleInspectionForm" -> ST.VehicleInspectionForm
         "UploadProfile" -> ST.UploadProfile
+        "BackgroundVerification" -> ST.BackgroundVerification
         _ -> ST.NO_OPTION
 
 transformToDoctype :: ST.RegisterationStep -> String
@@ -165,6 +167,7 @@ transformToDoctype step =
     ST.ProfileDetails -> "ProfileDetails"
     ST.VehicleInspectionForm -> "VehicleInspectionForm"
     ST.UploadProfile -> "UploadProfile"
+    ST.BackgroundVerification -> "BackgroundVerification"
     ST.NO_OPTION -> ""
 
 transformVehicleType :: Maybe String -> Maybe ST.VehicleCategory
