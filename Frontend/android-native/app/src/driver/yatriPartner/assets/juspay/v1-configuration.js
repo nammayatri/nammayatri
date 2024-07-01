@@ -732,6 +732,9 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_minneapolis_map",
         "cityCode" : "std:01189",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "",
+        "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 44.977753,
         "cityLong" : -93.2650108,
         "supportNumber" : "+918069724848",
@@ -752,20 +755,20 @@ window.getMerchantConfig = function () {
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
-        "showEarningSection" : false,
+        "showEarningSection" : true,
         "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "net.openkochi.yatri"
-        , "driverAppId" : "net.openkochi.yatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "assets" :{
-        "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+          "domain" : "https://www.getyatri.com",
+          "customerAppId" : "net.openkochi.yatri",
+          "driverAppId" : "net.openkochi.yatripartner"
+        },
+        "waitingCharges" : 1.50,
+        "waitingChargesConfig" : defWaitingChargesConfig,
+        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : defRateCardConfig,
+        "assets" : {
+          "auto_image" : "ny_ic_black_yellow_auto_side_view",
+          "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
+        }
       },
       {
         "cityName" : "Kochi",
