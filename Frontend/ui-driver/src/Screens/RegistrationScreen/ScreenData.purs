@@ -57,7 +57,8 @@ initData = {
         enteredDL : "",
         enteredRC : "",
         vehicleCategory : Nothing,
-        linkedRc : Nothing
+        linkedRc : Nothing,
+        bgvUrl : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -77,6 +78,9 @@ initData = {
         manageVehicle : false,
         manageVehicleCategory : Nothing,
         isApplicationInVerification: false,
-        isProfileDetailsCompleted: false
+        isProfileDetailsCompleted: false,
+        showCheckrWebView: false,
+        bgvInfo: ST.DoNothing,
+        otherMandetoryDocsDone: false
       }
   }

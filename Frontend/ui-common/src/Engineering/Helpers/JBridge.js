@@ -2772,3 +2772,9 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCDate();
   }
 }
+
+export const initWebViewOnActivity = function (webViewUrl) {
+  if (JBridge.initWebViewOnActivity) {
+    return JBridge.initWebViewOnActivity(webViewUrl);
+  }
+}

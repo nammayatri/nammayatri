@@ -993,6 +993,7 @@ addRCFromProfileStatusView state push =
                                                         COMPLETED -> "ny_ic_rc_success"
                                                         FAILED -> "ny_ic_rc_failed"
                                                         IN_PROGRESS -> "ny_ic_rc_pending"
+                                                        PENDING_REVIEW -> "ny_ic_rc_success"
                                                         _ -> "ny_ic_rc_pending"
         , height $ V 120
         , width $ V 230

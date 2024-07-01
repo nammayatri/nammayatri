@@ -1198,7 +1198,8 @@ newtype VehicleDocumentItem = VehicleDocumentItem
 newtype DocumentStatusItem = DocumentStatusItem
   { documentType :: String,
     verificationStatus :: String,
-    verificationMessage :: Maybe String
+    verificationMessage :: Maybe String,
+    verificationUrl :: Maybe String
   }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq DriverRegistrationStatusResp where
@@ -4981,3 +4982,29 @@ instance standardEncodeSocialProfileUpdateRes :: StandardEncode SocialProfileUpd
 instance showSocialProfileUpdateRes :: Show SocialProfileUpdateRes where show = genericShow
 instance decodeSocialProfileUpdateRes :: Decode SocialProfileUpdateRes where decode = defaultDecode
 instance encodeSocialProfileUpdateRes :: Encode SocialProfileUpdateRes where encode = defaultEncode
+
+
+----------------------------------------------- Checkr Background Verification -------------------------------------------------------
+
+data InitiateDriverBGVReq = InitiateDriverBGVReq
+
+newtype InitiateDriverBGVResp = InitiateDriverBGVResp ApiSuccessResult
+
+instance makeInitiateDriverBGVReq :: RestEndpoint InitiateDriverBGVReq InitiateDriverBGVResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.initiateDriverBGV "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericInitiateDriverBGVReq :: Generic InitiateDriverBGVReq _
+instance standardEncodeInitiateDriverBGV :: StandardEncode InitiateDriverBGVReq where standardEncode res = standardEncode {}
+instance showInitiateDriverBGV :: Show InitiateDriverBGVReq where show = genericShow
+instance decodeInitiateDriverBGV :: Decode InitiateDriverBGVReq where decode = defaultDecode
+instance encodeInitiateDriverBGV  :: Encode InitiateDriverBGVReq where encode = defaultEncode
+
+
+
+derive instance genericInitiateDriverBGVResp :: Generic InitiateDriverBGVResp _
+instance standardInitiateDriverBGVResp :: StandardEncode InitiateDriverBGVResp where standardEncode (InitiateDriverBGVResp body) = standardEncode body
+instance showInitiateDriverBGVResp :: Show InitiateDriverBGVResp where show = genericShow
+instance decodeInitiateDriverBGVResp :: Decode InitiateDriverBGVResp where decode = defaultDecode
+instance encodeInitiateDriverBGVResp  :: Encode InitiateDriverBGVResp where encode = defaultEncode

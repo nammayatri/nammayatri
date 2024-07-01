@@ -360,6 +360,8 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState 
                                 | SELECT_LANG_FROM_REGISTRATION
                                 | SSN_FROM_REGISTRATION RegistrationScreenState
                                 | PROFILE_DETAILS_FROM_REGISTRATION RegistrationScreenState
+                                | HANDLE_CHECKR_WEBVIEW_EXIT
+                                | GET_BGV_URL RegistrationScreenState
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState 
                                           | VALIDATE_DATA_API UploadDrivingLicenseState 

@@ -1611,3 +1611,11 @@ mkSocialProfileUpdate state =
     , mobileCountryCode : Just config.defaultCountryCodeConfig.countryCode
     , mobileNumber : state.data.mobileNumber
     }
+
+
+initiateDriverBGV :: InitiateDriverBGVReq -> Flow GlobalState (Either ErrorResponse InitiateDriverBGVResp)
+initiateDriverBGV req = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.initiateDriverBGV "") unwrapResponse $ callAPI headers req
+  where
+    unwrapResponse x = x
