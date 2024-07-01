@@ -11,6 +11,8 @@ import Kernel.Utils.Common (CacheFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
+import Storage.Queries.AmbulanceDetails as QueryAD
+import Storage.Queries.AmbulanceQuoteBreakup as QueryAQB
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.OrphanInstances.Quote ()
@@ -29,6 +31,9 @@ createDetails = \case
   DriverOfferDetails driverOffer -> QueryDO.create driverOffer
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
   InterCityDetails interCityDetails -> QueryICD.create interCityDetails
+  AmbulanceDetails ambulanceDetails -> do
+    traverse_ QueryAQB.create ambulanceDetails.ambulanceQuoteBreakupList
+    QueryAD.create ambulanceDetails
 
 createQuote' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Quote -> m ()
 createQuote' quote = do

@@ -55,7 +55,7 @@ data SearchRequest = SearchRequest
   }
   deriving (Generic, Show)
 
-data RiderPreferredOption = Rental | OneWay | InterCity deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

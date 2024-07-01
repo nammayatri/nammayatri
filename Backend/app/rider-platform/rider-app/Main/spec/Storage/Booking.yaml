@@ -121,7 +121,7 @@ Booking:
   types:
     BPPBooking: {}
     BookingDetails:
-      enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails
+      enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails
       derive': Show
     OneWayBookingDetails:
       toLocation: Location
@@ -136,6 +136,10 @@ Booking:
       otpCode: Maybe Text
       derive': Show
     InterCityBookingDetails:
+      toLocation: Location
+      distance: Distance
+      derive': Show
+    AmbulanceBookingDetails:
       toLocation: Location
       distance: Distance
       derive': Show

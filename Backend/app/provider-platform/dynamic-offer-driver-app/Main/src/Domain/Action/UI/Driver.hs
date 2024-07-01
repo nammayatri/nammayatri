@@ -1029,7 +1029,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
               DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-              _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
+              _ -> acceptStaticOfferDriverRequest merchantOpCityId (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
           QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource sReqFD.id
           return pullList
         Reject -> do
@@ -1136,6 +1136,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               rideTime = sReqFD.startTime,
               returnTime = searchReq.returnTime,
               roundTrip = fromMaybe False searchReq.roundTrip,
+              vehicleAge = Nothing,
               waitingTime = Nothing,
               actualRideDuration = Nothing,
               avgSpeedOfVehicle = Nothing,
@@ -1152,7 +1153,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               distanceUnit = searchReq.distanceUnit,
               ..
             }
-      QFP.updateFareParameters fareParams
+      QFP.updateFareParameters fareParams fareParams.id -- this must not be working?
       driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
@@ -1165,8 +1166,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
 
-acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe (Id DC.Client) -> Flow [SearchRequestForDriver]
-acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
+acceptStaticOfferDriverRequest :: Id DMOC.MerchantOperatingCity -> Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe (Id DC.Client) -> Flow [SearchRequestForDriver]
+acceptStaticOfferDriverRequest merchantOpCityId mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
@@ -1178,6 +1179,39 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
   whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
   (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId
+  farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId booking.tripCategory booking.vehicleServiceTier booking.area quoteId Nothing (Just (TransactionId (Id booking.transactionId)))
+  case booking.tripCategory of
+    DTC.Ambulance _ -> do
+      now <- getCurrentTime
+      fareParams <- do
+        calculateFareParameters
+          CalculateFareParametersParams
+            { farePolicy = farePolicy,
+              actualDistance = booking.estimatedDistance,
+              rideTime = booking.startTime,
+              returnTime = booking.returnTime,
+              roundTrip = fromMaybe False booking.roundTrip,
+              vehicleAge = DTC.getVehicleAge vehicle.mYManufacturing now,
+              waitingTime = Nothing,
+              actualRideDuration = Nothing,
+              avgSpeedOfVehicle = Nothing,
+              driverSelectedFare = Nothing,
+              customerExtraFee = Nothing,
+              nightShiftCharge = Nothing,
+              customerCancellationDues = Nothing,
+              tollCharges = Nothing,
+              estimatedRideDuration = Nothing,
+              nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
+              estimatedDistance = Nothing,
+              timeDiffFromUtc = Nothing,
+              currency = booking.currency,
+              distanceUnit = booking.distanceUnit,
+              ..
+            }
+      QFP.updateFareParameters fareParams booking.fareParams.id
+      let newEstimatedFare = fareSum fareParams
+      QBooking.updateEstimatedFare newEstimatedFare booking.id
+    _ -> pure ()
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
@@ -1208,6 +1242,7 @@ getStats (driverId, _, merchantOpCityId) date = do
               SlabDetails _ -> Nothing
               RentalDetails det -> Just ((deadKmFare :: Fare.FParamsRentalDetails -> HighPrecMoney) det)
               InterCityDetails det -> Just (pickupCharge det)
+              AmbulanceDetails _ -> Nothing
           )
           fareParameters
   let bonusEarning = GHCL.sum driverSelFares + GHCL.sum customerExtFees + GHCL.sum deadKmFares
@@ -1958,12 +1993,12 @@ acceptScheduledBooking ::
   Maybe (Id DC.Client) ->
   Id DRB.Booking ->
   Flow APISuccess
-acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
+acceptScheduledBooking (personId, merchantId, merchantOperatingCityId) clientId bookingId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id
   unless (isNothing activeRide) $ throwError (RideInvalidStatus "Cannot accept booking during active ride.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
-  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId -- handle driver blocked
+  void $ acceptStaticOfferDriverRequest merchantOperatingCityId mbActiveSearchTry driver booking.quoteId Nothing merchant clientId -- handle driver blocked
   pure Success

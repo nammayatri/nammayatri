@@ -76,6 +76,8 @@ data Booking = Booking
   }
   deriving (Generic, Show)
 
+data AmbulanceBookingDetails = AmbulanceBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Show)
+
 data BPPBooking = BPPBooking {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data BookingDetails
@@ -84,6 +86,7 @@ data BookingDetails
   | DriverOfferDetails Domain.Types.Booking.OneWayBookingDetails
   | OneWaySpecialZoneDetails Domain.Types.Booking.OneWaySpecialZoneBookingDetails
   | InterCityDetails Domain.Types.Booking.InterCityBookingDetails
+  | AmbulanceDetails Domain.Types.Booking.AmbulanceBookingDetails
   deriving (Show)
 
 data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Show)

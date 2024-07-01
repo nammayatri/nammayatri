@@ -181,6 +181,11 @@ Booking:
     - findByPrimaryKey
     - updateByPrimaryKey
 
+  queries:
+    updateEstimatedFare:
+      kvFunction: updateOneWithKV
+      params: [estimatedFare]
+      where: id
 
 BookingLocation:
   derives: "Generic,Show,Eq,Kernel.External.Maps.HasCoordinates.HasCoordinates"

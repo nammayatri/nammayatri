@@ -80,6 +80,8 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.validTill = T.utcToLocalTime T.utc validTill,
         BeamQSZ.estimatedFare = roundToIntegral estimatedFare,
         BeamQSZ.estimatedFareAmount = Just estimatedFare,
+        BeamQSZ.minEstimatedFare = minEstimatedFare,
+        BeamQSZ.maxEstimatedFare = maxEstimatedFare,
         BeamQSZ.currency = Just currency,
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id,

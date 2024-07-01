@@ -24,16 +24,19 @@ module Domain.Action.Beckn.OnSearch
     OneWaySpecialZoneQuoteDetails (..),
     InterCityQuoteDetails (..),
     RentalQuoteDetails (..),
+    AmbulanceQuoteDetails (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
     NightShiftInfo (..),
     WaitingChargesInfo (..),
+    AmbulanceQuoteBreakupInfo (..),
     onSearch,
     validateRequest,
   )
 where
 
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
+import qualified Domain.Types.AmbulanceDetails as DAmbulanceDetails
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
@@ -144,6 +147,11 @@ data EstimateBreakupInfo = EstimateBreakupInfo
     price :: BreakupPriceInfo
   }
 
+data AmbulanceQuoteBreakupInfo = AmbulanceQuoteBreakupInfo
+  { title :: Text,
+    price :: BreakupPriceInfo
+  }
+
 newtype BreakupPriceInfo = BreakupPriceInfo
   { value :: Price
   }
@@ -175,6 +183,7 @@ data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
   | InterCityDetails InterCityQuoteDetails
   | RentalDetails RentalQuoteDetails
+  | AmbulanceDetails AmbulanceQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
@@ -208,6 +217,16 @@ data RentalQuoteDetails = RentalQuoteDetails
     plannedPerKmRate :: Price,
     perExtraKmRate :: Price,
     deadKmFare :: Price,
+    nightShiftInfo :: Maybe NightShiftInfo
+  }
+
+data AmbulanceQuoteDetails = AmbulanceQuoteDetails
+  { id :: Text,
+    baseFare :: Price,
+    ambulanceQuoteBreakupList :: [AmbulanceQuoteBreakupInfo],
+    perKmRate :: Price,
+    minEstimatedFare :: Price,
+    maxEstimatedFare :: Price,
     nightShiftInfo :: Maybe NightShiftInfo
   }
 
@@ -256,6 +275,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterQuotesByPrefference _quotesInfo =
       case searchRequest.riderPreferredOption of
         Rental -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> True; _ -> False) _quotesInfo
+        Ambulance -> filter (\qInfo -> case qInfo.quoteDetails of AmbulanceDetails _ -> True; _ -> False) _quotesInfo
         _ -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> False; _ -> True) _quotesInfo
 
     filterEstimtesByPrefference :: [EstimateInfo] -> [EstimateInfo]
@@ -264,6 +284,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         Rental -> []
         OneWay -> _estimateInfo
         InterCity -> []
+        Ambulance -> []
 
     mkBppDetails :: Flow BppDetails
     mkBppDetails = do
@@ -365,6 +386,8 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
     InterCityDetails details -> do
       DQuote.InterCityDetails <$> buildInterCityQuoteDetails searchRequest.distanceUnit details
+    AmbulanceDetails details -> do
+      DQuote.AmbulanceDetails <$> buildAmbulanceQuoteDetails details
   pure
     DQuote.Quote
       { id = uid,
@@ -441,6 +464,35 @@ buildRentalDetails distanceUnit RentalQuoteDetails {..} = do
         ..
       }
 
+buildAmbulanceQuoteDetails :: MonadFlow m => AmbulanceQuoteDetails -> m DAmbulanceDetails.AmbulanceDetails
+buildAmbulanceQuoteDetails AmbulanceQuoteDetails {..} = do
+  let quoteId = Id id
+  ambulanceQuoteBreakupList_ <- buildAmbulanceQuoteBreakUp ambulanceQuoteBreakupList quoteId
+  pure
+    DAmbulanceDetails.AmbulanceDetails
+      { id = quoteId,
+        ambulanceQuoteBreakupList = ambulanceQuoteBreakupList_,
+        ..
+      }
+
+buildAmbulanceQuoteBreakUp ::
+  MonadFlow m =>
+  [AmbulanceQuoteBreakupInfo] ->
+  Id DAmbulanceDetails.AmbulanceDetails ->
+  m [DAmbulanceDetails.AmbulanceQuoteBreakup]
+buildAmbulanceQuoteBreakUp quoteItems quoteId =
+  quoteItems
+    `for` \quoteItems_ -> do
+      id <- generateGUID
+      price' <- mkAmbulanceQuotePrice quoteItems_.price
+      pure
+        DAmbulanceDetails.AmbulanceQuoteBreakup
+          { title = quoteItems_.title,
+            price = price',
+            quoteId = quoteId,
+            ..
+          }
+
 buildTripTerms ::
   MonadFlow m =>
   [Text] ->
@@ -476,3 +528,9 @@ mkEstimatePrice ::
   BreakupPriceInfo ->
   m DEstimate.EstimateBreakupPrice
 mkEstimatePrice BreakupPriceInfo {value} = pure DEstimate.EstimateBreakupPrice {value}
+
+mkAmbulanceQuotePrice ::
+  MonadFlow m =>
+  BreakupPriceInfo ->
+  m DAmbulanceDetails.AmbulanceQuoteBreakupPrice
+mkAmbulanceQuotePrice BreakupPriceInfo {value} = pure DAmbulanceDetails.AmbulanceQuoteBreakupPrice {value}

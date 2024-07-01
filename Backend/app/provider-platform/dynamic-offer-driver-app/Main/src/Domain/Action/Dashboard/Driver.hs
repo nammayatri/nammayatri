@@ -1023,6 +1023,7 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} =
       manufacturerModel = Just model,
       bodyType = Nothing,
       fuelType = energyType,
+      mYManufacturing = mYManufacturing,
       color = Just colour,
       dateOfRegistration = req.dateOfRegistration,
       vehicleModelYear = req.vehicleModelYear

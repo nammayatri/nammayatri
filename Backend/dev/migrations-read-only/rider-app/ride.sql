@@ -90,4 +90,10 @@ ALTER TABLE atlas_app.ride ADD COLUMN driver_account_id text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.ride ADD COLUMN vehicle_age double precision ;
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.ride ADD COLUMN online_payment boolean ;

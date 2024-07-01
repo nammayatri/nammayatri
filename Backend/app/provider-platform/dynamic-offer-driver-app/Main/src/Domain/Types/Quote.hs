@@ -35,6 +35,8 @@ data Quote = Quote
     tripCategory :: DTC.TripCategory,
     validTill :: UTCTime,
     estimatedFare :: HighPrecMoney,
+    minEstimatedFare :: Maybe HighPrecMoney,
+    maxEstimatedFare :: Maybe HighPrecMoney,
     currency :: Currency,
     distance :: Maybe Meters,
     distanceUnit :: DistanceUnit,

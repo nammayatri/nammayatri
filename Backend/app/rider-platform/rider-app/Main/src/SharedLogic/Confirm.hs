@@ -89,6 +89,7 @@ data ConfirmQuoteDetails
   | ConfirmRentalDetails Text
   | ConfirmAutoDetails Text
   | ConfirmOneWaySpecialZoneDetails Text
+  | ConfirmAmbulanceDetails Text
   deriving (Show, Generic)
 
 tryInitTriggerLock :: (Redis.HedisFlow m r) => Id DSReq.SearchRequest -> m Bool
@@ -125,6 +126,7 @@ confirm DConfirmReq {..} = do
         pure (Just driverOffer.bppQuoteId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
       DQuote.InterCityDetails details -> pure (Just details.id.getId)
+      DQuote.AmbulanceDetails details -> pure (Just details.id.getId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
@@ -191,6 +193,7 @@ confirm DConfirmReq {..} = do
           bppQuoteId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
           pure $ ConfirmAutoDetails bppQuoteId
         DQuote.OneWaySpecialZoneDetails details -> pure $ ConfirmOneWaySpecialZoneDetails details.quoteId
+        DQuote.AmbulanceDetails details -> pure $ ConfirmAmbulanceDetails details.id.getId
     checkOverlap :: Int -> Int -> UTCTime -> DRB.Booking -> Bool
     checkOverlap estimatedDistance estimatedDuration curBookingStartTime booking = do
       let estimatedDistanceInKm = estimatedDistance `div` 1000
@@ -275,6 +278,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
       DQuote.InterCityDetails _ -> DRB.InterCityDetails <$> buildInterCityDetails
+      DQuote.AmbulanceDetails _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails
 
     buildInterCityDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
@@ -291,6 +295,10 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWaySpecialZoneBookingDetails {..}
+    buildAmbulanceDetails = do
+      toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way ambulance search request")
+      distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way ambulance search request")
+      pure DRB.AmbulanceBookingDetails {..}
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do

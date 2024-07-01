@@ -29,6 +29,7 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Domain.Action.UI.AmbulanceDetails as DAmbulanceDetails
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.DriverOffer as UDriverOffer
 import Domain.Action.UI.Estimate as UEstimate
@@ -149,6 +150,7 @@ mkQuoteAPIDetails tollCharges = \case
      in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', ..}
   DQuote.OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   DQuote.InterCityDetails details -> DQuote.InterCityAPIDetails $ DInterCityDetails.mkInterCityDetailsAPIEntity details tollCharges
+  DQuote.AmbulanceDetails details -> DQuote.AmbulanceAPIDetails $ DAmbulanceDetails.mkAmbulanceDetailsAPIEntity details tollCharges
 
 mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
 mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =
@@ -211,7 +213,7 @@ processActiveBooking booking cancellationStage = do
     Just _ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
     Nothing -> do
       now <- getCurrentTime
-      if (addUTCTime 900 booking.startTime < now || not (isRentalOrInterCity booking.bookingDetails))
+      if addUTCTime 900 booking.startTime < now || not (isRentalOrInterCity booking.bookingDetails) || (addUTCTime 120 booking.startTime < now && isHighPriorityBooking booking.bookingDetails)
         then do
           let cancelReq =
                 DCancel.CancelReq
@@ -229,6 +231,11 @@ isRentalOrInterCity :: DBooking.BookingDetails -> Bool
 isRentalOrInterCity bookingDetails = case bookingDetails of
   DBooking.RentalDetails _ -> True
   DBooking.InterCityDetails _ -> True
+  _ -> False
+
+isHighPriorityBooking :: DBooking.BookingDetails -> Bool
+isHighPriorityBooking bookingDetails = case bookingDetails of
+  DBooking.AmbulanceDetails _ -> True
   _ -> False
 
 getOffers :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
@@ -264,6 +271,7 @@ getOffers searchRequest = do
         SQuote.DriverOfferDetails details -> details.distanceToPickup
         SQuote.OneWaySpecialZoneDetails _ -> Just $ Distance 0 Meter
         SQuote.InterCityDetails _ -> Just $ Distance 0 Meter
+        SQuote.AmbulanceDetails _ -> Just $ Distance 0 Meter
     creationTime :: OfferRes -> UTCTime
     creationTime (OnDemandCab QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt

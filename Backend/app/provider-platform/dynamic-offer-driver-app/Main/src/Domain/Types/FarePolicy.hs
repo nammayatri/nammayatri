@@ -21,6 +21,7 @@ import Data.List.NonEmpty
 import Data.Text as Text
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
+import Domain.Types.FarePolicy.FarePolicyAmbulanceDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyInterCityDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
@@ -79,7 +80,7 @@ instance FromJSON (FarePolicyD 'DTC.Safe)
 -- FIXME remove
 instance ToJSON (FarePolicyD 'DTC.Safe)
 
-data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s) | InterCityDetails (FPInterCityDetailsD s)
+data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s) | InterCityDetails (FPInterCityDetailsD s) | AmbulanceDetails (FPAmbulanceDetailsD s)
   deriving (Generic, Show)
 
 type FarePolicyDetails = FarePolicyDetailsD 'DTC.Safe
@@ -100,7 +101,7 @@ data CongestionChargeMultiplier
 
 $(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
 
-data FarePolicyType = Progressive | Slabs | Rental | InterCity
+data FarePolicyType = Progressive | Slabs | Rental | InterCity | Ambulance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -165,3 +166,4 @@ getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
   SlabsDetails _ -> Slabs
   RentalDetails _ -> Rental
   InterCityDetails _ -> InterCity
+  AmbulanceDetails _ -> Ambulance

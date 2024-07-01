@@ -115,7 +115,21 @@ getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
 getEstimatedFare item currency = do
   price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")
   let value = price.priceValue
-  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: tagValue")
+  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: priceValue")
+  return $ decimalValueToPrice currency tagValue
+
+getMinEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
+getMinEstimatedFare item currency = do
+  price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")
+  let value = price.priceMinimumValue
+  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: priceMinimumValue")
+  return $ decimalValueToPrice currency tagValue
+
+getMaxEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
+getMaxEstimatedFare item currency = do
+  price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")
+  let value = price.priceMaximumValue
+  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: priceMaximumValue")
   return $ decimalValueToPrice currency tagValue
 
 getItemId :: MonadFlow m => Spec.Item -> m Text
@@ -145,33 +159,58 @@ getTotalFareRange item currency = do
 
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.EstimateBreakupInfo]
 buildEstimateBreakupList item currency = do
+  let tagListRateCard = getTagListRateCardFromItem item
+      breakups = maybe [] (map (buildEstimateBreakUpItem currency)) tagListRateCard
+  return (catMaybes breakups)
+
+buildAmbulanceQuoteBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.AmbulanceQuoteBreakupInfo]
+buildAmbulanceQuoteBreakupList item currency = do
+  let tagListRateCard = getTagListRateCardFromItem item
+      breakups = maybe [] (map (buildAmbulanceQuoteBreakUpItem currency)) tagListRateCard
+  return (catMaybes breakups)
+
+getTagListRateCardFromItem :: Spec.Item -> Maybe [Spec.Tag]
+getTagListRateCardFromItem item = do
   let tagGroups = item.itemTags
       tagGroupRateCard = find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just (show Tag.FARE_POLICY)) =<< tagGroups -- consume this from now on
-      tagListRateCard = (.tagGroupList) =<< tagGroupRateCard
-  let breakups = maybe [] (map (buildEstimateBreakUpItem currency)) tagListRateCard
-  return (catMaybes breakups)
-  where
-    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
-    descriptorCode (Just desc) = desc.descriptorCode
-    descriptorCode Nothing = Nothing
+  (.tagGroupList) =<< tagGroupRateCard
+
+descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
+descriptorCode (Just desc) = desc.descriptorCode
+descriptorCode Nothing = Nothing
 
 buildEstimateBreakUpItem ::
   Currency ->
   Spec.Tag ->
   Maybe OnSearch.EstimateBreakupInfo
 buildEstimateBreakUpItem currency tag = do
-  descriptor <- tag.tagDescriptor
-  value <- tag.tagValue
-  tagValue <- DecimalValue.valueFromString value
-  title <- descriptor.descriptorCode
+  (title, value) <- getDetailsFromTag tag currency
   pure
     OnSearch.EstimateBreakupInfo
       { title = title,
-        price =
-          OnSearch.BreakupPriceInfo
-            { value = decimalValueToPrice currency tagValue
-            }
+        price = OnSearch.BreakupPriceInfo {..}
       }
+
+buildAmbulanceQuoteBreakUpItem ::
+  Currency ->
+  Spec.Tag ->
+  Maybe OnSearch.AmbulanceQuoteBreakupInfo
+buildAmbulanceQuoteBreakUpItem currency tag = do
+  (title, value) <- getDetailsFromTag tag currency
+  pure
+    OnSearch.AmbulanceQuoteBreakupInfo
+      { title = title,
+        price = OnSearch.BreakupPriceInfo {..}
+      }
+
+getDetailsFromTag :: Spec.Tag -> Currency -> Maybe (Text, Price)
+getDetailsFromTag tag currency = do
+  value <- tag.tagValue
+  descriptor <- tag.tagDescriptor
+  tagValue <- DecimalValue.valueFromString value
+  title <- descriptor.descriptorCode
+  let price = decimalValueToPrice currency tagValue
+  pure (title, price)
 
 buildTollChargesInfo :: Spec.Item -> Currency -> Maybe OnSearch.TollChargesInfo
 buildTollChargesInfo item currency = do
@@ -268,6 +307,12 @@ getPlannedPerKmRate tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PLANNED_PER_KM_CHARGE tagGroups
   plannedPerKmRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency plannedPerKmRate
+
+getPerKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
+getPerKmRate tagGroups currency = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_KM_RATE tagGroups
+  perKmRate <- DecimalValue.valueFromString tagValue
+  Just $ decimalValueToPrice currency perKmRate
 
 getPlannedPerKmRateRoundTrip :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getPlannedPerKmRateRoundTrip tagGroups currency = do

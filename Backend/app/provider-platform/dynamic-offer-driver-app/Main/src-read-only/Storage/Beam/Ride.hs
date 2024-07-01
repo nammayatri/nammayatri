@@ -82,6 +82,7 @@ data RideT f = RideT
     uiDistanceCalculationWithAccuracy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleServiceTierSeatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

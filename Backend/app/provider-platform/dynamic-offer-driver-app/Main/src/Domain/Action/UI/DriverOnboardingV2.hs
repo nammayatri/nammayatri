@@ -197,6 +197,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance mbService
               rideTime = now,
               waitingTime = Nothing,
               returnTime = Nothing,
+              vehicleAge = Nothing,
               roundTrip = False,
               actualRideDuration = Nothing,
               avgSpeedOfVehicle = Nothing,

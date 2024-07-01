@@ -83,7 +83,7 @@ data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLET
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity
+data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity | Ambulance
   deriving stock (Eq, Ord, Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
@@ -553,7 +553,7 @@ data FareBreakUp = FareBreakUp
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails
+data FareParametersDetails = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails | AmbulanceDetails FParamsAmbulanceDetails
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -562,6 +562,15 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
     extraKmFare :: Maybe Money,
     deadKmFareWithCurrency :: PriceAPIEntity,
     extraKmFareWithCurrency :: Maybe PriceAPIEntity
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FParamsAmbulanceDetails = FParamsAmbulanceDetails
+  { platformFee :: Maybe PriceAPIEntity,
+    sgst :: Maybe PriceAPIEntity,
+    cgst :: Maybe PriceAPIEntity,
+    distBasedFare :: PriceAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

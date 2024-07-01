@@ -952,6 +952,7 @@ updateFarePolicy _ _ farePolicyId req = do
         FarePolicy.SlabsDetails _ -> pure fPDetails
         FarePolicy.RentalDetails _ -> pure fPDetails
         FarePolicy.InterCityDetails _ -> pure fPDetails
+        FarePolicy.AmbulanceDetails _ -> pure fPDetails
 
     mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} = do
       FarePolicy.FPProgressiveDetails

@@ -5,6 +5,7 @@
 module Domain.Types.Vehicle where
 
 import Data.Aeson
+import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -22,6 +23,7 @@ data Vehicle = Vehicle
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     energyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     make :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     model :: Kernel.Prelude.Text,

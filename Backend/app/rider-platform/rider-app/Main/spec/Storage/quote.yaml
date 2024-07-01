@@ -8,9 +8,11 @@ imports:
   SpecialZoneQuote: Domain.Types.SpecialZoneQuote
   RentalDetails: Domain.Types.RentalDetails
   InterCityDetails: Domain.Types.InterCityDetails
+  AmbulanceDetails: Domain.Types.AmbulanceDetails
   DriverOffer: Domain.Types.DriverOffer
   RentalDetailsAPIEntity: Domain.Types.RentalDetails
   InterCityDetailsAPIEntity: Domain.Types.InterCityDetails
+  AmbulanceDetailsAPIEntity: Domain.Types.AmbulanceDetails
   DriverOfferAPIEntity: Domain.Action.UI.DriverOffer
   SpecialZoneQuoteAPIEntity: Domain.Action.UI.SpecialZoneQuote
   parseBaseUrl: Kernel.Prelude
@@ -32,7 +34,7 @@ Quote:
 
   types:
     QuoteDetails:
-      enum: OneWayDetails OneWayQuoteDetails, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote
+      enum: OneWayDetails OneWayQuoteDetails, InterCityDetails InterCityDetails, RentalDetails RentalDetails, AmbulanceDetails AmbulanceDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote
       derive': Generic,Show
 
     OneWayQuoteDetails:
@@ -40,7 +42,7 @@ Quote:
       derive': Generic,Show
 
     QuoteAPIDetails:
-      enum: OneWayAPIDetails OneWayQuoteAPIDetails, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity
+      enum: OneWayAPIDetails OneWayQuoteAPIDetails, InterCityAPIDetails InterCityDetailsAPIEntity, AmbulanceAPIDetails AmbulanceDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity
       derive': Generic,Show
 
     OneWayQuoteAPIDetails:

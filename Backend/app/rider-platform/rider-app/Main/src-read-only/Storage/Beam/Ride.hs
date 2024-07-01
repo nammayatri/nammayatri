@@ -69,6 +69,7 @@ data RideT f = RideT
     traveledDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     traveledDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     vehicleColor :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleModel :: B.C f Kernel.Prelude.Text,
     vehicleNumber :: B.C f Kernel.Prelude.Text,
