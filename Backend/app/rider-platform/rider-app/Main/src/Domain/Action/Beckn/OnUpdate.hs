@@ -396,7 +396,14 @@ onUpdate = \case
     dropLocMap <- SLM.buildDropLocationMapping dropLocMapping.locationId booking.id.getId DLM.BOOKING (Just bookingUpdateRequest.merchantId) (Just bookingUpdateRequest.merchantOperatingCityId)
     QLM.create dropLocMap
     fareBreakupsBUR <- QFareBreakup.findAllByEntityIdAndEntityType bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST
-    let fareBreakups = (\fareBreakup -> fareBreakup{entityType = DFareBreakup.BOOKING, entityId = booking.id.getId}) <$> fareBreakupsBUR
+    fareBreakups <-
+      mapM
+        ( \fareBreakup -> do
+            id <- generateGUID
+            return fareBreakup{id, entityType = DFareBreakup.BOOKING, entityId = booking.id.getId}
+        )
+        fareBreakupsBUR
+    QFareBreakup.deleteByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
     QFareBreakup.createMany fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
