@@ -302,6 +302,8 @@ foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
 
 foreign import focusChild :: EffectFn2 String Int Unit
+
+foreign import initWebViewOnActivity :: forall action. EffectFn3 String (action -> Effect Unit) (action) Unit
 type SliderConfig = { 
   id :: String,
   sliderConversionRate :: Number,

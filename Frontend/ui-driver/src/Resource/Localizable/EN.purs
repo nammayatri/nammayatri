@@ -1485,3 +1485,10 @@ getEN stringKey =
         VIEW_FARE_BREAKDOWN -> "View fare breakdown"
         TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "Total amount (incl. charges : " <> amount
         FARE_BREAKDOWN -> "Fare Breakdown"
+        INVALID_SSN -> "Given SSN is invalid."
+        SSN_ALREADY_TAKEN -> "SSN is already used by some other driver."
+        INVALID_ZIPCODE -> "Invalid Zip Code"
+        INVALID_EMAIL -> "Invalid email address."
+        INVALID_AGE -> "Number fiven for age is invalid."
+        REPORT_LIMIT_REACHED -> "Report Limit Exceeded."
+

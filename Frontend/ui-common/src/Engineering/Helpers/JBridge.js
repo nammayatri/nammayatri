@@ -591,7 +591,11 @@ export const isNetworkAvailable = function (unit) {
 export const openUrlInApp = function (str) {
   return function (unit) {
     if(str !== ""){
-      return window.JBridge.openUrlInApp(str);
+      try {
+        return window.JBridge.openUrlInApp(str, null);
+      }catch (e){
+        return window.JBridge.openUrlInApp(str);
+      }
     }else{
       console.error("openUrlInApp: URL is empty");
     }
@@ -606,7 +610,11 @@ export const openUrlInMailApp = function (str) {
         JBridge.openApp(payload)
       }
     } else {
-      openUrlInApp(str)();
+      try {
+        return window.JBridge.openUrlInApp(str, null);
+      }catch (e){
+        return window.JBridge.openUrlInApp(str);
+      }
     }
   };
 };
@@ -2814,4 +2822,21 @@ export const getDateFromDate = function(date, count) {
 
   givenDate = yyyy + "/" + mm + "/" + dd;
   return givenDate;
+}
+export const initWebViewOnActivity = function (webViewUrl, cb, action) {
+    const callback = callbackMapper.map(function () {
+      cb(action)();
+    });
+    if (window.__OS == "ANDROID") {
+      if (JBridge.initWebViewOnActivity) return JBridge.initWebViewOnActivity(webViewUrl);
+    }
+    else {
+      try {
+        return window.JBridge.openUrlInApp(webViewUrl, callback);
+      }catch (e){
+        return window.JBridge.openUrlInApp(webViewUrl);
+      }
+    }
+    
+  
 }

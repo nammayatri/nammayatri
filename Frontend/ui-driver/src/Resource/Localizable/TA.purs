@@ -1486,3 +1486,9 @@ getTA stringKey =
         VIEW_FARE_BREAKDOWN -> "கட்டண முறிவைக் காண்க"
         TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "கட்டணங்கள் உட்பட மொத்த தொகை : " <> amount
         FARE_BREAKDOWN -> "கட்டண முறிவு"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge

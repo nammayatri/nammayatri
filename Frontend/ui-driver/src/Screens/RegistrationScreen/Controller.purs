@@ -20,6 +20,8 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
+import Data.Maybe (Maybe (..), isJust, fromJust)
+import Debug (spy)
 import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
@@ -47,6 +49,9 @@ import Data.Array as DA
 import Screens.RegistrationScreen.ScreenData as SD
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import Engineering.Helpers.Commons as EHC 
+import Effect.Uncurried (runEffectFn3)
+import PrestoDOM.Core (getPushFn)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -94,12 +99,14 @@ data ScreenOutput = GoBack
                   | LogoutAccount
                   | GoToOnboardSubscription
                   | GoToHomeScreen RegistrationScreenState
+                  | HandleCheckrWebviewExitScreen
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
                   | SSN RegistrationScreenState
                   | ProfileDetailsExit RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
+                  | GetBGVUrl RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -111,6 +118,7 @@ data Action = BackPressed
             | PrimaryButtonAction PrimaryButtonController.Action
             | Refresh
             | ContactSupport
+            | HandleCheckrWebviewExit String
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
             | PrimaryEditTextActionController PrimaryEditText.Action 
             | ReferralCodeTextChanged String
@@ -124,6 +132,7 @@ data Action = BackPressed
             | ExpandOptionalDocs
             | OptionsMenuAction OptionsMenu.Action
             | BottomDrawerListAC BottomDrawerList.Action
+            | OnResumeCallback
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -141,8 +150,8 @@ eval BackPressed state = do
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
   else if state.props.manageVehicle then exit $ GoToHomeScreen state
   else do
-      void $ pure $ JB.minimizeApp ""
-      continue state
+    void $ pure $ JB.minimizeApp ""
+    continue state
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
@@ -161,6 +170,15 @@ eval (RegistrationAction step ) state = do
           ProfileDetails -> exit $ ProfileDetailsExit state
           SocialSecurityNumber -> exit $ SSN state
           VehicleInspectionForm -> exit $ DocCapture state item
+          BackgroundVerification -> 
+            if isJust state.data.bgvUrl 
+            then continueWithCmd state [ do
+              push <- getPushFn Nothing "RegistrationScreen"
+              void $ runEffectFn3 JB.initWebViewOnActivity (Mb.fromMaybe "" state.data.bgvUrl) push OnResumeCallback
+              pure NoAction
+            ]
+            else exit $ GetBGVUrl state
+           
           _ -> continue state
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
@@ -290,7 +308,10 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
 
 eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
 
+eval OnResumeCallback state = exit $ HandleCheckrWebviewExitScreen
+
 eval _ state = update state
+
 
 getStatusValue :: String -> StageStatus
 getStatusValue value = case value of
@@ -301,6 +322,7 @@ getStatusValue value = case value of
   "INVALID" -> FAILED
   "LIMIT_EXCEED" -> FAILED
   "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
+  "UNAUTHORIZED" -> ST.UNAUTHORIZED
   _ -> NOT_STARTED
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus

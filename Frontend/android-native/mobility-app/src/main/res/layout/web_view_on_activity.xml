@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/exitWebViewBtn"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="in.juspay.mobility.app.WebViewOnActivity">
+
+    <!-- unique ID of WebView -->
+
+    <WebView
+        android:id="@+id/web"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:layout_editor_absoluteX="8dp"
+        tools:layout_editor_absoluteY="8dp"></WebView>
+
+    <Button
+        android:id="@+id/exit_button"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="5dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/btn_exit_hv"
+        android:onClick="goBackToRegistrationScreen"
+        android:shadowRadius="2"
+        android:text="X"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body2"
+        android:textColor="#A19C9C"
+        android:textSize="20sp" />
+</RelativeLayout>

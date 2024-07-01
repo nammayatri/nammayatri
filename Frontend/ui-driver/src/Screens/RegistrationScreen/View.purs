@@ -45,8 +45,8 @@ import JBridge  as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
-import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml)
+import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/), discard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, url, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, webView, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -62,18 +62,29 @@ import Resource.Constants as Constant
 import Data.Int (toNumber, floor)
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import PrestoDOM.Elements.Keyed as Keyed 
+import Data.Function.Uncurried (runFn2)
+
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "RegistrationScreen"
-  , globalEvents : []
+  , globalEvents : [(\push -> do
+      _ <- pure $ runFn2 JB.storeOnResumeCallback push OnResumeCallback
+      if initialState.props.showCheckrWebView && (initialState.props.bgvInfo == ST.PendingUserAction)
+        then do
+          let bgvStp = filter(\elem -> elem.stage == BackgroundVerification) initialState.data.registerationStepsCabs
+          case bgvStp of
+            [bgvStp'] -> push $ RegistrationAction bgvStp'
+            _ -> pure unit
+      else pure unit
+      pure (pure unit)
+    )
+  ]
   , eval :
-      ( \state action -> do
-          let _ = spy "RegistrationScreen ----- state" state
-          let _ = spy "RegistrationScreen --------action" action
-          eval state action
+      ( \state action -> eval state action
       )
   }
 
@@ -172,6 +183,8 @@ view push state =
                                       ST.IN_PROGRESS -> Color.yellow900
                                       ST.FAILED -> Color.red
                                       ST.NOT_STARTED -> Color.grey900
+                                      ST.UNAUTHORIZED -> Color.red
+                                      ST.PENDING_REVIEW -> Color.green900
                                   , margin $ MarginLeft if index == 0 then 0 else 15
                                   ]
                                   []
@@ -217,6 +230,7 @@ view push state =
       <> if state.props.contactSupportModal /= ST.HIDE then [contactSupportModal push state] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
       <> if state.props.manageVehicle then [] else if state.props.isApplicationInVerification then [applicationInVerification push state] else []
+      <> if state.props.bgvInfo == ST.Unauthorized || (state.props.bgvInfo == ST.PendingVerification && state.props.otherMandetoryDocsDone) then [applicationInVerification push state] else []
       where 
         documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
         buttonVisibility = if state.props.manageVehicle then all (\docType -> (getStatus docType.stage state) == ST.COMPLETED) $ filter(\elem -> elem.isMandatory) documentList
@@ -439,6 +453,8 @@ listItem push item state =
                       ST.IN_PROGRESS -> Color.yellow900
                       ST.NOT_STARTED -> Color.black500
                       ST.FAILED -> Color.red
+                      ST.UNAUTHORIZED -> Color.red
+                      ST.PENDING_REVIEW -> Color.green900
                       _ -> Color.black500
         in strokeWidth <> colour
 
@@ -449,6 +465,8 @@ listItem push item state =
           ST.IN_PROGRESS -> Color.yellowOpacity10
           ST.NOT_STARTED -> Color.white900
           ST.FAILED -> Color.redOpacity10
+          ST.UNAUTHORIZED -> Color.redOpacity10
+          ST.PENDING_REVIEW -> Color.greenOpacity10
           _ -> Color.white900
 
       compClickable :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
@@ -468,6 +486,8 @@ listItem push item state =
           ST.IN_PROGRESS -> fetchImage COMMON_ASSET "ny_ic_pending"
           ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
           ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
+          ST.UNAUTHORIZED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
+          ST.PENDING_REVIEW -> fetchImage COMMON_ASSET "ny_ic_green_tick"
 
       getVerificationMessage :: ST.RegisterationStep -> ST.RegistrationScreenState -> Maybe String
       getVerificationMessage step state = 
@@ -702,17 +722,17 @@ applicationInVerification push state =
           imageView
           [ height $ V 250
           , width $ V 280
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress"
+          ,  if state.props.bgvInfo == ST.Unauthorized then imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress" else imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress"
           ]
       ]
     , textView $
-      [ text "Application verification in progress."
+      [ if state.props.bgvInfo == ST.Unauthorized then text "Caonnot Move Forward !!!!" else text "Application verification in progress."
       , color Color.black800
       , width MATCH_PARENT
       , gravity CENTER
       ] <> FontStyle.h2 TypoGraphy
     , textView $
-      [ text "Thank you for completing the registration. We will update you once the verification is done."
+      [ if state.props.bgvInfo == ST.Unauthorized then text "Sorry We can't move forward with your onboarding." else text "Thank you for completing the registration. We will update you once the verification is done."
       , color Color.black800
       , width MATCH_PARENT
       , margin $ Margin 16 10 16 0

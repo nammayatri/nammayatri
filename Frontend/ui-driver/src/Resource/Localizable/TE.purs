@@ -1488,3 +1488,9 @@ getTE stringKey =
         VIEW_FARE_BREAKDOWN -> "ఛార్జీల విభజనను వీక్షించండి"
         TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "ఛార్జీలతో సహా మొత్తం : " <> amount
         FARE_BREAKDOWN -> "ఛార్జీల విచ్ఛిన్నం"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge
