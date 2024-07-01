@@ -14,8 +14,6 @@ import qualified Tools.Beam.UtilsTH
 
 data BecknConfig = BecknConfig
   { buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    cancellationFeeAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    cancellationFeePercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     collectedBy :: Domain.Types.BecknConfig.PaymentCollectedBy,
     domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,

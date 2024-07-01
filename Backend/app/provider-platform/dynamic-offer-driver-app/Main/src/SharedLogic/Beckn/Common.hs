@@ -27,6 +27,7 @@ import Domain.Types.Vehicle as SVeh
 import Kernel.External.Maps.Types as Maps
 import Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
+import Kernel.Types.Common as Common
 
 data BookingDetails = BookingDetails
   { ride :: DRide.Ride,
@@ -68,6 +69,7 @@ data DBookingCancelledReq = DBookingCancelledReq
   { booking :: DRB.Booking,
     bookingDetails :: Maybe BookingDetails,
     cancellationSource :: SBCR.CancellationSource,
+    cancellationFee :: Maybe Common.PriceAPIEntity,
     estimateId :: Maybe Text
   }
 

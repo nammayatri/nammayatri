@@ -41,3 +41,13 @@ ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_track_ttl_sec inte
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_status_ttl_sec integer ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_cancel_ttl_sec integer ;
 ALTER TABLE atlas_driver_offer_bpp.beckn_config ADD COLUMN on_update_ttl_sec integer ;
+
+
+
+------- SQL updates -------
+
+
+--- Drop columns section begins. Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.beckn_config DROP COLUMN cancellation_fee_percentage;
+ALTER TABLE atlas_driver_offer_bpp.beckn_config DROP COLUMN cancellation_fee_amount;
+--- Drop columns section ends ---

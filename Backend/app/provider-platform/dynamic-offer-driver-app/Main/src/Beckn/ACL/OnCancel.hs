@@ -114,25 +114,25 @@ buildOnCancelReq action domain messageId bppSubscriberId bppUri city country can
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Spec.Order
-tfOrder booking cancelStatus cancellationSource merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone = do
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> DM.Merchant -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Spec.Order
+tfOrder booking cancelStatus cancellationSource cancellationFee merchant driverName customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone = do
   Spec.Order
     { orderId = Just booking.id.getId,
       orderStatus = Just cancelStatus,
       orderFulfillments = tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle driverPhone,
       orderCancellation = tfCancellation cancellationSource,
       orderBilling = Nothing,
-      orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
+      orderCancellationTerms = Just $ tfCancellationTerms cancellationFee,
       orderItems = tfItems booking merchant mbFarePolicy,
       orderPayments = tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig booking.paymentId,
       orderProvider = BUtils.tfProvider becknConfig,
@@ -311,11 +311,11 @@ tfCancellation cancellationSource =
       SBCR.ByDriver -> Just (show Enums.PROVIDER)
       _ -> Just (show Enums.PROVIDER) -- if it is cancelled by any other source like by ByMerchant, ByAllocator or ByApplication then we are considering as ByProvider
 
-tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
-tfCancellationTerms becknConfig =
+tfCancellationTerms :: Maybe PriceAPIEntity -> [Spec.CancellationTerm]
+tfCancellationTerms cancellationFee =
   L.singleton
     Spec.CancellationTerm
-      { cancellationTermCancellationFee = BUtils.tfCancellationFee becknConfig.cancellationFeeAmount,
+      { cancellationTermCancellationFee = BUtils.tfCancellationFee cancellationFee,
         cancellationTermFulfillmentState = BUtils.tfFulfillmentState Enums.RIDE_CANCELLED,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }

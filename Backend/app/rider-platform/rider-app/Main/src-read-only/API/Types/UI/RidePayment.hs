@@ -16,7 +16,8 @@ newtype AddTipRequest = AddTipRequest {amount :: Kernel.Types.Common.PriceAPIEnt
 data PaymentIntentResponse = PaymentIntentResponse {customerId :: Kernel.External.Payment.Interface.Types.CustomerId, ephemeralKey :: Kernel.Prelude.Text, paymentIntentClientSecret :: Kernel.Prelude.Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype PaymentMethodsResponse = PaymentMethodsResponse {list :: Kernel.External.Payment.Interface.Types.CustomerCardListResp} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data PaymentMethodsResponse = PaymentMethodsResponse {defaultPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId, list :: Kernel.External.Payment.Interface.Types.CustomerCardListResp}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SetupIntentResponse = SetupIntentResponse {customerId :: Kernel.External.Payment.Interface.Types.CustomerId, ephemeralKey :: Kernel.Prelude.Text, setupIntentClientSecret :: Kernel.Prelude.Text}
   deriving (Generic, ToJSON, FromJSON, ToSchema)

@@ -847,9 +847,9 @@ mapRideStatus rideStatus =
     Just DRide.CANCELLED -> Enums.RIDE_CANCELLED
     Nothing -> Enums.RIDE_ASSIGNED
 
-tfCancellationFee :: Maybe Int -> Maybe Spec.Fee
+tfCancellationFee :: Maybe Common.PriceAPIEntity -> Maybe Spec.Fee
 tfCancellationFee Nothing = Nothing
-tfCancellationFee amount = do
+tfCancellationFee (Just price) = do
   Just
     Spec.Fee
       { feeAmount = mkPrice,
@@ -860,11 +860,11 @@ tfCancellationFee amount = do
       Just
         Spec.Price
           { priceComputedValue = Nothing,
-            priceCurrency = Just "INR",
+            priceCurrency = Just $ show price.currency,
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Nothing,
-            priceValue = Just $ encodeToText amount
+            priceValue = Just $ encodeToText price.amount
           }
 
 tfFulfillmentState :: Enums.FulfillmentState -> Maybe Spec.FulfillmentState
@@ -1294,11 +1294,11 @@ buildRateCardTags RateCardBreakupItem {..} =
       tagValue = Just value
     }
 
-tfCancellationTerms :: DBC.BecknConfig -> Maybe Enums.FulfillmentState -> [Spec.CancellationTerm]
-tfCancellationTerms becknConfig state =
+tfCancellationTerms :: Maybe Common.PriceAPIEntity -> Maybe Enums.FulfillmentState -> [Spec.CancellationTerm]
+tfCancellationTerms cancellationFee state =
   List.singleton
     Spec.CancellationTerm
-      { cancellationTermCancellationFee = tfCancellationFee becknConfig.cancellationFeeAmount,
+      { cancellationTermCancellationFee = tfCancellationFee cancellationFee,
         cancellationTermFulfillmentState = mkFulfillmentState <$> state,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }

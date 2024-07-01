@@ -18,11 +18,13 @@ module Domain.Types.OnCancel where
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Kernel.Prelude
+import qualified Kernel.Types.Common as Common
 
 newtype OnCancelBuildReq
   = BookingCancelledBuildReqV2 DBookingCancelledReqV2
 
 data DBookingCancelledReqV2 = DBookingCancelledReqV2
   { booking :: DRB.Booking,
-    cancellationSource :: SBCR.CancellationSource
+    cancellationSource :: SBCR.CancellationSource,
+    cancellationFee :: Maybe Common.PriceAPIEntity
   }

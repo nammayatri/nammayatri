@@ -82,7 +82,7 @@ handler transporterId req = do
             _ -> do
               bookingDetails <- SyncRide.fetchBookingDetails ride booking
               SyncRide.BookingCancelledInfo {..} <- SyncRide.fetchBookingCancelledInfo (Just ride)
-              pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Just bookingDetails, ..}
+              pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Just bookingDetails, cancellationFee = Nothing, ..}
     Nothing -> do
       case booking.status of
         DBooking.NEW -> do
@@ -93,7 +93,7 @@ handler transporterId req = do
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.CANCELLED -> do
           bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing
-          pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Nothing, cancellationSource = bookingCancelledInfo.cancellationSource, ..}
+          pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Nothing, cancellationFee = Nothing, cancellationSource = bookingCancelledInfo.cancellationSource, ..}
         DBooking.REALLOCATED -> do
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
   pure DStatusRes {transporter, booking, info}

@@ -46,6 +46,12 @@ getCustomerPaymentId person =
       QPerson.updateCustomerPaymentId (Just customer.customerId) person.id
       return customer.customerId
 
+checkIfPaymentMethodExists :: Domain.Types.Person.Person -> PaymentMethodId -> Environment.Flow Bool
+checkIfPaymentMethodExists person paymentMethodId = do
+  customerPaymentId <- getCustomerPaymentId person
+  cardList <- Payment.getCardList person.merchantId person.merchantOperatingCityId customerPaymentId
+  return $ paymentMethodId `elem` (cardList <&> (.cardId))
+
 getPaymentMethods ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -61,7 +67,21 @@ getPaymentMethods (mbPersonId, _) = do
   when (maybe False (\dpm -> dpm `notElem` savedPaymentMethodIds) person.defaultPaymentMethodId) $ do
     let firstSavedPaymentMethodId = listToMaybe savedPaymentMethodIds
     QPerson.updateDefaultPaymentMethodId firstSavedPaymentMethodId personId
-  return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp}
+  return $ API.Types.UI.RidePayment.PaymentMethodsResponse {list = resp, defaultPaymentMethodId = person.defaultPaymentMethodId}
+
+postPaymentMethodsMakeDefault ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.External.Payment.Interface.Types.PaymentMethodId ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+postPaymentMethodsMakeDefault (mbPersonId, _) paymentMethodId = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  checkIfPaymentMethodExists person paymentMethodId >>= \case
+    False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
+    True -> QPerson.updateDefaultPaymentMethodId (Just paymentMethodId) personId >> return Success
 
 getPaymentIntentSetup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -105,9 +125,16 @@ postPaymentMethodUpdate (mbPersonId, _) rideId newPaymentMethodId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- check if payment method exists for the customer
+  checkIfPaymentMethodExists person newPaymentMethodId >>= \case
+    False -> throwError $ InvalidRequest "Payment method doesn't belong to Customer"
+    True -> do
+      ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+      booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      unless (booking.riderId == personId) $ throwError $ InvalidRequest "Person is not the owner of the ride"
   order <- runInReplica $ QPaymentOrder.findById (Kernel.Types.Id.cast rideId) >>= fromMaybeM (InternalError $ "No payment order found for the ride " <> rideId.getId)
   Payment.updatePaymentMethodInIntent person.merchantId person.merchantOperatingCityId order.paymentServiceOrderId newPaymentMethodId
-  -- Update booking and person default payment method
+  QPerson.updateDefaultPaymentMethodId (Just newPaymentMethodId) personId
+  -- Update booking payment method
   return Success
 
 deletePaymentMethodsDelete ::

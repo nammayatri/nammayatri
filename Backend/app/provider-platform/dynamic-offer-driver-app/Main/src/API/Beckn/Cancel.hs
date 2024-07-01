@@ -79,47 +79,50 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       pure (dCancelReq, callbackUrl, bapId, messageId, city, country, Just transactionId, context.contextBppId, bppUri)
 
   logDebug $ "Cancel Request: " <> T.pack (show dCancelReq)
-  _ <- case dCancelReq of
-    Left cancelReq -> do
+  case dCancelReq of
+    DCancel.CancelRide cancelRideReq -> do
       internalEndPointHashMap <- asks (.internalEndPointHashMap)
       merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
-      booking <- QRB.findById cancelReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelReq.bookingId.getId)
+      booking <- QRB.findById cancelRideReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelRideReq.bookingId.getId)
       fork "cancel received pushing ondc logs" do
         void $ pushLogs "cancel" (toJSON reqV2) merchant.id.getId
       let onCancelBuildReq =
             OC.DBookingCancelledReqV2
               { booking = booking,
-                cancellationSource = DBCR.ByUser
+                cancellationSource = DBCR.ByUser,
+                cancellationFee = Nothing -- fix this
               }
       let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
       bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
       ttl <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
       context <- ContextV2.buildContextV2 Context.ON_CANCEL Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just ttl)
-      let cancelStatus = A.decode . A.encode =<< cancelReq.cancelStatus
+      let cancelStatus = A.decode . A.encode =<< cancelRideReq.cancelStatus
       case cancelStatus of
         Just Enums.CONFIRM_CANCEL -> do
-          Redis.whenWithLockRedis (cancelLockKey cancelReq.bookingId.getId) 60 $ do
-            (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelReq
+          Redis.whenWithLockRedis (cancelLockKey cancelRideReq.bookingId.getId) 60 $ do
+            (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelRideReq
             mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
-            fork ("cancelBooking:" <> cancelReq.bookingId.getId) $ do
-              isReallocated <- DCancel.cancel cancelReq merchant booking mbActiveSearchTry
+            fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
+              isReallocated <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
               unless isReallocated $ do
                 buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
                 void $
                   Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                     pure buildOnCancelMessageV2
         Just Enums.SOFT_CANCEL -> do
+          -- TODO (Rupak): Calculate cancellation charges and update in fare_parameters, do it domain file. Pass to
           buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
           void $
             Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
               pure buildOnCancelMessageV2
         _ -> throwError $ InvalidRequest "Invalid cancel status"
-    Right cancelSearchReq -> do
+      return Ack
+    DCancel.CancelSearch cancelSearchReq -> do
       searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
       lockAndCall searchTry $ do
         fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
           DCancel.cancelSearch transporterId searchTry
-  return Ack
+      return Ack
   where
     lockAndCall searchTry action = STL.whenSearchTryCancellable searchTry.id action
 

@@ -17,8 +17,8 @@ types:
     customerId: CustomerId
     ephemeralKey: Text
   PaymentMethodsResponse:
-    recordType: NewType
     list: CustomerCardListResp
+    defaultPaymentMethodId: Maybe PaymentMethodId
   AddTipRequest:
     recordType: NewType
     amount: PriceAPIEntity
@@ -28,6 +28,13 @@ apis:
       auth: TokenAuth
       response:
         type: PaymentMethodsResponse
+  - POST:
+      endpoint: /payment/methods/{paymentMethodId}/makeDefault
+      params:
+        paymentMethodId: PaymentMethodId
+      auth: TokenAuth
+      response:
+        type: APISuccess
   - GET:
       endpoint: /payment/intent/setup
       auth: TokenAuth
@@ -40,6 +47,7 @@ apis:
         type: PaymentIntentResponse
   - POST:
       endpoint: /payment/{rideId}/method/{paymentMethodId}/update
+      auth: TokenAuth
       params:
         rideId: Id Ride
         paymentMethodId: PaymentMethodId
@@ -47,12 +55,14 @@ apis:
         type: APISuccess
   - DELETE:
       endpoint: /payment/methods/{paymentMethodId}/delete
+      auth: TokenAuth
       params:
         paymentMethodId: PaymentMethodId
       response:
         type: APISuccess
   - POST:
       endpoint: /payment/{rideId}/addTip
+      auth: TokenAuth
       params:
         rideId: Id Ride
       request:

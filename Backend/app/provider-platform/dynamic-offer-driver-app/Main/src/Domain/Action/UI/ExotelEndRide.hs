@@ -57,7 +57,6 @@ callBasedEndRide ::
 callBasedEndRide shandle merchantId mobileNumberHash callFrom = do
   driver <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchantId DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  _ <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
-  _ <- QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
-  _ <- EndRide.callBasedEndRide shandle activeRide.id (EndRide.CallBasedEndRideReq driver)
+  void $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
+  void $ EndRide.callBasedEndRide shandle activeRide.id (EndRide.CallBasedEndRideReq driver)
   return Ack

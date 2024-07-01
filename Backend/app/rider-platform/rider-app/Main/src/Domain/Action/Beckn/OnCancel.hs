@@ -16,27 +16,26 @@
 module Domain.Action.Beckn.OnCancel
   ( onCancel,
     validateRequest,
+    onSoftCancel,
     OnCancelReq (..),
+    ValidatedOnCancelReq (..),
   )
 where
 
 import qualified BecknV2.OnDemand.Enums as Enums
-import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
+import Environment
 import Environment ()
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Sms.Config (SmsConfig)
-import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.MerchantConfig as CMC
@@ -46,39 +45,24 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Event
-import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
 
 data OnCancelReq = BookingCancelledReq
   { bppBookingId :: Id SRB.BPPBooking,
-    cancellationSource :: Maybe Text
+    cancellationSource :: Maybe Text,
+    cancellationFee :: Maybe PriceAPIEntity
   }
 
 data ValidatedOnCancelReq = ValidatedBookingCancelledReq
   { bppBookingId :: Id SRB.BPPBooking,
     cancellationSource :: Maybe Text,
     booking :: SRB.Booking,
+    cancellationFee :: Maybe PriceAPIEntity,
     mbRide :: Maybe SRide.Ride
   }
 
-onCancel ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
-    EncFlow m r,
-    EsqDBReplicaFlow m r,
-    HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasBAPMetrics m r,
-    EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds,
-    ClickhouseFlow m r
-  ) =>
-  ValidatedOnCancelReq ->
-  m ()
+-- TODO (Rupak): this is being called by BPP if cancellation initiated by customer
+onCancel :: ValidatedOnCancelReq -> Flow ()
 onCancel ValidatedBookingCancelledReq {..} = do
   let cancellationSource_ :: Maybe Enums.CancellationSource = readMaybe . T.unpack =<< cancellationSource
   logTagInfo ("BookingId-" <> getId booking.id) ""
@@ -112,6 +96,9 @@ onCancel ValidatedBookingCancelledReq {..} = do
     castCancellatonSource = \case
       Just Enums.CONSUMER -> SBCR.ByUser
       _ -> SBCR.ByDriver
+
+onSoftCancel :: ValidatedOnCancelReq -> Flow ()
+onSoftCancel _ = logDebug "Soft cancel not implemented" -- TODO (Rupak): store cancellation fee in fare params
 
 validateRequest ::
   ( CacheFlow m r,

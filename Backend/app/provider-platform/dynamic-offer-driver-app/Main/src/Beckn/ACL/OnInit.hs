@@ -41,7 +41,7 @@ tfOrder res becknConfig mbFarePolicy = do
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
-      orderCancellationTerms = Just $ tfCancellationTerms becknConfig,
+      orderCancellationTerms = Just $ tfCancellationTerms res.cancellationFee,
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,
       orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId Nothing farePolicy (Just res.paymentId),
@@ -89,11 +89,11 @@ tfVehicle res = do
         vehicleCapacity = Nothing
       }
 
-tfCancellationTerms :: DBC.BecknConfig -> [Spec.CancellationTerm]
-tfCancellationTerms becknConfig =
+tfCancellationTerms :: Maybe PriceAPIEntity -> [Spec.CancellationTerm]
+tfCancellationTerms cancellationFee =
   L.singleton
     Spec.CancellationTerm
-      { cancellationTermCancellationFee = Utils.tfCancellationFee becknConfig.cancellationFeeAmount,
+      { cancellationTermCancellationFee = Utils.tfCancellationFee cancellationFee,
         cancellationTermFulfillmentState = Utils.tfFulfillmentState Enums.RIDE_ASSIGNED,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }

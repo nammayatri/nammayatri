@@ -50,8 +50,6 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.buyerFinderFee buyerFinderFee,
-      Se.Set Beam.cancellationFeeAmount cancellationFeeAmount,
-      Se.Set Beam.cancellationFeePercentage cancellationFeePercentage,
       Se.Set Beam.collectedBy collectedBy,
       Se.Set Beam.domain domain,
       Se.Set Beam.gatewayUrl (Kernel.Prelude.showBaseUrl gatewayUrl),
@@ -89,8 +87,6 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
       Just
         Domain.Types.BecknConfig.BecknConfig
           { buyerFinderFee = buyerFinderFee,
-            cancellationFeeAmount = cancellationFeeAmount,
-            cancellationFeePercentage = cancellationFeePercentage,
             collectedBy = collectedBy,
             domain = domain,
             gatewayUrl = gatewayUrl',
@@ -122,8 +118,6 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' (Domain.Types.BecknConfig.BecknConfig {..}) = do
     Beam.BecknConfigT
       { Beam.buyerFinderFee = buyerFinderFee,
-        Beam.cancellationFeeAmount = cancellationFeeAmount,
-        Beam.cancellationFeePercentage = cancellationFeePercentage,
         Beam.collectedBy = collectedBy,
         Beam.domain = domain,
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
