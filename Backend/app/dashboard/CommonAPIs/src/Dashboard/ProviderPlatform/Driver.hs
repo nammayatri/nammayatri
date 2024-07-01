@@ -896,7 +896,8 @@ data FleetEarningRes = FleetEarningRes
     vehicleType :: Maybe Variant,
     totalDuration :: TotalDuration,
     distanceTravelled :: Double,
-    driverPhoneNo :: Maybe Text
+    driverPhoneNo :: Maybe Text,
+    cancelledRides :: Int
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -912,6 +913,7 @@ data FleetTotalEarningResponse = FleetTotalEarningResponse
     totalVehicle :: Int,
     conversionRate :: Double,
     cancellationRate :: Double,
+    cancelledRides :: Int,
     totalDistanceTravelled :: Double
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)

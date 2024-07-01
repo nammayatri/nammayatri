@@ -1869,11 +1869,11 @@ fleetTotalEarning _merchantShortId _ fleetOwnerId mbFrom mbTo = do
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  (totalEarning, totalDistanceTravelled, totalRides) <- CQRide.totalRidesStatsInFleet (Just fleetOwnerId) from to
+  (totalEarning, totalDistanceTravelled, completedRides, cancelledRides) <- CQRide.totalRidesStatsInFleet (Just fleetOwnerId) from to
   totalVehicle <- VRCQuery.countAllActiveRCForFleet fleetOwnerId merchant.id
-  let conversionRate = 0.0 --------- currently we don't require this
-  let cancellationRate = 0.0
-  pure $ Common.FleetTotalEarningResponse {totalDistanceTravelled = fromIntegral totalDistanceTravelled / 1000.0, ..}
+  let conversionRate = fromIntegral completedRides / fromIntegral (completedRides + cancelledRides)
+  let cancellationRate = fromIntegral cancelledRides / fromIntegral (completedRides + cancelledRides)
+  pure $ Common.FleetTotalEarningResponse {totalDistanceTravelled = fromIntegral totalDistanceTravelled / 1000.0, totalRides = completedRides, ..}
 
 fleetVehicleEarning :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.FleetEarningListRes
 fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOffset mbFrom mbTo = do
@@ -1885,7 +1885,7 @@ fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOf
   listOfAllRc <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset Nothing merchant.id
   res <- forM listOfAllRc $ \rc -> do
     rcNo <- decrypt rc.certificateNumber
-    (totalEarning, distanceTravelled, totalRides, duration) <- CQRide.fleetStatsByVehicle fleetOwnerId rcNo from to
+    (totalEarning, distanceTravelled, totalRides, duration, cancelledRides) <- CQRide.fleetStatsByVehicle fleetOwnerId rcNo from to
     pure $
       Common.FleetEarningRes
         { driverId = Nothing,
@@ -1897,7 +1897,8 @@ fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOf
           vehicleType = castVehicleVariantDashboard rc.vehicleVariant,
           totalDuration = duration,
           distanceTravelled = fromIntegral distanceTravelled / 1000.0,
-          driverPhoneNo = Nothing
+          driverPhoneNo = Nothing,
+          cancelledRides = cancelledRides
         }
   let summary = Common.Summary {totalCount = 10000, count = length res}
   pure $ Common.FleetEarningListRes {fleetEarningRes = res, summary}
@@ -1915,20 +1916,21 @@ fleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPh
   rideIds <- findIdsByFleetOwner (Just fleetOwnerId) from to
   res <- forM driverListWithInfo $ \(driver, driverInfo') -> do
     let dId = cast @DP.Person @Common.Driver driver.id
-    (totalEarning, distanceTravelled, totalRides, duration) <- CQRide.fleetStatsByDriver rideIds (Just driver.id) from to
+    (totalEarning, distanceTravelled, completedRides, duration, cancelledRides) <- CQRide.fleetStatsByDriver rideIds (Just driver.id) from to
     let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
     pure $
       Common.FleetEarningRes
         { driverId = Just dId,
           driverName = Just driverName,
-          totalRides = totalRides,
+          totalRides = completedRides,
           totalEarning = totalEarning,
           vehicleNo = Nothing,
           status = Just $ castDriverStatus driverInfo'.mode,
           vehicleType = Nothing,
           totalDuration = duration,
-          distanceTravelled = (fromIntegral distanceTravelled) / 1000.0,
-          driverPhoneNo = driver.unencryptedMobileNumber
+          distanceTravelled = fromIntegral distanceTravelled / 1000.0,
+          driverPhoneNo = driver.unencryptedMobileNumber,
+          cancelledRides = cancelledRides
         }
   let summary = Common.Summary {totalCount = 10000, count = length res}
   pure $ Common.FleetEarningListRes {fleetEarningRes = res, summary}

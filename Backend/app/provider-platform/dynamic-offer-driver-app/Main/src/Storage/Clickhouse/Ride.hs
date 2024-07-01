@@ -58,6 +58,15 @@ type Ride = RideT Identity
 
 $(TH.mkClickhouseInstances ''RideT)
 
+data RideStats = RideStats
+  { totalEarnings :: Int,
+    totalDistanceTravelled :: Int,
+    totalRides :: Int,
+    totalDuration :: Int,
+    rideStatus :: Maybe DRide.RideStatus
+  }
+  deriving (Show)
+
 getCompletedRidesByDriver ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DRide.Ride] ->
@@ -155,7 +164,7 @@ getCompletedRidesStatsByIdsAndDriverId ::
   Maybe (Id DP.Person) ->
   UTCTime ->
   UTCTime ->
-  m (Int, Int, Int, Int)
+  m [RideStats]
 getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to = do
   res <-
     CH.findAll $
@@ -165,21 +174,19 @@ getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to = do
             let distanceTravelled = CH.sum_ ride.chargeableDistance
             let count = CH.count_ ride.id
             let duration = CH.sum_ (CH.timeDiff ride.createdAt ride.updatedAt)
-            CH.aggregate (earnings, distanceTravelled, count, duration)
+            CH.groupBy ride.status $ \status -> do
+              (earnings, distanceTravelled, count, duration, status)
         )
         $ CH.filter_
           ( \ride _ ->
-              ride.status CH.==. Just DRide.COMPLETED
+              ride.status `in_` [Just DRide.COMPLETED, Just DRide.CANCELLED]
                 CH.&&. ride.createdAt >=. from
                 CH.&&. ride.createdAt <=. to
                 CH.&&. ride.id `in_` rideIds
                 CH.&&. CH.whenJust_ mbDriverId (\driverId -> ride.driverId CH.==. Just (cast driverId))
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
-  case res of
-    [] -> pure (0, 0, 0, 0)
-    [(earnings, distanceTravelled, count, duration)] -> pure (fromMaybe 0 earnings, fromMaybe 0 distanceTravelled, count, duration)
-    _ -> throwError $ InternalError "getEarningsByDriver query returns more than 1 response"
+  pure $ mkRideStatsByRideStatus <$> res
 
 totalEarningsByFleetOwnerPerVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> UTCTime -> UTCTime -> m Int
 totalEarningsByFleetOwnerPerVehicle fleetOwnerId vehicleNumber from to = do
@@ -211,19 +218,21 @@ totalEarningsByFleetOwnerPerVehicleAndDriver fleetOwnerId vehicleNumber driverId
   rideIds <- findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber from to
   getEarningsByDriver (cast <$> rideIds) driverId from to
 
-totalRidesStatsInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> UTCTime -> UTCTime -> m (Int, Int, Int)
+totalRidesStatsInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> UTCTime -> UTCTime -> m (Int, Int, Int, Int)
 totalRidesStatsInFleet fleetOwnerId from to = do
   rideIds <- findIdsByFleetOwner fleetOwnerId from to
-  (totalEarning, distanceTravelled, totalCompletedRides, _) <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) Nothing from to
-  pure (totalEarning, distanceTravelled, totalCompletedRides)
+  rideStats <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) Nothing from to
+  let (totalEarning, totalDistanceTravelled, _, totalCompletedRides, totalCancelledRides) = getFleetStats rideStats
+  pure (totalEarning, totalDistanceTravelled, totalCompletedRides, totalCancelledRides)
 
-fleetStatsByDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [Id RideDetails.RideDetails] -> Maybe (Id DP.Person) -> UTCTime -> UTCTime -> m (Int, Int, Int, DC.TotalDuration)
+fleetStatsByDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [Id RideDetails.RideDetails] -> Maybe (Id DP.Person) -> UTCTime -> UTCTime -> m (Int, Int, Int, DC.TotalDuration, Int)
 fleetStatsByDriver rideIds mbDriverId from to = do
-  (totalEarning, distanceTravelled, totalCompletedRides, duration) <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) mbDriverId from to
+  rideStats <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) mbDriverId from to
+  let (totalEarning, totalDistanceTravelled, duration, totalCompletedRides, totalCancelledRides) = getFleetStats rideStats
   let totalDuration = calculateTimeDifference duration
-  pure (totalEarning, distanceTravelled, totalCompletedRides, totalDuration)
+  pure (totalEarning, totalDistanceTravelled, totalCompletedRides, totalDuration, totalCancelledRides)
 
-fleetStatsByVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Text -> Text -> UTCTime -> UTCTime -> m (Int, Int, Int, DC.TotalDuration)
+fleetStatsByVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Text -> Text -> UTCTime -> UTCTime -> m (Int, Int, Int, DC.TotalDuration, Int)
 fleetStatsByVehicle fleetOwnerId vehicleNumber from to = do
   rideIds <- findIdsByFleetOwnerAndVehicle (Just fleetOwnerId) vehicleNumber from to
   fleetStatsByDriver rideIds Nothing from to
@@ -242,3 +251,22 @@ calculateTimeDifference diffTime = DC.TotalDuration {..}
 
     minutes :: Int
     minutes = floor (remainingSeconds / 60)
+
+mkRideStatsByRideStatus :: (Maybe Int, Maybe Int, Int, Int, Maybe DRide.RideStatus) -> RideStats
+mkRideStatsByRideStatus (earnings, distanceTravelled, count, duration, status) = RideStats {..}
+  where
+    totalEarnings = fromMaybe 0 earnings
+    totalDistanceTravelled = fromMaybe 0 distanceTravelled
+    totalRides = count
+    totalDuration = duration
+    rideStatus = status
+
+getFleetStats :: [RideStats] -> (Int, Int, Int, Int, Int)
+getFleetStats rideStats =
+  let completedRides = filter (\ride -> ride.rideStatus == Just DRide.COMPLETED) rideStats
+      totalEarning = sum $ totalEarnings <$> completedRides
+      distanceTravelled = sum $ totalDistanceTravelled <$> completedRides
+      totalCompletedRides = sum $ totalRides <$> completedRides
+      cancelledRides = sum $ totalRides <$> filter (\ride -> ride.rideStatus == Just DRide.CANCELLED) rideStats
+      duration = sum $ totalDuration <$> completedRides
+   in (totalEarning, distanceTravelled, duration, totalCompletedRides, cancelledRides)
