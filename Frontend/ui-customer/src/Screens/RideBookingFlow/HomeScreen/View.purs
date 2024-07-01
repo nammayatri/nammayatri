@@ -811,7 +811,7 @@ showLiveStatsDashboard push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "webview")
-      , url state.data.config.dashboard.url
+      , url "http://pp-app-nammayatri.redbus.in/?mobileNo=BdlFEM2Y58UhKSJhQcQdLA=="
       ]]
 
 driverCallPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
