@@ -183,3 +183,6 @@ homeScreen = do
     GoToRideReqScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_REQ_SCREEN )
+    GoToRideSummary updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> pure GO_TO_RIDE_SUMMARY
