@@ -80,6 +80,7 @@ data NotificationType
   | CANCELLED_PRODUCT
   | DRIVER_ASSIGNMENT
   | RIDE_REQUESTED
+  | TRIP_STARTED
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow

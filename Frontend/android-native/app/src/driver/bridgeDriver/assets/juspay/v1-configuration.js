@@ -19,7 +19,8 @@ window.getMerchantConfig = function () {
                    "BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION" ,
                    "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT",
                    "VEHICLE_REGISTRATION_NUMBER",
-                   "RE_ENTER_VEHICLE_REGISTRATION_NUMBER"],
+                   "RE_ENTER_VEHICLE_REGISTRATION_NUMBER",
+                   "DOWNLOAD_NAMMA_YATRI"],
     "fontType": "Assets",
     "currency": "$",
     "distanceUnit": "mi",
@@ -61,7 +62,8 @@ window.getMerchantConfig = function () {
       "BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION" : "Connecting Minneapolis!",
       "OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT" : "App by the Drivers, for the People.\n People before profits, always!",
       "VEHICLE_REGISTRATION_NUMBER": "Vehicle Number Plate",
-      "RE_ENTER_VEHICLE_REGISTRATION_NUMBER": "Re-enter Vehicle Number Plate"
+      "RE_ENTER_VEHICLE_REGISTRATION_NUMBER": "Re-enter Vehicle Number Plate",
+      "DOWNLOAD_NAMMA_YATRI" : "Download Bridge"
     },
     "hindiStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "नम्मा यात्री पार्टनर ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
@@ -116,6 +118,7 @@ window.getMerchantConfig = function () {
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "leaderBoard": {
       "isMaskedName": false
+     , "enable" : false
     }
     , "subscriptionConfig" : {
           "enableBlocking" : false,
@@ -182,7 +185,7 @@ window.getMerchantConfig = function () {
           "showNew": false
         },
         "referral": {
-          "isVisible": false,
+          "isVisible": true,
           "showNew": false
         },
         "notifications": {
@@ -252,7 +255,7 @@ window.getMerchantConfig = function () {
       , "emailAuth" : false
       }
   , "defaultCountryCodeConfig" : {
-      "countryName" : "United States"
+      "countryName" : "UnitedStates"
     , "countryCode"  : "+91"
     , "countryShortCode" : "US"
     }
@@ -267,10 +270,26 @@ window.getMerchantConfig = function () {
   , "vehicleRegisterationScreen" : {
       "collectVehicleDetails" : true
   }
+  , "vehicleRegisterationScreen" : {
+    "collectVehicleDetails" : true
+  }
   , "bookingPreferencesConfig" : {
       "primaryToggleBackground": "#7D4BFF"
     , "vehicleNumberBackground" : "#E0D1FF"
     , "vehicleNumberRadius" : 15.0
+  }
+  , "benefitsScreen" : {
+      "learnAndEarnItem" : {
+          "statusBackground" : "#7D4BFF"
+      }
+  , "referralCardBackground":
+          { "customer": "#F1F2F7"
+          , "driver": "#E0D1FF"
+          }
+  }
+  , "lmsVideoScreen": {
+      "titleBackground" : "#F6F1FF"
+    , "enableQuiz" : false
   }
   , "homeScreen": {
           "offlineBtnColor" : "#7D4BFF",

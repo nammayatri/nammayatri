@@ -154,7 +154,7 @@ endRidePopUp state = let
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
     option1 {text = (getString GO_BACK), enableRipple = true},
-    option2 {text = (getString END_RIDE), enableRipple = true}
+    option2 {text = (getString END_RIDE), enableRipple = true, background = state.data.config.primaryBackground, color = state.data.config.primaryTextColor }
   }
 in popUpConfig'
 
@@ -605,9 +605,9 @@ cancelConfirmationConfig state = let
       text = (getString GO_BACK)
     , margin = MarginLeft 12
     , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryBackground
+    , background = state.data.config.primaryBackground
     , enableRipple = true
     },
     backgroundClickable = false,

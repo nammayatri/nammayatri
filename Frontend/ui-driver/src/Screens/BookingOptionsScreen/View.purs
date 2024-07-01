@@ -398,7 +398,7 @@ toggleView push state enabled default service =
     linearLayout
       [ width $ V 40
       , height $ V 22
-      , cornerRadius 11.0
+      , cornerRadius 100.0
       , alpha if default then 0.5 else 1.0
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
@@ -407,7 +407,7 @@ toggleView push state enabled default service =
       , clickable $ not default
       ]
       [ linearLayout
-          [ width $ V 40
+          [ width MATCH_PARENT
           , height WRAP_CONTENT
           , gravity align
           ]
@@ -415,7 +415,7 @@ toggleView push state enabled default service =
               [ width $ V 16
               , height $ V 16
               , background Color.white900
-              , cornerRadius 8.0
+              , cornerRadius 100.0
               , gravity CENTER_VERTICAL
               , margin (MarginHorizontal 2 2)
               ]
@@ -609,27 +609,30 @@ rateCardBannerView push state =
         , shimmerFrameLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , background Color.white900
           , visibility $ MP.boolToVisibility $ peakTime
-          , alpha 0.3
+          , cornerRadius 8.0
+          , alpha if EHC.os == "IOS" then 0.2 else 1.0
           ][  textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
+              , color Color.white900
+              , background bgColor
               , padding $ Padding 8 1 8 2
               , gravity CENTER
-              , cornerRadius 8.0
-              , text "↑ Peak"
+              , cornerRadius cornerRad
+              , text txt
+              , visibility $ if EHC.os == "IOS" then VISIBLE else INVISIBLE
               ] <> FontStyle.body1 TypoGraphy
           ]
       ]
   , textView $
     [ height WRAP_CONTENT
-    , weight 1.0
     , color Color.black800
     , margin $ Margin 6 0 0 1
     , text $ (HU.appName true) <> " " <> getString RATE_CARD
     ]
     <> FontStyle.subHeading1 TypoGraphy
+  , linearLayout[weight 1.0][]
   , imageView
     [ width $ V 18
     , height $ V 18

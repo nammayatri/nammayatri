@@ -23,7 +23,8 @@ config =
   , popupBackground : "#FFFFFF"
   , defaultLanguage : "EN_US"
   , leaderBoard :{
-    isMaskedName : true
+    isMaskedName : true,
+    enable : true
   }
   , rideCompletedCardConfig : {
       showSavedCommission : false,
@@ -602,8 +603,48 @@ config =
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
               }
-            }, 
-            {
+            },
+            { 
+              cityName: "Minneapolis"
+            , mapImage: "ny_ic_minneapolis_map"
+            , cityCode: "std:0820"
+            , showSubscriptions: false
+            , advancedRidePopUpYoutubeLink : ""
+            , callDriverInfoPost: false
+            , enableAdvancedBooking : false
+            , cityLat: 44.977753
+            , cityLong: - 93.2650108
+            , supportNumber: "+19522390127"
+            , supportMail : "drivers@bridge.cab"
+            , languageKey: "EN_US"
+            , showDriverReferral: true
+            , mandatoryDriverReferral: true
+            , showCustomerReferral: false
+            , uploadRCandDL: true
+            , enableYatriCoins: false
+            , vehicleNSImg : ""
+            , registration: registrationConfig{defVariantList = [CTA.CarCategory], enableAc = false, enableDataOfIssue = false, emailSupport = true}
+            , variantSubscriptionConfig:
+                { enableVariantBasedSubscription: false
+                , variantList: []
+                , enableCabsSubscriptionView: false
+                , staticViewPlans: getStaticViewPlans
+                }
+            , showEarningSection: false
+            , referral:
+                { domain: "https//nammayatri.in"
+                , customerAppId: "in.juspay.nammayatri"
+                , driverAppId: "in.juspay.nammayatripartner"
+                }
+            , waitingCharges : 1.50
+            , waitingChargesConfig : defWaitingChargesConfig
+            , rentalWaitingChargesConfig : defRentalWaitingChargesConfig
+            , rateCardConfig : defRateCardConfig
+            , assets :{
+              auto_image : "ic_auto_rickshaw",
+              onboarding_auto_image : "ny_ic_auto_right_side_black"
+            }
+          },{
               cityName : "Kochi",
               mapImage : "ny_ic_kochi_map",
               cityCode : "std:0484",
@@ -619,11 +660,13 @@ config =
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : true,
+              supportMail : "",
+              mandatoryDriverReferral: false,
               vehicleNSImg : "ny_ic_auto_image",
-              registration : {
-                  supportWAN : "918618963188",
-                  callSupport : true,
-                  whatsappSupport : true
+              registration : registrationConfig {
+                  supportWAN = "918618963188",
+                  callSupport = true,
+                  whatsappSupport = true
               },
               variantSubscriptionConfig : {
                 enableVariantBasedSubscription : true,
@@ -637,7 +680,7 @@ config =
               , customerAppId : "in.juspay.nammayatri"
               , driverAppId : "in.juspay.nammayatripartner"
             },
-            waitingCharges : 1.00,
+            waitingCharges : 1.50,
             waitingChargesConfig : defWaitingChargesConfig,
             rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
             rateCardConfig : defRateCardConfig,
@@ -809,6 +852,19 @@ config =
     , vehicleNumberBackground : "#E9BE4D"
     , vehicleNumberRadius : 6.0
   }
+  , benefitsScreen:
+      { learnAndEarnItem:
+          { statusBackground: "#2194FF"
+          }
+      , referralCardBackground:
+          { customer: "#80B2FFCC"
+          , driver: "#FCC32C"
+          }
+      }
+  , lmsVideoScreen: {
+    titleBackground : "#f4F7FF",
+    enableQuiz : true
+  }
   }
 
 registrationConfig :: CTC.RegistrationConfig
@@ -900,6 +956,10 @@ dummyCityConfig = {
     , driverAppId : ""
   },
   waitingCharges : 1.50,
+  assets :{
+    auto_image : "ic_auto_rickshaw",
+    onboarding_auto_image : "ny_ic_auto_right_side_black"
+  },
   waitingChargesConfig : {
     cab : {
       freeSeconds : 5,
@@ -909,6 +969,7 @@ dummyCityConfig = {
       freeSeconds : 3,
       perMinCharges : 1.50
     }
-  },
-  rateCardConfig : defRateCardConfig
+  }
+  , rentalWaitingChargesConfig : defRentalWaitingChargesConfig
+  , rateCardConfig : defRateCardConfig
 }

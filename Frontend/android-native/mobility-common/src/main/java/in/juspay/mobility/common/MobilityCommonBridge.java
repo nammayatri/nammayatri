@@ -246,6 +246,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String storeLocateOnMapCallBack = null;
     protected String storeDashboardCallBack = null;
     private String storeImageUploadCallBack = null;
+    private String storeCallBackOpenCamera = null;
     private String storeUploadMultiPartCallBack = null;
     protected Marker userPositionMarker;
     private final UICallBacks callBack;

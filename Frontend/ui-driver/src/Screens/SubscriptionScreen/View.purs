@@ -50,7 +50,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (convertUTCtoISC, flowRunner, getImageUrl, getNewIDWithTag, liftFlow, screenHeight, screenWidth)
+import Engineering.Helpers.Commons (convertUTCtoISC, flowRunner, getImageUrl, getNewIDWithTag, liftFlow, screenHeight, screenWidth, safeMarginTop, safeMarginBottom)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getValueBtwRange, getAssetsBaseUrl)
@@ -82,6 +82,7 @@ import Locale.Utils
 import RemoteConfig (ReelItem(..))
 import Mobility.Prelude as MP
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Debug
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -175,21 +176,18 @@ view push state =
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
   , background Color.white900
+  , padding $ PaddingVertical safeMarginTop safeMarginBottom
   ][  relativeLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
-      , orientation VERTICAL
       , gravity CENTER
       ][ Anim.screenAnimationFadeInOut $
           linearLayout
           [ width MATCH_PARENT
           , height MATCH_PARENT
-          , weight 1.0
           , orientation VERTICAL
           ][ errorView push state
             , shimmerView state
@@ -212,8 +210,6 @@ view push state =
           , width MATCH_PARENT
           , orientation VERTICAL
           , background if state.props.myPlanProps.isDueViewExpanded && state.props.subView == MyPlan then Color.blackLessTrans else Color.transparent
-          , clickable $ state.props.myPlanProps.isDueViewExpanded && state.props.subView == MyPlan
-          , onClick push $ const $ if state.props.myPlanProps.isDueViewExpanded then ToggleDueDetailsView else NoAction
           , gravity BOTTOM
           ][ duesView push state
            , if any (_ == state.props.subView) [MyPlan, JoinPlan, NoSubView] && not state.props.isEndRideModal then BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.SUBSCRIPTION_SCREEN state.data.config.bottomNavConfig) else dummyView
@@ -243,7 +239,7 @@ view push state =
 joinPlanView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 joinPlanView push state visibility' = 
   PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
-  linearLayout
+  relativeLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
@@ -254,12 +250,12 @@ joinPlanView push state visibility' =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
+    , gradient $ Linear 180.0 state.data.config.profile.backgroundGradient
     ][
-      if state.data.config.subscriptionConfig.showLottieSubscriptionScreen then lottieView state "lottieSubscriptionScreen" (Margin 0 0 0 0) (Padding 16 16 16 0) else linearLayout[][]
+      if state.data.config.subscriptionConfig.showLottieSubscriptionScreen then lottieView state "lottieSubscriptionScreen" (Margin 0 0 0 0) (Padding 16 16 16 0) else textView[]
     , relativeLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
-      , gradient $ Linear 180.0 state.data.config.profile.backgroundGradient
       ][  imageView
           [ width $ V 116
           , height $ V 368
@@ -267,9 +263,9 @@ joinPlanView push state visibility' =
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImageType
           ]
         , enjoyBenefitsView push state
-        , plansBottomView push state
       ]
     ]
+   , plansBottomView push state
   ]
   where 
     driverImageType = 
@@ -404,6 +400,7 @@ plansBottomView push state =
   , cornerRadii $ Corners 20.0 true true false false
   , background Color.white900
   , padding $ Padding 20 20 20 16
+  , orientation VERTICAL
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -450,16 +447,15 @@ plansBottomView push state =
           , visibility if not config.showHowThisWorks && state.props.joinPlanProps.isIntroductory then GONE else VISIBLE
           , onClick (\action -> do
                         let url = if state.data.config.subscriptionConfig.myPlanYoutubeLink == "" then state.data.config.subscriptionConfig.faqLink else HU.splitBasedOnLanguage state.data.config.subscriptionConfig.myPlanYoutubeLink
-                        _ <- push action
-                        _ <- pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
-                        _ <- pure $ JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
-                        _ <- pure $ JB.firebaseLogEvent "ny_driver_nyplans_watchvideo_clicked"
-                        _ <- JB.openUrlInApp url
-                        pure unit
+                            _ = JB.metaLogEvent "ny_driver_nyplans_watchvideo_clicked"
+                        void $ pure $ JB.cleverTapCustomEvent "ny_driver_nyplans_watchvideo_clicked"
+                        void $ JB.firebaseLogEvent "ny_driver_nyplans_watchvideo_clicked"
+                        void $ JB.openUrlInApp url
+                        push action
                         ) (const NoAction)
           ][ textView $
               [ height WRAP_CONTENT
-              , width $ V $ JB.getWidthFromPercent 70
+              , width WRAP_CONTENT-- $ V $ JB.getWidthFromPercent 70 -- TODO ENABLE when visiblility is toggled.
               , gravity LEFT
               , text ( (languageSpecificTranslation (getString GET_FREE_TRAIL_UNTIL) state.data.joinPlanData.subscriptionStartDate) <> " ✨")
               , color Color.black800
@@ -486,21 +482,17 @@ plansBottomView push state =
           , background Color.grey700
           , margin $ MarginVertical 10 10
           ][]
-        , scrollView
-          [ width MATCH_PARENT
-          , weight 1.0
-          ][ linearLayout
-              [ weight 1.0
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              ](map 
-                  (\item ->
-                    let selectedPlan = state.props.joinPlanProps.selectedPlanItem
-                    in case selectedPlan of
-                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] config
-                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] config
-                  ) state.data.joinPlanData.allPlans)
-          ]
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ](map 
+              (\item ->
+                let selectedPlan = state.props.joinPlanProps.selectedPlanItem
+                in case selectedPlan of
+                    Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] config
+                    Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] config
+              ) state.data.joinPlanData.allPlans)
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
       ]
   ]
@@ -676,64 +668,74 @@ headerView push state =
   let config = getHeaderConfig state.props.subView (state.props.myPlanProps.dueType /= AUTOPAY_PAYMENT) state.props.myPlanProps.multiTypeDues
   in 
     linearLayout
-    [ height $ V 55
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , gravity CENTER_VERTICAL
-    , padding $ PaddingLeft 16
-    , background Color.white900
-    , stroke $ "1," <> Color.grey900
-    ][ imageView
-      [ width $ V 24
-      , height $ V 24
-      , margin $ MarginRight 16
-      , visibility if config.backbutton || state.props.isEndRideModal then VISIBLE else GONE
-      , onClick push $ const $ BackPressed
-      , imageWithFallback $ if config.backbutton then HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_chevron_left"
-                          else if state.props.isEndRideModal then HU.fetchImage HU.FF_ASSET "ny_ic_close_bold"
-                          else ""
-      ]
-    , textView $
-      [ text config.title
-      , color Color.darkCharcoal
-      , padding $ PaddingBottom 4
-      , weight 1.0
-      ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
-    , linearLayout [
-        height WRAP_CONTENT
-        , padding $ Padding 10 10 10 10
+    , orientation VERTICAL
+    ][  linearLayout
+        [ height $ V 55
+        , width MATCH_PARENT
         , gravity CENTER_VERTICAL
-        , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] && not state.props.joinPlanProps.isIntroductory then VISIBLE else GONE
-      ][
-        imageView [
-          imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_blue"
-          , height $ V 56
-          , width $ V 56
-          , padding $ Padding 16 16 16 15
-          , margin $ MarginRight 3
-          , onClick push $ const $ CallSupport
-          ]
-        , textView
-          $ [ textFromHtml config.actionText
-          , visibility GONE -- Not being used now.
-          , padding $ PaddingBottom 3
-          , color Color.blue800
-          ] <> FontStyle.body1 TypoGraphy
+        , padding $ PaddingLeft 16
+        , background Color.white900
+        ][ if config.backbutton || state.props.isEndRideModal 
+            then imageView
+              [ width $ V 24
+              , height $ V 24
+              , margin $ MarginRight 16
+              , onClick push $ const $ BackPressed
+              , imageWithFallback $ if config.backbutton then HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_chevron_left"
+                                  else if state.props.isEndRideModal then HU.fetchImage HU.FF_ASSET "ny_ic_close_bold"
+                                  else ""
+              ]
+            else textView []
+        , textView $
+          [ text config.title
+          , color Color.darkCharcoal
+          , padding $ PaddingBottom 4
+          , weight 1.0
+          ] <> if state.props.isSelectedLangTamil then FontStyle.body7 TypoGraphy else FontStyle.h2 TypoGraphy
         , linearLayout [
-            height $ V 20
-            , width $ V 1
-            , background Color.grey900
-            , visibility if state.props.subView == MyPlan then VISIBLE else GONE
-          ][]
-        , imageView [
-            imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_settings_filled_blue"
-            , height $ V 56
-            , width $ V 56
-            , padding $ Padding 16 16 16 15
-            , margin $ MarginLeft 3
-            , onClick push $ const $ HeaderRightClick PLAN_MENU
-            , visibility if state.props.subView == MyPlan then VISIBLE else GONE
+            height WRAP_CONTENT
+            , padding $ Padding 10 10 10 10
+            , gravity CENTER_VERTICAL
+            , visibility if any (_ == state.props.subView) [MyPlan, JoinPlan] && not state.props.joinPlanProps.isIntroductory then VISIBLE else GONE
+          ][
+            imageView [
+              imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_phone_filled_blue"
+              , height $ V 56
+              , width $ V 56
+              , padding $ Padding 16 16 16 15
+              , margin $ MarginRight 3
+              , onClick push $ const $ CallSupport
+              ]
+            , textView
+              $ [ textFromHtml config.actionText
+              , visibility GONE -- Not being used now.
+              , padding $ PaddingBottom 3
+              , color Color.blue800
+              ] <> FontStyle.body1 TypoGraphy
+            , linearLayout [
+                height $ V 20
+                , width $ V 1
+                , background Color.grey900
+                , visibility if state.props.subView == MyPlan then VISIBLE else GONE
+              ][]
+            , imageView [
+                imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_settings_filled_blue"
+                , height $ V 56
+                , width $ V 56
+                , padding $ Padding 16 16 16 15
+                , margin $ MarginLeft 3
+                , onClick push $ const $ HeaderRightClick PLAN_MENU
+                , visibility if state.props.subView == MyPlan then VISIBLE else GONE
+              ]
           ]
-      ]
+        ]
+      , linearLayout
+        [ width MATCH_PARENT
+        , height $ V 1
+        , background Color.grey900
+        ][]
     ]
 
 myPlanBodyview :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
@@ -808,6 +810,7 @@ duesView push state =
       , stroke $ "1," <> Color.grey900
       , orientation VERTICAL
       , padding $ PaddingBottom 15
+      , clickable $ state.props.myPlanProps.isDueViewExpanded && state.props.subView == MyPlan
       , visibility if state.props.subView == MyPlan then VISIBLE else GONE
      ][ linearLayout[
           gravity CENTER_VERTICAL
@@ -1936,7 +1939,7 @@ lottieView state viewId margin' padding'=
   , margin margin'
   , padding padding'
   , cornerRadius 4.0
-  , background Color.blue600
+  , background Color.transparent
   , alpha if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE) then 0.4 else 1.0
   ][
     lottieAnimationView

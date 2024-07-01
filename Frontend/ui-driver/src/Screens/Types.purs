@@ -2526,6 +2526,7 @@ type BenefitsScreenData = {
   , rank :: Maybe Int
   , totalEligibleDrivers :: Maybe Int
   , moduleList :: LmsModuleList
+  , carouselItem :: Maybe ListItem
 }
 
 type BenefitsScreenProps = {
@@ -2573,7 +2574,11 @@ type LmsVideoScreenState = {
 type LmsVideoScreenData = {
   config :: AppConfig,
   logField :: Object Foreign,
-  videosScreenData :: LmsGetVideo
+  videosScreenData :: LmsGetVideo,
+  ytVideo :: {
+    videoId :: String
+  , enable :: Boolean
+  }
 }
 
 type LmsGetVideo = {

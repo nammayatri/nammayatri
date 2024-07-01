@@ -35,6 +35,7 @@ data Action = BackClick
     | ShowRateCard ST.RidePreference
     | PrimaryButtonAC PrimaryButton.Action
     | SliderCallback Int
+    | SliderCallbackManual Int
     | AfterRender
     | RateCardAction RateCard.Action
     | ChangeSlider Boolean
@@ -80,14 +81,16 @@ eval (PrimaryButtonAC PrimaryButton.OnClick) state = continueWithCmd state [ pur
 
 eval (SliderCallback val) state = continue state { props { sliderVal = val, sliderLoading = true}}
 
+eval (SliderCallbackManual val) state = continue state { props { sliderVal = val}}
+
 eval (DebounceCallBack _ _) state = updateAndExit state $ UpdatePrice state state.props.sliderVal
 
-eval (ChangeSlider increment) state = continueWithCmd state { props { sliderLoading = true }} [do 
+eval (ChangeSlider increment) state = continueWithCmd state [do 
     let val = if increment then state.props.sliderVal + state.props.incrementUnit else state.props.sliderVal - state.props.incrementUnit
         isSliderValueValid = val <= state.props.sliderMaxValue && val >= state.props.sliderMinValue
     if isSliderValueValid then do 
       void $ JB.updateSliderValue {sliderValue : val, id : EHC.getNewIDWithTag "RateSlider"}
-      pure $ SliderCallback val
+      pure $ SliderCallbackManual val
       else pure $ AfterRender
     ]
 

@@ -47,7 +47,9 @@ type AppConfigDriver a =
     welcomeScreen :: WelcomeScreen,
     enterMobileNumberScreen :: EnterMobileNumberScreen,
     vehicleRegisterationScreen :: VehicleRegisterationScreen,
-    bookingPreferencesConfig :: BookingPreferencesConfig
+    bookingPreferencesConfig :: BookingPreferencesConfig,
+    benefitsScreen :: BenefitsScreen,
+    lmsVideoScreen :: LmsVideoScreen
     | a
   } 
 
@@ -72,7 +74,8 @@ type BookingPreferencesConfig = {
 }
 
 type LeaderBoard = {
-  isMaskedName :: Boolean
+  isMaskedName :: Boolean,
+  enable :: Boolean
 }
 
 type ProfileVerificationConfig = {
@@ -312,4 +315,19 @@ type PillButtonState = {
 
 type VehicleRegisterationScreen = {
   collectVehicleDetails :: Boolean
+}
+
+type BenefitsScreen = {
+  learnAndEarnItem :: {
+    statusBackground :: String
+  },
+  referralCardBackground :: {
+    customer :: String
+  , driver :: String
+  }
+}
+
+type LmsVideoScreen = {
+  titleBackground :: String,
+  enableQuiz :: Boolean
 }

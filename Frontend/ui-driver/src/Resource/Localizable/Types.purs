@@ -1322,7 +1322,7 @@ data STR = LETS_GET_STARTED
         | NOT_ENOUGH_COINS_DESCRIPTION
         | SHARE
         | SHARE_NAMMA_YATRI String 
-        | SHARE_NAMMA_YATRI_MESSAGE
+        | SHARE_NAMMA_YATRI_MESSAGE String
         | BE_OPEN_CHOOSE_OPEN
         | NOW
         | ADD_VEHICLE

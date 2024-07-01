@@ -801,11 +801,20 @@ mapRouteConfig = {
 -- data SubTitle = SubTitle String
 
 -- data LoaderMessage = LoaderMessage Title SubTitle
+getHeightFromPercentWithOffset :: Int -> Int -> Int
+getHeightFromPercentWithOffset offset percent =
+  let scrHeight = (screenHeight unit) - offset
+    in ((scrHeight / 100) * percent)
 
 getHeightFromPercent :: Int -> Int
 getHeightFromPercent percent =
   let scrHeight = (screenHeight unit)
     in ((scrHeight / 100) * percent)
+
+getWidthFromPercentWithOffset :: Int -> Int -> Int
+getWidthFromPercentWithOffset offset percent =
+  let scrWidth = (screenWidth unit) - offset
+    in ((scrWidth / 100) * percent)
 
 getWidthFromPercent :: Int -> Int
 getWidthFromPercent percent =

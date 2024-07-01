@@ -424,31 +424,40 @@ getMerchantVehicleSize :: Unit -> Int
 getMerchantVehicleSize unit = 90
 
 getAssetLink :: LazyCheck -> String
-getAssetLink lazy = case (getMerchant lazy) of
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/images/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/driver/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
-  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
+getAssetLink lazy = getValueFromCache "getAssetLink" (\_ -> getAssetLinkByMerchant)
+  where
+    getAssetLinkByMerchant = 
+      case (getMerchant lazy) of
+        YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/images/"
+        YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/images/"
+        MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/driver/"
+        PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+        MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+        _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
 
 getAssetsBaseUrl :: LazyCheck -> String
-getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver"
-  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
+getAssetsBaseUrl lazy = getValueFromCache "getAssetsBaseUrl" (\_ -> getAssetsBaseUrlByMerchant)
+  where 
+    getAssetsBaseUrlByMerchant = 
+      case (getMerchant lazy) of
+      YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/"
+      YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/"
+      MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/"
+      PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+      MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+      _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
 
 getCommonAssetLink :: LazyCheck -> String
-getCommonAssetLink lazy = case (getMerchant lazy) of
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
-  _ -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
+getCommonAssetLink lazy = getValueFromCache "getCommonAssetLink" (\_ -> getCommonAssetLinkByMerchant)
+  where 
+    getCommonAssetLinkByMerchant = 
+      case (getMerchant lazy) of
+        YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
+        YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
+        MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
+        PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+        MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+        _ -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName =   
@@ -645,7 +654,7 @@ contactSupportNumber supportType = do
 
 getCityConfig :: Array CityConfig -> String -> CityConfig
 getCityConfig cityConfig cityName = do
-  maybe DC.dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
+  getValueFromCache cityName (\cityName -> maybe DC.dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig)
   where 
    setForwardBatchingData cityConfig' = do
     let (ForwardBatchConfigData forwardBatchRemoteConfig) = forwardBatchConfigData cityName

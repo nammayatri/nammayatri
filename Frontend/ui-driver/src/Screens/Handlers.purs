@@ -64,3 +64,6 @@ import Screens.DocumentDetailsScreen.Handler (documentDetailsScreen) as UI
 import Screens.RateCardScreen.Handler (rateCardScreen) as UI
 import Screens.DeleteAccountScreen.Handler (deleteAccountScreen) as UI
 import Screens.CameraScreen.Handler (cameraScreen) as UI
+import Screens.EarningsScreen.Weekly.Handler (earningScreenWeeklyV2) as UI
+import Screens.EarningsScreen.Daily.Handler (earningScreenDailyV2) as UI
+import Screens.EarningsScreen.History.Handler (earningsHistoryFlow) as UI
