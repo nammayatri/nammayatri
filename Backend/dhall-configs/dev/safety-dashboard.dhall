@@ -93,6 +93,7 @@ in  { esqDBCfg
         ? "dev/migrations-read-only/safety-dashboard"
       ,   env:SAFETY_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/migrations/safety-dashboard"
+      , "dev/after-release-migrations/safety-dashboard"
       ]
     , autoMigrate = True
     , loggerConfig =

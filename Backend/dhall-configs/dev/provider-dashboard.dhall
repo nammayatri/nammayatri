@@ -108,6 +108,7 @@ in  { esqDBCfg
     , migrationPath =
       [   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/migrations/provider-dashboard"
+      , "dev/after-release-migrations/provider-dashboard"
       ]
     , autoMigrate = True
     , loggerConfig =
