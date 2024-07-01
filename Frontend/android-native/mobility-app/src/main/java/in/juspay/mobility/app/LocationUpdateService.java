@@ -169,6 +169,7 @@ public class LocationUpdateService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        context = getApplicationContext();
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 this.startForeground(notificationServiceId, createNotification());
@@ -182,7 +183,6 @@ public class LocationUpdateService extends Service {
         }
         updateConfigVariables();
         initialiseJSONObjects();
-        context = getApplicationContext();
         isLocationUpdating = false;
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         fusedLocClientForDistanceCal = LocationServices.getFusedLocationProviderClient(this);
