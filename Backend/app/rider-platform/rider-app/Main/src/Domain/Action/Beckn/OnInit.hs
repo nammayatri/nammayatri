@@ -70,7 +70,8 @@ data OnInitRes = OnInitRes
     nightSafetyCheck :: Bool,
     isValueAddNP :: Bool,
     enableFrequentLocationUpdates :: Bool,
-    paymentId :: Maybe Text
+    paymentId :: Maybe Text,
+    enableOtpLessRide :: Bool
   }
   deriving (Generic, Show)
 
@@ -124,6 +125,7 @@ onInit req = do
                        && checkTimeConstraintForFollowRide riderConfig now
                    ),
             paymentId = req.paymentId,
+            enableOtpLessRide = fromMaybe False decRider.enableOtpLessRide,
             ..
           }
   pure (onInitRes, booking)

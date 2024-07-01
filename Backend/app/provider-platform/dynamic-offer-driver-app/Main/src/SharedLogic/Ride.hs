@@ -70,8 +70,9 @@ initializeRide ::
   Maybe Text ->
   Maybe Bool ->
   Maybe (Id DC.Client) ->
+  Maybe Bool ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId = do
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide = do
   let merchantId = merchant.id
   otpCode <-
     case mbOtpCode of
@@ -89,7 +90,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   previousRideInprogress <- QRide.getInProgressByDriverId driver.id
   now <- getCurrentTime
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
-  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment
+  ride <- buildRide driver booking ghrId otpCode enableFrequentLocationUpdates mbClientId previousRideInprogress now vehicle merchant.onlinePayment enableOtpLessRide
   rideDetails <- buildRideDetails ride driver vehicle
 
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
@@ -164,8 +165,9 @@ buildRide ::
   UTCTime ->
   DVeh.Vehicle ->
   Bool ->
+  Maybe Bool ->
   Flow DRide.Ride
-buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide now vehicle onlinePayment = do
+buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previousRide now vehicle onlinePayment enableOtpLessRide = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
@@ -236,7 +238,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         tripCategory = booking.tripCategory,
         vehicleServiceTierName = Just booking.vehicleServiceTierName,
         vehicleVariant = Just $ vehicle.variant,
-        onlinePayment = onlinePayment
+        onlinePayment = onlinePayment,
+        enableOtpLessRide = enableOtpLessRide
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

@@ -38,6 +38,7 @@ data RideT f = RideT
     driverGoHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverId :: B.C f Kernel.Prelude.Text,
     enableFrequentLocationUpdates :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     endOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     endOdometerReadingValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     endOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
