@@ -44,8 +44,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 33
-    versionCode 147
-    versionName "3.0.8"
+    versionCode 500
+    versionName "5.0.0"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -256,6 +256,7 @@ android {
             setIgnore(true)
         }
     }
+     dynamicFeatures = [':dynamicfeature']
 
 //    signingConfigs {
 //        release {
@@ -300,6 +301,7 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.7.1')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
+    implementation "com.google.j2objc:j2objc-annotations:2.8"
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-crashlytics'
@@ -336,7 +338,11 @@ dependencies {
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+//    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+
+    implementation 'com.google.android.play:feature-delivery:2.1.0'
+    implementation 'com.google.code.gson:gson:2.8.8'
+    implementation 'com.github.freshworks:freshchat-android:6.0.0'
 }
 
 def tmpSource = "/tmp/juspay"

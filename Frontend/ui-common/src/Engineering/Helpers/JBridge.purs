@@ -74,6 +74,7 @@ foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
 foreign import showInAppNotification :: InAppNotificationPayload -> Effect Unit
+foreign import emitJOSEventWithCb :: forall action. Fn4 String String (action -> Effect Unit) (String -> action) Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 foreign import isBackgroundLocationEnabled :: Unit -> Effect Boolean

@@ -43,6 +43,10 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -54,6 +58,7 @@ import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
+import com.clevertap.android.sdk.ActivityLifecycleCallback;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
@@ -69,6 +74,13 @@ import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.play.core.appupdate.AppUpdateManager;
 import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
+import com.google.android.play.core.splitinstall.SplitInstallManager;
+import com.google.android.play.core.splitinstall.SplitInstallManagerFactory;
+import com.google.android.play.core.splitinstall.SplitInstallRequest;
+import com.google.android.play.core.splitinstall.SplitInstallStateUpdatedListener;
+import com.google.android.play.core.splitinstall.model.SplitInstallErrorCode;
+import com.google.android.play.core.splitinstall.model.SplitInstallSessionStatus;
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.perf.metrics.AddTrace;
@@ -149,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
     private JSONObject currentLocationRes = new JSONObject();
     private JSONObject preInitFutureTaskResult = null;
     long onCreateTimeStamp = 0;
+    private ActivityResultLauncher<Intent> startForResult;
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -391,6 +404,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
         onCreateTimeStamp = System.currentTimeMillis();
+        ActivityLifecycleCallback.register(this.getApplication());
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -466,6 +480,19 @@ public class MainActivity extends AppCompatActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
+        startForResult = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        Intent data = result.getData();
+                        if (data != null) {
+                            String value = data.getStringExtra("key"); // Parse the string response to a java class
+                            // Handle the returned value
+                            Log.d("testresult", value);
+                        }
+                    }
+                }
+        );
     }
 
     private void handleSplashScreen() {
@@ -684,6 +711,64 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void initGlSdk(){
+        SplitInstallManager splitInstallManager =
+                SplitInstallManagerFactory.create(this);
+
+
+// Creates a request to install a module.
+        SplitInstallRequest request =
+                SplitInstallRequest
+                        .newBuilder()
+                        .addModule("dynamicfeature")
+                        .build();
+
+// Initializes a variable to later track the session ID for a given request.
+        int mySessionId = 0;
+
+// Creates a listener for request status updates.
+        SplitInstallStateUpdatedListener listener = state -> {
+            if (state.sessionId() == mySessionId) {
+                // Read the status of the request to handle the state update.
+                if (state.status() == SplitInstallSessionStatus.FAILED
+                        && state.errorCode() == SplitInstallErrorCode.SERVICE_DIED) {
+                    // Retry the request.
+                    return;
+                }
+                if (state.sessionId() == mySessionId) {
+                    switch (state.status()) {
+                        case SplitInstallSessionStatus.DOWNLOADING:
+                            long totalBytes = state.totalBytesToDownload();
+                            long progress = state.bytesDownloaded();
+                            // Update progress bar.
+                            Log.d("SplitInstallSessionStatus", "totalbytes->"+totalBytes+" progress->"+progress);
+                            break;
+
+                        case SplitInstallSessionStatus.INSTALLED:
+                            if (sharedPref!= null) sharedPref.edit().putBoolean("GLSDK_INSTALLED", true).apply();
+                            Intent intent = new Intent();
+                            intent.putExtra("token", "e68c7673a76b44ffb0e1237f239503c0");
+                            intent.setClassName(getPackageName(), "in.juspay.mobility.dynamicfeature.DynamicActivity");
+                            startForResult.launch(intent);
+                    }
+                }
+            }
+        };
+
+// Registers the listener.
+        splitInstallManager.registerListener(listener);
+
+        splitInstallManager
+                .startInstall(request)
+                .addOnSuccessListener(sessionId -> {
+                    Log.d("successSessionId", "" + sessionId);
+                    // Toast.makeText(this, "Successfully installed", Toast.LENGTH_LONG);
+                })
+                .addOnFailureListener(exception -> {
+                    // Toast.makeText(this, "Failure", Toast.LENGTH_LONG);
+                });
+    }
+
     private void initApp() {
         long initiateTimeStamp = System.currentTimeMillis();
         Log.i("APP_PERF", "INIT_APP_START : " + System.currentTimeMillis());
@@ -783,6 +868,24 @@ public class MainActivity extends AppCompatActivity {
                         hyperServices.terminate();
                         hyperServices = null;
                         initApp();
+                        break;
+                    case "gl_sdk" :
+                        try {
+                            if (jsonObject.has("action") && jsonObject.has("token") ) {
+//                                launchGLSDK(jsonObject.getString("action"), jsonObject.getString("token"));
+                                if (sharedPref != null && sharedPref.getBoolean("GLSDK_INSTALLED", false)){
+                                    Intent intent = new Intent();
+                                    intent.putExtra("token", "e68c7673a76b44ffb0e1237f239503c0");
+                                    intent.setClassName(getPackageName(), "in.juspay.mobility.dynamicfeature.DynamicActivity");
+                                    startForResult.launch(intent);
+                                }else {
+                                    initGlSdk();
+                                }
+                            }
+                        } catch (Exception exception) {
+                            System.out.println("zxc exc " + exception);
+                            exception.printStackTrace();
+                        }
                         break;
                     case "in_app_notification":
                         showInAppNotificationApp(jsonObject, context);

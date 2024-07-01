@@ -43,7 +43,9 @@ export const stringifyJSON = function (obj) {
 }
 
 export const toastWithLog = function (str) {
-  const JOSFlags = window.JOS.getJOSflags()
+  const JOSFlags = {
+    isCUGUser : true
+  }
   if (JOSFlags.isCUGUser || JOSFlags.isDevQa.isDevQa || isDebug) {
     if (window.__OS == "IOS") {
       // window.JBridge.toast(str); //remove once toast is fixed in iOS.

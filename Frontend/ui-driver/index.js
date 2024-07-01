@@ -282,6 +282,8 @@ window.onMerchantEvent = function (_event, payload) {
         if (!checkForReferral(parsedPayload.payload.viewParamNewIntent, "REFERRAL_NEW_INTENT")) {
           purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
         }
+      } else if (parsedPayload.payload.action == "gl_process" && parsedPayload.payload.callback && parsedPayload.payload.value) {
+        window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.value);
       } else {
         purescript.main(makeEvent("", ""))(parsedPayload.payload.driverInfoResponse)();
       }
@@ -458,7 +460,9 @@ if (typeof window.JOS != "undefined") {
 const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
 
-const JOSFlags = window.JOS.getJOSflags()
+const JOSFlags = {
+  isCUGUser: true
+}
 if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser || JOSFlags.isDevQa.isDevQa) {
   logger.enableLogger();
   Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");

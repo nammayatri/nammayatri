@@ -1989,6 +1989,13 @@ export const showInAppNotification = function (payload) {
   return window.JOS.emitEvent("java")("onEvent")(JSON.stringify(payload))()
 }
 
+export const emitJOSEventWithCb = function (eventName, extraParam , cb, action) {
+  const callback = callbackMapper.map(function (stringifyPayload) {
+    cb(action(stringifyPayload))();
+  });
+  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({ event: eventName, action: callback, token: extraParam }))()();
+}
+
 export const openWhatsAppSupport = function (contactNumber) {
   return function () {
     console.log("contactNumber" + contactNumber)
