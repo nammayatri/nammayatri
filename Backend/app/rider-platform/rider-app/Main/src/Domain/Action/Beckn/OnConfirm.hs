@@ -110,8 +110,10 @@ onConfirm ::
   m ()
 onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
   let fareParamsList = fromMaybe [] fareParams
+  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.INITIAL_BOOKING) fareParamsList
   fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareParamsList
-  _ <- QFareBreakup.createMany fareBreakups
+  QFareBreakup.createMany fareBreakups
+  QFareBreakup.createMany fareBreakups'
   whenJust specialZoneOtp $ \otp -> do
     void $ QRB.updateOtpCodeBookingId booking.id otp
     fork "sending Booking confirmed dasboard sms" $ do
