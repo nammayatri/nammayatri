@@ -1,3 +1,8 @@
+-- NOTE: need to delete first to remove old entries
+
+DELETE from atlas_driver_offer_bpp.merchant_overlay
+WHERE overlay_key = 'EDIT_LOCATION';
+
 INSERT INTO atlas_driver_offer_bpp.merchant_overlay
     (id, language, overlay_key, image_url, title, description, ok_button_text, merchant_id, merchant_operating_city_id)
 SELECT
