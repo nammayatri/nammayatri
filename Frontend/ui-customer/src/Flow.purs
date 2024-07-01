@@ -93,7 +93,7 @@ import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
-import Screens.HomeScreen.Controller (Action(..), flowWithoutOffers, getSearchExpiryTime, findingQuotesSearchExpired, tipEnabledState)
+import Screens.HomeScreen.Controller ( flowWithoutOffers, getSearchExpiryTime, findingQuotesSearchExpired, tipEnabledState)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
@@ -212,6 +212,7 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Helpers.TipConfig (isTipEnabled, setTipViewData)
 import Presto.Core.Types.API (ErrorResponse(..))
 import AssetsProvider (renewFile)
+import Screens.HomeScreen.Controllers.Types
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
