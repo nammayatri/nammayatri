@@ -1282,4 +1282,15 @@ public class MobilityAppBridge extends HyperBridge {
         });
 
     }
+
+    @JavascriptInterface
+    public void initWebViewOnActivity(String webViewUrl) {
+        Activity activity = bridgeComponents.getActivity();
+        Context context = bridgeComponents.getContext();
+
+        Intent newIntent = new Intent (context, WebViewOnActivity.class);
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        newIntent.putExtra("WebViewUrl", webViewUrl);
+        context.startActivity(newIntent);
+    }
 }

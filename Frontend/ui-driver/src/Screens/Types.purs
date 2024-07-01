@@ -13,14 +13,16 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types (
-  module Common,
-  module Screens.Types
-) where
+module Screens.Types
+  ( DocumentStatus
+  , module Common
+  , module Screens.Types
+  )
+  where
 
 import Common.Types.Config
 
-import Common.Types.App as Common
+import Common.Types.App hiding (SosStatus (..)) as Common
 import Domain.Payments as PP
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
@@ -205,6 +207,11 @@ type RegistrationScreenState = {
   data :: RegistrationScreenData,
   props :: RegistrationScreenProps
 }
+
+data BGVInfo = DoNothing | PendingUserAction | PendingVerification | Unauthorized
+derive instance genericBGVInfo :: Generic BGVInfo _
+instance eqBGVInfo :: Eq BGVInfo where eq = genericEq
+
 type RegistrationScreenData = {
   activeIndex :: Int,
   registerationStepsAuto :: Array StepProgress,
@@ -225,7 +232,8 @@ type RegistrationScreenData = {
   enteredRC :: String,
   vehicleCategory :: Maybe Common.VehicleCategory,
   vehicleTypeMismatch :: Boolean,
-  linkedRc :: Maybe String
+  linkedRc :: Maybe String,
+  bgvUrl :: Maybe String
 }
 
 type DocumentStatus = {
@@ -234,7 +242,8 @@ type DocumentStatus = {
   status :: StageStatus,
   docType :: RegisterationStep,
   verificationMessage :: Maybe String,
-  regNo :: Maybe String
+  regNo :: Maybe String,
+  verificationUrl :: Maybe String
 }
 
 type VehicleInfo = {
@@ -273,7 +282,10 @@ type RegistrationScreenProps = {
   manageVehicle :: Boolean,
   manageVehicleCategory :: Maybe Common.VehicleCategory,
   isApplicationInVerification :: Boolean,
-  isProfileDetailsCompleted :: Boolean
+  isProfileDetailsCompleted :: Boolean,
+  showCheckrWebView :: Boolean,
+  bgvInfo :: BGVInfo,
+  otherMandetoryDocsDone :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -297,11 +309,12 @@ data RegisterationStep =
   | ProfileDetails
   | VehicleInspectionForm
   | UploadProfile
+  | BackgroundVerification
 
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
 
-data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
+data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | UNAUTHORIZED | PENDING_REVIEW
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
