@@ -266,7 +266,7 @@ sourceView push  =
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      , gravity CENTER
+      , gravity LEFT
       , padding $ Padding 0 0 0 0
       ,margin $ Margin 0 10 0 10
       ]
@@ -294,7 +294,7 @@ destinationView push  =
       [ width $ V 200
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      , gravity CENTER
+      , gravity LEFT
       , padding $ Padding 0 0 0 0
       , PrestoList.visibilityHolder "visible"
       , margin $ Margin 0 0 0 10

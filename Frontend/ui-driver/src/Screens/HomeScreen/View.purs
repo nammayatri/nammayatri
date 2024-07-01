@@ -505,7 +505,9 @@ driverMapsHeaderView push state =
                       ]
                   ]
                 , offlineNavigationLinks push state
-              ] <> [gotoRecenterAndSupport state push]
+              ] <> [gotoRecenterAndSupport state push,
+                    bannerView state push
+                   ]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             , linearLayout
               [ width MATCH_PARENT
@@ -2402,3 +2404,85 @@ isAcWorkingPopupView push state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ][ PopUpModal.view (push <<< IsAcWorkingPopUpAction) (isAcWorkingPopupConfig state) ]
+
+
+bannerView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+bannerView state push  = 
+  linearLayout[
+    height WRAP_CONTENT
+    ,width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , margin $ MarginHorizontal 30 10 
+    , cornerRadius 12.0
+    , background Color.blue800
+
+  ][
+    linearLayout [
+      height WRAP_CONTENT 
+     , width MATCH_PARENT
+     , orientation HORIZONTAL
+     , gravity CENTER
+     , color $ Color.blue600
+     , stroke ("1," <> Color.borderColorLight)
+     , cornerRadius 12.0
+    --  , padding $ Padding  2 2 2 0
+     , background Color.blue600
+    ][ infoView state push
+       ,linearLayout[
+        weight 1.0
+       ][]
+
+      ,linearLayout[
+        height  MATCH_PARENT
+       ,width WRAP_CONTENT
+       ][imageView [
+         width $ V 76
+       , height $ V 46
+       , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_banner_image_sedan"
+      ]]
+      
+    ] 
+    , timerView state push 
+
+  ]
+
+infoView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w 
+infoView state push = 
+   linearLayout [
+    height WRAP_CONTENT
+   ,width WRAP_CONTENT 
+   ,orientation VERTICAL
+   ,margin $ Margin 15 3 3 3
+   ][
+    textView $ [
+      height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      ,gravity CENTER_VERTICAL
+      ,text "You have an upcoming rental booking"
+      ,color $ Color.blue800
+    ]<>FontStyle.tags TypoGraphy
+  , textView $ [
+       height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      ,color $ Color.blue800
+      ,gravity CENTER_VERTICAL
+      ,text "13 January 2024 , 16:00"
+      ,textSize  $ FontSize.a_14
+    ]<>FontStyle.h3 TypoGraphy
+   ]
+
+timerView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w 
+timerView state push  = 
+   linearLayout[
+    width $ V 338
+     , PP.cornerRadii $ PTD.Corners 15.0 false false true true 
+    , gravity CENTER
+   ][
+    textView $[
+     gravity CENTER
+     , padding $ Padding 4 4 4 4
+     , color Color.white900
+     , text "Ride starts in 01:30:25"
+    ]<>FontStyle.tags TypoGraphy
+   ]

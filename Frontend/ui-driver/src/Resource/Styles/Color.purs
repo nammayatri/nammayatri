@@ -441,3 +441,6 @@ lightGrey1 = "#F3F3F3"
 
 lightGreyBlue2 :: Color
 lightGreyBlue2 = "#6C7393"
+
+mayaBlue :: Color
+mayaBlue  = "#80B2FF"

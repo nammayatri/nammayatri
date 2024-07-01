@@ -4805,7 +4805,7 @@ newtype BookingAPIEntity = BookingAPIEntity {
    id :: String,
    isAirConditioned ::Maybe Boolean ,
    isScheduled :: Boolean,
-   maxEstimatedDistance :: Maybe String,
+   maxEstimatedDistance :: Maybe Number,
    returnTime :: Maybe String,
    roundTrip :: Maybe Boolean,
    specialZoneOtpCode :: Maybe String,

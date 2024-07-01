@@ -403,7 +403,7 @@ loadButtonView state push =
 
 getRideList :: forall action. (ScheduledBookingListResponse -> String -> action) -> (action -> Effect Unit) -> RideRequestScreenState -> Flow GlobalState Unit
 getRideList action push state = do
-  (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) "2024-06-03" (getFutureDate state.data.date 1) (state.data.tripCategory)
+  (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (getFutureDate state.data.date 1) (state.data.tripCategory)
   case scheduledBookingListResponse of
     Right (ScheduledBookingListResponse listResp) -> do
       doAff do liftEffect $ push $ action (ScheduledBookingListResponse listResp) "success"

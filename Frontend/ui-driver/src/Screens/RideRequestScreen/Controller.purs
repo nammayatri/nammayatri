@@ -34,6 +34,7 @@ import Data.Int as Int
 import Prelude (class Eq, class Show, Unit, identity, unit, ($), (/=), (==), (<>), (<<<))
 import Screens.Types as ST
 import Data.Array as DA
+import Debug (spy)
 
 
 
@@ -243,27 +244,33 @@ myRideListTransformerProp listres =
           visiblePill = if rideType == CTA.OneWay then "gone" else "visible"
           
 
-          carType = booking.vehicleServiceTierName
+          carType = booking.vehicleServiceTierName 
 
           image = case booking.vehicleServiceTier of
             AUTO_RICKSHAW -> "ny_ic_auto_side_view"
             SEDAN_TIER -> "ny_ic_sedan"
-            COMFY -> "ny_ic_sedan_ac"
-            ECO -> "ic_hatchback_ac"
+            COMFY -> "ny_ic_ac_mini"
+            ECO -> "ny_ic_ac_mini"
             PREMIUM -> "ny_ic_sedan"
             SUV_TIER -> "ic_suv_ac"
             HATCHBACK_TIER -> "ic_hatchback_ac"
-            TAXI -> "ic_taxi"
-            TAXI_PLUS -> "ny_ic_sedan_ac"
-            _ -> "ny_ic_sedan"
+            TAXI -> "ic_white_taxi"
+            TAXI_PLUS -> "ny_ic_non_ac"
+            _ -> "ny_ic_ac_mini"
+          _ = spy "printing imageNAme -> " image
+          _ = spy "printing serviceTier -> " booking.vehicleServiceTier
 
           
-          now = EHC.getCurrentUTC ""
-          diff = runFn2 differenceBetweenTwoUTC booking.startTime now 
+          now   = EHC.getCurrentUTC ""
+          diff  = runFn2 differenceBetweenTwoUTC booking.startTime now 
+          sec   = spy "difference ->" diff/60
+          min   = spy "minutes ->"  sec/60
+          hrs   = spy "hours ->" min/60
           overlayVisiblity  = if  diff< 0 then "visible" else "gone"
           imageType = case rideType of
                 CTA.Rental -> "ic_clock_unfilled"
                 _ -> "ny_ic_ride_rental_vector"
+          
 
           
         in

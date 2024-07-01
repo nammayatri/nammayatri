@@ -151,6 +151,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Common.Types.App as CTA
 import AssetsProvider (renewFile)
 import Engineering.Helpers.RippleCircles
+import Screens.RideRequestScreen.ScreenData as RideRequestData
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -4050,7 +4051,7 @@ rideRequestScreenFlow = do
   case action  of 
     TA.GOTO_HOME -> homeScreenFlow
     TA.RIDE_REQUEST_REFRESH_SCREEN state -> do
-      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0}})
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0, filteredArr =[], resp = RideRequestData.dummyResp}})
       rideRequestScreenFlow
     TA.LOADER__OUTPUT state -> do
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = state.data.offset + 5}})
