@@ -1,7 +1,13 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module API.UI.Issue where
 
+import qualified Beckn.ACL.IGM.Issue as ACL
+import qualified Beckn.ACL.IGM.IssueStatus as ACL
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Dashboard.Ride as DRide
+import Domain.Action.UI.IGM
+import qualified Domain.Types.IGMIssue as DIGM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
@@ -13,6 +19,9 @@ import qualified IssueManagement.Domain.Action.UI.Issue as Common
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as Domain
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as Domain
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as QIC
+import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as QIO
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import Kernel.Beam.Functions
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language)
@@ -21,13 +30,18 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.CallIGMBPP as CallBPP
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.IGMConfig as QIGMConfig
+import qualified Storage.Queries.IGMIssue as QIGM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
@@ -52,6 +66,8 @@ handler = externalHandler
         :<|> updateIssueOption (personId, merchantId)
         :<|> deleteIssue (personId, merchantId)
         :<|> updateIssueStatus (personId, merchantId)
+        :<|> igmIssueStatus (personId, merchantId)
+        :<|> resolveIGMIssue (personId, merchantId)
 
 customerIssueHandle :: Common.ServiceHandle Flow
 customerIssueHandle =
@@ -177,7 +193,25 @@ fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Text
 fetchMedia (personId, merchantId) = withFlowHandlerAPI . Common.fetchMedia (cast personId, cast merchantId)
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER
+createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbIGMReq <- buildIGMIssueReq req.rideId
+  becknIssueId <- case mbIGMReq of
+    Just igmReq | not igmReq.isValueAddNP -> processIGMReq igmReq person
+    _ -> return Nothing
+  Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER becknIssueId
+  where
+    processIGMReq igmReq person = do
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
+      merchantOperatingCity <- CQMOC.findById igmReq.booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmReq.booking.merchantOperatingCityId)
+      option <- maybe (return Nothing) (\id -> QIO.findById id CUSTOMER) req.optionId
+      category <- QIC.findById req.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
+      (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq igmReq.booking igmReq.ride category option req.description merchant person igmConfig merchantOperatingCity Nothing Nothing Nothing
+      QIGM.create igmIssue
+      fork "sending beckn issue" . withShortRetry $ do
+        void $ CallBPP.issue igmReq.booking.providerUrl becknIssueReq
+      return $ Just issueId
 
 issueMediaUpload :: (Id SP.Person, Id DM.Merchant) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
 issueMediaUpload (personId, merchantId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast personId, cast merchantId) customerIssueHandle req
@@ -201,3 +235,37 @@ updateIssueStatus :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> 
 updateIssueStatus (personId, merchantId) issueReportId language req = withFlowHandlerAPI $ do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Common.updateIssueStatus (cast personId, cast merchantId, cast person.merchantOperatingCityId) issueReportId language req customerIssueHandle CUSTOMER
+
+igmIssueStatus :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
+igmIssueStatus (_, merchantId) = withFlowHandlerAPI $ do
+  issues <- QIGM.findAllByStatus DIGM.OPEN
+  forM_ issues $ \issue -> do
+    merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    merchantOperatingCity <- CQMOC.findById issue.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show issue.merchantOperatingCityId)
+    booking <- QB.findById issue.bookingId >>= fromMaybeM (BookingNotFound issue.bookingId.getId)
+    becknIssueStatusReq <- ACL.buildIssueStatusReq merchant merchantOperatingCity booking issue.id.getId issue.transactionId
+    fork "sending beckn issue_status" . withShortRetry $ do
+      void $ CallBPP.issueStatus booking.providerUrl becknIssueStatusReq
+  return Success
+
+resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> CustomerResponse -> Common.CustomerRating -> FlowHandler APISuccess
+resolveIGMIssue (personId, merchantId) issueReportId response rating = withFlowHandlerAPI $ do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (InternalError $ "Issue Report not found " <> show issueReportId.getId)
+  becknIssueId <- maybe (throwError $ InvalidRequest "IGM Issue Id not found") return issueReport.becknIssueId
+  mbIGMIssue <- QIGM.findByPrimaryKey (Id becknIssueId)
+  maybe (throwError $ InvalidRequest "IGM Issue not found") (\igmIssue -> processIGMIssue igmIssue issueReport person) mbIGMIssue
+  return Success
+  where
+    processIGMIssue igmIssue issueReport person = do
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
+      merchantOperatingCity <- CQMOC.findById igmIssue.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show igmIssue.merchantOperatingCityId)
+      booking <- QB.findById igmIssue.bookingId >>= fromMaybeM (BookingNotFound igmIssue.bookingId.getId)
+      ride <- runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
+      option <- maybe (return Nothing) (\id -> QIO.findById id CUSTOMER) issueReport.optionId
+      category <- QIC.findById issueReport.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
+      (becknIssueReq, _, updatedIgmIssue) <- ACL.buildIssueReq booking ride category option issueReport.description merchant person igmConfig merchantOperatingCity (Just response) (Just rating) (Just igmIssue)
+      QIGM.updateByPrimaryKey updatedIgmIssue
+      fork "sending beckn issue" . withShortRetry $ do
+        void $ CallBPP.issue booking.providerUrl becknIssueReq

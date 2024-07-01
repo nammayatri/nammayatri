@@ -257,8 +257,9 @@ createIssueReport ::
   Common.IssueReportReq ->
   ServiceHandle m ->
   Identifier ->
+  Maybe Text ->
   m Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier = do
+createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
   category <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoNotExist categoryId.getId)
   mbOption <- forM optionId \justOptionId -> do
     CQIO.findByIdAndCategoryId justOptionId categoryId identifier >>= fromMaybeM (IssueOptionInvalid justOptionId.getId categoryId.getId)
@@ -313,7 +314,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             createdAt = now,
             updatedAt = now,
             description,
-            chats = updatedChats
+            chats = updatedChats,
+            becknIssueId
           }
 
     buildTicket :: (EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Person -> Id Merchant -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
@@ -333,7 +335,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             phoneNo = phoneNumber,
             personId = person.id.getId,
             classification = castIdentifierToClassification identifier,
-            rideDescription = Just info
+            rideDescription = Just info,
+            becknIssueId
           }
 
     buildRideInfo :: (EsqDBReplicaFlow m r, BeamFlow m r) => Id Merchant -> Id MerchantOperatingCity -> UTCTime -> ServiceHandle m -> Maybe Ride -> m TIT.RideInfo

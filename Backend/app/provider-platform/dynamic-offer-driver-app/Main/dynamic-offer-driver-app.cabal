@@ -30,6 +30,8 @@ library
       API.Beckn
       API.Beckn.Cancel
       API.Beckn.Confirm
+      API.Beckn.IGM.Issue
+      API.Beckn.IGM.IssueStatus
       API.Beckn.Init
       API.Beckn.Rating
       API.Beckn.Search
@@ -62,6 +64,7 @@ library
       API.Dashboard.RideBooking.Maps
       API.Dashboard.RideBooking.Ride
       API.Dashboard.RideBooking.Volunteer
+      API.IGM
       API.Internal
       API.Internal.Auth
       API.Internal.BulkLocUpdate
@@ -110,6 +113,11 @@ library
       Beckn.ACL.Common
       Beckn.ACL.Common.Order
       Beckn.ACL.Confirm
+      Beckn.ACL.IGM.Issue
+      Beckn.ACL.IGM.IssueStatus
+      Beckn.ACL.IGM.OnIssue
+      Beckn.ACL.IGM.OnIssueStatus
+      Beckn.ACL.IGM.Utils
       Beckn.ACL.Init
       Beckn.ACL.OnCancel
       Beckn.ACL.OnConfirm
@@ -137,6 +145,8 @@ library
       Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
+      Domain.Action.Beckn.IGM.Issue
+      Domain.Action.Beckn.IGM.IssueStatus
       Domain.Action.Beckn.Init
       Domain.Action.Beckn.Rating
       Domain.Action.Beckn.Search
@@ -303,6 +313,7 @@ library
       SharedLogic.Cac
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
+      SharedLogic.CallIGMBAP
       SharedLogic.Cancel
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
@@ -621,6 +632,8 @@ library
       Domain.Types.FleetRCAssociation
       Domain.Types.GoHomeConfig
       Domain.Types.IdfyVerification
+      Domain.Types.IGMConfig
+      Domain.Types.IGMIssue
       Domain.Types.Image
       Domain.Types.InterCityTravelCities
       Domain.Types.Invoice
@@ -731,6 +744,8 @@ library
       Storage.Beam.FleetRCAssociation
       Storage.Beam.GoHomeConfig
       Storage.Beam.IdfyVerification
+      Storage.Beam.IGMConfig
+      Storage.Beam.IGMIssue
       Storage.Beam.Image
       Storage.Beam.InterCityTravelCities
       Storage.Beam.Invoice
@@ -842,6 +857,8 @@ library
       Storage.Queries.FleetRCAssociation
       Storage.Queries.GoHomeConfig
       Storage.Queries.IdfyVerification
+      Storage.Queries.IGMConfig
+      Storage.Queries.IGMIssue
       Storage.Queries.Image
       Storage.Queries.InterCityTravelCities
       Storage.Queries.Invoice

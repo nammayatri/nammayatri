@@ -1,0 +1,57 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  UTCTime: Kernel.Prelude
+  Person: Domain.Types.Person
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Booking: Domain.Types.Booking
+  Text: Data.Text
+  UTCTimeRFC3339: Kernel.Types.TimeRFC339
+
+IGMIssue:
+  tableName: igm_issue
+
+  types:
+    Status:
+      enum: "OPEN, CLOSED, ESCALATED, RESOLVED"
+    Entity:
+      enum: "GRO, COUNTERPARTY"
+    IssueType:
+      enum: "GRIEVANCE, ISSUE"
+
+  fields:
+    id: Id IGMIssue
+    riderId: Id Person
+    bookingId: Id Booking
+    issueType: IssueType
+    issueStatus: Status
+    respondentEntityType: Maybe Entity
+    respondentName: Maybe Text
+    respondentEmail: Maybe Text
+    respondentPhone: Maybe Text
+    respondentAction: Maybe Text
+    respondingMerchantId: Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    transactionId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  excludedFields: [merchantId]
+
+  queries:
+    findAllByRiderIdandStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [riderId, issueStatus]
+
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: issueStatus
+
+    findByTransactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+
+  constraints:
+    id: PrimaryKey
+    internalIssueId: SecondaryKey

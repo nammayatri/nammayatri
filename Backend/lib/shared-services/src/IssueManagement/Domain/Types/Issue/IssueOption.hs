@@ -11,6 +11,7 @@ data IssueOption = IssueOption
     option :: Text,
     priority :: Int,
     issueMessageId :: Maybe Text,
-    label :: Maybe Text
+    label :: Maybe Text,
+    igmSubCategory :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)

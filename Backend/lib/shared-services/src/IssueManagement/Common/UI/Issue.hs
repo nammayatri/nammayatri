@@ -8,7 +8,7 @@ where
 
 import AWS.S3 (FileType (..))
 import Data.Aeson
-import Data.OpenApi (ToSchema)
+import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T hiding (count, map)
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common as Reexport hiding (Audio, Image)
@@ -223,3 +223,43 @@ newtype IssueStatusUpdateRes = IssueStatusUpdateRes
   { messages :: [Message]
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
+
+-------------------------------------------------------------------------
+
+type IgmStatusAPI =
+  Post '[JSON] APISuccess
+
+-------------------------------------------------------------------------
+
+type ResolveIgmIssueAPI =
+  MandatoryQueryParam "response" CustomerResponse
+    :> MandatoryQueryParam "rating" CustomerRating
+    :> Post '[JSON] APISuccess
+
+data CustomerResponse
+  = ACCEPT
+  | ESCALATE
+  deriving (Eq, Show, Ord, Read, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
+
+instance FromHttpApiData CustomerResponse where
+  parseUrlPiece "accept" = pure ACCEPT
+  parseUrlPiece "escalate" = pure ESCALATE
+  parseUrlPiece _ = Left "Unable to parse customer response"
+
+instance ToHttpApiData CustomerResponse where
+  toUrlPiece ACCEPT = "accept"
+  toUrlPiece ESCALATE = "escalate"
+
+data CustomerRating
+  = THUMBS_UP
+  | THUMBS_DOWN
+  deriving (Eq, Show, Ord, Read, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
+
+instance FromHttpApiData CustomerRating where
+  parseUrlPiece "thumbsup" = pure THUMBS_UP
+  parseUrlPiece "thumbsdown" = pure THUMBS_DOWN
+  parseUrlPiece _ = Left "Unable to parse customer rating"
+
+instance ToHttpApiData CustomerRating where
+  toUrlPiece THUMBS_UP = "thumbsup"
+  toUrlPiece THUMBS_DOWN = "thumbsdown"

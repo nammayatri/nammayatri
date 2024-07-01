@@ -4146,9 +4146,8 @@
         "type": "github"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/shreyash.pankaj/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {
