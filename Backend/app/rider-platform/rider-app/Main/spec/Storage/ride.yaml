@@ -45,6 +45,7 @@ Ride:
       rideOtp: Text
       endOtp: Maybe Text
       allowedEditLocationAttempts : Int
+      allowedEditPickupLocationAttempts : Int
       computedPrice: Maybe Money
       computedPriceWithCurrency: Maybe PriceAPIEntity
       chargeableRideDistance: Maybe HighPrecMeters
@@ -96,6 +97,7 @@ Ride:
     rideEndTime: Maybe UTCTime
     rideRating: Maybe Int
     allowedEditLocationAttempts: Maybe Int
+    allowedEditPickupLocationAttempts: Maybe Int
     driversPreviousRideDropLoc : Maybe LatLong
     startOdometerReading: Maybe Centesimal
     endOdometerReading: Maybe Centesimal
@@ -117,6 +119,7 @@ Ride:
 
   sqlType:
     allowedEditLocationAttempts: int
+    allowedEditPickupLocationAttempts: int
     bookingId: character(36)
     bppRideId: character(36)
     chargeableDistance: numeric(30,2)

@@ -24,6 +24,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Ride = Ride
   { allowedEditLocationAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    allowedEditPickupLocationAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
@@ -82,6 +83,7 @@ data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RideAPIEntity = RideAPIEntity
   { allowedEditLocationAttempts :: Kernel.Prelude.Int,
+    allowedEditPickupLocationAttempts :: Kernel.Prelude.Int,
     bppRideId :: Kernel.Types.Id.Id Domain.Types.Ride.BPPRide,
     chargeableRideDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     chargeableRideDistanceWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,

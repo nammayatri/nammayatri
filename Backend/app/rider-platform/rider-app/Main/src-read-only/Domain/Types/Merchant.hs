@@ -46,6 +46,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     mediaFileUrlPattern :: Kernel.Prelude.Text,
     minimumDriverRatesCount :: Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
+    numOfAllowedEditLocationAttemptsThreshold :: Kernel.Prelude.Int,
     numOfAllowedEditPickupLocationAttemptsThreshold :: Kernel.Prelude.Int,
     onlinePayment :: Kernel.Prelude.Bool,
     publicMediaFileUrlPattern :: Kernel.Prelude.Text,

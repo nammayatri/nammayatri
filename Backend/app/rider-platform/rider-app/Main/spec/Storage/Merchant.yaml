@@ -63,6 +63,7 @@ Merchant:
     editPickupDistanceThreshold: Distance
     driverDistanceThresholdFromPickup: Distance
     numOfAllowedEditPickupLocationAttemptsThreshold: Int
+    numOfAllowedEditLocationAttemptsThreshold : Int
     publicMediaFileUrlPattern: Text
     scheduleRideBufferTime: NominalDiffTime
     fakeOtpMobileNumbers: "[Text]"
@@ -139,6 +140,7 @@ Merchant:
     editPickupDistanceThreshold: double precision
     driverDistanceThresholdFromPickup: double precision
     numOfAllowedEditPickupLocationAttemptsThreshold: int
+    numOfAllowedEditLocationAttemptsThreshold: int
     signingPublicKey: text
     signatureExpiry: int
     state: text
@@ -186,6 +188,7 @@ Merchant:
     driverOnTheWayNotifyExpiry: "3600"
     scheduleRideBufferTime: "1800"
     numOfAllowedEditPickupLocationAttemptsThreshold: "2"
+    numOfAllowedEditLocationAttemptsThreshold : "3"
     driverDistanceThresholdFromPickup: "100"
     editPickupDistanceThreshold: "100"
     publicMediaFileUrlPattern: "'http://localhost:8013/v2/<DOMAIN>/media?filePath=<FILE_PATH>'"

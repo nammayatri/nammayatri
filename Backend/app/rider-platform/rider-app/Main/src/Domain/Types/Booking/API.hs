@@ -88,7 +88,6 @@ data BookingAPIEntity = BookingAPIEntity
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     isValueAddNP :: Bool,
-    editPickupAttemptsLeft :: Int,
     vehicleServiceTierType :: DVST.VehicleServiceTierType,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
@@ -196,7 +195,6 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       updatedAt = booking.updatedAt,
       hasDisability = hasDisability,
       sosStatus = mbSosStatus,
-      editPickupAttemptsLeft = fromMaybe 0 (activeRide >>= (.allowedEditLocationAttempts)),
       isValueAddNP,
       vehicleServiceTierType = booking.vehicleServiceTierType,
       vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
@@ -296,5 +294,6 @@ makeRideAPIEntity Ride {..} =
           chargeableRideDistanceWithUnit = chargeableDistance,
           vehicleColor = vehicleColor',
           allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
+          allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
           ..
         }

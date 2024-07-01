@@ -51,6 +51,7 @@ data MerchantT f = MerchantT
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     minimumDriverRatesCount :: B.C f Kernel.Prelude.Int,
     name :: B.C f Kernel.Prelude.Text,
+    numOfAllowedEditLocationAttemptsThreshold :: B.C f Kernel.Prelude.Int,
     numOfAllowedEditPickupLocationAttemptsThreshold :: B.C f Kernel.Prelude.Int,
     onlinePayment :: B.C f Kernel.Prelude.Bool,
     publicMediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
