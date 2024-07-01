@@ -442,11 +442,20 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
             "Please book again to get another ride."
           ]
       SBCR.ByDriver ->
-        unwords
-          [ "The driver had to cancel the ride for",
-            showTimeIst (booking.startTime) <> ".",
-            "Please book again to get another ride."
-          ]
+        case mbRide of
+          Nothing ->
+            unwords
+              [ "Sorry your ride for",
+                showTimeIst (booking.startTime),
+                "was cancelled.",
+                "Please try to book again"
+              ]
+          Just _ ->
+            unwords
+              [ "The driver had to cancel the ride for",
+                showTimeIst (booking.startTime) <> ".",
+                "Please book again to get another ride."
+              ]
       SBCR.ByAllocator ->
         unwords
           [ "The ride for",
