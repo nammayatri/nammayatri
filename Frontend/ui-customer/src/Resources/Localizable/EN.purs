@@ -1151,9 +1151,9 @@ getEN stringKey =
         LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "Learn about exclusive safety features on " <> merchantName 
         OTHER_PROVIDER_NO_RECEIPT -> "Driver receipt for rides fulfilled by other providers are not available yet."
         RIDE_FULFILLED_BY merchantName -> "Ride fulfilled by: " <> merchantName
-        RUSH_HOUR_CHARGES -> "Rush Hour Charges*"
+        CONGESTION_CHARGES -> "Congestion Charges*"
         TIP_CAN_BE_ADDED maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare."
-        RUSH_HOURS_DESC charges -> "*During Rush hours, "<> charges <>"% additional fare is applicable to compensate driver’s time for high traffic."
+        CONGESTION_CHARGES_DESC charges -> "*A Congestion Charge of "<> charges <>"% on your ride is applicable currently to compensate driver’s time in high traffic or to get more drivers available for you"
         AC_TURNED_OFF -> "A/C was not ON"
         ESTIMATES_EXPIRY_ERROR -> "Estimates has been expired. Please try again."
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
