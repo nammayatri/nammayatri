@@ -2,7 +2,7 @@
 ALTER TABLE
     atlas_driver_offer_bpp.fare_policy
 ADD COLUMN per_distance_unit_insurance_charge double precision NOT NULL DEFAULT 0.0,
-ADD COLUMN card_charge_multiplier double precision NOT NULL DEFAULT 0,
+ADD COLUMN card_charge_per_distance_unit_multiplier double precision NOT NULL DEFAULT 0,
 ADD COLUMN fixed_card_charge double precision NOT NULL DEFAULT 0.0;
 
 -- ADD COLUMN: fare_parameters table

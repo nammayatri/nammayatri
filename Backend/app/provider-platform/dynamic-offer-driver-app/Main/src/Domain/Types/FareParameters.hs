@@ -38,10 +38,15 @@ data FareParameters = FareParameters
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
     insuranceCharge :: Maybe HighPrecMoney,
-    cardChargeOnFare :: Maybe HighPrecMoney,
-    fixedCardCharge :: Maybe HighPrecMoney,
+    cardCharge :: CardCharge,
     currency :: Currency,
     updatedAt :: UTCTime
+  }
+  deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
+
+data CardCharge = CardCharge
+  { onFare :: Maybe HighPrecMoney,
+    fixed :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

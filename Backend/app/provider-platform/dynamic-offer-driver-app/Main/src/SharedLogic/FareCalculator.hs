@@ -30,7 +30,6 @@ where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (NightShiftChargeAPIEntity (..), Variant (..), WaitingChargeAPIEntity (..))
-import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Domain.Types.Common
@@ -94,11 +93,8 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       insuranceChargeCaption = show Enums.INSURANCE_CHARGES
       mbInsuranceChargeItem = mkBreakupItem insuranceChargeCaption . mkPrice <$> fareParams.insuranceCharge
 
-      cardChargeOnFareCaption = show Enums.CARD_CHARGE_ON_FARE
-      mbCardChargeOnFareItem = mkBreakupItem cardChargeOnFareCaption . mkPrice <$> fareParams.cardChargeOnFare
-
-      fixedCardChargeCaption = show Enums.FIXED_CARD_CHARGE
-      mbFixedCardChargeItem = mkBreakupItem fixedCardChargeCaption . mkPrice <$> fareParams.fixedCardCharge
+      cardChargesFareCaption = show Enums.CARD_CHARGES
+      mbCardChargesFareItem = mkBreakupItem cardChargesFareCaption . mkPrice <$> fareParams.cardCharge.onFare `maybeAdd` fareParams.cardCharge.fixed
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
@@ -115,8 +111,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbTollChargesItem,
       mbCustomerCancellationDues,
       mbInsuranceChargeItem,
-      mbCardChargeOnFareItem,
-      mbFixedCardChargeItem
+      mbCardChargesFareItem
     ]
     <> detailsBreakups
   where
@@ -176,6 +171,10 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
 
       catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem]
 
+maybeAdd :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney
+maybeAdd (Just a) (Just b) = Just . HighPrecMoney $ a.getHighPrecMoney + b.getHighPrecMoney
+maybeAdd a b = a <|> b
+
 -- TODO: make some tests for it
 
 fareSum :: FareParameters -> HighPrecMoney
@@ -200,8 +199,8 @@ pureFareSum fareParams = do
     + platformFee
     + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
     + fromMaybe 0.0 fareParams.insuranceCharge
-    + fromMaybe 0.0 fareParams.cardChargeOnFare
-    + fromMaybe 0.0 fareParams.fixedCardCharge
+    + fromMaybe 0.0 fareParams.cardCharge.onFare
+    + fromMaybe 0.0 fareParams.cardCharge.fixed
 
 perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
 perRideKmFareParamsSum fareParams = do
@@ -283,7 +282,7 @@ calculateFareParameters params = do
         {- without platformFee -}
         fullRideCostN
           + fromMaybe 0 govtCharges
-      cardChargeOnFare = countCardChargeOnFare fullCompleteRideCost fp.cardChargeMultiplier
+      cardChargeOnFare = countCardChargeOnFare fullCompleteRideCost <$> fp.cardCharge.perDistanceUnitMultiplier
       fareParams =
         FareParameters
           { id,
@@ -309,13 +308,16 @@ calculateFareParameters params = do
             customerCancellationDues = params.customerCancellationDues,
             tollCharges = addMaybes fp.tollCharges (if isTollApplicable fp.vehicleServiceTier then params.tollCharges else Nothing),
             insuranceCharge = insuranceChargeResult,
-            cardChargeOnFare,
-            fixedCardCharge = fp.fixedCardCharge,
+            cardCharge =
+              DFParams.CardCharge
+                { onFare = cardChargeOnFare,
+                  fixed = fp.cardCharge.fixed
+                },
             updatedAt = now,
             currency = params.currency,
             ..
           }
-  KP.forM_ debugLogs $ logTagInfo "FareCalculator"
+  KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
   where
@@ -430,23 +432,25 @@ calculateFareParameters params = do
                 + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - extraDistanceWithinSection)
         getPerExtraMRate perExtraKmRate = perExtraKmRate / 1000
 
-    processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections rideDurationInMins = do
-      let sortedPerMinFareSections = List.sortBy (comparing (.rideDurationInMin)) perMinRateSections
-          fpDebugLogStr = "Sorted per min rate sections: " +|| sortedPerMinFareSections ||+ " for ride duration (in mins): " +|| rideDurationInMins ||+ ""
+    processFPProgressiveDetailsPerRideDurationMinFare mbPerMinRateSections rideDurationInMins =
+      case mbPerMinRateSections of
+        Nothing -> (Nothing, ["No per min rate sections configured"])
+        Just perMinRateSections -> do
+          let sortedPerMinFareSections = NE.sortBy (comparing (.rideDurationInMin)) perMinRateSections
+              fpDebugLogStr = "Sorted per min rate sections: " +|| NE.toList sortedPerMinFareSections ||+ " for ride duration (in mins): " +|| rideDurationInMins ||+ ""
 
-      let rideDurationFare = HighPrecMoney $ processFPPDPerMinFare rideDurationInMins sortedPerMinFareSections
-          rideFareDebugLogStr = "Ride duration fare: " +|| rideDurationFare ||+ ""
+          let rideDurationFare = HighPrecMoney $ processFPPDPerMinFare rideDurationInMins sortedPerMinFareSections
+              rideFareDebugLogStr = "Ride duration fare: " +|| rideDurationFare ||+ ""
 
-      (Just rideDurationFare, [fpDebugLogStr, rideFareDebugLogStr])
+          (Just rideDurationFare, [fpDebugLogStr, rideFareDebugLogStr])
       where
         {- Sections for e.g.: (0, 5], (5, 15], (15, 30] -}
         processFPPDPerMinFare 0 _ = 0.0 :: Rational
-        processFPPDPerMinFare _ [] = 0.0 :: Rational
-        processFPPDPerMinFare !remRideDuration [aSection] = toRational remRideDuration * aSection.perMinRate.amount.getHighPrecMoney
-        processFPPDPerMinFare !remRideDuration (aSection : bSection : remSections) =
+        processFPPDPerMinFare !remRideDuration (aSection :| []) = toRational remRideDuration * aSection.perMinRate.amount.getHighPrecMoney
+        processFPPDPerMinFare !remRideDuration (aSection :| bSection : remSections) =
           let sectionDuration = bSection.rideDurationInMin - aSection.rideDurationInMin
               rideDurationWithinSection = min sectionDuration remRideDuration
-              remFare = processFPPDPerMinFare (remRideDuration - rideDurationWithinSection) (bSection : remSections)
+              remFare = processFPPDPerMinFare (remRideDuration - rideDurationWithinSection) (bSection :| remSections)
            in toRational rideDurationWithinSection * aSection.perMinRate.amount.getHighPrecMoney + remFare
 
     processFPSlabsDetailsSlab DFP.FPSlabsDetailsSlab {..} = do
@@ -538,8 +542,8 @@ calculateFareParameters params = do
         <&> \(distanceInMtrs, chargePerUnit) ->
           let distance = convertMetersToDistance dUnit distanceInMtrs
            in HighPrecMoney $ distance.value.getHighPrecDistance * chargePerUnit.getHighPrecMoney
-    countCardChargeOnFare :: HighPrecMoney -> Maybe Double -> Maybe HighPrecMoney
-    countCardChargeOnFare fullCompleteRideCost = fmap $ \cardCharge ->
+    countCardChargeOnFare :: HighPrecMoney -> Double -> HighPrecMoney
+    countCardChargeOnFare fullCompleteRideCost cardCharge =
       HighPrecMoney (fullCompleteRideCost.getHighPrecMoney * toRational cardCharge) - fullCompleteRideCost
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)

@@ -40,4 +40,4 @@ instance FromCacType (BeamFPPD.FarePolicyProgressiveDetails, [(CacContext, Value
   fromCacType (farePolicyProgressiveDetails, context, tenant, id, toss) = do
     fullFPPDP <- CQueriesFPPDP.findFarePolicyProgressiveDetailsPerExtraKmRateSectionFromCAC context tenant id toss
     fullFPPDPM <- KP.map Domain.makeFPProgressiveDetailsPerMinRateSection <$> CQueriesFPPDPM.findFarePolicyProgressiveDetailsPerMinRateSectionFromCAC context tenant id toss
-    pure $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails fullFPPDPM <$> nonEmpty fullFPPDP
+    pure $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails (nonEmpty fullFPPDPM) <$> nonEmpty fullFPPDP

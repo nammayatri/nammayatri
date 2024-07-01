@@ -39,7 +39,7 @@ data FarePolicyT f = FarePolicyT
     perMinuteRideExtraTimeCharge :: B.C f (Maybe HighPrecMoney),
     congestionCharge :: B.C f (Maybe Domain.CongestionChargeMultiplier),
     perDistanceUnitInsuranceCharge :: B.C f (Maybe HighPrecMoney),
-    cardChargeMultiplier :: B.C f (Maybe Double),
+    cardChargePerDistanceUnitMultiplier :: B.C f (Maybe Double),
     fixedCardCharge :: B.C f (Maybe HighPrecMoney),
     description :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
