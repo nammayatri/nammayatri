@@ -1305,7 +1305,7 @@ getEN stringKey =
         NOT_ENOUGH_COINS_DESCRIPTION -> "You don’t have enough coin balance. Please select a lower value to convert"
         SHARE -> "Share"
         SHARE_NAMMA_YATRI _ -> "Share Namma Yatri"
-        SHARE_NAMMA_YATRI_MESSAGE -> "Hey there! \n\nCheck India's first Zero commission ride hailing app. \n100% Open source | 100% Open data \n\n"
+        SHARE_NAMMA_YATRI_MESSAGE _ -> "Hey there! \n\nCheck India's first Zero commission ride hailing app. \n100% Open source | 100% Open data \n\n"
         BE_OPEN_CHOOSE_OPEN -> "\n\n #beOpen #chooseOpen"
         NOW -> "Now"
         ADD_VEHICLE -> "Add Vehicle"

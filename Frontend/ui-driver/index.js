@@ -1,4 +1,4 @@
-console.log("APP_PERF INDEX_BUNDLE_START : ", new Date().getTime());
+console.log("APP_PERF INDEX_BUNDLE_START : ", new Date().getTime(), Object.assign({},window.__payload));
 import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
@@ -106,6 +106,25 @@ const logger = function()
 
   return pub;
 }();
+window.storeMerchantId = function (payload) {
+  const clientPaylod = payload ? payload : window.__payload;
+  let clientId = clientPaylod.payload.clientId;
+  if (clientId.includes("_ios")) {
+    clientId = clientId.replace("_ios", "");
+  }
+  if (clientId == "yatriprovider") {
+    window.merchantID = "NAMMAYATRI"
+  } else if (clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider") {
+    window.merchantID = "YATRISATHI"
+  } else if (clientId.includes("provider")) {
+    let merchant = clientId.replace("mobility", "")
+    merchant = merchant.replace("provider", "");
+    window.merchantID = merchant.toUpperCase();
+  } else {
+    window.merchantID = "NAMMAYATRI";
+  }
+}
+
 console.log("APP_PERF INDEX_LOGGER_END : ", new Date().getTime());
 
 function setManualEvents(eventName, callbackFunction) {
@@ -188,34 +207,20 @@ function checkForReferral(viewParam, eventType) {
   return false;
 }
 
+
 window.onMerchantEvent = function (_event, payload) {
   console.log(payload);
   const clientPaylod = JSON.parse(payload);
-  let clientId = clientPaylod.payload.clientId;
-  if (clientId.includes("_ios")) {
-    clientId = clientId.replace("_ios","");
-  }
   const appName = clientPaylod.payload.appName;
   window.appName = appName;
   if (_event == "initiate") {
+    window.storeMerchantId(clientPaylod)
     console.log("APP_PERF INDEX_BUNDLE_INITIATE_START : ", new Date().getTime());
-    if (clientId == "yatriprovider") {
-      window.merchantID = "NAMMAYATRI"
-    } else if(clientId == "jatrisaathiprovider" || clientId == "jatrisaathidriver" || clientId == "yatrisathiprovider"){
-      window.merchantID = "YATRISATHI"
-    }else if (clientId.includes("provider")){
-      let merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("provider","");
-      window.merchantID = merchant.toUpperCase();
-    } else {
-      // window.merchantID = clientPaylod.payload.clientId.toUpperCase();
-      window.merchantID = "NAMMAYATRI";
-    }
     try {
       if (
         clientPaylod.payload &&
-        clientPaylod.payload.hasOwnProperty("onCreateTimeStamp") &&
-        clientPaylod.payload.hasOwnProperty("initiateTimeStamp") &&
+        Object.prototype.hasOwnProperty.call(clientPaylod.payload,"onCreateTimeStamp") &&
+        Object.prototype.hasOwnProperty.call(clientPaylod.payload,"initiateTimeStamp") &&
         typeof window.events.onCreateToInitiateDuration === "undefined" &&
         typeof window.events.initAppToInitiateDuration === "undefined"
       ) {

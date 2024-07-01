@@ -965,7 +965,7 @@ getFR stringKey =
         NOT_ENOUGH_COINS_DESCRIPTION -> "Vous n'avez pas assez de solde de pièces. Veuillez sélectionner une valeur inférieure à convertir"
         SHARE -> "Partager"
         SHARE_NAMMA_YATRI _ -> "Partagez Notre Voyageur"
-        SHARE_NAMMA_YATRI_MESSAGE -> "Salut! \n\nDécouvrez la première application de covoiturage sans commission en Inde. \n100% open source | 100% données ouvertes \n\n"
+        SHARE_NAMMA_YATRI_MESSAGE _ -> "Salut! \n\nDécouvrez la première application de covoiturage sans commission en Inde. \n100% open source | 100% données ouvertes \n\n"
         BE_OPEN_CHOOSE_OPEN -> "\n\n #খুলে_রাখুন #খোঁজ_করুন_খোঁজ_করুন"
         NOW -> "Maintenant"
         ADD_VEHICLE -> "Ajouter un véhicule"

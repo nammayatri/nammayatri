@@ -143,6 +143,26 @@ window.setManualEvents = setManualEvents;
 window.__FN_INDEX = 0;
 window.__PROXY_FN = top.__PROXY_FN || {};
 
+window.storeMerchantId = function (payload) {
+  const clientPaylod = payload ? payload.payload : window.__payload.payload;
+  let clientId = clientPaylod.clientId;
+  if (clientId.includes("_ios")) {
+    clientId = clientId.replace("_ios", "");
+  }
+  if (!clientId.startsWith("mobility") && clientId.includes("consumer")) {
+    let merchant = clientId.replace("mobility", "")
+    merchant = merchant.replace("consumer", "")
+    window.merchantID = merchant.toUpperCase();
+  } else {
+    let merchant = clientId.replace("mobility", "")
+    merchant = merchant.replace("consumer", "")
+    merchant = merchant.toUpperCase();
+    window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
+  }
+  if (window.merchantID == "YATRI") {
+    window.merchantID = "NAMMAYATRI";
+  }
+}
 const purescript = require("./output/Main");
 // if (window.__OS == "WEB") {
 //   purescript.main();
@@ -179,6 +199,7 @@ function shouldRefresh() {
     )
 }
 
+
 window.onMerchantEvent = function (_event, globalPayload) {
   console.log(globalPayload);
   window.__payload = JSON.parse(globalPayload);
@@ -190,24 +211,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
       "APP_PERF INDEX_BUNDLE_INITIATE_START : ",
       new Date().getTime()
     );
-    let clientId = clientPaylod.clientId;
-    if (clientId.includes("_ios"))
-    {
-      clientId = clientId.replace("_ios","");
-    }
-    if (!clientId.startsWith("mobility") && clientId.includes("consumer")) {
-      let merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("consumer","")
-      window.merchantID = merchant.toUpperCase();
-    } else {
-      let merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("consumer","")
-      merchant = merchant.toUpperCase();
-      window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
-    }
-    if (window.merchantID == "YATRI") {
-      window.merchantID = "NAMMAYATRI";
-    }
+    window.storeMerchantId(globalPayload)
     console.log("MID",window.merchantID);
     try {
       if (

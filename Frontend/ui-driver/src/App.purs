@@ -76,6 +76,7 @@ import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.DeleteAccountScreen.ScreenData as DeleteAccountScreenData
 import Screens.CameraScreen.ScreenData as CameraScreenData
+import Screens.EarningsScreen.ScreenData as EarningsScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -131,6 +132,7 @@ newtype GlobalState = GlobalState {
   , rateCardScreen :: RateCardScreenState
   , deleteAccountScreen :: DeleteAccountScreenData.State
   , cameraScreen :: CameraScreenState
+  , earningsScreenV2 :: EarningsScreenData.State
   }
 
 defaultGlobalState :: GlobalState
@@ -186,6 +188,7 @@ defaultGlobalState = GlobalState {
 , rateCardScreen : RateCardScreenData.initData
 , deleteAccountScreen : DeleteAccountScreenData.initData
 , cameraScreen : CameraScreenData.initData
+, earningsScreenV2 : EarningsScreenData.initialState
 }
 
 defaultGlobalProps :: GlobalProps
@@ -250,6 +253,7 @@ data ScreenType =
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CameraScreenStateType (CameraScreenState -> CameraScreenState)
+  | EarningsScreenV2 (EarningsScreenData.State -> EarningsScreenData.State)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -550,3 +554,9 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
 
 data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD_API RateCardScreenState Int
 data CAMERA_SCREEN_OUTPUT = OPEN_CAMERA
+
+
+data FlowState = EarningsV2Daily
+  | EarningsV2Weekly
+  | EarningsV2RideHistory
+  | EarningsV2PayoutHistory

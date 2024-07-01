@@ -814,10 +814,45 @@ newtype GetRidesSummaryListResp = GetRidesSummaryListResp
 newtype RidesSummary = RidesSummary
   {
     earnings :: Int,
+    -- earningsWithCurrency :: PriceAPIEntity,
     rideDistance :: Int,
     rideDate :: String,
     noOfRides :: Int
+    -- rideDistanceWithUnit :: Distance
   }
+
+-- data Currency = INR | USD | EUR
+
+-- newtype PriceAPIEntity = PriceAPIEntity {
+--   amount :: Number,
+--   currency :: Currency
+-- }
+
+-- data DistanceUnit = Meter | Mile | Yard | Kilometer
+
+-- newtype Distance = Distance {
+--   unit :: DistanceUnit,
+--   value :: Int
+-- }
+
+-- derive instance genericDistanceUnit :: Generic DistanceUnit _
+-- instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standardEncode body = defaultEnumEncode body
+-- instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
+-- instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
+
+-- derive instance genericDistance :: Generic Distance _
+-- derive instance newtypePriceAPIEntity :: Newtype PriceAPIEntity _
+-- instance standardEncodeDistance :: StandardEncode Distance where standardEncode (Distance body) = standardEncode body
+-- instance decodeDistance :: Decode Distance where decode = defaultDecode
+
+-- derive instance genericCurrency :: Generic Currency _
+-- instance standardEncodeCurrency :: StandardEncode Currency where standardEncode body = defaultEnumEncode body
+-- instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+
+-- derive instance genericPriceAPIEntity :: Generic PriceAPIEntity _
+-- derive instance newtypePriceAPIEntity :: Newtype PriceAPIEntity _
+-- instance standardEncodePriceAPIEntity :: StandardEncode PriceAPIEntity where standardEncode (PriceAPIEntity body) = standardEncode body
+-- instance decodePriceAPIEntity :: Decode PriceAPIEntity where decode = defaultDecode
 
 instance makeGetRidesSummarListReq :: RestEndpoint GetRidesSummaryListReq GetRidesSummaryListResp where
     makeRequest reqBody@(GetRidesSummaryListReq dateList) headers = defaultMakeRequest POST (EP.getRidesSummaryList dateList) headers reqBody Nothing

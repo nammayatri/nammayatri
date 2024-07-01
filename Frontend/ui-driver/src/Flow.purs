@@ -83,7 +83,7 @@ import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Types (AppConfig(..), Language)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
-import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
+import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const, (>>=))
 import Presto.Core.Types.API (ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, Flow)
 import PrestoDOM (initUI)
@@ -150,6 +150,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Common.Types.App as CTA
 import AssetsProvider (renewFile)
 import Helpers.PrestoUtils
+import Screens.EarningsScreen.ScreenData as ESD
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -161,13 +162,13 @@ baseAppFlow baseFlow event driverInfoResponse = do
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     liftFlowBT $ runEffectFn1 EHC.resetIdMap ""
     liftFlowBT $ resetAllTimers
+    when baseFlow $ initUIWrapper
     -- checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     updateNightSafetyPopup
     void $ liftFlowBT initiateLocationServiceClient
     updateOperatingCity
-    when baseFlow $ initUIWrapper
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
@@ -3988,6 +3989,15 @@ confirmQuestionFlow state = let moduleId = maybe "" (\selModule -> selModule ^. 
 
     getMultipleSelectedOptions = (map (\eOption -> eOption.optionId) state.props.currentQuestionSelectedOptionsData.selectedMultipleOptions)
 
+
+flowRouter :: TA.FlowState -> FlowBT String Unit
+flowRouter flowState = 
+  (case flowState of
+    TA.EarningsV2Daily -> lift $ lift $ UI.earningScreenDailyV2
+    TA.EarningsV2Weekly -> lift $ lift $ UI.earningScreenWeeklyV2
+    TA.EarningsV2RideHistory -> lift $ lift $ UI.earningsHistoryFlow ESD.Ride
+    TA.EarningsV2PayoutHistory -> lift $ lift $ UI.earningsHistoryFlow ESD.Payout) >>= flowRouter
+
 driverEarningsFlow :: FlowBT String Unit
 driverEarningsFlow = do 
   (GlobalState globalState) <- getState
@@ -3995,66 +4005,69 @@ driverEarningsFlow = do
   logField_ <- lift $ lift $ getLogFields
   let earningScreenState = globalState.driverEarningsScreen
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
-  uiAction <- UI.driverEarningsScreen
-  case uiAction of
-    EARNINGS_NAV HomeScreenNav state -> do
-       updateDriverStats state homeScreenFlow  
-    EARNINGS_NAV GoToSubscription state -> do
-       updateDriverStats state updateAvailableAppsAndGoToSubs  
-    EARNINGS_NAV GoToContest state -> do
-       updateDriverStats state referralFlow  
-    EARNINGS_NAV GoToAlerts state -> do
-       updateDriverStats state notificationFlow  
-    EARNINGS_NAV _ state -> do
-       updateDriverStats state driverEarningsFlow
-    CHANGE_SUB_VIEW subView state -> do
-      modifyScreenState $ DriverEarningsScreenStateType (\state -> state{props{subView = subView, date = getCurrentUTC ""}})
-      driverEarningsFlow
-    CONVERT_COIN_TO_CASH state -> do
-      resp <- lift $ lift $ Remote.convertCoinToCash state.data.coinsToUse
-      if isRight resp then liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_convert_to_cash_api_success" $ [{key : "Number of Coins", value : unsafeToForeign state.data.coinsToUse}] else pure unit
-      let lottieFile = if isRight resp then "ny_ic_coins_redeemed_success.json" else "ny_ic_coins_redeemed_failure.json"
-      modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{showCoinsRedeemedAnim = lottieFile, coinConvertedSuccess = isRight resp}})
-      driverEarningsFlow
-    REFRESH_EARNINGS_SCREEN state -> driverEarningsFlow
-    EARNINGS_HISTORY _ -> driverEarningsFlow
-    GOTO_PAYMENT_HISTORY_FROM_COINS -> paymentHistoryFlow
-    GOTO_MY_PLAN_FROM_COINS -> updateAvailableAppsAndGoToSubs
-    GOTO_TRIP_DETAILS  selectedCard -> do
-      sourceMod <- translateString selectedCard.source 400
-      destinationMod <- if selectedCard.tripType == ST.Rental then pure "" else translateString selectedCard.destination 400
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
-      tripId = selectedCard.id,
-      date = selectedCard.date,
-      time = selectedCard.time,
-      source = sourceMod,
-      destination = destinationMod,
-      totalAmount = selectedCard.total_amount,
-      distance = selectedCard.rideDistance,
-      status = selectedCard.status,
-      vehicleType = selectedCard.vehicleType,
-      rider = selectedCard.riderName,
-      customerExtraFee = selectedCard.customerExtraFee,
-      purpleTagVisibility = selectedCard.purpleTagVisibility,
-      gotoTagVisibility = selectedCard.gotoTagVisibility,
-      spLocTagVisibility = selectedCard.spLocTagVisibility,
-      specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
-      specialZoneImage = selectedCard.specialZoneImage,
-      specialZoneText = selectedCard.specialZoneText,
-      specialZonePickup = selectedCard.specialZonePickup,
-      tollCharge = selectedCard.tollCharge,
-      goBackTo = ST.Earning,
-      rideType = selectedCard.rideType,
-      tripStartTime = selectedCard.tripStartTime,
-      tripEndTime = selectedCard.tripEndTime,
-      vehicleModel = selectedCard.vehicleModel,
-      acRide = selectedCard.acRide,
-      vehicleServiceTier = selectedCard.vehicleServiceTier
-      }})
-      tripDetailsScreenFlow
-    LOAD_MORE_HISTORY state -> do
-      modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{offsetValue = state.props.offsetValue + 10}})
-      driverEarningsFlow
+  if false -- getMerchant FunctionCall == BRIDGE TODO: Enable after earnigns is completed.
+    then flowRouter TA.EarningsV2Daily
+    else do
+      uiAction <- UI.driverEarningsScreen
+      case uiAction of
+        EARNINGS_NAV HomeScreenNav state -> do
+          updateDriverStats state homeScreenFlow  
+        EARNINGS_NAV GoToSubscription state -> do
+          updateDriverStats state updateAvailableAppsAndGoToSubs  
+        EARNINGS_NAV GoToContest state -> do
+          updateDriverStats state referralFlow  
+        EARNINGS_NAV GoToAlerts state -> do
+          updateDriverStats state notificationFlow  
+        EARNINGS_NAV _ state -> do
+          updateDriverStats state driverEarningsFlow
+        CHANGE_SUB_VIEW subView state -> do
+          modifyScreenState $ DriverEarningsScreenStateType (\state -> state{props{subView = subView, date = getCurrentUTC ""}})
+          driverEarningsFlow
+        CONVERT_COIN_TO_CASH state -> do
+          resp <- lift $ lift $ Remote.convertCoinToCash state.data.coinsToUse
+          if isRight resp then liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_convert_to_cash_api_success" $ [{key : "Number of Coins", value : unsafeToForeign state.data.coinsToUse}] else pure unit
+          let lottieFile = if isRight resp then "ny_ic_coins_redeemed_success.json" else "ny_ic_coins_redeemed_failure.json"
+          modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{showCoinsRedeemedAnim = lottieFile, coinConvertedSuccess = isRight resp}})
+          driverEarningsFlow
+        REFRESH_EARNINGS_SCREEN state -> driverEarningsFlow
+        EARNINGS_HISTORY _ -> driverEarningsFlow
+        GOTO_PAYMENT_HISTORY_FROM_COINS -> paymentHistoryFlow
+        GOTO_MY_PLAN_FROM_COINS -> updateAvailableAppsAndGoToSubs
+        GOTO_TRIP_DETAILS  selectedCard -> do
+          sourceMod <- translateString selectedCard.source 400
+          destinationMod <- if selectedCard.tripType == ST.Rental then pure "" else translateString selectedCard.destination 400
+          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
+          tripId = selectedCard.id,
+          date = selectedCard.date,
+          time = selectedCard.time,
+          source = sourceMod,
+          destination = destinationMod,
+          totalAmount = selectedCard.total_amount,
+          distance = selectedCard.rideDistance,
+          status = selectedCard.status,
+          vehicleType = selectedCard.vehicleType,
+          rider = selectedCard.riderName,
+          customerExtraFee = selectedCard.customerExtraFee,
+          purpleTagVisibility = selectedCard.purpleTagVisibility,
+          gotoTagVisibility = selectedCard.gotoTagVisibility,
+          spLocTagVisibility = selectedCard.spLocTagVisibility,
+          specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
+          specialZoneImage = selectedCard.specialZoneImage,
+          specialZoneText = selectedCard.specialZoneText,
+          specialZonePickup = selectedCard.specialZonePickup,
+          tollCharge = selectedCard.tollCharge,
+          goBackTo = ST.Earning,
+          rideType = selectedCard.rideType,
+          tripStartTime = selectedCard.tripStartTime,
+          tripEndTime = selectedCard.tripEndTime,
+          vehicleModel = selectedCard.vehicleModel,
+          acRide = selectedCard.acRide,
+          vehicleServiceTier = selectedCard.vehicleServiceTier
+          }})
+          tripDetailsScreenFlow
+        LOAD_MORE_HISTORY state -> do
+          modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{offsetValue = state.props.offsetValue + 10}})
+          driverEarningsFlow
   where 
     updateDriverStats state flow = do
       when (state.props.subView == ST.YATRI_COINS_VIEW) $ do

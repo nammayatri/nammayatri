@@ -8,6 +8,7 @@ import ConfigProvider
 import Screens.BookingOptionsScreen.ScreenData as BOP
 import MerchantConfig.DefaultConfig as DC
 import Resource.Constants as RC
+import MerchantConfig.DefaultConfig as DC
 
 initData :: RateCardScreenState
 initData = { 

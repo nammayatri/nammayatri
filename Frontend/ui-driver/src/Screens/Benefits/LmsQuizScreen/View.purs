@@ -26,7 +26,7 @@ import Font.Style as FontStyle
 import Common.Types.App
 import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.Utils (getLanguageTwoLetters, fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Commons (screenWidth, flowRunner, liftFlow, screenHeight)
+import Engineering.Helpers.Commons (screenWidth, flowRunner, liftFlow, screenHeight, safeMarginTopWithDefault, safeMarginBottom)
 import Components.GenericHeader as GenericHeader
 import Screens.Benefits.LmsQuizScreen.ComponentConfig
 import Animation as Anim
@@ -98,12 +98,13 @@ view push state =
      , height $ MATCH_PARENT
      , orientation VERTICAL
      , background Color.white900
+     , padding $ PaddingBottom safeMarginBottom
      ]([ ] <> if not areTotalQuestionsDone then 
                 [
                    customHeaderView push state
                 ,  separatorView push state
                 ,  (if (state.props.isConfirming || state.props.isConfirmed ) then PrestoAnim.animationSet [] else  PrestoAnim.animationSet [ Anim.fadeIn state.props.animationVisibilty ]) $ 
-                   linearLayout
+                   relativeLayout
                    [ width MATCH_PARENT
                    , orientation VERTICAL
                    , height MATCH_PARENT
@@ -130,7 +131,7 @@ customHeaderView push state =
   [ width $ MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ Padding 16 16 16 16
+  , padding $ Padding 16 (safeMarginTopWithDefault 16) 16 16
   , background Color.white900
   ][ linearLayout
      [ width $ MATCH_PARENT
@@ -459,7 +460,7 @@ primaryButtonBodyView push state =
   $
   linearLayout
   [ width  MATCH_PARENT
-  , height WRAP_CONTENT
+  , height MATCH_PARENT
   , orientation VERTICAL
   , alignParentBottom "true,-1"
   , background Color.white900

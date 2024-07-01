@@ -73,6 +73,9 @@ white27 = "#45FCFCFC"
 white300 :: Color
 white300 = "#FDD56B"
 
+white160 :: Color
+white160 = "#29FFFFFF"
+
 white200 :: Color
 white200 = "#99FFFFFF"
 
@@ -387,3 +390,6 @@ purple900 = "#7435FC"
 
 purple500 :: Color
 purple500 = "#E0D1FF"
+
+purple700 :: Color
+purple700 = "#7D4BFF"

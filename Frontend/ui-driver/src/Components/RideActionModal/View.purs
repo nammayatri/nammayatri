@@ -368,8 +368,6 @@ totalDistanceView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (
 totalDistanceView push config =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
     , orientation VERTICAL
     , weight 1.0
     ][ textView $
@@ -390,44 +388,36 @@ totalDistanceView push config =
         ] <> FontStyle.body11 TypoGraphy
     ]
 
-pickUpDistance :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-pickUpDistance push config =
+pickUpDistance :: forall w. (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
+pickUpDistance push config vis =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , visibility $ boolToVisibility $ ( config.distance /= 0 && not (config.currentStage == RideStarted) )
+    , weight 1.0
+    , orientation VERTICAL
+    , padding $ PaddingLeft 4
+    , visibility $ boolToVisibility vis
     ]
-    [ separator true
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity RIGHT
-        , orientation VERTICAL
-        , weight 1.0
-        , padding $ PaddingLeft 4
-        ]
-        [ textView
-            $ [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , text $ getString PICK_UP
-              , color Color.black650
-              , ellipsize true
-              , singleLine true
-              , margin $ MarginLeft 10
-              
-              ]
-            <> FontStyle.body1 TypoGraphy
-        , textView
-            $ [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , text $ pickupDistanceText
-              , color Color.black900
-              , ellipsize true
-              , singleLine true
-              ,margin $ MarginLeft 20
-              ]
-            <> FontStyle.body11 TypoGraphy
-        ]
+    [ textView
+        $ [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ getString PICK_UP
+          , color Color.black650
+          , ellipsize true
+          , singleLine true
+          , margin $ MarginLeft 10
+          
+          ]
+        <> FontStyle.body1 TypoGraphy
+    , textView
+        $ [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ pickupDistanceText
+          , color Color.black900
+          , ellipsize true
+          , singleLine true
+          ,margin $ MarginLeft 20
+          ]
+        <> FontStyle.body11 TypoGraphy
     ]
   where
   pickupDistanceText =  fromMetersToKm config.distance
@@ -675,8 +665,6 @@ estimatedFareView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (
 estimatedFareView push config =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
     , orientation VERTICAL
     , weight 1.0
     ][ textView $
@@ -712,14 +700,13 @@ estimatedFareView push config =
                 waitingCharges = chargesOb.perMinCharges
             in waitingCharges * Int.toNumber min
 
-waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-waitTimeView push config =
+waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> Boolean -> PrestoDOM (Effect Unit) w
+waitTimeView push config vis =
    linearLayout
      [ height WRAP_CONTENT
-     , gravity START
      , orientation VERTICAL
      , weight 1.0
-     , visibility if config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
+     , visibility $ boolToVisibility vis
      ]
      [ linearLayout
          [
@@ -729,7 +716,7 @@ waitTimeView push config =
         [ height WRAP_CONTENT
          , width $ V 65
          , text (getString WAIT_TIME) 
-         ,margin $ Margin 20 0 0 0 
+        --  ,margin $ Margin 20 0 0 0 
          , color Color.black650
          , textSize FontSize.a_14
          , ellipsize true
@@ -760,7 +747,7 @@ waitTimeView push config =
             , ellipsize true
             , textSize FontSize.a_20
             -- ,padding $ Padding 4 0 0 0 
-            ,margin $ Margin 28 0 0 0  
+            -- ,margin $ Margin 28 0 0 0  
             ,singleLine true
             ,fontStyle $ FontStyle.semiBold TypoGraphy
             ]
@@ -833,6 +820,8 @@ rideInfoView push config =
 
 rentalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
 rentalRideInfoView push config = 
+  let isWaitTime = isWaitingTimeStarted config
+  in
   [ linearLayout[
     height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -847,9 +836,8 @@ rentalRideInfoView push config =
     , rentalDurationView push config
   ] 
   <> if config.startRideActive then (
-  if (config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered) then 
-  [  separator true , waitTimeView push config ] else [ 
-     separator true , totalDistanceView push config ]
+      [ separator true
+      , if isWaitTime then waitTimeView push config isWaitTime else totalDistanceView push config] 
   ) else []
 
 rideTierAndCapacity :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -925,8 +913,11 @@ rideTierAndCapacity push config =
 
 normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
 normalRideInfoView push config =
+  let isPickup = config.distance /= 0 && not (config.currentStage == RideStarted)
+      isWaitTime = isWaitingTimeStarted config
+  in
   [ linearLayout
-      [ width MATCH_PARENT
+      [ width $ V $ (screenWidth unit) - 52
       , height WRAP_CONTENT
       , orientation VERTICAL
       ]
@@ -934,20 +925,13 @@ normalRideInfoView push config =
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
+          , orientation HORIZONTAL
+          , gravity CENTER
           ]
           [ estimatedFareView push config
-          
-          , if isWaitingTimeStarted config then  
-                linearLayout
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                ,margin $ MarginHorizontal 5 5
-                ][separator true , waitTimeView push config] else pickUpDistance push config 
-          , linearLayout
-              [ weight 1.0
-              , height MATCH_PARENT
-              ]
-              []
+          , separator $ isPickup || isWaitTime
+          , waitTimeView push config isWaitTime
+          , pickUpDistance push config isPickup
           , separator true
           , totalDistanceView push config
           ]
@@ -976,13 +960,15 @@ normalRideInfoView push config =
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
 separator visibility' =
   linearLayout
-    [ weight 1.0
-    , height MATCH_PARENT
-    , margin $ MarginHorizontal 5 5
+    [ height MATCH_PARENT
     , visibility if visibility' then VISIBLE else GONE
+    , margin $ MarginHorizontal 5 5
+    , weight 1.0
+    , gravity CENTER
     ][ linearLayout
       [ width $ V 1
       , background Color.lightGrey
+      , height $ V $ JB.getHeightFromPercent 5
       , height MATCH_PARENT
       ][]
     ]
@@ -1282,4 +1268,4 @@ stopImageView  config push =
             SeparatorView.view separatorConfig]
     ]
 isWaitingTimeStarted :: Config -> Boolean
-isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+isWaitingTimeStarted config = config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
