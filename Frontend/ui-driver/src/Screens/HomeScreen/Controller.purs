@@ -303,6 +303,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToBookingPreferences ST.HomeScreenState
                     | GoToRideReqScreen ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
+                    | GoToRideSummary ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -434,6 +435,7 @@ data Action = NoAction
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
+            | RideSummary
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1465,6 +1467,8 @@ eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {prop
 eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {props {toll {showTollChargeAmbigousPopup = false}}}
 
 eval RideRequestsList state = exit $ GoToRideReqScreen state  
+
+eval RideSummary state = exit $ GoToRideSummary state
 
 eval _ state = update state
 
