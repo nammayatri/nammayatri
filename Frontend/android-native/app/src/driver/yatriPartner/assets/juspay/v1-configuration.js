@@ -722,6 +722,7 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+      "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -775,6 +776,10 @@ window.getMerchantConfig = function () {
         "mapImage" : "ny_ic_kochi_map",
         "cityCode" : "std:0484",
         "showSubscriptions" : false,
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "",
+        "callDriverInfoPost": false,
+        "showSubscriptions" : false,
         "cityLat" : 9.931233,
         "cityLong" : 76.267303,
         "supportNumber" : "08069724930",
@@ -804,6 +809,7 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+      "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
@@ -812,7 +818,9 @@ window.getMerchantConfig = function () {
       {
         "cityName": "Jaipur",
         "mapImage": "ny_ic_jaipur_map",
-        "cityCode": "std:0141",
+        "cityCode": "std:0141","enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "",
+        "callDriverInfoPost": false,
         "showSubscriptions": false,
         "cityLat": 28.618978,
         "cityLong": 77.207795,
@@ -852,6 +860,7 @@ window.getMerchantConfig = function () {
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : defRateCardConfig,
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side"
@@ -861,6 +870,9 @@ window.getMerchantConfig = function () {
         "cityName": "Chandigarh",
         "mapImage": "ny_ic_chandigarh_map",
         "cityCode": "std:0172",
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "",
+        "callDriverInfoPost": false,
         "showSubscriptions": false,
         "cityLat": 28.618978,
         "cityLong": 77.207795,
@@ -900,6 +912,7 @@ window.getMerchantConfig = function () {
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : defRateCardConfig,
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side"
@@ -909,6 +922,9 @@ window.getMerchantConfig = function () {
         "cityName": "Thrissur",
         "mapImage": "ny_ic_thrissur_map",
         "cityCode": "std:0487",
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "",
+        "callDriverInfoPost": false,
         "showSubscriptions": false,
         "cityLat": 9.931233,
         "cityLong": 76.267303,
@@ -939,6 +955,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : defRateCardConfig,
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"
@@ -948,6 +965,9 @@ window.getMerchantConfig = function () {
         "cityName": "Trivandrum",
         "mapImage": "ny_ic_trivandrum_map",
         "cityCode": "std:0471",
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "",
+        "callDriverInfoPost": false,
         "showSubscriptions": false,
         "cityLat": 9.931233,
         "cityLong": 76.267303,
@@ -978,6 +998,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : defRateCardConfig,
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"
@@ -987,6 +1008,9 @@ window.getMerchantConfig = function () {
         "cityName": "Kozhikode",
         "mapImage": "ny_ic_kochi_map",
         "cityCode": "std:0495",
+        "enableAdvancedBooking" : false,
+        "advancedRidePopUpYoutubeLink" : "",
+        "callDriverInfoPost": false,
         "showSubscriptions": false,
         "cityLat": 9.931233,
         "cityLong": 76.267303,
@@ -1017,6 +1041,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "rateCardConfig" : defRateCardConfig,
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"
