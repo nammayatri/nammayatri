@@ -1151,9 +1151,9 @@ getBN stringKey =
         LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> merchantName <> "মার্চেন্টনেমে একচেটিয়া নিরাপত্তা বৈশিষ্ট্য সম্পর্কে জানুন"
         OTHER_PROVIDER_NO_RECEIPT -> "অন্যান্য প্রদানকারীদের দ্বারা পরিপূর্ণ রাইডের জন্য ড্রাইভারের রসিদ এখনও উপলব্ধ নয়।"
         RIDE_FULFILLED_BY merchantName -> "রাইড পূরণ করেছে: " <> merchantName
-        RUSH_HOUR_CHARGES -> "রাশ ঘন্টা চার্জ*"
+        CONGESTION_CHARGES -> "যানজট চার্জ*"
         TIP_CAN_BE_ADDED maxTip -> "রাইড ভাড়াতে উপলব্ধ টিপ উপযুক্ত <>" <> maxTip <>  "<> টাকা পর্যন্ত যোগ করা যেতে পারে।"
-        RUSH_HOURS_DESC charges -> "*র‌্যাশ ঘন্টায়, উচ্চ যাতায়াতের জন্য ড্রাইভারের সময় পরিমিত করতে, অতিরিক্ত "<> charges <>"% ভাড়া প্রযোজ্য হবে।"
+        CONGESTION_CHARGES_DESC charges -> "*আপনার যাত্রার উপর বর্তমানে "<> charges <>"% যানজট চার্জ প্রযোজ্য, ড্রাইভারের সময়ের জন্য উচ্চ ট্র্যাফিকের সময় ক্ষতিপূরণ করতে বা আপনার জন্য আরও ড্রাইভার উপলব্ধ করার জন্য।"
         AC_TURNED_OFF -> "এসি বন্ধ করা হয়েছে"
         ESTIMATES_EXPIRY_ERROR -> "অনুমান মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "অনুমান মেয়াদ শেষ হয়েছে। আবার তথ্য নিতে, দয়া করে"

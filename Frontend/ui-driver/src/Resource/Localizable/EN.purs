@@ -1442,10 +1442,10 @@ getEN stringKey =
         PARKING_CHARGES_DESC -> "Parking charges accrued by the driver is not included in the fare. This is to be settled post ride between driver and passenger."
         TIP_CAN_BE_ADDED maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare."
         DAY_TIME_CHARGES from till -> "Daytime Charges ("<> from <> " to " <> till <> ")"
-        RUSH_HOURS_DESC charges -> "*During Rush hours, "<> charges <>"% additional fare is applicable to compensate driver’s time for high traffic."
         TOLL_OR_PARKING_CHARGES -> "^Toll/ Parking Charges"
         TOLL_CHARGES_ESTIMATED -> "Toll Charges (Estimated)^"
-        RUSH_HOUR_CHARGES -> "Rush Hour Charges*"
+        CONGESTION_CHARGES -> "Congestion Charges*"
+        CONGESTION_CHARGES_DESC charges -> "*A Congestion Charge of "<> charges <>"% on your ride is applicable currently to compensate driver’s time in high traffic or to get more drivers available for you"
         PICKUP_CHARGE -> "Pickup Charges"
         NIGHT_TIME_CHARGES from till -> "Night-time Charges ("<> from <> " to   " <> till <> ")"
         MIN_FARE_UPTO val -> "Min. Fare upto " <> val
