@@ -333,7 +333,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
         makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           let sortWithDriverScore' = sortWithDriverScore mOCityId transporterConfig intelligentPoolConfig driverPoolCfg
           (sortedDriverPool, randomizedDriverPool) <-
-            bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance, RideFrequency] True isOnRidePool) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False isOnRidePool)
+            bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance, ActualPickupDuration, RideFrequency] True isOnRidePool) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance, ActualPickupDuration] False isOnRidePool)
               =<< splitDriverPoolForSorting mOCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool onlyNewDrivers
           let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
           let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
@@ -429,7 +429,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               Intelligent -> do
                 let sortWithDriverScore' = sortWithDriverScore merchantOpCityId transporterConfig intelligentPoolConfig driverPoolCfg
                 (sortedDriverPool, randomizedDriverPool) <-
-                  bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance, RideFrequency] True False) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance] False False)
+                  bimapM (sortWithDriverScore' [AcceptanceRatio, CancellationRatio, AvailableTime, DriverSpeed, ActualPickupDistance, ActualPickupDuration, RideFrequency] True False) (sortWithDriverScore' [AvailableTime, DriverSpeed, ActualPickupDistance, ActualPickupDuration] False False)
                     =<< splitDriverPoolForSorting merchantOpCityId intelligentPoolConfig.minQuotesToQualifyForIntelligentPool nonGoHomeNormalDriversWithValidReqCountWithServiceTier -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
                 let sortedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance sortedDriverPool
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
@@ -507,8 +507,9 @@ sortWithDriverScore merchantOpCityId transporterConfig intelligentPoolConfig dri
   logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
   let driverIds = map (.driverPoolResult.driverId) dp
   let driverActualDistances = map ((.driverPoolResult.driverId) &&& (.driverPoolResult.distanceToPickup)) dp
+  let driverActualDurations = map ((.driverPoolResult.driverId) &&& (.actualDurationToPickup)) dp
   let cancellationScoreRelatedConfig = CancellationScoreRelatedConfig transporterConfig.popupDelayToAddAsPenalty transporterConfig.thresholdCancellationScore transporterConfig.minRidesForCancellationScore
-  calculatedScores <- mapM (fetchScore merchantOpCityId driverActualDistances driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig isOnRidePool) factorsToCalculate
+  calculatedScores <- mapM (fetchScore merchantOpCityId driverActualDistances driverActualDurations driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig isOnRidePool) factorsToCalculate
   let overallScore = calculateOverallScore calculatedScores
   driverPoolWithoutTie <- breakSameScoreTies $ groupByScore overallScore
   let sortedDriverPool = concatMap snd . sortOn (Down . fst) $ HM.toList driverPoolWithoutTie
@@ -523,12 +524,13 @@ sortWithDriverScore merchantOpCityId transporterConfig intelligentPoolConfig dri
                   case factor of
                     AcceptanceRatio -> accIntelligentScores {acceptanceRatio = res} :: IntelligentScores
                     ActualPickupDistance -> accIntelligentScores {actualPickupDistanceScore = res} :: IntelligentScores
+                    ActualPickupDuration -> accIntelligentScores {actualPickupDurationScore = res} :: IntelligentScores
                     CancellationRatio -> accIntelligentScores {cancellationRatio = res} :: IntelligentScores
                     AvailableTime -> accIntelligentScores {availableTime = res} :: IntelligentScores
                     DriverSpeed -> accIntelligentScores {driverSpeed = res} :: IntelligentScores
                     RideFrequency -> accIntelligentScores {rideFrequency = res} :: IntelligentScores
               )
-              (IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing 0)
+              (IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing Nothing 0)
               factorOverallScore
       addIntelligentPoolInfo cancellationScoreRelatedConfig dObj intelligentScores
     addIntelligentPoolInfo cancellationScoreRelatedConfig dObj is@IntelligentScores {..} = do
@@ -575,6 +577,7 @@ fetchScore ::
   ) =>
   Id MerchantOperatingCity ->
   [(Id Driver, Meters)] ->
+  [(Id Driver, Seconds)] ->
   [Id Driver] ->
   DriverIntelligentPoolConfig ->
   DriverPoolConfig ->
@@ -582,7 +585,7 @@ fetchScore ::
   Bool ->
   IntelligentFactors ->
   m (HM.HashMap Text Double)
-fetchScore merchantOpCityId driverActualDistanceList driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig isOnRidePool factor =
+fetchScore merchantOpCityId driverActualDistanceList driverActualDurations driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig isOnRidePool factor =
   HM.fromList <$> case factor of
     AcceptanceRatio | intelligentPoolConfig.acceptanceRatioWeightage /= 0 -> do
       acceptanceRatios <- getRatios (getLatestAcceptanceRatio merchantOpCityId) driverIds
@@ -600,6 +603,9 @@ fetchScore merchantOpCityId driverActualDistanceList driverIds intelligentPoolCo
       getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
     ActualPickupDistance | intelligentPoolConfig.actualPickupDistanceWeightage /= 0 -> do
       pure $ map (bimap (.getId) ((* (fromIntegral intelligentPoolConfig.actualPickupDistanceWeightage)) . fromIntegral . flip div (fromMaybe (Meters 1) (if isOnRidePool then driverPoolCfg.actualDistanceThresholdOnRide else driverPoolCfg.actualDistanceThreshold)))) driverActualDistanceList
+    ActualPickupDuration | intelligentPoolConfig.actualPickupDurationWeightage /= 0 -> do
+      let maxDuration = maybe (Seconds 1) (snd . maximumBy (comparing snd)) (nonEmpty driverActualDurations)
+      pure $ map (bimap (.getId) ((* (fromIntegral intelligentPoolConfig.actualPickupDurationWeightage)) . fromIntegral . flip div maxDuration)) driverActualDurations
     RideFrequency | intelligentPoolConfig.numRidesWeightage /= 0 -> do
       driverIdAndNumRides <- mapM (getTotalRidesCount merchantOpCityId) driverIds <&> zip (getId <$> driverIds)
       logDebug $ "Intelligent pool :- [(DriverId, numRides)] - " <> show driverIdAndNumRides
