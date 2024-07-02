@@ -23,6 +23,7 @@ import Domain.Payments as PP
 import ConfigProvider
 import Screens.Types as ST
 import RemoteConfig.Utils as RU
+import Constants.Configs (dummyPrice)
 import MerchantConfig.DefaultConfig (dummyCityConfig)
 
 initData :: HomeScreenState
@@ -149,6 +150,9 @@ initData =
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
+      , earningPerKmWithCurrency : dummyPrice 
+      , totalEarningsOfDayWithCurrency : dummyPrice
+      , bonusEarnedWithCurrency : dummyPrice
     }
   , props:
       { isFreeRide: false
@@ -246,6 +250,9 @@ dummyDriverRideStats =
     , coinBalance: 0
     , totalEarningsOfDayPerKm : Nothing
     , totalValidRidesOfDay : Nothing
+    , totalEarningsOfDayPerKmWithCurrency : dummyPrice
+    , totalEarningsOfDayWithCurrency : dummyPrice
+    , bonusEarningWithCurrency : dummyPrice
     }
 
 dummyRideData :: ActiveRide

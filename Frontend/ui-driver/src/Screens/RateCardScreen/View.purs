@@ -277,7 +277,7 @@ serviceTierItem push state service index =
     ]
     where primaryTextColor = if peakTime then Color.green900 else Color.black800
           secondaryTextColor = if peakTime then Color.green900 else Color.black600
-          curr = EHU.getCurrencySymbol $ fromMaybe CT.INR service.currency
+          curr = EHC.getCurrencySymbol $ fromMaybe CT.INR service.currency
           primaryText = curr <> show (DI.round $  (DI.toNumber state.props.sliderVal) * (fromMaybe 0.0 service.perKmRate))
           secondaryText = curr <> (toStringWith (fixed 2) $ fromMaybe 0.0 service.perKmRate) <> "/" <> getDistanceUnit appConfig -- getDistanceUnit 
           peakTime = service.farePolicyHour == Just API.Peak

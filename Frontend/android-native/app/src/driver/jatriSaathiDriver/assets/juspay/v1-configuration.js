@@ -396,6 +396,7 @@ window.getMerchantConfig = function () {
         }
       },
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"

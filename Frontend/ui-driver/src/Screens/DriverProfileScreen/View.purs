@@ -15,7 +15,9 @@
 module Screens.DriverProfileScreen.View where
 
 import Common.Types.Config
+import ConfigProvider
 import Data.List
+import Data.Int (fromNumber)
 import Screens.DriverProfileScreen.ComponentConfig
 import Screens.SubscriptionScreen.Transformer
 import Mobility.Prelude (boolToVisibility)
@@ -784,7 +786,7 @@ missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
 missedOppArray analyticsData =
   [ { key: (getString CANCELLATION_RATE), value: (show analyticsData.cancellationRate <> "%"), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
   , { key: (getString RIDES_CANCELLED), value: show analyticsData.ridesCancelled, value1: show analyticsData.totalRidesAssigned, infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
-  , { key: (getString EARNINGS_MISSED), value: "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings), value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
+  , { key: (getString EARNINGS_MISSED), value: EHU.intPriceToBeDisplayed analyticsData.missedEarningsWithCurrency true, value1: "", infoImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage: fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
   ]
 
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
@@ -822,7 +824,7 @@ driverAnalyticsView state push =
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   ]
-                  [ infoTileView state { primaryText: "₹ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString $ EARNED_ON_APP "EARNED_ON_APP"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
+                  [ infoTileView state { primaryText: EHU.intPriceToBeDisplayed analyticsData.totalEarningsWithCurrency true, subText: (getString $ EARNED_ON_APP "EARNED_ON_APP"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
                   , linearLayout
                       [ height MATCH_PARENT
                       , width (V 1)
@@ -830,10 +832,10 @@ driverAnalyticsView state push =
                       , background Color.lightGreyShade
                       ]
                       []
-                  , infoTileView state { primaryText: "₹ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned, subText: (getString $ NAMMA_BONUS "NAMMA_BONUS"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
+                  , infoTileView state { primaryText: EHU.intPriceToBeDisplayed analyticsData.bonusEarnedWithCurrency true, subText: (getString $ NAMMA_BONUS "NAMMA_BONUS"), postImgVisibility: false, seperatorView: false, margin: Margin 0 0 0 0 }
                   ]
               else
-                infoCard state push { key: (getString $ EARNED_ON_APP "EARNED_ON_APP"), value: "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), value1: "", infoImageUrl: "", postfixImage: "", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
+                infoCard state push { key: (getString $ EARNED_ON_APP "EARNED_ON_APP"), value: EHU.intPriceToBeDisplayed analyticsData.totalEarningsWithCurrency true, value1: "", infoImageUrl: "", postfixImage: "", showPostfixImage: false, showInfoImage: false, valueColor: Color.charcoalGrey, action: NoAction }
             ]
       , linearLayout
           [ width MATCH_PARENT

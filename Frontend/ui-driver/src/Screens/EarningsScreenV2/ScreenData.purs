@@ -1,5 +1,6 @@
 module Screens.EarningsScreen.ScreenData where
 
+import Common.Types.App (Price(..), Currency(..), Distance(..), DistanceUnit(..))
 import Prelude
 import Screens.EarningsScreen.Common.Types
 import Halogen.VDom.DOM.Prop (PropValue)
@@ -55,7 +56,9 @@ initialState =
 
 type WeeklyEarning
   = { earnings :: Int
+    , earningsWithCurrency :: Price
     , rideDistance :: Int
+    , rideDistanceWithUnit :: Distance
     , rideDate :: String
     , noOfRides :: Int
     , percentLength :: Number
@@ -63,43 +66,57 @@ type WeeklyEarning
 
 dummyEarnings =
   [ { earnings: 1500
+    , earningsWithCurrency : dummyEarningsWithCurrency
     , rideDistance: 100
+    , rideDistanceWithUnit: dummyRideDistanceWithUnit
     , rideDate: "12"
     , noOfRides: 30
     , percentLength: 100.0
     }
   , { earnings: 100
+    , earningsWithCurrency : dummyEarningsWithCurrency
     , rideDistance: 100
+    , rideDistanceWithUnit: dummyRideDistanceWithUnit
     , rideDate: "12"
     , noOfRides: 30
     , percentLength: 50.0
     }
   , { earnings: 100
+    , earningsWithCurrency : dummyEarningsWithCurrency
     , rideDistance: 100
+    , rideDistanceWithUnit: dummyRideDistanceWithUnit
     , rideDate: "12"
     , noOfRides: 30
     , percentLength: 50.0
     }
   , { earnings: 100
+    , earningsWithCurrency : dummyEarningsWithCurrency
     , rideDistance: 100
+    , rideDistanceWithUnit: dummyRideDistanceWithUnit
     , rideDate: "12"
     , noOfRides: 30
     , percentLength: 50.0
     }
   , { earnings: 100
+    , earningsWithCurrency : dummyEarningsWithCurrency
     , rideDistance: 100
+    , rideDistanceWithUnit: dummyRideDistanceWithUnit
     , rideDate: "12"
     , noOfRides: 30
     , percentLength: 50.0
     }
   , { earnings: 100
+    , earningsWithCurrency : dummyEarningsWithCurrency
     , rideDistance: 100
+    , rideDistanceWithUnit: dummyRideDistanceWithUnit
     , rideDate: "12"
     , noOfRides: 30
     , percentLength: 20.0
     }
   , { earnings: 100
+    , earningsWithCurrency : dummyEarningsWithCurrency
     , rideDistance: 100
+    , rideDistanceWithUnit: dummyRideDistanceWithUnit
     , rideDate: "12"
     , noOfRides: 100
     , percentLength: 50.0
@@ -108,11 +125,19 @@ dummyEarnings =
 
 dummyWeeklyEarnings =
   { earnings: 100
+  , earningsWithCurrency : dummyEarningsWithCurrency
   , rideDistance: 100
+  , rideDistanceWithUnit: dummyRideDistanceWithUnit
   , rideDate: "12"
   , noOfRides: -1
   , percentLength: 50.0
   }
+
+dummyEarningsWithCurrency :: Price
+dummyEarningsWithCurrency = {amount: 100.0, currency: INR}
+
+dummyRideDistanceWithUnit :: Distance
+dummyRideDistanceWithUnit = Distance {value: 100.0, unit: Kilometer}
 
 type ListProps = {
   serviceTier :: PropValue

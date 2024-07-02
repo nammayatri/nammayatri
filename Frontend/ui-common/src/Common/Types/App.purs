@@ -674,3 +674,25 @@ instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
 instance showVehicleCategory :: Show VehicleCategory where show = genericShow
 instance decodeVehicleCategory :: Decode VehicleCategory where decode = defaultEnumDecode
 instance encodeVehicleCategory :: Encode VehicleCategory where encode = defaultEnumEncode
+
+data DistanceUnit = Meter | Mile | Yard | Kilometer
+
+newtype Distance = Distance {
+  unit :: DistanceUnit,
+  value :: Number
+}
+
+derive instance genericDistanceUnit :: Generic DistanceUnit _
+instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standardEncode body = defaultEnumEncode body
+instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
+instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
+instance showDistanceUnit :: Show DistanceUnit where show = genericShow
+instance encodeDistanceUnit :: Encode DistanceUnit where encode = defaultEncode
+
+derive instance genericDistance :: Generic Distance _
+derive instance newtypeDistance :: Newtype Distance _
+instance standardEncodeDistance :: StandardEncode Distance where standardEncode (Distance body) = standardEncode body
+instance decodeDistance :: Decode Distance where decode = defaultDecode
+instance showDistance :: Show Distance where show = genericShow
+instance encodeDistance :: Encode Distance where encode = defaultEncode
+instance eqDistance :: Eq Distance where eq = genericEq

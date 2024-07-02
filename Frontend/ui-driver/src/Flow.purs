@@ -3430,6 +3430,9 @@ updateDriverDataToStates = do
           bonusEarned = driverStats.bonusEarning, 
           earningPerKm = driverStats.totalEarningsOfDayPerKm,
           totalValidRidesOfDay = fromMaybe 0 driverStats.totalValidRidesOfDay,
+          earningPerKmWithCurrency = driverStats.totalEarningsOfDayPerKmWithCurrency,
+          totalEarningsOfDayWithCurrency = driverStats.totalEarningsOfDayWithCurrency,
+          bonusEarnedWithCurrency = driverStats.bonusEarningWithCurrency,
           driverStats = true }})
       void $ pure $ setCleverTapUserProp [{key : "Driver Coin Balance", value : unsafeToForeign driverStats.coinBalance }]
     Nothing -> pure unit
@@ -4043,7 +4046,9 @@ driverEarningsFlow = do
           source = sourceMod,
           destination = destinationMod,
           totalAmount = selectedCard.total_amount,
+          totalAmountWithCurrency = selectedCard.total_amount_with_currency,
           distance = selectedCard.rideDistance,
+          distanceWithUnit = selectedCard.rideDistanceWithUnit,
           status = selectedCard.status,
           vehicleType = selectedCard.vehicleType,
           rider = selectedCard.riderName,
@@ -4056,6 +4061,7 @@ driverEarningsFlow = do
           specialZoneText = selectedCard.specialZoneText,
           specialZonePickup = selectedCard.specialZonePickup,
           tollCharge = selectedCard.tollCharge,
+          tollChargeWithCurrency = selectedCard.tollChargeWithCurrency,
           goBackTo = ST.Earning,
           rideType = selectedCard.rideType,
           tripStartTime = selectedCard.tripStartTime,

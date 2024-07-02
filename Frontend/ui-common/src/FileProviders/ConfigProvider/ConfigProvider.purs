@@ -17,6 +17,7 @@ module ConfigProvider (
   module ReExport) where
 
 import Prelude
+import Data.Array (find)
 import Constants as ReExport
 import Data.Function.Uncurried (Fn1)
 import Effect (Effect)
@@ -106,3 +107,8 @@ getCurrency key = (getAppConfig key).currency
 
 getDistanceUnit :: String -> String
 getDistanceUnit key = (getAppConfig key).distanceUnit
+
+getCurrencyForCity :: String -> String
+getCurrencyForCity cityName = do
+  let cityConfig = fromMaybe DefaultConfig.dummyCityConfig $ find (\item -> item.cityName == cityName) (getAppConfig "").cityConfig
+  cityConfig.currency

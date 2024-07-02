@@ -15,11 +15,12 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..), Currency(..))
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck(..), Currency(..), Price, Distance(..), DistanceUnit(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
+import Data.Int (floor)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.String (length, trim, toLower)
 import Data.Maybe (Maybe(..))
@@ -34,7 +35,7 @@ import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (EffectFn1, mkEffectFn1, runEffectFn1)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, liftFlow, os)
+import Engineering.Helpers.Commons (flowRunner, liftFlow, os, formatCurrencyWithCommas)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (Foreign, decode, decodeJSON, encodeJSON)
@@ -455,10 +456,39 @@ formatMinIntoHoursMins mins =
     minutes = mins `mod` 60
   in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> " hr"
 
-getCurrencySymbol :: Currency -> String
-getCurrencySymbol cur = 
-  case cur of
-    INR -> "₹"
-    USD -> "$"
-    EUR -> "€"
-    _ -> ""
+intPriceToBeDisplayed :: Price -> Boolean -> String
+intPriceToBeDisplayed price formatCurrency = case price.currency of
+  INR -> "₹" <> value
+  USD -> "$" <> value
+  EUR -> "€" <> value
+  _ -> show price.currency <> show value
+  where
+    value = if formatCurrency then formatCurrencyWithCommas (show $ floor price.amount) else show $ floor price.amount
+
+priceToBeDisplayed :: Price -> Boolean -> String
+priceToBeDisplayed price formatCurrency = case price.currency of
+  INR -> "₹" <> value
+  USD -> "$" <> value
+  EUR -> "€" <> value
+  _ -> show price.currency <> show value
+  where
+    value = if formatCurrency then formatCurrencyWithCommas (getFixedTwoDecimals price.amount) else getFixedTwoDecimals price.amount 
+
+distanceTobeDisplayed :: Distance -> Boolean -> Boolean -> String
+distanceTobeDisplayed (Distance distance) transformToKm formatDistance = case distance.unit of
+  Meter -> if transformToKm then formatCurrencyWithCommas (getFixedTwoDecimals $ distance.value / 1000.0) <> " km" else formatCurrencyWithCommas (getFixedTwoDecimals $ distance.value) <> " m"
+  Mile -> value <> " mi"
+  Kilometer -> value <> " km"
+  Yard -> value <> " ya"
+  _ -> value <> " " <> show distance.unit
+  where value = if formatDistance then formatCurrencyWithCommas (getFixedTwoDecimals distance.value) else getFixedTwoDecimals distance.value 
+
+intDistanceTobeDisplayed :: Distance -> Boolean -> Boolean -> String
+intDistanceTobeDisplayed (Distance distance) transformToKm formatDistance = case distance.unit of
+  Meter -> if transformToKm then formatCurrencyWithCommas (show $ floor $ distance.value / 1000.0) <> " km" else formatCurrencyWithCommas (show $ floor distance.value) <> " m"
+  Mile -> value <> " mi"
+  Kilometer -> value <> " km"
+  Yard -> value <> " ya"
+  _ -> value <> " " <> show distance.unit
+  where value = if formatDistance then formatCurrencyWithCommas (show $ floor distance.value) else show $ floor distance.value 
+  

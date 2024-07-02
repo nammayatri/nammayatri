@@ -266,6 +266,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+        "currency" : "₹",
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side"
@@ -318,6 +319,7 @@ window.getMerchantConfig = function () {
            },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "currency" : "₹",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
@@ -361,6 +363,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -413,10 +416,11 @@ window.getMerchantConfig = function () {
          },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
-         "assets" :{
-           "auto_image" : "ic_auto_rickshaw",
-           "onboarding_auto_image" : "ny_ic_auto_side"
-         }
+      "currency" : "₹",
+      "assets" :{
+        "auto_image" : "ic_auto_rickshaw",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+        }
       },
       {
         "cityName" : "Chennai",
@@ -508,6 +512,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -551,6 +556,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -594,6 +600,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -637,6 +644,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -680,6 +688,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -722,6 +731,7 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -762,6 +772,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "$",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -801,6 +812,7 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
@@ -849,6 +861,7 @@ window.getMerchantConfig = function () {
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side"
@@ -897,6 +910,7 @@ window.getMerchantConfig = function () {
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side"
@@ -936,6 +950,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"
@@ -975,6 +990,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"
@@ -1014,6 +1030,7 @@ window.getMerchantConfig = function () {
         "waitingCharges": 1.50,
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+        "currency" : "₹",
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black"

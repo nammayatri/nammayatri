@@ -407,6 +407,8 @@ type DriverVehicleDetails = {
 
 type AnalyticsData = {
     totalEarnings :: String
+  , totalEarningsWithCurrency :: Common.Price
+  , bonusEarnedWithCurrency :: Common.Price 
   , bonusEarned :: String
   , totalCompletedTrips :: Int
   , totalUsersRated :: Int
@@ -415,6 +417,7 @@ type AnalyticsData = {
   , lastRegistered :: String
   , badges :: Array Badge
   , missedEarnings :: Int
+  , missedEarningsWithCurrency :: Common.Price
   , ridesCancelled :: Int
   , cancellationRate :: Int
   , totalRidesAssigned :: Int
@@ -723,9 +726,11 @@ type IndividualRideCardState =
     date :: String,
     time :: String,
     total_amount :: Int,
+    total_amount_with_currency :: Common.Price,
     card_visibility :: String,
     shimmer_visibility :: String,
     rideDistance :: String,
+    rideDistanceWithUnit :: Common.Distance,
     status :: String,
     vehicleModel :: String,
     shortRideId :: String,
@@ -749,6 +754,7 @@ type IndividualRideCardState =
     specialZonePickup :: Boolean,
     tripType :: TripType,
     tollCharge :: Number,
+    tollChargeWithCurrency :: Common.Price,
     rideType :: String,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
@@ -940,7 +946,10 @@ type HomeScreenData =  {
   isVehicleSupported :: Boolean,
   linkedVehicleCategory :: String,
   linkedVehicleVariant :: String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  earningPerKmWithCurrency :: Common.Price, 
+  totalEarningsOfDayWithCurrency :: Common.Price,
+  bonusEarnedWithCurrency :: Common.Price
 }
 
 type BannerCarousalData = {
@@ -1303,8 +1312,10 @@ type TripDetailsScreenData =
     source :: String,
     destination :: String,
     totalAmount :: Int,
+    totalAmountWithCurrency :: Common.Price,
     paymentMode :: PaymentMode,
     distance :: String,
+    distanceWithUnit :: Common.Distance,
     status :: String,
     vehicleType :: String,
     customerExtraFee :: Maybe Int,
@@ -1318,6 +1329,7 @@ type TripDetailsScreenData =
     goBackTo :: GoBackToScreen,
     specialZonePickup :: Boolean,
     tollCharge :: Number,
+    tollChargeWithCurrency :: Common.Price,
     rideType :: String,
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
@@ -2450,7 +2462,9 @@ type FaqQuestions = {
 
 type WeeklyEarning = {
   earnings :: Int,
+  earningsWithCurrency :: Common.Price,
   rideDistance :: Int,
+  rideDistanceWithUnit :: Common.Distance,
   rideDate :: String,
   noOfRides :: Int,
   percentLength :: Number
@@ -2460,8 +2474,10 @@ type TotalEarningsData = {
   fromDate :: String,
   toDate :: String,
   totalEarnings :: Int,
+  totalEarningsWithCurrency :: Common.Price,
   totalRides :: Int,
-  totalDistanceTravelled :: Int
+  totalDistanceTravelled :: Int,
+  totalDistanceTravelledWithUnit :: Common.Distance 
 }
 
 newtype CachedEarningsForDriver = CachedEarningsForDriver {
@@ -2489,6 +2505,7 @@ type CoinHistoryItem = {
   timestamp :: String,
   coins :: Int,
   earnings ::  Maybe Int,
+  earningsWithCurrency :: Maybe Common.Price,
   status :: Maybe String,
   tagImages :: Array String,
   cash :: Number,
