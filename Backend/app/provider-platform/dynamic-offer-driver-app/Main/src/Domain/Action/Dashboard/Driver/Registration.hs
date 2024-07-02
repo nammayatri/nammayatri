@@ -154,6 +154,8 @@ mapDocumentType Common.VehiclePUCImage = Domain.VehiclePUC
 mapDocumentType Common.VehiclePermitImage = Domain.VehiclePermit
 mapDocumentType Common.VehicleInsuranceImage = Domain.VehicleInsurance
 mapDocumentType Common.VehicleFitnessCertificateImage = Domain.VehicleFitnessCertificate
+mapDocumentType Common.VehicleInspectionImage = Domain.VehicleInspectionForm
+mapDocumentType Common.ProfilePhotoImage = Domain.ProfilePhoto
 mapDocumentType Common.PanCard = Domain.PanCard
 
 uploadDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp

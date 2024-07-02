@@ -22,7 +22,8 @@ instance FromTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetai
             id = Kernel.Types.Id.Id id,
             make = make,
             model = model,
-            vehicleVariant = vehicleVariant
+            vehicleVariant = vehicleVariant,
+            year = year
           }
 
 instance ToTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetails where
@@ -33,5 +34,6 @@ instance ToTType' Beam.VehicleDetails Domain.Types.VehicleDetails.VehicleDetails
         Beam.id = Kernel.Types.Id.getId id,
         Beam.make = make,
         Beam.model = model,
-        Beam.vehicleVariant = vehicleVariant
+        Beam.vehicleVariant = vehicleVariant,
+        Beam.year = year
       }

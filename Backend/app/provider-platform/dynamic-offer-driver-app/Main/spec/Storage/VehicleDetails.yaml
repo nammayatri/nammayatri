@@ -14,6 +14,7 @@ VehicleDetails:
     model: Text
     capacity: Maybe Int
     acAvailable: Maybe Bool
+    year: Maybe Int
     vehicleVariant: Variant
   constraints:
     id: PrimaryKey
@@ -21,13 +22,14 @@ VehicleDetails:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findByMake:
+    findByMakeAndYear:
       kvFunction: findAllWithKV
-      where: make
-    findByMakeAndModel:
+      where:
+        and: [make, year]
+    findByMakeAndModelAndYear:
       kvFunction: findOneWithKV
       where:
-        and: [make, model]
+        and: [make, model, year]
 
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
 
