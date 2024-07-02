@@ -70,6 +70,11 @@ bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> F
 bookingStatus bookingId _ = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   logInfo $ "booking: test " <> show booking
+  void $ handleConfirmTtlExpiry booking
+  SRB.buildBookingAPIEntity booking booking.riderId
+
+handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
+handleConfirmTtlExpiry booking = do
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle booking.merchantId "MOBILITY" (Utils.mapVariantToVehicle $ DVST.castServiceTierToVariant booking.vehicleServiceTierType) >>= fromMaybeM (InternalError "Beckn Config not found")
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
   now <- getCurrentTime
@@ -82,7 +87,6 @@ bookingStatus bookingId _ = do
     dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
     void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
     throwError $ RideInvalidStatus "Booking Invalid"
-  SRB.buildBookingAPIEntity booking booking.riderId
   where
     cancelReq =
       DCancel.CancelReq
@@ -91,6 +95,13 @@ bookingStatus bookingId _ = do
           additionalInfo = Nothing,
           reallocate = Nothing
         }
+
+bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
+bookingStatusPolling bookingId _ = do
+  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  logInfo $ "booking: test " <> show booking
+  handleConfirmTtlExpiry booking
+  SRB.buildBookingStatusAPIEntity booking
 
 checkBookingsForStatus :: [SRB.Booking] -> Flow ()
 checkBookingsForStatus (currBooking : bookings) = do

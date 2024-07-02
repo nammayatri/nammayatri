@@ -34,7 +34,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.PersonFlowStatus as DPFS
 import Domain.Types.RiderConfig
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -319,7 +318,6 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   Metrics.startSearchMetrics merchant.name txnId
   triggerSearchEvent SearchEventData {searchRequest = searchRequest}
   _ <- QSearchRequest.createDSReq searchRequest
-  _ <- QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
   let dSearchRes =
         SearchRes
