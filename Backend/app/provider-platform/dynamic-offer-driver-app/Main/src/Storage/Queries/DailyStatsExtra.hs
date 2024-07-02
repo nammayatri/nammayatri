@@ -33,6 +33,6 @@ findAllByDatesInAndPayoutStatus dates payoutStatus = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantLocalDate $ Se.In dates,
-          Se.Is Beam.payoutStatus $ Se.Eq payoutStatus
+          Se.Is Beam.payoutStatus $ Se.Eq (Just payoutStatus)
         ]
     ]

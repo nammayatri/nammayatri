@@ -25,7 +25,7 @@ import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Reels as Reels
-import qualified API.Action.UI.ReferalPayout as ReferralPayout
+import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.Tokenization as Tokenization

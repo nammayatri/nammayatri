@@ -37,12 +37,12 @@ findByMerchantOpCityIdAndIsPayoutEnabled merchantOperatingCityId isPayoutEnabled
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Vehicle.Variant -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
-findByPrimaryKey merchantOperatingCityId vehicleVariant = do
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Vehicle.Category -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
+findByPrimaryKey merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
 
@@ -65,7 +65,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant]]
+    [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
 
 instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
   fromTType' (Beam.PayoutConfigT {..}) = do
@@ -85,7 +85,7 @@ instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig whe
             remark = remark,
             thresholdPayoutAmountPerPerson = thresholdPayoutAmountPerPerson,
             timeDiff = Kernel.Utils.Common.secondsToNominalDiffTime timeDiff,
-            vehicleVariant = vehicleVariant,
+            vehicleCategory = vehicleCategory,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -106,7 +106,7 @@ instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
         Beam.remark = remark,
         Beam.thresholdPayoutAmountPerPerson = thresholdPayoutAmountPerPerson,
         Beam.timeDiff = Kernel.Utils.Common.nominalDiffTimeToSeconds timeDiff,
-        Beam.vehicleVariant = vehicleVariant,
+        Beam.vehicleCategory = vehicleCategory,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

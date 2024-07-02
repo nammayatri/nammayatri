@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Payment.Storage.Beam.PayoutTransactions where
+module Lib.Payment.Storage.Beam.PayoutTransaction where
 
 import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
@@ -12,8 +12,9 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 
-data PayoutTransactionsT f = PayoutTransactionsT
-  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+data PayoutTransactionT f = PayoutTransactionT
+  { currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    price :: B.C f Kernel.Types.Common.HighPrecMoney,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     fulfillmentMethod :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gateWayRefId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -26,12 +27,12 @@ data PayoutTransactionsT f = PayoutTransactionsT
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table PayoutTransactionsT where
-  data PrimaryKey PayoutTransactionsT f = PayoutTransactionsId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = PayoutTransactionsId <$> id <*> transactionRef
+instance B.Table PayoutTransactionT where
+  data PrimaryKey PayoutTransactionT f = PayoutTransactionId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = PayoutTransactionId <$> id <*> transactionRef
 
-type PayoutTransactions = PayoutTransactionsT Identity
+type PayoutTransaction = PayoutTransactionT Identity
 
-$(enableKVPG ''PayoutTransactionsT ['id, 'transactionRef] [])
+$(enableKVPG ''PayoutTransactionT ['id, 'transactionRef] [])
 
-$(mkTableInstancesGenericSchema ''PayoutTransactionsT "payout_transactions")
+$(mkTableInstancesGenericSchema ''PayoutTransactionT "payout_transaction")

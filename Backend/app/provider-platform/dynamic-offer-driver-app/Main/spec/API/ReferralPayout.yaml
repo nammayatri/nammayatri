@@ -8,7 +8,7 @@ imports:
   CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
   PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
 
-module: ReferalPayout
+module: ReferralPayout
 
 types:
 
@@ -36,17 +36,17 @@ types:
 apis:
   # get API for referral earnings
   - GET:
-      endpoint: /referral/earnings
+      endpoint: payout/referral/earnings
       auth: TokenAuth PROVIDER_TYPE
       mandatoryQuery:
         fromDate: Day
         toDate: Day
       response:
-        type: API.Types.UI.ReferalPayout.ReferralEarningsRes
+        type: API.Types.UI.ReferralPayout.ReferralEarningsRes
 
   # post API to delete the existing payout vpa
   - POST:
-      endpoint: /delete/vpa
+      endpoint: payout/delete/vpa
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: Kernel.Types.APISuccess.APISuccess

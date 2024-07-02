@@ -39,12 +39,12 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
             totalDistance = Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
             totalPayoutEarnings = Kernel.Types.Common.mkAmountWithDefault totalPayoutEarningsAmount totalPayoutEarnings,
-            totalReferralCounts = totalReferralCounts,
             totalRatingScore = totalRatingScore,
             totalRatings = totalRatings,
+            totalReferralCounts = Kernel.Prelude.fromMaybe 0 totalReferralCounts,
             totalRides = totalRides,
             totalRidesAssigned = totalRidesAssigned,
-            totalValidActivatedRides = totalValidActivatedRides,
+            totalValidActivatedRides = Kernel.Prelude.fromMaybe 0 totalValidActivatedRides,
             updatedAt = updatedAt
           }
 
@@ -68,13 +68,13 @@ instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
         Beam.totalDistance = getTotalDistance totalDistance,
         Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
         Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,
-        Beam.totalRatingScore = totalRatingScore,
-        Beam.totalRatings = totalRatings,
         Beam.totalPayoutEarnings = Kernel.Prelude.roundToIntegral totalPayoutEarnings,
         Beam.totalPayoutEarningsAmount = Kernel.Prelude.Just totalPayoutEarnings,
-        Beam.totalReferralCounts = totalReferralCounts,
+        Beam.totalRatingScore = totalRatingScore,
+        Beam.totalRatings = totalRatings,
+        Beam.totalReferralCounts = Kernel.Prelude.Just totalReferralCounts,
         Beam.totalRides = totalRides,
         Beam.totalRidesAssigned = totalRidesAssigned,
-        Beam.totalValidActivatedRides = totalValidActivatedRides,
+        Beam.totalValidActivatedRides = Kernel.Prelude.Just totalValidActivatedRides,
         Beam.updatedAt = updatedAt
       }

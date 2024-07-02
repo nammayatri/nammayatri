@@ -39,7 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
-import qualified Lib.Payment.Storage.Queries.PayoutOrders as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
 import Storage.Beam.Payment ()

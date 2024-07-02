@@ -19,7 +19,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
     pure $
       Just
         Domain.Types.DailyStats.DailyStats
-          { activatedValidRides = activatedValidRides,
+          { activatedValidRides = Kernel.Prelude.fromMaybe 0 activatedValidRides,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverId = Kernel.Types.Id.Id driverId,
@@ -28,8 +28,8 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
             numRides = numRides,
             payoutOrderId = payoutOrderId,
             payoutOrderStatus = payoutOrderStatus,
-            payoutStatus = payoutStatus,
-            referralCounts = referralCounts,
+            payoutStatus = Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying payoutStatus,
+            referralCounts = Kernel.Prelude.fromMaybe 0 referralCounts,
             referralEarnings = Kernel.Types.Common.mkAmountWithDefault referralEarningsAmount referralEarnings,
             totalDistance = totalDistance,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
@@ -40,7 +40,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
 instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
   toTType' (Domain.Types.DailyStats.DailyStats {..}) = do
     Beam.DailyStatsT
-      { Beam.activatedValidRides = activatedValidRides,
+      { Beam.activatedValidRides = Kernel.Prelude.Just activatedValidRides,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverId = Kernel.Types.Id.getId driverId,
@@ -49,8 +49,8 @@ instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
         Beam.numRides = numRides,
         Beam.payoutOrderId = payoutOrderId,
         Beam.payoutOrderStatus = payoutOrderStatus,
-        Beam.payoutStatus = payoutStatus,
-        Beam.referralCounts = referralCounts,
+        Beam.payoutStatus = Kernel.Prelude.Just payoutStatus,
+        Beam.referralCounts = Kernel.Prelude.Just referralCounts,
         Beam.referralEarnings = Kernel.Prelude.roundToIntegral referralEarnings,
         Beam.referralEarningsAmount = Kernel.Prelude.Just referralEarnings,
         Beam.totalDistance = totalDistance,
