@@ -859,6 +859,38 @@ notifyStopModification person entityData = do
           [ if entityData.isEdit then "Customer edited stop!" else "Customer added a stop!"
           ]
 
+notifyDirectCallOnCallServiceDown ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Id DOrder.PaymentOrder ->
+  m ()
+notifyDirectCallOnCallServiceDown merchantOpCityId personId mbDeviceToken orderId = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken personId) False notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
+  where
+    notifType = FCM.CALL_SERVICE_DOWN
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.PaymentOrder,
+          fcmEntityIds = orderId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType Nothing,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCMNotificationTitle "Customer is Trying to Contact You!"
+    body =
+      FCMNotificationBody $
+        EulerHS.Prelude.unwords
+          [ "Please Use Direct Call Option to Call Customer."
+          ]
+
 notifyOnRideStarted ::
   ( CacheFlow m r,
     EsqDBFlow m r

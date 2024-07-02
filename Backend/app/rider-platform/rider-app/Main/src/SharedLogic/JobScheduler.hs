@@ -24,6 +24,7 @@ import qualified Domain.Types.Extra.Booking as DEB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -33,6 +34,7 @@ import Lib.Scheduler
 data RiderJobType
   = CheckPNAndSendSMS
   | ScheduledRideNotificationsToRider
+  | CheckExotelStatusDoFallback
   | OtherJobTypes
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -43,6 +45,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo :: Sing (e :: RiderJobType) -> Text -> Maybe (AnyJobInfo RiderJobType)
   restoreAnyJobInfo SCheckPNAndSendSMS jobData = AnyJobInfo <$> restoreJobInfo SCheckPNAndSendSMS jobData
   restoreAnyJobInfo SScheduledRideNotificationsToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToRider jobData
+  restoreAnyJobInfo SCheckExotelStatusDoFallback jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelStatusDoFallback jobData
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
 
 data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
@@ -76,6 +79,17 @@ data ScheduledRideNotificationsToRiderJobData = ScheduledRideNotificationsToRide
 instance JobInfoProcessor 'ScheduledRideNotificationsToRider
 
 type instance JobContent 'ScheduledRideNotificationsToRider = ScheduledRideNotificationsToRiderJobData
+
+data CheckExotelStatusDoFallbackJobData = CheckExotelStatusDoFallbackJobData
+  { rideId :: Id DR.Ride,
+    endTime :: UTCTime,
+    personId :: Id Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckExotelStatusDoFallback
+
+type instance JobContent 'CheckExotelStatusDoFallback = CheckExotelStatusDoFallbackJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,

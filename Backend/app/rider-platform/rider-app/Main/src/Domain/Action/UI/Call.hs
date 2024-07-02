@@ -27,6 +27,7 @@ module Domain.Action.UI.Call
   )
 where
 
+import qualified Data.Map as M
 import Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.UI.CallEvent as DCE
@@ -42,13 +43,17 @@ import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import qualified Kernel.External.Call.Interface.Types as Call
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption
+import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -134,6 +139,7 @@ initiateCallToDriver rideId = do
             merchantId = Just booking.merchantId.getId,
             callService = Just Call.Exotel,
             callError = Nothing,
+            callAttempt = Just Resolved,
             createdAt = now,
             updatedAt = now
           }
@@ -169,9 +175,11 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   where
     updateCallStatus callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration)
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
+getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool), HasField "exotelStatusScheduler" r Seconds) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
   callId <- generateGUID
+  maxShards <- asks (.maxShards)
+  exotelStatusScheduler <- getSeconds <$> asks (.exotelStatusScheduler)
   callStatusObj <- buildCallStatus callId callSid (exotelStatusToInterfaceStatus callStatus)
   QCallStatus.create callStatusObj
   let callFrom = dropFirstZero callFrom_
@@ -195,6 +203,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
     case mbRiderDetails of
       Just (dtmfNumberUsed, booking) -> do
         ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= maybe (throwCallError callId (RideWithBookingIdNotFound $ getId booking.id) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+        scheduleJobs ride.id maxShards exotelStatusScheduler booking.riderId
         return (ride.driverMobileNumber, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
       Nothing -> do
         mbRide <- runInReplica $ QRide.findLatestByDriverPhoneNumber callFrom
@@ -224,6 +233,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
             rideId = Nothing,
             dtmfNumberUsed = Nothing,
             status = exoStatus,
+            callAttempt = Just Attempted,
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Nothing,
@@ -232,6 +242,17 @@ getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
             createdAt = now,
             updatedAt = now
           }
+
+scheduleJobs :: (MonadFlow m, SchedulerFlow r, EsqDBFlow m r, CacheFlow m r) => Id SRide.Ride -> Int -> Int -> Id Person -> m ()
+scheduleJobs rideId maxShards exotelStatusScheduler personId = do
+  now <- getCurrentTime
+  let scheduleTime = addUTCTime (fromIntegral exotelStatusScheduler) now
+  createJobIn @_ @'CheckExotelStatusDoFallback (fromIntegral exotelStatusScheduler) maxShards $
+    CheckExotelStatusDoFallbackJobData
+      { rideId = rideId,
+        endTime = scheduleTime,
+        personId = personId
+      }
 
 -- getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe (Maybe Text, BT.Booking))
 -- getDtmfFlow dtmfNumber_ merchantId callSid exophone = do
