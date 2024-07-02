@@ -159,11 +159,11 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance mbService
   case mbServiceTierType of
     Just serviceTierType -> do
       when (serviceTierType `notElem` driverVehicleServiceTierTypes) $ throwError $ InvalidRequest ("Service tier " <> show serviceTierType <> " not available for driver")
-      rateCard <- getRateCardForServiceTier mbDistance transporterConfig (OneWay OneWayOnDemandDynamicOffer) distanceUnit serviceTierType
-      return [rateCard]
+      mbRateCard <- getRateCardForServiceTier mbDistance transporterConfig (OneWay OneWayOnDemandDynamicOffer) distanceUnit serviceTierType
+      return $ maybeToList mbRateCard
     Nothing -> do
-      rateCard <- mapM (getRateCardForServiceTier mbDistance transporterConfig (OneWay OneWayOnDemandDynamicOffer) distanceUnit) driverVehicleServiceTierTypes
-      return rateCard
+      rateCards <- mapM (getRateCardForServiceTier mbDistance transporterConfig (OneWay OneWayOnDemandDynamicOffer) distanceUnit) driverVehicleServiceTierTypes
+      return $ catMaybes rateCards
   where
     mkBreakupItem :: Text -> Text -> Maybe API.Types.UI.DriverOnboardingV2.RateCardItem
     mkBreakupItem title valueInText = do
@@ -174,66 +174,70 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance mbService
             price = priceObject.amountInt,
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
-    getRateCardForServiceTier :: Maybe Meters -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.ServiceTierType.ServiceTierType -> Environment.Flow API.Types.UI.DriverOnboardingV2.RateCardResp
+    getRateCardForServiceTier :: Maybe Meters -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.ServiceTierType.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
     getRateCardForServiceTier mbDistance transporterConfig tripCategory distanceUnit serviceTierType = do
       now <- getCurrentTime
-      fullFarePolicy <- getFarePolicy merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
-      let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
-      let isPeak =
-            fromMaybe False $
-              fullFarePolicy.congestionChargeMultiplier <&> \case
-                BaseFareAndExtraDistanceFare congestionChargeMultiplier -> congestionChargeMultiplier > 1
-                ExtraDistanceFare congestionChargeMultiplier -> congestionChargeMultiplier > 1
-      let mbIsNight =
-            if isRentalTrip tripCategory
-              then Just $ isNightAllowanceApplicable fullFarePolicy.nightShiftBounds now now (maybe 19800 (.timeDiffFromUtc) transporterConfig)
-              else isNightShift <$> fullFarePolicy.nightShiftBounds <*> Just now
-      let isNight = fromMaybe False mbIsNight
-      fareParams <-
-        calculateFareParameters
-          CalculateFareParametersParams
-            { farePolicy = fullFarePolicy,
-              actualDistance = mbDistance,
-              rideTime = now,
-              waitingTime = Nothing,
-              returnTime = Nothing,
-              roundTrip = False,
-              actualRideDuration = Nothing,
-              avgSpeedOfVehicle = Nothing,
-              driverSelectedFare = Nothing,
-              customerExtraFee = Nothing,
-              nightShiftCharge = Nothing,
-              customerCancellationDues = Nothing,
-              nightShiftOverlapChecking = isFixedNightCharge tripCategory,
-              estimatedDistance = mbDistance,
-              estimatedRideDuration = Nothing,
-              timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
-              currency = INR, -- fix it later
-              distanceUnit,
-              tollCharges = Nothing
-            }
-      let totalFareAmount = perRideKmFareParamsSum fareParams
-      let perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 (getKilometers . metersToKilometers) mbDistance)
-      let perKmRate =
-            PriceAPIEntity
-              { amount = HighPrecMoney perKmAmount,
-                currency = INR
-              }
-      let totalFare =
-            PriceAPIEntity
-              { amount = totalFareAmount,
-                currency = INR
-              }
-      return $
-        API.Types.UI.DriverOnboardingV2.RateCardResp
-          { serviceTierType,
-            perKmRate,
-            totalFare,
-            perMinuteRate = Nothing, -- TODO: Add per minute rate for USA
-            tripCategory,
-            farePolicyHour = if isPeak then APITypes.Peak else if isNight then APITypes.Night else APITypes.NonPeak,
-            rateCardItems
-          }
+      eitherFullFarePolicy <- try @_ @SomeException $ getFarePolicy merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
+      case eitherFullFarePolicy of
+        Left _ -> return Nothing
+        Right fullFarePolicy -> do
+          let rateCardItems = catMaybes $ mkFarePolicyBreakups EulerHS.Prelude.id mkBreakupItem Nothing Nothing (fullFarePolicyToFarePolicy fullFarePolicy)
+          let isPeak =
+                fromMaybe False $
+                  fullFarePolicy.congestionChargeMultiplier <&> \case
+                    BaseFareAndExtraDistanceFare congestionChargeMultiplier -> congestionChargeMultiplier > 1
+                    ExtraDistanceFare congestionChargeMultiplier -> congestionChargeMultiplier > 1
+          let mbIsNight =
+                if isRentalTrip tripCategory
+                  then Just $ isNightAllowanceApplicable fullFarePolicy.nightShiftBounds now now (maybe 19800 (.timeDiffFromUtc) transporterConfig)
+                  else isNightShift <$> fullFarePolicy.nightShiftBounds <*> Just now
+          let isNight = fromMaybe False mbIsNight
+          fareParams <-
+            calculateFareParameters
+              CalculateFareParametersParams
+                { farePolicy = fullFarePolicy,
+                  actualDistance = mbDistance,
+                  rideTime = now,
+                  waitingTime = Nothing,
+                  returnTime = Nothing,
+                  roundTrip = False,
+                  actualRideDuration = Nothing,
+                  avgSpeedOfVehicle = Nothing,
+                  driverSelectedFare = Nothing,
+                  customerExtraFee = Nothing,
+                  nightShiftCharge = Nothing,
+                  customerCancellationDues = Nothing,
+                  nightShiftOverlapChecking = isFixedNightCharge tripCategory,
+                  estimatedDistance = mbDistance,
+                  estimatedRideDuration = Nothing,
+                  timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
+                  currency = INR, -- fix it later
+                  distanceUnit,
+                  tollCharges = Nothing
+                }
+          let totalFareAmount = perRideKmFareParamsSum fareParams
+          let perKmAmount :: Rational = totalFareAmount.getHighPrecMoney / fromIntegral (maybe 1 (getKilometers . metersToKilometers) mbDistance)
+          let perKmRate =
+                PriceAPIEntity
+                  { amount = HighPrecMoney perKmAmount,
+                    currency = INR
+                  }
+          let totalFare =
+                PriceAPIEntity
+                  { amount = totalFareAmount,
+                    currency = INR
+                  }
+          return $
+            Just $
+              API.Types.UI.DriverOnboardingV2.RateCardResp
+                { serviceTierType,
+                  perKmRate,
+                  totalFare,
+                  perMinuteRate = Nothing, -- TODO: Add per minute rate for USA
+                  tripCategory,
+                  farePolicyHour = if isPeak then APITypes.Peak else if isNight then APITypes.Night else APITypes.NonPeak,
+                  rateCardItems
+                }
 
 postDriverUpdateAirCondition ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
