@@ -170,7 +170,7 @@ eval BackPressed state =
     pure $ Exit $ (case state.data.entryPoint of 
                     TripDetailsScreenEntry -> GotoTripDetailsScreen 
                     HelpAndSupportScreenEntry -> GoToHelpAndSupportScreen 
-                    RideSelectionScreenEntry -> GoToRideSelectionScreen 
+                    RideSelectionScreenEntry -> GoToHelpAndSupportScreen 
                     OldChatEntry -> GoToHelpAndSupportScreen
                     SafetyScreen -> GoToSafetyScreen
                     HomeScreenEntry -> GoToHomeScreen ) state {props {showSubmitComp = false}}
@@ -414,7 +414,7 @@ eval (UpdateRecordModelPlayer url) state = do
 
 ---------------------------------------------------- Chat View Model ----------------------------------------------------
 eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
-  let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent optionName "Customer" (getCurrentUTC ""))
+  let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent optionName Nothing Nothing "Customer" (getCurrentUTC ""))
       option = find (\optionObj -> optionObj.option == optionName) state.data.options
   case option of
     Just selectedOption -> do
@@ -422,6 +422,8 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
         continue state { props { showCallDriverModel = true, isPopupModelOpen = true }, data { selectedOption = Just selectedOption } }
       else if selectedOption.label == "REOPEN_TICKET" then
         exit $ ReopenIssue state { data { selectedOption = Just selectedOption, options = [], chatConfig { chatSuggestionsList = [], messages = messages' } } }
+      else if selectedOption.label == "SELECT_RIDE" then 
+        exit $ GoToRideSelectionScreen state { data {selectedOption = Just selectedOption, chatConfig { chatSuggestionsList = [], messages = messages' } }}
       else 
         updateWithCmdAndExit state [ do
           if selectedOption.label == "DOWNLOAD_INVOICE" then
@@ -486,7 +488,7 @@ eval (ConfirmCall (PrimaryButton.OnClick)) state = do
   let option = find (\opt -> (state.props.showCallSupportModel && opt.label == "CALL_SUPPORT") ||(state.props.showCallDriverModel && opt.label == "CALL_DRIVER")) state.data.options
   case option of
     Just selectedOption -> do
-      let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent selectedOption.option "Customer" (getCurrentUTC "") )
+      let messages' = snoc state.data.chatConfig.messages (ChatView.makeChatComponent selectedOption.option Nothing Nothing "Customer" (getCurrentUTC "") )
           state' = state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOption = Just selectedOption }, props { isPopupModelOpen = false, showCallDriverModel = false, showCallSupportModel = false } }
       if state.props.showCallDriverModel
       then

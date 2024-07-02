@@ -30,7 +30,6 @@ import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
-import Components.ChatView as ChatView
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
@@ -1083,7 +1082,7 @@ messagingViewConfig state =
           , showVehicleDetails = not state.props.isChatWithEMEnabled
           , enableSuggestions = state.data.config.feature.enableSuggestions
           }
-        , messages = state.data.messages
+        , messages = map (\{ message, sentBy, timeStamp, type: type_, delay } -> { message, sentBy, timeStamp, type: type_, delay }) state.data.messages
         , messagesSize = state.data.messagesSize
         , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber
         , chatSuggestionsList = getChatSuggestions state

@@ -16,6 +16,7 @@
 module Components.ChatView.Controller where
 
 import PrestoDOM.Types.DomAttributes (Padding(..), Margin(..))
+import Data.Maybe (Maybe(..))
 
 data Action = SendMessage
             | SendSuggestion String
@@ -66,6 +67,8 @@ type UserConfig =
 
 type ChatComponentConfig = {
     message :: String 
+  , messageTitle :: Maybe String
+  , messageAction :: Maybe String
   , sentBy :: String 
   , timeStamp :: String
   , type :: String
@@ -108,18 +111,22 @@ config =
     , showNavigate : true
   }
 
-makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponentConfig 
-makeChatComponent' message sender timeStamp type' delay =  {
-  "message" : message 
+makeChatComponent' :: String -> Maybe String -> Maybe String -> String -> String -> String -> Int -> ChatComponentConfig 
+makeChatComponent' message messageTitle messageAction sender timeStamp type' delay =  {
+  "message" : message
+, "messageTitle" : messageTitle
+, "messageAction" : messageAction
 , "sentBy" : sender
 , "timeStamp" : timeStamp
 , "type" : type'
 , delay : delay
 }
 
-makeChatComponent :: String -> String -> String -> ChatComponentConfig
-makeChatComponent message sender timeStamp =  {
+makeChatComponent :: String -> Maybe String -> Maybe String -> String -> String -> ChatComponentConfig
+makeChatComponent message messageTitle messageAction sender timeStamp =  {
   "message" : message
+, "messageTitle" : messageTitle
+, "messageAction" : messageAction
 , "sentBy" : sender
 , "timeStamp" : timeStamp
 , "type" : "Text"

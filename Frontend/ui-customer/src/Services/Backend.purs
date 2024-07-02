@@ -36,7 +36,7 @@ import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Commons as EHC
 import Foreign.Generic (encode)
 import Foreign.Object (empty)
-import Helpers.Utils (decodeError, getTime)
+import Helpers.Utils (decodeError, getTime, decodeErrorCode)
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig, Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import JBridge as JB
 import Juspay.OTP.Reader as Readers
@@ -1127,21 +1127,27 @@ getCategoriesBT language = do
         errorHandler _ = do
             BackT $ pure GoBack
 
-getOptionsBT :: String -> String -> String -> String -> FlowBT String GetOptionsRes
-getOptionsBT language categoryId optionId issueReportId = do
+getOptionsBT :: String -> String -> String -> String -> String -> FlowBT String GetOptionsRes
+getOptionsBT language categoryId optionId rideId issueReportId = do
       headers <- getHeaders' "" false
-      withAPIResultBT (EP.getOptions categoryId optionId issueReportId language) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetOptionsReq categoryId optionId issueReportId language))
+      withAPIResultBT (EP.getOptions categoryId optionId rideId issueReportId language) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetOptionsReq categoryId optionId rideId issueReportId language))
         where
           errorHandler _ = do
             BackT $ pure GoBack
 
-postIssueBT :: String -> PostIssueReqBody -> FlowBT String PostIssueRes
+postIssueBT :: String -> PostIssueReqBody -> FlowBT String (Either ErrorResponse PostIssueRes)
 postIssueBT language payload = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.postIssue language) (\x -> x) errorHandler (lift $ lift $ callAPI headers (PostIssueReq language payload))
+    lift $ lift $ withAPIResult (EP.postIssue language) unwrapResponse $ callAPI headers (PostIssueReq language payload)
     where
-        errorHandler _ = do
-            BackT $ pure GoBack
+        unwrapResponse x = x
+
+getCorrespondingErrorMessage :: ErrorResponse -> String
+getCorrespondingErrorMessage errorPayload = do
+    let errorCode = decodeErrorCode errorPayload.response.errorMessage
+    case errorCode of
+        "ISSUE_REPORT_ALREADY_EXISTS" -> getString ISSUE_REPORT_ALREADY_EXISTS
+        _ -> getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
 
 issueInfoBT :: String -> String -> FlowBT String IssueInfoRes
 issueInfoBT language issueId = do

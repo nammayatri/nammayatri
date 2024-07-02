@@ -1074,6 +1074,11 @@ export const differenceBetweenTwoUTCInMinutes = function (date1, date2) {
   return diffInMinutes;
 }
 
+export const getSecondsFromUTCTime = function (str) {
+  const date = new Date(str);
+  return Math.floor(date.getTime() / 1000);
+}
+
 export const isCoordOnPath = function (data) {
   return function (lat) {
     return function (lon) {

@@ -18,7 +18,7 @@ module Screens.RideSelectionScreen.Handler where
 import Components.IndividualRideCard.View as IndividualRideCard
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons 
 import ModifyScreenState (modifyScreenState, FlowState(..))
@@ -47,6 +47,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import MerchantConfig.Types as MT
 import ConfigProvider (getAppConfig)
 import Constants (appConfig)
+import Debug
 
 rideSelection :: FlowBT String FlowState
 rideSelection = do
@@ -91,36 +92,40 @@ selectRideHandler state = do
   modifyScreenState $ RideSelectionScreenStateType (\_ -> state )
   let language = fetchLanguage $ getLanguageLocale languageKey
       config = getAppConfig appConfig
-  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language state.selectedCategory.categoryId "" ""
+      tripId' = state.selectedItem <#> (_.rideId) 
+  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language state.selectedCategory.categoryId (fromMaybe "" state.data.selectedOptionId) (fromMaybe "" tripId') ""
   (GlobalState globalState) <- getState
   let 
+    -- VaibhavD : need to shift this check to backend
     transformedOptions = transformIssueOptions getOptionsRes.options state.selectedItem globalState.helpAndSupportScreen.data.ongoingIssueList config.cityConfig
     getOptionsRes' = mapWithIndex (
       \index (Option optionObj) -> optionObj { 
-        option = (show (index + 1)) <> ". " <> optionObj.option 
+        option = optionObj.option 
       }
     ) transformedOptions
 
     messages' = mapWithIndex (
-      \index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))
+      \index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500*(index + 1))
     ) getOptionsRes.messages
 
-    chats' = map (
-      \(Message currMessage) -> Chat {
-        chatId : currMessage.id, 
-        chatType : "IssueMessage", 
-        timestamp : getCurrentUTC ""
-      } 
-    ) getOptionsRes.messages
-
-    tripId' = case state.selectedItem of
-      Just item -> Just item.rideId
-      _         -> Nothing
+    chats' = globalState.reportIssueChatScreen.data.chats <>
+      [ Chat {
+            chatId : fromMaybe "" state.data.selectedOptionId
+          , chatType : "IssueOption"
+          , timestamp : getCurrentUTC ""
+        }
+      ] <>
+      map (
+        \(Message currMessage) -> Chat {
+          chatId : currMessage.id, 
+          chatType : "IssueMessage", 
+          timestamp : getCurrentUTC ""
+        } 
+      ) getOptionsRes.messages
 
     merchantExoPhone' = case state.selectedItem of
       Just item -> Just item.merchantExoPhone
       _         -> Nothing
-    categoryName = getTitle state.selectedCategory.categoryAction
 
   modifyScreenState $ ReportIssueChatScreenStateType (\_ -> 
     ReportIssueChatScreenData.initData { 
@@ -129,17 +134,16 @@ selectRideHandler state = do
       , chats = chats'
       , tripId = tripId'
       , merchantExoPhone = merchantExoPhone'
-      , categoryName = categoryName
-      , categoryId = state.selectedCategory.categoryId
+      , selectedCategory = state.selectedCategory
       , options = getOptionsRes'
       , chatConfig { 
-        messages = messages' 
+        messages = (globalState.reportIssueChatScreen.data.chatConfig.messages <> messages')
       }
       ,  selectedRide = state.selectedItem 
       } 
     } 
   )
-  App.BackT $ App.BackPoint <$> (pure IssueReportChatScreenFlow)
+  App.BackT $ App.NoBack <$> (pure IssueReportChatScreenFlow)
 
 
 refreshScreenHandler :: RideSelectionScreenState -> FlowBT String FlowState

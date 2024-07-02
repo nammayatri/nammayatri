@@ -1018,15 +1018,17 @@ eval (UpdateMessages message sender timeStamp size) state = do
     
 eval (RideActionModalAction (RideActionModal.LoadMessages)) state = do
   let allMessages = getChatMessages Common.FunctionCall
+      toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
+        { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
   case (Array.last allMessages) of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true}} else
-                      if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = []}, props {canSendSuggestion = true}}
+                      if value.sentBy == "Driver" then updateMessagesWithCmd state {data {messages = toChatComponentConfig <$> allMessages, chatSuggestionsList = []}, props {canSendSuggestion = true}}
                       else do
                         let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                         let unReadMessages = (if (readMessages == 0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (Array.length allMessages) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
                         let suggestions = getDriverSuggestions state $ getSuggestionsfromKey chatSuggestion value.message
-                        updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions }, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
-      Nothing -> continue state {props {canSendSuggestion = true}, data{ messages = allMessages}}
+                        updateMessagesWithCmd state {data {messages = toChatComponentConfig <$> allMessages, chatSuggestionsList = suggestions }, props {unReadMessages = unReadMessages, canSendSuggestion = true}}
+      Nothing -> continue state {props {canSendSuggestion = true}, data{ messages = toChatComponentConfig <$> allMessages}}
 
 eval ScrollToBottom state = do
   _ <- pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true

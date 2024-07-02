@@ -225,6 +225,7 @@ foreign import stopAudioRecording :: EffectFn1 String String
 foreign import differenceBetweenTwoUTC :: Fn2 String String Int
 
 foreign import differenceBetweenTwoUTCInMinutes :: Fn2 String String Int
+foreign import getSecondsFromUTCTime :: Fn1 String Int
 
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean

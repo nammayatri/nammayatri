@@ -679,19 +679,22 @@ eval (UpdateMessages message sender timeStamp size) state = do
 
 eval LoadMessages state = do
   let allMessages = getChatMessages FunctionCall
+      toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
+        { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+      transformedMessages = map toChatComponentConfig allMessages
   case last allMessages of
       Just value -> if value.message == "" then continue state {data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1)}, props {canSendSuggestion = true, isChatNotificationDismissed = false}} 
                       else do
                         let currentUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer" 
-                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = if state.props.isChatWithEMEnabled then getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId else [], lastMessage = value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
+                        if value.sentBy == currentUser then updateMessagesWithCmd state {data {messages = transformedMessages, chatSuggestionsList = if state.props.isChatWithEMEnabled then getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId else [], lastMessage = toChatComponentConfig value, lastSentMessage = value}, props {canSendSuggestion = true,  isChatNotificationDismissed = false}}
                         else do
                           let readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
-                              unReadMessages = if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (readMessages < (length allMessages) && state.props.currentStage /= ChatWithDriver)
+                              unReadMessages = if readMessages == 0 && state.props.currentStage /= ChatWithDriver then true else (readMessages < (length transformedMessages) && state.props.currentStage /= ChatWithDriver)
                               suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
                               suggestions = getSuggestionsfromKey suggestionKey value.message
                               isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
                               showNotification = isChatNotificationDismissed && unReadMessages
-                          updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
+                          updateMessagesWithCmd state {data {messages = transformedMessages, chatSuggestionsList = suggestions, lastMessage = toChatComponentConfig value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
       Nothing -> 
         if state.props.isChatWithEMEnabled then
             continueWithCmd state [do 
@@ -802,7 +805,10 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
-      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, stageBeforeChatScreen = if state.props.currentStage /= ChatWithDriver then state.props.currentStage else state.props.stageBeforeChatScreen, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
+          toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
+            { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+          transformedMessages = map toChatComponentConfig allMessages
+      continueWithCmd state {data{messages = transformedMessages}, props {currentStage = ChatWithDriver, stageBeforeChatScreen = if state.props.currentStage /= ChatWithDriver then state.props.currentStage else state.props.stageBeforeChatScreen, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
       ]

@@ -18,18 +18,17 @@ module Helpers.Utils
     , module ReExport
     ) where
 
--- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null) as DA
+import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Array as DA
 import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..))
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
@@ -58,7 +57,7 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<))
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<), (>>=))
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
@@ -73,7 +72,7 @@ import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo)
+import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
@@ -111,6 +110,9 @@ import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
+import Data.Function (flip)
+import Data.Ord (compare)
+import Debug
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -980,3 +982,28 @@ getPurpleRideConfigForVehicle linkedVehicleVariant purpleRideConfigForCity =
     "AUTO_RICKSHAW" -> purpleRideConfigForCity.purpleRideConfigForAuto
     "BIKE" -> purpleRideConfigForCity.purpleRideConfigForBikes
     _ -> purpleRideConfigForCity.purpleRideConfigForCabs
+
+sortIssueCategories :: String -> GetCategoriesRes -> Array CategoryListType 
+sortIssueCategories language (GetCategoriesRes response) =
+  let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
+      compareByOrder a b =
+        let indexA = fromMaybe (DA.length categoryOrder) (a.categoryAction >>= flip DA.elemIndex categoryOrder)
+            indexB = fromMaybe (DA.length categoryOrder) (b.categoryAction >>= flip DA.elemIndex categoryOrder)
+        in compare indexA indexB 
+      temp = categoryTransformer response.categories language
+  in DA.sortBy compareByOrder temp
+  
+categoryTransformer :: Array Category -> String -> Array CategoryListType 
+categoryTransformer categories language = 
+  map (\(Category catObj) ->
+    { categoryName :
+        if (language == "en")
+        then EHU.capitalizeFirstChar catObj.category
+        else catObj.category
+    , categoryId       : catObj.issueCategoryId
+    , categoryAction   : Just catObj.label
+    , categoryImageUrl : Just catObj.logoUrl
+    , isRideRequired : catObj.isRideRequired
+    , maxAllowedRideAge : Nothing
+    }) categories
+    

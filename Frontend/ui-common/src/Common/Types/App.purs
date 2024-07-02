@@ -493,9 +493,11 @@ type CarouselHolderData = {
 
 type CategoryListType = {
     categoryName :: String
-  , categoryImageUrl :: String
-  , categoryAction :: String
+  , categoryImageUrl :: Maybe String
+  , categoryAction :: Maybe String
   , categoryId :: String
+  , isRideRequired :: Boolean
+  , maxAllowedRideAge :: Maybe Int
   }
 
 type DisplayBase64ImageConig = {

@@ -26,7 +26,7 @@ import Components.SettingSideBar.Controller as SettingSideBar
 import ModifyScreenState (modifyScreenState, FlowState(..))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (getValueToLocalStore, KeyStore(..))
-import Common.Types.App (LazyCheck(..), CategoryListType)
+import Common.Types.App (LazyCheck(..), CategoryListType(..))
 import Screens.HelpAndSupportScreen.Transformer (isEmailPresent)
 import Data.Array as DA
 import Data.String as DS 
@@ -53,7 +53,7 @@ helpAndSupportScreen = do
   if DA.null helpAndSupportScreenState.data.categories then do 
     let language = fetchLanguage $ getLanguageLocale languageKey 
     (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
+    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge}) response.categories
     modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories' } } )
   else pure unit
   modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ReportIssueChatScreenData.HelpAndSupportScreenEntry }})
@@ -193,7 +193,8 @@ goToRideSelectionScreenHandler selectedCategory updatedState = do
   modifyScreenState $ RideSelectionScreenStateType (
     \rideHistoryScreen -> rideHistoryScreen {
       data {
-        offsetValue = 0
+        offsetValue = 0,
+        selectedOptionId = Nothing
       },
       selectedCategory = selectedCategory
     } 
@@ -205,10 +206,10 @@ goToChatScreenHandler :: CategoryListType -> HelpAndSupportScreenState -> FlowBT
 goToChatScreenHandler selectedCategory updatedState =  do
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState) 
   let language = fetchLanguage $ getLanguageLocale languageKey
-  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
+  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" "" ""
   let 
-    options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
-    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
+    options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = optionObj.option}) getOptionsRes.options
+    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
     chats' = map (
       \(Message currMessage) -> Chat {
         chatId : currMessage.id,
@@ -216,14 +217,13 @@ goToChatScreenHandler selectedCategory updatedState =  do
         timestamp : getCurrentUTC ""
       }
     ) getOptionsRes.messages
-    categoryName = getTitle selectedCategory.categoryAction
+    categoryName = getTitle $ fromMaybe "" selectedCategory.categoryAction
 
   modifyScreenState $ ReportIssueChatScreenStateType (
     \updatedState ->  updatedState {
       data {
         chats = chats'
-      , categoryName = categoryName
-      , categoryId = selectedCategory.categoryId
+      , selectedCategory = selectedCategory
       , options = options'
       , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{
           messages = messages'
@@ -241,7 +241,7 @@ goToOldChatScreenHandler selectedIssue updatedState = do
   (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language selectedIssue.issueReportId
   let 
     options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) issueInfoRes.options
-    messages' = DA.mapWithIndex (\_ (ChatDetail currMessage) -> makeChatComponent' (reportIssueMessageTransformer (fromMaybe "" currMessage.content)) (if currMessage.sender == "USER" then "Customer" else "Bot") currMessage.timestamp currMessage.chatType 0)issueInfoRes.chats
+    messages' = DA.mapWithIndex (\_ (ChatDetail currMessage) -> makeChatComponent' (reportIssueMessageTransformer (fromMaybe "" currMessage.content)) currMessage.title currMessage.actionText (if currMessage.sender == "USER" then "Customer" else "Bot") currMessage.timestamp currMessage.chatType 0)issueInfoRes.chats
     categoryName = getTitle issueInfoRes.categoryLabel
     showStillHaveIssue' = case (DA.last issueInfoRes.chats) of
       Just (ChatDetail msg) -> (fromMaybe "" msg.label) == "AUTO_MARKED_RESOLVED"
@@ -252,8 +252,14 @@ goToOldChatScreenHandler selectedIssue updatedState = do
       data {
         entryPoint = ReportIssueChatScreenData.OldChatEntry
         , showStillHaveIssue = showStillHaveIssue'
-        , categoryId = issueInfoRes.categoryId
-        , categoryName = categoryName
+        , selectedCategory = {
+              categoryName : categoryName
+            , categoryImageUrl : Nothing
+            , categoryAction : Nothing
+            , categoryId : issueInfoRes.categoryId
+            , isRideRequired : false
+            , maxAllowedRideAge : Nothing
+        }
         , options = options'
         , issueId = Just selectedIssue.issueReportId
         , issueReportShortId = issueInfoRes.issueReportShortId
