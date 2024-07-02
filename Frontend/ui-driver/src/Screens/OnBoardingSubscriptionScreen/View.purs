@@ -61,7 +61,6 @@ import Animation as Anim
 import Locale.Utils
 import RemoteConfig (ReelItem(..))
 
-
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -69,7 +68,7 @@ screen initialState =
   , name : "OnBoardingSubscriptionScreen"
   , globalEvents : [(\push -> do 
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-        uiPlans <- Remote.getUiPlans ""
+        uiPlans <- Remote.getUiPlans if(initialState.data.vehicleCategory == Just ST.BikeCategory) then "BIKE" else "null"
         case uiPlans of
           Right plansResp -> do 
             liftFlow $ push $ LoadPlans plansResp

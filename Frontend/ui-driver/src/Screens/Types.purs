@@ -205,7 +205,7 @@ instance showValidationStatus :: Show ValidationStatus where show = genericShow
 instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
 
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike
 
  -- ############################################################# UploadingDrivingLicenseScreen ################################################################################
 type UploadDrivingLicenseState = {
@@ -268,6 +268,7 @@ type RegistrationScreenData = {
   activeIndex :: Int,
   registerationStepsAuto :: Array StepProgress,
   registerationStepsCabs :: Array StepProgress,
+  registerationStepsBike :: Array StepProgress,
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
@@ -358,7 +359,7 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
-data VehicleCategory = AutoCategory | CarCategory | UnKnown
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory | UnKnown
 
 derive instance genericVehicleCategory :: Generic VehicleCategory _
 instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
@@ -1543,7 +1544,8 @@ type OnBoardingSubscriptionScreenData = {
   plansList :: Array PlanCardConfig,
   selectedPlanItem :: Maybe PlanCardConfig,
   subscriptionConfig :: SubscriptionConfig,
-  reelsData :: Array RC.ReelItem
+  reelsData :: Array RC.ReelItem,
+  vehicleCategory :: Maybe VehicleCategory
 }
 
 type OnBoardingSubscriptionScreenProps = {

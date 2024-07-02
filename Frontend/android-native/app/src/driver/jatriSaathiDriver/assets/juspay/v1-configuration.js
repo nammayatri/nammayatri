@@ -298,10 +298,11 @@ window.getMerchantConfig = function () {
     }
     , "enableMockLocation" : false
     , "flowConfig" : {
-      "chooseCity" : {
-        "runFlow" : false
+        "chooseCity" : {
+          "runFlow" : true,
+          "defCity" : "Kolkata"
+        }
       }
-    }
     , "permissions" : {
       "locationPermission" : true,
       "notification" : false
@@ -342,7 +343,7 @@ window.getMerchantConfig = function () {
   , "cityConfig" : [
     {
       "cityName" : "Kolkata",
-      "mapImage" : "",
+      "mapImage" : "ys_ic_kolkata_map",
       "cityCode" : "std:033",
       "showSubscriptions" : true,
       "enableAdvancedBooking" : false,
@@ -383,6 +384,10 @@ window.getMerchantConfig = function () {
            "auto" : {
              "freeSeconds" : 180,
              "perMinCharges" : 1.50
+           },
+           "bike" : {
+             "freeSeconds" : 300,
+             "perMinCharges" : 1.0
            }
          },
       "rentalWaitingChargesConfig" : {
@@ -393,9 +398,82 @@ window.getMerchantConfig = function () {
         "auto" : {
           "freeSeconds" : 180,
           "perMinCharges" : 2.0
+        },
+        "bike" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
         }
       },
       "rateCardConfig" : defRateCardConfig,
+      "assets" :{
+        "auto_image" : "ny_ic_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      }
+    },
+    {
+      "cityName" : "Siliguri",
+      "mapImage" : "ys_ic_siliguri_map",
+      "cityCode" : "std:0353",
+      "showSubscriptions" : true,
+      "enableAdvancedBooking" : false,
+      "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+      "cityLat" : 26.708845,
+      "cityLong" : 88.434362,
+      "supportNumber" : "",
+      "languageKey" : "BN_IN",
+      "showDriverReferral" : true,
+      "showCustomerReferral" : true,
+      "uploadRCandDL" : true,
+      "enableYatriCoins" : true,
+      "vehicleNSImg" : "",
+      "registration" : {
+          "supportWAN" : "918618963188",
+          "callSupport" : true,
+          "whatsappSupport" : true
+      },
+      "variantSubscriptionConfig" : {
+        "enableVariantBasedSubscription" : false,
+        "variantList" : [],
+        "enableCabsSubscriptionView" : false,
+        "staticViewPlans" : []
+      },
+      "showEarningSection" : true,
+      "referral" : {
+          "domain" : "https://nammayatri.in"
+        , "customerAppId" : "in.juspay.nammayatri"
+        , "driverAppId" : "in.juspay.nammayatripartner"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.50
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "rentalWaitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "bike" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        }
+      },
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"

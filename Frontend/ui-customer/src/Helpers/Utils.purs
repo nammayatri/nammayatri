@@ -804,6 +804,7 @@ getCityFromString cityString =
     "Tumakuru" -> Tumakuru
     "Noida" -> Noida
     "Gurugram" -> Gurugram
+    "Siliguri" -> Siliguri
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
@@ -1124,4 +1125,5 @@ getLanguageBasedCityName cityName =
     Tumakuru -> getString TUMAKURU
     Noida -> getString NOIDA
     Gurugram -> getString GURUGRAM
+    Siliguri -> getString SILIGURI
     AnyCity -> ""

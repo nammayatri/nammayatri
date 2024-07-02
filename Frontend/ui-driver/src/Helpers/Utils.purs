@@ -289,10 +289,12 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "TAXI"  -> []
                                                 "SUV"   -> ["SEDAN", "HATCHBACK"]
                                                 "SEDAN" -> ["TAXI", "HATCHBACK"] 
+                                                "BIKE"  -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+                                        "BIKE"  -> []
                                         _       -> []
 
 
@@ -316,12 +318,14 @@ getUIDowngradeOptions :: String -> Array String
 getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                 YATRISATHI -> case variant of
                                                 "TAXI"  -> []
+                                                "BIKE"  -> []
                                                 "SUV"   -> ["SEDAN"]
                                                 "SEDAN" -> ["TAXI"] 
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+                                        "BIKE"  -> []
                                         _       -> []
   
 getVehicleType :: String -> String
@@ -333,6 +337,7 @@ getVehicleType vehicleType =
     "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
+    "BIKE" -> "Bike"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -524,6 +529,7 @@ getCategorizedVariant variant = case variant of
       "HATCHBACK"  -> "AC Taxi"
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "AC Taxi"
+      "BIKE" -> "Bike"
       _ -> "Non AC"
     _ -> case var of
       "SEDAN"  -> "Sedan"
@@ -531,6 +537,7 @@ getCategorizedVariant variant = case variant of
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "Suv"
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      "BIKE" -> "Bike"
       _ -> var
   Nothing -> ""
 
@@ -571,6 +578,7 @@ getVehicleVariantImage variant =
                         "SUV_TIER"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
+                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _ -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
@@ -592,6 +600,7 @@ getVehicleVariantImage variant =
                             "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
+                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
                         _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 getVariantRideType :: String -> String
@@ -600,6 +609,7 @@ getVariantRideType variant =
     YATRISATHI -> case variant of
                     "TAXI" -> getString TAXI
                     "SUV"  -> getString AC_SUV
+                    "BIKE" -> getString BIKE_TAXI
                     _      -> getString AC_CAB
     _          -> case variant of
                     "TAXI"          -> getString TAXI
@@ -608,6 +618,7 @@ getVariantRideType variant =
                     "TAXI_PLUS"     -> getString TAXI_PLUS
                     "SUV"           -> getString SUV
                     "AUTO_RICKSHAW" -> getString AUTO_RICKSHAW
+                    "BIKE"          -> getString BIKE_TAXI
                     _               -> variant
                     
 getStatus :: String -> PaymentStatus
@@ -686,6 +697,10 @@ getCityConfig cityConfig cityName = do
                             auto : {
                               freeSeconds : 180,
                               perMinCharges : 1.50
+                            },
+                            bike: {
+                              freeSeconds : 3,
+                              perMinCharges : 1.50
                             }
                           },
                           rentalWaitingChargesConfig : {
@@ -696,6 +711,10 @@ getCityConfig cityConfig cityName = do
                             auto : {
                               freeSeconds : 180,
                               perMinCharges : 2.0
+                            },
+                            bike: {
+                              freeSeconds : 180,
+                              perMinCharges : 1.5
                             }
                           },
                           rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
@@ -966,3 +985,4 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.TAXI_PLUS -> "TAXI_PLUS"
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
+  SA.BIKE_TIER -> "BIKE"

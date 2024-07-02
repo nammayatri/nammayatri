@@ -1470,3 +1470,8 @@ getBN stringKey =
         ONLY_3_MORE_RIDES_FOR_50_COINS -> "শুধুমাত্র ৩ টি আরও রাইড নিন এবং ৫০ কয়েন পান"
         YOU_GOT_50_COINS -> "আপনি ৫০ কয়েন পেয়েছেন"
         YOU_GOT_10_COINS -> "আপনি ১০ কয়েন পেয়েছেন"
+        REGISTER_YOUR_BIKE -> "আপনার বাইক নিবন্ধন করুন"
+        BIKE_TAXI -> "বাইক ট্যাক্সি"
+        FIRST_RIDE_FREE count -> "প্রথম " <> count <> " রাইড ফ্রি"
+        FIRST_RIDES_FREE count -> "প্রথম " <> count <> " রাইড ফ্রি"
+
