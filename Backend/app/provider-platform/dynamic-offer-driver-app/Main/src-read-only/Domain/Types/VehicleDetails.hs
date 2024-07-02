@@ -17,6 +17,7 @@ data VehicleDetails = VehicleDetails
     id :: Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails,
     make :: Data.Text.Text,
     model :: Data.Text.Text,
-    vehicleVariant :: Domain.Types.Vehicle.Variant
+    vehicleVariant :: Domain.Types.Vehicle.Variant,
+    year :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

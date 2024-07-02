@@ -359,20 +359,25 @@ postDriverRegisterSsn ::
     Environment.Flow APISuccess
   )
 postDriverRegisterSsn (mbPersonId, _, _) API.Types.UI.DriverOnboardingV2.SSNReq {..} = do
-  ssn' <- encrypt ssn
-  id' <- generateGUID
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  QDriverSSN.upsert (buildDriverSSN id' ssn' driverId)
+  ssnEnc <- encrypt ssn
+  mbSsnEntry <- QDriverSSN.findBySSN (ssnEnc & hash)
+  whenJust mbSsnEntry $ \ssnEntry -> do
+    unless (ssnEntry.driverId == driverId) $ throwError (InvalidRequest "SSN Already linked to another Driver.")
+  ssnEntry <- buildDriverSSN ssnEnc driverId
+  QDriverSSN.upsert ssnEntry
   return Success
   where
-    buildDriverSSN id' ssn' driverId' =
-      Domain.Types.DriverSSN.DriverSSN
-        { id = id',
-          driverId = driverId',
-          ssn = ssn',
-          verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
-          rejectReason = Nothing
-        }
+    buildDriverSSN ssnEnc driverId = do
+      id <- generateGUID
+      return $
+        Domain.Types.DriverSSN.DriverSSN
+          { id,
+            driverId,
+            ssn = ssnEnc,
+            verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+            rejectReason = Nothing
+          }
 
 postDriverBackgroundVerification ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
