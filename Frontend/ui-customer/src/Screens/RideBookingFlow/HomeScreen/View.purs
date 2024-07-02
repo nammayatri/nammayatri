@@ -1227,7 +1227,7 @@ buttonLayout state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , background if ((null state.data.savedLocations  && null state.data.recentSearchs.predictionArray ) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.white900
-      , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
+      , gradient (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
       , orientation VERTICAL
       , padding $ PaddingTop 16
       ] $ maybe ([]) (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem
@@ -3397,7 +3397,7 @@ homeScreenViewV2 push state =
               [ weight 1.0
               , background Color.white900
               , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
-              , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
+              , gradient (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
               ][ scrollView
                   [ height MATCH_PARENT
                   , width MATCH_PARENT
@@ -4432,7 +4432,7 @@ rentalBanner push state =
     , padding $ Padding 8 0 8 0
     , margin $ MarginHorizontal 8 8
     , visibility $ boolToVisibility $ (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) 
-    , gradient if os == "IOS" then (Linear 270.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
+    , gradient (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
     ][  if state.props.showShimmer then 
           textView[]
           else rentalBannerView state push]

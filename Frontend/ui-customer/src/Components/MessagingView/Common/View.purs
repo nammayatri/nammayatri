@@ -333,7 +333,7 @@ quickRepliesView push state =
         [ height $ V $ replyItemHeight FunctionCall
         , width $ V 40
         , accessibility DISABLE
-        , gradient $ if os == "IOS" then (Linear 180.0 ["#2C2F3A","#282C2F3A",Color.transparent]) else (Linear 90.0 [Color.transparent, "#282C2F3A", "#2C2F3A"])
+        , gradient (Linear 90.0 [Color.transparent, "#282C2F3A", "#2C2F3A"])
         ][]  
       ]
     ]
