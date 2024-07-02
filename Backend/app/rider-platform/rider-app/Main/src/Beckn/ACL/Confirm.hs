@@ -154,12 +154,11 @@ tfCustomer res =
           }
 
     mkPerson = do
-      riderName <- res.mbRiderName
       return $
         Spec.Person
           { personId = Nothing,
             personImage = Nothing,
-            personName = Just riderName,
+            personName = res.mbRiderName,
             personTags = mkPersonTags
           }
 

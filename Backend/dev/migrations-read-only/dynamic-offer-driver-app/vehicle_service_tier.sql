@@ -52,3 +52,11 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN oxygen double
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_air_conditioned boolean ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN air_conditioned_threshold double precision ;
+
+
+------- SQL updates -------
+
+
+--- Drop columns section begins. Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier DROP COLUMN air_conditioned;
+--- Drop columns section ends ---
