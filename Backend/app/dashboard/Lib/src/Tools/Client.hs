@@ -14,7 +14,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Tools.Client (CallServerAPI (..), clientWithMerchantAndCity) where
+module Tools.Client (CallServerAPI (..), CallServerAPI', clientWithMerchantAndCity) where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Merchant as DM
@@ -49,6 +49,12 @@ class
     | m b -> c
   where
   callServerAPI :: DSN.ServerName -> (Text -> apis) -> Text -> (apis -> b) -> c
+
+type CallServerAPI' apis m r b c =
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    CallServerAPI apis m r b c
+  )
 
 instance
   ( CoreMetrics m,

@@ -51,5 +51,10 @@ upsertMerchantServiceConfig merchantServiceConfig opCity = do
         [ Se.Set BeamMSC.configJSON configJSON,
           Se.Set BeamMSC.updatedAt now
         ]
-        [Se.Is BeamMSC.merchantId (Se.Eq $ getId merchantServiceConfig.merchantId)]
+        [ Se.And
+            [ Se.Is BeamMSC.merchantId $ Se.Eq $ getId merchantServiceConfig.merchantId,
+              Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ Just $ getId opCity,
+              Se.Is BeamMSC.serviceName $ Se.Eq _serviceName
+            ]
+        ]
     else createWithKV merchantServiceConfig

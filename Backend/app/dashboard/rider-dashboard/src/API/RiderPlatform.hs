@@ -20,6 +20,7 @@ module API.RiderPlatform
   )
 where
 
+import qualified API.Action.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified API.RiderPlatform.Booking as Booking
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.HotSpot as HotSpot
@@ -57,6 +58,7 @@ type API' =
     :<|> Issue.API
     :<|> Tickets.API
     :<|> HotSpot.API
+    :<|> MerchantDSL.API
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -71,6 +73,7 @@ handler merchantId = do
     :<|> Issue.handler merchantId city
     :<|> Tickets.handler merchantId city
     :<|> HotSpot.handler merchantId city
+    :<|> MerchantDSL.handler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI" -> City.Bangalore
@@ -89,3 +92,4 @@ handlerV2 merchantId city =
     :<|> Issue.handler merchantId city
     :<|> Tickets.handler merchantId city
     :<|> HotSpot.handler merchantId city
+    :<|> MerchantDSL.handler merchantId city

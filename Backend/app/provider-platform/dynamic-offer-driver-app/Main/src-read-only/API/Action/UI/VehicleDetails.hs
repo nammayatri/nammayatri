@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.VehicleDetails where
+module API.Action.UI.VehicleDetails
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.VehicleDetails
 import qualified Control.Lens

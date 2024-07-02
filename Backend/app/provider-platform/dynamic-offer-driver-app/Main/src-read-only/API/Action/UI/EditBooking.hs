@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.EditBooking where
+module API.Action.UI.EditBooking
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.EditBooking
 import qualified Control.Lens

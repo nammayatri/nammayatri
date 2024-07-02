@@ -29,9 +29,7 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   "merchant"
-    :> ( Common.MerchantUpdateAPI
-           :<|> Common.ServiceUsageConfigAPI
-           :<|> Common.MapsServiceConfigUpdateAPI
+    :> ( Common.ServiceUsageConfigAPI
            :<|> Common.MapsServiceUsageConfigUpdateAPI
            :<|> Common.SmsServiceConfigUpdateAPI
            :<|> Common.SmsServiceUsageConfigUpdateAPI
@@ -44,9 +42,7 @@ type API =
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
-  merchantUpdate merchantId city
-    :<|> serviceUsageConfig merchantId city
-    :<|> mapsServiceConfigUpdate merchantId city
+  serviceUsageConfig merchantId city
     :<|> mapsServiceUsageConfigUpdate merchantId city
     :<|> smsServiceConfigUpdate merchantId city
     :<|> smsServiceUsageConfigUpdate merchantId city
@@ -56,25 +52,11 @@ handler merchantId city =
     :<|> upsertSpecialLocationGate merchantId city
     :<|> deleteSpecialLocationGate merchantId city
 
-merchantUpdate ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Common.MerchantUpdateReq ->
-  FlowHandler APISuccess
-merchantUpdate merchantShortId city = withFlowHandlerAPI . DMerchant.merchantUpdate merchantShortId city
-
 serviceUsageConfig ::
   ShortId DM.Merchant ->
   Context.City ->
   FlowHandler Common.ServiceUsageConfigRes
 serviceUsageConfig merchantShortId = withFlowHandlerAPI . DMerchant.serviceUsageConfig merchantShortId
-
-mapsServiceConfigUpdate ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Common.MapsServiceConfigUpdateReq ->
-  FlowHandler APISuccess
-mapsServiceConfigUpdate merchantShortId city = withFlowHandlerAPI . DMerchant.mapsServiceConfigUpdate merchantShortId city
 
 mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->

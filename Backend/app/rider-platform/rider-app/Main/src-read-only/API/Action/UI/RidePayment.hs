@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.RidePayment where
+module API.Action.UI.RidePayment
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.RidePayment
 import qualified Control.Lens

@@ -46,20 +46,20 @@ findGitRoot dir = do
 --     Left err -> error $ show err
 --     Right yml -> return yml
 
-processSpecFolders :: Bool -> FilePath -> IO ()
-processSpecFolders isGenAll specFolderPath =
+processSpecFolders :: Bool -> Bool -> FilePath -> IO ()
+processSpecFolders isGenAll insideOfSpecFolder specFolderPath =
   if ".direnv" `isInfixOf` specFolderPath
     then putStrLn $ ("ignore folder: " :: String) <> show specFolderPath <> " containing: \".direnv\""
-    else processSpecFolders' isGenAll specFolderPath
+    else processSpecFolders' isGenAll insideOfSpecFolder specFolderPath
 
-processSpecFolders' :: Bool -> FilePath -> IO ()
-processSpecFolders' isGenAll specFolderPath = do
+processSpecFolders' :: Bool -> Bool -> FilePath -> IO ()
+processSpecFolders' isGenAll insideOfSpecDir specFolderPath = do
   contents <- listDirectory specFolderPath
   forM_ contents $ \entry -> do
     let entryPath = specFolderPath </> entry
     isDirectory <- doesDirectoryExist entryPath
     when isDirectory $ do
-      let isSpecDir = "/spec" `isSuffixOf` entryPath
+      let isSpecDir = "/spec" `isSuffixOf` entryPath || insideOfSpecDir
       if isSpecDir
         then do
           let apiFolderPath = entryPath </> "API"
@@ -71,23 +71,26 @@ processSpecFolders' isGenAll specFolderPath = do
           if not isConfigExists
             then do
               putStrLn' "33" ("Skipping as Config file not found at " ++ configPath)
+              processSpecFolders isGenAll isSpecDir entryPath
             else do
               forM_ apiContents $
                 \inputFile -> do
-                  let inputFilePath = apiFolderPath </> inputFile
-                  fileState <- NammaDSL.getFileState inputFilePath
-                  putStrLn $ show fileState ++ " " ++ inputFilePath
-                  when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
-                    NammaDSL.runApiGenerator configPath inputFilePath
+                  when (".yaml" `isSuffixOf` inputFile) $ do
+                    let inputFilePath = apiFolderPath </> inputFile
+                    fileState <- NammaDSL.getFileState inputFilePath
+                    putStrLn $ show fileState ++ " " ++ inputFilePath
+                    when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
+                      NammaDSL.runApiGenerator configPath inputFilePath
 
               forM_ storageContents $
                 \inputFile -> do
-                  let inputFilePath = storageFolderPath </> inputFile
-                  fileState <- NammaDSL.getFileState inputFilePath
-                  putStrLn $ show fileState ++ " " ++ inputFilePath
-                  when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
-                    NammaDSL.runStorageGenerator configPath inputFilePath
-        else processSpecFolders isGenAll entryPath
+                  when (".yaml" `isSuffixOf` inputFile) $ do
+                    let inputFilePath = storageFolderPath </> inputFile
+                    fileState <- NammaDSL.getFileState inputFilePath
+                    putStrLn $ show fileState ++ " " ++ inputFilePath
+                    when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
+                      NammaDSL.runStorageGenerator configPath inputFilePath
+        else processSpecFolders isGenAll isSpecDir entryPath
 
 putStrLn' :: String -> String -> IO ()
 putStrLn' colorCode text = putStrLn $ "\x1b[" ++ colorCode ++ "m" ++ text ++ "\x1b[0m"
@@ -101,7 +104,7 @@ main = do
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
   setEnv "GIT_ROOT_PATH" (show rootDir)
   putStrLn' "32" ("Root dir: " ++ rootDir)
-  processSpecFolders generateAllSpecs rootDir
+  processSpecFolders generateAllSpecs False rootDir
 
 -- What about Library apps ? --TODO
 -- mapM_

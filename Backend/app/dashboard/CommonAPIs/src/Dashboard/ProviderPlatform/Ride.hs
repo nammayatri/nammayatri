@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.ProviderPlatform.Ride
   ( module Dashboard.ProviderPlatform.Ride,
@@ -20,6 +21,7 @@ module Dashboard.ProviderPlatform.Ride
   )
 where
 
+import API.Types.ProviderPlatform.Management.Ride as Reexport
 import Dashboard.Common as Reexport
 import Dashboard.Common.Booking as Reexport (CancellationReasonCode (..))
 import Dashboard.Common.Ride as Reexport
@@ -39,53 +41,6 @@ import Servant hiding (Summary)
 
 ---------------------------------------------------------
 -- ride list --------------------------------------------
-
-type RideListAPI =
-  "list"
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
-    :> QueryParam "bookingStatus" BookingStatus
-    :> QueryParam "rideShortId" (ShortId Ride)
-    :> QueryParam "customerPhoneNo" Text
-    :> QueryParam "driverPhoneNo" Text
-    :> QueryParam "fareDiff" HighPrecMoney
-    :> QueryParam "currency" Currency
-    :> QueryParam "from" UTCTime
-    :> QueryParam "to" UTCTime
-    :> Get '[JSON] RideListRes
-
-data RideListRes = RideListRes
-  { totalItems :: Int, -- for backward compatibility
-    summary :: Summary,
-    rides :: [RideListItem]
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data RideListItem = RideListItem
-  { rideId :: Id Ride,
-    rideShortId :: ShortId Ride,
-    customerName :: Maybe Text,
-    customerPhoneNo :: Text,
-    driverName :: Text,
-    driverPhoneNo :: Maybe Text,
-    tripCategory :: TripCategory,
-    vehicleNo :: Text,
-    fareDiff :: Maybe Money,
-    fareDiffWithCurrency :: Maybe PriceAPIEntity,
-    bookingStatus :: BookingStatus,
-    rideCreatedAt :: UTCTime
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED
-  deriving stock (Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity
-  deriving stock (Eq, Ord, Generic, Show)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 derivePersistField "BookingStatus"
 

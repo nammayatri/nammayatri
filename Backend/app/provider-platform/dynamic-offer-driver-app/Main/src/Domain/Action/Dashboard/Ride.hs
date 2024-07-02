@@ -13,7 +13,7 @@
 -}
 
 module Domain.Action.Dashboard.Ride
-  ( rideList,
+  ( getRideList,
     rideInfo,
     rideSync,
     multipleRideSync,
@@ -77,21 +77,21 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Tools.Error
 
 ---------------------------------------------------------------------
-rideList ::
+getRideList ::
   ShortId DM.Merchant ->
   Context.City ->
-  Maybe Int ->
-  Maybe Int ->
   Maybe Common.BookingStatus ->
-  Maybe (ShortId Common.Ride) ->
+  Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
   Maybe HighPrecMoney ->
-  Maybe Currency ->
   Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFareDiff mbCurrency mbfrom mbto = do
+getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbFareDiff mbfrom mbLimit mbOffset mbReqShortRideId mbto = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   whenJust mbCurrency $ \currency -> do

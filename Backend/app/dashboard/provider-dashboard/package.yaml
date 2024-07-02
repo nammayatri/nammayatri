@@ -96,7 +96,9 @@ ghc-options:
   - -hiedir=.hie
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
+    - src-read-only
   ghc-options:
     - -fhide-source-paths
     - -Wincomplete-uni-patterns

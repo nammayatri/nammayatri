@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.Sos where
+module API.Action.UI.Sos
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.Sos
 import qualified Control.Lens

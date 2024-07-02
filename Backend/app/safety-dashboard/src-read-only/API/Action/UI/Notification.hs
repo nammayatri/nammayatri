@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.Notification where
+module API.Action.UI.Notification
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.Notification
 import qualified Domain.Action.UI.Notification as Domain.Action.UI.Notification

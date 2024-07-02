@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.Reels where
+module API.Action.UI.Reels
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.Reels
 import qualified Control.Lens

@@ -26,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import Kernel.Utils.Common (Currency, HighPrecMoney, MonadFlow, withFlowHandlerAPI')
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import qualified ProviderPlatformClient.DynamicOfferDriver.RideBooking as Client
@@ -38,8 +38,7 @@ import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   "ride"
-    :> ( RideListAPI
-           :<|> RideStartAPI
+    :> ( RideStartAPI
            :<|> RideEndAPI
            :<|> MultipleRideEndAPI
            :<|> CurrentActiveRideAPI
@@ -53,10 +52,6 @@ type API =
            :<|> TicketRideListAPI
            :<|> FareBreakUpAPI
        )
-
-type RideListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'RIDES 'RIDE_LIST
-    :> Common.RideListAPI
 
 type TicketRideListAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'RIDES 'TICKET_RIDE_LIST_API
@@ -112,8 +107,7 @@ type FareBreakUpAPI =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  rideList merchantId city
-    :<|> rideStart merchantId city
+  rideStart merchantId city
     :<|> rideEnd merchantId city
     :<|> multipleRideEnd merchantId city
     :<|> currentActiveRide merchantId city
@@ -150,25 +144,6 @@ buildManagementServerTransaction ::
   m DT.Transaction
 buildManagementServerTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.RideAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing
-
-rideList ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe Common.BookingStatus ->
-  Maybe (ShortId Common.Ride) ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe HighPrecMoney ->
-  Maybe Currency ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
-  FlowHandler Common.RideListRes
-rideList merchantShortId opCity apiTokenInfo mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFareDiff mbCurrency mbfrom mbto = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFareDiff mbCurrency mbfrom mbto
 
 rideStart :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
 rideStart merchantShortId opCity apiTokenInfo rideId req = withFlowHandlerAPI' $ do

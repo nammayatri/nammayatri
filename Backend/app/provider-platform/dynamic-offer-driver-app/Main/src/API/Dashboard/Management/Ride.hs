@@ -27,7 +27,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common (Currency, HighPrecMoney, logTagInfo, withFlowHandlerAPI)
+import Kernel.Utils.Common (logTagInfo, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -36,8 +36,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 type API =
   "ride"
-    :> ( Common.RideListAPI
-           :<|> Common.MultipleRideEndAPI
+    :> ( Common.MultipleRideEndAPI
            :<|> Common.MultipleRideCancelAPI
            :<|> Common.RideInfoAPI
            :<|> Common.RideSyncAPI
@@ -48,31 +47,13 @@ type API =
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
-  rideList merchantId city
-    :<|> multipleRideEnd merchantId city
+  multipleRideEnd merchantId city
     :<|> multipleRideCancel merchantId city
     :<|> rideInfo merchantId city
     :<|> rideSync merchantId city
     :<|> multipleRideSync merchantId city
     :<|> rideRoute merchantId city
     :<|> ticketRideList merchantId city
-
-rideList ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe Common.BookingStatus ->
-  Maybe (ShortId Common.Ride) ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe HighPrecMoney ->
-  Maybe Currency ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
-  FlowHandler Common.RideListRes
-rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbCurrency mbfrom mbto =
-  withFlowHandlerAPI . DRide.rideList merchantShortId opCity mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff mbCurrency mbfrom mbto
 
 multipleRideEnd :: ShortId DM.Merchant -> Context.City -> Common.MultipleRideEndReq -> FlowHandler Common.MultipleRideEndResp
 multipleRideEnd merchantShortId opCity req = withFlowHandlerAPI $ do

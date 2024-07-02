@@ -1,0 +1,36 @@
+imports:
+  ExophoneReq: Dashboard.Common.Merchant
+  FCMConfigUpdateReq: Dashboard.Common.Merchant
+  MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
+
+module: Merchant
+
+apis:
+  - POST:
+      endpoint: /update
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_UPDATE
+      request:
+        type: MerchantUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.RiderPlatform.Merchant.validateMerchantUpdateReq
+  - POST:
+      endpoint: /serviceConfig/maps/update
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
+      request:
+        type: MapsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+
+types:
+  MerchantUpdateReq:
+    name: Maybe Text
+    exoPhones: Maybe (NonEmpty ExophoneReq)
+    fcmConfig: Maybe FCMConfigUpdateReq
+    gatewayUrl: Maybe BaseUrl
+    registryUrl: Maybe BaseUrl
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.FareCalculator where
+module API.Action.UI.FareCalculator
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.FareCalculator
 import qualified Control.Lens

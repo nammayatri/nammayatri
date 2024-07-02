@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.EditLocation where
+module API.Action.UI.EditLocation
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.EditLocation
 import qualified Control.Lens

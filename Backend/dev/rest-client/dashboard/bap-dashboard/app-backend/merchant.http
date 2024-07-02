@@ -46,7 +46,7 @@ content-type: application/json
 
 ###
 
-# @name merchanServiceUsageConfig
+# @name merchantServiceUsageConfig
 
 GET {{bap-dashboard-host}}/bap/YATRI/merchant/serviceUsageConfig
 token: {{juspay_admin}}

@@ -13,10 +13,10 @@ GET {{bpp-dashboard-host}}
 # @name rideList
 
 # FIXME ?bookingStatus=COMPLETED
-GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/list
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/ride/list
 ?bookingStatus="COMPLETED"
 # &rideShortId=DNNJaROfj7
-&customerPhoneNo=9999999999
+# &customerPhoneNo=9999999999
 # &driverPhoneNo=6666666666
 &limit=10
 &offset=0

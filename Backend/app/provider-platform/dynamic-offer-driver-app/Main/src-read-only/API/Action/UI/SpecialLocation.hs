@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.SpecialLocation where
+module API.Action.UI.SpecialLocation
+  ( API,
+    handler,
+  )
+where
 
 import qualified Control.Lens
 import qualified Domain.Action.UI.SpecialLocation as Domain.Action.UI.SpecialLocation

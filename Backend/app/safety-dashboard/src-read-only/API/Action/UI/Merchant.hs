@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.Merchant where
+module API.Action.UI.Merchant
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.Merchant
 import qualified Domain.Action.UI.Merchant as Domain.Action.UI.Merchant

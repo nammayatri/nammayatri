@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.LmsModule where
+module API.Action.UI.LmsModule
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.LmsModule
 import qualified Control.Lens

@@ -342,13 +342,13 @@ data UpdateDriverReq = UpdateDriverReq
 newtype ScheduledBookingRes = ScheduledBookingRes
   { bookings :: [ScheduleBooking]
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data ScheduleBooking = ScheduleBooking
   { bookingDetails :: BookingAPIEntity,
     fareDetails :: [DOVT.RateCardItem]
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id DRB.Booking,
