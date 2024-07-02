@@ -44,7 +44,7 @@ postVehicleModels ::
     Environment.Flow API.Types.UI.VehicleDetails.VehicleModelsResp
   )
 postVehicleModels (_, _, _) (API.Types.UI.VehicleDetails.VehicleModelsReq make) = do
-  vehicleDetails <- QCVehicleDetails.findByMake make
+  vehicleDetails <- QCVehicleDetails.findByMakeAndYear make Nothing
   let models = map Domain.Types.VehicleDetails.model vehicleDetails
   pure $ API.Types.UI.VehicleDetails.VehicleModelsResp models
 
@@ -56,4 +56,4 @@ postVehicleDetails ::
     API.Types.UI.VehicleDetails.VehicleDetailsReq ->
     Environment.Flow Domain.Types.VehicleDetails.VehicleDetails
   )
-postVehicleDetails (_, _, _) (API.Types.UI.VehicleDetails.VehicleDetailsReq make model) = QCVehicleDetails.findByMakeAndModel make model >>= fromMaybeM (InvalidRequest "vehicle detail not found")
+postVehicleDetails (_, _, _) (API.Types.UI.VehicleDetails.VehicleDetailsReq make model) = QCVehicleDetails.findByMakeAndModelAndYear make model Nothing >>= fromMaybeM (InvalidRequest "vehicle detail not found")

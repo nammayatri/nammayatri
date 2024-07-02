@@ -12,3 +12,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_details ALTER COLUMN ac_available SET DEFAULT true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_details ADD COLUMN year integer ;

@@ -285,6 +285,8 @@ data DocumentType
   | VehiclePUCImage
   | VehicleInsuranceImage
   | VehicleFitnessCertificateImage
+  | VehicleInspectionImage
+  | ProfilePhotoImage
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data UploadDocumentReq = UploadDocumentReq

@@ -39,34 +39,34 @@ cacheVehicleDetails vehicleDetails = do
 makeVehicleDetailsKey :: Text
 makeVehicleDetailsKey = "CachedQueries:ValueAddNP:VehicleDetails"
 
-findByMake :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m ([Domain.Types.VehicleDetails.VehicleDetails]))
-findByMake make = do
-  Hedis.safeGet (makeVehicleDetailsMakeKey make) >>= \case
+findByMakeAndYear :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Maybe Int -> m ([Domain.Types.VehicleDetails.VehicleDetails]))
+findByMakeAndYear make year = do
+  Hedis.safeGet (makeVehicleDetailsMakeYearKey make year) >>= \case
     Just a -> return a
     Nothing -> findAndCache
   where
-    findAndCache = cacheVehicleDetailsMake make /=<< QVehicleDetails.findByMake make
+    findAndCache = cacheVehicleDetailsMakeYear make year /=<< QVehicleDetails.findByMakeAndYear make year
 
-cacheVehicleDetailsMake :: (CacheFlow m r) => Text -> [Domain.Types.VehicleDetails.VehicleDetails] -> m ()
-cacheVehicleDetailsMake make vehicleDetails = do
+cacheVehicleDetailsMakeYear :: (CacheFlow m r) => Text -> Maybe Int -> [Domain.Types.VehicleDetails.VehicleDetails] -> m ()
+cacheVehicleDetailsMakeYear make year vehicleDetails = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeVehicleDetailsMakeKey make) vehicleDetails expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeVehicleDetailsMakeYearKey make year) vehicleDetails expTime
 
-makeVehicleDetailsMakeKey :: Text -> Text
-makeVehicleDetailsMakeKey make = "CachedQueries:ValueAddNP:VehicleDetails:Make-" <> make
+makeVehicleDetailsMakeYearKey :: Text -> Maybe Int -> Text
+makeVehicleDetailsMakeYearKey make year = "CachedQueries:ValueAddNP:VehicleDetails:Make-" <> make <> ":Year-" <> (maybe "All" show year)
 
-findByMakeAndModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Data.Text.Text -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
-findByMakeAndModel make model = do
-  Hedis.safeGet (makeVehicleDetailsMakeModelKey make model) >>= \case
+findByMakeAndModelAndYear :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Data.Text.Text -> Maybe Int -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
+findByMakeAndModelAndYear make model year = do
+  Hedis.safeGet (makeVehicleDetailsMakeModelYearKey make model year) >>= \case
     Just a -> return a
     Nothing -> findAndCache
   where
-    findAndCache = cacheVehicleDetailsMakeModel make model /=<< QVehicleDetails.findByMakeAndModel make model
+    findAndCache = cacheVehicleDetailsMakeModelYear make model year /=<< QVehicleDetails.findByMakeAndModelAndYear make model year
 
-cacheVehicleDetailsMakeModel :: (CacheFlow m r) => Text -> Text -> Maybe Domain.Types.VehicleDetails.VehicleDetails -> m ()
-cacheVehicleDetailsMakeModel make model vehicleDetails = do
+cacheVehicleDetailsMakeModelYear :: (CacheFlow m r) => Text -> Text -> Maybe Int -> Maybe Domain.Types.VehicleDetails.VehicleDetails -> m ()
+cacheVehicleDetailsMakeModelYear make model year vehicleDetails = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeVehicleDetailsMakeModelKey make model) vehicleDetails expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeVehicleDetailsMakeModelYearKey make model year) vehicleDetails expTime
 
-makeVehicleDetailsMakeModelKey :: Text -> Text -> Text
-makeVehicleDetailsMakeModelKey make model = "CachedQueries:ValueAddNP:VehicleDetails:Make-" <> make <> ":Model-" <> model
+makeVehicleDetailsMakeModelYearKey :: Text -> Text -> Maybe Int -> Text
+makeVehicleDetailsMakeModelYearKey make model year = "CachedQueries:ValueAddNP:VehicleDetails:Make-" <> make <> ":Model-" <> model <> ":Year-" <> (maybe "All" show year)
