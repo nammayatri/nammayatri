@@ -786,6 +786,36 @@ notifyDriverBirthDay personId driverName = do
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
+notifyDirectCallOnCallServiceDown ::
+  ServiceFlow m r =>
+  Id Person ->
+  m ()
+notifyDirectCallOnCallServiceDown personId = do
+  person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CALL_SERVICE_DOWN merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.CALL_SERVICE_DOWN,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product personId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+      title = T.pack "driver is trying to contact you!"
+      body =
+        unwords
+          [ "Please try calling directly for better connectivity"
+          ]
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
 notifyRideStartToEmergencyContacts ::
   ( EsqDBFlow m r,
     EncFlow m r,

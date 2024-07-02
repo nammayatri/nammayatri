@@ -17,7 +17,8 @@ instance FromTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
     pure $
       Just
         Domain.Types.CallStatus.CallStatus
-          { callError = callError,
+          { callAttempt = callAttempt,
+            callError = callError,
             callId = callId,
             callService = callService,
             conversationDuration = conversationDuration,
@@ -34,7 +35,8 @@ instance FromTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
 instance ToTType' Beam.CallStatus Domain.Types.CallStatus.CallStatus where
   toTType' (Domain.Types.CallStatus.CallStatus {..}) = do
     Beam.CallStatusT
-      { Beam.callError = callError,
+      { Beam.callAttempt = callAttempt,
+        Beam.callError = callError,
         Beam.callId = callId,
         Beam.callService = callService,
         Beam.conversationDuration = conversationDuration,

@@ -121,6 +121,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
             rideId = Just ride.id,
             dtmfNumberUsed = Nothing,
             status = exotelResponse.callStatus,
+            callAttempt = Just Resolved,
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Just booking.merchantId.getId,

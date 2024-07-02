@@ -8,6 +8,10 @@ imports:
 CallStatus:
   tableName: call_status
 
+  types:
+    CallAttemptStatus:
+      enum: "Attempted, Resolved, Failed"
+
   fields:
     id : Id CallStatus
     callId : Text
@@ -19,6 +23,7 @@ CallStatus:
     merchantId : Maybe Text
     callService : Maybe CallService
     callError : Maybe Text
+    callAttempt : Maybe CallAttemptStatus
     createdAt : UTCTime
 
   sqlType:
@@ -40,6 +45,10 @@ CallStatus:
       kvFunction: findOneWithKV
       where: id
 
+    findByRideId:
+      kvFunction: findOneWithKV
+      where: rideId
+
     updateCallStatus:
       kvFunction: updateWithKV
       params: [conversationDuration, recordingUrl, status]
@@ -55,6 +64,11 @@ CallStatus:
       params: [callError, callService, merchantId]
       where: id
 
+    updateCallAttempt:
+      kvFunction: updateWithKV
+      params: [callAttempt]
+      where: rideId
+
   excludedFields: [merchantOperatingCityId]
 
   extraOperations:
@@ -62,3 +76,4 @@ CallStatus:
 
   excludedDefaultQueries:
     - create
+

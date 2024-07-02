@@ -138,7 +138,8 @@ data AppCfg = AppCfg
     superPositionConfig :: CF.SuperPositionConfig,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
-    isMetroTestTransaction :: Bool
+    isMetroTestTransaction :: Bool,
+    exotelStatusScheduler :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -218,7 +219,8 @@ data AppEnv = AppEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
-    isMetroTestTransaction :: Bool
+    isMetroTestTransaction :: Bool,
+    exotelStatusScheduler :: Seconds
   }
   deriving (Generic)
 

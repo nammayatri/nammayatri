@@ -254,6 +254,7 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
       SharedLogic.ScheduledNotifications
+      SharedLogic.Scheduler.Jobs.CheckExotelDoFallback
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       Storage.Beam.BecknRequest

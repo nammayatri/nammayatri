@@ -25,6 +25,16 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m (Maybe Domain.Types.CallStatus.CallStatus))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) -> m (Maybe Domain.Types.CallStatus.CallStatus))
+findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId <$> rideId)]
+
+updateCallAttempt ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) -> m ())
+updateCallAttempt callAttempt rideId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.callAttempt callAttempt, Se.Set Beam.updatedAt _now] [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId <$> rideId)]
+
 updateCallError ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
@@ -66,7 +76,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.callError callError,
+    [ Se.Set Beam.callAttempt callAttempt,
+      Se.Set Beam.callError callError,
       Se.Set Beam.callId callId,
       Se.Set Beam.callService callService,
       Se.Set Beam.conversationDuration conversationDuration,

@@ -13,3 +13,8 @@ ALTER TABLE atlas_app.call_status ADD COLUMN ride_id character(36) ;
 ALTER TABLE atlas_app.call_status ADD COLUMN status varchar(255) NOT NULL;
 ALTER TABLE atlas_app.call_status ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.call_status ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.call_status ADD COLUMN call_attempt text ;
