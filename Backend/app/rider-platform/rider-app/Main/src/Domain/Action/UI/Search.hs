@@ -406,6 +406,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         autoAssignEnabledV2 = Nothing,
         selectedPaymentMethodId = Nothing,
         isAdvanceBookingEnabled = Nothing,
+        availablePaymentMethods = [],
         riderPreferredOption, -- this is just to store the rider preference for the ride type to handle backward compatibility
         distanceUnit,
         totalRidesCount

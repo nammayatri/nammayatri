@@ -57,6 +57,7 @@ SearchRequest:
     backendAppVersion: Maybe Text
     totalRidesCount: Maybe Int
     isAdvanceBookingEnabled: Maybe Bool
+    availablePaymentMethods: "[Id MerchantPaymentMethod]"
 
   types:
     SearchRequestStatus:

@@ -32,6 +32,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
         Domain.Types.SearchRequest.SearchRequest
           { autoAssignEnabled = autoAssignEnabled,
             autoAssignEnabledV2 = autoAssignEnabledV2,
+            availablePaymentMethods = Kernel.Types.Id.Id <$> availablePaymentMethods,
             backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             clientBundleVersion = clientBundleVersion',
@@ -69,6 +70,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
     Beam.SearchRequestT
       { Beam.autoAssignEnabled = autoAssignEnabled,
         Beam.autoAssignEnabledV2 = autoAssignEnabledV2,
+        Beam.availablePaymentMethods = Kernel.Types.Id.getId <$> availablePaymentMethods,
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
         Beam.clientBundleVersion = Kernel.Utils.Version.versionToText <$> clientBundleVersion,

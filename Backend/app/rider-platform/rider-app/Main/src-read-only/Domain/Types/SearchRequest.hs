@@ -9,6 +9,7 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Kernel.External.Maps
 import qualified Kernel.External.Payment.Interface.Types
@@ -22,6 +23,7 @@ import qualified Tools.Beam.UtilsTH
 data SearchRequest = SearchRequest
   { autoAssignEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoAssignEnabledV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    availablePaymentMethods :: [Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod],
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
