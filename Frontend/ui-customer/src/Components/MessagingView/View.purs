@@ -34,7 +34,7 @@ import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, negate, (+), (<=), discard, void, (>=), (<), when)
-import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing, rippleColor, root)
+import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Events (afterRender)
@@ -51,6 +51,7 @@ import Engineering.Helpers.Utils(getFlexBoxCompatibleVersion)
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
 
+
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   PrestoAnim.animationSet [ fadeIn true] $ 
@@ -60,10 +61,34 @@ view push config =
   , orientation VERTICAL
   , clickable $ os == "IOS"
   , accessibility DISABLE
-  ][ if config.isKeyBoardOpen then Tuple "KeyBoardOpenChatView" $ messagingView config push
-     else Tuple "KeyBoardCloseChatView" $ messagingView config push
-   , Tuple "ChatFooterView" $ 
-      linearLayout
+  ][ 
+    if os /= "IOS" then 
+      if config.isKeyBoardOpen then Tuple "KeyBoardOpenChatView" $ messagingView config push
+      else Tuple "KeyBoardCloseChatView" $ messagingView config push
+      else 
+        Tuple "AndroidChatView" $ linearLayout
+        [ height $ WRAP_CONTENT
+        , width $ MATCH_PARENT
+        , clickable $ os == "IOS"
+        , alignParentBottom "true,-1"
+        , adjustViewWithKeyboard "true"
+        , margin $ MarginTop safeMarginTop
+        , accessibility DISABLE
+        ][ linearLayout
+            [ height $ V $ config.peekHeight + 125
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , background Color.grey700
+            , clickable true
+            , adjustViewWithKeyboard "false"
+            , cornerRadii $ Corners 24.0 true true false false
+            , stroke $ config.config.driverInfoConfig.cardStroke
+            , accessibility DISABLE
+            ][ chatHeaderView config push
+            , chatBodyView config push 
+            ]
+          ]
+    , Tuple "ChatFooterView" $ linearLayout
       [ height $ WRAP_CONTENT
       , width $ MATCH_PARENT
       , orientation VERTICAL
@@ -102,8 +127,8 @@ messagingView config push =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      ][ Tuple "fasdf" $ chatHeaderView config push
-       , Tuple "fadafsdfsf" $ chatBodyView config push
+      ][ Tuple "chatHeaderView" $ chatHeaderView config push
+       , Tuple "chatBodyView" $ chatBodyView config push
       ]
     ]
   ]
