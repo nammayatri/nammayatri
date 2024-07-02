@@ -1399,6 +1399,8 @@ getKN stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "ನಿಮ್ಮ ನಾಣ್ಯಗಳನ್ನು ರಿಯಾಯಿತಿಗೆ ಪರಿವರ್ತಿಸಿ "
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION  -> "ನಿಮ್ಮ ಚಂದಾದಾರಿಕೆಯಲ್ಲಿ ರಿಯಾಯಿತಿ ಪಡೆಯಲು ನಿಮ್ಮ ನಾಣ್ಯಗಳನ್ನು ಪರಿವರ್ತಿಸಿ" 
         CONVERT_NOW -> "ಈಗ ಪರಿವರ್ತಿಸಿ"
+        MORE_RIDES -> "ಇನ್ನಷ್ಟು ಸವಾರಿಗಳು"
+        SORT_BY -> "ವಿಂಗಡಿಸು"
         TOLL_CHARGES_INCLUDED -> "ಶುಲ್ಕ ಶುಲ್ಕವನ್ನು ಶುಲ್ಕದಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ"
         PLEASE_DO_NOT_DEMAND_EXTRA -> "ದಯವಿಟ್ಟು ಗ್ರಾಹಕರಿಂದ ಹೆಚ್ಚುವರಿ ಬೇಡಿಕೆ ಇಡಬೇಡಿ"
         FINAL_FARE_EXCLUDES_TOLL -> "ಅಂತಿಮ ದರವು ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ಹೊರತುಪಡಿಸುತ್ತದೆ"
