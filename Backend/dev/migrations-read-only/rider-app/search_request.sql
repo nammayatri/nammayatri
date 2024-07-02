@@ -75,3 +75,9 @@ ALTER TABLE atlas_app.search_request ALTER COLUMN selected_payment_method_id TYP
 ALTER TABLE atlas_app.search_request DROP COLUMN available_payment_methods;
 --- Drop columns section ends ---
 ALTER TABLE atlas_app.search_request ADD COLUMN total_rides_count integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN available_payment_methods text[] NOT NULL;
