@@ -64,7 +64,7 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser)
 import JBridge as JB
-import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute)
+import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute, breakPrefixAndId)
 import Language.Strings (getString)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon, transformGeoJsonFeature, getSpecialTag, getZoneType, transformHotSpotInfo, mapSpecialZoneGates)
 import Language.Types (STR(..)) as STR
@@ -212,6 +212,7 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Helpers.TipConfig (isTipEnabled, setTipViewData)
 import Presto.Core.Types.API (ErrorResponse(..))
 import AssetsProvider (renewFile)
+import Data.Tuple
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -277,7 +278,13 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
             _ -> pure unit
           hideSplashAndCallFlow safetyEducationFlow
         "mt" -> hideSplashAndCallFlow metroTicketBookingFlow
-        _ -> if skipDefaultCase then pure unit else currentFlowStatus
+        _ -> do
+          case breakPrefixAndId screen of
+            Just ( Tuple "metroBooking" bookingId )-> do
+              case bookingId of
+                Just id -> hideSplashAndCallFlow $ viewTicketDetialsFlow (Just id)
+                _ -> pure unit
+            _ -> if skipDefaultCase then pure unit else currentFlowStatus
       Nothing -> currentFlowStatus
     Nothing -> do
       let
@@ -4420,6 +4427,51 @@ metroMyTicketsFlow = do
     GO_HOME_FROM_METRO_MY_TICKETS -> homeScreenFlow
     GO_METRO_BOOKING_FROM_METRO_MY_TICKETS -> metroTicketBookingFlow
     _ -> metroMyTicketsFlow
+
+viewTicketDetialsFlow :: Maybe String -> FlowBT String Unit
+viewTicketDetialsFlow mbBookingId = do
+  case mbBookingId of
+    Just bookingId -> do
+      response <- lift $ lift $ Remote.getMetroBookingStatus bookingId
+      case response of
+        (Right (GetMetroBookingStatusResp resp)) -> do
+          let  (MetroTicketBookingStatus metroTicketBookingStatus) = resp
+          if (metroTicketBookingStatus.status == "CONFIRMED") then do
+            modifyScreenState
+              $ MetroTicketDetailsScreenStateType
+                  ( \metroTicketDetailsState ->
+                      let
+                        transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                      in
+                        transformedState { props { previousScreenStage = ST.MetroMyTicketsStage } }
+                  )
+            metroTicketDetailsFlow
+          else if (metroTicketBookingStatus.status == "CANCELLED") then do
+            modifyScreenState
+              $ MetroTicketDetailsScreenStateType
+                  ( \metroTicketDetailsState ->
+                      let
+                        transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                      in
+                        transformedState { props { previousScreenStage = ST.MetroMyTicketsStage, stage = MetroHardCancelStatusStage } }
+                  )
+            metroTicketDetailsFlow
+          else if (any (_ == metroTicketBookingStatus.status) [ "PAYMENT_PENDING", "FAILED" ]) then do
+            modifyScreenState
+              $ MetroTicketStatusScreenStateType
+                  ( \metroTicketStatusScreen ->
+                      let
+                        transformedState = metroTicketStatusTransformer resp metroTicketStatusScreen
+                      in
+                        transformedState { props { entryPoint = MyMetroTicketsToMetroTicketStatus } }
+                  )
+            setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+            metroTicketStatusFlow
+          else
+            metroMyTicketsFlow
+        _ -> metroMyTicketsFlow
+    Nothing -> homeScreenFlow
+    
 
 metroTicketStatusFlow :: FlowBT String Unit
 metroTicketStatusFlow = do
