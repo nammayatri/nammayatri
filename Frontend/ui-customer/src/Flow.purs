@@ -78,9 +78,9 @@ import ModifyScreenState (modifyScreenState, updateRepeatRideDetails, FlowState(
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling (delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice, estimateLabelMaxWidth, locateOnMapLabelMaxWidth, markerArrowSize)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, estimateLabelMaxWidth, locateOnMapLabelMaxWidth, markerArrowSize)
 import Screens (getScreen)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, getAddressFromBooking, dummyPrice)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, getAddressFromBooking)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
 import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSavedLocations, getSavedTags, getLocationList, calculateDistance, getSavedTagsFromHome, validTag, isValidLocation, getLocTag, savedLocTransformer) as AddNewAddress
@@ -132,7 +132,7 @@ import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), 
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
-import Constants.Configs
+import Constants.Configs 
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
 import PaymentPage

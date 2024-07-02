@@ -465,7 +465,7 @@ dottedLineView push margintop earnings =
         <> FontStyle.paragraphText TypoGraphy
     ]
 
-barView :: forall w. (Action -> Effect Unit) -> Int -> ST.WeeklyEarning -> State -> Visibility -> PrestoDOM (Effect Unit) w
+barView :: forall w. (Action -> Effect Unit) -> Int -> WeeklyEarning -> State -> Visibility -> PrestoDOM (Effect Unit) w
 barView push index item state vis =
   let
     selectedIndex = state.props.selectedBarIndex

@@ -16,12 +16,13 @@
 module Screens.RideSelectionScreen.Controller where
 
 import Log
+import Constants.Configs (dummyDistance)
 import Data.Array (length, union, filter, (!!))
 import Data.Int (fromString, toNumber)
 import Data.Maybe (Maybe(..), fromMaybe, isJust,maybe)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool, convertUTCtoISC, getNewIDWithTag)
-import Helpers.Utils (parseFloat, setEnabled, setRefreshing)
+import Helpers.Utils (parseFloat, setEnabled, setRefreshing, dummyPriceForCity)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class Show, bind, discard, map, not, pure, unit, show, ($), (&&), (+), (/), (/=), (<>), (==), (||))
@@ -38,6 +39,7 @@ import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils as HU
 import ConfigProvider
+import Storage
 
 instance showAction :: Show Action where
   show _ = ""
@@ -213,11 +215,16 @@ rideListResponseTransformer list categoryAction =
     , shortRideId : ride.shortRideId
     , vehicleColor : ride.vehicleColor
     , rideDistance : parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2
+    , rideDistanceWithUnit : fromMaybe dummyDistance ride.chargeableDistanceWithUnit
     , vehicleModel : ride.vehicleModel
     , total_amount : (case (ride.status) of
                         "CANCELLED" -> 0
                         _ -> fromMaybe ride.estimatedBaseFare ride.computedFare
                      )
+    , total_amount_with_currency : (case (ride.status) of
+                                    "CANCELLED" -> dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION)
+                                    _ -> fromMaybe ride.estimatedBaseFareWithCurrency ride.computedFareWithCurrency
+                                  )
     , vehicleNumber   :  ride.vehicleNumber
     , card_visibility : (case (ride.status) of
                            "CANCELLED" -> "gone"
@@ -237,6 +244,7 @@ rideListResponseTransformer list categoryAction =
     , specialZonePickup : false
     , tripType : rideTypeConstructor ride.tripCategory
     , tollCharge : fromMaybe 0.0 ride.tollCharges
+    , tollChargeWithCurrency : fromMaybe (dummyPriceForCity $ getValueToLocalStore DRIVER_LOCATION) ride.tollChargesWithCurrency
     , rideType : ride.vehicleServiceTierName
     , tripStartTime : ride.tripStartTime
     , tripEndTime : ride.tripEndTime

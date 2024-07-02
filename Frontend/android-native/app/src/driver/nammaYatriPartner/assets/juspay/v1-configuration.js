@@ -217,6 +217,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+        "currency" : "₹",
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side"
@@ -269,6 +270,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "currency" : "₹",
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -312,6 +314,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -364,6 +367,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -416,6 +420,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -459,6 +464,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -502,6 +508,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -545,6 +552,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -588,6 +596,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -631,6 +640,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -674,6 +684,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -717,6 +728,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "$",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -760,6 +772,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig": defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
@@ -812,6 +825,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -864,6 +878,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -916,6 +931,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -968,6 +984,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -1020,6 +1037,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -1072,6 +1090,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"
@@ -1124,6 +1143,7 @@ window.getMerchantConfig = function () {
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "currency" : "₹",
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow"

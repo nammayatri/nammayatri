@@ -25,6 +25,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils (intPriceToBeDisplayed, distanceTobeDisplayed)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleVariantImage, getCityConfig)
@@ -259,7 +260,7 @@ tripDetailsView state =
       , gravity RIGHT
       , orientation VERTICAL
       ][  textView $
-          [ text $ (getCurrency appConfig) <> ( show state.data.totalAmount)
+          [ text $ intPriceToBeDisplayed state.data.totalAmountWithCurrency true
           , color Color.black
           ] <> FontStyle.body14 TypoGraphy
         , textView $
@@ -301,8 +302,8 @@ tripDataView push state =
   , orientation VERTICAL
   , gravity CENTER_VERTICAL
   ][  tripDetailsRow push {  keyLeft : getString RIDE_TYPE, valLeft : rideType, keyRight : (getString TRIP_ID), valRight : state.data.tripId, leftClick : NoAction, rightClick : Copy, leftAsset : "", rightAsset : "ny_ic_copy", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : if state.data.acRide == Just true then Just "ny_ic_ac" else Nothing},
-      tripDetailsRow push {  keyLeft : getString DISTANCE, valLeft : (state.data.distance <> " km"), keyRight : getString RIDE_TIME, valRight : tripTime, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : Nothing},
-      tripDetailsRow push {  keyLeft : getString EARNINGS_PER_KM, valLeft : earningPerKm, keyRight : (getString TOLL_INCLUDED), valRight : currency <> (show state.data.tollCharge), leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : state.data.tollCharge /= 0.0, leftItemLeftAsset : Nothing}
+      tripDetailsRow push {  keyLeft : getString DISTANCE, valLeft : distanceTobeDisplayed state.data.distanceWithUnit true true , keyRight : getString RIDE_TIME, valRight : tripTime, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : Nothing},
+      tripDetailsRow push {  keyLeft : getString EARNINGS_PER_KM, valLeft : earningPerKm, keyRight : (getString TOLL_INCLUDED), valRight : intPriceToBeDisplayed state.data.tollChargeWithCurrency true, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : false, rightVisibility : state.data.tollChargeWithCurrency.amount /= 0.0, leftItemLeftAsset : Nothing}
   ]
   where 
     tripTime = case state.data.tripStartTime, state.data.tripEndTime of

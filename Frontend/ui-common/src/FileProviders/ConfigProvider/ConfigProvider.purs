@@ -17,6 +17,7 @@ module ConfigProvider (
   module ReExport) where
 
 import Prelude
+import Data.Array (find)
 import Constants as ReExport
 import Data.Function.Uncurried (Fn1)
 import Effect (Effect)
@@ -34,6 +35,7 @@ import Control.Monad.Except.Trans (lift)
 import Data.Maybe
 import Log
 import DecodeUtil
+import Debug
 
 foreign import mergeforegin :: Array Foreign -> Foreign
 

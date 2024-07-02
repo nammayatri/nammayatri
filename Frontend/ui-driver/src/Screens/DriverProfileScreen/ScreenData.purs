@@ -23,6 +23,7 @@ import Foreign.Object (empty)
 import Language.Types (STR(..)) as STR
 import ConfigProvider
 import Prelude (class Eq, map, unit, (<>), (==), (||), (/=))
+import Constants.Configs (dummyPrice, dummyDistance)
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 
@@ -76,6 +77,8 @@ initData =
     autoPayStatus : NO_AUTOPAY,
     analyticsData : {
         totalEarnings : ""
+      , totalEarningsWithCurrency : dummyPrice
+      , bonusEarnedWithCurrency : dummyPrice
       , bonusEarned : ""
       , totalCompletedTrips : 0
       , totalUsersRated : 0
@@ -84,10 +87,12 @@ initData =
       , lastRegistered : ""
       , badges : []
       , missedEarnings : 0
+      , missedEarningsWithCurrency : dummyPrice
       , ridesCancelled : 0
       , cancellationRate : 0
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
+      , totalDistanceTravelledWithUnit : dummyDistance
       },
     config
     },

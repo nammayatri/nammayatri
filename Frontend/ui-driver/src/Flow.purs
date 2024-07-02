@@ -1964,7 +1964,9 @@ myRidesScreenFlow = do
       source = sourceMod,
       destination = destinationMod,
       totalAmount = selectedCard.total_amount,
+      totalAmountWithCurrency = selectedCard.total_amount_with_currency,
       distance = selectedCard.rideDistance,
+      distanceWithUnit = selectedCard.rideDistanceWithUnit,
       status = selectedCard.status,
       vehicleType = selectedCard.vehicleType,
       rider = selectedCard.riderName,
@@ -2545,7 +2547,9 @@ homeScreenFlow = do
                     destination = if (RC.rideTypeConstructor response.tripCategory) == ST.Rental then "" else maybe "" (\toLocation -> decodeAddress toLocation false) response.toLocation,
                     vehicleType = response.vehicleVariant,
                     totalAmount = fromMaybe response.estimatedBaseFare response.computedFare,
+                    totalAmountWithCurrency = fromMaybe response.estimatedBaseFareWithCurrency response.computedFareWithCurrency,
                     distance = parseFloat (toNumber (fromMaybe 0 response.chargeableDistance) / 1000.0) 2,
+                    distanceWithUnit = fromMaybe dummyDistance response.chargeableDistanceWithUnit,
                     status = response.status,
                     rider = (fromMaybe "" response.riderName),
                     customerExtraFee = response.customerExtraFee,
@@ -2557,6 +2561,7 @@ homeScreenFlow = do
                     specialZoneText = specialZoneConfig.text,
                     specialZonePickup = isSpecialPickUpZone,
                     tollCharge = fromMaybe 0.0 response.tollCharges,
+                    tollChargeWithCurrency = fromMaybe (HU.dummyPriceForCity $ (getValueToLocalStore DRIVER_LOCATION)) response.tollChargesWithCurrency,
                     vehicleModel = response.vehicleModel,
                     rideType = response.vehicleServiceTierName,
                     tripStartTime = response.tripStartTime,
@@ -2575,6 +2580,7 @@ homeScreenFlow = do
                         actualRideDuration = response.actualDuration,
                         actualRideDistance = if state.data.activeRide.tripType == ST.Rental then round <$> response.actualRideDistance else response.chargeableDistance, 
                         finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, 
+                        finalAmountWithCurrency = fromMaybe response.estimatedBaseFareWithCurrency response.computedFareWithCurrency,
                         riderName = fromMaybe "" response.riderName, 
                         rideId = response.id, 
                         tip = response.customerExtraFee, 
@@ -3435,6 +3441,9 @@ updateDriverDataToStates = do
           bonusEarned = driverStats.bonusEarning, 
           earningPerKm = driverStats.totalEarningsOfDayPerKm,
           totalValidRidesOfDay = fromMaybe 0 driverStats.totalValidRidesOfDay,
+          earningPerKmWithCurrency = driverStats.totalEarningsOfDayPerKmWithCurrency,
+          totalEarningsOfDayWithCurrency = driverStats.totalEarningsOfDayWithCurrency,
+          bonusEarnedWithCurrency = driverStats.bonusEarningWithCurrency,
           driverStats = true }})
       void $ pure $ setCleverTapUserProp [{key : "Driver Coin Balance", value : unsafeToForeign driverStats.coinBalance }]
     Nothing -> pure unit
@@ -3996,7 +4005,7 @@ driverEarningsFlow = do
   logField_ <- lift $ lift $ getLogFields
   let earningScreenState = globalState.driverEarningsScreen
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
-  if true -- getMerchant FunctionCall == BRIDGE TODO: Enable after earnigns is completed.
+  if false -- getMerchant FunctionCall == BRIDGE TODO: Enable after earnigns is completed.
     then flowRouter TA.EarningsV2Daily
     else do
       uiAction <- UI.driverEarningsScreen
@@ -4034,7 +4043,9 @@ driverEarningsFlow = do
           source = sourceMod,
           destination = destinationMod,
           totalAmount = selectedCard.total_amount,
+          totalAmountWithCurrency = selectedCard.total_amount_with_currency,
           distance = selectedCard.rideDistance,
+          distanceWithUnit = selectedCard.rideDistanceWithUnit,
           status = selectedCard.status,
           vehicleType = selectedCard.vehicleType,
           rider = selectedCard.riderName,
@@ -4047,6 +4058,7 @@ driverEarningsFlow = do
           specialZoneText = selectedCard.specialZoneText,
           specialZonePickup = selectedCard.specialZonePickup,
           tollCharge = selectedCard.tollCharge,
+          tollChargeWithCurrency = selectedCard.tollChargeWithCurrency,
           goBackTo = ST.Earning,
           rideType = selectedCard.rideType,
           tripStartTime = selectedCard.tripStartTime,

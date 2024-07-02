@@ -178,10 +178,10 @@ getRateCardOb serviceTierType (API.GetDriverRateCardRes rateCardResp) = do
   case rateCardRespItem of
     Just (API.RateCardRespItem rateCardRespItem) -> 
       { 
-        perKmRate : Just rateCardRespItem.perKmRate.amount, 
+        perKmRate : Just rateCardRespItem.perKmRate, 
         farePolicyHour : Just rateCardRespItem.farePolicyHour,
         rateCardData : Just $ getFareBreakupList rateCardRespItem.rateCardItems tips,
-        perMinuteRate : rateCardRespItem.perMinuteRate >>= (\a -> Just $ a.amount),
+        perMinuteRate : rateCardRespItem.perMinuteRate, -- rateCardRespItem.perMinuteRate >>= (\a -> Just $ a.amount),
         currency : Just $ rateCardRespItem.perKmRate.currency
       }
     Nothing -> {
@@ -193,8 +193,8 @@ getRateCardOb serviceTierType (API.GetDriverRateCardRes rateCardResp) = do
     }
 
 type RateCardOb = {
-  perKmRate :: Maybe Number,
-  perMinuteRate :: Maybe Number,
+  perKmRate :: Maybe CTA.Price,
+  perMinuteRate :: Maybe CTA.Price,
   farePolicyHour :: Maybe API.FarePolicyHour,
   rateCardData :: Maybe CTA.BreakupList,
   currency :: Maybe CTA.Currency

@@ -1555,11 +1555,12 @@ activeRideDetail state (RidesInfo ride) =
               "CANCELLED" -> CANCELLED
               _ -> COMPLETED,
   distance : (toNumber ride.estimatedDistance),
+  distanceWithUnit : ride.estimatedDistanceWithUnit,
   duration : state.data.activeRide.duration,
   tripDuration : ride.estimatedDuration,
   actualRideDuration : ride.actualDuration,
   riderName : fromMaybe "" ride.riderName,
-  estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
+  estimatedFareWithCurrency : {amount : ride.driverSelectedFareWithCurrency.amount + ride.estimatedBaseFareWithCurrency.amount, currency : ride.estimatedBaseFareWithCurrency.currency},
   notifiedCustomer : Array.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [(show ST.PostTriggered), (show ST.Triggered), (show ST.Scheduled)],
   exoPhone : ride.exoPhone,
   waitTimeSeconds :if ride.status == "INPROGRESS" && isTimerValid then waitTime else -1,

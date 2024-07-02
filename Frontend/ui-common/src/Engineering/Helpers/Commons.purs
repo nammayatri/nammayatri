@@ -21,7 +21,7 @@ import Common.Types.Sdk (SDKRequest(..), SDKResponse(..))
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Monad.State as S
-import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData)
+import Common.Types.App (Version(..), DateObj, CalendarDate, CalendarWeek, YoutubeData, CarouselHolderData, Currency(..), Price(..), Distance(..), DistanceUnit(..))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2, Fn3)
 import Data.Int as INT
@@ -339,3 +339,19 @@ getUTCAfterNHours = runFn2 getUTCAfterNHoursImpl
 
 compareUTCDate :: String -> String -> Int
 compareUTCDate = runFn2 compareUTCDateImpl
+
+getCurrencyTypeFromSymbol :: String -> Currency
+getCurrencyTypeFromSymbol cur = 
+  case cur of 
+    "₹" -> INR
+    "$" -> USD
+    "€" -> EUR
+    _   -> INR
+
+getCurrencySymbol :: Currency -> String
+getCurrencySymbol cur = 
+  case cur of
+    INR -> "₹"
+    USD -> "$"
+    EUR -> "€"
+    _ -> show cur

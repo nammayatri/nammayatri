@@ -15,6 +15,7 @@
 
 module Screens.DriverProfileScreen.ComponentConfig where
 
+import Common.Types.App (Distance(..))
 import Components.PopUpModal as PopUpModal
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryEditText as PrimaryEditText
@@ -48,6 +49,7 @@ import Effect (Effect)
 import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
 import Font.Style (Style(..))
 import ConfigProvider
+import Engineering.Helpers.Utils (distanceTobeDisplayed)
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -505,7 +507,7 @@ deleteRcPopUpConfig state =
   in
     popUpConfig'
 
-getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRailData
+getChipRailArray :: Int -> String -> Array String -> Distance -> Array ST.ChipRailData
 getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
   let
     alive = getPeriod lastRegistered
@@ -533,7 +535,7 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
             []
     )<>
     (
-      [ { mainTxt: totalDistanceTravelled
+      [ { mainTxt: distanceTobeDisplayed totalDistanceTravelled true true
         , subTxt: getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"
         }
       ]

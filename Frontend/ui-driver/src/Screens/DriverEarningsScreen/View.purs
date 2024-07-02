@@ -37,6 +37,7 @@ import Components.GenericHeader.View as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton.View as PrimaryButton
 import Components.RequestInfoCard as RequestInfoCard
+import Constants.Configs (dummyDistance)
 import Control.Monad.Except (runExceptT, runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -54,7 +55,7 @@ import Effect.Uncurried (runEffectFn7)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Commons (getCurrentUTC, flowRunner, getFormattedDate, getNewIDWithTag, screenHeight, getVideoID, getDayName, safeMarginBottom, screenWidth, convertUTCtoISC, liftFlow, formatCurrencyWithCommas)
-import Engineering.Helpers.Utils (loaderText, toggleLoader, getFixedTwoDecimals)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, getFixedTwoDecimals, intPriceToBeDisplayed, intDistanceTobeDisplayed)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Generic (decodeJSON)
@@ -461,7 +462,7 @@ totalEarningsView push state =
             , textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ "₹" <> (formatCurrencyWithCommas (show state.props.totalEarningsData.totalEarnings))
+                  , text $ intPriceToBeDisplayed state.props.totalEarningsData.totalEarningsWithCurrency true
                   , color Color.black900
                   ]
                 <> FontStyle.priceFont TypoGraphy
@@ -536,7 +537,7 @@ totalEarningsView push state =
             , textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ show (state.props.totalEarningsData.totalDistanceTravelled / 1000) <> " km"
+                  , text $ distanceToShow
                   ]
                 <> FontStyle.h2 TypoGraphy
             ]
@@ -550,6 +551,11 @@ totalEarningsView push state =
         ]
         (map (\index -> dotView push index state) [ 0, 1, 2, 3 ])
     ]
+    where 
+      (Distance distanceTravelled) = state.props.totalEarningsData.totalDistanceTravelledWithUnit
+      distanceToShow = case distanceTravelled.unit of
+                          Meter -> if ((distanceTravelled.value / 1000.0) > 0.0) then intDistanceTobeDisplayed state.props.totalEarningsData.totalDistanceTravelledWithUnit true false else "--"
+                          _ -> if distanceTravelled.value > 0.0 then intDistanceTobeDisplayed state.props.totalEarningsData.totalDistanceTravelledWithUnit false false  else "--"
 
 dotView :: forall w. (Action -> Effect Unit) -> Int -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 dotView push index state =
@@ -1715,7 +1721,7 @@ historyViewForEarnings push state =
                   ]
                 <> FontStyle.paragraphText TypoGraphy
             , textView
-                $ [ text $ "₹" <> formatCurrencyWithCommas (show $ getDailyEarnings state.data.earningHistoryItems)
+                $ [ text $ intPriceToBeDisplayed (getDailyEarnings state.data.earningHistoryItems) true
                   , color Color.black800
                   ]
                 <> FontStyle.h2 TypoGraphy
@@ -1728,8 +1734,8 @@ historyViewForEarnings push state =
             (mapWithIndex (\index item -> historyViewItemForEarnings push item state index) state.data.earningHistoryItems)
         ]
 
-dottedLineView :: forall w. (Action -> Effect Unit) -> Int -> Int -> PrestoDOM (Effect Unit) w
-dottedLineView push margintop earnings =
+dottedLineView :: forall w. (Action -> Effect Unit) -> Int -> Int -> Currency -> PrestoDOM (Effect Unit) w
+dottedLineView push margintop earnings currency =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -1746,7 +1752,7 @@ dottedLineView push margintop earnings =
         $ [ height $ WRAP_CONTENT
           , width $ WRAP_CONTENT
           , gravity RIGHT
-          , text $ "₹" <> formatCurrencyWithCommas (show earnings)
+          , text $ intPriceToBeDisplayed {amount: toNumber earnings, currency: currency} true
           ]
         <> FontStyle.paragraphText TypoGraphy
     ]
@@ -1755,14 +1761,15 @@ barGraphView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenStat
 barGraphView push state =
   let
     currWeekMaxEarning = if state.props.currentWeekMaxEarning > 0 then state.props.currentWeekMaxEarning else 1500
+    currency = state.props.totalEarningsData.totalEarningsWithCurrency.currency
   in
     relativeLayout
       [ height $ V 150
       , width MATCH_PARENT
       ]
-      [ dottedLineView push 4 currWeekMaxEarning
-      , dottedLineView push 37 ((currWeekMaxEarning * 2) / 3)
-      , dottedLineView push 70 (currWeekMaxEarning / 3)
+      [ dottedLineView push 4 currWeekMaxEarning currency
+      , dottedLineView push 37 ((currWeekMaxEarning * 2) / 3) currency
+      , dottedLineView push 70 (currWeekMaxEarning / 3) currency
       , linearLayout
           [ height $ V 2
           , width MATCH_PARENT
@@ -1836,14 +1843,14 @@ barView push index item state =
           <> FontStyle.body9 TypoGraphy
       ]
 
-getDailyEarnings :: Array ST.CoinHistoryItem -> Int
+getDailyEarnings :: Array ST.CoinHistoryItem -> Price
 getDailyEarnings list =
   foldl
-    ( \acc record -> case record.earnings of
-        Just x -> acc + x
+    ( \acc record -> case record.earningsWithCurrency of
+        Just x -> {amount: acc.amount + x.amount, currency: x.currency}
         Nothing -> acc
     )
-    0
+    (dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION))
     list
 
 historyViewItemForEarnings :: forall w. (Action -> Effect Unit) -> ST.CoinHistoryItem -> ST.DriverEarningsScreenState -> Int -> PrestoDOM (Effect Unit) w
@@ -1853,7 +1860,7 @@ historyViewItemForEarnings push item state index =
 
     color' = if rideStatus /= "CANCELLED" then Color.green900 else Color.red
 
-    earnings = fromMaybe 0 item.earnings
+    earningsWithCurrency = fromMaybe (dummyPriceForCity $ getValueToLocalStore DRIVER_LOCATION) item.earningsWithCurrency
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -1869,7 +1876,7 @@ historyViewItemForEarnings push item state index =
           ]
           [ linearLayout
               [ height WRAP_CONTENT
-              , weight 2.0
+              , weight 1.0
               , orientation VERTICAL
               ]
               [ textView
@@ -1914,8 +1921,7 @@ historyViewItemForEarnings push item state index =
               ]
           , linearLayout 
               [ height WRAP_CONTENT
-              , weight 1.0
-              , gravity RIGHT
+              , width WRAP_CONTENT
               ][ linearLayout
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
@@ -1925,7 +1931,7 @@ historyViewItemForEarnings push item state index =
                   , gravity RIGHT
                   ]
                   [ textView
-                      $ [ text $ if rideStatus /= "CANCELLED" then "₹" <> formatCurrencyWithCommas (show earnings) else getString CANCELLED_
+                      $ [ text $ if rideStatus /= "CANCELLED" then intPriceToBeDisplayed earningsWithCurrency true else getString CANCELLED_
                         , height WRAP_CONTENT
                         , width WRAP_CONTENT
                         , color color'

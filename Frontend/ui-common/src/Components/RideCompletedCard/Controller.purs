@@ -5,6 +5,7 @@ import Prelude
 import Components.Banner as Banner
 import Components.PrimaryButton.Controller as PB
 import Components.SelectListModal.Controller as SL
+import Constants.Configs(dummyPrice)
 import Data.Int (toNumber)
 import Helpers.Utils (parseFloat)
 import PrestoDOM 
@@ -123,7 +124,9 @@ config = {
     title : "",
     titleColor : Color.grey900,
     finalAmount : 0,
+    finalAmountWithCurrency : dummyPrice,
     initialAmount : 0,
+    initialAmountWithCurrency : dummyPrice,
     fareUpdatedVisiblity : false,
     gradient : [Color.black900, Color.black900, Color.pickledBlue, Color.black900],
     topPill : {
@@ -262,7 +265,9 @@ type TopCard = {
   title :: String,
   titleColor :: String,
   finalAmount :: Int,
+  finalAmountWithCurrency :: Price,
   initialAmount :: Int,
+  initialAmountWithCurrency :: Price,
   fareUpdatedVisiblity :: Boolean,
   gradient :: Array String,
   topPill :: TopPill,

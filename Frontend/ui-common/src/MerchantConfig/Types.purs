@@ -119,6 +119,8 @@ type CityConfig = {
   waitingChargesConfig :: WaitingChargesConfig,
   rentalWaitingChargesConfig :: WaitingChargesConfig,
   rateCardConfig :: RateCardConfig,
+  currency :: String,
+  distanceUnit :: String,
   assets :: Assets
 }
 

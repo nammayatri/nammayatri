@@ -20,6 +20,7 @@ import Engineering.Helpers.Commons (getCurrentUTC)
 import Data.Maybe (Maybe(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
+import Constants.Configs (dummyPrice, dummyDistance)
 
 initData :: DriverEarningsScreenState
 initData =
@@ -50,9 +51,11 @@ initData =
             date : "",
             time : "",
             total_amount : 0,
+            total_amount_with_currency : dummyPrice,
             card_visibility : "",
             shimmer_visibility : "",
             rideDistance : "",
+            rideDistanceWithUnit : dummyDistance,
             status : "",
             vehicleModel : "",
             shortRideId : "",
@@ -76,6 +79,7 @@ initData =
             specialZonePickup : false,
             tripType : OneWay,
             tollCharge : 0.0,
+            tollChargeWithCurrency : dummyPrice,
             rideType : "",
             tripStartTime : Nothing,
             tripEndTime : Nothing,
@@ -104,8 +108,10 @@ initData =
           { fromDate: ""
           , toDate: ""
           , totalEarnings: 0
+          , totalEarningsWithCurrency: dummyPrice
           , totalRides: 0
           , totalDistanceTravelled: 0
+          , totalDistanceTravelledWithUnit: dummyDistance
           }
       , currWeekData: []
       , startDate: ""

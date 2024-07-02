@@ -93,7 +93,7 @@ rideActionModalConfig state =
   rideActionModalConfig' = config {
     startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) ),
     arrivedStopActive = state.props.arrivedAtStop,
-    totalDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",
+    totalDistanceWithUnit = state.data.activeRide.distanceWithUnit,
     customerName = if DS.length (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) < 4
                       then (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)) <> " " <> (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 1))
                       else
@@ -114,7 +114,7 @@ rideActionModalConfig state =
       titleText : fromMaybe "" ((DS.split (DS.Pattern ",") stop) DA.!! 0),
       detailText : stop
     }) <$> state.data.activeRide.lastStopAddress,
-    estimatedRideFare = state.data.activeRide.estimatedFare,
+    estimatedRideFareWithCurrency = state.data.activeRide.estimatedFareWithCurrency,
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
@@ -1523,7 +1523,9 @@ getRideCompletedConfig state = let
     topCard {
       title = getString COLLECT_VIA_UPI_QR_OR_CASH,
       finalAmount = state.data.endRideData.finalAmount,
+      finalAmountWithCurrency = state.data.endRideData.finalAmountWithCurrency,
       initialAmount = state.data.endRideData.finalAmount,
+      initialAmountWithCurrency = state.data.endRideData.finalAmountWithCurrency,
       fareUpdatedVisiblity = state.props.isFreeRide,
       gradient =  state.data.config.rideCompletedCardConfig.topCardGradient,
       infoPill {

@@ -40,6 +40,7 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
+import ConfigProvider
 import Constants (defaultDensity)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
@@ -65,7 +66,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.Utils (toggleLoader)
+import Engineering.Helpers.Utils (toggleLoader, intPriceToBeDisplayed)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign (unsafeToForeign)
@@ -601,7 +602,7 @@ bridgeStatsView push state =
                   )
         )
         []
-        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: getCurrency appConfig <> show state.data.totalEarningsOfDay, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "12" , infoView: true} ]
+        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "12" , infoView: true} ]
     )
     , bridgeLocationUpdateview push state
     ]
@@ -1365,7 +1366,7 @@ statsModel push state =
            ][ textView $
               [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ "₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)
+              , text $ intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true
               , color Color.black800
               , visibility $ boolToVisibility state.data.driverStats
               ] <> FontStyle.h2 TypoGraphy
@@ -1440,7 +1441,7 @@ expandedStatsModel push state =
       , height WRAP_CONTENT
       , gravity CENTER_VERTICAL
       ][ commonTV push (getString TODAYS_EARNINGS_STR) Color.black700 FontStyle.tags LEFT 0 ToggleStatsModel true true
-      , commonTV push ("₹" <> formatCurrencyWithCommas (show state.data.totalEarningsOfDay)) Color.black800 FontStyle.h2 RIGHT 0 ToggleStatsModel false state.data.driverStats
+      , commonTV push (intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true) Color.black800 FontStyle.h2 RIGHT 0 ToggleStatsModel false state.data.driverStats
       , imageView 
         [ width $ V 12
         , height $ V 12
@@ -1472,7 +1473,7 @@ expandedStatsModel push state =
           , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_info_grey"
           , onClick push $ const $ ToggleBonusPopup
           ]
-        , commonTV push ("₹" <> earningPerKm <> "/km") Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
+        , commonTV push (intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true <> "/" <> getDistanceUnit appConfig) Color.black800 FontStyle.subHeading1 RIGHT 0 NoAction true state.data.driverStats
       ]
     , separatorView 10
     , textView $
@@ -1485,7 +1486,6 @@ expandedStatsModel push state =
       , margin $ MarginTop 10
       ] <> FontStyle.body3 TypoGraphy
   ]
-  where earningPerKm = show $ fromMaybe 0 state.data.earningPerKm
 
 commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 commonTV push text' color' theme gravity' marginTop action useWeight visible = 
