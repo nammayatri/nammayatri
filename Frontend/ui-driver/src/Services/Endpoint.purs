@@ -16,9 +16,9 @@
 module Services.EndPoints where
 
 import Data.Maybe (Maybe(..))
-import Prelude (show, (<>), (==), (*))
-import Services.Config (getBaseUrl)
-
+import Prelude (show, unit, (<>), (==), (*))
+import Services.Config (getBaseUrl, getSpecialZoneBaseUrl)
+import ConfigProvider (isDebugBuild)
 
 triggerOTP :: String -> String
 triggerOTP  dummy = (getBaseUrl "" ) <> "/auth"
@@ -320,7 +320,7 @@ dummyRideRequest :: String -> String
 dummyRideRequest _ =  (getBaseUrl "") <> "/driver/getDummyRideRequest"
 
 specialLocationList :: String -> String
-specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"
+specialLocationList _ = (if isDebugBuild unit then (getBaseUrl "") else (getSpecialZoneBaseUrl "")) <> "/specialLocation/list"
 
 onBoardingConfigs :: String -> String
 onBoardingConfigs qp = (getBaseUrl "") <> "/onboarding/configs" <> qp
