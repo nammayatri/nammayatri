@@ -35,7 +35,12 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data UsageSafety = Safe | Unsafe
 
-data TripCategory = OneWay OneWayMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode (Maybe Text) | CrossCity OneWayMode (Maybe Text)
+data TripCategory
+  = OneWay OneWayMode
+  | Rental RentalMode
+  | RideShare RideShareMode
+  | InterCity OneWayMode (Maybe Text)
+  | CrossCity OneWayMode (Maybe Text)
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema)
 
