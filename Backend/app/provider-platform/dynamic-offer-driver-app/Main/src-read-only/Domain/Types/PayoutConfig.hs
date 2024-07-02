@@ -27,7 +27,7 @@ data PayoutConfig = PayoutConfig
     remark :: Kernel.Prelude.Text,
     thresholdPayoutAmountPerPerson :: Kernel.Types.Common.HighPrecMoney,
     timeDiff :: Kernel.Prelude.NominalDiffTime,
-    vehicleVariant :: Domain.Types.Vehicle.Variant,
+    vehicleCategory :: Domain.Types.Vehicle.Category,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

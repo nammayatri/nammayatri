@@ -30,14 +30,14 @@ data DriverStatsT f = DriverStatsT
     totalDistance :: B.C f Kernel.Prelude.Double,
     totalEarnings :: B.C f Kernel.Types.Common.Money,
     totalEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    totalPayoutEarnings :: (B.C f Kernel.Types.Common.Money),
-    totalPayoutEarningsAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    totalReferralCounts :: (B.C f Kernel.Prelude.Int),
+    totalPayoutEarnings :: B.C f Kernel.Types.Common.Money,
+    totalPayoutEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalRatingScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalRatings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    totalReferralCounts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalRides :: B.C f Kernel.Prelude.Int,
     totalRidesAssigned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    totalValidActivatedRides :: (B.C f Kernel.Prelude.Int),
+    totalValidActivatedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

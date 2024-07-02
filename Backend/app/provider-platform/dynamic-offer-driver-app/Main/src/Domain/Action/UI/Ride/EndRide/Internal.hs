@@ -58,10 +58,10 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.Vehicle as DV
 import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
-import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (forM_, whenJust)
@@ -216,23 +216,22 @@ sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transpor
             let referralMessage = "Congratulations!"
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
-            unencryptedMobileNumber <- decrypt riderDetails.mobileNumber
-            mobileNumberHash <- getDbHash unencryptedMobileNumber
+            let mobileNumberHash = (.hash) riderDetails.mobileNumber
             localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
             mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
-            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats -- riderdetails and check flag if just send false
+            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
             whenJust mbFlagReason $ \flagReason -> do
               QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) (Just flagReason) riderDetails.id
             when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
-            -- TODO: notifyDriver (for referral reward)
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
           Nothing -> pure ()
   where
     updateReferralStats referredDriverId mbDailyStats localTime = do
-      vehicle <- QV.findById referredDriverId >>= fromMaybeM (DriverWithoutVehicle referredDriverId.getId)
-      payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicle.variant >>= fromMaybeM (InternalError "Payout config not present")
+      mbVehicle <- QV.findById referredDriverId
+      let vehicleCategory = fromMaybe DV.CAR ((.category) =<< mbVehicle)
+      payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
       let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
       driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId
@@ -268,7 +267,7 @@ sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transpor
       availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
       let isValidForMinPickupThreshold = maybe True (>= transporterConfig.minPickupDistanceThresholdForReferralPayout) booking.distanceToPickup
           isValidForMinRideDistance = ride.traveledDistance >= transporterConfig.minRideDistanceThresholdForReferralPayout
-          isMaxReferralExceeded = maybe False (< transporterConfig.maxPayoutReferralForADay) ((.referralCounts) <$> mbDailyStats)
+          isMaxReferralExceeded = maybe False ((< transporterConfig.maxPayoutReferralForADay) . (.referralCounts)) mbDailyStats
           isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
       let mbFlagReason =
             case (listToMaybe availablePersonWithNumber, isValidForMinRideDistance, isValidForMinPickupThreshold, isMaxReferralExceeded) of

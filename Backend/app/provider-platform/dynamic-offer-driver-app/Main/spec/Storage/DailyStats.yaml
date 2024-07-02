@@ -32,6 +32,9 @@ DailyStats:
 
   beamType:
     distanceUnit: Maybe DistanceUnit
+    activatedValidRides: Maybe Int
+    referralCounts: Maybe Int
+    payoutStatus: Maybe PayoutStatus
 
   beamFields:
     totalEarnings:
@@ -48,6 +51,9 @@ DailyStats:
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     referralEarnings: Kernel.Types.Common.mkAmountWithDefault referralEarningsAmount referralEarnings|E
+    activatedValidRides:  Kernel.Prelude.fromMaybe 0|I
+    referralCounts: Kernel.Prelude.fromMaybe 0|I
+    payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying|I
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
@@ -56,16 +62,14 @@ DailyStats:
     distanceUnit: Kernel.Prelude.Just|I
     referralEarnings: Kernel.Prelude.roundToIntegral|I
     referralEarningsAmount: Kernel.Prelude.Just|I
+    activatedValidRides:  Kernel.Prelude.Just|I
+    referralCounts: Kernel.Prelude.Just|I
+    payoutStatus: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
 
-  default:
-    activatedValidRides: "0"
-    referralEarnings: "0.0"
-    referralCounts: "0"
-    payoutStatus: "'Verifying'"
 
   excludedFields: [merchantOperatingCityId, merchantId]
 
@@ -102,12 +106,6 @@ DailyStats:
       kvFunction: updateOneWithKV
       params: [payoutStatus]
       where: id
-
-    # updatePayoutOrderIdAndStatus:
-    #   kvFunction: updateOneWithKV
-    #   params: [payoutOrderId, payoutOrderStatus]
-    #   where:
-    #     and: [driverId, merchantLocalDate]
 
   extraOperations:
     - EXTRA_QUERY_FILE

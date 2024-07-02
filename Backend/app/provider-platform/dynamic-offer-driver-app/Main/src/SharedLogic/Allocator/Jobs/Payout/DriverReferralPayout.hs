@@ -21,6 +21,7 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
+import qualified Domain.Types.Vehicle as DV
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as PT
@@ -105,9 +106,9 @@ callPayout ::
   DS.PayoutStatus ->
   m ()
 callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutConfigList statusForRetry = do
-  vehicle <- QV.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
-  let vehicleVariant = vehicle.variant
-  let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleVariant == vehicleVariant) payoutConfigList
+  mbVehicle <- QV.findById driverId
+  let vehicleCategory = fromMaybe DV.CAR ((.category) =<< mbVehicle)
+  let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
   case payoutConfig' of
     Just payoutConfig -> do
       uid <- generateGUID

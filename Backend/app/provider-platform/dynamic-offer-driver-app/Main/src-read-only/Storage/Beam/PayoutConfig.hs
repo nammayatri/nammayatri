@@ -27,18 +27,18 @@ data PayoutConfigT f = PayoutConfigT
     remark :: B.C f Kernel.Prelude.Text,
     thresholdPayoutAmountPerPerson :: B.C f Kernel.Types.Common.HighPrecMoney,
     timeDiff :: B.C f Kernel.Types.Common.Seconds,
-    vehicleVariant :: B.C f Domain.Types.Vehicle.Variant,
+    vehicleCategory :: B.C f Domain.Types.Vehicle.Category,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table PayoutConfigT where
-  data PrimaryKey PayoutConfigT f = PayoutConfigId (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.Vehicle.Variant) deriving (Generic, B.Beamable)
-  primaryKey = PayoutConfigId <$> merchantOperatingCityId <*> vehicleVariant
+  data PrimaryKey PayoutConfigT f = PayoutConfigId (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.Vehicle.Category) deriving (Generic, B.Beamable)
+  primaryKey = PayoutConfigId <$> merchantOperatingCityId <*> vehicleCategory
 
 type PayoutConfig = PayoutConfigT Identity
 
-$(enableKVPG ''PayoutConfigT ['merchantOperatingCityId, 'vehicleVariant] [])
+$(enableKVPG ''PayoutConfigT ['merchantOperatingCityId, 'vehicleCategory] [])
 
 $(mkTableInstances ''PayoutConfigT "payout_config")

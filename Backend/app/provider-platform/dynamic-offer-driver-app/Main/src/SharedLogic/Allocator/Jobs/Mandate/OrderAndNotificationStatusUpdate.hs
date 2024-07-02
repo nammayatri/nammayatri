@@ -3,7 +3,7 @@ module SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate where
 import Data.List (nubBy)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.UI.Payment as SharedPayment
-import qualified Domain.Action.UI.ReferalPayout as Payout
+import qualified Domain.Action.UI.ReferralPayout as Payout
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.Invoice as INV
 import Domain.Types.TransporterConfig
@@ -15,7 +15,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (cast)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.Common as PD
-import qualified Lib.Payment.Storage.Queries.PayoutOrders as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutOrdersExtra as PE
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event

@@ -21,9 +21,9 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (getCurrentTime)
-import Lib.Payment.Domain.Types.PayoutOrders (PayoutOrders)
+import Lib.Payment.Domain.Types.PayoutOrder (PayoutOrder)
 import Lib.Payment.Storage.Beam.BeamFlow
-import qualified Lib.Payment.Storage.Beam.PayoutOrders as BeamPO
+import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPO
 import qualified Sequelize as Se
 
 updateLastCheckedOn :: (BeamFlow m r) => [Text] -> m ()
@@ -34,4 +34,4 @@ updateLastCheckedOn payoutOrderIds = do
     [ Se.Set BeamPO.lastStatusCheckedAt (Just lastCheckedAt),
       Se.Set BeamPO.updatedAt now
     ]
-    [Se.Is BeamPO.orderId (Se.In $ payoutOrderIds)]
+    [Se.Is BeamPO.orderId (Se.In payoutOrderIds)]
