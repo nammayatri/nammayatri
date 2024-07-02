@@ -37,6 +37,7 @@ data DriverInformationT f = DriverInformationT
     enabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     forwardBatchingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isInteroperable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     lastACStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     lastEnabledOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode),

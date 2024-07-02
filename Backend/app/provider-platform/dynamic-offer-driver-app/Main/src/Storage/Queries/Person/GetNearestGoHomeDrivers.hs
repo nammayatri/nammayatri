@@ -39,7 +39,8 @@ data NearestGoHomeDriversReq = NearestGoHomeDriversReq
     merchantId :: Id Merchant,
     driverPositionInfoExpiry :: Maybe Seconds,
     isRental :: Bool,
-    isInterCity :: Bool
+    isInterCity :: Bool,
+    isValueAddNP :: Bool
   }
 
 data NearestGoHomeDriversResult = NearestGoHomeDriversResult
@@ -71,7 +72,7 @@ getNearestGoHomeDrivers ::
 getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
-  driverInfos <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
+  driverInfos <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity isValueAddNP
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   driverStats <- QDriverStats.findAllByDriverIds drivers
