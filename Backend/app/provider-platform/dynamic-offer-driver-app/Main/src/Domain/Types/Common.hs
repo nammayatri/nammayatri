@@ -76,8 +76,8 @@ instance FromJSON TripCategory where
       "OneWay" -> OneWay <$> v .: "contents"
       "Rental" -> Rental <$> v .: "contents"
       "RideShare" -> RideShare <$> v .: "contents"
-      "InterCity" -> InterCity <$> v .: "contents" <*> v .: "city"
-      "CrossCity" -> CrossCity <$> v .: "contents" <*> v .: "city"
+      "InterCity" -> InterCity <$> v .: "contents" <*> v .:? "city"
+      "CrossCity" -> CrossCity <$> v .: "contents" <*> v .:? "city"
       _ -> fail $ "Unknown tag: " ++ tag
 
 data TripOption = TripOption
