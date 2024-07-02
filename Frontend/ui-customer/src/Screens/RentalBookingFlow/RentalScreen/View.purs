@@ -187,7 +187,7 @@ sliderView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDO
 sliderView push state = 
   let 
     updateSliderMethodExists = EHC.jBridgeMethodExists "updateSliderValue" 
-    prefixText = if updateSliderMethodExists then "-" else "2 hr"
+    prefixText = if updateSliderMethodExists then "-" else "1 hr"
     suffixText = if updateSliderMethodExists then "+" else show state.props.maxDuration <> " hrs"
     buttonPadding = if updateSliderMethodExists then Padding 18 2 18 8 else Padding 0 0 0 0
     fontStyle = if updateSliderMethodExists then FontStyle.h1 TypoGraphy else FontStyle.body1 TypoGraphy

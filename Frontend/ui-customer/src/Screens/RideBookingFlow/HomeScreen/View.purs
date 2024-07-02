@@ -3826,7 +3826,7 @@ mapView' push state idTag =
     [ height mapDimensions.height
     , width mapDimensions.width 
     , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-    , margin $ if isHomeScreenView state then MarginLeft 16 else MarginTop 0
+    , margin $ if isHomeScreenView state then Margin 16 (if os == "IOS" then 16 else 0) 0 0 else MarginTop 0
     , padding $ PaddingBottom $ bottomPadding
     ]$[ Tuple ("MapView" <> idTag) $ linearLayout
           ([ height mapDimensions.height
