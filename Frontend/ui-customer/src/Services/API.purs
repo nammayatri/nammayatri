@@ -1017,9 +1017,11 @@ newtype RideBookingRes = RideBookingRes {
   tollConfidence :: Maybe CTA.Confidence,
   driversPreviousRideDropLocLat :: Maybe Number,
   driversPreviousRideDropLocLon :: Maybe Number
+, estimatedFareBreakup :: Array FareBreakupAPIEntity
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
+  amount :: Number,
   amountWithCurrency :: CTA.Price,
   description :: String
 }

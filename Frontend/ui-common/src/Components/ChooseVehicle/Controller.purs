@@ -65,6 +65,8 @@ type Config
     , validTill :: String
     , waitingTimeInfo :: CT.WaitingTimeInfo
     , showStroke :: Boolean
+    , hasTollCharges :: Boolean
+    , hasParkingCharges :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -123,4 +125,6 @@ config =
   , validTill : ""
   , waitingTimeInfo : { freeMinutes: "", charge: "" }
   , showStroke : true
+  , hasTollCharges : false 
+  , hasParkingCharges : false
   }

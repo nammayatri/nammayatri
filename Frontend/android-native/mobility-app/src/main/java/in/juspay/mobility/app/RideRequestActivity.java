@@ -165,7 +165,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideStartDate,
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
-                    offeredPrice
+                    offeredPrice,
+                    rideRequestBundle.getDouble("parkingCharge")
                     );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);

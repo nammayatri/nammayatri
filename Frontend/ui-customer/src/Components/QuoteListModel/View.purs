@@ -308,7 +308,7 @@ findingRidesView state push =
         , gravity CENTER
         , height WRAP_CONTENT
         , width MATCH_PARENT
-        , visibility $ boolToVisibility $ (state.vehicleVariant /= "AUTO_RICKSHAW") && (getValueToLocalStore HAS_TOLL_CHARGES == "true")
+        , visibility $ boolToVisibility state.hasToll
         ] <> FontStyle.subHeading2 TypoGraphy
       ]
     , addTipView state push

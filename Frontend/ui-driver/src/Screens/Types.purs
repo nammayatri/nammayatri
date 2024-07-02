@@ -807,7 +807,8 @@ type IndividualRideCardState =
     tripStartTime :: Maybe String,
     tripEndTime :: Maybe String,
     acRide :: Maybe Boolean,
-    vehicleServiceTier :: String
+    vehicleServiceTier :: String,
+    parkingCharge :: Number
   }
 
 
@@ -995,6 +996,13 @@ type HomeScreenData =  {
   linkedVehicleCategory :: String,
   linkedVehicleVariant :: String,
   cityConfig :: CityConfig
+, parking :: ParkingData
+, toll :: TollState
+}
+
+type ParkingData = {
+  estimatedCharge :: Maybe Number
+, finalCharge :: Maybe Number
 }
 
 type BannerCarousalData = {
@@ -1036,12 +1044,10 @@ type EndRideData = {
     disability :: Maybe String,
     payerVpa :: String,
     specialZonePickup :: Maybe Boolean,
-    actualTollCharge :: Number,
-    estimatedTollCharge :: Number,
     capacity :: Maybe Int,
-    serviceTier :: String,
-    tollAmbigous :: Boolean
+    serviceTier :: String
   }
+
 type PaymentState = {
   rideCount :: Int,
   totalMoneyCollected :: Int,
@@ -1154,11 +1160,11 @@ type ActiveRide = {
   driverVehicle :: String,
   serviceTier :: String,
   capacity :: Maybe Int,
-  hasToll :: Boolean,
-  estimatedTollCharge :: Maybe Number,
+  estimatedTollCharges :: Number,
   acRide :: Maybe Boolean,
   bapName :: String,
   bookingFromOtherPlatform :: Boolean
+, parkingCharge :: Number
 }
 
 type HomeScreenProps =  {
@@ -1235,7 +1241,6 @@ type HomeScreenProps =  {
   showAcWorkingPopup :: Maybe Boolean,
   acExplanationPopup :: Boolean,
   isOdometerReadingsRequired :: Boolean,
-  toll :: TollState,
   bookingStage :: BookingTypes,
   showAdvancedRidePopUp :: Boolean,
   showInterOperablePopUp :: Boolean
@@ -1244,6 +1249,9 @@ type HomeScreenProps =  {
 type TollState = {
   showTollChargePopup :: Boolean
 , showTollChargeAmbigousPopup :: Boolean
+, finalCharge :: Number
+, tollAmbigous :: Boolean
+, estimatedCharge :: Number
 }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1377,7 +1385,8 @@ type TripDetailsScreenData =
     tripEndTime :: Maybe String,
     vehicleModel :: String,
     acRide :: Maybe Boolean,
-    vehicleServiceTier :: String
+    vehicleServiceTier :: String,
+    parkingCharge :: Number
   }
 
 type TripDetailsScreenProps =

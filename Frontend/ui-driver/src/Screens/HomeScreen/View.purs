@@ -353,8 +353,8 @@ view push state =
       , if state.props.currentStage == RideCompleted then RideCompletedCard.view (getRideCompletedConfig state) (push <<< RideCompletedAC) else dummyTextView -- 
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
       , if state.props.showAcWorkingPopup == Just true && isCar then isAcWorkingPopupView push state else dummyTextView 
-      , if state.props.currentStage == RideAccepted && state.data.activeRide.hasToll && state.props.toll.showTollChargePopup then PopUpModal.view (push <<< TollChargesPopUpAC) (PopUpConfig.tollChargesIncluded state) else dummyTextView
-      , if state.props.currentStage == RideCompleted && state.data.endRideData.tollAmbigous && state.props.toll.showTollChargeAmbigousPopup then PopUpModal.view (push <<< TollChargesAmbigousPopUpAC) (PopUpConfig.finalFareExcludesToll state) else dummyTextView
+      , if state.props.currentStage == RideAccepted && state.data.activeRide.estimatedTollCharges > 0.0 && state.data.toll.showTollChargePopup then PopUpModal.view (push <<< TollChargesPopUpAC) (PopUpConfig.tollChargesIncluded state) else dummyTextView
+      , if state.props.currentStage == RideCompleted && state.data.toll.tollAmbigous && state.data.toll.showTollChargeAmbigousPopup then PopUpModal.view (push <<< TollChargesAmbigousPopUpAC) (PopUpConfig.finalFareExcludesToll state) else dummyTextView
       , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
   ]
   where 

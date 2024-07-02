@@ -517,7 +517,8 @@ rideHistoryItemTransformer (RidesInfo ride) =
     tripStartTime : ride.tripStartTime,
     tripEndTime : ride.tripEndTime,
     acRide : ride.isVehicleAirConditioned,
-    vehicleServiceTier : ride.vehicleServiceTier
+    vehicleServiceTier : ride.vehicleServiceTier,
+    parkingCharge : fromMaybe 0.0 ride.parkingCharge
   }
 
 getDisabilityType :: Maybe String -> Maybe DisabilityType
@@ -758,6 +759,7 @@ dummyRideHistoryItem = RidesInfo {
       bookingType : Nothing,
       bapName : Nothing,
       isValueAddNP : false
+    , parkingCharge : Nothing
   }
 
 dummyLocationInfo :: LocationInfo

@@ -1463,9 +1463,9 @@ eval (OpenLink link) state = continueWithCmd state [ do
   pure AfterRender
   ]
   
-eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {props { toll  {showTollChargePopup = false}}}
+eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {data { toll  {showTollChargePopup = false}}}
 
-eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {props {toll {showTollChargeAmbigousPopup = false}}}
+eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {data {toll {showTollChargeAmbigousPopup = false}}}
 
 eval (SwitchBookingStage stage) state = do
   if state.props.bookingStage == stage then continue state
@@ -1596,11 +1596,11 @@ activeRideDetail state (RidesInfo ride) =
   driverVehicle : ride.vehicleVariant,
   serviceTier : ride.vehicleServiceTierName,
   capacity : ride.vehicleCapacity,
-  hasToll :  maybe false (\charge -> charge /= 0.0) ride.estimatedTollCharges,
-  estimatedTollCharge : ride.estimatedTollCharges,
+  estimatedTollCharges :  fromMaybe 0.0 ride.estimatedTollCharges,
   acRide : ride.isVehicleAirConditioned,
   bapName : transformBapName $ fromMaybe "" ride.bapName,
   bookingFromOtherPlatform : not ride.isValueAddNP
+, parkingCharge : fromMaybe 0.0 ride.parkingCharge
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

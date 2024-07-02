@@ -670,6 +670,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String notificationSource= rideRequestBundle.getString("notificationSource");
                     boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");
                     int offeredPrice = rideRequestBundle.getInt("driverDefaultStepFeeWithCurrency", 0);
+                    double parkingCharge = rideRequestBundle.getDouble("parkingCharge", 0);
                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
@@ -716,7 +717,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             rideStartDate,
                             notificationSource,
                             isThirdPartyBooking,
-                            offeredPrice
+                            offeredPrice,
+                            parkingCharge
                     );
 
                     if (floatyView == null) {

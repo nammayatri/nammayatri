@@ -133,6 +133,7 @@ referenceList state =
     <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" state.data.selectedItem.faresList) then [ (getString EARLY_END_RIDE_CHARGES_DESCRIPTION) ] else [])
     <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" state.data.selectedItem.faresList) then [ (getString CUSTOMER_TIP_DESCRIPTION) ] else [])
     <> (if (isHaveFare "TOLL_CHARGES" state.data.selectedItem.faresList) then [ "⁺" <> (getString TOLL_CHARGES_DESC) ] else [])
+    <> (if (isHaveFare "PARKING_CHARGE" state.data.selectedItem.faresList) then [ "⁺" <> (getString PARKING_CHARGES_DESC) ] else [])
 
 ---------------------- amountBreakupView -------------------
 amountBreakupView :: forall w. ST.InvoiceScreenState -> PrestoDOM (Effect Unit) w
@@ -267,5 +268,6 @@ getFareText fareType baseDistance estimatedDistance rideType =
         "TOLL_CHARGES" -> getString TOLL_CHARGES <> "⁺"
         "DIST_BASED_FARE" -> distanceBasedCharges
         "TIME_BASED_FARE" -> getString TIME_BASED_CHARGES
-        "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES
+        "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES 
+        "PARKING_CHARGE" -> getString PARKING_CHARGE <> "⁺"
         _ -> formatFareType fareType

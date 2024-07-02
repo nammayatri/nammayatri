@@ -8,7 +8,6 @@
  */
 
 package in.juspay.mobility.app;
-import static android.graphics.Color.rgb;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -665,6 +664,16 @@ public class RideRequestUtils {
     }
 
     public static void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        if (model.isThirdPartyBooking()) {
+            holder.thirdPartyTag.setVisibility(View.VISIBLE);
+            holder.thirdPartyTagText.setText(context.getString(R.string.third_party_booking));
+            holder.rateText.setVisibility(View.GONE);
+            holder.rateViewDot.setVisibility(View.GONE);
+            holder.textIncludesCharges.setText(context.getString(R.string.no_additional_fare_tips_and_waiting_charges));
+            holder.textIncludesCharges.setTextColor(context.getColor(R.color.red900));
+            return ;
+        }
+
         boolean showPickupCharges = false;
         boolean hideZeroPickupCharges = true;
         int pickUpCharges = model.getDriverPickUpCharges();
@@ -679,22 +688,25 @@ public class RideRequestUtils {
         }catch (JSONException e){
             firebaseLogEventWithParams("exception_in_update_extra_charges", "exception", String.valueOf(e), context);
         }
-        if (model.isThirdPartyBooking()) {
-            holder.thirdPartyTag.setVisibility(View.VISIBLE);
-            holder.thirdPartyTagText.setText(context.getString(R.string.third_party_booking));
-            holder.rateText.setVisibility(View.GONE);
-            holder.rateViewDot.setVisibility(View.GONE);
-            holder.textIncludesCharges.setText(context.getString(R.string.no_additional_fare_tips_and_waiting_charges));
-            holder.textIncludesCharges.setTextColor(Color.parseColor("#E55454"));
-        }else if ((pickUpCharges > 0 && !hideZeroPickupCharges) && showPickupCharges) {
-            String formattedPickupChargesText = context.getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(pickUpCharges));
-            holder.textIncludesCharges.setText(formattedPickupChargesText);
-            holder.textIncludesCharges.setVisibility(View.VISIBLE);
-            holder.rateViewDot.setVisibility(View.VISIBLE);
-        } else {
+        showPickupCharges = pickUpCharges > 0 && !hideZeroPickupCharges && showPickupCharges;
+
+        double parkingCharge = model.getParkingCharges();
+        boolean showParkingCharges = Double.compare(parkingCharge, 0.0) > 0;
+
+        if(!showPickupCharges && !showParkingCharges){
             holder.textIncludesCharges.setVisibility(View.GONE);
             holder.rateViewDot.setVisibility(View.GONE);
+            return;
         }
+
+        String pickupChargesText = showPickupCharges ? context.getString(R.string.includes_pickup_charges_10).replace("{#amount#}", Integer.toString(pickUpCharges)) : "";
+        String parkingChargesText = showParkingCharges ? context.getString(R.string.parking_charges, parkingCharge) : "";
+        String includesText = context.getString(R.string.includes);
+        String fullText =includesText + " " + pickupChargesText + (showPickupCharges && showParkingCharges ? " & " : "")  + parkingChargesText;
+
+        holder.textIncludesCharges.setText(fullText);
+        holder.textIncludesCharges.setVisibility(View.VISIBLE);
+        holder.rateViewDot.setVisibility(View.VISIBLE);
     }
 
     private static boolean showAcConfig(Context context) {

@@ -52,7 +52,7 @@ initData = {
       vehicleModel : "",
       acRide : Nothing,
       vehicleServiceTier : ""
-
+    , parkingCharge : 0.0
   },
   props: {
     rating : 4,
