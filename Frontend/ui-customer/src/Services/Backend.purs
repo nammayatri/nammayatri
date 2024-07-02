@@ -1195,6 +1195,7 @@ getFollowRide _ = do
 -------------------------------------------------------- Metro Booking --------------------------------------------------------
 
 -- getMetroBookingStatus :: String -> FlowBT String GetMetroBookingStatusResp
+getMetroBookingStatus :: String -> Flow GlobalState (Either ErrorResponse GetMetroBookingStatusResp)
 getMetroBookingStatus shortOrderID = do 
   headers <- getHeaders "" false
   withAPIResult (EP.getMetroBookingStatus shortOrderID) unwrapResponse $ callAPI headers (GetMetroBookingStatusReq shortOrderID)
