@@ -3,6 +3,9 @@ let rootDir = env:GIT_ROOT_PATH
 let outputPrefixDashboardReadOnly =
       rootDir ++ "/Backend/app/dashboard/provider-dashboard/src-read-only/"
 
+let outputPrefixDashboard =
+      rootDir ++ "/Backend/app/dashboard/provider-dashboard/src/"
+
 let outputPrefixCommonApisReadOnly =
       rootDir ++ "/Backend/app/dashboard/CommonAPIs/src-read-only/"
 
@@ -32,11 +35,12 @@ let outputPath =
           outputPrefixDashboardReadOnly ++ "Storage/CachedQueries"
       , _beamTable = outputPrefixDashboardReadOnly ++ "Storage/Beam"
       , _domainHandler = outputPrefixDriverApp ++ "Domain/Action/Dashboard"
+      , _domainHandlerDashboard =
+          outputPrefixDashboard ++ "Domain/Action/ProviderPlatform"
       , _domainType = outputPrefixDashboardReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixDriverAppReadOnly ++ "API/Action/Dashboard"
       , _servantApiDashboard =
-              outputPrefixDashboardReadOnly
-          ++  "API/Action/ProviderPlatform/DynamicOfferDriver"
+          outputPrefixDashboardReadOnly ++ "API/Action/ProviderPlatform"
       , _sql = [ { _1 = migrationPath, _2 = "atlas_driver_offer_bpp" } ]
       , _purescriptFrontend = ""
       }
@@ -46,6 +50,7 @@ let GeneratorType =
       | SERVANT_API_DASHBOARD
       | API_TYPES
       | DOMAIN_HANDLER
+      | DOMAIN_HANDLER_DASHBOARD
       | BEAM_QUERIES
       | CACHED_QUERIES
       | BEAM_TABLE
@@ -147,7 +152,6 @@ let defaultImports =
           [ "EulerHS.Prelude"
           , "Servant"
           , "Tools.Auth.Api"
-          , "Tools.Auth.Merchant"
           , "Kernel.Utils.Common"
           , "Storage.Beam.CommonInstances ()"
           ]
@@ -155,6 +159,31 @@ let defaultImports =
           [ "Domain.Types.Person"
           , "Kernel.Prelude"
           , "Control.Lens"
+          , "Kernel.Types.Id"
+          , "Kernel.Types.Beckn.Context"
+          ]
+        , _packageImports =
+          [ { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Domain.Types.Merchant"
+            }
+          , { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Environment"
+            }
+          ]
+        , _generationType = GeneratorType.SERVANT_API_DASHBOARD
+        }
+      , { _simpleImports =
+          [ "EulerHS.Prelude"
+          , "Tools.Auth.Api"
+          , "Tools.Auth.Merchant"
+          , "Kernel.Utils.Common"
+          , "Storage.Beam.CommonInstances ()"
+          ]
+        , _qualifiedImports =
+          [ "Domain.Types.Person"
+          , "Kernel.Prelude"
           , "Kernel.Types.Id"
           , "Kernel.Types.Beckn.Context"
           , "SharedLogic.Transaction"
@@ -169,7 +198,7 @@ let defaultImports =
             , _importModuleName = "Environment"
             }
           ]
-        , _generationType = GeneratorType.SERVANT_API_DASHBOARD
+        , _generationType = GeneratorType.DOMAIN_HANDLER_DASHBOARD
         }
       , { _simpleImports =
           [ "EulerHS.Prelude hiding (id)"
@@ -253,6 +282,7 @@ let defaultConfigs =
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =
         [ GeneratorType.DOMAIN_HANDLER
+        , GeneratorType.DOMAIN_HANDLER_DASHBOARD
         , GeneratorType.API_TYPES
         , GeneratorType.SERVANT_API
         , GeneratorType.SERVANT_API_DASHBOARD

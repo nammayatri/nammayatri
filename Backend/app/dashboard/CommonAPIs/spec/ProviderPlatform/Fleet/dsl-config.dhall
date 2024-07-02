@@ -7,6 +7,8 @@ let outputPath =
       //  { _apiRelatedTypes = defaultOutput._apiRelatedTypes ++ "/Fleet"
           , _servantApi = defaultOutput._servantApi ++ "/Fleet"
           , _domainHandler = defaultOutput._domainHandler + "/Fleet"
+          , _domainHandlerDashboard =
+              defaultOutput._domainHandlerDashboard ++ "/Fleet"
           , _servantApiDashboard =
               defaultOutput._servantApiDashboard ++ "/Fleet"
           }

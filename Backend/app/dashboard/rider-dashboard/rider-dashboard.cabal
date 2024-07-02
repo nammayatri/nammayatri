@@ -48,6 +48,7 @@ library
       API.RiderPlatform.RideBooking.Select
       API.RiderPlatform.Tickets
       App
+      Domain.Action.RiderPlatform.Management.Merchant
       RiderPlatformClient.RiderApp.Operations
       RiderPlatformClient.RiderApp.RideBooking
       Storage.Beam.CommonInstances

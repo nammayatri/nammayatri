@@ -2134,11 +2134,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1719746841,
-        "narHash": "sha256-288aP4NeKpHpcMtcki6tApvf4KElVk2sUHaAFu5EM/k=",
+        "lastModified": 1719929263,
+        "narHash": "sha256-eh/WkHro8WHZIfguQUwzB+dJ073t8/F+Ky8ygd5FMek=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "4b3c95b924eb776f8e0054f7e8c81489f2d49df2",
+        "rev": "e1791d464209d6de56e43278d5d5fed83698bebe",
         "type": "github"
       },
       "original": {

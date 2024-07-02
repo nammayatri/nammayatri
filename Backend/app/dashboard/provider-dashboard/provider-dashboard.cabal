@@ -47,6 +47,9 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
       App
+      Domain.Action.ProviderPlatform.Management.Merchant
+      Domain.Action.ProviderPlatform.Management.Revenue
+      Domain.Action.ProviderPlatform.Management.Ride
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
       ProviderPlatformClient.DynamicOfferDriver.Operations
@@ -54,9 +57,9 @@ library
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
-      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant
-      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Revenue
-      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Ride
+      API.Action.ProviderPlatform.Management.Merchant
+      API.Action.ProviderPlatform.Management.Revenue
+      API.Action.ProviderPlatform.Management.Ride
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:

@@ -7,6 +7,8 @@ let outputPath =
       //  { _apiRelatedTypes = defaultOutput._apiRelatedTypes ++ "/RideBooking"
           , _servantApi = defaultOutput._servantApi ++ "/RideBooking"
           , _domainHandler = common.outputPrefixDriverApp ++ "Domain/Action/UI"
+          , _domainHandlerDashboard =
+              defaultOutput._domainHandlerDashboard ++ "/RideBooking"
           , _servantApiDashboard =
               defaultOutput._servantApiDashboard ++ "/RideBooking"
           }
