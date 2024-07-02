@@ -33,3 +33,8 @@ ALTER TABLE atlas_app.ticket_place ALTER COLUMN merchant_operating_city_id SET N
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN status text NOT NULL default 'Active';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN allow_same_day_booking boolean NOT NULL default true;
