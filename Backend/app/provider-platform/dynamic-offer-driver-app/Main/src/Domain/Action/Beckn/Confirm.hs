@@ -154,6 +154,7 @@ handler merchant req validatedQuote = do
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
+                customerPhoneNum = Nothing,
                 isRepeatSearch = False
               }
       initiateDriverSearchBatch driverSearchBatchInput

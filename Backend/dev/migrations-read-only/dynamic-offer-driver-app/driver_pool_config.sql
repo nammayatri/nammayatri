@@ -56,3 +56,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN on_ride_batch
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN fav_driver boolean NOT NULL default false;

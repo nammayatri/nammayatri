@@ -53,6 +53,7 @@ DriverPoolConfig:
     actualDistanceThresholdOnRide: Maybe Meters
     currentRideTripCategoryValidForForwardBatching : "[Text]"
     distanceUnit: DistanceUnit
+    favDriver: Bool
 
   beamFields:
     distanceUnit:
@@ -91,6 +92,7 @@ DriverPoolConfig:
     onRideBatchSplitConfig: "Array ['BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistanceOnRide { batchSplitSize = 1, batchSplitDelay = 4 }']"
     enableForwardBatching: "false"
     maxParallelSearchRequestsOnRide: "1"
+    favDriver: "false"
 
   queries:
     findAllByMerchantOpCityId:

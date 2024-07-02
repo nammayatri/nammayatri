@@ -415,7 +415,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     driverToDestinationDistanceThreshold :: Meters,
     radiusShrinkValueForDriversOnRideWithUnit :: Maybe Distance,
     driverToDestinationDistanceThresholdWithUnit :: Maybe Distance,
-    driverToDestinationDuration :: Seconds
+    driverToDestinationDuration :: Seconds,
+    favDriver :: Bool
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

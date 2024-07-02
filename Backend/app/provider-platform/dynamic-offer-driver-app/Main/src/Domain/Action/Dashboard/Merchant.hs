@@ -480,6 +480,7 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
         radiusShrinkValueForDriversOnRide = maybe radiusShrinkValueForDriversOnRide distanceToMeters radiusShrinkValueForDriversOnRideWithUnit,
         driverToDestinationDistanceThreshold = maybe driverToDestinationDistanceThreshold distanceToMeters driverToDestinationDistanceThresholdWithUnit,
         actualDistanceThresholdOnRide = distanceToMeters <$> actualDistanceThresholdOnRideWithUnit <|> actualDistanceThresholdOnRide,
+        favDriver = False,
         ..
       }
 

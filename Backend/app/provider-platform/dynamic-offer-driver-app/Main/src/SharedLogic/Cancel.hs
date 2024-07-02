@@ -74,6 +74,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                     tripQuoteDetails,
                     customerExtraFee = searchTry.customerExtraFee,
                     messageId = searchTry.messageId,
+                    customerPhoneNum = Nothing,
                     isRepeatSearch
                   }
           result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput)
@@ -120,6 +121,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                     tripQuoteDetails = [tripQuoteDetail],
                     customerExtraFee = searchTry.customerExtraFee,
                     messageId = newBooking.id.getId,
+                    customerPhoneNum = Nothing,
                     isRepeatSearch
                   }
           result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput) --  remove CONSTRAINT quote_unique_reqid_bppid_quoteid UNIQUE (request_id, provider_id);, check searchTry key for scheduling

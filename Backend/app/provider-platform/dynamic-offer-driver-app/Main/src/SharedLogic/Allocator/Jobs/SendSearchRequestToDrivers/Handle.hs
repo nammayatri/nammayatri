@@ -39,13 +39,14 @@ data MetricsHandle m = MetricsHandle
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
     isReceivedMaxDriverQuotes :: m Bool,
-    getNextDriverPoolBatch :: GoHomeConfig -> m DriverPoolWithActualDistResultWithFlags,
+    getNextDriverPoolBatch :: GoHomeConfig -> Maybe Text -> m DriverPoolWithActualDistResultWithFlags,
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> [Id Driver] -> GoHomeConfig -> m (),
     getRescheduleTime :: m UTCTime,
     metrics :: MetricsHandle m,
     setBatchDurationLock :: m (Maybe UTCTime),
     createRescheduleTime :: UTCTime -> m UTCTime,
     isSearchTryValid :: m Bool,
+    customerPhoneNum :: Maybe Text,
     isBookingValid :: Bool,
     initiateDriverSearchBatch :: m (),
     cancelSearchTry :: m (),
@@ -91,7 +92,7 @@ processRequestSending Handle {..} goHomeCfg = do
               cancelBookingIfApplies
               return (Complete, NormalPool, Nothing)
         else do
-          driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
+          driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg customerPhoneNum
           when (not $ null driverPoolWithFlags.driverPoolWithActualDistResult) $
             sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
           ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.poolType,driverPoolWithFlags.nextScheduleTime)
