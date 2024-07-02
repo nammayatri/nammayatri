@@ -54,8 +54,12 @@ import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
+import com.clevertap.android.sdk.ActivityLifecycleCallback;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
+import com.finternet.sdk.Callback;
+import com.finternet.sdk.GullakCore;
+import com.finternet.sdk.GullakSDKResponse;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -391,6 +395,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
         onCreateTimeStamp = System.currentTimeMillis();
+        ActivityLifecycleCallback.register(this.getApplication());
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -796,6 +801,14 @@ public class MainActivity extends AppCompatActivity {
                         } catch (Exception ignored) {
                         }
                         break;
+                    case "gl_sdk" :
+                        try {
+                            if (jsonObject.has("action") && jsonObject.has("token")) {
+                                launchGLSDK(jsonObject.getString("action"), jsonObject.getString("token"));
+                            }
+                        } catch (Exception ignored) {
+                        }
+                        break;
                     case "log_stream":
                         JSONObject payload;
                         try {
@@ -850,6 +863,25 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             AlertDialog alertDialog = builder.create();
             alertDialog.show();
+        });
+    }
+
+    private void launchGLSDK(String callBack, String token) {
+        GullakCore.startGullak(MainActivity.this, token, gullakSDKResponse -> {
+            Gson gson = new Gson();
+            String jsonStr = gson.toJson(gullakSDKResponse);
+            try {
+                JSONObject processPL = new JSONObject();
+                JSONObject innerPayload = getInnerPayload(new JSONObject(),"gl_process");
+                innerPayload.put("callback", callBack)
+                        .put("value", jsonStr);
+                processPL.put(PaymentConstants.PAYLOAD, innerPayload)
+                        .put("requestId", UUID.randomUUID())
+                        .put("service", getService());
+                hyperServices.process(processPL);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, e.toString());
+            }
         });
     }
 

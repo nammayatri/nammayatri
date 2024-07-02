@@ -36,7 +36,7 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="${isUsesCleartextTraffic}"
         tools:replace="android:allowBackup"
-        android:name="com.clevertap.android.sdk.Application">
+        android:name=".MainApplication">
 
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"

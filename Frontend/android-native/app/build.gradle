@@ -323,13 +323,13 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     implementation 'com.google.android.play:app-update:2.1.0'
-    implementation 'com.airbnb.android:lottie:5.2.0'
+    implementation "com.airbnb.android:lottie:6.1.0"
 
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'com.facebook.android:facebook-android-sdk:14.0.0'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
-    implementation 'com.github.bumptech.glide:glide:4.15.1'
+    implementation "com.github.bumptech.glide:glide:4.12.0"
     implementation 'androidx.core:core:1.4.0'
     implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
     implementation 'com.clevertap.android:push-templates:1.0.9'
@@ -337,6 +337,16 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+    
+    //gullak required dependencies
+    implementation 'com.github.freshworks:freshchat-android:6.0.0'
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation "com.facebook.soloader:soloader:0.9.0+"
+    implementation "com.facebook.react:react-android:0.72.3"
+    implementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
+    annotationProcessor "com.github.bumptech.glide:compiler:4.12.0"
+    implementation files('libs/gullak-release-0.1.0.aar')
+    implementation files('libs/android-jsc-r250231.aar')
 }
 
 def tmpSource = "/tmp/juspay"
