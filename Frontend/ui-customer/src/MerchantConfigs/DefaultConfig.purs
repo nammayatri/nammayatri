@@ -99,6 +99,7 @@ config =
     { secondaryButtonTextColor : "#2C2F3A"
     , secondaryButtonStroke : "1,#2C2F3A"
     , buttonCornerRadius : 8.0
+    , shuffleCancelReasons : true
     }
   , profileBackground: "#2C2F3A"
   , profileName: "#FFFFFF"
@@ -403,6 +404,7 @@ config =
             }
             , enableAcViews = true
             , enableCabs = false
+            , enableRentals = true
             , estimateAndQuoteConfig {
               showInfoIcon = true
               }
@@ -417,7 +419,8 @@ config =
               { radius = 250000
               , strictBounds = true
               },
-            enableAcViews = true
+            enableAcViews = true,
+            enableRentals = true
           },
         defaultCityConfig 
           { cityName = "Tumakuru",
@@ -429,7 +432,8 @@ config =
               { radius = 250000
               , strictBounds = true
               },
-            enableAcViews = true
+            enableAcViews = true,
+            enableRentals = true
           },
         defaultCityConfig 
           {   cityName = "Chennai"
@@ -566,7 +570,7 @@ defaultCityConfig =
     dashboardUrl : "",
     appLogoLight : "",
     enableAcViews : false,
-    enableRentals : true,
+    enableRentals : false,
     enableIntercity : false, 
     waitingChargeConfig : {
       auto : {
