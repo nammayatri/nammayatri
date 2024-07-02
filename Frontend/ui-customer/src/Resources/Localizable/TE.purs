@@ -1318,3 +1318,5 @@ getTE stringKey =
     NOIDA -> "నోయిడా"
     GURUGRAM -> "గురుగ్రామ్"
     WAITING_CHARGES -> "వెచ్చింపు ధరలు"
+    PLACE_A_CALL -> "కాల్ చేయండి"
+    YOU_CAN_WRITE_TO_US_AT -> "మీరు మాకు వ్రాయవచ్చు"

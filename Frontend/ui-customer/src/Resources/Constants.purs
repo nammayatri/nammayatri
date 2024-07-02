@@ -411,3 +411,6 @@ estimateLabelMaxWidth = if (os == "IOS") then 80 else 300
 
 locateOnMapLabelMaxWidth :: Int
 locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
+
+mailToLink :: String
+mailToLink = "mailto:" 

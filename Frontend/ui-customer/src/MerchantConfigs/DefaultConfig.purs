@@ -161,6 +161,7 @@ config =
   , autoVariantEnabled : true
   , showDisabilityBanner : false
   , showCheckoutRentalBanner : false
+  , enableHelpAndSupport : true
   , geoCoder: {
       enableLLtoAddress : true
     , enableAddressToLL : true 
