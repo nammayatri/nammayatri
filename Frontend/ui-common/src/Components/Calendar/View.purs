@@ -67,17 +67,17 @@ view push config =
 
 calendarView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 calendarView push config = 
-  horizontalScrollView 
-  [ width WRAP_CONTENT
+  (if EHC.os == "IOS" then linearLayout else horizontalScrollView)
+  ([ width WRAP_CONTENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
-  , scrollBarX false
-  ][ linearLayout
-     [ width MATCH_PARENT
-     , height WRAP_CONTENT
-     , orientation VERTICAL
-     , gravity CENTER
-     ][ datePicker push config
+  ] <> if EHC.os == "IOS" then [] else [scrollBarX false])
+  [ linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , gravity CENTER
+    ][ datePicker push config
     ]
   ]
 
@@ -171,37 +171,25 @@ monthYearPicker push config =
   , background Color.white900
   , margin $ Margin 16 16 16 16
   , cornerRadius 9.0
-  ][  imageView
+  , gravity CENTER
+  ][ imageView
       [ imageWithFallback $ fetchImage FF_ASSET $ if decrementMonthFlag then "ny_ic_chevron_left_black" else "ny_ic_chevron_left_grey"
       , width $ V 24
       , height $ V 24
-      , gravity CENTER
       , onClick push $ const if decrementMonthFlag then DecrementMonth decrementRes else NoAction
       ]
-    , linearLayout
-      [ weight 1.0
-      , height WRAP_CONTENT
-      , orientation HORIZONTAL
+    , textView
+      [ text $ config.selectedTimeSpan.shortMonth <> " " <> show config.selectedTimeSpan.year
+      , weight 1.0
+      , textSize FontSize.a_16
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , color Color.black800
       , gravity CENTER
-      ][  textView
-          [ text $ config.selectedTimeSpan.shortMonth
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.bold LanguageStyle
-          , color Color.black800
-          ]
-        , textView
-          [ text $ show config.selectedTimeSpan.year
-          , textSize FontSize.a_16
-          , fontStyle $ FontStyle.bold LanguageStyle
-          , color Color.black800
-          , margin $ MarginLeft 5
-          ]
       ]
     , imageView
       [ imageWithFallback $ fetchImage FF_ASSET $ if incrementMonthFlag then "ny_ic_chevron_right_black" else "ny_ic_chevron_right_grey"
-      , width $ V 28
-      , height $ V 28
-      , gravity CENTER
+      , width $ V 24
+      , height $ V 24
       , onClick push $ const if incrementMonthFlag then IncrementMonth incrementRes else NoAction
       ]
   ]
@@ -210,7 +198,6 @@ monthYearPicker push config =
         incrementRes = EHU.incrementCalendarMonth config.selectedTimeSpan config.startDate config.endDate
         decrementMonthFlag = (config.selectedTimeSpan.intMonth >= config.pastLimit.intMonth &&  config.selectedTimeSpan.year == config.pastLimit.year) || (config.selectedTimeSpan.year > config.pastLimit.year)
         decrementRes = EHU.decrementCalendarMonth config.selectedTimeSpan config.startDate config.endDate
-
 
 
 datePicker :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -284,10 +271,10 @@ dateView push config weekRow =
             [ width $ V if squareSize < 42 then squareSize else 42
             , height $ V if squareSize < 42 then squareSize else 42
             , gravity CENTER
-            , cornerRadii $ if item.isEnd then Corners 50.0 false true true false
-                            else if item.isStart && endDate.date /= 0 then Corners 50.0 true false false true
-                            else if item.isStart && endDate.date == 0 then Corners 90.0 true true true true
-                            else Corners 90.0 false false false false
+            , cornerRadii $ if item.isEnd then Corners 21.0 false true true false
+                            else if item.isStart && endDate.date /= 0 then Corners 21.0 true false false true
+                            else if item.isStart && endDate.date == 0 then Corners 21.0 true true true true
+                            else Corners 20.0 true true true true
             , background $ if ((item.utcDate == startDate.utcDate) || (item.utcDate == endDate.utcDate)) && item.date /= 0 then Color.blue9000 
                              else if item.isInRange then Color.blue9000
                              else Color.transparent

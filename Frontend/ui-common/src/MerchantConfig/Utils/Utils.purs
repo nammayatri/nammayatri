@@ -17,6 +17,7 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Data.Show.Generic (genericShow) 
 import Language.Types (STR(..))
+import LocalStorage.Cache (getValueFromCache)
 
 foreign import getStringFromConfig :: forall a. STR -> (a -> Maybe a) -> (Maybe a) -> Maybe String
 
@@ -31,6 +32,7 @@ data Merchant
   | MOBILITY_PM
   | PASSCULTURE
   | MOBILITY_RS
+  | BRIDGE
 
 derive instance genericMerchant :: Generic Merchant _
 instance showMerchant :: Show Merchant where show = genericShow
@@ -44,9 +46,12 @@ instance decodeMerchant :: Decode Merchant where
   decode = defaultEnumDecode
 
 getMerchant :: LazyCheck -> Merchant
-getMerchant lazy = case decodeMerchantId (getMerchantId "") of
-  Just merchant -> merchant
-  Nothing -> NAMMAYATRI
+getMerchant lazy = getValueFromCache "merchantID" (\_ -> spy "decodeMerchant" $ decodeMerchant)
+  where
+    decodeMerchant =
+      case decodeMerchantId (getMerchantId "") of
+        Just merchant -> merchant
+        Nothing -> NAMMAYATRI
 
 decodeMerchantId :: Foreign -> Maybe Merchant
 decodeMerchantId = hush <<< runExcept <<< decode

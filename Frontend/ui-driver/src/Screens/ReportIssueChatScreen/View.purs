@@ -21,7 +21,7 @@ import Components.ChatView.Controller (makeChatComponent')
 import Data.Array (length)
 import Data.Maybe (fromMaybe, isJust)
 import Effect (Effect)
-import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC)
+import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, safeMarginBottom, safeMarginTopWithDefault)
 import Font.Style (bold)
 import Helpers.Utils (getCurrentUTC, fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
@@ -39,6 +39,7 @@ import Components.AddAudioModel (view) as AddAudioModel
 import Components.AddImagesModel (view) as AddImagesModel
 import Components.ChatView as ChatView
 import Styles.Colors (black800, black900, black9000, blue900, brightBlue, blueTextColor, grey900, greyLight, lightGreyBlue, white900, rippleShade) as Color
+import Styles.Colors  as Color
 import Font.Size (a_16, a_20, a_14, a_17, a_18) as FontSize
 import Font.Style (h3, semiBold) as FontStyle
 import JBridge (storeCallBackImageUpload, storeCallBackUploadMultiPartData) as JB
@@ -48,6 +49,7 @@ import Components.RecordAudioModel.View (view) as RecordAudioModel
 import Data.String (length, trim) as STR
 import Components.ViewImageModel.View (view) as ViewImageModel
 import Effect.Uncurried (runEffectFn2)
+import Font.Style as FontStyle
 
 screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -71,6 +73,7 @@ view push state =
       , onBackPressed push (const BackPressed)
       , afterRender push (const AfterRender)
       , background Color.white900
+      , padding $ PaddingBottom safeMarginBottom
       ] ([ relativeLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
@@ -117,26 +120,21 @@ headerLayout state push =
         , height MATCH_PARENT
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
-        , layoutGravity "center_vertical"
-        , padding $ Padding 5 16 5 16
+        , padding $ Padding 10 (safeMarginTopWithDefault 13) 10 13
         ]
         [ imageView
-            [ width $ V 40
-            , height $ V 40
-            , imageUrl "ny_ic_chevron_left"
+            [ width $ V 30
+            , height $ V 30
+            , imageWithFallback $ fetchImage FF_ASSET  "ny_ic_chevron_left"
             , onClick push $ const BackPressed
-            , padding $ Padding 7 7 7 7
-            , margin $ MarginLeft 5
             , rippleColor Color.rippleShade
-            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text state.data.categoryName
-              , textSize FontSize.a_18
               , margin $ MarginLeft 10
-              , weight 1.0
+              , padding $ PaddingBottom 2
               , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
@@ -230,10 +228,11 @@ submitView push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER
-      , stroke ("1,"<>Color.grey900)
-      , cornerRadius 18.0
-      , onClick push (const AddImage)
-      , margin (MarginRight 12)
+      , stroke $ "1," <> Color.grey900
+      , cornerRadius 25.0
+      , onClick push $ const AddImage
+      , margin $ MarginRight 12
+      , padding $ Padding 8 8 8 8
       ][ imageView
        [ width $ V 36
        , height $ V 36
@@ -263,8 +262,10 @@ submitView push state =
       , orientation HORIZONTAL
       , gravity CENTER
       , stroke ("1,"<>Color.grey900)
-      , cornerRadius 18.0
+      , cornerRadius 25.0
       , onClick push (const $ AddAudio false)
+      , background Color.white900
+      , padding $ Padding 8 8 8 8
       ][ imageView
        [ width $ V 36
        , height $ V 36
@@ -293,13 +294,12 @@ submitView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , background Color.brightBlue
-    , cornerRadius 32.0
-    , padding (PaddingVertical 12 12)
+    , cornerRadius 26.0
+    , padding $ PaddingVertical 16 16
     , orientation HORIZONTAL
     , alpha if shouldEnableSubmitBtn state then 1.0 else 0.5
-    , onClick push $ const SubmitIssue
+    , onClick push if shouldEnableSubmitBtn state then (const SubmitIssue) else (const NoAction)
     , gravity CENTER
-    , clickable (shouldEnableSubmitBtn state)
     ][ textView
      [ color Color.white900
      , textSize FontSize.a_16
@@ -335,15 +335,18 @@ helperView push state =
      , background Color.greyLight
      ]
      []
-     , textView
-     [ width WRAP_CONTENT
+     , textView $
+     [ width MATCH_PARENT
      , layoutGravity "center"
      , text if (isJust state.data.issueId) && (isJust state.data.selectedOptionId) then (getString ISSUE_SUBMITTED_TEXT) else (getString CHOOSE_AN_OPTION)
      , textSize FontSize.a_16
      , margin (MarginVertical 18 24)
      , gravity CENTER
-     ]
+     , color Color.black700
+     ] <> FontStyle.body5 TypoGraphy
    ]
+
+
 
 addAudioModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 addAudioModel state push = AddAudioModel.view (push <<< AddAudioModelAction) (addAudioModelConfig state)

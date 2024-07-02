@@ -16,18 +16,19 @@
 module Types.ModifyScreenState where
 
 import Debug (spy)
-import Engineering.Helpers.BackTrack (modifyState)
+import Presto.Core.Types.Language.Flow (Flow, modifyState)
 import Helpers.Utils (generateUniqueId)
 import JBridge (removeAllPolylines, enableMyLocation)
-import Prelude (Unit, ($), show, discard, unit, pure, bind)
+import Prelude (Unit, ($), show, discard, unit, pure, bind, (<<<), void)
+import Control.Monad.Except.Trans (lift)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
 import Screens.Types (HomeScreenStage(..))
 import Storage (KeyStore(..), setValueToLocalStore, updateLocalStage)
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), ScreenStage(..))
 
-modifyScreenState :: ScreenType -> FlowBT String Unit
-modifyScreenState st =
-  case st of
+modifyScreenStateFlow :: ScreenType -> Flow GlobalState GlobalState
+modifyScreenStateFlow =
+  case _ of
     DocumentCaptureScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ documentCaptureScreen = a state.documentCaptureScreen}) 
     SplashScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { splashScreen = a state.splashScreen})
     ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})
@@ -76,6 +77,11 @@ modifyScreenState st =
     LmsQuizScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsQuizScreen = a state.lmsQuizScreen})
     DocumentDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {documentDetailsScreen = a state.documentDetailsScreen})
     RateCardScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rateCardScreen = a state.rateCardScreen})
+    CameraScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { cameraScreen = a state.cameraScreen})
+    EarningsScreenV2 a ->  modifyState (\(GlobalState state) -> GlobalState $ state { earningsScreenV2 = a state.earningsScreenV2})
+
+modifyScreenState :: ScreenType -> FlowBT String Unit
+modifyScreenState st = void $ lift $ lift $ modifyScreenStateFlow st
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

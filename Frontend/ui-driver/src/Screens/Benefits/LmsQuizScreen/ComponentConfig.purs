@@ -50,12 +50,12 @@ quizDoneButtonConfig label state isRetryButtonVisible =
     , color = case label of
                "RETRY_QUESTION" -> Color.black700
                "CLOSE_QUIZ" -> Color.black700
-               _ -> Color.yellow900
+               _ -> PrimaryButton.config.textConfig.color
     }
   , background = case label of
                   "RETRY_QUESTION" -> Color.white900
                   "CLOSE_QUIZ" -> Color.white900
-                  _ -> Color.black900
+                  _ -> PrimaryButton.config.background
   , enableRipple = false
   , rippleColor = Color.white40Alpha
   , margin = case label of

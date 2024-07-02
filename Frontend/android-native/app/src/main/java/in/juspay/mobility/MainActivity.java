@@ -1251,7 +1251,7 @@ public class MainActivity extends AppCompatActivity {
         payload.put("logLevel",1);
         payload.put("isBootable",true);
         payload.put(PaymentConstants.ENV, "prod");
-        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(in.juspay.mobility.app.R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
+        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(in.juspay.mobility.app.R.string.preference_file_key),"BUNDLE_TIME_OUT","1000"));
         payload.put("bundleTimeOut",bundleTimeOut);
         return payload;
     }

@@ -73,6 +73,9 @@ white27 = "#45FCFCFC"
 white300 :: Color
 white300 = "#FDD56B"
 
+white160 :: Color
+white160 = "#29FFFFFF"
+
 white200 :: Color
 white200 = "#99FFFFFF"
 
@@ -156,7 +159,9 @@ frenchSkyBlue400 :: Color
 frenchSkyBlue400 = "#a9cbff"
 
 green700 :: Color
-green700 = "#268C6E"
+green700 = 
+  let config = getAppConfig appConfig
+  in config.colors.green700
 
 blackLessTrans :: Color
 blackLessTrans = "#99000000"
@@ -370,5 +375,21 @@ greyBackDarkColor = "#D3D3D3"
 
 black12 :: Color
 black12 = "#1F000000"
+
 aliceBlueLight :: Color
 aliceBlueLight = "#F4F7FF"
+
+blue500 :: Color
+blue500 = "#4285F4"
+
+bridgeGreen :: Color
+bridgeGreen = "#F0F5F2"
+
+purple900 :: Color
+purple900 = "#7435FC"
+
+purple500 :: Color
+purple500 = "#E0D1FF"
+
+purple700 :: Color
+purple700 = "#7D4BFF"

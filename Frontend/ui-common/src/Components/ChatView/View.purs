@@ -31,7 +31,7 @@ import Common.Types.App
 import Common.Styles.Colors as Color
 import PrestoDOM.Elements.Elements (progressBar)
 import PrestoDOM.Events (afterRender)
-import Engineering.Helpers.Commons (screenHeight, safeMarginTop, convertUTCtoISC)
+import Engineering.Helpers.Commons (screenHeight, safeMarginTop, convertUTCtoISC, safeMarginTopWithDefault)
 import Engineering.Helpers.Suggestions(getMessageFromKey, chatSuggestion)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Function.Uncurried (runFn1)
@@ -57,17 +57,15 @@ chatHeaderView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effe
 chatHeaderView config push =
   linearLayout
   [ orientation VERTICAL
-  , height $ V 80
+  , height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ MarginTop $ if os == "IOS" then safeMarginTop else 0
   , visibility $ boolToVisibility $ config.showHeader 
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity CENTER_VERTICAL
       , orientation HORIZONTAL
-      , padding (PaddingHorizontal 8 16)
-      , margin (Margin 0 16 0 16)
+      , padding (Padding 8 (safeMarginTopWithDefault 16) 16 16)
       ][ linearLayout
          [ height $ V 40
          , width $ V 40
@@ -147,7 +145,7 @@ headerActionView config push =
     , clickable (config.enableCall)
     , background Color.grey700
     , stroke $ "1,"<> Color.grey900
-    , cornerRadius 32.0
+    , cornerRadius if os == "IOS" then 20.0 else 32.0
     , margin $ MarginRight 8
     , onClick push (const $ Call)
     ][ imageView
@@ -166,7 +164,7 @@ headerActionView config push =
     , orientation HORIZONTAL
     , background Color.blue600
     , stroke $ "1,"<> Color.blue900
-    , cornerRadius 32.0
+    , cornerRadius if os == "IOS" then 20.0 else 32.0
     , onClick push (const $ Navigate)
     ][ imageView
        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_navigation_blue"

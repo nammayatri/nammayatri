@@ -33,7 +33,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, not, ($), (/), (==), (<>), (<<<), (&&), (||), (<), (/=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, progressBar, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, progressBar, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, progressBarColor)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
@@ -52,6 +52,7 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , afterRender push (const AfterRender)
+      , padding $ PaddingTop EHC.safeMarginTop
       ][  headerLayout state push
         , linearLayout
           [ width MATCH_PARENT
@@ -72,9 +73,9 @@ view push state =
               , height WRAP_CONTENT
               , gravity CENTER
               ][  progressBar
-                  [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , stroke Color.grey900
+                  [ width $ V 28
+                  , height $ V 28
+                  , progressBarColor Color.white900
                   , visibility if state.verificationStatus == InProgress then VISIBLE else GONE
                   ]
                 , textView
@@ -177,31 +178,32 @@ profilePictureLayout state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     ][ linearLayout
-        [ width WRAP_CONTENT
+        [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
         , layoutGravity "center"
         ][ frameLayout
-            [ width WRAP_CONTENT
+            [ width MATCH_PARENT
             , height MATCH_PARENT
             , margin (MarginTop 70)
             , layoutGravity "center"
+            , gravity CENTER
             ][ linearLayout
                 [ width $ V 350
-                , afterRender push (const AfterRender)
+                , afterRender push $ const AfterRender
                 , height $ V 250
-                , margin (MarginTop 2)
+                , margin $ MarginTop 2
                 , layoutGravity "center"
                 , gravity CENTER_HORIZONTAL
-                , id (EHC.getNewIDWithTag "ValidateProfileImage")
+                , id $ EHC.getNewIDWithTag "ValidateProfileImage"
                 ][]
-                ,imageView
+                ,linearLayout
                 [ width $ V 354
                 , height $ V 255
                 , layoutGravity "center"
                 , cornerRadius 4.0
                 , stroke $ if state.verificationStatus /= Failure then ("4,"<> Color.darkGreen) else ("4,"<> Color.red)
-                ]
+                ][]
             ]
         ]
     ]
@@ -212,11 +214,11 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = getString if state.verificationStatus == None then CONFIRM_AND_UPLOAD else RETAKE_PHOTO
-      , color = Color.yellow900
       }
       , margin = Margin 18 0 25 10
       , cornerRadius = 8.0
-      , background = Color.black900
       , height = V 60
+      , id = "ValidateDocumentModalStatePB"
+      , enableLoader = JB.getBtnLoader "ValidateDocumentModalStatePB"
       }
   in primaryButtonConfig'

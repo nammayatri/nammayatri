@@ -4,7 +4,7 @@ import JBridge (shareTextMessage, minimizeApp, firebaseLogEvent, hideKeyboardOnN
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($))
 import PrestoDOM (Eval, update, continue, exit)
-import PrestoDOM.Types.Core (class Loggable)
+import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types 
 import Effect.Unsafe (unsafePerformEffect)
@@ -30,6 +30,7 @@ import Services.API
 import Effect.Uncurried (runEffectFn4)
 import Debug (spy)
 import Screens.Benefits.BenefitsScreen.Transformer (buildLmsModuleRes)
+import PrestoDOM.List (ListItem)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -42,7 +43,7 @@ instance loggableAction :: Loggable Action where
         trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "back_icon"
         trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
       GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "forward_icon"
-    ShowQRCode -> pure unit
+    ShowQRCode _ -> pure unit
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
       trackAppActionClick appId (getScreen REFERRAL_SCREEN) "bottom_nav_bar" "on_navigate"
       trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
@@ -54,7 +55,7 @@ instance loggableAction :: Loggable Action where
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "primary_button_action" "no_action"
     ReferredDriversAPIResponseAction val -> pure unit
     ChangeTab tab -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "change_tab" (show tab)
-    ShowReferedInfo referralInfoPopType -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "change_tab" (show referralInfoPopType)
+    ShowReferedInfo referralInfoPopType _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "change_tab" (show referralInfoPopType)
     GoToLeaderBoard -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "change_tab" "leaderboard"
     UpdateDriverPerformance _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "referral_screen_response_action" "referral_screen_response_action"
     UpdateLeaderBoard _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "referral_screen_leaderboard_rank_action_action" "referral_screen_leaderboard_rank_action_action"
@@ -62,19 +63,20 @@ instance loggableAction :: Loggable Action where
     OpenModule _->  trackAppActionClick appId (getScreen REFERRAL_SCREEN) "go_to_module" "go_to_lms_video_screen"
     UpdateModuleList _ ->  trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list" "update_module_list"
     UpdateModuleListErrorOccurred -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list_error_occurred" "update_module_list"
-    ShareQRLink -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "render_qr_link"
+    ShareQRLink _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "render_qr_link"
+    _ -> defaultPerformLog action appId
 
 data Action = BackPressed
             | AfterRender
             | GenericHeaderActionController GenericHeader.Action
-            | ShowQRCode
-            | ShareQRLink
+            | ShowQRCode Int
+            | ShareQRLink Int
             | BottomNavBarAction BottomNavBar.Action
             | LearnMore
             | PrimaryButtonActionController BenefitsScreenState PrimaryButton.Action
             | ReferredDriversAPIResponseAction Int
             | ChangeTab DriverReferralType
-            | ShowReferedInfo ReferralInfoPopType
+            | ShowReferedInfo ReferralInfoPopType Int
             | GoToLeaderBoard
             | UpdateDriverPerformance GetPerformanceRes
             | UpdateLeaderBoard LeaderBoardRes
@@ -82,6 +84,9 @@ data Action = BackPressed
             | OpenModule LmsModuleRes
             | UpdateModuleList LmsGetModuleRes
             | UpdateModuleListErrorOccurred
+            | SetCarouselItem ListItem
+            | BannerChanged String
+            | BannerStateChanged String
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -100,16 +105,18 @@ eval BackPressed state =
     continue state{props{referralInfoPopType = NO_REFERRAL_POPUP}}
   else exit $ GoToHomeScreen state
 
+eval (SetCarouselItem item) state = continue state {data{carouselItem = Just item}}
+
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
 
-eval ShowQRCode state = do
+eval (ShowQRCode _) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_app_qr_code_click"
   continue state {props {showDriverReferralQRCode = true}}
 
-eval ShareQRLink state = do
+eval (ShareQRLink _) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_share_referral_code_click"
   let title = getString $ SHARE_NAMMA_YATRI "SHARE_NAMMA_YATRI"
-  let message = (getString SHARE_NAMMA_YATRI_MESSAGE) <> title <> " " <> (getString NOW) <> "! \n" <> (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) <> (getString BE_OPEN_CHOOSE_OPEN) 
+  let message = (getString $ SHARE_NAMMA_YATRI_MESSAGE "SHARE_NAMMA_YATRI_MESSAGE") <> title <> " " <> (getString NOW) <> "! \n" <> (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) <> (getString BE_OPEN_CHOOSE_OPEN) 
   _ <- pure $ shareTextMessage title message
   continue state
 
@@ -153,7 +160,7 @@ eval (ChangeTab tab) state = do
       pure $ RenderQRCode
     ]
 
-eval (ShowReferedInfo referralInfoPopType) state = 
+eval (ShowReferedInfo referralInfoPopType _ ) state = 
   continue state {props {referralInfoPopType = referralInfoPopType}}
 
 eval GoToLeaderBoard state = do
@@ -165,6 +172,8 @@ eval (OpenModule selectedModule) state = updateAndExit state { props{selectedMod
 eval (UpdateModuleList modules) state = continue state {data {moduleList = buildLmsModuleRes modules}, props {showShimmer = false}}
 
 eval UpdateModuleListErrorOccurred state = continue state {props {showShimmer = false}}
+
+eval (BannerChanged item) state = continue state{props{driverReferralType = if item == "0" then CUSTOMER else DRIVER}}
 
 eval _ state = update state
 

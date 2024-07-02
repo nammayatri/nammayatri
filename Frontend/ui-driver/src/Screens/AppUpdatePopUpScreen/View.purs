@@ -210,7 +210,6 @@ updateRequiredView push state =
                 , stroke ("1," <> Color.textSecondary)
                 , cornerRadius 10.0
                 , alpha 0.6
-                -- , visibility GONE
                 ][
                     textView $
                     [ width WRAP_CONTENT

@@ -11,6 +11,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
+import Engineering.Helpers.Commons as EHC
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (-), bind, void, pure, unit, discard, negate, (/=)) 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Gradient(..) ,Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport, relativeLayout, shimmerFrameLayout, gradient)
@@ -83,7 +84,7 @@ view push state =
           , onBackPressed push $ const BackPressed
           , afterRender push $ const AfterRender
           , background Color.white900
-          , padding $ PaddingBottom 24
+          , padding $ PaddingBottom $ EHC.safeMarginBottomWithDefault 24
           ]
           $ [ headerLayout push state
             , scrollView
@@ -116,7 +117,7 @@ acCheckForDriversView push state =
 
     (API.AirConditionedTier airConditionedData) = MB.fromMaybe defaultAirConditionedData state.data.airConditioned
 
-    backgroundColor = if airConditionedData.isWorking then Color.blue800 else Color.black600
+    backgroundColor = if airConditionedData.isWorking then state.data.config.bookingPreferencesConfig.primaryToggleBackground else Color.black600
 
     align = if airConditionedData.isWorking then RIGHT else LEFT
 
@@ -148,13 +149,13 @@ acCheckForDriversView push state =
             , height WRAP_CONTENT
             , onClick push $ const $ ShowACVideoPopup
             , gravity CENTER_VERTICAL
-            ][  textView
+            ][  textView $
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , color Color.black800
                 , text $ getString AC_CHECK_TITILE
                 , margin $ MarginRight 7
-                ]
+                ] <> FontStyle.subHeading1 TypoGraphy
               , imageView
                 [ width $ V 32
                 , height $ V 32
@@ -196,14 +197,14 @@ acCheckForDriversView push state =
               ]
             ]
           ]
-      , textView
+      , textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , visibility $ MP.boolToVisibility $ MB.isJust airConditionedData.restrictionMessage
           , color messageColor
           , padding $ if callSupportVisibility then Padding 0 0 0 0 else PaddingBottom 12
           , text $ fromMaybe "" airConditionedData.restrictionMessage
-          ]
+          ] <> FontStyle.tags TypoGraphy
       , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -266,7 +267,7 @@ downgradeVehicleView push state =
             , color Color.black700
             , margin $ MarginBottom 16
             , text $ getString RIDE_TYPE_SELECT
-            ]
+            ] <> FontStyle.body1 TypoGraphy
       , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -362,7 +363,7 @@ serviceTierItem state push service enabled opacity index =
             , onClick push $ const $ ToggleRidePreference service
             , gravity RIGHT
             ]
-            [ toggleView push service.isSelected service.isDefault service ]
+            [ toggleView push state service.isSelected service.isDefault service ]
         ]
     ]
 
@@ -387,17 +388,17 @@ intercityPreferenceView push state = do
     item :: ST.RidePreference
     item = defaultRidePreferenceOption {name = "Intercity", isSelected = fromMaybe false state.props.canSwitchToIntercity, serviceTierType = API.INTERCITY}
 
-toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
-toggleView push enabled default service =
+toggleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
+toggleView push state enabled default service =
   let
-    backgroundColor = if enabled && not service.isUsageRestricted then Color.blue800 else Color.black600
+    backgroundColor = if enabled && not service.isUsageRestricted then state.data.config.bookingPreferencesConfig.primaryToggleBackground else Color.black600
 
     align = if enabled && not service.isUsageRestricted then RIGHT else LEFT
   in
     linearLayout
       [ width $ V 40
       , height $ V 22
-      , cornerRadius 100.0
+      , cornerRadius 11.0
       , alpha if default then 0.5 else 1.0
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
@@ -406,7 +407,7 @@ toggleView push enabled default service =
       , clickable $ not default
       ]
       [ linearLayout
-          [ width MATCH_PARENT
+          [ width $ V 40
           , height WRAP_CONTENT
           , gravity align
           ]
@@ -414,7 +415,7 @@ toggleView push enabled default service =
               [ width $ V 16
               , height $ V 16
               , background Color.white900
-              , cornerRadius 100.0
+              , cornerRadius 8.0
               , gravity CENTER_VERTICAL
               , margin (MarginHorizontal 2 2)
               ]
@@ -454,6 +455,7 @@ vehicleDetailsView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScre
 vehicleDetailsView push state =
   let
     vehicleViewLabel = if DS.null state.data.vehicleName then (getVariantRideType state.data.vehicleType) else state.data.vehicleName
+    isBridgeApp = DS.contains (DS.Pattern "Bridge") (HU.appName false)  
   in
     linearLayout
       [ width MATCH_PARENT
@@ -471,8 +473,8 @@ vehicleDetailsView push state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , orientation VERTICAL
-          , cornerRadius 6.0
-          , background Color.golden
+          , cornerRadius state.data.config.bookingPreferencesConfig.vehicleNumberRadius
+          , background state.data.config.bookingPreferencesConfig.vehicleNumberBackground
           , padding $ Padding 3 3 3 3
           ]
           [ textView
@@ -480,11 +482,10 @@ vehicleDetailsView push state =
                 , height MATCH_PARENT
                 , padding $ Padding 5 3 5 3
                 , text state.data.vehicleNumber
-                , color Color.black800
+                , color Color.black900
                 , gravity CENTER
                 , cornerRadius 3.0
-                , stroke $ "2," <> Color.black800
-                ]
+                ] <> if isBridgeApp then [] else [stroke $ "2," <> Color.black800]
               <> FontStyle.body8 TypoGraphy
           ]
       ]
@@ -527,29 +528,25 @@ headerLayout push state =
     ]
     [ linearLayout
         [ width MATCH_PARENT
-        , height MATCH_PARENT
+        , height WRAP_CONTENT
         , orientation HORIZONTAL
-        , layoutGravity "center_vertical"
-        , padding $ PaddingVertical 10 10
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 10 (EHC.safeMarginTopWithDefault 13) 10 13
         ]
         [ imageView
             [ width $ V 30
             , height $ V 30
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-            , gravity CENTER_VERTICAL
             , onClick push $ const BackPressed
-            , padding $ Padding 2 2 2 2
-            , margin $ MarginLeft 5
+            , rippleColor Color.rippleShade
             ]
         , textView
             $ [ width WRAP_CONTENT
-              , height MATCH_PARENT
+              , height WRAP_CONTENT
               , text $ getString BOOKING_OPTIONS
-              , margin $ MarginLeft 20
-              , color Color.black
-              , weight 1.0
-              , gravity CENTER_VERTICAL
-              , alpha 0.8
+              , margin $ MarginLeft 10
+              , padding $ PaddingBottom 2
+              , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
         ]
@@ -593,7 +590,7 @@ rateCardBannerView push state =
   , gravity CENTER
   , cornerRadius 8.0
   , rippleColor Color.rippleShade
-  , gradient (Linear 90.0 [Colors.darkGradientBlue, Color.lightGradientBlue])
+  , gradient gradientColors
   , onClick push $ const $ RateCardBannerClick
   , visibility $ MP.boolToVisibility state.props.rateCardLoaded
   ][  relativeLayout
@@ -640,6 +637,7 @@ rateCardBannerView push state =
     ]
   ]
   where peakTime = state.props.peakTime
-        bgColor = if peakTime then Color.green900 else Color.blue800
+        bgColor = if peakTime then Color.green900 else state.data.config.bookingPreferencesConfig.primaryToggleBackground
         cornerRad = if peakTime then 8.0 else 24.0
         txt = if peakTime then "↑  Peak" else CP.getCurrency CS.appConfig
+        gradientColors = (Linear 90.0 state.data.config.primaryGradientColor)

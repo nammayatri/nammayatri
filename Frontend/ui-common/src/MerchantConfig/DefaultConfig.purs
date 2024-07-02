@@ -1,13 +1,22 @@
 module Common.DefaultConfig where
 
 import Common.Types.Config
+import Common.Types.App
 
 defaultColors :: Colors
 defaultColors = {
     black800 : "#454545"
   , black900 : "#2C2F3A"
+  , green700 : "#268C6E"
   , red : "#E55454"
   }
+
+countryCode ::  CountryCodeObj
+countryCode = {
+        countryName : "India" 
+      , countryCode  : "+91" 
+      , countryShortCode : "IN"
+      }
 
 defaultAppData :: AppDatas
 defaultAppData =  {

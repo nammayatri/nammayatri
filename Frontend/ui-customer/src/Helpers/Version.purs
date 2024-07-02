@@ -39,6 +39,7 @@ import Services.Backend as Remote
 import Services.API (UpdateProfileReq(..))
 import Data.Lens ((^.))
 import Accessor (_minor, _major, _maintenance)
+import Effect.Uncurried 
 
 type IosVersion = {
   majorUpdateIndex :: Int,
@@ -99,8 +100,8 @@ appUpdatedFlow payload = do
   fl <- UI.handleAppUpdatePopUp
   case fl of
     UpdateNow -> do 
-      liftFlowBT showSplash
-      liftFlowBT reboot
+      liftFlowBT $ runEffectFn1 showSplash ""
+      liftFlowBT $ runEffectFn1 reboot ""
     Later -> pure unit
 
 updateVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit

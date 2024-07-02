@@ -22,6 +22,7 @@ import Font.Style (Style(..))
 import Data.Maybe(Maybe(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), LetterSpacing(..), Accessiblity(..))
 import Common.Types.App
+import ConfigProvider
 
 data Action = TextChanged String String | FocusChanged Boolean
 
@@ -99,7 +100,9 @@ type ImageConfig =
   }
 
 config :: Config
-config = {
+config = 
+  let config = getAppConfig appConfig
+  in {
     height : V 54
   , width : MATCH_PARENT
   , margin : (Margin 10 0 10 15)
@@ -166,7 +169,7 @@ config = {
     width : WRAP_CONTENT
   , height : MATCH_PARENT
   , gravity : CENTER
-  , text : "+91"
+  , text : config.defaultCountryCodeConfig.countryCode
   , textStyle : ParagraphText
   , color : Color.black800
   , padding : Padding 0 0 0 0

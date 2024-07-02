@@ -1,7 +1,7 @@
 module Components.RateCard.Utils where
 
 import Prelude
-import Common.Types.App (EstimateFares(..), FareList(..), Price(..), BreakupList)
+import Common.Types.App (EstimateFares(..), FareList(..), Price(..), BreakupList, Currency(..))
 import Data.Maybe (fromMaybe, isJust, Maybe(..), maybe)
 import Data.Array as DA
 import Mobility.Prelude as MP
@@ -33,12 +33,13 @@ fetchSpecificFare fareBreakup fareType =
     maybe dummyPriceEntity getPriceEntity fare
   where
     getPriceEntity item = item ^. EHA._priceWithCurrency
-    dummyPriceEntity = { amount: 0.0, currency: "INR" }
+    dummyPriceEntity = { amount: 0.0, currency: INR }
 
 priceToBeDisplayed :: Price -> String
 priceToBeDisplayed price = case price.currency of
-  "INR" -> "₹" <> value
-  _ -> price.currency <> show value
+  INR -> "₹" <> value
+  USD -> "$" <> value
+  _ -> show price.currency <> show value
   where
     value = EHU.getFixedTwoDecimals price.amount
 

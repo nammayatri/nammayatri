@@ -68,10 +68,22 @@ instance showVehicalTypes :: Show VehicalTypes where
 
 
 
-data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK
-  | TRACKING_CALLBACK | SEARCH_REQUEST | CONFIRM_REQUEST | UPCOMING_CASE
+data NotificationType
+  = REGISTRATION_APPROVED
+  | SEARCH_CALLBACK
+  | CONFIRM_CALLBACK
+  | TRACKING_CALLBACK
+  | SEARCH_REQUEST
+  | CONFIRM_REQUEST
+  | UPCOMING_CASE
+  | DRIVER_REACHED
+  | CANCELLED_PRODUCT
+  | DRIVER_ASSIGNMENT
+  | RIDE_REQUESTED
+  | TRIP_STARTED
 
 derive instance genericNotificationType :: Generic NotificationType _
+instance showNotificationType :: Show NotificationType where show = genericShow
 instance decodeNotificationType :: Decode NotificationType where decode = defaultEnumDecode
 instance encodeNotificationType :: Encode NotificationType where encode = defaultEnumEncode
 
@@ -129,10 +141,15 @@ newtype Payload = Payload
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
+  , fragmentViewGroups :: Maybe FragmentViewGroup
   }
 
 newtype QueryParam = QueryParam {
   option :: Maybe String
+}
+
+newtype FragmentViewGroup = FragmentViewGroup {
+  main :: Maybe String
 }
 
 newtype DeeplinkOptions = DeeplinkOptions {
@@ -145,6 +162,11 @@ newtype LocationData = LocationData {
   , lon :: Number
   , name :: Maybe String
 }
+
+derive instance newFragmentViewGroup :: Newtype FragmentViewGroup _
+derive instance genericFragmentViewGroup :: Generic FragmentViewGroup _
+instance decodeFragmentViewGroup :: Decode FragmentViewGroup where decode = defaultDecode
+instance encodeFragmentViewGroup :: Encode FragmentViewGroup where encode = defaultEncode
 
 derive instance newPayload :: Newtype Payload _
 derive instance genericPayload :: Generic Payload _
@@ -552,7 +574,7 @@ instance decodeProviderType :: Decode ProviderType where decode = defaultEnumDec
 
 type Price = {
     amount :: Number
-  , currency :: String
+  , currency :: Currency
 }
 
 type WaitingTimeInfo = {
@@ -575,8 +597,14 @@ type RentalBookingConfig = {
   , extraTimeFare :: String
 }
 
+data Currency = INR | USD | EUR
 
-
+derive instance genericCurrency :: Generic Currency _
+instance standardEncodeCurrency :: StandardEncode Currency where standardEncode _ = standardEncode {}
+instance showCurrency :: Show Currency where show = genericShow
+instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+instance encodeCurrency  :: Encode Currency where encode = defaultEnumEncode
+instance eqCurrency :: Eq Currency where eq = genericEq
 
 data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues
 derive instance genericCustomerIssueTypes :: Generic CustomerIssueTypes _
@@ -639,3 +667,10 @@ type RateCard =
     waitingTimeInfo :: WaitingTimeInfo,
     serviceTierName :: Maybe String
   }
+data VehicleCategory = AutoCategory | CarCategory | UnKnown
+
+derive instance genericVehicleCategory :: Generic VehicleCategory _
+instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
+instance showVehicleCategory :: Show VehicleCategory where show = genericShow
+instance decodeVehicleCategory :: Decode VehicleCategory where decode = defaultEnumDecode
+instance encodeVehicleCategory :: Encode VehicleCategory where encode = defaultEnumEncode

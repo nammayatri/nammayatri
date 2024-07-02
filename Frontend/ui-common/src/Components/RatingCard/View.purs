@@ -76,15 +76,15 @@ currentRatingView push state =
   , clickable true
   , alignParentBottom "true,-1"
   , onClick push $ const NoAction
-  ][  scrollView 
-      [ height if os == "IOS" then (V 500) else WRAP_CONTENT
+  ][  (if state.showFeedbackPill then scrollView else linearLayout) 
+      [ height if (os == "IOS") && state.showFeedbackPill then (V 500) else WRAP_CONTENT
       , width MATCH_PARENT
       , scrollBarY false 
       ][ linearLayout 
          [ height WRAP_CONTENT
          , width MATCH_PARENT
          , orientation VERTICAL
-         , padding $ PaddingBottom if os == "IOS" then 40 else 0
+         , padding $ PaddingBottom if (os == "IOS") && state.showFeedbackPill then 40 else 0
          ][ starRatingView state push
           , if state.showFeedbackPill then feedbackPillView state push else dummyTextView
           , editTextView state push

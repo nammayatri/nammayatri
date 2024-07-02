@@ -24,6 +24,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Common.Types.App
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
+import ConfigProvider
 
 data Action = TextChanged String String | FocusChanged Boolean | CountryCodeSelected CountryCodeObj | ShowOptions | CloseOptions 
 
@@ -112,6 +113,7 @@ type CountryCodeOptionConfig  =
   , stroke :: String
   , cornerRadius :: Number 
   , margin :: Margin
+  , padding :: Padding
   }
 type CountryCodeOptionElementConfig = 
   { height :: Length
@@ -135,7 +137,9 @@ type CountryCodeCaptureConfig =
   }
 
 config :: Config
-config = {
+config = let
+  config = getAppConfig appConfig
+  in {
     height : V 54
   , width : MATCH_PARENT
   , margin : (Margin 10 0 10 15)
@@ -202,13 +206,13 @@ config = {
       width : WRAP_CONTENT
     , height : MATCH_PARENT
     , gravity : CENTER
-    , text : "+91"
+    , text : config.defaultCountryCodeConfig.countryCode
     , textStyle : ParagraphText
     , color : Color.black800
     , padding : Padding 0 0 0 0
     , margin : Margin 10 0 0 0
     , countryCodeOptionExpanded : false
-    , countryCode : "+91"
+    , countryCode : config.defaultCountryCodeConfig.countryCode
   }
   , countryCodeOptionConfig : {
       height : WRAP_CONTENT
@@ -217,6 +221,7 @@ config = {
     , stroke : "1,"<>Color.grey900
     , cornerRadius : 8.0 
     , margin : MarginTop 10
+    , padding : PaddingHorizontal 16 8
   }
   , countryCodeOptionElementConfig :{ 
     height : WRAP_CONTENT

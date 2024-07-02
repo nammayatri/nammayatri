@@ -16,25 +16,26 @@ android {
         consumerProguardFiles "consumer-rules.pro"
     }
 
+    Properties properties = new Properties()
+    if (project.file("local.properties").exists()) {
+        properties.load(project.file("local.properties").newDataInputStream())
+    }
     buildTypes {
         release {
             minifyEnabled true
+            resValue "string", "oauth_client_id", properties.getProperty("oauth_client_id","")
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         qa {
             minifyEnabled false
+            resValue "string", "oauth_client_id", properties.getProperty("oauth_client_id","")
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
             minifyEnabled false
+            resValue "string", "oauth_client_id", properties.getProperty("oauth_client_id","")
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
-    }
-
-
-    Properties properties = new Properties()
-    if (rootProject.file("local.properties").exists()) {
-        properties.load(rootProject.file("local.properties").newDataInputStream())
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

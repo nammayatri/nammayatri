@@ -74,6 +74,9 @@ import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
+import Screens.DeleteAccountScreen.ScreenData as DeleteAccountScreenData
+import Screens.CameraScreen.ScreenData as CameraScreenData
+import Screens.EarningsScreen.ScreenData as EarningsScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -88,7 +91,7 @@ newtype GlobalState = GlobalState {
   , uploadDrivingLicenseScreen :: UploadDrivingLicenseState
   , registrationScreen :: RegistrationScreenState
   , uploadAdhaarScreen :: UploadAdhaarScreenState
-  , addVehicleDetailsScreen :: AddVehicleDetailsScreenState
+  , addVehicleDetailsScreen :: AddVehicleDetailsScreenData.AddVehicleDetailsScreenState
   , tripDetailsScreen :: TripDetailsScreenState
   , rideHistoryScreen :: RideHistoryScreenState
   , rideSelectionScreen :: RideSelectionScreenState
@@ -127,6 +130,9 @@ newtype GlobalState = GlobalState {
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
   , rateCardScreen :: RateCardScreenState
+  , deleteAccountScreen :: DeleteAccountScreenData.State
+  , cameraScreen :: CameraScreenState
+  , earningsScreenV2 :: EarningsScreenData.State
   }
 
 defaultGlobalState :: GlobalState
@@ -180,6 +186,9 @@ defaultGlobalState = GlobalState {
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
+, deleteAccountScreen : DeleteAccountScreenData.initData
+, cameraScreen : CameraScreenData.initData
+, earningsScreenV2 : EarningsScreenData.initialState
 }
 
 defaultGlobalProps :: GlobalProps
@@ -204,7 +213,7 @@ data ScreenType =
   | UploadDrivingLicenseScreenStateType (UploadDrivingLicenseState -> UploadDrivingLicenseState)
   | RegisterScreenStateType (RegistrationScreenState -> RegistrationScreenState)
   | UploadAdhaarScreenStateType (UploadAdhaarScreenState -> UploadAdhaarScreenState)
-  | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState)
+  | AddVehicleDetailsScreenStateType (AddVehicleDetailsScreenData.AddVehicleDetailsScreenState -> AddVehicleDetailsScreenData.AddVehicleDetailsScreenState)
   | DriverDetailsScreenStateType (DriverDetailsScreenState -> DriverDetailsScreenState)
   | VehicleDetailsScreenStateType (VehicleDetailsScreenState -> VehicleDetailsScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
@@ -243,10 +252,14 @@ data ScreenType =
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
+  | CameraScreenStateType (CameraScreenState -> CameraScreenState)
+  | EarningsScreenV2 (EarningsScreenData.State -> EarningsScreenData.State)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
 data DOCUMENT_DETAILS_SCREEN_OUTPUT = GO_TO_HOME_FROM_DOCUMENT_DETAILS DocumentDetailsScreenState
+
+data DeleteAccountScreenOutput = SubmitRequest | Back 
 
 data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN 
                             | PROFILE_SCREEN
@@ -293,6 +306,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_EDIT_BANK_DETAIL_SCREEN
                                     | ON_BOARDING_FLOW
                                     | DOCUMENTS_FLOW
+                                    | DELETE_ACCOUNT_FLOW
                                     | NOTIFICATIONS_SCREEN
                                     | GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
                                     | GO_TO_BOOKING_OPTIONS_SCREEN DriverProfileScreenState
@@ -338,8 +352,8 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
-data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
-                                | UPLOAD_VEHICLE_DETAILS RegistrationScreenState (Array String)
+data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState StepProgress
+                                | UPLOAD_VEHICLE_DETAILS RegistrationScreenState StepProgress
                                 | PERMISSION_SCREEN RegistrationScreenState
                                 | LOGOUT_FROM_REGISTERATION_SCREEN
                                 | GO_TO_ONBOARD_SUBSCRIPTION
@@ -348,6 +362,8 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | REFERRAL_CODE_SUBMIT RegistrationScreenState
                                 | DOCUMENT_CAPTURE_FLOW RegistrationScreenState RegisterationStep
                                 | SELECT_LANG_FROM_REGISTRATION
+                                | SSN_FROM_REGISTRATION RegistrationScreenState
+                                | PROFILE_DETAILS_FROM_REGISTRATION RegistrationScreenState
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState 
                                           | VALIDATE_DATA_API UploadDrivingLicenseState 
@@ -361,18 +377,18 @@ data UPLOAD_ADHAAR_CARD_SCREENOUTPUT = GO_TO_ADD_BANK_DETAILS
 
 data BANK_DETAILS_SCREENOUTPUT = GO_TO_ADD_VEHICLE_DETAILS
 
-data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenState 
-                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenState 
-                                        | REFER_API_CALL AddVehicleDetailsScreenState 
+data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
+                                        | VALIDATE_RC_DATA_API_CALL AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
+                                        | REFER_API_CALL AddVehicleDetailsScreenData.AddVehicleDetailsScreenState 
                                         | APPLICATION_STATUS_SCREEN 
                                         | LOGOUT_USER 
                                         | ONBOARDING_FLOW 
                                         | DRIVER_PROFILE_SCREEN 
-                                        | RC_ACTIVATION AddVehicleDetailsScreenState
+                                        | RC_ACTIVATION AddVehicleDetailsScreenData.AddVehicleDetailsScreenState
                                         | CHANGE_VEHICLE_FROM_RC_SCREEN
                                         | CHANGE_LANG_FROM_RC_SCREEN
 
-data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN
+data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN | GO_TO_RIDE_HISTORY_SCREEN
 
 data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN | LOGOUT_FROM_PERMISSIONS_SCREEN | GO_TO_REGISTERATION_SCREEN PermissionsScreenState
 
@@ -430,7 +446,9 @@ data APPLICATION_STATUS_SCREENOUTPUT = GO_TO_HOME_FROM_APPLICATION_STATUS
                                       | RESEND_OTP_TO_ALTERNATE_NUMBER ApplicationStatusScreenState
 data EDIT_BANK_DETAILS_SCREEN_OUTPUT = EDIT_BANK_DETAILS
 data EDIT_AADHAAR_DETAILS_SCREEN_OUTPUT = EDIT_AADHAAR_DETAILS
-data ENTER_MOBILE_NUMBER_SCREEN_OUTPUT = GO_TO_ENTER_OTP EnterMobileNumberScreenState
+data ENTER_MOBILE_NUMBER_SCREEN_OUTPUT
+  = GO_TO_ENTER_OTP EnterMobileNumberScreenState
+  | GO_TO_DRIVER_INFO EnterMobileNumberScreenState
 data ENTER_OTP_SCREEN_OUTPUT = RETRY EnterOTPScreenState | DRIVER_INFO_API_CALL EnterOTPScreenState
 data NO_INTERNET_SCREEN_OUTPUT = REFRESH_INTERNET | TURN_ON_GPS | CHECK_INTERNET
 data POPUP_SCREEN_OUTPUT = POPUP_REQUEST_RIDE String Number
@@ -530,5 +548,15 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | LOGOUT_FROM_DOC_CAPTURE 
                                       | CHANGE_LANG_FROM_DOCUMENT_CAPTURE
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
+                                      | UPDATE_SSN DocumentCaptureScreenState
+                                      | UPDATE_SOCIAL_PROFILE DocumentCaptureScreenState
+                                      | OPEN_CAMERA_FOR_PROFILE_PIC DocumentCaptureScreenState
 
 data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD_API RateCardScreenState Int
+data CAMERA_SCREEN_OUTPUT = OPEN_CAMERA
+
+
+data FlowState = EarningsV2Daily
+  | EarningsV2Weekly
+  | EarningsV2RideHistory
+  | EarningsV2PayoutHistory

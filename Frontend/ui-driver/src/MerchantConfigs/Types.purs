@@ -1,6 +1,7 @@
 module MerchantConfig.Types where
 
 import Common.Types.Config
+import Foreign.Object (Object)
 
 type AppConfig = AppConfigDriver CommonAppConfig
 
@@ -8,6 +9,8 @@ type AppConfigDriver a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    primaryGradientColor :: Array String,
+    secondaryBackground :: String,
     languageList :: Array Language,
     popupBackground :: String,
     rideCompletedCardConfig :: RideCompletedCardConfig, 
@@ -40,7 +43,13 @@ type AppConfigDriver a =
     coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
     chooseCity :: ChooseCityScreenConfig,
-    safetyRide :: SafetyRideConfig
+    safetyRide :: SafetyRideConfig,
+    welcomeScreen :: WelcomeScreen,
+    enterMobileNumberScreen :: EnterMobileNumberScreen,
+    vehicleRegisterationScreen :: VehicleRegisterationScreen,
+    bookingPreferencesConfig :: BookingPreferencesConfig,
+    benefitsScreen :: BenefitsScreen,
+    lmsVideoScreen :: LmsVideoScreen
     | a
   } 
 
@@ -58,8 +67,15 @@ type Language =  {
   subtitle :: String
  }
 
+type BookingPreferencesConfig = {
+  primaryToggleBackground :: String,
+  vehicleNumberBackground :: String,
+  vehicleNumberRadius :: Number
+}
+
 type LeaderBoard = {
-  isMaskedName :: Boolean
+  isMaskedName :: Boolean,
+  enable :: Boolean
 }
 
 type ProfileVerificationConfig = {
@@ -89,7 +105,13 @@ type SubscriptionConfig =  {
   earnAmountInADay :: Int,
   showFeeBreakup :: Boolean,
   noChargesTillDate :: String,
-  lowestFeesFromDate :: String
+  lowestFeesFromDate :: String,
+  showLottieSubscriptionScreen :: Boolean,
+  backgroundGradient :: Array String,
+  showUPIAutopay :: Boolean,
+  promoTextColor :: String,
+  showHowThisWorks :: Boolean,
+  benefitsBgColor :: String
  }
 
 type SubscriptionOfferBannerConfig = {
@@ -116,18 +138,24 @@ type GradientConfig = {
 
 type RideActionModelConfig = {
   showVehicleVariant :: Boolean
+, mapBackground :: String
 }
 
 type RideCompletedCardConfig = {
   showSavedCommission :: Boolean,
-  lottieQRAnim :: Boolean
+  lottieQRAnim :: Boolean,
+  topCardGradient :: Array String,
+  bottomBackground :: String
 }
 
 type ProfileConfig = {
   bookingOptionMenuForTaxi :: Boolean,
   showBookingOption :: Boolean
 , checkRCStatusForBookingOption :: Boolean
-
+, enableMultipleRC :: Boolean
+, backgroundGradient :: Array String
+, background :: String
+, settingsBtnColor :: String
 }
 
 type GotoConfig = {
@@ -141,7 +169,8 @@ type BottomNavConfig = {
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
   notifications :: BottomNavItemConfig,
-  driverEarnings :: BottomNavItemConfig
+  driverEarnings :: BottomNavItemConfig,
+  activeColor :: String
 }
 
 type BottomNavItemConfig = {
@@ -168,7 +197,9 @@ type FlowConfig = {
 
 type ChooseCityFlowConfig = {
   runFlow :: Boolean,
-  defCity :: String
+  defCity :: String,
+  directAuth :: Boolean,
+  useDefault :: Boolean
 }
 
 type PermissionsConfig = {
@@ -178,7 +209,10 @@ type PermissionsConfig = {
 
 type HomeScreenConfig = {
   specialRideOtpView :: Boolean,
-  showGenderBanner :: Boolean
+  showGenderBanner :: Boolean,
+  statusPills :: Object PillButtonState,
+  offlineBtnColor :: String,
+  statsBackground :: String
 }
 
 type Features = {
@@ -262,4 +296,38 @@ type ChooseCityScreenConfig = {
 type SafetyRideConfig = {
   startTime :: String
 , endTime :: String
+}
+
+type WelcomeScreen = {
+  background :: String
+}
+
+type EnterMobileNumberScreen = {
+  headerBackground :: String,
+  emailAuth :: Boolean
+}
+
+type PillButtonState = {
+  background :: String,
+  imageUrl :: String,
+  textColor :: String
+}
+
+type VehicleRegisterationScreen = {
+  collectVehicleDetails :: Boolean
+}
+
+type BenefitsScreen = {
+  learnAndEarnItem :: {
+    statusBackground :: String
+  },
+  referralCardBackground :: {
+    customer :: String
+  , driver :: String
+  }
+}
+
+type LmsVideoScreen = {
+  titleBackground :: String,
+  enableQuiz :: Boolean
 }

@@ -21,6 +21,7 @@ import static in.juspay.mobility.common.Utils.captureImage;
 import static in.juspay.mobility.common.Utils.drawableToBitmap;
 import static in.juspay.mobility.common.Utils.encodeImageToBase64;
 import static in.juspay.mobility.common.Utils.getCircleOptionsFromJSON;
+import static in.juspay.mobility.common.Utils.startCropImageActivity;
 import static android.graphics.Color.GREEN;
 import static android.graphics.Color.green;
 import static android.graphics.Color.rgb;
@@ -304,13 +305,13 @@ public class MobilityCommonBridge extends HyperBridge {
     protected HashMap<String, GroundOverlay> groundOverlays = new HashMap<>();
 
 
-    private  MediaPlayer mediaPlayer = null;
+    private MediaPlayer mediaPlayer = null;
     private android.media.MediaPlayer audioPlayer;
     protected AppType app;
     protected MapUpdate mapUpdate = new MapUpdate();
     private MapRemoteConfig mapRemoteConfig;
     protected LocateOnMapManager locateOnMapManager = null;
-    private static Hashtable<String, Hashtable <String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
+    private Hashtable<String, Hashtable <String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
 
     protected enum AppType {
         CONSUMER, PROVIDER
@@ -603,6 +604,7 @@ public class MobilityCommonBridge extends HyperBridge {
         storeDashboardCallBack = null;
         userPositionMarker = null;
         storeImageUploadCallBack = null;
+        storeCallBackOpenCamera = null;
         if(mediaPlayer != null) mediaPlayer.audioPlayers = new ArrayList<>();
         Utils.deRegisterCallback(callBack);
     }
@@ -660,7 +662,10 @@ public class MobilityCommonBridge extends HyperBridge {
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION}, BACKGROUND_LOCATION_REQ_CODE);
         }
     }
-
+    @JavascriptInterface
+    public void storeCallBackOpenCamera (String callback){
+        storeCallBackOpenCamera = callback;
+    }
     @JavascriptInterface
     public void requestLocation() {
         if (!isLocationPermissionEnabled()) {
@@ -3665,17 +3670,21 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                 });
 
-                switch (label) {
-                    case DatePickerLabels.MINIMUM_EIGHTEEN_YEARS:
-                        Calendar maxDateDOB = Calendar.getInstance();
-                        maxDateDOB.set(Calendar.DAY_OF_MONTH, mDate);
-                        maxDateDOB.set(Calendar.MONTH, mMonth);
-                        maxDateDOB.set(Calendar.YEAR, mYear - 18);
-                        datePickerDialog.getDatePicker().setMaxDate(maxDateDOB.getTimeInMillis());
-                        break;
-                    case DatePickerLabels.MAXIMUM_PRESENT_DATE:
-                        datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
-                        break;
+                if (label.equals(DatePickerLabels.MINIMUM_EIGHTEEN_YEARS)) {
+                    Calendar maxDateDOB = Calendar.getInstance();
+                    maxDateDOB.set(Calendar.DAY_OF_MONTH, mDate);
+                    maxDateDOB.set(Calendar.MONTH, mMonth);
+                    maxDateDOB.set(Calendar.YEAR, mYear - 18);
+                    datePickerDialog.getDatePicker().setMaxDate(maxDateDOB.getTimeInMillis());
+                } else if (label.equals(DatePickerLabels.MAXIMUM_PRESENT_DATE)) {
+                    datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
+                } else if (label.contains(DatePickerLabels.MINIMUM_YEARS)) {
+                    String[] strArray = label.split(",");
+                    Calendar maxDateDOB = Calendar.getInstance();
+                    maxDateDOB.set(Calendar.DAY_OF_MONTH, mDate);
+                    maxDateDOB.set(Calendar.MONTH, mMonth);
+                    maxDateDOB.set(Calendar.YEAR, mYear - Integer.parseInt(strArray[1]));
+                    datePickerDialog.getDatePicker().setMaxDate(maxDateDOB.getTimeInMillis());
                 }
                 if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
                     datePickerDialog.setTitle(bridgeComponents.getContext().getString(R.string.select_date));
@@ -4352,6 +4361,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private static class DatePickerLabels {
         private static final String MAXIMUM_PRESENT_DATE = "MAXIMUM_PRESENT_DATE";
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
+        private static final String MINIMUM_YEARS = "MINIMUM_YEARS";
         private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
         private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
     }
@@ -4809,7 +4819,10 @@ public class MobilityCommonBridge extends HyperBridge {
         }
 
     }
-
+    @JavascriptInterface
+    public void cropImage(String imageUri, boolean isCircularCrop) {
+        startCropImageActivity(Uri.parse(imageUri), bridgeComponents.getActivity(), isCircularCrop);
+    }
     //region Audio Recorder
 
     // Deprecated on 16-Feb-24
@@ -4864,8 +4877,13 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void uploadFile() {
+        uploadFile(false);
+    }
+
+    @JavascriptInterface
+    public void uploadFile(boolean showCircularFrame) {
         if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        mediaPlayer.uploadFile();
+        mediaPlayer.uploadFile(storeCallBackOpenCamera, showCircularFrame);
     }
 
     @JavascriptInterface
@@ -4928,6 +4946,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
                 break;
             case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
+                if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
                 if (resultCode == RESULT_OK) {
                     new Thread(() -> encodeImageToBase64(data, bridgeComponents.getContext(), null)).start();
                 } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
@@ -4950,18 +4969,7 @@ public class MobilityCommonBridge extends HyperBridge {
             case IMAGE_PERMISSION_REQ_CODE:
                 Context context = bridgeComponents.getContext();
                 if ((ActivityCompat.checkSelfPermission(context, CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-                    if (bridgeComponents.getActivity() != null) {
-                        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        KeyValueStore.write(context, bridgeComponents.getSdkName(), context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp);
-                        Uri photoFile = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", new File(context.getFilesDir(), "IMG_" + timeStamp + ".jpg"));
-                        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
-                        Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
-                        chooseFromFile.setType("image/*");
-                        Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
-                    }
+                    mediaPlayer.uploadFile(storeCallBackOpenCamera,mediaPlayer.getShowCircularFrame());
                 } else {
                     Toast.makeText(context, context.getString(R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
                 }

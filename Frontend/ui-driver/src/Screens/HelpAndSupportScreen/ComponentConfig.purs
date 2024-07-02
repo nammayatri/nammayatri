@@ -42,7 +42,14 @@ issueListState state = let
         headerConfig {
           headTextConfig {
             text = if state.data.issueListType == ST.ONGOING_ISSUES_MODAL then ( getString ONGOING_ISSUE) <>(" : ") <> (toStringJSON (length state.data.ongoingIssueList)) else getString RESOLVED_ISSUE
+          , padding = PaddingBottom 2
+          },
+          imageConfig {
+            padding = PaddingTop 0,
+            height = V 30,
+            width  = V 30
           }
+        , padding = Padding 10 (if EHC.safeMarginTop == 0 then 13 else 0) 10 13
         },
         issueViewConfig {
           thirdTextConfig {

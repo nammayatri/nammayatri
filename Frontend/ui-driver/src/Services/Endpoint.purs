@@ -96,7 +96,7 @@ callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
 driverRegistrationStatus :: String -> String
-driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status"
+driverRegistrationStatus isPrefill = (getBaseUrl "") <> "/driver/register/status" <> if isPrefill == "" then "" else "?providePrefillDetails=" <>  isPrefill
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -349,3 +349,21 @@ getDriverRateCard mbServiceTier mbDist =
         Just serviceTier, Nothing -> "?vehicleServiceTier=" <> serviceTier
         Nothing, Just dist -> "?distance=" <> show (dist*1000)
         _ , _ -> ""
+
+getMakeList :: String -> String
+getMakeList _ = (getBaseUrl "") <> "/vehicleMakes"
+
+getModelList :: String -> String
+getModelList _ = (getBaseUrl "") <> "/vehicleModels"
+
+getVehicleDetails :: String -> String
+getVehicleDetails _ = (getBaseUrl "") <> "/vehicleDetails"
+
+getSSN :: String -> String
+getSSN _ = (getBaseUrl "") <> "/driver/register/ssn"
+
+socialLogin :: String -> String
+socialLogin _ = (getBaseUrl "") <> "/social/login"
+
+updateSocialProfile :: String -> String
+updateSocialProfile _ = (getBaseUrl "") <> "/social/update/profile"

@@ -64,13 +64,23 @@ instance decodeAPIResponse :: (Decode a, Decode b) => Decode (APIResponse a b) w
 -- Trigger OTP API request, response types
 
 newtype TriggerOTPReq = TriggerOTPReq {
-  mobileNumber :: String,
+  mobileNumber :: Maybe String,
   mobileCountryCode :: String,
   merchantId :: String,
   merchantOperatingCity :: Maybe String,
   registrationLat :: Maybe Number,
-  registrationLon :: Maybe Number
+  registrationLon :: Maybe Number,
+  email  :: Maybe String,
+  identifierType :: Maybe String
 }
+
+data OAuthProvider = Google | IOS
+
+derive instance genericOAuthProvider :: Generic OAuthProvider _
+instance standardEncodeOAuthProvider :: StandardEncode OAuthProvider where standardEncode =  defaultEnumEncode
+instance showOAuthProvider :: Show OAuthProvider where show = genericShow
+instance decodeOAuthProvider :: Decode OAuthProvider where decode = defaultEnumDecode
+instance encodeOAuthProvider :: Encode OAuthProvider where encode = defaultEnumEncode
 
 newtype TriggerOTPResp = TriggerOTPResp {
   authId :: String,
@@ -119,7 +129,7 @@ newtype User = User
     , middleName :: Maybe String
     , id :: String
     , lastName :: Maybe String
-    , maskedMobileNumber :: String
+    , maskedMobileNumber :: Maybe String
     , role :: String
     }
 
@@ -712,6 +722,13 @@ newtype LocationInfo = LocationInfo
         lon :: Number
       }
 
+data DistanceUnit = Meter | Mile | Yard | Kilometer
+
+derive instance genericDistanceUnit :: Generic DistanceUnit _
+instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standardEncode body = defaultEnumEncode body
+instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
+instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
+
 data BookingTypes = CURRENT | ADVANCED
 
 derive instance genericBookingTypesMethods :: Generic BookingTypes _
@@ -797,10 +814,45 @@ newtype GetRidesSummaryListResp = GetRidesSummaryListResp
 newtype RidesSummary = RidesSummary
   {
     earnings :: Int,
+    -- earningsWithCurrency :: PriceAPIEntity,
     rideDistance :: Int,
     rideDate :: String,
     noOfRides :: Int
+    -- rideDistanceWithUnit :: Distance
   }
+
+-- data Currency = INR | USD | EUR
+
+-- newtype PriceAPIEntity = PriceAPIEntity {
+--   amount :: Number,
+--   currency :: Currency
+-- }
+
+-- data DistanceUnit = Meter | Mile | Yard | Kilometer
+
+-- newtype Distance = Distance {
+--   unit :: DistanceUnit,
+--   value :: Int
+-- }
+
+-- derive instance genericDistanceUnit :: Generic DistanceUnit _
+-- instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standardEncode body = defaultEnumEncode body
+-- instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
+-- instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
+
+-- derive instance genericDistance :: Generic Distance _
+-- derive instance newtypePriceAPIEntity :: Newtype PriceAPIEntity _
+-- instance standardEncodeDistance :: StandardEncode Distance where standardEncode (Distance body) = standardEncode body
+-- instance decodeDistance :: Decode Distance where decode = defaultDecode
+
+-- derive instance genericCurrency :: Generic Currency _
+-- instance standardEncodeCurrency :: StandardEncode Currency where standardEncode body = defaultEnumEncode body
+-- instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+
+-- derive instance genericPriceAPIEntity :: Generic PriceAPIEntity _
+-- derive instance newtypePriceAPIEntity :: Newtype PriceAPIEntity _
+-- instance standardEncodePriceAPIEntity :: StandardEncode PriceAPIEntity where standardEncode (PriceAPIEntity body) = standardEncode body
+-- instance decodePriceAPIEntity :: Decode PriceAPIEntity where decode = defaultDecode
 
 instance makeGetRidesSummarListReq :: RestEndpoint GetRidesSummaryListReq GetRidesSummaryListResp where
     makeRequest reqBody@(GetRidesSummaryListReq dateList) headers = defaultMakeRequest POST (EP.getRidesSummaryList dateList) headers reqBody Nothing
@@ -1031,7 +1083,17 @@ newtype DriverRCReq = DriverRCReq {
   imageId :: String,
   dateOfRegistration :: Maybe String,
   vehicleCategory :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  vehicleDetails :: Maybe DriverVehicleDetails
+}
+
+data DriverVehicleDetails = DriverVehicleDetails {
+  colour :: Maybe String,
+  vehicleColour :: Maybe String,
+  vehicleDoors :: Maybe Int,
+  vehicleManufacturer :: Maybe String,
+  vehicleModel :: Maybe String,
+  vehicleSeatBelts :: Maybe Int
 }
 
 newtype DriverRCResp = DriverRCResp ApiSuccessResult
@@ -1054,6 +1116,12 @@ instance standardEncodeDriverRCResp :: StandardEncode DriverRCResp where standar
 instance showDriverRCResp :: Show DriverRCResp where show = genericShow
 instance decodeDriverRCResp:: Decode DriverRCResp where decode = defaultDecode
 instance encodeDriverRCResp  :: Encode DriverRCResp where encode = defaultEncode
+
+derive instance genericDriverVehicleDetails :: Generic DriverVehicleDetails _
+instance standardEncodeDriverVehicleDetails :: StandardEncode DriverVehicleDetails where standardEncode (DriverVehicleDetails body) = standardEncode body
+instance showDriverVehicleDetails :: Show DriverVehicleDetails where show = genericShow
+instance decodeDriverVehicleDetails:: Decode DriverVehicleDetails where decode = defaultDecode
+instance encodeDriverVehicleDetails  :: Encode DriverVehicleDetails where encode = defaultEncode
 
 
 -- registerDriverDL API request, response types
@@ -1121,7 +1189,7 @@ instance encodeValidateImageRes  :: Encode ValidateImageRes where encode = defau
 
 
 -- DriverRegistrationStatus API request, response types
-data DriverRegistrationStatusReq = DriverRegistrationStatusReq { }
+data DriverRegistrationStatusReq = DriverRegistrationStatusReq String
 
 newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
@@ -1130,7 +1198,35 @@ newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     , driverDocuments :: Array DocumentStatusItem
     , vehicleDocuments :: Array VehicleDocumentItem
     , enabled :: Maybe Boolean
+    , vehicleRegistrationCertificateDetails :: Maybe (Array RCDetails)
+    , driverLicenseDetails :: Maybe (Array DLDetails)
     }
+
+newtype RCDetails = RCDetails {
+  airConditioned :: Maybe Boolean,
+  createdAt :: String,
+  dateOfRegistration :: Maybe String,
+  imageId :: String,
+  operatingCity :: String,
+  vehicleCategory :: Maybe String,
+  vehicleColor :: Maybe String,
+  vehicleDoors :: Maybe Int,
+  vehicleManufacturer :: Maybe String,
+  vehicleModel :: Maybe String,
+  vehicleModelYear :: Maybe Int,
+  vehicleRegistrationCertNumber :: String,
+  vehicleSeatBelts :: Maybe Int
+}
+
+newtype DLDetails = DLDetails {
+  classOfVehicles :: Array Boolean,
+  createdAt :: String,
+  driverDateOfBirth :: Maybe String,
+  imageId1 :: String,
+  operatingCity :: String,
+  driverLicenseNumber :: String,
+  dateOfIssue :: Maybe String
+}
 
 newtype VehicleDocumentItem = VehicleDocumentItem
   { registrationNo :: String,
@@ -1149,7 +1245,7 @@ newtype DocumentStatusItem = DocumentStatusItem
   }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq DriverRegistrationStatusResp where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.driverRegistrationStatus "") headers reqBody Nothing
+    makeRequest reqBody@(DriverRegistrationStatusReq isPrefill) headers = defaultMakeRequest GET (EP.driverRegistrationStatus isPrefill) headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 
@@ -1158,6 +1254,20 @@ instance standardEncodeVehicleDocumentItem :: StandardEncode VehicleDocumentItem
 instance showVehicleDocumentItem :: Show VehicleDocumentItem where show = genericShow
 instance decodeVehicleDocumentItem :: Decode VehicleDocumentItem where decode = defaultDecode
 instance encodeVehicleDocumentItem  :: Encode VehicleDocumentItem where encode = defaultEncode
+
+derive instance genericRCDetails :: Generic RCDetails _
+derive instance newtypeRCDetails :: Newtype RCDetails _
+instance standardEncodeRCDetails :: StandardEncode RCDetails where standardEncode (RCDetails res) = standardEncode res
+instance showRCDetails :: Show RCDetails where show = genericShow
+instance decodeRCDetails :: Decode RCDetails where decode = defaultDecode
+instance encodeRCDetails  :: Encode RCDetails where encode = defaultEncode
+
+derive instance genericDLDetails :: Generic DLDetails _
+instance standardEncodeDLDetails :: StandardEncode DLDetails where standardEncode (DLDetails res) = standardEncode res
+derive instance newtypeDLDetails:: Newtype DLDetails _
+instance showDLDetails :: Show DLDetails where show = genericShow
+instance decodeDLDetails :: Decode DLDetails where decode = defaultDecode
+instance encodeDLDetails  :: Encode DLDetails where encode = defaultEncode
 
 derive instance genericDocumentStatusItem :: Generic DocumentStatusItem _
 instance standardEncodeDocumentStatusItem :: StandardEncode DocumentStatusItem where standardEncode (DocumentStatusItem res) = standardEncode res
@@ -4740,15 +4850,179 @@ data FarePolicyHour
 derive instance genericFarePolicyHour :: Generic FarePolicyHour _
 instance showFarePolicyHour :: Show FarePolicyHour where show = genericShow
 instance decodeFarePolicyHour :: Decode FarePolicyHour
-  where decode body = case unsafeFromForeign body of
-                  "Peak"       -> except $ Right Peak
-                  "NonPeak"    -> except $ Right NonPeak
-                  "Night"      -> except $ Right Night
-                  _            -> except $ Right NonPeak
+  where decode = defaultEnumDecode
 instance encodeFarePolicyHour :: Encode FarePolicyHour where encode = defaultEnumEncode
 instance eqFarePolicyHour :: Eq FarePolicyHour where eq = genericEq
-instance standardEncodeFarePolicyHour :: StandardEncode FarePolicyHour
-  where
-    standardEncode Peak = standardEncode "Peak"
-    standardEncode NonPeak = standardEncode "NonPeak"
-    standardEncode Night = standardEncode "Night"
+instance standardEncodeFarePolicyHour :: StandardEncode FarePolicyHour where standardEncode = defaultEnumEncode
+
+data GetMakeListReq = GetMakeListReq
+
+data GetMakeListResp = GetMakeListResp {
+  makes :: Array String
+}
+
+
+instance makeGetMakeList :: RestEndpoint GetMakeListReq GetMakeListResp where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.getMakeList "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericGetMakeListReq :: Generic GetMakeListReq _
+instance standardEncodeGetMakeList :: StandardEncode GetMakeListReq where standardEncode res = standardEncode {}
+instance showGetMakeList :: Show GetMakeListReq where show = genericShow
+instance decodeGetMakeList :: Decode GetMakeListReq where decode = defaultDecode
+instance encodeGetMakeList  :: Encode GetMakeListReq where encode = defaultEncode
+
+derive instance genericGetMakeListResp :: Generic GetMakeListResp _
+instance standardEncodeGetMakeListResp :: StandardEncode GetMakeListResp where standardEncode (GetMakeListResp res) = standardEncode res
+instance showGetMakeListResp :: Show GetMakeListResp where show = genericShow
+instance decodeGetMakeListResp :: Decode GetMakeListResp where decode = defaultDecode
+instance encodeGetMakeListResp  :: Encode GetMakeListResp where encode = defaultEncode
+
+
+data GetModelListReq = GetModelListReq {
+  make :: String
+}
+
+data GetModelListResp = GetModelListResp {
+  models :: Array String
+}
+
+
+instance makeGetModelListReq :: RestEndpoint GetModelListReq GetModelListResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.getModelList "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericGetModelListReq :: Generic GetModelListReq _
+instance standardEncodeGetModelListReq :: StandardEncode GetModelListReq where standardEncode (GetModelListReq req) = standardEncode req
+instance showGetModelListReq :: Show GetModelListReq where show = genericShow
+instance decodeGetModelListReq :: Decode GetModelListReq  where decode = defaultDecode
+instance encodeGetModelListReq  :: Encode GetModelListReq where encode = defaultEncode
+
+derive instance genericGetModelListResp :: Generic GetModelListResp _
+instance standardEncodeGetModelListResp :: StandardEncode GetModelListResp where standardEncode (GetModelListResp res) = standardEncode res
+instance showGetModelListResp :: Show GetModelListResp where show = genericShow
+instance decodeGetModelListResp :: Decode GetModelListResp where decode = defaultDecode
+instance encodeGetModelListResp  :: Encode GetModelListResp where encode = defaultEncode
+
+
+data GetVehicleDetailsReq = GetVehicleDetailsReq {
+  make :: String,
+  model :: String
+}
+
+data VehicleDetailsResp = VehicleDetailsResp {
+  model :: String
+, acAvailable :: Boolean
+, id :: String
+, make :: String
+}
+
+
+instance makeGetVehicleDetailsReq :: RestEndpoint GetVehicleDetailsReq VehicleDetailsResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.getVehicleDetails "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericGetVehicleDetailsReq :: Generic GetVehicleDetailsReq _
+instance standardEncodeGetVehicleDetailsReq :: StandardEncode GetVehicleDetailsReq where standardEncode (GetVehicleDetailsReq req) = standardEncode req
+instance showGetVehicleDetailsReq :: Show GetVehicleDetailsReq where show = genericShow
+instance decodeGetVehicleDetailsReq :: Decode GetVehicleDetailsReq  where decode = defaultDecode
+instance encodeGetVehicleDetailsReq  :: Encode GetVehicleDetailsReq where encode = defaultEncode
+
+derive instance genericVehicleDetailsResp :: Generic VehicleDetailsResp _
+instance standardEncodeVehicleDetailsResp :: StandardEncode VehicleDetailsResp where standardEncode (VehicleDetailsResp res) = standardEncode res
+instance showVehicleDetailsResp :: Show VehicleDetailsResp where show = genericShow
+instance decodeVehicleDetailsResp :: Decode VehicleDetailsResp where decode = defaultDecode
+instance encodeVehicleDetailsResp  :: Encode VehicleDetailsResp where encode = defaultEncode
+
+
+data UpdateSSNReq = UpdateSSNReq {
+  ssn :: String
+}
+
+data UpdateSSNResp = UpdateSSNResp {
+  result :: String
+}
+
+
+instance makeUpdateSSNReq :: RestEndpoint UpdateSSNReq UpdateSSNResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.getSSN "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest = standardEncode
+
+derive instance genericUpdateSSNReq :: Generic UpdateSSNReq _
+instance standardEncodeUpdateSSNReq :: StandardEncode UpdateSSNReq where standardEncode (UpdateSSNReq req) = standardEncode req
+instance showUpdateSSNReq :: Show UpdateSSNReq where show = genericShow
+instance decodeUpdateSSNReq :: Decode UpdateSSNReq  where decode = defaultDecode
+instance encodeUpdateSSNReq  :: Encode UpdateSSNReq where encode = defaultEncode
+
+derive instance genericUpdateSSNResp :: Generic UpdateSSNResp _
+instance standardEncodeUpdateSSNResp :: StandardEncode UpdateSSNResp where standardEncode (UpdateSSNResp res) = standardEncode res
+instance showUpdateSSNResp :: Show UpdateSSNResp where show = genericShow
+instance decodeUpdateSSNResp :: Decode UpdateSSNResp where decode = defaultDecode
+instance encodeUpdateSSNResp  :: Encode UpdateSSNResp where encode = defaultEncode
+
+data SocialLoginReq = SocialLoginReq 
+  { email  :: Maybe String,
+    merchantId :: String,
+    merchantOperatingCity :: Maybe String,
+    name :: Maybe String,
+    oauthProvider :: Maybe OAuthProvider,
+    registrationLat :: Maybe Number,
+    registrationLon :: Maybe Number,
+    tokenId  :: Maybe String
+  }
+
+data SocialLoginRes = SocialLoginRes
+  { token :: String
+  }
+
+instance makeSocialLoginReq :: RestEndpoint SocialLoginReq SocialLoginRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.socialLogin "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericSocialLoginReq :: Generic SocialLoginReq _
+instance standardEncodeSocialLoginReq :: StandardEncode SocialLoginReq where standardEncode (SocialLoginReq req) = standardEncode req
+instance showSocialLoginReq :: Show SocialLoginReq where show = genericShow
+instance decodeSocialLoginReq :: Decode SocialLoginReq where decode = defaultDecode
+instance encodeSocialLoginReq :: Encode SocialLoginReq where encode = defaultEncode
+
+derive instance genericSocialLoginRes :: Generic SocialLoginRes _
+instance standardEncodeSocialLoginRes :: StandardEncode SocialLoginRes where standardEncode (SocialLoginRes res) = standardEncode res
+instance showSocialLoginRes :: Show SocialLoginRes where show = genericShow
+instance decodeSocialLoginRes :: Decode SocialLoginRes where decode = defaultDecode
+instance encodeSocialLoginRes :: Encode SocialLoginRes where encode = defaultEncode
+
+
+data SocialProfileUpdate
+  = SocialProfileUpdate
+    { email :: String
+    , firstName :: Maybe String
+    , lastName :: Maybe String
+    , mobileCountryCode :: Maybe String
+    , mobileNumber :: Maybe String
+    }
+
+data SocialProfileUpdateRes
+  = SocialProfileUpdateRes
+
+
+instance makeSocialProfileUpdate :: RestEndpoint SocialProfileUpdate SocialProfileUpdateRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.updateSocialProfile "") headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericSocialProfileUpdate :: Generic SocialProfileUpdate _
+instance standardEncodeSocialProfileUpdate :: StandardEncode SocialProfileUpdate where standardEncode (SocialProfileUpdate req) = standardEncode req
+instance showSocialProfileUpdate :: Show SocialProfileUpdate where show = genericShow
+instance decodeSocialProfileUpdate :: Decode SocialProfileUpdate where decode = defaultDecode
+instance encodeSocialProfileUpdate :: Encode SocialProfileUpdate where encode = defaultEncode
+
+derive instance genericSocialProfileUpdateRes :: Generic SocialProfileUpdateRes _
+instance standardEncodeSocialProfileUpdateRes :: StandardEncode SocialProfileUpdateRes where standardEncode _ = standardEncode {}
+instance showSocialProfileUpdateRes :: Show SocialProfileUpdateRes where show = genericShow
+instance decodeSocialProfileUpdateRes :: Decode SocialProfileUpdateRes where decode = defaultDecode
+instance encodeSocialProfileUpdateRes :: Encode SocialProfileUpdateRes where encode = defaultEncode

@@ -1,0 +1,223 @@
+{
+    "searchRequestsForDriver": [
+        {
+            "airConditioned": null,
+            "bapLogo": "https://bitbucket.juspay.net/projects/PICAF/repos/assetstore/browse/beckn/nammayatri/nammayatricommon/images/ny_ic_launcher.png",
+            "bapName": "NAMMA_YATRI",
+            "baseFare": 234,
+            "customerCancellationDues": 0,
+            "customerExtraFee": 30,
+            "disabilityTag": null,
+            "distance": 10743,
+            "distanceToPickup": 0,
+            "driverLatLong": {
+                "lat": 12.930110706495803,
+                "lon": 77.67968326807022
+            },
+            "driverMaxExtraFee": 20,
+            "driverMinExtraFee": 0,
+            "driverPickUpCharges": 10,
+            "duration": 1780,
+            "durationToPickup": 0,
+            "fromLocation": {
+                "area": "Devarai Besanahalli, Kariyammana Agrahara, 13/3B",
+                "areaCode": null,
+                "building": "13/3B",
+                "city": "Bengaluru",
+                "country": "India",
+                "createdAt": "2024-05-02T13:21:19.539039195Z",
+                "door": "13/3B",
+                "full_address": "13/3B, 13/3B, Kariyammana Agrahara, Devarai Besanahalli, Bengaluru, Karnataka 560103, India",
+                "id": "f0033b47-86a9-466f-808d-d44e1baa2395",
+                "lat": 12.930115,
+                "lon": 77.67968,
+                "state": "Karnataka 560103",
+                "street": "Kariyammana Agrahara",
+                "updatedAt": "2024-05-02T13:21:19.539039195Z"
+            },
+            "goHomeRequestId": null,
+            "isTranslated": false,
+            "isValueAddNP": true,
+            "keepHiddenForSeconds": 0,
+            "newFromLocation": {
+                "address": {
+                    "area": "Devarai Besanahalli, Kariyammana Agrahara, 13/3B",
+                    "areaCode": null,
+                    "building": "13/3B",
+                    "city": "Bengaluru",
+                    "country": "India",
+                    "door": "13/3B",
+                    "fullAddress": "13/3B, 13/3B, Kariyammana Agrahara, Devarai Besanahalli, Bengaluru, Karnataka 560103, India",
+                    "state": "Karnataka 560103",
+                    "street": "Kariyammana Agrahara"
+                },
+                "createdAt": "2024-05-02T13:21:19.539039195Z",
+                "id": "f0033b47-86a9-466f-808d-d44e1baa2395",
+                "lat": 12.930115,
+                "lon": 77.67968,
+                "updatedAt": "2024-05-02T13:21:19.539039195Z"
+            },
+            "newToLocation": {
+                "address": {
+                    "area": "Electronic City, Phase 2, Maruthi Layout",
+                    "areaCode": null,
+                    "building": "Maruthi Layout",
+                    "city": "Bengaluru",
+                    "country": "India",
+                    "door": "Ddd viswarup guruji upline house",
+                    "fullAddress": "Ddd viswarup guruji upline house, Maruthi Layout, Phase 2, Electronic City, Bengaluru, Karnataka, India",
+                    "state": "Karnataka",
+                    "street": "Phase 2"
+                },
+                "createdAt": "2024-05-02T13:21:19.539090376Z",
+                "id": "bc20d3a9-5756-4cb9-928b-4c84acb9d969",
+                "lat": 12.89241,
+                "lon": 77.627684,
+                "updatedAt": "2024-05-02T13:21:19.539090376Z"
+            },
+            "pickupZone": false,
+            "requestedVehicleVariant": "AUTO_RICKSHAW",
+            "rideRequestPopupDelayDuration": 0,
+            "searchRequestId": "5eff642e-189d-47f6-a2e8-c60718456df1",
+            "searchRequestValidTill": "2024-05-02T13:22:50.387954Z",
+            "searchTryId": "5eff642e-189d-47f6-a2e8-c60718456df1",
+            "specialLocationTag": null,
+            "specialZoneExtraTip": null,
+            "startTime": "2024-05-02T13:21:19.537848Z",
+            "toLocation": {
+                "area": "Electronic City, Phase 2, Maruthi Layout",
+                "areaCode": null,
+                "building": "Maruthi Layout",
+                "city": "Bengaluru",
+                "country": "India",
+                "createdAt": "2024-05-02T13:21:19.539090376Z",
+                "door": "Ddd viswarup guruji upline house",
+                "full_address": "Ddd viswarup guruji upline house, Maruthi Layout, Phase 2, Electronic City, Bengaluru, Karnataka, India",
+                "id": "bc20d3a9-5756-4cb9-928b-4c84acb9d969",
+                "lat": 12.89241,
+                "lon": 77.627684,
+                "state": "Karnataka",
+                "street": "Phase 2",
+                "updatedAt": "2024-05-02T13:21:19.539090376Z"
+            },
+            "tollCharges": null,
+            "tripCategory": {
+                "contents": "OneWayOnDemandDynamicOffer",
+                "tag": "OneWay"
+            },
+            "vehicleServiceTier": "Auto"
+        }
+    ]
+}
+
+{
+    "searchRequestsForDriver": [
+        {
+            "airConditioned": null,
+            "bapLogo": "https://bitbucket.juspay.net/projects/PICAF/repos/assetstore/browse/beckn/nammayatri/nammayatricommon/images/ny_ic_launcher.png",
+            "bapName": "NAMMA_YATRI",
+            "baseFare": 234,
+            "customerCancellationDues": 0,
+            "customerExtraFee": 30,
+            "disabilityTag": null,
+            "distance": 10743,
+            "distanceToPickup": 0,
+            "driverLatLong": {
+                "lat": 12.930110706495803,
+                "lon": 77.67968326807022
+            },
+            "driverMaxExtraFee": 20,
+            "driverMinExtraFee": 0,
+            "driverPickUpCharges": 10,
+            "duration": 1780,
+            "durationToPickup": 0,
+            "fromLocation": {
+                "area": "Devarai Besanahalli, Kariyammana Agrahara, 13/3B",
+                "areaCode": null,
+                "building": "13/3B",
+                "city": "Bengaluru",
+                "country": "India",
+                "createdAt": "2024-05-02T13:21:19.539039195Z",
+                "door": "13/3B",
+                "full_address": "13/3B, 13/3B, Kariyammana Agrahara, Devarai Besanahalli, Bengaluru, Karnataka 560103, India",
+                "id": "f0033b47-86a9-466f-808d-d44e1baa2395",
+                "lat": 12.930115,
+                "lon": 77.67968,
+                "state": "Karnataka 560103",
+                "street": "Kariyammana Agrahara",
+                "updatedAt": "2024-05-02T13:21:19.539039195Z"
+            },
+            "goHomeRequestId": null,
+            "isTranslated": false,
+            "isValueAddNP": true,
+            "keepHiddenForSeconds": 0,
+            "newFromLocation": {
+                "address": {
+                    "area": "Devarai Besanahalli, Kariyammana Agrahara, 13/3B",
+                    "areaCode": null,
+                    "building": "13/3B",
+                    "city": "Bengaluru",
+                    "country": "India",
+                    "door": "13/3B",
+                    "fullAddress": "13/3B, 13/3B, Kariyammana Agrahara, Devarai Besanahalli, Bengaluru, Karnataka 560103, India",
+                    "state": "Karnataka 560103",
+                    "street": "Kariyammana Agrahara"
+                },
+                "createdAt": "2024-05-02T13:21:19.539039195Z",
+                "id": "f0033b47-86a9-466f-808d-d44e1baa2395",
+                "lat": 12.930115,
+                "lon": 77.67968,
+                "updatedAt": "2024-05-02T13:21:19.539039195Z"
+            },
+            "newToLocation": {
+                "address": {
+                    "area": "Electronic City, Phase 2, Maruthi Layout",
+                    "areaCode": null,
+                    "building": "Maruthi Layout",
+                    "city": "Bengaluru",
+                    "country": "India",
+                    "door": "Ddd viswarup guruji upline house",
+                    "fullAddress": "Ddd viswarup guruji upline house, Maruthi Layout, Phase 2, Electronic City, Bengaluru, Karnataka, India",
+                    "state": "Karnataka",
+                    "street": "Phase 2"
+                },
+                "createdAt": "2024-05-02T13:21:19.539090376Z",
+                "id": "bc20d3a9-5756-4cb9-928b-4c84acb9d969",
+                "lat": 12.89241,
+                "lon": 77.627684,
+                "updatedAt": "2024-05-02T13:21:19.539090376Z"
+            },
+            "pickupZone": false,
+            "requestedVehicleVariant": "AUTO_RICKSHAW",
+            "rideRequestPopupDelayDuration": 0,
+            "searchRequestId": "5eff642e-189d-47f6-a2e8-c60718456df1",
+            "searchRequestValidTill": "2024-05-02T13:23:20.16987Z",
+            "searchTryId": "5eff642e-189d-47f6-a2e8-c60718456df1",
+            "specialLocationTag": null,
+            "specialZoneExtraTip": null,
+            "startTime": "2024-05-02T13:21:19.537848Z",
+            "toLocation": {
+                "area": "Electronic City, Phase 2, Maruthi Layout",
+                "areaCode": null,
+                "building": "Maruthi Layout",
+                "city": "Bengaluru",
+                "country": "India",
+                "createdAt": "2024-05-02T13:21:19.539090376Z",
+                "door": "Ddd viswarup guruji upline house",
+                "full_address": "Ddd viswarup guruji upline house, Maruthi Layout, Phase 2, Electronic City, Bengaluru, Karnataka, India",
+                "id": "bc20d3a9-5756-4cb9-928b-4c84acb9d969",
+                "lat": 12.89241,
+                "lon": 77.627684,
+                "state": "Karnataka",
+                "street": "Phase 2",
+                "updatedAt": "2024-05-02T13:21:19.539090376Z"
+            },
+            "tollCharges": null,
+            "tripCategory": {
+                "contents": "OneWayOnDemandDynamicOffer",
+                "tag": "OneWay"
+            },
+            "vehicleServiceTier": "Auto"
+        }
+    ]
+}``

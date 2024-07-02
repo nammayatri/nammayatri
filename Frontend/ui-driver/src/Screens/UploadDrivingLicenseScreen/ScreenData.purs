@@ -19,7 +19,7 @@ import Data.Maybe
 
 import Engineering.Helpers.Commons as EHC
 import Foreign.Object (empty)
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import MerchantConfig.DefaultConfig (dummyCityConfig)
 import Screens.Types (UploadDrivingLicenseState)
 import ConfigProvider
 import Screens.Types as ST
@@ -47,6 +47,7 @@ initData = {
       , vehicleCategory : Nothing
       , cityConfig : dummyCityConfig
       , config : getAppConfig appConfig
+      , variantList : []
       },
       props: {
         openRegistrationModal : false
@@ -68,5 +69,8 @@ initData = {
       , menuOptions : false
       , confirmChangeVehicle : false
       , contactSupportModal : ST.HIDE
+      , setDefault : false
+      , previewSampleImage : false
+      , previewImgUrl : ""
       }
     }

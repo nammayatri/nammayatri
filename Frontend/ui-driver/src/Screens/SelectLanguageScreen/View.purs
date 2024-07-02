@@ -37,6 +37,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import PrestoDOM.Animation as PrestoAnim
 import Debug
+import Engineering.Helpers.Commons as EHC
 import Mobility.Prelude(boolToVisibility)
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
@@ -66,6 +67,7 @@ view push state =
       , onBackPressed push (const BackPressed)
       , background Color.white900
       , afterRender push (const AfterRender)
+      , padding $ PaddingBottom EHC.safeMarginBottom
       ][  headerLayout push state
         , menuButtonsView state push
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
@@ -74,44 +76,43 @@ view push state =
 -------------------------------------------------- headerLayout --------------------------
 headerLayout :: (Action -> Effect Unit) -> ST.SelectLanguageScreenState ->  forall w . PrestoDOM (Effect Unit) w
 headerLayout push state = 
- linearLayout
- [ width MATCH_PARENT
- , height WRAP_CONTENT
- , orientation VERTICAL
- ][ linearLayout
+  linearLayout
     [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , orientation HORIZONTAL
-    , layoutGravity "center_vertical"
-    , padding (Padding 5 12 5 12)
-    ][ imageView
-        [ width $ V 40
-        , height $ V 40
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
-        , gravity CENTER_VERTICAL
-        , onClick push (const BackPressed)
-        , padding (Padding 10 10 10 10)
-        , margin (MarginLeft 5)
-        , rippleColor Color.rippleShade
-        , cornerRadius 20.0
-        ]
-      , textView $
-        [ width WRAP_CONTENT
-        , height MATCH_PARENT
-        , text (getString SELECT_LANGUAGE)
-        , margin (MarginLeft 10)
-        , color Color.black
-        , weight 1.0
-        , gravity CENTER_VERTICAL
-        ] <> FontStyle.h3 TypoGraphy
+    , height WRAP_CONTENT
+    , orientation VERTICAL
     ]
-  , linearLayout
-    [ width MATCH_PARENT
-    , height $ V 1 
-    , background Color.black800
-    , alpha 0.1
-    ][]
- ]
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 10 (EHC.safeMarginTopWithDefault 13) 10 13
+        ]
+        [ imageView
+            [ width $ V 30
+            , height $ V 30
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+            , onClick push $ const BackPressed
+            , rippleColor Color.rippleShade
+            , cornerRadius 15.0
+            ]
+        , textView
+            $ [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text (getString SELECT_LANGUAGE)
+              , margin $ MarginLeft 10
+              , padding $ PaddingBottom 2
+              , color Color.black900
+              ]
+            <> FontStyle.h3 TypoGraphy
+        ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height $ V 1
+        , background Color.greyLight
+        ]
+        []
+    ]
 
 ------------------------------ menuButtonsView ------------------------------
 menuButtonsView :: ST.SelectLanguageScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w

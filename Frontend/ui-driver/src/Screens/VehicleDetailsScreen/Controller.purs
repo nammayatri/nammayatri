@@ -102,7 +102,7 @@ eval _ state = update state
 getTitle :: ListOptions -> String
 getTitle listOptions =
   case listOptions of
-    RegistrationNumber -> (getString VEHICLE_REGISTRATION_NUMBER)
+    RegistrationNumber -> getString $ VEHICLE_REGISTRATION_NUMBER "VEHICLE_REGISTRATION_NUMBER"
     VehicleType -> (getString VEHICLE_TYPE)
     VehicleModelName -> (getString VEHICLE_MODEL_NAME)
     VehicleColor -> (getString VEHICLE_COLOUR)

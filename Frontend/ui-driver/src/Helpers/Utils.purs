@@ -22,10 +22,12 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
+import Data.Newtype (class Newtype, unwrap)
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Array as DA
 import Data.String as DS
+import Data.Newtype (class Newtype, unwrap)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
@@ -59,7 +61,7 @@ import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<))
-import Prelude (class Eq, class Show, (<<<))
+import Prelude (class Eq, class Show, (<<<), compare)
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
@@ -110,6 +112,7 @@ import Common.RemoteConfig.Utils (forwardBatchConfigData)
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldl)
+import MerchantConfig.DefaultConfig as DC
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -157,6 +160,7 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
+foreign import startRideRequestMApp :: EffectFn1 String Unit
 
 decodeGeoJson :: String -> Maybe GeoJson
 decodeGeoJson stringGeoJson = 
@@ -417,36 +421,43 @@ getGenderIndex req arr = do
   reqIndex
 
 getMerchantVehicleSize :: Unit -> Int
-getMerchantVehicleSize unit = 
-  case getMerchant FunctionCall of 
-    _ -> 90
+getMerchantVehicleSize unit = 90
 
 getAssetLink :: LazyCheck -> String
-getAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/images/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/driver/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+getAssetLink lazy = getValueFromCache "getAssetLink" (\_ -> getAssetLinkByMerchant)
+  where
+    getAssetLinkByMerchant = 
+      case (getMerchant lazy) of
+        YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/images/"
+        YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/images/"
+        MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/driver/"
+        PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+        MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver/images"
+        _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/images/"
 
 getAssetsBaseUrl :: LazyCheck -> String
-getAssetsBaseUrl lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+getAssetsBaseUrl lazy = getValueFromCache "getAssetsBaseUrl" (\_ -> getAssetsBaseUrlByMerchant)
+  where 
+    getAssetsBaseUrlByMerchant = 
+      case (getMerchant lazy) of
+      YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/driver/"
+      YATRI -> "https://" <> assetDomain <> "/beckn/yatri/driver/"
+      MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/"
+      PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+      MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/driver"
+      _ -> "https://" <> assetDomain <> "/beckn/nammayatri/driver/"
 
 getCommonAssetLink :: LazyCheck -> String
-getCommonAssetLink lazy = case (getMerchant lazy) of
-  NAMMAYATRI -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
-  YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
-  YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
-  MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
-  PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
-  MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+getCommonAssetLink lazy = getValueFromCache "getCommonAssetLink" (\_ -> getCommonAssetLinkByMerchant)
+  where 
+    getCommonAssetLinkByMerchant = 
+      case (getMerchant lazy) of
+        YATRISATHI -> "https://" <> assetDomain <> "/beckn/jatrisaathi/jatrisaathicommon/images/"
+        YATRI -> "https://" <> assetDomain <> "/beckn/yatri/yatricommon/images/"
+        MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/mobilitypaytmcommon/"
+        PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+        MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
+        _ -> "https://" <> assetDomain <> "/beckn/nammayatri/nammayatricommon/images/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName =   
@@ -643,68 +654,7 @@ contactSupportNumber supportType = do
 
 getCityConfig :: Array CityConfig -> String -> CityConfig
 getCityConfig cityConfig cityName = do
-  let dummyCityConfig = {
-                          cityName : "",
-                          mapImage : "",
-                          cityCode : "",
-                          showSubscriptions : false,
-                          enableAdvancedBooking : false,
-                          advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
-                          callDriverInfoPost : false,
-                          cityLat : 0.0,
-                          cityLong : 0.0,
-                          supportNumber : "",
-                          languageKey : "",
-                          enableYatriCoins : false,
-                          showDriverReferral : false,
-                          showCustomerReferral : false,
-                          uploadRCandDL : true,
-                          vehicleNSImg : "",
-                          registration : { 
-                            callSupport : false,
-                            supportWAN : "", 
-                            whatsappSupport : false
-                          },
-                          variantSubscriptionConfig : {
-                            enableVariantBasedSubscription : true,
-                            variantList : ["AutoCategory"],
-                            enableCabsSubscriptionView : false,
-                            staticViewPlans : []
-                          },
-                          showEarningSection: true,
-                          referral : {
-                              domain : ""
-                            , customerAppId : ""
-                            , driverAppId : ""
-                          },
-                          waitingCharges : 1.50,
-                          waitingChargesConfig : {
-                            cab : {
-                              freeSeconds : 300,
-                              perMinCharges : 1.0
-                            },
-                            auto : {
-                              freeSeconds : 180,
-                              perMinCharges : 1.50
-                            }
-                          },
-                          rentalWaitingChargesConfig : {
-                            cab : {
-                              freeSeconds : 180,
-                              perMinCharges : 2.0
-                            },
-                            auto : {
-                              freeSeconds : 180,
-                              perMinCharges : 2.0
-                            }
-                          },
-                          rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
-                          assets :{
-                            auto_image :  "ny_ic_black_yellow_auto_side_view",
-                            onboarding_auto_image : "ny_ic_auto_right_side_yellow"
-                          }
-                        }
-  maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
+  getValueFromCache cityName (\cityName -> maybe DC.dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig)
   where 
    setForwardBatchingData cityConfig' = do
     let (ForwardBatchConfigData forwardBatchRemoteConfig) = forwardBatchConfigData cityName
@@ -966,3 +916,6 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.TAXI_PLUS -> "TAXI_PLUS"
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
+  
+sortListBasedOnCreatedAt :: forall a t. Newtype t (Record (createdAt:: String | a)) => Array t -> Array t
+sortListBasedOnCreatedAt = DA.sortBy (\a b -> compare ((unwrap b).createdAt) ((unwrap a).createdAt))

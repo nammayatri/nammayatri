@@ -28,6 +28,10 @@ initData = {
   data : {
     config : getAppConfig appConfig,
     logField : empty,
+      ytVideo : {
+        videoId : ""
+      , enable : false
+    },
     videosScreenData : {
       quizEnabled : true,
       completed : [],

@@ -49,6 +49,7 @@ import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..),
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
+import ConfigProvider
 
 instance showAction :: Show Action where
   show _ = ""
@@ -135,7 +136,7 @@ eval Refresh state = exit $ RefreshScreen state
 eval (ScrollStateChanged scrollState) state = do
   _ <- case scrollState of
            SCROLL_STATE_FLING ->
-               pure $ setEnabled "2000030" false
+               pure $ setEnabled (getNewIDWithTag "MyRidesSceenSwipeRefreshLayout") false
            _ ->
                pure unit
   continue state
@@ -173,7 +174,7 @@ eval Loader state = exit $ LoaderOutput state{loaderButtonVisibility = false}
 eval (RideHistoryAPIResponseAction rideList) state = do
   let bufferCardDataPrestoList = (rideHistoryListTransformer rideList)
   let filteredRideList = (rideListResponseTransformer rideList)
-  _ <- pure $ setRefreshing "2000030" false
+  _ <- pure $ setRefreshing (getNewIDWithTag "MyRidesSceenSwipeRefreshLayout") false
   let loadBtnDisabled = if(length rideList == 0) then true else false
   continue $ state {shimmerLoader = AnimatedOut, recievedResponse = true,rideList = union(state.rideList) (filteredRideList) ,prestoListArrayItems =  union (state.prestoListArrayItems) (bufferCardDataPrestoList), loadMoreDisabled = loadBtnDisabled}
 
@@ -184,7 +185,7 @@ eval (Scroll value) state = do
   let totalItems = fromMaybe 0 (fromString (fromMaybe "0"((split (Pattern ",")(value))!!2)))
   let canScrollUp = fromMaybe true (strToBool (fromMaybe "true" ((split (Pattern ",")(value))!!3)))
   let loadMoreButton = if (totalItems == (firstIndex + visibleItems) && totalItems /= 0 && totalItems /= visibleItems) then true else false
-  _ <- if canScrollUp then (pure $ setEnabled "2000030" false) else  (pure $ setEnabled "2000030" true)
+  _ <- pure $ setEnabled (getNewIDWithTag "MyRidesSceenSwipeRefreshLayout") (not canScrollUp)
   continue state { loaderButtonVisibility = loadMoreButton}
 
 eval (DatePickerAC (DatePickerModel.OnDateSelect idx item)) state = do
@@ -213,7 +214,7 @@ rideHistoryListTransformer list = (map (\(RidesInfo ride) ->
       {
       date : toPropValue (convertUTCtoISC (ride.createdAt) "D MMM"),
       time : toPropValue (convertUTCtoISC (ride.createdAt )"h:mm A"),
-      total_amount : toPropValue $ fromMaybe ride.estimatedBaseFare ride.computedFare,
+      total_amount : toPropValue $ getCurrency appConfig <> (show $ fromMaybe ride.estimatedBaseFare ride.computedFare), 
       card_visibility : toPropValue "visible",
       shimmer_visibility : toPropValue "gone",
       rideDistance : toPropValue $ (parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2) <> " km Ride" <> case ride.riderName of 

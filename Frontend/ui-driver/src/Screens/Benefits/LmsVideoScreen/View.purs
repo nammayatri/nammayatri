@@ -17,7 +17,7 @@ module Screens.Benefits.LmsVideoScreen.View where
 
 import Prelude
 import Effect (Effect)
-import PrestoDOM (shimmerFrameLayout, Orientation(..), PrestoDOM, Screen, Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), layoutGravity, weight, maxLines, ellipsize, frameLayout, stroke, clickable, onClick, imageWithFallback, cornerRadius, margin, imageView, visibility, color, gravity, relativeLayout, height, width, background, textView, text, padding, linearLayout, orientation, onBackPressed, scrollView)
+import PrestoDOM (shimmerFrameLayout, Orientation(..), PrestoDOM, Screen, Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), onAnimationEnd, layoutGravity, weight, maxLines, ellipsize, frameLayout, stroke, clickable, onClick, imageWithFallback, cornerRadius, margin, imageView, visibility, color, gravity, relativeLayout, height, width, background, textView, text, padding, linearLayout, orientation, onBackPressed, scrollView, id)
 import Screens.Types (LmsVideoScreenState)
 import Screens.Benefits.LmsVideoScreen.Controller (Action(..), eval, ScreenOutput)
 import Debug (spy)
@@ -26,7 +26,7 @@ import Font.Style as FontStyle
 import Common.Types.App
 import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getLanguageTwoLetters)
-import Engineering.Helpers.Commons (screenWidth, flowRunner, liftFlow)
+import Engineering.Helpers.Commons (screenWidth, flowRunner, liftFlow, safeMarginTopWithDefault, safeMarginBottom, getNewIDWithTag, getYoutubeData)
 import Components.GenericHeader as GenericHeader
 import Animation as Anim
 import Data.Array (length, mapWithIndex, null, find)
@@ -48,6 +48,8 @@ import Data.Maybe (Maybe(..), maybe)
 import PrestoDOM.Animation as PrestoAnim
 import Mobility.Prelude (boolToVisibility)
 import Services.Accessor (_name)
+import JBridge as JB
+import Data.Function.Uncurried (runFn5)
 
 screen :: LmsVideoScreenState -> Screen Action LmsVideoScreenState ScreenOutput
 screen initialState =
@@ -74,24 +76,47 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  relativeLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , background Color.white900
-  , onBackPressed push $ const BackPressed
-  , clickable false
-  ][ PrestoAnim.animationSet [Anim.fadeIn true] $ 
-     linearLayout
-     [ width $ MATCH_PARENT
-     , height $ MATCH_PARENT
-     , orientation VERTICAL
-     , background Color.white900
-     ]([ customHeaderView push state
-     ,  separatorView push state
-     ] <> if state.props.showError then [errorView push state]
-          else [videosShimmerView push state,  videosView push state])
-  ]
+  PrestoAnim.animationSet [Anim.fadeIn true] $ 
+    linearLayout
+    [ width $ MATCH_PARENT
+    , height $ MATCH_PARENT
+    , orientation VERTICAL
+    , onBackPressed push $ const BackPressed
+    , background Color.white900
+    , padding $ PaddingBottom safeMarginBottom
+    ][ customHeaderView push state
+    , separatorView push state
+    , errorView push state
+    , videosShimmerView push state
+    , linearLayout 
+      [ weight 1.0
+      , width MATCH_PARENT][mainView push state]
+    ]
 
+
+mainView :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> PrestoDOM (Effect Unit) w
+mainView push state =
+  relativeLayout
+    [ width $ MATCH_PARENT
+    , height $ MATCH_PARENT
+    ]
+    [ videosView push state
+    , PrestoAnim.animationSet [ Anim.fadeIn state.data.ytVideo.enable ]
+        $ linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , background Color.black900
+            , gravity CENTER_VERTICAL
+            , id $ getNewIDWithTag "LMSYoutubeVideoView"
+            , visibility $ boolToVisibility state.data.ytVideo.enable
+            , onAnimationEnd
+                ( \_ -> do
+                    void $ pure $ runFn5 JB.setYoutubePlayer (getYoutubeData { videoId = state.data.ytVideo.videoId, videoType = "PORTRAIT_VIDEO", videoHeight = 1500, showFullScreen = false, showSeekBar = false, hideFullScreenButton = true }) (getNewIDWithTag "LMSYoutubeVideoView") "PAUSED" push YoutubeVideoStatus
+                )
+                (const NoAction)
+            ]
+            []
+    ]
 
 customHeaderView :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> PrestoDOM (Effect Unit) w
 customHeaderView push state =
@@ -102,7 +127,7 @@ customHeaderView push state =
   [ width $ MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ Padding 16 16 16 16
+  , padding $ Padding 16 (safeMarginTopWithDefault 16) 16 16
   ][ linearLayout
      [ width $ MATCH_PARENT
      , height WRAP_CONTENT
@@ -127,7 +152,7 @@ customHeaderView push state =
         [ width $ V sw
         , height $ WRAP_CONTENT
         , orientation HORIZONTAL
-        , gravity CENTER
+        , gravity RIGHT
         , onClick push $ const SelectLanguage
         ][ imageView
            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_language_logo"
@@ -171,7 +196,7 @@ videosShimmerView push state =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , margin $ Margin 16 16 16 16
-  , visibility $ boolToVisibility state.props.showShimmer
+  , visibility $ boolToVisibility (state.props.showShimmer && not state.props.showError)
   ][ linearLayout
      [ width $ MATCH_PARENT
      , height $ V 50
@@ -236,16 +261,16 @@ videosShimmerView push state =
 videosView :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> PrestoDOM (Effect Unit) w
 videosView push state =
   let quizStatus =  state.data.videosScreenData.quizStatus
-      quizEnabled = state.data.videosScreenData.quizEnabled
+      quizEnabled =  state.data.videosScreenData.quizEnabled
   in
   scrollView
   [ width MATCH_PARENT
-  , height WRAP_CONTENT
+  , height MATCH_PARENT
   , orientation VERTICAL
-  , visibility $ boolToVisibility (not state.props.showShimmer)
+  , visibility $ boolToVisibility (not state.props.showShimmer && not state.props.showError)
   ][  linearLayout
       [ width MATCH_PARENT
-      , height WRAP_CONTENT
+      , height MATCH_PARENT
       , orientation VERTICAL
       ][  headerInformationView push state getStatusForHeaderInfo
         , linearLayout
@@ -254,7 +279,7 @@ videosView push state =
           , orientation VERTICAL
           ](mapWithIndex (\index eVideo -> videoCardView push state index eVideo "PENDING") state.data.videosScreenData.pending)
         , if quizEnabled && (quizStatus == ENTITY_INCOMPLETE || quizStatus == ENTITY_NOT_STARTED) then quizCardView push state (length state.data.videosScreenData.pending /= 0) else linearLayout [][]
-        , if length state.data.videosScreenData.pending > 0 && length  state.data.videosScreenData.completed > 0 then headerInformationView push state "VIDEO_WATCHED_TILE" else linearLayout [][]
+        , if length state.data.videosScreenData.pending > 0 && length  state.data.videosScreenData.completed > 0 then headerInformationView push state "VIDEO_WATCHED_TILE" else textView[]
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -278,7 +303,7 @@ videoCardView push state index (LmsVideoRes video) videoStatus =
   , stroke $ "1," <> Color.grey900
   , cornerRadius 8.0
   , clickable true
-  , onClick push $ const $ OpenReelsView index videoStatus
+  , onClick push $ const $ OpenReelsView index videoStatus (LmsVideoRes video)
   , margin $ if index == 0 then Margin 24 24 24 24 else Margin 24 0 24 24
   ][ videoThumbNailView push state (LmsVideoRes video)
   ,  videoInformation push state index (LmsVideoRes video)
@@ -340,7 +365,6 @@ videoCardPillView push state pillText =
   ,  imageView
      [ width $ V 12
      , height $ V 7
-     , layoutGravity "center_vertical"
      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_arrow"
      , margin $ Margin 0 3 0 0
      ]
@@ -356,6 +380,7 @@ quizCardView push state isLocked =
   , height $ V 92
   , margin $ dataAccToStatus.margin
   , padding $ PaddingHorizontal 24 24
+  , visibility $ boolToVisibility state.data.config.lmsVideoScreen.enableQuiz
   ][  linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -485,6 +510,7 @@ errorView push state =
   , height MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER
+  , visibility $ boolToVisibility state.props.showError
   ][ imageView
      [ width $ V 159
      , height $ V 117

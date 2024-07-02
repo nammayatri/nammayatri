@@ -393,3 +393,42 @@ triggerOnAnimationEnd ifAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 10
     ] ifAnim
+
+
+expandWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+expandWithDuration duration isAnim = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromScaleY 0.0
+    , PrestoAnim.toScaleY 1.0
+    ]
+    isAnim
+
+collapseWithDuration :: Int -> Boolean -> PrestoAnim.Animation   
+collapseWithDuration duration isAnim = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toScaleY 0.0
+    , PrestoAnim.fromScaleY 1.0
+    ]
+    isAnim
+
+scaleAnimWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+scaleAnimWithDuration duration ifAnim =
+   PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromScaleY 0.0
+    , PrestoAnim.toScaleY 1.0
+    , PrestoAnim.fromScaleX 0.0
+    , PrestoAnim.toScaleX 1.0
+    , PrestoAnim.interpolator interpolator
+    ] ifAnim
+
+rotateToDegWithDuration :: Int -> Int -> Int -> PrestoAnim.Animation
+rotateToDegWithDuration duration fromRotation toRotation =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromRotation fromRotation
+    , PrestoAnim.toRotation toRotation
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ] true

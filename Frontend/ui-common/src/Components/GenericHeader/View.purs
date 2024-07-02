@@ -47,6 +47,7 @@ view push config =
       , accessibility ENABLE
       , cornerRadius config.prefixImageConfig.cornerRadius
       , margin $ config.prefixImageConfig.layoutMargin
+      , padding $ config.prefixImageConfig.layoutPadding
       ] <> (if config.prefixImageConfig.enableRipple then [rippleColor config.prefixImageConfig.rippleColor] else []))
       [ imageView
         [ imageWithFallback config.prefixImageConfig.imageUrl
@@ -67,6 +68,7 @@ view push config =
       , accessibility ENABLE
       , accessibilityHint if config.textConfig.accessibilityHint == "" then config.textConfig.text else config.textConfig.accessibilityHint
       , color config.textConfig.color
+      , padding config.textConfig.padding
       ] <> (FontStyle.getFontStyle config.textConfig.textStyle LanguageStyle)
     , suffixImageLayout config push
   ]

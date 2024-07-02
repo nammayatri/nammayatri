@@ -19,7 +19,7 @@ import ConfigProvider
 
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl, mapMaybe, find)
 import Accessor (_description, _amount, _amountWithCurrency)
-import Common.Types.App (LazyCheck(..), OptionButtonList, Price)
+import Common.Types.App (LazyCheck(..), OptionButtonList, Price, Currency(..))
 import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber)
 import Data.Lens ((^.))
@@ -272,7 +272,7 @@ dummyFareBreakUp :: FareBreakupAPIEntity
 dummyFareBreakUp = FareBreakupAPIEntity{amountWithCurrency : dummyPrice ,description: ""}
 
 dummyPrice :: Price
-dummyPrice = {amount: 0.0, currency: ""}
+dummyPrice = {amount: 0.0, currency: INR}
 
 getMerchantSpecificFilteredFares :: Merchant -> Array String
 getMerchantSpecificFilteredFares merchant = 

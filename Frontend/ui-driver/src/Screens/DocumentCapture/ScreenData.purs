@@ -16,7 +16,7 @@ module Screens.DocumentCaptureScreen.ScreenData where
 
 import Screens.Types as ST
 import Data.Maybe(Maybe(..))
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import MerchantConfig.DefaultConfig (dummyCityConfig)
 
 initData :: ST.DocumentCaptureScreenState
 initData =
@@ -28,6 +28,12 @@ initData =
       , docId : ""
       , linkedRc : Nothing
       , cityConfig : dummyCityConfig
+      , ssn : ""
+      , firstName : Nothing
+      , lastName : Nothing
+      , mobileNumber : Nothing
+      , email: Nothing
+      , variantList: []
       }
   , props:
       { validateDocModal : false,
@@ -35,6 +41,15 @@ initData =
         validating : false,
         menuOptions : false,
         confirmChangeVehicle : false,
-        contactSupportModal : ST.HIDE
+        contactSupportModal : ST.HIDE, 
+        isSSNView : false,
+        isProfileView: false,
+        isValidEmail : true,
+        isValidFirstName : true,
+        isValidMobileNumber: true,
+        setDefault : false,
+        shouldGoBack : true,
+        previewSampleImage : false,
+        previewImgUrl : ""
       }
   }

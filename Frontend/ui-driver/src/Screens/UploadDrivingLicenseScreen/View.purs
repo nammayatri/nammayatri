@@ -47,13 +47,14 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||))
+import Mobility.Prelude (boolToVisibility)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||), (*), (/))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, ellipsize, singleLine)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Views (redirectScreen, rightWrongView)
+import Screens.AddVehicleDetailsScreen.Views (redirectScreen)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
 import Styles.Colors as Color
@@ -81,6 +82,7 @@ screen initialState =
     else pure unit
     void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $
               if initialState.props.validateProfilePicturePopUp  then  lift $ lift $ doAff do liftEffect $ push $ AfterRender  else pure unit 
+    if initialState.props.setDefault then do pure $ EHC.setText (EHC.getNewIDWithTag "EnterDrivingLicenseEditText") (initialState.data.driver_license_number) else pure unit
     pure $ pure unit)]
   , eval : \action state -> do
       let _ = spy  "UploadDrivingLicenseScreen state -----" state
@@ -117,10 +119,10 @@ linearLayout
         , orientation VERTICAL
         ][ scrollView
             [ width MATCH_PARENT
-            , height MATCH_PARENT
+            , height WRAP_CONTENT
             , scrollBarY false
             ][ linearLayout
-                [ height MATCH_PARENT
+                [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 , padding (PaddingHorizontal 20 20)
@@ -186,14 +188,13 @@ linearLayout
     <> if state.props.validateProfilePicturePopUp then [validateProfilePictureModal push state] else []
     <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else []
     <> if state.props.menuOptions then [menuOptionModal push state] else []
+    <> if state.props.previewSampleImage then [expandedSampleImgView push state] else []
 
 menuOptionModal :: forall w. (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
 menuOptionModal push state = 
   linearLayout 
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 headerView :: forall w. ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -450,7 +451,7 @@ dateOfBirth push state =
         , orientation HORIZONTAL
         , onClick (\action -> do
                         _ <- push action
-                        JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
+                        JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push (DatePicker "DATE_OF_BIRTH") "631195200"
                       ) (const SelectDateOfBirthAction)
         , clickable state.props.isDateClickable 
       ][ textView
@@ -493,7 +494,7 @@ dateOfIssue push state =
         , orientation HORIZONTAL
         , onClick (\action -> do
                         _ <- push action 
-                        JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_ISSUE"
+                        JB.datePicker "MAXIMUM_PRESENT_DATE" push (DatePicker "DATE_OF_ISSUE") ""
                       ) $ const SelectDateOfIssueAction
         , clickable state.props.isDateClickable
       ][ textView $
@@ -522,6 +523,23 @@ dateOfIssue push state =
         ] <> FontStyle.tags TypoGraphy
       ]
   ]
+
+expandedSampleImgView :: forall w. (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+expandedSampleImgView push state = 
+  linearLayout
+    [ height MATCH_PARENT 
+    , width  MATCH_PARENT 
+    , gravity CENTER
+    , onClick push $ const $ BackPressed false
+    , background Color.blackLessTrans
+    ]
+    [ imageView
+        [ height $ V (((EHC.screenHeight unit) / 10) * 8)
+        , width $ V (((EHC.screenWidth unit) / 10) * 8)
+        , imageWithFallback state.props.previewImgUrl
+        , clickable false
+        ]
+    ]
 
 howToUpload :: (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> forall w . PrestoDOM (Effect Unit) w
 howToUpload push state = 
@@ -565,11 +583,78 @@ howToUpload push state =
       , margin $ MarginTop 20
       , stroke $ "1," <> Color.borderGreyColor
       , padding $ Padding 16 16 16 0
-      ][ rightWrongView true
-       , rightWrongView false
+      ][ rightWrongView push true
+       , rightWrongView push false
       ]  
     ]
   ]
+
+rightWrongView :: (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongView push isRight = 
+  let imageNmae = if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+  in
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER_VERTICAL
+  , margin $ MarginBottom 16
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      , cornerRadius 4.0
+      , onClick push $ const $ PreviewSampleImage imageNmae
+      , clickable $ isRight
+      , stroke $ "1," <> (if isRight then Color.purple100 else Color.white900)
+      ]
+      [ imageView
+        [ width $ V 120
+        , height $ V if isRight then 80 else 100
+        , imageWithFallback $ fetchImage FF_ASSET $ imageNmae
+        ]
+      , textView $
+        [ height WRAP_CONTENT
+        , width $ V 120
+        , text $ getString CLICK_TO_PREVIEW
+        , color Color.purple900
+        , singleLine true
+        , ellipsize true
+        , padding $ PaddingBottom 4
+        , gravity CENTER
+        , background Color.purple100
+        , visibility $ boolToVisibility isRight
+        ] <>  FontStyle.captions TypoGraphy
+      ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 0 0
+    , gravity CENTER
+    ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
+     , rightWrongItemView isRight $ if isRight then (getString CROPPED_CORRECTLY) else (getString WRONG_CROPPING)
+    ]
+  ]
+
+rightWrongItemView :: Boolean -> String -> forall w . PrestoDOM (Effect Unit) w
+rightWrongItemView isRight text' = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ MarginBottom 5
+  , gravity CENTER_VERTICAL
+  ][ imageView
+    [ width $ V 16
+    , height $ V 16
+    , imageWithFallback $ fetchImage FF_ASSET $ if isRight then "ny_ic_green_tick" else "ny_ic_payment_failed"
+    ]
+  , textView $
+    [ text text'
+    , color Color.black800
+    , margin $ MarginLeft 8
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
 
 popupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
 popupModal push state =

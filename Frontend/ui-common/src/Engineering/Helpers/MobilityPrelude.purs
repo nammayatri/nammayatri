@@ -128,3 +128,9 @@ startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLow
 
 noView :: forall w . PD.PrestoDOM (Effect Unit) w
 noView = PD.textView [ PD.width $ PD.V 0 , PD.height $ PD.V 0, PD.visibility PD.GONE]
+
+strToMaybe :: String -> Maybe String
+strToMaybe str = 
+  case str of
+    "" -> Nothing
+    _ -> Just str

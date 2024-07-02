@@ -21,6 +21,7 @@ module Styles.Colors
 
 import Styles.Types
 import Common.Styles.Colors
+import ConfigProvider as CP
 
 -- Text Color
 
@@ -169,7 +170,9 @@ incorrectAlert :: Color
 incorrectAlert  = "#F76F6F"
 
 darkMint :: Color
-darkMint = "#53BB6F"
+darkMint = 
+  let config = CP.getAppConfig CP.appConfig
+  in config.colors.green700
 
 charcoalGrey :: Color
 charcoalGrey = "#323643"
@@ -398,7 +401,9 @@ golden :: Color
 golden = "#E9BE4D"
 
 greenGrey :: Color
-greenGrey = "#268C6E"
+greenGrey = 
+  let config = CP.getAppConfig CP.appConfig
+  in config.colors.green700
 
 greenGrey100 :: Color
 greenGrey100 = "#29268C6E"

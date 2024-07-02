@@ -68,17 +68,12 @@ genericHeaderConfig state = let
   in genericHeaderConfig'
 
 primaryButtonConfig :: ST.BenefitsScreenState -> PrimaryButton.Config 
-primaryButtonConfig state = let 
-    config = PrimaryButton.config
-    primaryButtonConfig' = config 
+primaryButtonConfig state = PrimaryButton.config 
       { textConfig
       { text = getString GO_BACK
-      , color = state.data.config.primaryTextColor
       }
       , margin = Margin 10 10 10 10
-      , background = Color.black900
       , height = V 48
       , width = MATCH_PARENT
       , id = "BenefitsScreenPrimaryButton"
       }
-  in primaryButtonConfig'

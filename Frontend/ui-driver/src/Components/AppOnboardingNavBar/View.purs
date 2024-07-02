@@ -16,7 +16,7 @@
 
 module Components.AppOnboardingNavBar.View where
 
-import Prelude (Unit, const, ($), (<>), (<<<))
+import Prelude (Unit, const, ($), (<>), (<<<), (+))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
 import Effect (Effect)
 import Components.AppOnboardingNavBar.Controller (Action(..), Config)
@@ -27,6 +27,7 @@ import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils as HU
 import Components.GenericHeader as GenericHeader
+import Engineering.Helpers.Commons as EHC
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -34,12 +35,13 @@ view push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  , padding $ Padding 16 16 16 16
+  , padding $ Padding 16 (EHC.safeMarginTop + 16) 16 16
   , orientation VERTICAL
-  , background state.appConfig.primaryBackground
+  , background state.appConfig.secondaryBackground
   ][  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
+      , gravity CENTER
       ][  imageView
           [ imageWithFallback $ HU.fetchImage HU.FF_ASSET state.prefixImageConfig.image
           , height state.prefixImageConfig.height
@@ -49,7 +51,8 @@ view push state =
           , onClick push $ const PrefixImgOnClick
           ]
         , linearLayout
-          [weight 1.0
+          [height WRAP_CONTENT
+          , weight 1.0
           ][ GenericHeader.view (push <<< GenericHeaderAC) (state.genericHeaderConfig)]
         , logoutButtonView push state
       ]
@@ -70,7 +73,7 @@ logoutButtonView push config =
   , width WRAP_CONTENT
   , orientation VERTICAL
   , layoutGravity "center_vertical"
-  , cornerRadius 12.0
+  , cornerRadius 11.0
   , stroke ("1,"<>Color.white900)
   , padding $ Padding 4 2 4 4
   , onClick push $ const Logout 
