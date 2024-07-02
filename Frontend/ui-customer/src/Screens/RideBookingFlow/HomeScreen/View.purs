@@ -3028,7 +3028,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                   else pure unit
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
-              else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) then do
+              else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) || hasCurrentLocAndPrevDropLoc /= state.data.previousRideDrop then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
                 routeResponseAdvanced <- do
