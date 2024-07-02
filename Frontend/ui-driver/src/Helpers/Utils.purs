@@ -640,76 +640,83 @@ contactSupportNumber supportType = do
       else
         pure $ showDialer supportNumber false
 
+setForwardBatchingData :: CityConfig -> CityConfig
+setForwardBatchingData cityConf =
+  let (ForwardBatchConfigData forwardBatchRemoteConfig) = forwardBatchConfigData cityConf.cityName
+  in cityConf {enableAdvancedBooking = forwardBatchRemoteConfig.is_Forward_Dispatch_Feature_Enabled, advancedRidePopUpYoutubeLink = forwardBatchRemoteConfig.advancedRidePopUpYoutubeLink, callDriverInfoPost = forwardBatchRemoteConfig.callDriverInfoPost}
+
+dummyCityConfig :: CityConfig
+dummyCityConfig = {
+  cityName : "",
+  mapImage : "",
+  cityCode : "",
+  showSubscriptions : false,
+  enableAdvancedBooking : false,
+  advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
+  callDriverInfoPost : false,
+  cityLat : 0.0,
+  cityLong : 0.0,
+  supportNumber : "",
+  languageKey : "",
+  enableYatriCoins : false,
+  showDriverReferral : false,
+  showCustomerReferral : false,
+  uploadRCandDL : true,
+  vehicleNSImg : "",
+  registration : { 
+    callSupport : false,
+    supportWAN : "", 
+    whatsappSupport : false
+  },
+  variantSubscriptionConfig : {
+    enableVariantBasedSubscription : true,
+    variantList : ["AutoCategory"],
+    enableCabsSubscriptionView : false,
+    staticViewPlans : []
+  },
+  showEarningSection: true,
+  referral : {
+      domain : ""
+    , customerAppId : ""
+    , driverAppId : ""
+  },
+  waitingCharges : 1.50,
+  waitingChargesConfig : {
+    cab : {
+      freeSeconds : 300,
+      perMinCharges : 1.0
+    },
+    auto : {
+      freeSeconds : 180,
+      perMinCharges : 1.50
+    }
+  },
+  rentalWaitingChargesConfig : {
+    cab : {
+      freeSeconds : 180,
+      perMinCharges : 2.0
+    },
+    auto : {
+      freeSeconds : 180,
+      perMinCharges : 2.0
+    }
+  },
+  rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
+  assets :{
+    auto_image :  "ny_ic_black_yellow_auto_side_view",
+    onboarding_auto_image : "ny_ic_auto_right_side_yellow"
+  }
+}
 
 getCityConfig :: Array CityConfig -> String -> CityConfig
 getCityConfig cityConfig cityName = do
-  let dummyCityConfig = {
-                          cityName : "",
-                          mapImage : "",
-                          cityCode : "",
-                          showSubscriptions : false,
-                          enableAdvancedBooking : false,
-                          advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
-                          callDriverInfoPost : false,
-                          cityLat : 0.0,
-                          cityLong : 0.0,
-                          supportNumber : "",
-                          languageKey : "",
-                          enableYatriCoins : false,
-                          showDriverReferral : false,
-                          showCustomerReferral : false,
-                          uploadRCandDL : true,
-                          vehicleNSImg : "",
-                          registration : { 
-                            callSupport : false,
-                            supportWAN : "", 
-                            whatsappSupport : false
-                          },
-                          variantSubscriptionConfig : {
-                            enableVariantBasedSubscription : true,
-                            variantList : ["AutoCategory"],
-                            enableCabsSubscriptionView : false,
-                            staticViewPlans : []
-                          },
-                          showEarningSection: true,
-                          referral : {
-                              domain : ""
-                            , customerAppId : ""
-                            , driverAppId : ""
-                          },
-                          waitingCharges : 1.50,
-                          waitingChargesConfig : {
-                            cab : {
-                              freeSeconds : 300,
-                              perMinCharges : 1.0
-                            },
-                            auto : {
-                              freeSeconds : 180,
-                              perMinCharges : 1.50
-                            }
-                          },
-                          rentalWaitingChargesConfig : {
-                            cab : {
-                              freeSeconds : 180,
-                              perMinCharges : 2.0
-                            },
-                            auto : {
-                              freeSeconds : 180,
-                              perMinCharges : 2.0
-                            }
-                          },
-                          rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
-                          assets :{
-                            auto_image :  "ny_ic_black_yellow_auto_side_view",
-                            onboarding_auto_image : "ny_ic_auto_right_side_yellow"
-                          }
-                        }
   maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
-  where 
-   setForwardBatchingData cityConfig' = do
-    let (ForwardBatchConfigData forwardBatchRemoteConfig) = forwardBatchConfigData cityName
-    cityConfig' {enableAdvancedBooking = forwardBatchRemoteConfig.is_Forward_Dispatch_Feature_Enabled, advancedRidePopUpYoutubeLink = forwardBatchRemoteConfig.advancedRidePopUpYoutubeLink, callDriverInfoPost = forwardBatchRemoteConfig.callDriverInfoPost}
     
+getCityConfigFromCityCode :: Array CityConfig -> String -> CityConfig
+getCityConfigFromCityCode cityConfigArr cityCode =
+  let cityConfig = fromMaybe dummyCityConfig $ DA.find (\item -> item.cityCode == cityCode) cityConfigArr
+  in setForwardBatchingData cityConfig
+
 formatSecIntoMinSecs :: Int -> String
 formatSecIntoMinSecs seconds = 
   let
