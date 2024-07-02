@@ -119,7 +119,6 @@ library
     , cereal
     , containers
     , cryptonite
-    , dashboard-helper-api
     , either
     , esqueleto
     , euler-hs
@@ -137,6 +136,8 @@ library
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
+    , regex-compat
+    , regex-tdfa
     , resource-pool
     , scheduler
     , sequelize

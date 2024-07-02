@@ -27,6 +27,7 @@ import qualified Dashboard.Common.Merchant as CMerchant
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
+import qualified Data.ByteString.Lazy as LBS
 import Data.Time
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Action.Dashboard.Ride as DCM
@@ -40,6 +41,8 @@ import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Common as DIssue
 import IssueManagement.Common.Dashboard.Issue as Issue
 import IssueManagement.Domain.Types.Issue.IssueCategory
+import IssueManagement.Domain.Types.Issue.IssueMessage
+import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -119,7 +122,12 @@ data IssueAPIs = IssueAPIs
     issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
     issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
     issueFetchMedia :: Text -> Euler.EulerClient Text,
-    ticketStatusCallBack_ :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
+    ticketStatusCallBack_ :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess,
+    createIssueCategory :: Issue.CreateIssueCategoryReq -> Euler.EulerClient APISuccess,
+    updateIssueCategory :: Id IssueCategory -> Issue.UpdateIssueCategoryReq -> Euler.EulerClient APISuccess,
+    createIssueOption :: Id IssueCategory -> Id IssueMessage -> Issue.CreateIssueOptionReq -> Euler.EulerClient APISuccess,
+    updateIssueOption :: Id IssueOption -> Issue.UpdateIssueOptionReq -> Euler.EulerClient APISuccess,
+    upsertIssueMessage :: (LBS.ByteString, Issue.UpsertIssueMessageReq) -> Euler.EulerClient APISuccess
   }
 
 data TicketAPIs = TicketAPIs
@@ -201,7 +209,12 @@ mkAppBackendAPIs merchantId city token = do
       :<|> issueUpdate
       :<|> issueAddComment
       :<|> issueFetchMedia
-      :<|> ticketStatusCallBack_ = issueV2Client
+      :<|> ticketStatusCallBack_
+      :<|> createIssueCategory
+      :<|> updateIssueCategory
+      :<|> createIssueOption
+      :<|> updateIssueOption
+      :<|> upsertIssueMessage = issueV2Client
 
     verifyBookingDetails
       :<|> getServices

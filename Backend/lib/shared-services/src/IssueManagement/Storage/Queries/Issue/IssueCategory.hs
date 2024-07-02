@@ -3,6 +3,7 @@
 module IssueManagement.Storage.Queries.Issue.IssueCategory where
 
 import Database.Beam.Postgres (Postgres)
+import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DomainIC
 import IssueManagement.Domain.Types.Issue.IssueTranslation as DomainIT
@@ -10,9 +11,28 @@ import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueTranslation as BeamIT
 import IssueManagement.Storage.BeamFlow
 import IssueManagement.Storage.Queries.Issue.IssueTranslation ()
-import IssueManagement.Tools.UtilsTH
+import IssueManagement.Tools.UtilsTH hiding (label)
 import Kernel.External.Types (Language)
 import Kernel.Types.Id
+
+create :: BeamFlow m r => IssueCategory -> m ()
+create = createWithKV
+
+updateByPrimaryKey :: BeamFlow m r => IssueCategory -> m ()
+updateByPrimaryKey IssueCategory {..} =
+  updateWithKV
+    [ Set BeamIC.category category,
+      Set BeamIC.logoUrl logoUrl,
+      Set BeamIC.priority priority,
+      Set BeamIC.categoryType categoryType,
+      Set BeamIC.merchantOperatingCityId (getId merchantOperatingCityId),
+      Set BeamIC.isActive isActive,
+      Set BeamIC.maxAllowedRideAge maxAllowedRideAge,
+      Set BeamIC.label label,
+      Set BeamIC.createdAt createdAt,
+      Set BeamIC.updatedAt updatedAt
+    ]
+    [Is BeamIC.id $ Eq (getId id)]
 
 findAllIssueTranslationWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIT.IssueTranslationT] -> m [IssueTranslation]
 findAllIssueTranslationWithSeCondition = findAllWithKV
@@ -20,10 +40,10 @@ findAllIssueTranslationWithSeCondition = findAllWithKV
 findAllIssueCategoryWithSeCondition :: BeamFlow m r => [Clause Postgres BeamIC.IssueCategoryT] -> OrderBy BeamIC.IssueCategoryT -> Maybe Int -> Maybe Int -> m [IssueCategory]
 findAllIssueCategoryWithSeCondition = findAllWithOptionsKV
 
-findAllByLanguage :: BeamFlow m r => Language -> m [(IssueCategory, Maybe IssueTranslation)]
-findAllByLanguage language = do
+findAllActiveByMerchantOpCityIdAndLanguage :: BeamFlow m r => Id MerchantOperatingCity -> Language -> m [(IssueCategory, Maybe IssueTranslation)]
+findAllActiveByMerchantOpCityIdAndLanguage merchantOpCityId language = do
   iTranslations <- findAllIssueTranslationWithSeCondition [Is BeamIT.language $ Eq language]
-  iCategorys <- findAllIssueCategoryWithSeCondition [Is BeamIC.category $ In (DomainIT.sentence <$> iTranslations)] (Asc BeamIC.priority) Nothing Nothing
+  iCategorys <- findAllIssueCategoryWithSeCondition [And [Is BeamIC.isActive $ Eq True, Is BeamIC.merchantOperatingCityId $ Eq (getId merchantOpCityId)]] (Asc BeamIC.priority) Nothing Nothing
   pure $ foldl' (getIssueCategoryWithTranslations iTranslations) [] iCategorys
   where
     getIssueCategoryWithTranslations iTranslations dInfosWithTranslations iCategory =
@@ -47,16 +67,25 @@ findByIdAndLanguage (Id issueCategoryId) language = do
 
     headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 
+findCategoriesByMinPriority :: BeamFlow m r => Int -> m [IssueCategory]
+findCategoriesByMinPriority priority =
+  findAllWithKV [Is BeamIC.priority $ GreaterThanOrEq priority]
+
+updatePriority :: BeamFlow m r => Id IssueCategory -> Int -> m ()
+updatePriority issueCategoryId priority =
+  updateWithKV
+    [Set BeamIC.priority priority]
+    [Is BeamIC.id $ Eq (getId issueCategoryId)]
+
 instance FromTType' BeamIC.IssueCategory IssueCategory where
   fromTType' BeamIC.IssueCategoryT {..} = do
     pure $
       Just
         IssueCategory
           { id = Id id,
-            category = category,
-            logoUrl = logoUrl,
-            priority = priority,
-            merchantId = Id merchantId
+            merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
+            ..
           }
 
 instance ToTType' BeamIC.IssueCategory IssueCategory where
@@ -64,7 +93,14 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
     BeamIC.IssueCategoryT
       { BeamIC.id = getId id,
         BeamIC.category = category,
+        BeamIC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamIC.logoUrl = logoUrl,
         BeamIC.priority = priority,
-        BeamIC.merchantId = getId merchantId
+        BeamIC.merchantId = getId merchantId,
+        BeamIC.categoryType = categoryType,
+        BeamIC.maxAllowedRideAge = maxAllowedRideAge,
+        BeamIC.label = label,
+        BeamIC.isActive = isActive,
+        BeamIC.createdAt = createdAt,
+        BeamIC.updatedAt = updatedAt
       }

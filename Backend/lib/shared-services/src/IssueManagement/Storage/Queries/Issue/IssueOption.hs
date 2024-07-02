@@ -15,6 +15,26 @@ import IssueManagement.Tools.UtilsTH hiding (label)
 import Kernel.External.Types (Language)
 import Kernel.Types.Id
 
+create :: BeamFlow m r => IssueOption -> m ()
+create = createWithKV
+
+updateByPrimaryKey :: BeamFlow m r => IssueOption -> m ()
+updateByPrimaryKey IssueOption {..} =
+  updateWithKV
+    [ Set BeamIO.option option,
+      Set BeamIO.issueCategoryId (getId <$> issueCategoryId),
+      Set BeamIO.issueMessageId issueMessageId,
+      Set BeamIO.merchantOperatingCityId (getId merchantOperatingCityId),
+      Set BeamIO.priority priority,
+      Set BeamIO.label label,
+      Set BeamIO.isActive isActive,
+      Set BeamIO.restrictedVariants restrictedVariants,
+      Set BeamIO.showOnlyWhenUserBlocked showOnlyWhenUserBlocked,
+      Set BeamIO.createdAt createdAt,
+      Set BeamIO.updatedAt updatedAt
+    ]
+    [And [Is BeamIO.id $ Eq (getId id)]]
+
 findByIdAndCategoryId :: BeamFlow m r => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
 findByIdAndCategoryId issueOptionId issueCategoryId = findOneWithKV [And [Is BeamIO.id $ Eq $ getId issueOptionId, Is BeamIO.issueCategoryId $ Eq $ Just (getId issueCategoryId)]]
 
@@ -34,9 +54,9 @@ findAllByCategoryAndLanguage (Id issueCategoryId) language = do
       let iTranslations' = filter (\iTranslation -> iTranslation.sentence == iOption.option) iTranslations
        in dInfosWithTranslations <> if not (null iTranslations') then (\iTranslation'' -> (iOption, Just iTranslation'')) <$> iTranslations' else [(iOption, Nothing)]
 
-findAllByMessageAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> m [(IssueOption, Maybe IssueTranslation)]
-findAllByMessageAndLanguage (Id issueMessageId) language = do
-  iOptions <- findAllIssueOptionWithSeCondition [Is BeamIO.issueMessageId $ Eq $ Just issueMessageId] (Asc BeamIO.priority) Nothing Nothing
+findAllActiveByMessageAndLanguage :: BeamFlow m r => Id IssueMessage -> Language -> m [(IssueOption, Maybe IssueTranslation)]
+findAllActiveByMessageAndLanguage (Id issueMessageId) language = do
+  iOptions <- findAllIssueOptionWithSeCondition [Is BeamIO.issueMessageId $ Eq $ Just issueMessageId, Is BeamIO.isActive $ Eq True] (Asc BeamIO.priority) Nothing Nothing
   iTranslations <- findAllIssueTranslationWithSeCondition [And [Is BeamIT.language $ Eq language, Is BeamIT.sentence $ In (DomainIO.option <$> iOptions)]]
   pure $ foldl' (getIssueOptionsWithTranslations iTranslations) [] iOptions
   where
@@ -59,6 +79,13 @@ findByIdAndLanguage issueOptionId language = do
 findById :: BeamFlow m r => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Is BeamIO.id $ Eq issueOptionId]
 
+updatePriority :: BeamFlow m r => Id IssueOption -> Int -> m ()
+updatePriority issueOptionId priority =
+  updateWithKV
+    [ Set BeamIO.priority priority
+    ]
+    [Is BeamIO.id $ Eq (getId issueOptionId)]
+
 instance FromTType' BeamIO.IssueOption IssueOption where
   fromTType' BeamIO.IssueOptionT {..} = do
     pure $
@@ -66,11 +93,9 @@ instance FromTType' BeamIO.IssueOption IssueOption where
         IssueOption
           { id = Id id,
             issueCategoryId = Id <$> issueCategoryId,
-            option = option,
-            priority = priority,
-            issueMessageId = issueMessageId,
-            label = label,
-            merchantId = Id merchantId
+            merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
+            ..
           }
 
 instance ToTType' BeamIO.IssueOption IssueOption where
@@ -78,9 +103,15 @@ instance ToTType' BeamIO.IssueOption IssueOption where
     BeamIO.IssueOptionT
       { BeamIO.id = getId id,
         BeamIO.issueCategoryId = getId <$> issueCategoryId,
+        BeamIO.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamIO.option = option,
         BeamIO.priority = priority,
         BeamIO.issueMessageId = issueMessageId,
+        BeamIO.restrictedVariants = restrictedVariants,
+        BeamIO.showOnlyWhenUserBlocked = showOnlyWhenUserBlocked,
         BeamIO.label = label,
-        BeamIO.merchantId = getId merchantId
+        BeamIO.merchantId = getId merchantId,
+        BeamIO.isActive = isActive,
+        BeamIO.createdAt = createdAt,
+        BeamIO.updatedAt = updatedAt
       }

@@ -1,14 +1,25 @@
 module IssueManagement.Domain.Action.Dashboard.Issue where
 
 import qualified AWS.S3 as S3
+import Control.Applicative ((<|>))
+import qualified Data.ByteString as BS
+import qualified Data.List as DL
 import qualified Data.Text as T hiding (count, map)
+import qualified EulerHS.Language as L
+import EulerHS.Prelude (withFile)
+import EulerHS.Types (base64Encode)
+import GHC.IO.Handle (hFileSize)
+import GHC.IO.IOMode (IOMode (..))
 import IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
 import qualified IssueManagement.Domain.Action.UI.Issue as UIR
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
+import qualified IssueManagement.Domain.Types.Issue.IssueMessage as DIM
+import qualified IssueManagement.Domain.Types.Issue.IssueOption as DIO
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
 import qualified IssueManagement.Domain.Types.Issue.IssueTranslation as DIT
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQI
@@ -16,7 +27,11 @@ import qualified IssueManagement.Storage.CachedQueries.Issue.IssueMessage as CQI
 import qualified IssueManagement.Storage.CachedQueries.Issue.IssueOption as CQIO
 import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.Issue.Comment as QC
+import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
+import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as QIM
+import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
+import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
 import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
@@ -32,10 +47,11 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person -> m (Maybe Person),
-    findByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
+    findByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity),
+    findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig
   }
 
-checkMerchantCityAccess :: (BeamFlow m r) => ShortId Merchant -> Context.City -> DIR.IssueReport -> Maybe Person -> ServiceHandle m -> m ()
+checkMerchantCityAccess :: BeamFlow m r => ShortId Merchant -> Context.City -> DIR.IssueReport -> Maybe Person -> ServiceHandle m -> m MerchantOperatingCity
 checkMerchantCityAccess merchantShortId opCity issueReport mbPerson issueHandle = do
   merchantOperatingCity <-
     issueHandle.findByMerchantShortIdAndCity merchantShortId opCity
@@ -48,14 +64,18 @@ checkMerchantCityAccess merchantShortId opCity issueReport mbPerson issueHandle 
           return
           mbPerson
       unless (person.merchantOperatingCityId == merchantOperatingCity.id) $
-        throwError $ IssueReportDoNotExist issueReport.id.getId
-    Just moCityId ->
+        throwError $ IssueReportDoesNotExist issueReport.id.getId
+    Just moCityId -> do
       unless (moCityId == merchantOperatingCity.id) $
-        throwError $ IssueReportDoNotExist issueReport.id.getId
+        throwError $ IssueReportDoesNotExist issueReport.id.getId
+  return merchantOperatingCity
 
-issueCategoryList :: BeamFlow m r => ShortId Merchant -> Context.City -> Identifier -> m Common.IssueCategoryListRes
-issueCategoryList _merchantShortId _opCity identifier = do
-  issueCategoryTranslationList <- CQIC.findAllByLanguage ENGLISH identifier
+issueCategoryList :: BeamFlow m r => ShortId Merchant -> Context.City -> ServiceHandle m -> Identifier -> m Common.IssueCategoryListRes
+issueCategoryList merchantShortId city issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  issueCategoryTranslationList <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage merchantOperatingCity.id ENGLISH identifier
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
   where
     mkIssueCategory :: (DIC.IssueCategory, Maybe DIT.IssueTranslation) -> Common.IssueCategoryRes
@@ -135,24 +155,27 @@ issueInfo ::
   m Common.IssueInfoRes
 issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandle identifier = do
   issueReport <- case mbIssueReportId of
-    Just iReportId -> B.runInReplica $ QIR.findById iReportId >>= fromMaybeM (IssueReportDoNotExist iReportId.getId)
+    Just iReportId -> B.runInReplica $ QIR.findById iReportId >>= fromMaybeM (IssueReportDoesNotExist iReportId.getId)
     Nothing -> case mbIssueReportShortId of
-      Just iReportShortId -> B.runInReplica $ QIR.findByShortId iReportShortId >>= fromMaybeM (IssueReportDoNotExist iReportShortId.getShortId)
+      Just iReportShortId -> B.runInReplica $ QIR.findByShortId iReportShortId >>= fromMaybeM (IssueReportDoesNotExist iReportShortId.getShortId)
       Nothing -> throwError (InvalidRequest "Either issueReportId or issueReportShortId is required")
   person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
-  checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
-  mkIssueInfoRes person issueReport
+  merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
+  mkIssueInfoRes person issueReport merchantOpCity.id
   where
-    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> m Common.IssueInfoRes
-    mkIssueInfoRes person issueReport = do
+    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> Id MerchantOperatingCity -> m Common.IssueInfoRes
+    mkIssueInfoRes person issueReport merchantOpCityId = do
       personDetail <- Just <$> mkPersonDetail person
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
       comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
       category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
       option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
+      issueConfig <-
+        CQI.findByMerchantOpCityId merchantOpCityId identifier
+          >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
       issueChats <- case identifier of
         DRIVER -> return Nothing
-        CUSTOMER -> Just <$> UIR.recreateIssueChats issueReport ENGLISH identifier
+        CUSTOMER -> Just <$> UIR.recreateIssueChats issueReport issueConfig Nothing ENGLISH identifier
       pure $
         Common.IssueInfoRes
           { issueReportId = cast issueReport.id,
@@ -203,18 +226,17 @@ issueUpdate ::
   Id DIR.IssueReport ->
   ServiceHandle m ->
   Common.IssueUpdateByUserReq ->
-  Id Merchant ->
   m APISuccess
-issueUpdate merchantShortId opCity issueReportId issueHandle req merchantId = do
+issueUpdate merchantShortId opCity issueReportId issueHandle req = do
   unless (isJust req.status || isJust req.assignee) $
     throwError $ InvalidRequest "Empty request, no fields to update."
-  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   QIR.updateStatusAssignee issueReportId req.status req.assignee
-  whenJust req.assignee mkIssueAssigneeUpdateComment
+  whenJust req.assignee $ \assignee -> mkIssueAssigneeUpdateComment assignee merchantOpCity
   pure Success
   where
-    mkIssueAssigneeUpdateComment assignee = do
+    mkIssueAssigneeUpdateComment assignee merchantOpCity = do
       id <- generateGUID
       now <- getCurrentTime
       void $
@@ -225,7 +247,7 @@ issueUpdate merchantShortId opCity issueReportId issueHandle req merchantId = do
               authorId = cast req.userId,
               comment = "Assignee Updated : " <> assignee,
               createdAt = now,
-              merchantId
+              merchantId = merchantOpCity.merchantId
             }
 
 issueAddComment ::
@@ -237,15 +259,14 @@ issueAddComment ::
   Id DIR.IssueReport ->
   ServiceHandle m ->
   Common.IssueAddCommentByUserReq ->
-  Id Merchant ->
   m APISuccess
-issueAddComment merchantShortId opCity issueReportId issueHandle req merchantId = do
-  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
-  checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
-  _ <- QC.create =<< mkComment
+issueAddComment merchantShortId opCity issueReportId issueHandle req = do
+  issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
+  merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
+  _ <- QC.create =<< mkComment merchantOpCity
   pure Success
   where
-    mkComment = do
+    mkComment merchantOpCity = do
       id <- generateGUID
       now <- getCurrentTime
       pure $
@@ -255,7 +276,7 @@ issueAddComment merchantShortId opCity issueReportId issueHandle req merchantId 
             comment = req.comment,
             authorId = cast req.userId,
             createdAt = now,
-            merchantId
+            merchantId = merchantOpCity.merchantId
           }
 
 issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => ShortId Merchant -> Text -> m Text
@@ -267,13 +288,21 @@ ticketStatusCallBack ::
     BeamFlow m r
   ) =>
   Common.TicketStatusCallBackReq ->
+  ServiceHandle m ->
   Identifier ->
   m APISuccess
-ticketStatusCallBack req identifier = do
+ticketStatusCallBack req issueHandle identifier = do
   issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
   transformedStatus <- transformKaptureStatus req
   when (transformedStatus == RESOLVED) $ do
-    issueConfig <- CQI.findIssueConfig identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+    merchantOpCityId <-
+      maybe
+        ( issueHandle.findPersonById issueReport.personId
+            >>= fromMaybeM (PersonNotFound issueReport.personId.getId) <&> (.merchantOperatingCityId)
+        )
+        return
+        issueReport.merchantOperatingCityId
+    issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
     mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
     let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
     now <- getCurrentTime
@@ -297,3 +326,516 @@ transformKaptureStatus req = case req.status of
   "Complete" -> return RESOLVED
   "Pending" -> return PENDING_EXTERNAL
   _ -> throwError $ InvalidRequest ("Invalid ticket status " <> req.status <> " for ticket id " <> req.ticketId)
+
+validateCreateIssueMessageReq :: BeamFlow m r => DIC.CategoryType -> [Common.CreateIssueMessageReq] -> m ()
+validateCreateIssueMessageReq categoryType messages = do
+  case categoryType of
+    DIC.FAQ ->
+      mapM_
+        ( \message -> do
+            when (isJust message.referenceOptionId && isJust message.referenceCategoryId) $ throwError $ InvalidRequest "IssueMessage for an FAQ category should contain either one of referenceOptionId or referenceCategoryId."
+            unless (null message.options) $ throwError $ InvalidRequest "IssueMessage for an FAQ category should not contain any options."
+        )
+        messages
+    DIC.Category -> (checkICMessages . DL.sortOn (.priority)) messages <&> (.options) >>= validateCreateIssueOptionReq categoryType
+  where
+    checkICMessages :: BeamFlow m r => [Common.CreateIssueMessageReq] -> m Common.CreateIssueMessageReq
+    checkICMessages [] = throwError $ InvalidRequest "Incomplete request"
+    checkICMessages [lastMsg] = pure lastMsg
+    checkICMessages (currMsg : remMsgs) = do
+      unless (null currMsg.options) $ throwError $ InvalidRequest "Only the message with the highest priority value can include options."
+      when (isJust currMsg.referenceOptionId || isJust currMsg.referenceOptionId) $ throwError $ InvalidRequest "An IssueCategory message should not contain reference optionId or categoryId."
+      checkICMessages remMsgs
+
+validateCreateIssueOptionReq :: BeamFlow m r => DIC.CategoryType -> [Common.CreateIssueOptionReq] -> m ()
+validateCreateIssueOptionReq categoryType =
+  mapM_
+    ( \option -> do
+        when (length option.messages < 1) $ throwError $ InvalidRequest "IssueOptions should always contain at least one message."
+        validateCreateIssueMessageReq categoryType option.messages
+    )
+
+createIssueCategory ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.CreateIssueCategoryReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m APISuccess
+createIssueCategory merchantShortId city Common.CreateIssueCategoryReq {..} issueHandle identifier = do
+  validateCreateIssueMessageReq categoryType messages
+  merchantOperatingCity <-
+    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  newIssueCategory <- mkIssueCategory merchantOperatingCity
+  QIC.create newIssueCategory
+  handleCategoryPrioriyUpdates merchantOperatingCity.id priority identifier
+  upsertTranslations category Nothing merchantOperatingCity translations
+  CQIC.clearAllIssueCategoryByMerchantOpCityIdAndLanguageCache merchantOperatingCity.id identifier
+  mapM_
+    ( \(msgReq, index) ->
+        createIssueMessages merchantShortId city merchantOperatingCity newIssueCategory.id
+          Nothing
+          issueHandle
+          (getIssueMessageType categoryType index (length messages - 1))
+          msgReq
+          identifier
+    )
+    (zip messages [0 ..])
+  return Success
+  where
+    mkIssueCategory merchantOperatingCity = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DIC.IssueCategory
+          { isActive = fromMaybe False isActive,
+            createdAt = now,
+            updatedAt = now,
+            merchantId = merchantOperatingCity.merchantId,
+            merchantOperatingCityId = merchantOperatingCity.id,
+            ..
+          }
+
+createIssueMessages ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  MerchantOperatingCity ->
+  Id DIC.IssueCategory ->
+  Maybe (Id DIO.IssueOption) ->
+  ServiceHandle m ->
+  DIM.IssueMessageType ->
+  Common.CreateIssueMessageReq ->
+  Identifier ->
+  m APISuccess
+createIssueMessages merchantShortId city merchantOperatingCity issueCategoryId mbIssueOptionId issueHandle issueMessageType Common.CreateIssueMessageReq {..} identifier = do
+  newIssueMessage <- mkIssueMessage
+  QIM.create newIssueMessage
+  upsertTranslations message Nothing merchantOperatingCity messageTranslations
+  traverse_ (\newSentence -> upsertTranslations newSentence Nothing merchantOperatingCity actionTranslations) messageAction
+  traverse_ (\newSentence -> upsertTranslations newSentence Nothing merchantOperatingCity titleTranslations) messageTitle
+  mapM_ ((flip $ createIssueOption merchantShortId city (Just merchantOperatingCity) issueCategoryId newIssueMessage.id issueHandle) identifier) options
+  pure Success
+  where
+    mkIssueMessage = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DIM.IssueMessage
+          { categoryId = maybe (Just issueCategoryId) (const Nothing) mbIssueOptionId,
+            isActive = fromMaybe True isActive,
+            optionId = mbIssueOptionId,
+            messageType = issueMessageType,
+            merchantId = merchantOperatingCity.merchantId,
+            merchantOperatingCityId = merchantOperatingCity.id,
+            createdAt = now,
+            updatedAt = now,
+            mediaFiles = [],
+            ..
+          }
+
+updateIssueCategory :: BeamFlow m r => ShortId Merchant -> Context.City -> Id DIC.IssueCategory -> Common.UpdateIssueCategoryReq -> ServiceHandle m -> Identifier -> m APISuccess
+updateIssueCategory merchantShortId city issueCategoryId req issueHandle identifier = do
+  exIssueCategory <- CQIC.findById issueCategoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist issueCategoryId.getId)
+  merchantOperatingCity <-
+    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  when (exIssueCategory.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  updatedIssueCategory <- mkIssueCategory exIssueCategory
+  when (exIssueCategory.priority /= updatedIssueCategory.priority) $ do
+    handleCategoryPrioriyUpdates merchantOperatingCity.id updatedIssueCategory.priority identifier
+  CQIC.updateByPrimaryKey updatedIssueCategory
+  CQIC.clearAllIssueCategoryByMerchantOpCityIdAndLanguageCache merchantOperatingCity.id identifier
+  CQIC.clearIssueCategoryByIdCache exIssueCategory.id identifier
+  CQIC.clearAllIssueCategoryByIdAndLanguageCache exIssueCategory.id identifier
+  upsertTranslations updatedIssueCategory.category (Just exIssueCategory.category) merchantOperatingCity req.translations
+  return Success
+  where
+    mkIssueCategory :: BeamFlow m r => DIC.IssueCategory -> m DIC.IssueCategory
+    mkIssueCategory DIC.IssueCategory {..} = do
+      now <- getCurrentTime
+      return $
+        DIC.IssueCategory
+          { category = fromMaybe category req.category,
+            logoUrl = fromMaybe logoUrl req.logoUrl,
+            priority = fromMaybe priority req.priority,
+            categoryType = fromMaybe categoryType req.categoryType,
+            isActive = fromMaybe isActive req.isActive,
+            maxAllowedRideAge = req.maxAllowedRideAge <|> maxAllowedRideAge,
+            label = req.label <|> label,
+            updatedAt = now,
+            ..
+          }
+
+createIssueOption ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Maybe MerchantOperatingCity ->
+  Id DIC.IssueCategory ->
+  Id DIM.IssueMessage ->
+  ServiceHandle m ->
+  Common.CreateIssueOptionReq ->
+  Identifier ->
+  m APISuccess
+createIssueOption merchantShortId city mbMerchantOpCity issueCategoryId issueMessageId issueHandle req@Common.CreateIssueOptionReq {..} identifier = do
+  validateCreateIssueOptionReq DIC.Category [req]
+  parentIssueCategory <-
+    CQIC.findById issueCategoryId identifier
+      >>= fromMaybeM (IssueCategoryDoesNotExist issueCategoryId.getId)
+  merchantOperatingCity <-
+    maybe
+      ( issueHandle.findByMerchantShortIdAndCity merchantShortId city
+          >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+      )
+      return
+      mbMerchantOpCity
+  when (isNothing mbMerchantOpCity) $ do
+    validateMessageCategoryAssociation issueMessageId merchantOperatingCity.id parentIssueCategory identifier
+    handleOptionPriorityUpdates (Just issueMessageId.getId) priority identifier
+  newIssueOption <- mkIssueOption merchantOperatingCity
+  QIO.create newIssueOption
+  CQIO.clearAllIssueOptionByMessageAndLanguageCache issueMessageId identifier
+  upsertTranslations option Nothing merchantOperatingCity translations
+  mapM_
+    ( \(msgReq, index) ->
+        createIssueMessages
+          merchantShortId
+          city
+          merchantOperatingCity
+          issueCategoryId
+          (Just newIssueOption.id)
+          issueHandle
+          (getIssueMessageType parentIssueCategory.categoryType index (length messages - 1))
+          msgReq
+          identifier
+    )
+    (zip messages [0 ..])
+  pure Success
+  where
+    mkIssueOption merchantOperatingCity = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DIO.IssueOption
+          { createdAt = now,
+            updatedAt = now,
+            issueCategoryId = Just issueCategoryId,
+            issueMessageId = Just issueMessageId.getId,
+            isActive = fromMaybe False isActive,
+            restrictedVariants = fromMaybe [] restrictedVariants,
+            showOnlyWhenUserBlocked = fromMaybe False showOnlyWhenUserBlocked,
+            merchantId = merchantOperatingCity.merchantId,
+            merchantOperatingCityId = merchantOperatingCity.id,
+            ..
+          }
+
+updateIssueOption :: BeamFlow m r => ShortId Merchant -> Context.City -> Id DIO.IssueOption -> Common.UpdateIssueOptionReq -> ServiceHandle m -> Identifier -> m APISuccess
+updateIssueOption merchantShortId city issueOptionId req issueHandle identifier = do
+  merchantOperatingCity <-
+    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  case (req.issueCategoryId, req.issueMessageId) of
+    (Just catId, Just msgId) -> do
+      parentIssueCategory <- CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryDoesNotExist catId.getId)
+      validateMessageCategoryAssociation msgId merchantOperatingCity.id parentIssueCategory identifier
+    (Nothing, Nothing) -> return ()
+    _ -> throwError $ InvalidRequest "Both categoryId and messageId is required to move option."
+  exIssueOption <- CQIO.findById issueOptionId identifier >>= fromMaybeM (IssueOptionDoesNotExist issueOptionId.getId)
+  when (exIssueOption.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  updatedIssueOption <- mkIssueOption exIssueOption
+  QIO.updateByPrimaryKey updatedIssueOption
+  when (exIssueOption.priority /= updatedIssueOption.priority) $ do
+    handleOptionPriorityUpdates updatedIssueOption.issueMessageId updatedIssueOption.priority identifier
+  CQIO.clearAllIssueOptionByIdAndLanguageCache exIssueOption.id identifier
+  CQIO.clearIssueOptionByIdCache exIssueOption.id identifier
+  maybe (return ()) ((`CQIO.clearAllIssueOptionByMessageAndLanguageCache` identifier) . Id) updatedIssueOption.issueMessageId
+  when (exIssueOption.issueMessageId /= updatedIssueOption.issueMessageId) $
+    maybe (return ()) ((`CQIO.clearAllIssueOptionByMessageAndLanguageCache` identifier) . Id) (exIssueOption.issueMessageId)
+  upsertTranslations updatedIssueOption.option (Just exIssueOption.option) merchantOperatingCity req.translations
+  return Success
+  where
+    mkIssueOption DIO.IssueOption {..} = do
+      now <- getCurrentTime
+      return $
+        DIO.IssueOption
+          { option = fromMaybe option req.option,
+            priority = fromMaybe priority req.priority,
+            isActive = fromMaybe isActive req.isActive,
+            issueMessageId = (req.issueMessageId <&> (.getId)) <|> issueMessageId,
+            issueCategoryId = req.issueCategoryId <|> issueCategoryId,
+            restrictedVariants = fromMaybe [] $ req.restrictedVariants <|> Just restrictedVariants,
+            showOnlyWhenUserBlocked = fromMaybe False $ req.showOnlyWhenUserBlocked <|> Just showOnlyWhenUserBlocked,
+            label = req.label <|> label,
+            updatedAt = now,
+            ..
+          }
+
+upsertIssueMessage :: (BeamFlow m r, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => ShortId Merchant -> Context.City -> Common.UpsertIssueMessageReq -> ServiceHandle m -> Identifier -> m APISuccess
+upsertIssueMessage merchantShortId city req issueHandle identifier = do
+  existingIssueMessage <-
+    traverse
+      ( \issueMessageId ->
+          CQIM.findById issueMessageId identifier
+            >>= fromMaybeM (IssueMessageDoesNotExist issueMessageId.getId)
+      )
+      req.issueMessageId
+  merchantOperatingCity <-
+    issueHandle.findByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  whenJust existingIssueMessage $ \issueMessage ->
+    when (issueMessage.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+  updatedIssueMessage <- mkIssueMessage existingIssueMessage merchantOperatingCity issueHandle
+  handleMessagePriorityUpdates existingIssueMessage updatedIssueMessage.optionId updatedIssueMessage.categoryId updatedIssueMessage.messageType updatedIssueMessage.priority identifier
+  whenJust existingIssueMessage $ \extIM -> do
+    clearOptionAndCategoryCache extIM
+    clearUpdatedIssueMessagesCacheIfRequired extIM updatedIssueMessage
+  upsertTranslations updatedIssueMessage.message ((.message) <$> existingIssueMessage) merchantOperatingCity (fromMaybe [] req.messageTranslations)
+  traverse_ (\newSentence -> upsertTranslations newSentence ((.messageAction) =<< existingIssueMessage) merchantOperatingCity (fromMaybe [] req.actionTranslations)) updatedIssueMessage.messageAction
+  traverse_ (\newSentence -> upsertTranslations newSentence ((.messageTitle) =<< existingIssueMessage) merchantOperatingCity (fromMaybe [] req.titleTranslations)) updatedIssueMessage.messageTitle
+  if isJust existingIssueMessage
+    then do
+      QIM.updateByPrimaryKey updatedIssueMessage
+      clearIssueMessageIdCaches updatedIssueMessage
+    else do
+      clearOptionAndCategoryCache updatedIssueMessage
+      QIM.create updatedIssueMessage
+  return Success
+  where
+    mkIssueMessage :: (BeamFlow m r, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Maybe DIM.IssueMessage -> MerchantOperatingCity -> ServiceHandle m -> m DIM.IssueMessage
+    mkIssueMessage mbIssueMessage merchantOperatingCity iHandle = do
+      (mbOptionId, mbCategoryId) <- getAndValidateOptionAndCategoryId mbIssueMessage
+      mbParentCategory <- findIssueCategory mbOptionId mbCategoryId
+      whenJust mbParentCategory $ \parentCategory ->
+        when (parentCategory.merchantOperatingCityId /= merchantOperatingCity.id) $ throwError AccessDenied
+      (referenceOptionId, referenceCategoryId) <- getAndValidateReferenceOptionAnCategoryId mbIssueMessage ((.categoryType) <$> mbParentCategory)
+      id <- maybe generateGUID (return . (.id)) mbIssueMessage
+      now <- getCurrentTime
+      message <- fromMaybeM (InvalidRequest "Message is required field for creating a new issue message") $ req.message <|> ((.message) <$> mbIssueMessage)
+      priority <- fromMaybeM (InvalidRequest "Priority is required field for creating a new issue message") $ req.priority <|> ((.priority) <$> mbIssueMessage)
+      let messageType = findIssueMessageType mbIssueMessage mbParentCategory
+      mediaFiles <- uploadMessageMediaFiles id (maybe [] (.mediaFiles) mbIssueMessage) merchantOperatingCity messageType iHandle
+      return $
+        DIM.IssueMessage
+          { label = req.label <|> ((.label) =<< mbIssueMessage),
+            createdAt = maybe now (.createdAt) mbIssueMessage,
+            updatedAt = now,
+            categoryId = mbCategoryId,
+            merchantId = merchantOperatingCity.merchantId,
+            merchantOperatingCityId = merchantOperatingCity.id,
+            optionId = mbOptionId,
+            messageTitle = req.messageTitle <|> ((.messageTitle) =<< mbIssueMessage),
+            messageAction = req.messageAction <|> ((.messageAction) =<< mbIssueMessage),
+            isActive = fromMaybe True (req.isActive <|> (mbIssueMessage <&> (.isActive))),
+            ..
+          }
+
+    clearIssueMessageIdCaches :: BeamFlow m r => DIM.IssueMessage -> m ()
+    clearIssueMessageIdCaches im = do
+      CQIM.clearAllIssueMessageByIdAndLanguageCache im.id identifier
+      CQIM.clearIssueMessageByIdCache im.id identifier
+
+    clearUpdatedIssueMessagesCacheIfRequired :: BeamFlow m r => DIM.IssueMessage -> DIM.IssueMessage -> m ()
+    clearUpdatedIssueMessagesCacheIfRequired extIM upIM = do
+      when (extIM.optionId /= upIM.optionId || extIM.categoryId /= upIM.categoryId) $
+        clearOptionAndCategoryCache upIM
+
+    clearOptionAndCategoryCache :: BeamFlow m r => DIM.IssueMessage -> m ()
+    clearOptionAndCategoryCache im = do
+      maybe (return ()) (`CQIM.clearAllIssueMessageByOptionIdAndLanguageCache` identifier) (im.optionId)
+      maybe (return ()) (`CQIM.clearAllIssueMessageByCategoryIdAndLanguageCache` identifier) (im.categoryId)
+
+    getAndValidateOptionAndCategoryId :: BeamFlow m r => Maybe DIM.IssueMessage -> m (Maybe (Id DIO.IssueOption), Maybe (Id DIC.IssueCategory))
+    getAndValidateOptionAndCategoryId mbIm =
+      case (req.optionId, req.categoryId, mbIm) of
+        (Just _, Just _, _) -> throwError $ InvalidRequest "IssueMessage can only have either one of optionId or categoryId"
+        (_, _, Just issueMessage) -> return (issueMessage.optionId, issueMessage.categoryId)
+        (Just optionId, _, _) -> do
+          void $ CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionDoesNotExist optionId.getId)
+          return (Just optionId, Nothing)
+        (_, Just categoryId, _) -> do
+          void $ CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
+          return (Nothing, Just categoryId)
+        _ -> throwError $ InvalidRequest "Either categoryId or optionId required to create a message."
+
+    findIssueCategory :: BeamFlow m r => Maybe (Id DIO.IssueOption) -> Maybe (Id DIC.IssueCategory) -> m (Maybe DIC.IssueCategory)
+    findIssueCategory mbOptionId mbCategoryId = do
+      categoryId <- case mbCategoryId of
+        Just cId -> return (Just cId)
+        Nothing -> (.issueCategoryId) <$> findIssueOption
+      maybe (return Nothing) (\(catId :: Id DIC.IssueCategory) -> CQIC.findById catId identifier) categoryId
+      where
+        findIssueOption =
+          maybe
+            (throwError $ InvalidRequest "Either categoryId or optionId is required")
+            (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId))
+            mbOptionId
+
+    getAndValidateReferenceOptionAnCategoryId :: BeamFlow m r => Maybe DIM.IssueMessage -> Maybe DIC.CategoryType -> m (Maybe (Id DIO.IssueOption), Maybe (Id DIC.IssueCategory))
+    getAndValidateReferenceOptionAnCategoryId mbIm mbCategoryType = do
+      case mbCategoryType of
+        Just DIC.FAQ ->
+          case (req.referenceOptionId, req.referenceCategoryId, mbIm) of
+            (Just _, Just _, _) -> throwError $ InvalidRequest "IssueMessage can only have either one of reference optionId or categoryId"
+            (Just optionId, _, _) -> do
+              void $ CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionDoesNotExist optionId.getId)
+              return (Just optionId, Nothing)
+            (_, Just categoryId, _) -> do
+              void $ CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
+              return (Nothing, Just categoryId)
+            (_, _, Just issueMessage) -> return (issueMessage.referenceOptionId, issueMessage.referenceCategoryId)
+            _ -> return (Nothing, Nothing)
+        _ -> do
+          when (isJust req.referenceOptionId || isJust req.referenceCategoryId) $ throwError $ InvalidRequest "An IssueCategory message should not contain reference optionId or categoryId."
+          return (Nothing, Nothing)
+
+    findIssueMessageType :: Maybe DIM.IssueMessage -> Maybe DIC.IssueCategory -> DIM.IssueMessageType
+    findIssueMessageType mbIssueMessage mbParentCategory = case mbIssueMessage of
+      Just message -> message.messageType
+      Nothing -> maybe DIM.Terminal (bool DIM.Intermediate DIM.FAQ . ((== DIC.FAQ) . (.categoryType))) mbParentCategory
+
+    uploadMessageMediaFiles :: (BeamFlow m r, MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) => Id DIM.IssueMessage -> [Id DMF.MediaFile] -> MerchantOperatingCity -> DIM.IssueMessageType -> ServiceHandle m -> m [Id DMF.MediaFile]
+    uploadMessageMediaFiles issueMessageId existingMediaFiles merchantOpCity messageType iHandle = do
+      case messageType of
+        DIM.FAQ -> do
+          config <- iHandle.findMerchantConfig merchantOpCity.merchantId merchantOpCity.id Nothing
+          mediaFileIds <-
+            mapM
+              ( \fileData -> do
+                  contentType <- validateContentType fileData.reqContentType
+                  fileSize <- L.runIO $ withFile fileData.file ReadMode hFileSize
+                  when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
+                    throwError $ FileSizeExceededError (show fileSize)
+                  mediaFile <- L.runIO $ base64Encode <$> BS.readFile fileData.file
+                  filePath <- S3.createFilePath "issue-media/faqMedia/" ("messageId-" <> issueMessageId.getId) S3.Image contentType
+                  let fileUrl =
+                        config.mediaFileUrlPattern
+                          & T.replace "<DOMAIN>" "issue"
+                          & T.replace "<FILE_PATH>" filePath
+                  _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
+                  UIR.createMediaEntry fileUrl S3.Image <&> (.fileId)
+              )
+              (fromMaybe [] req.mediaFiles)
+          return $ bool (existingMediaFiles <> mediaFileIds) mediaFileIds (fromMaybe False req.deleteExistingFiles)
+        _ -> return []
+
+    validateContentType :: BeamFlow m r => Text -> m Text
+    validateContentType contType =
+      case contType of
+        "image/png" -> pure "png"
+        "image/jpeg" -> pure "jpg"
+        _ -> throwError $ FileFormatNotSupported contType
+
+upsertTranslations :: BeamFlow m r => Text -> Maybe Text -> MerchantOperatingCity -> [Common.Translation] -> m ()
+upsertTranslations newSentence mbOldSentence merchantOpCity =
+  mapM_
+    ( \translation -> do
+        extTranslation <- QIT.findIssueTranslationByLanguageAndSentence translation.language $ fromMaybe newSentence mbOldSentence
+        updatedTranslation <- mkIssueTranslation extTranslation translation
+        if isJust extTranslation then QIT.updateByPrimaryKey updatedTranslation else QIT.create updatedTranslation
+    )
+  where
+    mkIssueTranslation :: BeamFlow m r => Maybe DIT.IssueTranslation -> Common.Translation -> m DIT.IssueTranslation
+    mkIssueTranslation mbTranslation translation = do
+      id <- maybe generateGUID (return . (.id)) mbTranslation
+      now <- getCurrentTime
+      return $
+        DIT.IssueTranslation
+          { translation = translation.translation,
+            language = translation.language,
+            sentence = newSentence,
+            merchantId = merchantOpCity.merchantId,
+            createdAt = maybe now (.createdAt) mbTranslation,
+            updatedAt = now,
+            ..
+          }
+
+validateMessageCategoryAssociation :: BeamFlow m r => Id DIM.IssueMessage -> Id MerchantOperatingCity -> DIC.IssueCategory -> Identifier -> m ()
+validateMessageCategoryAssociation issueMessageId merchantOperatingCityId parentIssueCategory identifier = do
+  parentIssueMessage <- CQIM.findById issueMessageId identifier >>= fromMaybeM (IssueMessageDoesNotExist issueMessageId.getId)
+  when
+    ( parentIssueCategory.merchantOperatingCityId /= merchantOperatingCityId
+        || parentIssueMessage.merchantOperatingCityId /= merchantOperatingCityId
+    )
+    $ throwError AccessDenied
+  when (parentIssueMessage.messageType /= DIM.Terminal) $ throwError $ InvalidRequest "Parent message has incorrect messageType."
+  mbParentMessageCategoryId <-
+    maybe
+      (maybe (return Nothing) findCategoryId parentIssueMessage.optionId)
+      (return . Just)
+      parentIssueMessage.categoryId
+  whenJust mbParentMessageCategoryId $ \categoryId ->
+    when (categoryId /= parentIssueCategory.id) $ throwError $ InvalidRequest "Parent Message does not belong to the Parent category."
+  where
+    findCategoryId :: BeamFlow m r => Id DIO.IssueOption -> m (Maybe (Id DIC.IssueCategory))
+    findCategoryId issueOptionId =
+      CQIO.findById issueOptionId identifier
+        >>= fromMaybeM
+          (IssueOptionNotFound issueOptionId.getId)
+        <&> (.issueCategoryId)
+
+handleCategoryPrioriyUpdates :: BeamFlow m r => Id MerchantOperatingCity -> Int -> Identifier -> m ()
+handleCategoryPrioriyUpdates merchantOpCityId priority identifier = do
+  allCategories <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage merchantOpCityId ENGLISH identifier
+  let matchingPriority = find (\(category, _) -> category.priority == priority) allCategories
+  whenJust matchingPriority $ \_ ->
+    mapM_
+      ( \(category, _) ->
+          when (category.priority >= priority) $ do
+            QIC.updatePriority category.id (category.priority + 1)
+            CQIC.clearAllIssueCategoryByIdAndLanguageCache category.id identifier
+            CQIC.clearIssueCategoryByIdCache category.id identifier
+      )
+      allCategories
+
+handleOptionPriorityUpdates :: BeamFlow m r => Maybe Text -> Int -> Identifier -> m ()
+handleOptionPriorityUpdates mbIssueMessageId priority identifier = do
+  case mbIssueMessageId of
+    Nothing -> return ()
+    Just issueMessageId -> do
+      allOptions <- CQIO.findAllActiveByMessageAndLanguage (Id issueMessageId) ENGLISH identifier
+      let matchingPriority = find (\(option, _) -> option.priority == priority) allOptions
+      whenJust matchingPriority $ \_ ->
+        mapM_
+          ( \(option, _) ->
+              when (option.priority >= priority) $ do
+                QIO.updatePriority option.id (option.priority + 1)
+                CQIO.clearAllIssueOptionByIdAndLanguageCache option.id identifier
+                CQIO.clearIssueOptionByIdCache option.id identifier
+          )
+          allOptions
+
+handleMessagePriorityUpdates :: BeamFlow m r => Maybe DIM.IssueMessage -> Maybe (Id DIO.IssueOption) -> Maybe (Id DIC.IssueCategory) -> DIM.IssueMessageType -> Int -> Identifier -> m ()
+handleMessagePriorityUpdates mbOldIssueMessage mbIssueOptionId mbIssueCategoryId messageType priority identifier = do
+  issueMessages <- case mbIssueOptionId of
+    Just optionId -> CQIM.findAllActiveByOptionIdAndLanguage optionId ENGLISH identifier
+    Nothing -> case mbIssueCategoryId of
+      Just categoryId -> CQIM.findAllActiveByCategoryIdAndLanguage categoryId ENGLISH identifier
+      Nothing -> return []
+  let maxPriority = maximum (map (\(message, _, _) -> message.priority) issueMessages)
+  when (messageType /= DIM.FAQ && not (null issueMessages) && priority > maxPriority) $
+    throwError $ InvalidRequest "Priority is greater than the priority of the Terminal IssueMessage."
+  case mbOldIssueMessage of
+    Just oldMessage -> when (oldMessage.priority /= priority) $ updatePriorities issueMessages
+    Nothing -> updatePriorities issueMessages
+  where
+    updatePriorities :: BeamFlow m r => [(DIM.IssueMessage, DIT.DetailedTranslation, [Text])] -> m ()
+    updatePriorities messages = do
+      let matchingPriority = find (\(message, _, _) -> message.priority == priority) messages
+      whenJust matchingPriority $ \_ ->
+        mapM_
+          ( \(message, _, _) ->
+              when (message.priority >= priority) $ do
+                QIM.updatePriority (message.id) (message.priority + 1)
+                CQIM.clearAllIssueMessageByIdAndLanguageCache message.id identifier
+                CQIM.clearIssueMessageByIdCache message.id identifier
+          )
+          messages
+
+getIssueMessageType :: DIC.CategoryType -> Int -> Int -> DIM.IssueMessageType
+getIssueMessageType DIC.FAQ _ _ = DIM.FAQ
+getIssueMessageType DIC.Category currentIndex lastIndex
+  | currentIndex == lastIndex = DIM.Terminal
+  | otherwise = DIM.Intermediate
