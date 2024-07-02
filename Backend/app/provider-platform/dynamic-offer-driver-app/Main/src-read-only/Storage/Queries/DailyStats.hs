@@ -83,7 +83,11 @@ updateReferralStatsByDriverId activatedValidRides referralEarnings payoutStatus 
       Se.Set Beam.payoutStatus payoutStatus,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.DailyStats.DailyStats))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]

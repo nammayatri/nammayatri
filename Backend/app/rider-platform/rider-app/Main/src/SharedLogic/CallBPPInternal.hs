@@ -17,7 +17,8 @@ import Tools.Metrics (CoreMetrics)
 data RefereeLinkInfoReq = RefereeLinkInfoReq
   { referralCode :: Text,
     customerMobileNumber :: Text,
-    customerMobileCountryCode :: Text
+    customerMobileCountryCode :: Text,
+    isMultipleDeviceIdExist :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -46,10 +47,11 @@ linkReferee ::
   Text ->
   Text ->
   Text ->
+  Bool ->
   m APISuccess
-linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode = do
+linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode isMultipleDeviceIdExist = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode)) "LinkReferee" likeRefereeApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode (Just isMultipleDeviceIdExist))) "LinkReferee" likeRefereeApi
 
 type FeedbackFormAPI =
   "internal"

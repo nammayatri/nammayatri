@@ -296,6 +296,10 @@ Person:
       params: [id, totalRidesCount]
       where: id
 
+    findAllByDeviceId:
+      kvFunction: findAllWithKV
+      where: deviceId
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
