@@ -291,49 +291,68 @@ sourceDestinationView push config =
   let isNotRentalRide = (config.fareProductType /= FPT.RENTAL)
       bottomMargin = (if os == "IOS" && config.rideStarted && config.enablePaddingBottom then (safeMarginBottom + 36) else 12)
       dropLocationTextWidth = if config.enableEditDestination && isNotRentalRide then if os == "IOS" then V ((screenWidth unit) / 100 * 80) else V ((screenWidth unit) / 100 * 65) else V ((screenWidth unit) / 10 * 8)
+      pickupLocationTextWidth = if (config.isEditPickupEnabled && config.rideAccepted) then if os == "IOS" then V ((screenWidth unit) / 100 * 80) else V ((screenWidth unit) / 100 * 65) else V ((screenWidth unit) / 10 * 8)
   in 
     PrestoAnim.animationSet [ scaleYAnimWithDelay 100] $ 
-      linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , margin $ Margin 16 0 16 bottomMargin
-      , background config.backgroundColor
-      , onAnimationEnd push $ const $ config.onAnimationEnd
-      , cornerRadius 8.0
-      , padding $ Padding 16 12 16 12
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , margin $ Margin 16 0 16 (if os == "IOS" && config.rideStarted && config.enablePaddingBottom then safeMarginBottom + 36 else 12)
+  , background config.backgroundColor
+  , onAnimationEnd push $ const $ config.onAnimationEnd
+  , cornerRadius 8.0
+  , padding $ Padding 16 12 16 12
+  ][linearLayout
+    [ orientation HORIZONTAL
+    , height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    ][linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity LEFT
+      , accessibility ENABLE
+      , weight 1.0
+      , accessibilityHint $ "Pickup : " <> config.source
       ][linearLayout
-        [ orientation VERTICAL
-        , height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity LEFT
-        , accessibility ENABLE
-        , accessibilityHint $ "Pickup : " <> config.source
-        ][linearLayout
-          [ orientation HORIZONTAL
-          , gravity CENTER
-          ][imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
-            , height $ V 8
-            , width $ V 8
-            ]
-            ,textView $
-            [ text $ getString PICKUP
-            , margin $ MarginLeft 6
-            , color Color.black700
-            ] <> FontStyle.body3 TypoGraphy
-            ]
-          , textView $
-            [ text config.source
-            , maxLines 1
-            , ellipsize true
-            , width $ V ((screenWidth unit) / 10 * 8)
-            , height MATCH_PARENT
-            , gravity LEFT
-            , color Color.black900
-            , margin $ MarginTop 3
-            ] <> FontStyle.body1 TypoGraphy
+        [ orientation HORIZONTAL
+        , gravity CENTER
+        ][imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
+          , height $ V 8
+          , width $ V 8
           ]
+          ,textView $
+          [ text $ getString PICKUP
+          , margin $ MarginLeft 6
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+          ]
+        , textView $
+          [ text config.source
+          , maxLines 2
+          , ellipsize true
+          , width $ pickupLocationTextWidth
+          , height MATCH_PARENT
+          , gravity LEFT
+          , color Color.black900
+          , margin $ MarginTop 3
+          ] <> FontStyle.body1 TypoGraphy
+        ]
+      , textView $ 
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text $ getString EDIT
+        , cornerRadius if os == "IOS" then 20.0 else 32.0
+        , stroke $ "1," <> Color.grey900
+        , padding $ Padding 12 8 12 8
+        , visibility $ boolToVisibility $ (config.isEditPickupEnabled && config.rideAccepted)
+        , onClick push $ const config.editingPickupLocation
+        , rippleColor Color.rippleShade
+        ] <> FontStyle.body1 TypoGraphy
+      ]
         , separator (MarginVertical 12 12) (V 1) Color.ghostWhite isNotRentalRide
         , linearLayout
         [

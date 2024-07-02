@@ -588,6 +588,7 @@ getScreenFromStage stage = case stage of
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
   LoadMap -> "map_loader"
+  EditPickUpLocation -> "edit_pickup_location_screen"
   ProviderSelection -> "provider_selection_screen"
   RideSearch -> "ride_search"
   ConfirmRentalRide -> "confirm_rental_ride"

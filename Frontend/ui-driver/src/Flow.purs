@@ -85,7 +85,7 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
 import Presto.Core.Types.API (ErrorResponse(..))
-import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, Flow)
+import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, setState, Flow)
 import PrestoDOM (initUI)
 import RemoteConfig as RC
 import Resource.Constants (decodeAddress)
@@ -2532,6 +2532,9 @@ homeScreenFlow = do
         "TRIP_STARTED" -> do 
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = false}})
           homeScreenFlow
+        "EDIT_LOCATION" -> do
+          _ <- lift $ lift $ setState defaultGlobalState
+          baseAppFlow true Nothing Nothing
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""

@@ -26,6 +26,7 @@ import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Debug (spy)
 import Effect (Effect)
+import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, parseFloat)
 import Engineering.Helpers.Commons as EHC
@@ -54,8 +55,9 @@ screen initialState =
   , name: "DriverSavedLocationScreen"
   , globalEvents:
       [ ( \push -> do
-            if initialState.props.viewType == LOCATE_ON_MAP then
-              JB.storeCallBackLocateOnMap push UpdateLocation
+            if initialState.props.viewType == LOCATE_ON_MAP then do
+              void $ runEffectFn1 JB.triggerCallBackQueue ""
+              void $ runEffectFn2 JB.storeCallBackLocateOnMap (\key lat lon -> push $ UpdateLocation key lat lon) (JB.handleLocateOnMapCallback "DriverSavedLocationScreen")
             else if initialState.props.viewType == GoToList then do
               void $ launchAff $ flowRunner defaultGlobalState
                 $ do
