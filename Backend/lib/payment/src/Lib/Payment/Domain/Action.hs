@@ -53,14 +53,14 @@ import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
-import qualified Lib.Payment.Domain.Types.PayoutOrders as Payment
-import qualified Lib.Payment.Domain.Types.PayoutTransactions as PT
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
+import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
-import qualified Lib.Payment.Storage.Queries.PayoutOrders as QPayoutOrder
-import qualified Lib.Payment.Storage.Queries.PayoutTransactions as QPayoutTransaction
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 
 data PaymentStatusResp
@@ -744,21 +744,23 @@ createPayoutService merchantId _personId mbEntityId mbEntityName city createPayo
     buildPayoutOrder req resp = do
       now <- getCurrentTime
       uuid <- generateGUID
+      customerEmail <- encrypt req.customerEmail
+      mobileNo <- encrypt req.customerPhone
       pure $
-        Payment.PayoutOrders
+        Payment.PayoutOrder
           { id = uuid,
             customerId = req.customerId,
             orderId = req.orderId,
             merchantId = merchantId.getId,
-            mobileNo = req.customerPhone,
+            mobileNo = mobileNo,
             city = city,
-            amount = req.amount,
+            amount = mkPrice Nothing req.amount,
             entityId = mbEntityId,
             entityName = mbEntityName,
             status = resp.status,
             accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments, --- for now only one fullfillment supported
             vpa = Just req.customerVpa,
-            customerEmail = req.customerEmail,
+            customerEmail = customerEmail,
             lastStatusCheckedAt = Nothing,
             createdAt = now,
             updatedAt = now
@@ -797,14 +799,14 @@ payoutStatusUpdates status_ orderId statusResp = do
               uuid <- generateGUID
               now <- getCurrentTime
               let payoutTransaction =
-                    PT.PayoutTransactions
+                    PT.PayoutTransaction
                       { id = uuid,
                         merchantId = order.merchantId,
                         payoutOrderId = Id orderId,
                         transactionRef = transactionRef,
                         gateWayRefId = gatewayRefId,
                         fulfillmentMethod = fulfillmentMethod,
-                        amount = realToFrac amount_txn,
+                        amount = mkPrice Nothing (realToFrac amount_txn),
                         status = status,
                         createdAt = now,
                         updatedAt = now

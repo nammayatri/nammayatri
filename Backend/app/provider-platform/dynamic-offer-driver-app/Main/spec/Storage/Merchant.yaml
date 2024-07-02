@@ -35,6 +35,7 @@ imports:
   BookingStatus: Domain.Types.Booking
   FCMNotificationType: Kernel.External.Notification.FCM.Types
   ServiceTierType: Domain.Types.ServiceTierType
+  Category: Domain.Types.Vehicle
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -1230,7 +1231,7 @@ PayoutConfig:
     isPayoutEnabled: Bool
     thresholdPayoutAmountPerPerson: HighPrecMoney
     batchLimit: Int
-    vehicleVariant: Domain.Types.Vehicle.Variant
+    vehicleCategory: Category
     maxRetryCount: Int
     payoutRegistrationFee: HighPrecMoney
     payoutRegistrationCgst: HighPrecMoney
@@ -1258,7 +1259,7 @@ PayoutConfig:
     orderType: "'FULFILL_ONLY'"
   constraints:
     merchantOperatingCityId: PrimaryKey
-    vehicleVariant: PrimaryKey
+    vehicleCategory: PrimaryKey
   queries:
     findByMerchantOpCityIdAndIsPayoutEnabled:
       kvFunction: findAllWithKV
