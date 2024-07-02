@@ -47,8 +47,8 @@ view push state =
   relativeLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
-  , adjustViewWithKeyboard "true"
-  ][ enterReferralCodeView push state
+  ]
+  [ enterReferralCodeView push state
    , referralPopUp push state
    , referralInfoPopup push state
    ]
@@ -58,20 +58,21 @@ enterReferralCodeView :: forall w. (Action -> Effect Unit) -> ReferralComponentS
 enterReferralCodeView push state =
   PrestoAnim.animationSet [ translateYAnim translateYAnimConfig ] $
   linearLayout
-  [ height MATCH_PARENT
+  ([ height MATCH_PARENT
   , width MATCH_PARENT
   , gravity CENTER
   , orientation VERTICAL
   , background Color.blackLessTrans
   , visibility $ boolToVisibility $ state.stage == ENTER_REFERRAL_CODE && state.stage /= NO_REFERRAL_STAGE
   , clickable true
-  , adjustViewWithKeyboard "true"
-  ]
-  [ scrollView
+  ] <> if EHC.os == "IOS" then [] else [adjustViewWithKeyboard "true"]) 
+  [ 
+    scrollView
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ]
-  [  linearLayout
+  [ 
+     linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , cornerRadius 16.0
