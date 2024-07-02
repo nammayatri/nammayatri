@@ -167,7 +167,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
           return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
         Nothing -> do
           (status, mbReason, mbUrl) <- getInProgressDriverDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
-          message <- documentStatusMessage status mbReason docType mbProcessedUrl language
+          message <- documentStatusMessage status mbReason docType mbUrl language
           return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
 
   processedVehicleDocumentsWithRC <- do
@@ -188,7 +188,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
             Nothing -> do
               (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
-              message <- documentStatusMessage status mbReason docType mbProcessedUrl language
+              message <- documentStatusMessage status mbReason docType mbUrl language
               return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
       return $
         VehicleDocumentItem
