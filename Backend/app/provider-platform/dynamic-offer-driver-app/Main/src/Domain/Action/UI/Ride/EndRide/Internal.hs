@@ -157,7 +157,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
 
-  sendReferralFCM ride booking.providerId mbRiderDetails booking.merchantOperatingCityId thresholdConfig
+  sendReferralFCM ride booking booking.providerId mbRiderDetails booking.merchantOperatingCityId thresholdConfig
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
   let currency = booking.currency
@@ -194,16 +194,16 @@ sendReferralFCM ::
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   Ride.Ride ->
+  SRB.Booking ->
   Id Merchant ->
   Maybe RD.RiderDetails ->
   Id DMOC.MerchantOperatingCity ->
   TransporterConfig ->
   m ()
-sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId transporterConfig = do
+sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transporterConfig = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   now <- getCurrentTime
   let shouldUpdateRideComplete =
-        -- TODO: add fraud checks for referral payout
         case minTripDistanceForReferralCfg of
           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
           Nothing -> True
@@ -218,22 +218,24 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId transporterConfi
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
             unencryptedMobileNumber <- decrypt riderDetails.mobileNumber
             mobileNumberHash <- getDbHash unencryptedMobileNumber
-            isValidRideForPayout <- fraudChecksForReferralPayout mobileNumberHash riderDetails.mobileCountryCode
-            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId
+            localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+            mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
+            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats -- riderdetails and check flag if just send false
+            whenJust mbFlagReason $ \flagReason -> do
+              QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) (Just flagReason) riderDetails.id
+            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             -- TODO: notifyDriver (for referral reward)
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
           Nothing -> pure ()
   where
-    updateReferralStats referredDriverId = do
+    updateReferralStats referredDriverId mbDailyStats localTime = do
       vehicle <- QV.findById referredDriverId >>= fromMaybeM (DriverWithoutVehicle referredDriverId.getId)
       payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicle.variant >>= fromMaybeM (InternalError "Payout config not present")
       let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
       driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId
-      localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-      mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
       case mbDailyStats of
         Just stats -> do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referredDriverId.getId) 3 3 $ do
@@ -241,12 +243,42 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId transporterConfi
         Nothing -> do
           id <- generateGUIDText
           now <- getCurrentTime
-          let dailyStatsOfDriver' = DDS.DailyStats {id = id, driverId = referredDriverId, totalEarnings = fromMaybe 0.0 ride.fare, numRides = 1, totalDistance = fromMaybe 0 ride.chargeableDistance, merchantLocalDate = utctDay localTime, currency = ride.currency, distanceUnit = ride.distanceUnit, activatedValidRides = 1, referralEarnings = referralRewardAmount, referralCounts = 1, payoutStatus = DDS.Verifying, payoutOrderId = Nothing, payoutOrderStatus = Nothing, createdAt = now, updatedAt = now}
+          let dailyStatsOfDriver' =
+                DDS.DailyStats
+                  { id = id,
+                    driverId = referredDriverId,
+                    totalEarnings = 0.0,
+                    numRides = 0,
+                    totalDistance = 0,
+                    merchantLocalDate = utctDay localTime,
+                    currency = ride.currency,
+                    distanceUnit = ride.distanceUnit,
+                    activatedValidRides = 1,
+                    referralEarnings = referralRewardAmount,
+                    referralCounts = 1,
+                    payoutStatus = DDS.Verifying,
+                    payoutOrderId = Nothing,
+                    payoutOrderStatus = Nothing,
+                    createdAt = now,
+                    updatedAt = now
+                  }
           QDailyStats.create dailyStatsOfDriver'
 
-    fraudChecksForReferralPayout mobileNumberHash mobileCountryCode = do
-      availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo mobileCountryCode mobileNumberHash
-      return $ null availablePersonWithNumber
+    fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats = do
+      availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
+      let isValidForMinPickupThreshold = maybe True (>= transporterConfig.minPickupDistanceThresholdForReferralPayout) booking.distanceToPickup
+          isValidForMinRideDistance = ride.traveledDistance >= transporterConfig.minRideDistanceThresholdForReferralPayout
+          isMaxReferralExceeded = maybe False (< transporterConfig.maxPayoutReferralForADay) ((.referralCounts) <$> mbDailyStats)
+          isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
+      let mbFlagReason =
+            case (listToMaybe availablePersonWithNumber, isValidForMinRideDistance, isValidForMinPickupThreshold, isMaxReferralExceeded) of
+              (Just _, _, _, _) -> Just RD.CustomerExistAsDriver
+              (_, False, _, _) -> Just RD.MinRideDistanceInvalid
+              (_, _, False, _) -> Just RD.MinPickupDistanceInvalid
+              (_, _, _, False) -> Just RD.ExceededMaxReferral
+              _ -> Nothing
+      let isValid = null availablePersonWithNumber && isValidForMinPickupThreshold && isValidForMinRideDistance && isMaxReferralExceeded && isMultipleDeviceIdExists
+      return (isValid, mbFlagReason)
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 

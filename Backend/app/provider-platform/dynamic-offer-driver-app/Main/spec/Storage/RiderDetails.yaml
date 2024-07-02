@@ -12,7 +12,8 @@ RiderDetails:
   tableName: rider_details
 
   types:
-
+    PayoutFlagReason:
+        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists"
 
   fields:
     id : Id RiderDetails
@@ -31,6 +32,8 @@ RiderDetails:
     merchantId : Id Merchant
     otpCode : Maybe Text
     nightSafetyChecks : Bool
+    firstRideId: Maybe Text
+    payoutFlagReason: Maybe PayoutFlagReason
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -92,6 +95,11 @@ RiderDetails:
     updateDisputeChancesUsedAndCancellationDues:
       kvFunction: updateOneWithKV
       params: [disputeChancesUsed, cancellationDues]
+      where: id
+
+    updateFirstRideIdAndFlagReason:
+      kvFunction: updateOneWithKV
+      params: [firstRideId, payoutFlagReason]
       where: id
 
   sqlType:

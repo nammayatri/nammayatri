@@ -794,6 +794,9 @@ TransporterConfig:
     payoutBatchLimit: Int
     updatePayoutStatusBatchSize: Int
     lastNdaysToCheckForPayoutOrderStatus: Int
+    minRideDistanceThresholdForReferralPayout: HighPrecMeters
+    minPickupDistanceThresholdForReferralPayout: Meters
+    maxPayoutReferralForADay: Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1073,6 +1076,9 @@ TransporterConfig:
     payoutBatchLimit: "10"
     updatePayoutStatusBatchSize: "20"
     lastNdaysToCheckForPayoutOrderStatus: "2"
+    minRideDistanceThresholdForReferralPayout: "1500.0"
+    minPickupDistanceThresholdForReferralPayout: "500"
+    maxPayoutReferralForADay: "5"
 
   excludedDefaultQueries:
     - findByPrimaryKey
