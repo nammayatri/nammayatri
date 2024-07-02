@@ -101,11 +101,11 @@ enterReferralCodeView push state =
             , width WRAP_CONTENT
             , color Color.black900
             , text $ getString HAVE_REFERRAL_CODE
+            , padding $ Padding 0 7 0 0
             ] <> FontStyle.body7 TypoGraphy
           , imageView
             [ height $ V 30
             , width $ V 30
-            , margin $ MarginLeft 5
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
             ]
           ]
