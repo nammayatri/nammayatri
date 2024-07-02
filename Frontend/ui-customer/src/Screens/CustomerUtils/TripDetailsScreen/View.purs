@@ -521,7 +521,7 @@ allTopicsView state push topicList =
             , width MATCH_PARENT
             , orientation HORIZONTAL
             ][  imageView
-                [ imageWithFallback item.categoryImageUrl
+                [ imageWithFallback (fromMaybe "" item.categoryImageUrl)
                 , height $ V 20
                 , width $ V 20
                 ]

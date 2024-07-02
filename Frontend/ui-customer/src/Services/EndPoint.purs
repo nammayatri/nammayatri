@@ -192,13 +192,17 @@ postIssue language = (getBaseUrl "41") <> "/issue?language=" <> language
 uploadFile :: String -> String
 uploadFile dummy = (getBaseUrl "42") <> "/issue/upload"
 
-getOptions :: String -> String -> String -> String -> String
-getOptions categoryId optionId issueReportId language = 
-  if (optionId == "") 
-    then (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&language=" <> language
-    else if (issueReportId == "")
-      then (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&optionId=" <> optionId <> "&language=" <> language
-      else (getBaseUrl "43") <> "/issue/option?categoryId=" <> categoryId <> "&optionId=" <> optionId <> "&issueReportId=" <> issueReportId <> "&language=" <> language
+getOptions :: String -> String -> String -> String -> String -> String
+getOptions categoryId optionId rideId issueReportId language = 
+  getBaseUrl "43" <> "/issue/option?categoryId=" <> categoryId <> "&language=" <> language <> rideIdQueryParam <> optionIdQueryParam
+  where
+    rideIdQueryParam = if null rideId then "" else "&rideId=" <> rideId
+    optionIdQueryParam = 
+      if null optionId then "" 
+      else "&optionId=" <> optionId <> issueReportIdQueryParam
+    issueReportIdQueryParam = 
+      if null issueReportId then "" 
+      else "&issueReportId=" <> issueReportId
 
 issueInfo :: String -> String -> String
 issueInfo issueId language = (getBaseUrl "44") <> "/issue/" <> issueId <> "/info?language=" <> language

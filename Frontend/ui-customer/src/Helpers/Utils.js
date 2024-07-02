@@ -513,3 +513,13 @@ export const getAndRemoveLatestNotificationType = function() {
   window.notificationType = null;
   return notificationType;
 }
+
+export const decodeErrorCode = function (a) {
+  try {
+    const errorCodee = JSON.parse(a).errorCode;
+    return  errorCodee;
+  } catch (e) {
+    console.log(e);
+    return " ";
+  }
+};

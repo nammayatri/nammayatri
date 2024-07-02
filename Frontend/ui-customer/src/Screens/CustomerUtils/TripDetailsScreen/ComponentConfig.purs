@@ -37,6 +37,7 @@ import Data.Array (filter, elem)
 import Common.Animation.Config
 import PrestoDOM.Animation as PrestoAnim
 import Engineering.Helpers.Commons (convertUTCtoISC)
+import Data.Maybe (maybe)
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -134,17 +135,22 @@ topicsList state =
       neededCategories = ["RIDE_RELATED", "LOST_AND_FOUND", "PAYMENT_RELATED", "FARE_DISCREPANCY", "SAFETY"]
   in 
   if appConfig.feature.enableSelfServe then 
-    filter (\obj -> elem obj.categoryAction neededCategories) state.data.categories 
+    filter (\obj -> maybe false (\action -> 
+      action `elem` neededCategories) obj.categoryAction) state.data.categories
   else 
-      [{ categoryAction : "CONTACT_US"
+      [{ categoryAction : Just "CONTACT_US"
       , categoryName : getString FOR_OTHER_ISSUES_WRITE_TO_US
-      , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
+      , categoryImageUrl : Just $ fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
       , categoryId : "5"
+      , isRideRequired : false
+      , maxAllowedRideAge : Nothing
       },
-      { categoryAction : "CALL_SUPPORT"
+      { categoryAction : Just "CALL_SUPPORT"
       , categoryName : getString CONTACT_SUPPORT
-      , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_help"
+      , categoryImageUrl : Just $ fetchImage FF_COMMON_ASSET "ny_ic_help"
       , categoryId : "6"
+      , isRideRequired : false
+      , maxAllowedRideAge : Nothing
       }]
 
 listExpandingAnimationConfig :: Boolean -> AnimConfig

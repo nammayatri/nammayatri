@@ -129,8 +129,8 @@ eval Loader state = do
   exit $ LoaderOutput state
 
 eval (RideHistoryAPIResponseAction rideList) state = do
-  let bufferCardDataPrestoList = (rideHistoryListTransformer rideList state.selectedCategory.categoryAction)
-  let filteredRideList         = (rideListResponseTransformer rideList state.selectedCategory.categoryAction)
+  let bufferCardDataPrestoList = (rideHistoryListTransformer rideList $ fromMaybe "" state.selectedCategory.categoryAction)
+  let filteredRideList         = (rideListResponseTransformer rideList $ fromMaybe "" state.selectedCategory.categoryAction)
   _ <- pure $ setRefreshing "2000030" false
   let loadBtnDisabled          = length rideList == 0
   continue state {

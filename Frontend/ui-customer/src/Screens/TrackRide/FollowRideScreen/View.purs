@@ -389,6 +389,8 @@ getMessageNotificationViewConfig state =
       removeNotification = if state.props.isRideStarted && not state.props.currentUserOnRide && currentFollower.priority == 0 
                               then state.props.removeNotification 
                               else true
+      toChatComponent { message, sentBy, timeStamp, type: type_, delay } = 
+        { message, sentBy, timeStamp, type: type_, delay}
   in {
     showChatNotification : state.props.showChatNotification
   , enableChatWidget : state.props.enableChatWidget
@@ -396,7 +398,7 @@ getMessageNotificationViewConfig state =
   , fareProductType : driverInfoCard.fareProductType
   , config : state.data.config
   , rideStarted : true
-  , lastMessage : state.data.lastMessage
+  , lastMessage : toChatComponent state.data.lastMessage
   , lastSentMessage : state.data.lastSentMessage
   , lastReceivedMessage : state.data.lastReceivedMessage
   , removeNotificationAction : RemoveNotification
@@ -1024,6 +1026,8 @@ messagingViewConfig state = let
   driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
   currentFollower = getCurrentFollower state.data.currentFollower
   name = fromMaybe currentFollower.mobileNumber currentFollower.name
+  toChatComponent { message, sentBy, timeStamp, type: type_, delay } = 
+        { message, sentBy, timeStamp, type: type_, delay}
   in MessagingView.config {
     userConfig
     { userName = name
@@ -1036,7 +1040,7 @@ messagingViewConfig state = let
     , enableSuggestions = state.data.config.feature.enableSuggestions
     , showVehicleDetails = false
     }
-  , messages = state.data.messages
+  , messages = map toChatComponent state.data.messages
   , messagesSize = state.data.messagesSize
   , vehicleNo = makeNumber $ driverInfoCard.registrationNumber     
   , chatSuggestionsList = getChatSuggestions state

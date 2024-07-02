@@ -18,7 +18,6 @@ module Components.DriverInfoCard.Controller where
 import MerchantConfig.Types
 
 import Common.Types.App (RentalBookingConfig)
-import Components.ChatView.Controller (ChatComponentConfig)
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController

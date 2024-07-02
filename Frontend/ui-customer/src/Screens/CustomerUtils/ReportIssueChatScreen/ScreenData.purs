@@ -31,15 +31,15 @@ import Data.Show.Generic (genericShow)
 import Services.API (Chat)
 import Screens.Types (IndividualRideCardState)
 import MerchantConfig.Types (AppConfig)
+import Common.Types.App (CategoryListType)
 
 initData :: ReportIssueChatScreenState
 initData = {
     data: {
         tripId: Nothing,
         selectedOption: Nothing,
-        categoryName: "",
         issueId: Nothing,
-        categoryId: "",
+        selectedCategory: selectedCategory',
         messageToBeSent: "",
         chatConfig: chatConfig',
         recordAudioState: recordAudioState',
@@ -125,6 +125,14 @@ addAudioState' = {
   stateChanged: false
 }
 
+selectedCategory' = {
+  categoryName : "", 
+  categoryImageUrl : Nothing, 
+  categoryId : "", 
+  categoryAction : Nothing,  
+  isRideRequired : false,
+  maxAllowedRideAge : Nothing
+}
 
 type ReportIssueChatScreenState = {
     data :: ReportIssueChatScreenData,
@@ -133,13 +141,12 @@ type ReportIssueChatScreenState = {
 
 type ReportIssueChatScreenData = {
   tripId :: Maybe String,
-  categoryName :: String,
+  selectedCategory :: CategoryListType,
   messageToBeSent :: String,
   issueId :: Maybe String,
   chatConfig :: Config,
   selectedOption :: Maybe Option,
   addedImages :: Array { image :: String, imageName :: String },
-  categoryId :: String,
   recordAudioState :: RecordAudioState,
   addImagesState :: AddImageState,
   viewImageState :: ViewImageState,

@@ -18,7 +18,7 @@ module Screens.HelpAndSupportScreen.View where
 import Common.Types.App (LazyCheck(..), CategoryListType)
 import Data.Array (cons, uncons,length)
 import Data.Int (round, toNumber)
-import Data.Maybe (Maybe(Just, Nothing))
+import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
 import Data.Tuple (Tuple(Tuple), fst, snd)
 import Effect (Effect)
 import Language.Strings (getString)
@@ -222,14 +222,14 @@ recentRideDetails state push =
              , height WRAP_CONTENT
              , orientation HORIZONTAL
              ][
-             (case (fst categoryGroup) of
+             case (fst categoryGroup) of
                 Just cat -> categoryView cat 3.0 2.0 state push
                 _        -> linearLayout [] []
-             ),
-             (case (snd categoryGroup) of
+             ,
+             case (snd categoryGroup) of
                   Just cat -> categoryView cat 2.0 3.0 state push
                   _        -> linearLayout [] []
-             )
+             
             ]
          ) (getModifiedCategories state.data.categories))
 
@@ -238,14 +238,13 @@ categoryView categoryGroup marginLeft marginRight state push =
   let vw = (toNumber (screenWidth unit)) / 100.0
   in
   linearLayout
-  [ height MATCH_PARENT
+  [ height WRAP_CONTENT
   , width (V (round (45.0 * vw)))
   , orientation VERTICAL
   , padding (Padding 0 20 0 20)
-  , onClick push (case categoryGroup.categoryAction of
-                    "LOST_AND_FOUND" -> (const $ SelectRide categoryGroup)
-                    "RIDE_RELATED"   -> (const $ SelectRide categoryGroup)
-                    _                -> (const $ OpenChat categoryGroup)
+  , onClick push (if categoryGroup.isRideRequired  
+                    then const $ SelectRide categoryGroup
+                    else const $ OpenChat categoryGroup
                   )
   , margin (Margin (round (marginLeft * vw)) (round (2.0 * vw)) (round (marginRight * vw)) (round (2.0 * vw)))
   , cornerRadius 8.0
@@ -256,14 +255,14 @@ categoryView categoryGroup marginLeft marginRight state push =
       [ width (V (round (30.0 * vw)))
       , height(V (round (30.0 * vw)))
       , cornerRadius (15.0 * vw)
-      , imageWithFallback ("," <> categoryGroup.categoryImageUrl)
+      , imageWithFallback ("," <> fromMaybe "" categoryGroup.categoryImageUrl)
       , background Color.grey800
       ]
       , textView
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , margin (Margin 0 10 0 0)
-      , text $ getCategoryName categoryGroup.categoryAction
+      , text $ getCategoryName $ fromMaybe "" categoryGroup.categoryAction
       , gravity CENTER
       , color Color.black800
       , textSize FontSize.a_17

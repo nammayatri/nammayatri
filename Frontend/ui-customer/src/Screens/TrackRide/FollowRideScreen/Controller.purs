@@ -242,26 +242,28 @@ eval action state = case action of
             else continue newState
   GenericHeaderAC act -> continueWithCmd state [ pure BackPressed ]
   LoadMessages -> do
-    let
-      allMessages = getChatMessages FunctionCall
+    let allMessages = getChatMessages FunctionCall
+        toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
+          { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+        transformedMessages = map toChatComponentConfig allMessages
     case (last allMessages) of
       Just value ->
         if STR.null value.message then
           continue state { data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1) }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
         else if value.sentBy == getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys then
-          updateMessagesWithCmd state { data { messages = allMessages, chatSuggestionsList = getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e", lastMessage = value, lastSentMessage = value }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
+          updateMessagesWithCmd state { data { messages = transformedMessages, chatSuggestionsList = getSuggestionsfromKey emChatSuggestion "31e3bbf96e4b4208f1328f5b0da57d2e", lastMessage = toChatComponentConfig value, lastSentMessage = value }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
         else do
           let
             readMessages = fromMaybe 0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
 
-            unReadMessages = if readMessages == 0 && state.data.currentStage /= ST.ChatWithEM then true else (readMessages < (length allMessages) && state.data.currentStage /= ST.ChatWithEM)
+            unReadMessages = if readMessages == 0 && state.data.currentStage /= ST.ChatWithEM then true else (readMessages < (length transformedMessages) && state.data.currentStage /= ST.ChatWithEM)
 
             suggestions = getSuggestionsfromKey emChatSuggestion value.message
 
             isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
 
             showNotification = isChatNotificationDismissed && unReadMessages
-          updateMessagesWithCmd state { data { messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value }, props { unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification } }
+          updateMessagesWithCmd state { data { messages = transformedMessages, chatSuggestionsList = suggestions, lastMessage = toChatComponentConfig value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value }, props { unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification } }
       Nothing -> continue state { props { canSendSuggestion = true } }
   UpdateMessages message sender timeStamp size -> do
     if not state.props.chatCallbackInitiated then
@@ -288,7 +290,10 @@ eval action state = case action of
               void $ pure $ performHapticFeedback unit
               _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
               let allMessages = getChatMessages FunctionCall
-              continueWithCmd state {data{messages = allMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do 
+                  toChatComponentConfig { message, sentBy, timeStamp, type: type_, delay } = 
+                    { message, messageTitle: Nothing, messageAction: Nothing, sentBy, timeStamp, type: type_, delay}
+                  transformedMessages = map toChatComponentConfig allMessages
+              continueWithCmd state {data{messages = transformedMessages, currentStage = ST.ChatWithEM}, props {sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}} [do 
                 void $ launchAff $ flowRunner defaultGlobalState $ updateMapPadding state
                 pure $ ResetSheetState]
           else 

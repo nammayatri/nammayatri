@@ -168,7 +168,7 @@ headerLayout state push =
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text state.data.categoryName
+              , text state.data.selectedCategory.categoryName
               , margin $ MarginLeft 5
               , weight 1.0
               , color Color.black900
@@ -217,7 +217,6 @@ chatView push state =
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    , afterRender push $ pure ShowOptions
     , background Color.white900
     , orientation VERTICAL
     ]

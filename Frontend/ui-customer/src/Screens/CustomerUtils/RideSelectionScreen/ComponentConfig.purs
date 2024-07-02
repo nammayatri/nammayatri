@@ -32,6 +32,7 @@ import Styles.Colors as Color
 import Data.Maybe 
 import Screens.RideSelectionScreen.ScreenData
 import MerchantConfig.DefaultConfig as DC
+import Mobility.Prelude
 
 apiErrorModalConfig :: RideSelectionScreenState -> ErrorModal.Config 
 apiErrorModalConfig state = let 
@@ -78,7 +79,7 @@ errorModalConfig state = let
       , color = Color.black800
       }
     , errorDescriptionConfig {
-        text = getString YOU_HAVENT_TAKEN_A_TRIP_YET
+        text = getString errorMessage
       , color = Color.black700
       }
     , buttonConfig {
@@ -86,6 +87,11 @@ errorModalConfig state = let
       }
     }
   in errorModalConfig' 
+  where
+    errorMessage = 
+      case state.selectedCategory.maxAllowedRideAge of
+      Just maxAllowedRideAge -> YOU_HAVENT_TAKEN_A_TRIP_YET_IN_PAST_HOURS (show $ maxAllowedRideAge/3600)
+      Nothing -> YOU_HAVENT_TAKEN_A_TRIP_YET
 
 genericHeaderConfig :: RideSelectionScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
@@ -104,7 +110,7 @@ genericHeaderConfig state = let
       , accessibilityHint = "Back Button"
       } 
     , textConfig {
-        text = (getTitle state.selectedCategory.categoryAction)
+        text = (getTitle (fromMaybe "" state.selectedCategory.categoryAction))
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {
@@ -129,5 +135,6 @@ cancelButtonConfig _ = let
     , cornerRadius= 0.0
     , margin = Margin 0 0 0 0
     , id = "cancelButtonConfig"
+    , visibility = boolToVisibility false
     }
   in primaryButtonConfig'

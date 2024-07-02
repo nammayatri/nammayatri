@@ -42,7 +42,8 @@ type RideSelectionScreenData = {
     offsetValue :: Int,
     loadMoreText :: Boolean,
     isSrcServiceable :: Boolean,
-    config :: AppConfig
+    config :: AppConfig,
+    selectedOptionId :: Maybe String
   }
 
 type RideSelectionScreenProps = {
@@ -75,13 +76,16 @@ initData =
       , loadMoreText: true
       , isSrcServiceable : true
       , config : getAppConfig appConfig
+      , selectedOptionId : Nothing
       }
   , prestoListArrayItems: []
   , selectedCategory : {
         categoryName : ""
-      , categoryImageUrl : ""
-      , categoryAction : ""
+      , categoryImageUrl : Nothing
+      , categoryAction : Nothing
       , categoryId : ""
+      , isRideRequired : false
+      , maxAllowedRideAge : Nothing
     }
   , selectedItem : Nothing
   }

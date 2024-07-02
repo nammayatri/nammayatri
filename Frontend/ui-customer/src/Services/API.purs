@@ -2599,6 +2599,8 @@ newtype Category = Category
   , logoUrl  :: String
   , category :: String
   , issueCategoryId :: String
+  , isRideRequired :: Boolean
+  , maxAllowedRideAge :: Maybe Int
   }
 
 instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq  where
@@ -2624,7 +2626,7 @@ instance decodeGetCategoriesRes         :: Decode GetCategoriesRes where decode 
 instance encodeGetCategoriesRes         :: Encode GetCategoriesRes where encode = defaultEncode
 
 --------------------------------------------------- getOptions ----------------------------------------------------
-data GetOptionsReq = GetOptionsReq String String String String
+data GetOptionsReq = GetOptionsReq String String String String String
 
 newtype GetOptionsRes = GetOptionsRes { 
   options :: Array Option, 
@@ -2641,15 +2643,17 @@ newtype Message = Message
   { id  :: String
   , message :: String
   , label :: Maybe String 
+  , messageTitle :: Maybe String
+  , messageAction :: Maybe String 
   }
 
-instance makeGetOptionsReq :: RestEndpoint GetOptionsReq  where
-    makeRequest reqBody@(GetOptionsReq categoryId optionId issueReportId language) headers = defaultMakeRequest GET (EP.getOptions categoryId optionId issueReportId language) headers reqBody Nothing
+instance makeGetOptionsReq :: RestEndpoint GetOptionsReq where
+    makeRequest reqBody@(GetOptionsReq categoryId optionId rideId issueReportId language) headers = defaultMakeRequest GET (EP.getOptions categoryId optionId rideId issueReportId language) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericGetOptionsReq :: Generic GetOptionsReq _
 instance showGetOptionsReq     :: Show GetOptionsReq where show     = genericShow
-instance standardGetOptionsReq :: StandardEncode GetOptionsReq where standardEncode (GetOptionsReq _ _ _ _) = standardEncode {}
+instance standardGetOptionsReq :: StandardEncode GetOptionsReq where standardEncode (GetOptionsReq _ _ _ _ _) = standardEncode {}
 instance decodeGetOptionsReq   :: Decode GetOptionsReq where decode = defaultDecode
 instance encodeGetOptionsReq   :: Encode GetOptionsReq where encode = defaultEncode
 
@@ -2742,6 +2746,8 @@ newtype IssueInfoRes = IssueInfoRes
 newtype ChatDetail = ChatDetail
   { timestamp :: String,
     content :: Maybe String,
+    title :: Maybe String,
+    actionText :: Maybe String,
     id :: String,
     label :: Maybe String,
     chatType :: String,
