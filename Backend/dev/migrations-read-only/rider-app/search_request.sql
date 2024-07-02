@@ -87,3 +87,4 @@ ALTER TABLE atlas_app.search_request ADD COLUMN client_manufacturer text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN is_dashboard_request boolean ;
+ALTER TABLE atlas_app.search_request ADD COLUMN available_payment_methods text[] NOT NULL;
