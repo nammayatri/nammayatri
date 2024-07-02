@@ -23,6 +23,7 @@ import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import "lib-dashboard" Domain.Types.Merchant as DMerchant
 import qualified "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import qualified Domain.Types.Transaction as DT
+import qualified Domain.Types.Vehicle as Vehicle
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -124,10 +125,11 @@ planList ::
   City.City ->
   ApiTokenInfo ->
   Id Common.Driver ->
+  Maybe Vehicle.Variant ->
   FlowHandler DTPlan.PlanListAPIRes
-planList merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
+planList merchantShortId opCity apiTokenInfo driverId mbVehicleVariant = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.planList) driverId
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.planList) driverId mbVehicleVariant
 
 planListV2 ::
   ShortId DMerchant.Merchant ->
@@ -135,10 +137,11 @@ planListV2 ::
   ApiTokenInfo ->
   Id Common.Driver ->
   DPlan.ServiceNames ->
+  Maybe Vehicle.Variant ->
   FlowHandler DTPlan.PlanListAPIRes
-planListV2 merchantShortId opCity apiTokenInfo driverId serviceName = withFlowHandlerAPI' $ do
+planListV2 merchantShortId opCity apiTokenInfo driverId serviceName mbVehicleVariant = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.planListV2) driverId serviceName
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.planListV2) driverId serviceName mbVehicleVariant
 
 planSelect ::
   ShortId DMerchant.Merchant ->

@@ -40,6 +40,7 @@ import qualified "dynamic-offer-driver-app" Domain.Types.Invoice as INV
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import Domain.Types.ServerName
+import qualified Domain.Types.Vehicle as Vehicle
 import qualified EulerHS.Types as Euler
 import IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue as Issue
@@ -216,7 +217,7 @@ data IssueAPIs = IssueAPIs
   }
 
 data SubscriptionAPIs = SubscriptionAPIs
-  { planListV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Euler.EulerClient Subscription.PlanListAPIRes,
+  { planListV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Maybe Vehicle.Variant -> Euler.EulerClient Subscription.PlanListAPIRes,
     planSelectV2 :: Id Driver.Driver -> Id DPlan.Plan -> DPlan.ServiceNames -> Euler.EulerClient APISuccess,
     planSuspendV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Euler.EulerClient APISuccess,
     planSubscribeV2 :: Id Driver.Driver -> Id DPlan.Plan -> DPlan.ServiceNames -> MSubscription.PlanSubscribeReq -> Euler.EulerClient Subscription.PlanSubscribeRes,
@@ -226,7 +227,7 @@ data SubscriptionAPIs = SubscriptionAPIs
     getPaymentHistoryEntityDetailsV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
     updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.ServiceNames -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
     sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DDriver.SendSmsReq -> Euler.EulerClient APISuccess,
-    planList :: Id Driver.Driver -> Euler.EulerClient Subscription.PlanListAPIRes,
+    planList :: Id Driver.Driver -> Maybe Vehicle.Variant -> Euler.EulerClient Subscription.PlanListAPIRes,
     planSelect :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient APISuccess,
     planSuspend :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     planSubscribe :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient Subscription.PlanSubscribeRes,

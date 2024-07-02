@@ -25,6 +25,7 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.Vehicle as Vehicle
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
@@ -71,6 +72,7 @@ type API =
 type ListPlan =
   Capture "driverId" (Id DP.Driver)
     :> "list"
+    :> QueryParam "vehicleVariant" Vehicle.Variant
     :> Get '[JSON] DTPlan.PlanListAPIRes
 
 type ListPlanV2 =
@@ -78,6 +80,7 @@ type ListPlanV2 =
     :> Capture "serviceName" DPlan.ServiceNames
     :> "v2"
     :> "list"
+    :> QueryParam "vehicleVariant" Vehicle.Variant
     :> Get '[JSON] DTPlan.PlanListAPIRes
 
 type SelectPlan =
@@ -217,17 +220,17 @@ handler merchantId city =
     :<|> updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantId city
     :<|> sendSmsToDriver merchantId city
 
-planListV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> DPlan.ServiceNames -> FlowHandler DTPlan.PlanListAPIRes
-planListV2 merchantShortId opCity driverId serviceName = do
+planListV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> DPlan.ServiceNames -> Maybe Vehicle.Variant -> FlowHandler DTPlan.PlanListAPIRes
+planListV2 merchantShortId opCity driverId serviceName mbVehicleVariant = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) serviceName (Just 0) (Just 50) Nothing
+  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) serviceName (Just 0) (Just 50) mbVehicleVariant
 
-planList :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> FlowHandler DTPlan.PlanListAPIRes
-planList merchantShortId opCity driverId = do
+planList :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> Maybe Vehicle.Variant -> FlowHandler DTPlan.PlanListAPIRes
+planList merchantShortId opCity driverId mbVehicleVariant = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) DPlan.YATRI_SUBSCRIPTION (Just 0) (Just 50) Nothing
+  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) DPlan.YATRI_SUBSCRIPTION (Just 0) (Just 50) mbVehicleVariant
 
 planSelectV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> Id DPlan.Plan -> DPlan.ServiceNames -> FlowHandler APISuccess
 planSelectV2 merchantShortId opCity driverId planId serviceName = do

@@ -70,6 +70,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.DriverRCAssociationExtra as DRAQuery
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
@@ -288,7 +289,13 @@ onVerifyRC person mbVerificationReq rcVerificationResponse = do
 onVerifyRCHandler :: Person.Person -> VT.RCVerificationResponse -> Maybe Vehicle.Category -> Maybe Bool -> Id Image.Image -> Maybe Vehicle.Variant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Flow ()
 onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator = do
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
+  _documentVerificationConfig <- SCO.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId ODC.VehicleRegistrationCertificate (fromMaybe Vehicle.CAR mbVehicleCategory) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show ODC.VehicleRegistrationCertificate))
   now <- getCurrentTime
+  when (True) do
+    associations <- DRAQuery.findAllLinkedByDriverId person.id
+    associatedVehicles <- RCQuery.findAllById $ map (.rcId) associations
+    let vehicleCategories = map (\rc -> getCategory <$> rc.vehicleVariant) associatedVehicles
+    when (not (null vehicleCategories) && isJust mbVehicleCategory && not (mbVehicleCategory `elem` vehicleCategories)) $ throwError $ CrossCategoryRCOnboardingDisabled
   let rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear
   mVehicleRC <- do
     case mbVehicleVariant of

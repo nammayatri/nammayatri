@@ -1134,6 +1134,7 @@ data DriverOnboardingError
   | DriverSSNNotFound Text
   | DriverDLNotFound Text
   | DriverBankAccountNotFound Text
+  | CrossCategoryRCOnboardingDisabled
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1177,6 +1178,7 @@ instance IsBaseError DriverOnboardingError where
     DriverSSNNotFound id_ -> Just $ "Driver SSN not found for driverId \"" <> id_ <> "\"."
     DriverDLNotFound id_ -> Just $ "Driver DL not found for driverId \"" <> id_ <> "\"."
     DriverBankAccountNotFound id_ -> Just $ "Driver Bank Account not found for driverId \"" <> id_ <> "\"."
+    CrossCategoryRCOnboardingDisabled -> Just "Cross category RC onboarding is disabled."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1219,6 +1221,7 @@ instance IsHTTPError DriverOnboardingError where
     DriverSSNNotFound _ -> "DRIVER_SSN_NOT_FOUND"
     DriverDLNotFound _ -> "DRIVER_DL_NOT_FOUND"
     DriverBankAccountNotFound _ -> "DRIVER_BANK_ACCOUNT_NOT_FOUND"
+    CrossCategoryRCOnboardingDisabled -> "CROSS_CATEGORY_RC_ONBOARDING_DISABLED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1259,6 +1262,7 @@ instance IsHTTPError DriverOnboardingError where
     DriverSSNNotFound _ -> E400
     DriverDLNotFound _ -> E400
     DriverBankAccountNotFound _ -> E400
+    CrossCategoryRCOnboardingDisabled -> E400
 
 instance IsAPIError DriverOnboardingError
 
