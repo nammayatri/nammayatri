@@ -16,4 +16,4 @@ ALTER TABLE atlas_app.issue ADD PRIMARY KEY ( id);
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.issue ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.issue ADD COLUMN merchant_id character varying(36) ;

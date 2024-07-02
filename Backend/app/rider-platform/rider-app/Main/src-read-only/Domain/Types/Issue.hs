@@ -20,7 +20,7 @@ data Issue = Issue
     customerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Issue.Issue,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     nightSafety :: Kernel.Prelude.Bool,
     reason :: Kernel.Prelude.Text,
     status :: IssueManagement.Common.IssueStatus,
