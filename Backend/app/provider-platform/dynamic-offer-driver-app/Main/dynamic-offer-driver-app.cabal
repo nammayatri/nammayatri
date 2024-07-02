@@ -213,7 +213,7 @@ library
       Domain.Action.UI.Plan
       Domain.Action.UI.Rating
       Domain.Action.UI.Reels
-      Domain.Action.UI.ReferalPayout
+      Domain.Action.UI.ReferralPayout
       Domain.Action.UI.Registration
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
@@ -568,7 +568,7 @@ library
       API.Action.UI.FareCalculator
       API.Action.UI.LmsModule
       API.Action.UI.Reels
-      API.Action.UI.ReferalPayout
+      API.Action.UI.ReferralPayout
       API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
       API.Action.UI.Tokenization
@@ -579,7 +579,7 @@ library
       API.Types.UI.FareCalculator
       API.Types.UI.LmsModule
       API.Types.UI.Reels
-      API.Types.UI.ReferalPayout
+      API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
       API.Types.UI.Tokenization
       API.Types.UI.VehicleDetails

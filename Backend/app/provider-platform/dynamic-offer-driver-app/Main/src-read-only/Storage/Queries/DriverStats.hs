@@ -41,7 +41,7 @@ updatePayoutEarningsByDriverId totalPayoutEarnings driverId = do
 updateTotalReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateTotalReferralCount totalReferralCounts driverId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.totalReferralCounts totalReferralCounts, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+  updateOneWithKV [Se.Set Beam.totalReferralCounts (Kernel.Prelude.Just totalReferralCounts), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateTotalValidRidesAndPayoutEarnings ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -49,7 +49,7 @@ updateTotalValidRidesAndPayoutEarnings ::
 updateTotalValidRidesAndPayoutEarnings totalValidActivatedRides totalPayoutEarnings driverId = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.totalValidActivatedRides totalValidActivatedRides,
+    [ Se.Set Beam.totalValidActivatedRides (Kernel.Prelude.Just totalValidActivatedRides),
       Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.roundToIntegral totalPayoutEarnings),
       Se.Set Beam.totalPayoutEarningsAmount (Kernel.Prelude.Just totalPayoutEarnings),
       Se.Set Beam.updatedAt _now
@@ -79,14 +79,14 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),
-      Se.Set Beam.totalRatingScore totalRatingScore,
-      Se.Set Beam.totalRatings totalRatings,
       Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.roundToIntegral totalPayoutEarnings),
       Se.Set Beam.totalPayoutEarningsAmount (Kernel.Prelude.Just totalPayoutEarnings),
-      Se.Set Beam.totalReferralCounts totalReferralCounts,
+      Se.Set Beam.totalRatingScore totalRatingScore,
+      Se.Set Beam.totalRatings totalRatings,
+      Se.Set Beam.totalReferralCounts (Kernel.Prelude.Just totalReferralCounts),
       Se.Set Beam.totalRides totalRides,
       Se.Set Beam.totalRidesAssigned totalRidesAssigned,
-      Se.Set Beam.totalValidActivatedRides totalValidActivatedRides,
+      Se.Set Beam.totalValidActivatedRides (Kernel.Prelude.Just totalValidActivatedRides),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]

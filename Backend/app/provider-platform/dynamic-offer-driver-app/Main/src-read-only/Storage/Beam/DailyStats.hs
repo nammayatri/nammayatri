@@ -17,7 +17,7 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data DailyStatsT f = DailyStatsT
-  { activatedValidRides :: B.C f Kernel.Prelude.Int,
+  { activatedValidRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Data.Text.Text,
@@ -26,8 +26,8 @@ data DailyStatsT f = DailyStatsT
     numRides :: B.C f Kernel.Prelude.Int,
     payoutOrderId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus),
-    payoutStatus :: B.C f Domain.Types.DailyStats.PayoutStatus,
-    referralCounts :: B.C f Kernel.Prelude.Int,
+    payoutStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DailyStats.PayoutStatus),
+    referralCounts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     referralEarnings :: B.C f Kernel.Types.Common.Money,
     referralEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalDistance :: B.C f Kernel.Types.Common.Meters,

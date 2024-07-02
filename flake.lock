@@ -2133,11 +2133,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1719913593,
+        "lastModified": 1719938718,
         "narHash": "sha256-58iM8XNqO4L5ruIxNHH89fz13VMPFYSI+SlltJo1a6I=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "ae9b3359f1fa3865cf3006d5033437916b90429c",
+        "rev": "5d7a78f90bb834191e0e57428b0cde13ec20faca",
         "type": "github"
       },
       "original": {
@@ -4138,16 +4138,17 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1719510765,
-        "narHash": "sha256-t10cqgIBCzGD5/90J5+KEK0zEukmdqF02JOnQEB8wZQ=",
+        "lastModified": 1719935064,
+        "narHash": "sha256-OXb/gErGB9gIKAeEXdBfxeIKEgeP3yV4eerzig9HqJ8=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "09b55503b00dd2686c435260efded7fd626d4e81",
+        "rev": "b68d4f6ee77920ef7b15126ec3c5fe7e25e6194e",
         "type": "github"
       },
       "original": {
-        "path": "/Users/prashant.singh/Desktop/shared-kernel",
-        "type": "path"
+        "owner": "nammayatri",
+        "repo": "shared-kernel",
+        "type": "github"
       }
     },
     "systems": {
