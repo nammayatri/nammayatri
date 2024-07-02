@@ -97,6 +97,11 @@ findAllLinkedByDriverId (Id driverId) = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.associatedTill $ Se.GreaterThan $ Just now] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
 
+findAllUnlinkedByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [DriverRCAssociation]
+findAllUnlinkedByDriverId (Id driverId) = do
+  now <- getCurrentTime
+  findAllWithOptionsKV [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.associatedTill $ Se.LessThan $ Just now] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
+
 mapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Int -> Maybe Int -> m [(VehicleRegistrationCertificate, FleetDriverAssociation, DriverRCAssociation)]
 mapping fleetIdWanted mbLimit mbOffset = do
   dbConf <- getMasterBeamConfig
