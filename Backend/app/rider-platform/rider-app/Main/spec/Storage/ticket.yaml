@@ -24,21 +24,22 @@ TicketPlace:
   tableName: ticket_place
 
   fields:
-    id : Id TicketPlace
-    merchantOperatingCityId : Id MerchantOperatingCity
-    name : Text
-    description : Maybe Text
-    lat : Maybe Double
-    lon : Maybe Double
-    gallery : "[Text]"
-    shortDesc : Text
-    iconUrl : Maybe Text
-    termsAndConditions : "[Text]"
-    placeType : PlaceType #
-    mapImageUrl : Maybe Text
-    openTimings : Maybe TimeOfDay
-    closeTimings : Maybe TimeOfDay
-    status : PlaceStatus
+    id: Id TicketPlace
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    description: Maybe Text
+    lat: Maybe Double
+    lon: Maybe Double
+    gallery: "[Text]"
+    shortDesc: Text
+    iconUrl: Maybe Text
+    termsAndConditions: "[Text]"
+    placeType: PlaceType #
+    mapImageUrl: Maybe Text
+    openTimings: Maybe TimeOfDay
+    closeTimings: Maybe TimeOfDay
+    status: PlaceStatus
+    allowSameDayBooking: Bool
 
   types:
     PlaceType:
@@ -51,6 +52,7 @@ TicketPlace:
     placeType: "'Other'"
     shortDesc: "'Short description not available'"
     status: "'Active'"
+    allowSameDayBooking: "true"
 
   queries:
     getTicketPlaces:
@@ -61,19 +63,19 @@ TicketPlace:
       where: id
 
 TicketService:
-  tableName : ticket_service
+  tableName: ticket_service
 
-  fields :
-    id : Id TicketService
-    placesId : Text
-    service : Text
-    shortDesc : Maybe Text
-    operationalDays : "[Text]"
-    maxVerification : Int
-    allowFutureBooking : Bool
-    allowCancellation : Bool
-    expiry : ExpiryType
-    businessHours : "[Id BusinessHour]"
+  fields:
+    id: Id TicketService
+    placesId: Text
+    service: Text
+    shortDesc: Maybe Text
+    operationalDays: "[Text]"
+    maxVerification: Int
+    allowFutureBooking: Bool
+    allowCancellation: Bool
+    expiry: ExpiryType
+    businessHours: "[Id BusinessHour]"
   types:
     ExpiryType:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
@@ -95,19 +97,19 @@ TicketService:
       where: placesId
 
   extraOperations:
-    - EXTRA_QUERY_FILE
+  - EXTRA_QUERY_FILE
 
 SpecialOccasion:
-  tableName : special_occasion
+  tableName: special_occasion
 
-  fields :
-    id : Id SpecialOccasion
-    entityId : Text
-    date : Maybe Day
-    dayOfWeek : Maybe Text
-    specialDayType : SpecialDayType
-    description : Maybe Text
-    businessHours : "[Id BusinessHour]"
+  fields:
+    id: Id SpecialOccasion
+    entityId: Text
+    date: Maybe Day
+    dayOfWeek: Maybe Text
+    specialDayType: SpecialDayType
+    description: Maybe Text
+    businessHours: "[Id BusinessHour]"
 
   types:
     SpecialDayType:
@@ -321,7 +323,7 @@ TicketBooking:
       where: id
 
   extraOperations:
-    - EXTRA_QUERY_FILE
+  - EXTRA_QUERY_FILE
 
 TicketBookingService:
   tableName: ticket_booking_service
@@ -388,7 +390,7 @@ TicketBookingService:
       where: id
 
   extraOperations:
-    - EXTRA_QUERY_FILE
+  - EXTRA_QUERY_FILE
 
 TicketBookingServiceCategory:
   tableName: ticket_booking_service_category
@@ -420,7 +422,7 @@ TicketBookingServiceCategory:
 
   types:
     CancelledBy:
-        enum: "User,Merchant"
+      enum: "User,Merchant"
 
   queries:
     findAllByTicketBookingServiceId:
@@ -442,7 +444,7 @@ TicketBookingServiceCategory:
     bookedSeats: "0"
 
   extraOperations:
-    - EXTRA_QUERY_FILE
+  - EXTRA_QUERY_FILE
 
 TicketBookingPeopleCategory:
   tableName: ticket_booking_people_category
@@ -478,8 +480,8 @@ TicketBookingPeopleCategory:
       where: ticketBookingServiceCategoryId
     updateTicketPeopleUnitsAndAmountById:
       kvFunction: updateWithKV
-      params: [numberOfUnitsCancelled,amountToRefund]
+      params: [numberOfUnitsCancelled, amountToRefund]
       where: id
 
   extraOperations:
-    - EXTRA_QUERY_FILE
+  - EXTRA_QUERY_FILE
