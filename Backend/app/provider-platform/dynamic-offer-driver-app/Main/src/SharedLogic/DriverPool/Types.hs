@@ -68,7 +68,8 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     toLocation :: a,
     merchantId :: Id DM.Merchant,
     isRental :: Bool,
-    isInterCity :: Bool
+    isInterCity :: Bool,
+    isValueAddNP :: Bool
   }
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig

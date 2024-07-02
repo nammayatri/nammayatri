@@ -66,14 +66,15 @@ getNearestDriversCurrentlyOnRide ::
   [Text] ->
   Bool ->
   Bool ->
+  Bool ->
   m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry _reduceRadiusValue currentRideTripCategoryValidForForwardBatching isRental isInterCity = do
+getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry _reduceRadiusValue currentRideTripCategoryValidForForwardBatching isRental isInterCity isValueAddNP = do
   let onRideRadius = radiusMeters
   logDebug $ "On Ride radius " <> show onRideRadius
   logDebug $ "lat long" <> show fromLocLatLong
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong onRideRadius
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity isValueAddNP
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show driverInfos
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles

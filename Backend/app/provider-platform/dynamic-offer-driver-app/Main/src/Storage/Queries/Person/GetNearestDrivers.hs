@@ -57,10 +57,11 @@ getNearestDrivers ::
   Maybe Seconds ->
   Bool ->
   Bool ->
+  Bool ->
   m [NearestDriversResult]
-getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry isRental isInterCity = do
+getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry isRental isInterCity isValueAddNP = do
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide) isRental isInterCity
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide) isRental isInterCity isValueAddNP
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   driverStats <- QDriverStats.findAllByDriverIds drivers
