@@ -190,3 +190,19 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN update_payout_s
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN last_ndays_to_check_for_payout_order_status integer NOT NULL default 2;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_ride_distance_threshold_for_referral_payout integer NOT NULL default 1500;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN min_pickup_distance_threshold_for_referral_payout integer NOT NULL default 500;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_ride_distance_threshold_for_referral_payout SET DEFAULT 1500.0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_payout_referral_for_a_day integer NOT NULL default 5;
