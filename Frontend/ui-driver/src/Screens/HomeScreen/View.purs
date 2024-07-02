@@ -305,6 +305,7 @@ view push state =
           _ <- Events.measureDuration "JBridge.setFCMToken" $ JB.setFCMToken push $ SetToken
           _ <- Events.measureDuration "JBridge.getCurrentPosition" $ JB.getCurrentPosition push CurrentLocation
           _ <- Events.measureDuration "JBridge.showMap" $ JB.showMap (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap") (enableCurrentLocation state) "satellite" (17.0) 0.0 0.0 push ShowMap
+          _ <- push $ UpdateSpecialZoneList
           pure unit
         ) (const AfterRender)
       , onBackPressed push (const BackPressed)
