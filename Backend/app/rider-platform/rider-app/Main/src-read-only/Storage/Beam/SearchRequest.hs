@@ -20,6 +20,7 @@ import Tools.Beam.UtilsTH
 data SearchRequestT f = SearchRequestT
   { autoAssignEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     autoAssignEnabledV2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    availablePaymentMethods :: B.C f [Kernel.Prelude.Text],
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
