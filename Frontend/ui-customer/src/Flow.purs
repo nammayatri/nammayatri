@@ -888,6 +888,7 @@ homeScreenFlow = do
       (GlobalState globalState) <- getState
       let state = globalState.homeScreen
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
+      setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
       setValueToLocalStore TRACKING_DRIVER "False"
       void $ lift $ lift $ toggleLoader true
       checkRideStatus true
