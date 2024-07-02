@@ -359,7 +359,7 @@ window.getMerchantConfig = function () {
       "vehicleNSImg" : "",
       "showEarningSection" : true,
       "registration" : {
-          "supportWAN" : "",
+          "supportWAN" : "918088065549",
           "callSupport" : true,
           "whatsappSupport" : false
       },
