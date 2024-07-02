@@ -31,7 +31,7 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, Price(..))
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (CityConfig(..), GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
@@ -68,7 +68,7 @@ import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, r
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
-import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (flowRunner, getCurrencyTypeFromSymbol)
 import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
@@ -900,7 +900,7 @@ setPerKmRate :: SA.GetDriverRateCardRes -> ST.RidePreference -> ST.RidePreferenc
 setPerKmRate (SA.GetDriverRateCardRes rateCardResp) prefOb = 
   let rateCardRespItem = DA.find (\(SA.RateCardRespItem item) -> item.serviceTierType == prefOb.serviceTierType) rateCardResp
   in case rateCardRespItem of
-    Just (SA.RateCardRespItem rateCardRespItem) -> prefOb { perKmRate = Just $ rateCardRespItem.perKmRate.amount}
+    Just (SA.RateCardRespItem rateCardRespItem) -> prefOb { perKmRate = Just $ rateCardRespItem.perKmRate}
     Nothing -> prefOb
 
 getVehicleMapping :: SA.ServiceTierType -> String
@@ -919,3 +919,14 @@ getVehicleMapping serviceTierType = case serviceTierType of
   
 sortListBasedOnCreatedAt :: forall a t. Newtype t (Record (createdAt:: String | a)) => Array t -> Array t
 sortListBasedOnCreatedAt = DA.sortBy (\a b -> compare ((unwrap b).createdAt) ((unwrap a).createdAt))
+
+dummyPriceForCity :: String -> Price
+dummyPriceForCity cityName = do
+  let currencySymobol = getCurrencyForCity cityName
+  {amount: 0.0, currency: getCurrencyTypeFromSymbol currencySymobol}
+
+getCurrencyForCity :: String -> String
+getCurrencyForCity cityName = maybe "$" (\config -> config.currency) (DA.find (\item -> item.cityName == cityName) (getAppConfig "").cityConfig)
+
+getDistanceUnitForCity :: String -> String
+getDistanceUnitForCity cityName = maybe "mi" (\config -> config.distanceUnit) (DA.find (\item -> item.cityName == cityName) (getAppConfig "").cityConfig)

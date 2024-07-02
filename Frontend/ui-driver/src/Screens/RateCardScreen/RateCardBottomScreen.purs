@@ -23,6 +23,7 @@ import Effect.Aff (Milliseconds(..), launchAff)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
 import Helpers.API as API
 import JBridge (getHeightFromPercent, getWidthFromPercent)
@@ -41,6 +42,7 @@ import ConfigProvider
 import Data.String as DS
 import Common.Animation.Config
 import Helpers.Pooling (delay)
+import Storage
 
 type State
   = { serviceTier :: Maybe String
@@ -174,7 +176,7 @@ getUpdatedFareList state =
     ( case state.ridePreference.perKmRate of
         Just fare ->
           [ { key: "Per Mile Fare"
-            , val: cur <> show fare <> "/mi"
+            , val: EHU.priceToBeDisplayed fare false <> "/" <> (getDistanceUnitForCity $ getValueToLocalStore DRIVER_LOCATION)
             }
           ]
         Nothing -> []
@@ -182,7 +184,7 @@ getUpdatedFareList state =
       <> ( case state.ridePreference.perMinRate of
             Just fare ->
               [ { key: "Per Minute Fare"
-                , val: cur <> show fare <> "/mi"
+                , val: cur <> show fare <> "/" <> (getDistanceUnitForCity $ getValueToLocalStore DRIVER_LOCATION)
                 }
               ]
             Nothing -> []

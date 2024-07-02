@@ -594,6 +594,7 @@ newtype RidesInfo = RidesInfo
   {
       status :: String,
       computedFare :: Maybe Int,
+      computedFareWithCurrency :: Maybe CTA.Price,
       vehicleModel :: String,
       createdAt :: String,
       driverNumber :: Maybe String,
@@ -601,10 +602,14 @@ newtype RidesInfo = RidesInfo
       vehicleNumber :: String,
       driverName :: String,
       driverSelectedFare :: Int,
+      driverSelectedFareWithCurrency :: CTA.Price,
       chargeableDistance :: Maybe Int,
+      chargeableDistanceWithUnit :: Maybe CTA.Distance,
       actualRideDistance :: Maybe Number,
+      actualRideDistanceWithUnit :: CTA.Distance,
       vehicleVariant :: String,
       estimatedBaseFare :: Int,
+      estimatedBaseFareWithCurrency :: CTA.Price,
       vehicleColor :: String,
       tripStartTime :: Maybe String,
       id :: String,
@@ -614,10 +619,12 @@ newtype RidesInfo = RidesInfo
       fromLocation :: LocationInfo,
       toLocation :: Maybe LocationInfo,
       estimatedDistance :: Int,
+      estimatedDistanceWithUnit :: CTA.Distance,
       exoPhone :: String,
       specialLocationTag :: Maybe String,
       requestedVehicleVariant :: Maybe String,
       customerExtraFee :: Maybe Int,
+      customerExtraFeeWithCurrency :: Maybe CTA.Price,
       disabilityTag :: Maybe String,
       payerVpa :: Maybe String,
       autoPayStatus :: Maybe String,
@@ -636,7 +643,9 @@ newtype RidesInfo = RidesInfo
       endOdometerReading :: Maybe OdometerReading,
       isOdometerReadingsRequired :: Maybe Boolean,
       tollCharges :: Maybe Number,
+      tollChargesWithCurrency :: Maybe CTA.Price,
       estimatedTollCharges :: Maybe Number,
+      estimatedTollChargesWithCurrency :: Maybe CTA.Price,
       vehicleServiceTierName :: String,
       vehicleServiceTier :: String,
       isVehicleAirConditioned :: Maybe Boolean,
@@ -721,13 +730,6 @@ newtype LocationInfo = LocationInfo
         areaCode :: Maybe String,
         lon :: Number
       }
-
-data DistanceUnit = Meter | Mile | Yard | Kilometer
-
-derive instance genericDistanceUnit :: Generic DistanceUnit _
-instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standardEncode body = defaultEnumEncode body
-instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
-instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
 
 data BookingTypes = CURRENT | ADVANCED
 
@@ -814,45 +816,12 @@ newtype GetRidesSummaryListResp = GetRidesSummaryListResp
 newtype RidesSummary = RidesSummary
   {
     earnings :: Int,
-    -- earningsWithCurrency :: PriceAPIEntity,
+    earningsWithCurrency :: CTA.Price,
     rideDistance :: Int,
     rideDate :: String,
-    noOfRides :: Int
-    -- rideDistanceWithUnit :: Distance
+    noOfRides :: Int,
+    rideDistanceWithUnit :: CTA.Distance
   }
-
--- data Currency = INR | USD | EUR
-
--- newtype PriceAPIEntity = PriceAPIEntity {
---   amount :: Number,
---   currency :: Currency
--- }
-
--- data DistanceUnit = Meter | Mile | Yard | Kilometer
-
--- newtype Distance = Distance {
---   unit :: DistanceUnit,
---   value :: Int
--- }
-
--- derive instance genericDistanceUnit :: Generic DistanceUnit _
--- instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standardEncode body = defaultEnumEncode body
--- instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
--- instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
-
--- derive instance genericDistance :: Generic Distance _
--- derive instance newtypePriceAPIEntity :: Newtype PriceAPIEntity _
--- instance standardEncodeDistance :: StandardEncode Distance where standardEncode (Distance body) = standardEncode body
--- instance decodeDistance :: Decode Distance where decode = defaultDecode
-
--- derive instance genericCurrency :: Generic Currency _
--- instance standardEncodeCurrency :: StandardEncode Currency where standardEncode body = defaultEnumEncode body
--- instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
-
--- derive instance genericPriceAPIEntity :: Generic PriceAPIEntity _
--- derive instance newtypePriceAPIEntity :: Newtype PriceAPIEntity _
--- instance standardEncodePriceAPIEntity :: StandardEncode PriceAPIEntity where standardEncode (PriceAPIEntity body) = standardEncode body
--- instance decodePriceAPIEntity :: Decode PriceAPIEntity where decode = defaultDecode
 
 instance makeGetRidesSummarListReq :: RestEndpoint GetRidesSummaryListReq GetRidesSummaryListResp where
     makeRequest reqBody@(GetRidesSummaryListReq dateList) headers = defaultMakeRequest POST (EP.getRidesSummaryList dateList) headers reqBody Nothing
@@ -1322,6 +1291,9 @@ newtype DriverProfileStatsResp = DriverProfileStatsResp
     , coinBalance :: Int
     , totalEarningsOfDayPerKm :: Maybe Int
     , totalValidRidesOfDay :: Maybe Int
+    , totalEarningsOfDayPerKmWithCurrency :: CTA.Price
+    , totalEarningsOfDayWithCurrency :: CTA.Price
+    , bonusEarningWithCurrency :: CTA.Price
     }
 
 instance makeGetDriverProfileStatsReq :: RestEndpoint DriverProfileStatsReq DriverProfileStatsResp where
@@ -2461,6 +2433,7 @@ newtype DriverProfileSummaryRes
   , mobileNumber :: Maybe String
   , linkedVehicle :: Maybe Vehicle
   , totalDistanceTravelled :: Int
+  , totalDistanceTravelledWithUnit :: CTA.Distance
   , rating :: Maybe Number
   , totalUsersRated :: Int
   , language :: Maybe String
@@ -2480,6 +2453,8 @@ newtype DriverSummary
   , totalCompletedTrips :: Int
   , lateNightTrips :: Int
   , lastRegistered :: String
+  , bonusEarnedWithCurrency :: CTA.Price
+  , totalEarningsWithCurrency :: CTA.Price
   }
 
 newtype DriverMissedOpp
@@ -2488,6 +2463,7 @@ newtype DriverMissedOpp
   , ridesCancelled :: Int
   , totalRides :: Int
   , missedEarnings :: Int
+  , missedEarningsWithCurrency :: CTA.Price
   }
 
 newtype DriverBadges

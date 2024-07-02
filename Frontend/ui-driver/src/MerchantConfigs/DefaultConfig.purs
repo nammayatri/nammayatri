@@ -180,6 +180,8 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              currency : "₹",
+              distanceUnit : "km",
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -222,6 +224,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow" 
@@ -263,6 +267,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
@@ -304,6 +310,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
@@ -345,6 +353,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow"
@@ -386,6 +396,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow"
@@ -427,6 +439,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow"
@@ -468,6 +482,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
@@ -509,6 +525,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
@@ -550,6 +568,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow"
@@ -599,6 +619,8 @@ config =
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
               rateCardConfig : defRateCardConfig,
+              currency : "₹",
+              distanceUnit : "km",
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side"
@@ -640,6 +662,8 @@ config =
             , waitingChargesConfig : defWaitingChargesConfig
             , rentalWaitingChargesConfig : defRentalWaitingChargesConfig
             , rateCardConfig : defRateCardConfig
+            , currency : "$"
+            , distanceUnit : "mi"
             , assets :{
               auto_image : "ic_auto_rickshaw",
               onboarding_auto_image : "ny_ic_auto_right_side_black"
@@ -684,6 +708,8 @@ config =
             waitingChargesConfig : defWaitingChargesConfig,
             rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
             rateCardConfig : defRateCardConfig,
+            currency : "₹",
+            distanceUnit : "km",
             assets :{
               auto_image : "ic_auto_rickshaw",
               onboarding_auto_image : "ny_ic_auto_right_side_black"
@@ -978,5 +1004,7 @@ dummyCityConfig = {
     }
   }
   , rentalWaitingChargesConfig : defRentalWaitingChargesConfig
+  , currency : "₹"
+  , distanceUnit : "km"
   , rateCardConfig : defRateCardConfig
 }

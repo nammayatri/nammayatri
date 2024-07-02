@@ -34,6 +34,7 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, safeMarginBottomWithDefault, os, convertUTCtoISC)
+import Engineering.Helpers.Utils (intPriceToBeDisplayed, distanceTobeDisplayed)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..), dummyLabelConfig)
@@ -382,7 +383,7 @@ totalDistanceView push config =
       , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text config.totalDistance
+        , text $ distanceTobeDisplayed config.totalDistanceWithUnit true false
         , color Color.black900
         , ellipsize true
         , singleLine true
@@ -684,7 +685,7 @@ estimatedFareView push config =
         ][  textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
-            , text $ currency <> (show config.estimatedRideFare)
+            , text $ intPriceToBeDisplayed config.estimatedRideFareWithCurrency true
             , color Color.black900
             , ellipsize true
             , singleLine true
@@ -692,7 +693,7 @@ estimatedFareView push config =
           , if config.waitTimeSeconds > (chargesOb.freeSeconds + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
         ]
     ]
-    where currency = getCurrency appConfig
+    where currency = HU.getCurrencyForCity (getValueToLocalStore DRIVER_LOCATION)
           pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - chargesOb.freeSeconds))
           chargesOb = HU.getChargesOb config.rideType config.cityConfig config.driverVehicle
 

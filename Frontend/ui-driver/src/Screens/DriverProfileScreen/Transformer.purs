@@ -2,6 +2,7 @@ module Screens.DriverProfileScreen.Transformer where
 
 import Prelude
 
+import ConfigProvider
 import Data.Array (length, filter)
 import Data.Int (toNumber)
 import Data.Maybe (fromMaybe, Maybe(..))
@@ -20,6 +21,8 @@ getAnalyticsData (DriverProfileSummaryRes response) =
     (DriverMissedOpp missedOpp) = response.missedOpp
   in
     { totalEarnings: show summary.totalEarnings
+    , totalEarningsWithCurrency: summary.totalEarningsWithCurrency
+    , bonusEarnedWithCurrency: summary.bonusEarnedWithCurrency
     , bonusEarned: show summary.bonusEarned
     , totalCompletedTrips: summary.totalCompletedTrips
     , totalUsersRated: response.totalUsersRated
@@ -28,10 +31,12 @@ getAnalyticsData (DriverProfileSummaryRes response) =
     , lastRegistered: summary.lastRegistered
     , badges: [] -- TODO implement Badges
     , missedEarnings: missedOpp.missedEarnings
+    , missedEarningsWithCurrency: missedOpp.missedEarningsWithCurrency
     , ridesCancelled: missedOpp.ridesCancelled
     , cancellationRate: missedOpp.cancellationRate
     , totalRidesAssigned: response.totalRidesAssigned
-    , totalDistanceTravelled: (parseFloat (toNumber response.totalDistanceTravelled / 1000.0) 2) <> "km"
+    , totalDistanceTravelled: (parseFloat (toNumber response.totalDistanceTravelled / 1000.0) 2) <> getDistanceUnit appConfig
+    , totalDistanceTravelledWithUnit : response.totalDistanceTravelledWithUnit
     }
 
 transformSelectedVehicles :: Array ChooseVehicle.Config -> Array VehicleP

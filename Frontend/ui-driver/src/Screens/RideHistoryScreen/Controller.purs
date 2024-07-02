@@ -27,6 +27,7 @@ import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PaymentHistoryListItem as PaymentHistoryModelItem
 import Components.PaymentHistoryModel as PaymentHistoryModel
 import Components.PrimaryButton as PrimaryButton
+import Constants.Configs (dummyDistance)
 import Data.Array (union, (!!), filter, length)
 import Data.Int (ceil)
 import Data.Int (fromString, toNumber)
@@ -36,7 +37,7 @@ import Data.Show (show)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (checkSpecialPickupZone, setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag, incrementValueOfLocalStoreKey)
+import Helpers.Utils (checkSpecialPickupZone, setRefreshing, setEnabled, parseFloat, getRideLabelData, convertUTCtoISC, getRequiredTag, incrementValueOfLocalStoreKey, dummyPriceForCity)
 import JBridge (cleverTapCustomEvent, metaLogEvent, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -50,6 +51,7 @@ import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import ConfigProvider
+import Storage
 
 instance showAction :: Show Action where
   show _ = ""
@@ -264,11 +266,15 @@ rideListResponseTransformer list =
         total_amount : (case (ride.status) of
                         "CANCELLED" -> 0
                         _ -> fromMaybe ride.estimatedBaseFare ride.computedFare),
+        total_amount_with_currency : (case (ride.status) of
+                                      "CANCELLED" -> dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION)
+                                      _ -> fromMaybe ride.estimatedBaseFareWithCurrency ride.computedFareWithCurrency),
         card_visibility : (case (ride.status) of
                             "CANCELLED" -> "gone"
                             _ -> "visible"),
         shimmer_visibility : "gone",
         rideDistance :  parseFloat (toNumber (fromMaybe 0 ride.chargeableDistance) / 1000.0) 2,
+        rideDistanceWithUnit : fromMaybe dummyDistance ride.chargeableDistanceWithUnit,
         status :  (ride.status),
         vehicleModel : ride.vehicleModel ,
         shortRideId : ride.shortRideId  ,
@@ -292,6 +298,7 @@ rideListResponseTransformer list =
         specialZonePickup : checkSpecialPickupZone ride.specialLocationTag,
         tripType : rideTypeConstructor ride.tripCategory,
         tollCharge : fromMaybe 0.0 ride.tollCharges,
+        tollChargeWithCurrency : fromMaybe (dummyPriceForCity $ getValueToLocalStore DRIVER_LOCATION) ride.tollChargesWithCurrency,
         rideType : ride.vehicleServiceTierName,
         tripStartTime : ride.tripStartTime,
         tripEndTime : ride.tripEndTime,
@@ -311,9 +318,11 @@ dummyCard =  {
     date : "",
     time : "",
     total_amount : 0,
+    total_amount_with_currency : dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION),
     card_visibility : "",
     shimmer_visibility : "",
     rideDistance : "",
+    rideDistanceWithUnit : dummyDistance,
     status : "",
     vehicleModel : "",
     shortRideId : "",
@@ -337,6 +346,7 @@ dummyCard =  {
     specialZonePickup : false,
     tripType : OneWay,
     tollCharge : 0.0,
+    tollChargeWithCurrency : dummyPriceForCity (getValueToLocalStore DRIVER_LOCATION),
     rideType : "",
     tripStartTime : Nothing,
     tripEndTime : Nothing,

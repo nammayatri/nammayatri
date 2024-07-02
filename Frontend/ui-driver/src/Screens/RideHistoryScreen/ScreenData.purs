@@ -21,6 +21,7 @@ import ConfigProvider
 import Prelude ((-))
 import Resource.Constants (tripDatesCount)
 import Screens.Types (AnimationState(..), RideHistoryScreenState, TripType(..))
+import Constants.Configs (dummyPrice, dummyDistance)
 
 initData :: RideHistoryScreenState
 initData = {
@@ -34,9 +35,11 @@ initData = {
     date : "",
     time : "",
     total_amount : 0,
+    total_amount_with_currency : dummyPrice,
     card_visibility : "",
     shimmer_visibility : "",
     rideDistance : "",
+    rideDistanceWithUnit : dummyDistance,
     status : "",
     vehicleModel : "",
     shortRideId : "",
@@ -60,6 +63,7 @@ initData = {
     specialZonePickup : false,
     tripType : OneWay,
     tollCharge : 0.0,
+    tollChargeWithCurrency : dummyPrice,
     rideType : "",
     tripStartTime : Nothing,
     tripEndTime : Nothing,

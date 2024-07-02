@@ -229,7 +229,7 @@ priceAndDistanceUpdateView config push =
           , gravity CENTER
           , margin $ MarginHorizontal 16 16
           ][ textView $ 
-              [ text if config.isFreeRide then "₹0" else "₹" <> (show config.topCard.finalAmount)
+              [ text $ if config.isDriver then Utils.intPriceToBeDisplayed config.topCard.finalAmountWithCurrency true else if config.isFreeRide then "₹0" else "₹" <> (show config.topCard.finalAmount)
               , accessibilityHint $ "Ride Complete: Final Fare ₹"  <> (show config.topCard.finalAmount)
               , accessibility config.accessibility
               , color $ if config.theme == LIGHT then Color.black800 else Color.white900

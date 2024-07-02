@@ -50,6 +50,7 @@ import Constants as CS
 import Data.Int as DI
 import Data.Array as DA
 import Debug
+import Storage
 
 screen :: ST.RateCardScreenState -> Screen Action ST.RateCardScreenState ScreenOutput
 screen initialState =
@@ -283,9 +284,10 @@ serviceTierItem push state service index =
     ]
     where primaryTextColor = if peakTime then Color.green900 else Color.black800
           secondaryTextColor = if peakTime then Color.green900 else Color.black600
-          curr = EHU.getCurrencySymbol $ fromMaybe CT.INR service.currency
-          primaryText = curr <> show (DI.round $  (DI.toNumber state.props.sliderVal) * (fromMaybe 0.0 service.perKmRate))
-          secondaryText = curr <> (toStringWith (fixed 2) $ fromMaybe 0.0 service.perKmRate) <> "/" <> getDistanceUnit appConfig -- getDistanceUnit 
+          curr = EHC.getCurrencySymbol $ fromMaybe CT.INR service.currency
+          perKmRateWithCurrency = fromMaybe (HU.dummyPriceForCity $ (getValueToLocalStore DRIVER_LOCATION)) service.perKmRate
+          primaryText = curr <> show (DI.round $  (DI.toNumber state.props.sliderVal) * perKmRateWithCurrency.amount)
+          secondaryText = EHU.priceToBeDisplayed perKmRateWithCurrency true <> "/" <> (HU.getDistanceUnitForCity $ getValueToLocalStore DRIVER_LOCATION)
           peakTime = service.farePolicyHour == Just API.Peak
 
 peakTimeView :: forall w. (Action -> Effect Unit) -> ST.RateCardScreenState -> PrestoDOM (Effect Unit) w
@@ -365,7 +367,7 @@ rateSlider push state =
                   , clickable decButtonEnabled
                   ] <> if decButtonEnabled then [rippleColor Color.rippleShade] else []
             , textView
-                $ [ text $ show state.props.sliderVal <> " " <> getDistanceUnit appConfig
+                $ [ text $ show state.props.sliderVal <> " " <> (HU.getDistanceUnitForCity $ getValueToLocalStore DRIVER_LOCATION)
                   , color Color.black800
                   , gravity CENTER
                   , weight 1.0
