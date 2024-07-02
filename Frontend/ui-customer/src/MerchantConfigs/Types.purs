@@ -116,7 +116,8 @@ type RatingConfig = {
 type CancelReasonConfig = {
   secondaryButtonTextColor :: String,
   secondaryButtonStroke :: String,
-  buttonCornerRadius :: Number
+  buttonCornerRadius :: Number,
+  shuffleCancelReasons :: Boolean
 }
 
 type DriverInfoConfig = {

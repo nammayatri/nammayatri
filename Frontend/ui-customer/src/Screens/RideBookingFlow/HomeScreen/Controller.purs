@@ -60,7 +60,7 @@ import Control.Monad.Trans.Class (lift)
 import Constants.Configs (getPolylineAnimationConfig)
 import Helpers.Ride
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, find, updateAt, insert, delete, tail, singleton, take)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, find, updateAt, insert, delete, tail, singleton, take, drop)
 import Data.Function.Uncurried (runFn3, runFn2)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.), view)
@@ -79,7 +79,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
@@ -2208,7 +2208,15 @@ eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   let isAcCab = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
                 && state.data.currentCityConfig.enableAcViews
-  continue state { props { isCancelRide = true, cancellationReasons = cancelReasons isAcCab, cancelRideActiveIndex = Nothing, cancelReasonCode = "", cancelDescription = "", cancelSearchCallDriver = false } }
+      cancellationReasons = cancelReasons isAcCab
+      noOfReasons = length cancellationReasons
+      shuffledCancellationReason = shuffle $ (take ( noOfReasons - 1) cancellationReasons ) <> (take 1 (drop (noOfReasons - 1) cancellationReasons) )
+  continue state { props {  isCancelRide = true
+                          , cancellationReasons = if state.data.config.cancelReasonConfig.shuffleCancelReasons then shuffledCancellationReason else cancellationReasons
+                          , cancelRideActiveIndex = Nothing
+                          , cancelReasonCode = ""
+                          , cancelDescription = ""
+                          , cancelSearchCallDriver = false } }             
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CancelRide infoCard)) state =
   if (state.data.config.driverInfoConfig.showCancelPrevention && not state.props.isSpecialZone) || state.props.zoneType.sourceTag == METRO then
