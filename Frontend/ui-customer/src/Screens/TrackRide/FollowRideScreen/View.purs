@@ -517,7 +517,7 @@ messagingView push state =
 sosOverlayView :: forall w. (Action -> Effect Unit) -> SOSOverlayConfig -> Layout w
 sosOverlayView push config =
   let
-    currentGradient = if os == "IOS" then Linear 270.0 [ Color.white900, Color.white900, Color.white900, Color.transparent ] else Linear 180.0 [ Color.white900, Color.white900, Color.white900, Color.transparent ]
+    currentGradient = Linear 180.0 [ Color.white900, Color.white900, Color.white900, Color.transparent ]
   in
     linearLayout
       [ width MATCH_PARENT

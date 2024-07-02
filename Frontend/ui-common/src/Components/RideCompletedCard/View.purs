@@ -66,7 +66,7 @@ topGradientView config push =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , padding $ if config.isDriver then Padding 16 16 16 6 else PaddingVertical 40 6
-    , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) config.topCard.gradient
+    , gradient $ Linear 0.0 config.topCard.gradient
     , cornerRadii $ Corners radii false false true true
     , stroke $ borderWidth <> Color.grey900
     , id $ getNewIDWithTag "topViewId"
