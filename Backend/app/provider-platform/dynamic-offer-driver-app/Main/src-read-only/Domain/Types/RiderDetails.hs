@@ -19,6 +19,7 @@ data RiderDetailsE e = RiderDetails
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     disputeChancesUsed :: Kernel.Prelude.Int,
+    firstRideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     hasTakenValidRide :: Kernel.Prelude.Bool,
     hasTakenValidRideAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails,
@@ -27,6 +28,7 @@ data RiderDetailsE e = RiderDetails
     mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     nightSafetyChecks :: Kernel.Prelude.Bool,
     otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    payoutFlagReason :: Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason,
     referralCode :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral),
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     referredByDriver :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -48,6 +50,7 @@ instance EncryptedItem RiderDetails where
           createdAt = createdAt entity,
           currency = currency entity,
           disputeChancesUsed = disputeChancesUsed entity,
+          firstRideId = firstRideId entity,
           hasTakenValidRide = hasTakenValidRide entity,
           hasTakenValidRideAt = hasTakenValidRideAt entity,
           id = id entity,
@@ -56,6 +59,7 @@ instance EncryptedItem RiderDetails where
           mobileNumber = mobileNumber_,
           nightSafetyChecks = nightSafetyChecks entity,
           otpCode = otpCode entity,
+          payoutFlagReason = payoutFlagReason entity,
           referralCode = referralCode entity,
           referredAt = referredAt entity,
           referredByDriver = referredByDriver entity,
@@ -69,6 +73,7 @@ instance EncryptedItem RiderDetails where
             createdAt = createdAt entity,
             currency = currency entity,
             disputeChancesUsed = disputeChancesUsed entity,
+            firstRideId = firstRideId entity,
             hasTakenValidRide = hasTakenValidRide entity,
             hasTakenValidRideAt = hasTakenValidRideAt entity,
             id = id entity,
@@ -77,6 +82,7 @@ instance EncryptedItem RiderDetails where
             mobileNumber = mobileNumber_,
             nightSafetyChecks = nightSafetyChecks entity,
             otpCode = otpCode entity,
+            payoutFlagReason = payoutFlagReason entity,
             referralCode = referralCode entity,
             referredAt = referredAt entity,
             referredByDriver = referredByDriver entity,
@@ -89,3 +95,13 @@ instance EncryptedItem' RiderDetails where
   type UnencryptedItem RiderDetails = DecryptedRiderDetails
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+data PayoutFlagReason
+  = ExceededMaxReferral
+  | MinRideDistanceInvalid
+  | MinPickupDistanceInvalid
+  | CustomerExistAsDriver
+  | MultipleDeviceIdExists
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFlagReason)

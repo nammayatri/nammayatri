@@ -6,6 +6,7 @@
 module Storage.Beam.RiderDetails where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.RiderDetails
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
@@ -18,6 +19,7 @@ data RiderDetailsT f = RiderDetailsT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     disputeChancesUsed :: B.C f Kernel.Prelude.Int,
+    firstRideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hasTakenValidRide :: B.C f Kernel.Prelude.Bool,
     hasTakenValidRideAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
@@ -27,6 +29,7 @@ data RiderDetailsT f = RiderDetailsT
     mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    payoutFlagReason :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

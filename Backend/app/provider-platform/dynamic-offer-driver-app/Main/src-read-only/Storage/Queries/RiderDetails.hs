@@ -47,6 +47,13 @@ updateDisputeChancesUsedAndCancellationDues disputeChancesUsed cancellationDues 
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.disputeChancesUsed disputeChancesUsed, Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateFirstRideIdAndFlagReason ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateFirstRideIdAndFlagReason firstRideId payoutFlagReason id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.firstRideId firstRideId, Se.Set Beam.payoutFlagReason payoutFlagReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateHasTakenValidRide ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
@@ -73,6 +80,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.disputeChancesUsed disputeChancesUsed,
+      Se.Set Beam.firstRideId firstRideId,
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -81,6 +89,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.mobileNumberHash (mobileNumber & hash),
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.otpCode otpCode,
+      Se.Set Beam.payoutFlagReason payoutFlagReason,
       Se.Set Beam.referralCode (Kernel.Types.Id.getId <$> referralCode),
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByDriver (Kernel.Types.Id.getId <$> referredByDriver),

@@ -17,6 +17,7 @@ module Domain.Action.Internal.DriverReferee where
 import Data.OpenApi (ToSchema)
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.Payout as DAP
+import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverReferral as Domain
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.RiderDetails as DRD
@@ -32,6 +33,7 @@ import qualified Kernel.Utils.Text as TU
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverReferral as QDR
@@ -43,7 +45,8 @@ import Utils.Common.CacUtils
 data RefereeLinkInfoReq = RefereeLinkInfoReq
   { referralCode :: Id Domain.DriverReferral,
     customerMobileNumber :: Text,
-    customerMobileCountryCode :: Text
+    customerMobileCountryCode :: Text,
+    isMultipleDeviceIdExist :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -69,23 +72,18 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   currency <- maybe (pure INR) SMerchant.getCurrencyByMerchantOpCity driverInfo.merchantOperatingCityId
   unless (driverInfo.enabled) $
     throwError $ InvalidRequest "Driver is not enabled"
-  driverStats <- QDriverStats.findByPrimaryKey driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound driverReferralLinkage.driverId.getId)
-  QDriverStats.updateTotalReferralCount (driverStats.totalReferralCounts + 1) driverReferralLinkage.driverId
-  merchOpCityId <- maybe (QP.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound (driverReferralLinkage.driverId.getId)) <&> (.merchantOperatingCityId)) pure driverInfo.merchantOperatingCityId
-  transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId (Just (DriverId (cast driverReferralLinkage.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
-  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  dailyStats <- QDailyStats.findByDriverIdAndDate driverReferralLinkage.driverId (utctDay localTime) >>= fromMaybeM (InvalidRequest "Daily Stats Not Found")
-  Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverReferralLinkage.driverId.getId) 3 3 $ do
-    QDailyStats.updateReferralCount (dailyStats.referralCounts + 1) driverReferralLinkage.driverId (utctDay localTime)
+  let isMultipleDeviceIdExist_ = fromMaybe False isMultipleDeviceIdExist
+  unless isMultipleDeviceIdExist_ $ updateReferralStats driverInfo driverReferralLinkage.driverId
+  let flagReason = if isMultipleDeviceIdExist_ then Just DRD.MultipleDeviceIdExists else Nothing
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   _ <- case mbRiderDetails of
     Just _ -> QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
     Nothing -> do
-      riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency
+      riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency flagReason
       QRD.create riderDetails
   pure Success
   where
-    mkRiderDetailsObj driverId currency = do
+    mkRiderDetailsObj driverId currency flagReason = do
       id <- generateGUID
       now <- getCurrentTime
       otp <- generateOTPCode
@@ -107,5 +105,43 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             nightSafetyChecks = True,
             cancellationDues = 0.0,
             disputeChancesUsed = 0,
+            firstRideId = Nothing,
+            payoutFlagReason = flagReason,
             currency
           }
+
+    updateReferralStats driverInfo driverId = do
+      driverStats <- QDriverStats.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      QDriverStats.updateTotalReferralCount (driverStats.totalReferralCounts + 1) driverId
+      merchOpCityId <- maybe (QP.findById driverId >>= fromMaybeM (PersonNotFound (driverId.getId)) <&> (.merchantOperatingCityId)) pure driverInfo.merchantOperatingCityId
+      transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
+      localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+      mbDailyStats <- QDailyStats.findByDriverIdAndDate driverId (utctDay localTime)
+      merchantOperatingCity <- CQMOC.findById merchOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCityId.getId)
+      case mbDailyStats of
+        Just dailyStats -> do
+          Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
+            QDailyStats.updateReferralCount (dailyStats.referralCounts + 1) driverId (utctDay localTime)
+        Nothing -> do
+          id <- generateGUIDText
+          now <- getCurrentTime
+          let dailyStatsOfDriver =
+                DDS.DailyStats
+                  { id = id,
+                    driverId = driverId,
+                    totalEarnings = 0.0,
+                    numRides = 0,
+                    totalDistance = 0,
+                    merchantLocalDate = utctDay localTime,
+                    currency = merchantOperatingCity.currency,
+                    distanceUnit = merchantOperatingCity.distanceUnit,
+                    activatedValidRides = 0,
+                    referralEarnings = 0.0,
+                    referralCounts = 1,
+                    payoutStatus = DDS.Verifying,
+                    payoutOrderId = Nothing,
+                    payoutOrderStatus = Nothing,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          QDailyStats.create dailyStatsOfDriver

@@ -18,3 +18,14 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN referred_at timestam
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN referred_by_driver character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN payout_flag_reason text ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN first_ride_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ALTER COLUMN first_ride_id TYPE text;
