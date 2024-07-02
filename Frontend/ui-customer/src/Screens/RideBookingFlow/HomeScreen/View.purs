@@ -3448,9 +3448,9 @@ homeScreenContent push state =  let
   where 
     contentView state = 
       linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      ][ 
+      [ width $ V $ screenWidth unit
+      , height $ V 160
+      ]$[ 
         -- imageView
         --   [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"
         --   , height $ V 135
@@ -3461,11 +3461,8 @@ homeScreenContent push state =  let
         --   , accessibility DISABLE
         --   , visibility $ boolToVisibility $ state.data.config.banners.homeScreenCabLaunch && Arr.elem state.props.city [ST.Bangalore, ST.Tumakuru, ST.Mysore]
         --   ]
-       (maybe -- TEMP disabling banners in Bangalore
-          (emptyLayout state) 
-          (\item -> bannersCarousal item state push) 
-          state.data.bannerData.bannerItem)
-      ]
+       
+      ] <> maybe [] (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem
     
     followView :: forall w. (Action -> Effect Unit) -> Array Followers -> PrestoDOM (Effect Unit) w
     followView push followers = 
