@@ -1305,3 +1305,5 @@ getHI stringKey =
         WAITING_CHARGES -> "प्रतीक्षा शुल्क"
         PLACE_A_CALL -> "कॉल करें"
         YOU_CAN_WRITE_TO_US_AT -> "आप हमें लिख सकते हैं"
+        CHARGEABLE -> "चार्ज योग्य"
+        BOOKED -> "बुक किया गया"

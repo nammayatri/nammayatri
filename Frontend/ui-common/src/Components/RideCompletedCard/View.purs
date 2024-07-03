@@ -42,6 +42,7 @@ import PrestoDOM.List
 import CarouselHolder as CarouselHolder
 import Language.Strings (getString)
 import Debug
+import Data.String as DS
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -835,10 +836,10 @@ rentalTripDetailsView config push =
       , orientation VERTICAL
       ] 
       [ 
-        rentalTripRowView config push RideTime
-      , rentalTripRowView config push RideDistance
-      , separatorView
-      , rentalTripRowView config push RideStartedAt
+      --   rentalTripRowView config push RideTime -- TODO :: Mercy - uncomment once we start getting proper value from backend 
+      -- , rentalTripRowView config push RideDistance
+      -- , separatorView
+      rentalTripRowView config push RideStartedAt
       , rentalTripRowView config push RideEndedAt
       ]
     , textView $
@@ -884,14 +885,23 @@ rentalTripRowView config push description =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
-    , margin $ MarginTop if description == EstimatedFare then 0 else 16
+    , margin $ MarginTop if any ( _ == description) [EstimatedFare, RideStartedAt] then 0 else 16
     , visibility $ boolToVisibility (textConfig.estimatedValue /= "₹0")
     ] 
-    [ textView $ [
-        text $ textConfig.title
+    [ linearLayout
+      [ height WRAP_CONTENT
       , weight 0.1
-      , gravity LEFT
-      ] <> FontStyle.body1 TypoGraphy
+      , orientation VERTICAL 
+      ][  textView $ [
+            text $ textConfig.title
+          , gravity LEFT
+          ] <> FontStyle.body1 TypoGraphy
+        , textView $ [
+            text $ textConfig.subTitle
+          , gravity LEFT 
+          , visibility $ boolToVisibility (textConfig.subTitle /= "")
+          ] <> FontStyle.body1 TypoGraphy
+        ]
     , linearLayout [
         height MATCH_PARENT
       , width WRAP_CONTENT
@@ -922,19 +932,19 @@ rentalTripRowView config push description =
             rentalRowDetails = config'.rentalRowDetails
         in
           case description' of
-            RideTime -> mkRentalTextConfig rentalRowDetails.rideTime (" / " <> show rentalBookingData.baseDuration <> "hr") ( if rentalBookingData.finalDuration == 0 then "0 hr" else Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
-            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance "" (show rentalBookingData.finalDistance <> " km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
-            RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt rentalBookingData.rideStartedAt "" Color.black600
-            RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt rentalBookingData.rideEndedAt "" Color.black600
-            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show config'.topCard.initialAmount) "" Color.black600
-            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraTimeFare)))) "" Color.black600
-            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraDistanceFare)))) "" Color.black600
-            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show config'.topCard.finalAmount) "" Color.black600
-            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+            RideTime -> mkRentalTextConfig rentalRowDetails.rideTime  "" (" / " <> show rentalBookingData.baseDuration <> "hr") ( if rentalBookingData.finalDuration == 0 then "0 hr" else Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
+            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance rentalRowDetails.rideDistanceInfo (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> " km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
+            RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt "" rentalBookingData.rideStartedAt "" Color.black600
+            RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt "" rentalBookingData.rideEndedAt "" Color.black600
+            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("₹" <> show config'.topCard.initialAmount) "" Color.black600
+            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraTimeFare)))) "" Color.black600
+            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraDistanceFare)))) "" Color.black600
+            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("₹" <> show config'.topCard.finalAmount) "" Color.black600
+            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
 
             
-      mkRentalTextConfig :: String -> String -> String -> String -> RentalTextConfig
-      mkRentalTextConfig title' estimatedValue' actualValue' color' = { title: title', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}
+      mkRentalTextConfig :: String -> String -> String -> String -> String -> RentalTextConfig
+      mkRentalTextConfig title' subTitle' estimatedValue' actualValue' color' = { title: title', subTitle: subTitle', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}
       showRedOrBlackColor :: Boolean -> String
       showRedOrBlackColor isRed =
         if isRed then Color.red else Color.black900
@@ -996,6 +1006,10 @@ lottieQRView config push =
 
 rentalRideInfoView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rentalRideInfoView push config = 
+  let 
+    rideStartedTime = not $ DS.null $ config.rentalRideConfig.rideStartedAt
+    rideEndTime = not $ DS.null $ config.rentalRideConfig.rideEndedAt
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -1005,12 +1019,22 @@ rentalRideInfoView push config =
   , margin $ MarginVertical 14 24
   , background Color.white900
   , stroke $ "2," <> Color.grey800
-  ]([  linearLayout
+  ]([  
+    -- linearLayout -- TODO :: Mercy - Uncomment once we start getting proper value from backend
+    --   [ height WRAP_CONTENT
+    --   , width MATCH_PARENT
+    --   , orientation if config.isDriver then HORIZONTAL else VERTICAL
+    --   ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage1" config.rentalRideTextConfig.rideTime "" config.rentalRideConfig.actualRideDuration config.rentalRideConfig.baseRideDuration
+    --     , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage2" config.rentalRideTextConfig.rideDistance "" config.rentalRideConfig.actualRideDistance config.rentalRideConfig.baseRideDistance
+    --   ]
+    linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , orientation if config.isDriver then HORIZONTAL else VERTICAL
-      ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage1" config.rentalRideTextConfig.rideTime config.rentalRideConfig.actualRideDuration config.rentalRideConfig.baseRideDuration
-        , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage2" config.rentalRideTextConfig.rideDistance config.rentalRideConfig.actualRideDistance config.rentalRideConfig.baseRideDistance
+      , orientation VERTICAL
+      , visibility $ boolToVisibility $ (rideStartedTime || rideEndTime )
+      ][  if rideStartedTime then infoCardView config "HORIZONTAL" $ getRentalRideInfoCardView config "" config.rentalRideTextConfig.rideStartedAt "" config.rentalRideConfig.rideStartedAt "" else textView[],
+          textView[height $ V 2, width MATCH_PARENT],
+          if rideEndTime then infoCardView config "HORIZONTAL" $ getRentalRideInfoCardView config "" config.rentalRideTextConfig.rideEndedAt "" config.rentalRideConfig.rideEndedAt "" else textView[]
       ]
   ] <>
       if (config.rentalRideConfig.showRideOdometerReading) then
@@ -1028,14 +1052,14 @@ rentalRideInfoView push config =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation if config.isDriver then HORIZONTAL else VERTICAL
-          ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage3" config.rentalRideConfig.startRideOdometerImage (config.rentalRideTextConfig.rideStart) (config.rentalRideTextConfig.rideStartedAt) (config.rentalRideConfig.rideStartODOReading)
-            , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage4" config.rentalRideConfig.endRideOdometerImage (config.rentalRideTextConfig.rideEnd) (config.rentalRideTextConfig.rideEndedAt) (config.rentalRideConfig.rideEndODOReading)
+          ][  infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage3" config.rentalRideConfig.startRideOdometerImage (config.rentalRideTextConfig.rideStart) "" (config.rentalRideTextConfig.rideStartedAt) (config.rentalRideConfig.rideStartODOReading)
+            , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage4" config.rentalRideConfig.endRideOdometerImage (config.rentalRideTextConfig.rideEnd) "" (config.rentalRideTextConfig.rideEndedAt) (config.rentalRideConfig.rideEndODOReading)
           ]]
       else [])
     
 
-getRentalRideInfoCardOdometerView :: forall w. Config -> String -> String -> String -> String -> String -> (InfoCardConfig)
-getRentalRideInfoCardOdometerView config image renderImage heading heading' subHeading1  = 
+getRentalRideInfoCardOdometerView :: forall w. Config -> String -> String -> String -> String -> String -> String -> (InfoCardConfig)
+getRentalRideInfoCardOdometerView config image renderImage heading headingInfo' heading' subHeading1  = 
   { id : image, 
     margin : (MarginBottom 0 ), 
     height : WRAP_CONTENT, 
@@ -1051,6 +1075,12 @@ getRentalRideInfoCardOdometerView config image renderImage heading heading' subH
       fontStyle : FontStyle.body1 TypoGraphy, 
       visibility : VISIBLE
       }, 
+    headingInfo : {
+      text : headingInfo' , 
+      color : Color.black700 , 
+      fontStyle : FontStyle.body1 TypoGraphy, 
+      visibility : boolToVisibility $ not $ DS.null headingInfo'
+    },
     subHeading1 : {
       text :  subHeading1, 
       color : Color.black800 , 
@@ -1064,8 +1094,8 @@ getRentalRideInfoCardOdometerView config image renderImage heading heading' subH
       visibility : GONE
       }}
 
-getRentalRideInfoCardView :: forall w. Config -> String -> String -> String -> String -> (InfoCardConfig)
-getRentalRideInfoCardView config image heading subHeading1 subHeading2 =
+getRentalRideInfoCardView :: forall w. Config -> String -> String -> String -> String -> String -> (InfoCardConfig)
+getRentalRideInfoCardView config image heading headingInfo' subHeading1 subHeading2 =
   { id : image,
     margin : (MarginBottom 0 ), 
     height : WRAP_CONTENT, 
@@ -1076,6 +1106,12 @@ getRentalRideInfoCardView config image heading subHeading1 subHeading2 =
       width : V 100, 
       renderImage : ""
       }, 
+    headingInfo : {
+      text : headingInfo' , 
+      color : Color.black700 , 
+      fontStyle : FontStyle.body1 TypoGraphy, 
+      visibility : boolToVisibility $ not $ DS.null headingInfo'
+    },
     heading : {
       text : heading, 
       color : Color.black700, 
@@ -1092,7 +1128,7 @@ getRentalRideInfoCardView config image heading subHeading1 subHeading2 =
       text : " / " <> subHeading2, 
       color : Color.black600, 
       fontStyle : FontStyle.body2 TypoGraphy, 
-      visibility : VISIBLE
+      visibility :  boolToVisibility $ not $ DS.null subHeading2
       }}
 
 

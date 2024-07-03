@@ -1040,7 +1040,9 @@ type EndRideData = {
     estimatedTollCharge :: Number,
     capacity :: Maybe Int,
     serviceTier :: String,
-    tollAmbigous :: Boolean
+    tollAmbigous :: Boolean,
+    tripStartTime :: Maybe String,
+    tripEndTime :: Maybe String
   }
 type PaymentState = {
   rideCount :: Int,

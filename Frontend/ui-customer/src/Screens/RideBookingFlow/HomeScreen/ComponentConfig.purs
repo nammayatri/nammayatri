@@ -1791,6 +1791,7 @@ rideCompletedCardConfig state =
       , rentalRowDetails
         { rideTime = getString RIDE_TIME
         , rideDistance = getString RIDE_DISTANCE
+        , rideDistanceInfo = "( " <> getString CHARGEABLE <> " / " <> getString BOOKED <> " )"
         , rideStartedAt = getString RIDE_STARTED_AT
         , rideEndedAt = getString RIDE_ENDED_AT
         , estimatedFare = getString ESTIMATED_FARE
