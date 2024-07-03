@@ -351,11 +351,11 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
     Just globalPayload -> case globalPayload ^. _payload ^. _view_param of
       Just screen -> case screen of
         "rides" -> hideSplashAndCallFlow myRidesScreenFlow
-        "abt" -> hideSplashAndCallFlow aboutUsScreenFlow
-        "fvrts" -> hideSplashAndCallFlow savedLocationFlow
+        "abt" -> hideSplashAndCallFlow aboutUsScreenFlow 
+        "fvrts" -> hideSplashAndCallFlow $ savedLocationFlow HomeScreenFlow
         "help" -> hideSplashAndCallFlow $ flowRouter HelpAndSupportScreenFlow
         "prof" -> hideSplashAndCallFlow myProfileScreenFlow
-        "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
+        "lang" -> hideSplashAndCallFlow $ selectLanguageScreenFlow HomeScreenFlow
         "tkts" -> hideSplashAndCallFlow placeListFlow
         "safety" -> hideSplashAndCallFlow safetySettingsFlow
         "smd" -> do
@@ -922,7 +922,7 @@ homeScreenFlow = do
     GO_TO_HELP -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
       flowRouter HelpAndSupportScreenFlow
-    CHANGE_LANGUAGE -> selectLanguageScreenFlow
+    CHANGE_LANGUAGE -> selectLanguageScreenFlow HomeScreenFlow
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_TICKETS -> do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
@@ -2000,7 +2000,7 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_FAVOURITES_ -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_addresses"
-      savedLocationFlow
+      savedLocationFlow HomeScreenFlow
     OPEN_GOOGLE_MAPS state -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_ride_track_gmaps"
       (GetDriverLocationResp resp) <- Remote.getDriverLocationBT (state.data.driverInfoCardState.rideId)
@@ -2952,8 +2952,7 @@ tripDetailsScreenFlow = do
     GET_CATEGORIES_LIST updatedState -> do 
       let language = fetchLanguage $ getLanguageLocale languageKey
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let selfServeCategories = filter (\(Category category) -> category.categoryType == "Category") response.categories
-          categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired, maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType, allowedRideStatuses : catObj.allowedRideStatuses}) selfServeCategories
+      let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired, maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType, allowedRideStatuses : catObj.allowedRideStatuses}) response.categories
       modifyScreenState $ TripDetailsScreenStateType (\helpAndSupportScreen -> updatedState { data {categories = categories' }, props { fromMyRides = updatedState.props.fromMyRides} } )
       tripDetailsScreenFlow 
     GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
@@ -3018,11 +3017,19 @@ flowRouter flowState = case flowState of
   RideSelectionScreenFlow -> do
     nextFlow <- UI.rideSelection
     flowRouter nextFlow
+  SelectFaqScreenFlow -> do
+    nextFlow <- UI.selectFaqScreen
+    flowRouter nextFlow
+  FaqScreenFlow -> do
+    nextFlow <- UI.faqScreen
+    flowRouter nextFlow
   HomeScreenFlow -> homeScreenFlow
   ActivateSafetyScreenFlow -> activateSafetyScreenFlow
   TripDetailsScreenFlow -> tripDetailsScreenFlow
   ContactUsScreenFlow -> contactUsScreenFlow
   MyRidesScreenFlow -> myRidesScreenFlow
+  GoToFavouritesScreenFlow -> savedLocationFlow FaqScreenFlow
+  ChangeLanguageScreenFlow -> selectLanguageScreenFlow FaqScreenFlow
 
 myRidesScreenFlow :: FlowBT String Unit
 myRidesScreenFlow = do
@@ -3088,8 +3095,8 @@ myRidesScreenFlow = do
       updateLocalStage HomeScreen
       homeScreenFlow
 
-selectLanguageScreenFlow :: FlowBT String Unit
-selectLanguageScreenFlow = do
+selectLanguageScreenFlow :: FlowState -> FlowBT String Unit
+selectLanguageScreenFlow goBackState = do
   logField_ <- lift $ lift $ getLogFields
   flow <- UI.selectLanguageScreen
   case flow of
@@ -3115,7 +3122,11 @@ selectLanguageScreenFlow = do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = [] }, props { needIssueListApiCall = true } })
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { famousDestinations = [] }})
       homeScreenFlow
-    GO_TO_HOME_SCREEN -> homeScreenFlow
+    GO_BACK_SCREEN -> 
+      case goBackState of 
+        FaqScreenFlow -> flowRouter FaqScreenFlow
+        HomeScreenFlow -> homeScreenFlow
+        _ -> homeScreenFlow
 
 emergencyScreenFlow :: FlowBT String Unit
 emergencyScreenFlow = do
@@ -3306,8 +3317,8 @@ myProfileScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } } })
       homeScreenFlow
 
-savedLocationFlow :: FlowBT String Unit
-savedLocationFlow = do
+savedLocationFlow :: FlowState -> FlowBT String Unit
+savedLocationFlow goBackState = do
   void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
   flow <- UI.savedLocationScreen
   (SavedLocationsListRes savedLocationResp) <- FlowCache.updateAndFetchSavedLocationsBT SavedLocationReq false
@@ -3338,7 +3349,7 @@ savedLocationFlow = do
       void $ FlowCache.updateAndFetchSavedLocations true
       pure $ toast (getString STR.FAVOURITE_REMOVED_SUCCESSFULLY)
       setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-      savedLocationFlow
+      savedLocationFlow HomeScreenFlow
     EDIT_LOCATION cardState -> do
       (ServiceabilityRes serviceabilityRes) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 cardState.lat) (fromMaybe 0.0 cardState.lon)) ORIGIN
       let
@@ -3393,7 +3404,10 @@ savedLocationFlow = do
       addNewAddressScreenFlow "edit Location"
     GO_BACK_FROM_SAVED_LOCATION -> do
       void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
-      homeScreenFlow
+      case goBackState of 
+        FaqScreenFlow -> flowRouter FaqScreenFlow
+        HomeScreenFlow -> homeScreenFlow
+        _ -> homeScreenFlow
   pure unit
 
 addNewAddressScreenFlow :: String -> FlowBT String Unit
@@ -3510,7 +3524,7 @@ addNewAddressScreenFlow input = do
             void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
             homeScreenFlow
       else
-        savedLocationFlow
+        savedLocationFlow HomeScreenFlow
     UPDATE_LOCATION_NAME_ADDRESS state lat lon -> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq lat lon) ORIGIN
       let
@@ -3565,7 +3579,7 @@ addNewAddressScreenFlow input = do
         addNewAddressScreenFlow ""
     GO_TO_FAVOURITES -> do
       void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
-      savedLocationFlow
+      savedLocationFlow HomeScreenFlow
     CHECK_LOCATION_SERVICEABILITY state locItemType -> do
       void $ pure $ spy "Inside CHECK_LOCATION_SERVICEABILITY" state
       let

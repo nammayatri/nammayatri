@@ -60,7 +60,7 @@ data Action = PrimaryButtonActionController PrimaryButtonController.Action
             | AfterRender
 
 data ScreenOutput = UpdateLanguage SelectLanguageScreenState 
-                  | GoToHomeScreen
+                  | GoBackScreen
 eval :: Action -> SelectLanguageScreenState -> Eval Action ScreenOutput SelectLanguageScreenState
 
 eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do
@@ -80,6 +80,6 @@ eval BackPressed state =
     then do 
       void $ pure $ emitTerminateApp Nothing true
       continue state
-    else exit $ GoToHomeScreen
+    else exit $ GoBackScreen
 
 eval _ state = continue state

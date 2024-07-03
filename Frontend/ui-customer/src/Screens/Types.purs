@@ -2789,3 +2789,52 @@ type PickupInstructionsScreenData = {
 type PickupInstructionsScreenProps = {
   
 }
+
+-- ######################################### SelectFaqScreenState ####################################################
+
+
+type SelectFaqScreenState =
+  {
+    data :: SelectFaqScreenData,
+    props :: SelectFaqScreenProps
+  }
+
+type SelectFaqScreenData =
+  {
+    config :: AppConfig,
+    issueList :: Array IssueInfo,
+    issueListType :: IssueModalType,
+    categories :: Array CTA.CategoryListType,
+    categoryName :: String
+  }
+
+type SelectFaqScreenProps =
+  {
+    apiFailure :: Boolean
+  , needIssueListApiCall :: Boolean
+  }
+
+-- ######################################### FaqScreenState ####################################################
+
+type FaqScreenState =
+  {
+    data :: FaqScreenData,
+    props :: FaqScreenProps
+  }
+
+type FaqScreenData =
+  {
+    config :: AppConfig,
+    dropDownList :: Array CTA.FaqCardDropDownInfo,
+    issueListType :: IssueModalType,
+    categories :: Array CTA.CategoryListType,
+    categoryName :: String,
+    maxAllowedRideAge :: Maybe Int
+  }
+
+type FaqScreenProps =
+  {
+    apiFailure :: Boolean
+  , needIssueListApiCall :: Boolean
+  }
+

@@ -147,6 +147,7 @@ data ScreenOutput = GoToHelpAndSupportScreen ReportIssueChatScreenState
                   | GoToRideSelectionScreen ReportIssueChatScreenState
                   | GoToSafetyScreen ReportIssueChatScreenState
                   | GoToHomeScreen ReportIssueChatScreenState
+                  | GoToFaqScreen ReportIssueChatScreenState
 
 eval :: Action -> ReportIssueChatScreenState -> Eval Action ScreenOutput ReportIssueChatScreenState
 
@@ -174,6 +175,7 @@ eval BackPressed state =
                     RideSelectionScreenEntry -> GoToHelpAndSupportScreen 
                     OldChatEntry -> GoToHelpAndSupportScreen
                     SafetyScreen -> GoToSafetyScreen
+                    FaqEntry -> GoToFaqScreen
                     HomeScreenEntry -> GoToHomeScreen ) state {props {showSubmitComp = false}}
   ]
 

@@ -24,6 +24,8 @@ import Screens.ContactUsScreen.Handler (contactUsScreen) as UI
 import Screens.EmergencyContactsScreen.Handler (emergencyContactsScreen) as UI
 import Screens.EnterMobileNumberScreen.Handler (enterMobileNumberScreen) as UI
 import Screens.HelpAndSupportScreen.Handler (helpAndSupportScreen) as UI
+import Screens.SelectFaqScreen.Handler (selectFaqScreen) as UI
+import Screens.FaqScreen.Handler (faqScreen) as UI
 import Screens.HomeScreen.Handler (homeScreen) as UI
 import Screens.InvoiceScreen.Handler (invoiceScreen) as UI
 import Screens.MyProfileScreen.Handler (myProfileScreen) as UI

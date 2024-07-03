@@ -139,7 +139,9 @@ view push state =
                   , recentRideView state push
                 ] 
                   <> [ headingView state $ getString ALL_TOPICS
-                   , allTopicsView state push $ topicsList state] 
+                   , if state.data.isFaqListEmpty 
+                      then allTopicsView state push $ topicsList state 
+                      else allTopicsView state push $ addFaqSection $ topicsList state] 
                   <> ( if state.data.config.feature.enableSelfServe then [
                           if DA.null state.data.ongoingIssueList && DA.null state.data.resolvedIssueList then textView[height $ V 0, visibility GONE] else headingView state $ getString YOUR_REPORTS
                           , allTopicsView state push $ reportsList state
@@ -286,9 +288,21 @@ driverRatingView state =
                           ]) [1 ,2 ,3 ,4 ,5])
     ]
 
+addFaqSection :: Array CategoryListType -> Array CategoryListType
+addFaqSection topicList = topicList <> [{ categoryAction : Just "FAQ"
+                                              , categoryName : getString GETTING_STARTED_AND_FAQS
+                                              , categoryImageUrl : Just $ fetchImage FF_ASSET "ny_ic_clip_board"
+                                              , categoryId : "9"
+                                              , isRideRequired: false
+                                              , maxAllowedRideAge: Nothing
+                                              , categoryType: "Category"
+                                              , allowedRideStatuses: Nothing
+                                              }]
 ------------------------------- allTopics --------------------------
 allTopicsView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> forall w . PrestoDOM (Effect Unit) w
 allTopicsView state push topicList =
+  let _ = spy "hello world allTopicsView" topicList
+  in 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -306,6 +320,7 @@ allTopicsView state push topicList =
                     "CONTACT_US"         -> const $ ContactUs
                     "CALL_SUPPORT"       -> const $ CallSupport
                     "DELETE_ACCOUNT"     -> const $ DeleteAccount
+                    "FAQ"                -> const $ SelectFaqCategory item
                     _ | item.isRideRequired 
                                          -> const $ SelectRide item
                     _                    -> const $ OpenChat item
@@ -346,7 +361,7 @@ allTopicsView state push topicList =
               , background Color.greyLight
               , visibility $ boolToVisibility $ not $ index == (DA.length (topicList)) - 1
               ][]
-          ]) topicList)
+          ]) (topicList))
 
 deleteAccountView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 deleteAccountView state push=

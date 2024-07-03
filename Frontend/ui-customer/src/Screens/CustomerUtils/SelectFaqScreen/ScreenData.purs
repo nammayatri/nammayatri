@@ -13,29 +13,26 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.RideSelectionScreen.ScreenData where
+module Screens.SelectFaqScreen.ScreenData where
 
-import Screens.Types (AnimationState(..), RideSelectionScreenState)
-import Data.Maybe (Maybe(..))
+import Screens.Types
+import Common.Types.App 
+import ConfigProvider
+import Data.Maybe(Maybe(..))
+import MerchantConfig.Types (AppConfig)
 
-initData :: RideSelectionScreenState
-initData =
-  { rideList      : []
-  , offsetValue   : 0
-  , selectedItem  : Nothing
-  , shimmerLoader : AnimatingIn
-  , loadMoreDisabled : false
-  , recievedResponse : false
-  , selectedCategory :
-    { categoryId     : ""
-    , categoryName   : ""
-    , categoryAction : Nothing
-    , categoryImageUrl : Nothing
-    , isRideRequired : false
-    , maxAllowedRideAge : Nothing
-    , allowedRideStatuses : Nothing
-    , categoryType : "Category"
-    }
-  , prestoListArrayItems   : []
-  , loaderButtonVisibility : false
+initData :: SelectFaqScreenState
+initData = {
+  data: {
+    config : getAppConfig appConfig,
+    issueList : [],
+    issueListType : HELP_AND_SUPPORT_SCREEN_MODAL,
+    categories : [],
+    categoryName : ""
+  },
+  props:{
+    apiFailure : false
+  , needIssueListApiCall : true
+  }
+
 }
