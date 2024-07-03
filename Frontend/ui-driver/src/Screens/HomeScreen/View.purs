@@ -1927,7 +1927,7 @@ addAadhaarNumber push state visibility' =
   , stroke $ "1," <> Color.black600
   , padding $ Padding 20 16 20 16
   , gravity CENTER_VERTICAL
-  , onClick push $ const ClickAddAlternateButton
+  , onClick push $ const LinkAadhaarAC
   , visibility if visibility' then VISIBLE else GONE
   , rippleColor Color.rippleShade
   ][  imageView
@@ -1990,12 +1990,12 @@ offlineNavigationLinks push state =
     ]
     where
       navLinksArray = [ {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
-                        {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : ClickAddAlternateButton},
+                        {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction},
                         {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
                         {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
                       ]
       itemVisibility action = case action of
-                        ClickAddAlternateButton -> if isNothing state.data.driverAlternateMobile then VISIBLE else GONE
+                        AddAlternateNumberAction -> if isNothing state.data.driverAlternateMobile then VISIBLE else GONE
                         LinkAadhaarAC -> if state.props.showlinkAadhaarPopup then VISIBLE else GONE
                         AddGotoAC -> if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then VISIBLE else GONE
                         _ -> VISIBLE

@@ -1248,6 +1248,8 @@ driverProfileFlow = do
       bookingOptionsFlow
     GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do
       res <- lift $ lift $ Remote.makeRcActiveOrInactive (Remote.makeRcActiveOrInactiveReq (not state.data.isRCActive) (state.data.rcNumber))
+      (GlobalState globalstate) <- getState
+      when (globalstate.homeScreen.props.driverStatusSet /= Offline) $ changeDriverStatus Offline
       case res of
         Right (MakeRcActiveOrInactiveResp response) -> do
           pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> (getString IS_ACTIVE_NOW)

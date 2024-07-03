@@ -433,6 +433,7 @@ data Action = NoAction
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
+            | AddAlternateNumberAction
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1239,6 +1240,16 @@ eval ClickAddAlternateButton state = do
         continue state
       else do
         exit $ AddAlternateNumber state
+
+eval AddAlternateNumberAction state = do
+  let curr_time = getCurrentUTC ""
+  let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
+  let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
+  if(time_diff <= 600 && time_diff > 0) then do
+    pure $ toast $ getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER
+    continue state
+  else do
+    exit $ AddAlternateNumber state
 
 eval LinkAadhaarAC state = exit $ AadhaarVerificationFlow state
 
