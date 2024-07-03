@@ -22,7 +22,7 @@ import qualified Domain.Action.UI.Location as SLoc
 import Domain.Types.Booking
 import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.Exophone as DExophone
-import Domain.Types.FareBreakup
+import Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Person as Person
 import Domain.Types.Ride (Ride (..), RideAPIEntity (..))
@@ -263,17 +263,24 @@ buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
   -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
-  fareBreakups <- bool (pure []) (runInReplica $ QFareBreakup.findAllByBookingId booking.id) (booking.status == COMPLETED)
-  -- query1 <- maybe (pure []) (\rideId -> runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE) (mbRide <&> (.id))
-  -- fareBreakups <- bool (pure []) (bool (pure query1) (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING) (null query1)) (booking.status == COMPLETED)
-  -- estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
+  (fareBreakups, estimatedFareBreakups) <- do
+    case mbRide of
+      Just ride ->
+        case booking.status of
+          COMPLETED -> do
+            updatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE
+            estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
+            let fareBreakups = if null updatedFareBreakups then estimatedFareBreakups else updatedFareBreakups
+            return (fareBreakups, estimatedFareBreakups)
+          _ -> return ([], [])
+      Nothing -> return ([], [])
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   mbSosStatus <- getActiveSos mbActiveRide personId
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbRide
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) [] fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity
