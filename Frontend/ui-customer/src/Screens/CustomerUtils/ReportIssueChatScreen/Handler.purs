@@ -47,6 +47,7 @@ import Data.Either(Either(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Screens.Types (TripDetailsGoBackType(..))
 import Control.Applicative (unless)
+import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 
 reportIssueChatScreen :: FlowBT String FlowState
 reportIssueChatScreen = do
@@ -73,6 +74,8 @@ reportIssueChatScreen = do
     GoToSafetyScreen updatedState -> goToSafetyScreenHandler updatedState
 
     GoToHomeScreen updatedState -> goToHomeScreenHandler updatedState
+
+    GoToFaqScreen updatedState -> goToFaqScreenHandler updatedState
 
 selectIssueOptionHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 selectIssueOptionHandler updatedState = do 
@@ -194,7 +197,7 @@ uploadIssueHandler updatedState = do
 
   postIssueResp <- Remote.postIssueBT language postIssueReqBody
   case postIssueResp of
-    Left errorPayload -> void $ pure $ toast $ Remote.getCorrespondingErrorMessage $ spy "VaibhavD : Error Payload " errorPayload
+    Left errorPayload -> void $ pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
     Right (PostIssueRes postIssueRes) -> do
       void $ pure $ toast $ getString YOUR_ISSUE_HAS_BEEN_REPORTED
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language postIssueRes.issueReportId
@@ -328,7 +331,8 @@ goToRideSelectionScreenHandler updatedState = do
     \rideHistoryScreen -> rideHistoryScreen {
       data {
         offsetValue = 0,
-        selectedOptionId = (_.issueOptionId) <$> updatedState.data.selectedOption
+        selectedOptionId = (_.issueOptionId) <$> updatedState.data.selectedOption,
+        entryPoint = RideSelectionScreenData.HelpAndSupportScreenEntry
       },
       selectedCategory = updatedState.data.selectedCategory
     } 
@@ -382,3 +386,8 @@ gotoTripDetailsScreenHandler updatedState = do
     }
   })
   App.BackT $ App.BackPoint <$> (pure TripDetailsScreenFlow)
+
+goToFaqScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+goToFaqScreenHandler updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
+  App.BackT $ App.NoBack <$> (pure $ FaqScreenFlow)

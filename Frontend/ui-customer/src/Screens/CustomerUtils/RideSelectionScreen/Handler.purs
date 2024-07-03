@@ -49,6 +49,7 @@ import ConfigProvider (getAppConfig)
 import Constants (appConfig)
 import Screens.RideSelectionScreen.Controller (getTitle)
 import Debug
+import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 
 rideSelection :: FlowBT String FlowState
 rideSelection = do
@@ -73,8 +74,9 @@ rideSelection = do
 goBackHandler :: RideSelectionScreenState -> FlowBT String FlowState
 goBackHandler state = do 
   modifyScreenState $ RideSelectionScreenStateType (\_ -> state )
-  App.BackT $ App.NoBack <$> (pure HelpAndSupportScreenFlow) 
-
+  case state.data.entryPoint of  
+    RideSelectionScreenData.FaqScreenEntry -> App.BackT $ App.NoBack <$> (pure FaqScreenFlow)
+    RideSelectionScreenData.HelpAndSupportScreenEntry -> App.BackT $ App.NoBack <$> (pure HelpAndSupportScreenFlow) 
 
 loaderOutputHandler :: RideSelectionScreenState -> FlowBT String FlowState
 loaderOutputHandler state = do
@@ -106,6 +108,8 @@ selectRideHandler state = do
     messages' = mapWithIndex (
       \index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500*(index + 1))
     ) getOptionsRes.messages
+
+    showSubmitComp' = any (\ (Message  message) -> (fromMaybe "" message.label) == "CREATE_TICKET") getOptionsRes.messages 
 
     chats' = globalState.reportIssueChatScreen.data.chats <>
       (if isJust state.data.selectedOptionId 
@@ -147,8 +151,8 @@ selectRideHandler state = do
       }
       ,  selectedRide = state.selectedItem 
       }
-      , props {
-        showSubmitComp = showSubmitComp' 
+    , props {
+      showSubmitComp = showSubmitComp'
       } 
     } 
   )

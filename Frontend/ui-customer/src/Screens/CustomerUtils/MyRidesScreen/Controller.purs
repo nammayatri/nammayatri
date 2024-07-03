@@ -114,7 +114,7 @@ data Action = NoAction
             | IndividualRideCardActionController IndividualRideCardController.Action
             | ErrorModalActionController ErrorModal.Action
             | APIFailureActionController ErrorModal.Action
-            | Scroll String
+            | Scroll String 
             | AfterRender
             | ScrollStateChanged ScrollState
 

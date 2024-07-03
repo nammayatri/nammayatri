@@ -9,12 +9,14 @@ import Font.Style as FontStyle
 import Styles.Colors as Color 
 import PrestoDOM
 import Effect (Effect)
+import Styles.Types (Color)
+
 
 
 
 
 data Action = NoAction 
-              | OnClick
+              | OnClick Config
 
 
 type Config = 
@@ -23,6 +25,14 @@ type Config =
   , layout :: forall w . PrestoDOM (Effect Unit) w
   , openArrowImage :: String
   , closeArrowImage :: String 
+  , id :: String
+  , titleBackground :: Color
+  , cardMargin :: Margin
+  , cardPadding :: Padding
+  , headingPadding :: Padding
+  , imageHeight :: Length
+  , imageWidth :: Length
+  , headingCornerRadius :: Number
   }
 
 
@@ -35,4 +45,6 @@ type Config =
 --             [ height WRAP_CONTENT
 --             , width WRAP_CONTENT
 --             ][]
+--   , openArrowImage : "ny_ic_chevron_down"
+--   , closeArrowImage : "ny_ic_chevron_up"
 -- }

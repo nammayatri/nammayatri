@@ -55,7 +55,8 @@ initData = {
     ongoingIssueList : [],
     issueListType : HELP_AND_SUPPORT_SCREEN_MODAL,
     categories : [],
-    merchantExoPhone : ""
+    merchantExoPhone : "",
+    isFaqListEmpty : true
   },
   props:{
     apiFailure : false
@@ -104,7 +105,8 @@ type HelpAndSupportScreenData =
     issueListType :: IssueModalType,
     categories :: Array CategoryListType,
     merchantExoPhone :: String,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    isFaqListEmpty :: Boolean
   }
 
 type HelpAndSuportScreenProps =

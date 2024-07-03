@@ -163,6 +163,7 @@ instance loggableAction :: Loggable Action where
       ResolvedIssue -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "resolved_issue"
       SelectRide _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "select_ride"
       OpenChat _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "open_chat"
+      SelectFaqCategory _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "select_faq_category"
       IssueScreenModal act -> case act of
         IssueListController.IssueViewAction act -> case act of
           IssueViewController.IssueClick selectedIssue -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "issue_click"
@@ -199,6 +200,7 @@ data Action = BackPressed Boolean
             | SelectRide CategoryListType
             | OpenChat CategoryListType
             | IssueScreenModal IssueList.Action
+            | SelectFaqCategory CategoryListType
 
 data ScreenOutput = GoBack HelpAndSupportScreenState
                   | GoToSupportScreen String HelpAndSupportScreenState
@@ -208,6 +210,7 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
                   | UpdateState HelpAndSupportScreenState
                   | GoToRideSelectionScreen CategoryListType HelpAndSupportScreenState
                   | GoToChatScreen CategoryListType HelpAndSupportScreenState
+                  | GoToSelectFaqScreen CategoryListType HelpAndSupportScreenState
                   | GoToHelpAndSupportScreen HelpAndSupportScreenState 
                   | ConfirmDeleteAccount HelpAndSupportScreenState 
                   | GoToOldChatScreen IssueInfo HelpAndSupportScreenState
@@ -237,6 +240,8 @@ eval (IssueScreenModal (IssueListController.BackPressed)) state = exit $ GoToHel
 eval (SelectRide selectedCategory) state = exit $ GoToRideSelectionScreen selectedCategory state
 
 eval (OpenChat selectedCategory) state = exit $ GoToChatScreen selectedCategory state
+
+eval (SelectFaqCategory selectedCategory) state = exit $ GoToSelectFaqScreen selectedCategory state
 
 eval ReportedIssue state = continue state {data {issueListType = REPORTED_ISSUES_MODAL}}
 

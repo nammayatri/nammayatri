@@ -58,6 +58,8 @@ modifyScreenState st =
     RentalScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { rentalScreen = a state.rentalScreen })
     RideSelectionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSelectionScreen = a state.rideSelectionScreen})
     ReportIssueChatScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {reportIssueChatScreen = a state.reportIssueChatScreen})
+    SelectFaqScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {selectFaqScreen = a state.selectFaqScreen})
+    FaqScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {faqScreen = a state.faqScreen})
     MetroTicketDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketDetailsScreen = a state.metroTicketDetailsScreen})
     MetroMyTicketsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroMyTicketsScreen = a state.metroMyTicketsScreen})
     MetroTicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketBookingScreen = a state.metroTicketBookingScreen})
@@ -131,8 +133,12 @@ updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos = do
 data FlowState = HelpAndSupportScreenFlow 
                | IssueReportChatScreenFlow
                | RideSelectionScreenFlow
+               | SelectFaqScreenFlow
+               | FaqScreenFlow
                | HomeScreenFlow
                | ActivateSafetyScreenFlow
                | TripDetailsScreenFlow
                | ContactUsScreenFlow
                | MyRidesScreenFlow
+               | GoToFavouritesScreenFlow
+               | ChangeLanguageScreenFlow

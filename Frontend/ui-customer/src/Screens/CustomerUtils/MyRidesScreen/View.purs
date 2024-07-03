@@ -167,7 +167,7 @@ ridesView listItemm push state =
         [ height MATCH_PARENT
         , scrollBarY false
         , width MATCH_PARENT
-        , onScroll "rides" "MyRidesScreen" push (Scroll)
+        , onScroll "rides" "MyRidesScreen" push (Scroll )
         , onScrollStateChange push (ScrollStateChanged)
         , visibility $ case DA.null state.itemsRides of
                     false -> VISIBLE

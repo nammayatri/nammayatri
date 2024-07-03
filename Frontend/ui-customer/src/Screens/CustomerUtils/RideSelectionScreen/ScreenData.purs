@@ -43,7 +43,8 @@ type RideSelectionScreenData = {
     loadMoreText :: Boolean,
     isSrcServiceable :: Boolean,
     config :: AppConfig,
-    selectedOptionId :: Maybe String
+    selectedOptionId :: Maybe String,
+    entryPoint :: RideSelectionScreenEntry
   }
 
 type RideSelectionScreenProps = {
@@ -55,7 +56,7 @@ type RideSelectionScreenProps = {
   optionsVisibility :: Boolean
 }
 
-
+data RideSelectionScreenEntry = FaqScreenEntry | HelpAndSupportScreenEntry
 
 -- ############################### Data ###############################
 
@@ -77,6 +78,7 @@ initData =
       , isSrcServiceable : true
       , config : getAppConfig appConfig
       , selectedOptionId : Nothing
+      , entryPoint : HelpAndSupportScreenEntry
       }
   , prestoListArrayItems: []
   , selectedCategory : {
@@ -84,8 +86,8 @@ initData =
       , categoryImageUrl : Nothing
       , categoryAction : Nothing
       , categoryId : ""
-      , categoryType : ""
       , isRideRequired : false
+      , categoryType: ""
       , maxAllowedRideAge : Nothing
       , allowedRideStatuses : Nothing
     }

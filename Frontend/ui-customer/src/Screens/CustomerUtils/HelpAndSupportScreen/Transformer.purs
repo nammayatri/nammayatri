@@ -169,6 +169,7 @@ myRideListTransform state listRes =
                   , issueListType: HELP_AND_SUPPORT_SCREEN_MODAL
                   , categories: state.data.categories
                   , merchantExoPhone: ride.merchantExoPhone
+                  , isFaqListEmpty: state.data.isFaqListEmpty
                   }
               , props:
                   { apiFailure: false
@@ -272,8 +273,8 @@ topicsList state =
           , categoryId: "7"
           , isRideRequired: false
           , maxAllowedRideAge: Nothing
-          , allowedRideStatuses: Nothing
           , categoryType: "Category"
+          , allowedRideStatuses: Nothing
           }
         ]
       else
@@ -289,10 +290,10 @@ reportsList state =
             , categoryName: getString ACTIVE_STR <> " : " <> (toStringJSON (DA.length (state.data.ongoingIssueList)))
             , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_reported"
             , categoryId: "1"
-            , categoryType: ""
             , isRideRequired: false
             , maxAllowedRideAge: Nothing
             , allowedRideStatuses: Nothing
+            , categoryType: "Category"
             }
           ]
       )
@@ -303,10 +304,10 @@ reportsList state =
             , categoryName: getString RESOLVED <> " : " <> (toStringJSON (DA.length (state.data.resolvedIssueList)))
             , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_resolved"
             , categoryId: "2"
-            , categoryType: ""
             , isRideRequired: false
             , maxAllowedRideAge: Nothing
             , allowedRideStatuses: Nothing
+            , categoryType: "Category"
             }
           ]
       )

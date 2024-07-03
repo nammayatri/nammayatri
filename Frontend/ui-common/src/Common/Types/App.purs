@@ -499,7 +499,7 @@ type CategoryListType = {
   , isRideRequired :: Boolean
   , maxAllowedRideAge :: Maybe Int
   , allowedRideStatuses :: Maybe (Array String)
-  , categoryType :: String
+  , categoryType :: String 
   }
 
 type DisplayBase64ImageConig = {
@@ -662,3 +662,20 @@ data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED |
 derive instance genericRecordingState :: Generic RecordingState _
 instance eqRecordingState :: Eq RecordingState where eq = genericEq
 instance showRecordingState :: Show RecordingState where show = genericShow
+
+
+type FaqCardDropDownInfo = {
+  title :: String,
+  description :: String,
+  isExpanded :: Boolean,
+  label :: Maybe String,
+  id :: String, 
+  action :: Maybe String, 
+  referenceCategoryId :: Maybe String,
+  referenceOptionId :: Maybe String
+}
+
+type FaqStringType = {
+  value :: String,
+  messageStringType :: String
+}
