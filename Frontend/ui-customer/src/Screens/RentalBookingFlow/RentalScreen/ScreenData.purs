@@ -36,6 +36,8 @@ initData =
         , estimatedFare : 0
         , finalFare : 0
         , nightCharge : "250"
+        , rideStartedAt : ""
+        , rideEndedAt : ""
       }
     , config : getAppConfig appConfig
     , searchId : ""

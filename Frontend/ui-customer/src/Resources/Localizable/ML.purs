@@ -1033,3 +1033,5 @@ getML stringKey =
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "ഈ റൈഡിൽ എസി ലഭ്യമല്ല"
         AC_NOT_WORKING_DESC -> "എസി പ്രവർത്തിക്കുന്നില്ല / ഡ്രൈവർ ഓണ് ചെയ്യാനായി നിരാകരിച്ചു"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "എസ്റ്റിമേറ്റുകൾ കാലഹരണപ്പെട്ടു. വീണ്ടും നേടുക, ദയവായി ക്ഷണം കാത്തുകൊണ്ട് വീണ്ടും പരിശോധിക്കുക."
+        CHARGEABLE -> "ചാർജ്ജുചെയ്യാവുന്ന"
+        BOOKED -> "ബുക്ക് ചെയ്തു"

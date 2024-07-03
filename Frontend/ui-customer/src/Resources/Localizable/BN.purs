@@ -1015,3 +1015,5 @@ getBN stringKey =
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "এই রাইডে এসি উপলব্ধ নয়"
         AC_NOT_WORKING_DESC -> "এসি কাজ করছে না / চালক অন করতে অসমর্থ"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "অনুমান মেয়াদ শেষ হয়েছে। আবার তথ্য নিতে, দয়া করে"
+        CHARGEABLE -> "চার্জযোগ্য"
+        BOOKED -> "বুক করা হয়েছে"

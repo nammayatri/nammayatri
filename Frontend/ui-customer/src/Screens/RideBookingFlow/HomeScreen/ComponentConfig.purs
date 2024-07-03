@@ -1628,10 +1628,13 @@ rideCompletedCardConfig state =
         , finalDuration = state.data.driverInfoCardState.rentalData.finalDuration
         , finalDistance = state.data.driverInfoCardState.rentalData.finalDistance
         , finalFare = state.data.finalAmount
+        , rideStartedAt = state.data.driverInfoCardState.rentalData.rideStartedAt
+        , rideEndedAt = state.data.driverInfoCardState.rentalData.rideEndedAt
         },
         rentalRowDetails {
           rideTime = getString RIDE_TIME
         , rideDistance = getString RIDE_DISTANCE
+        , rideDistanceInfo = "( " <> getString CHARGEABLE <> " / " <> getString BOOKED <> " )"
         , rideStartedAt = getString RIDE_STARTED_AT
         , rideEndedAt = getString RIDE_ENDED_AT
         , estimatedFare = getString ESTIMATED_FARE
