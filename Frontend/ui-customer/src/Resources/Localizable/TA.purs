@@ -1325,3 +1325,4 @@ getTA stringKey =
     YOU_CAN_WRITE_TO_US_AT -> "உங்கள் கேள்விகளை எங்களுக்கு எழுதலாம்"
     CHARGEABLE -> "கட்டணமாகும்"
     BOOKED -> "பதிவு செய்யப்பட்டது"
+    SURCHARGES -> "கூடுதல் கட்டணம்"

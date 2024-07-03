@@ -1309,3 +1309,4 @@ getFR stringKey =
         YOU_CAN_WRITE_TO_US_AT -> "Vous pouvez nous écrire à"
         CHARGEABLE -> "Facturable"
         BOOKED -> "Réservé"
+        SURCHARGES -> "Suppléments"

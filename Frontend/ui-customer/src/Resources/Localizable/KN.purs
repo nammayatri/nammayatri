@@ -1308,3 +1308,4 @@ getKN stringKey =
         YOU_CAN_WRITE_TO_US_AT -> "ನೀವು ನಮಗೆ ಬರೆಯಬಹುದು"
         CHARGEABLE -> "ಚಾರ್ಜ್ ಮಾಡುವ"
         BOOKED -> "ಬುಕ್ ಮಾಡಲಾಗಿದೆ"
+        SURCHARGES -> "ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ"

@@ -1307,3 +1307,4 @@ getBN stringKey =
         YOU_CAN_WRITE_TO_US_AT -> "আপনি আমাদের লিখতে পারেন"
         CHARGEABLE -> "চার্জযোগ্য"
         BOOKED -> "বুক করা হয়েছে"
+        SURCHARGES -> " অতিরিক্ত চার্জ"
