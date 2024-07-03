@@ -580,7 +580,7 @@ defaultCityConfig =
       },
       cabs : {
         freeMinutes : 5.0
-      , perMinCharges : 1.0
+      , perMinCharges : 1.5
       }
     },
     rentalWaitingChargeConfig : {
