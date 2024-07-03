@@ -415,25 +415,25 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
-  let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
-        DFare.ProgressiveDetails _ -> (0, 0, 0)
-        DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
-        DFare.RentalDetails _ -> (0, 0, 0)
-        DFare.InterCityDetails _ -> (0, 0, 0)
+  let (platformFee, cgst, sgst, isSpecialZoneCharge) = case newFareParams.fareParametersDetails of
+        DFare.ProgressiveDetails _ -> (0, 0, 0, False)
+        DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
+        DFare.RentalDetails _ -> (0, 0, 0, False)
+        DFare.InterCityDetails _ -> (0, 0, 0, False)
   let totalDriverFee = govtCharges + platformFee + cgst + sgst
-  mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft totalDriverFee
+  mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft isSpecialZoneCharge
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
-  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking)
+  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking) isSpecialZoneCharge
   vehicle <- QV.findById driverId
   let isEnableForVariant = maybe True (`elem` transporterConfig.variantsToEnableForSubscription) (vehicle <&> (.variant))
   let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEnableForVariant
-  when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft totalDriverFee) $ do
+  when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge) $ do
     numRides <- case lastDriverFee of
       Just ldFee ->
         if now >= ldFee.startTime && now < ldFee.endTime
           then do
-            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking
+            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
             return (ldFee.numRides + 1)
           else do
             QDF.create driverFee
@@ -445,13 +445,13 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
     fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
     scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
-    isEligibleForCharge transporterConfig freeTrialDaysLeft totalFee =
-      if totalFee > 0
+    isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge =
+      if isSpecialZoneCharge
         then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
         else freeTrialDaysLeft <= 0
 
-    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Int -> HighPrecMoney -> m (Maybe DriverPlan)
-    getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' totalFee = do
+    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Int -> Bool -> m (Maybe DriverPlan)
+    getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' isSpecialZoneCharge = do
       mbDriverPlan' <- findByDriverIdWithServiceName (cast driverId) serviceName
       let planMandatory = transporterConfig.isPlanMandatory
           chargeSPZRides = transporterConfig.considerSpecialZoneRideChargesInFreeTrial
@@ -459,7 +459,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           isEligibleForDefaultPlanBeforeFreeTrial = freeTrialDaysLeft' > 0 && chargeSPZRides && planMandatory
       if isNothing mbDriverPlan'
         then do
-          case (totalFee > 0, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
+          case (isSpecialZoneCharge, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
             (True, True, _) -> assignDefaultPlan
             (_, _, True) -> assignDefaultPlan
             _ -> return mbDriverPlan'
@@ -525,8 +525,9 @@ mkDriverFee ::
   Currency ->
   TransporterConfig ->
   Maybe SRB.Booking ->
+  Bool ->
   m DF.DriverFee
-mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking = do
+mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking isSpecialZoneCharge = do
   id <- generateGUID
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
@@ -578,7 +579,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
       }
   where
     specialZoneMetricsIntialization totalFee' = do
-      if totalFee' > 0 then (1, totalFee') else (0, 0)
+      if isSpecialZoneCharge then (1, totalFee') else (0, 0)
 
 getPlan ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
