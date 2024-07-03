@@ -376,7 +376,7 @@ config =
           { cityName = "Bangalore",
             cityCode = "std:080",
             geoCodeConfig
-              { radius = 50000,
+              { radius = 250000,
                 strictBounds = true
               },
             featureConfig {
@@ -387,6 +387,10 @@ config =
         defaultCityConfig 
           { cityName = "Mysore",
             cityCode = "std:0821",
+            geoCodeConfig
+              { radius = 250000,
+                strictBounds = true
+              },
             featureConfig {
               enableCabBanner = true
             },
@@ -395,6 +399,10 @@ config =
         defaultCityConfig 
           { cityName = "Tumakuru",
             cityCode = "std:0816",
+            geoCodeConfig
+              { radius = 250000,
+                strictBounds = true
+              },
             featureConfig {
               enableCabBanner = true
             },
@@ -403,8 +411,9 @@ config =
         defaultCityConfig 
           { cityName = "Chennai",
             cityCode = "std:044",
+
             geoCodeConfig
-              { radius = 50000,
+              { radius = 250000,
                 strictBounds = true
               },
             enableCabs = true
