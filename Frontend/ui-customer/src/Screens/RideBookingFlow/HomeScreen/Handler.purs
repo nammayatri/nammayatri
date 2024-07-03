@@ -231,3 +231,6 @@ homeScreen = do
     GoToRideRelatedIssues updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_RELATED_ISSUES updatedState)
+    ExitAndEnterHomeScreen state -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> (pure $ EXIT_AND_ENTER_HOME_SCREEN)

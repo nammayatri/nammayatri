@@ -26,7 +26,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Prop, toPropValue)
 import PrestoDOM.List (ListItem)
 import Screens.Types (Gender)
 import Styles.Colors as Color
-import Common.RemoteConfig (RCCarousel(..))
+import Common.RemoteConfig (RCCarousel(..), RemoteAC(..))
 import Data.String as DS
 
 
@@ -81,6 +81,7 @@ type Config a = {
   actionArrowIconVisibility :: Boolean,
   actionBottomArrowIconVisibility :: Boolean
 , imageBannerUrl :: String
+, dynamicAction :: Maybe RemoteAC
 }
 
 config :: forall a. a -> Config a
@@ -118,6 +119,7 @@ config action = {
     actionArrowIconVisibility : true,
     actionBottomArrowIconVisibility : false
 , imageBannerUrl : ""
+, dynamicAction : Nothing
 }
 
 
@@ -203,6 +205,7 @@ remoteConfigTransformer remoteConfig action =
         actionTextVisibility = DS.null remoteConfig.cta_image_url ,
         actionArrowIconVisibility = DS.null remoteConfig.cta_image_url,
         actionBottomArrowIconVisibility = DS.null remoteConfig.cta_image_url,
-        imageBannerUrl = fromMaybe "" remoteConfig.image_banner
+        imageBannerUrl = fromMaybe "" remoteConfig.image_banner,
+        dynamicAction = remoteConfig.dynamic_action
       }
     in config'') remoteConfig
