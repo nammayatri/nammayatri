@@ -37,6 +37,7 @@ module Domain.Action.Beckn.OnUpdate
 where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Booking as DRB
@@ -454,7 +455,7 @@ validateRequest = \case
   OUNewMessageReq NewMessageReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-    unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
+    unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))
     return $ OUValidatedNewMessageReq ValidatedNewMessageReq {..}
     where
       isValidRideStatus status = status `elem` [DRide.NEW, DRide.INPROGRESS]

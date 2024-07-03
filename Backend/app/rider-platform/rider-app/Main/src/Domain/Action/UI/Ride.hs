@@ -29,6 +29,7 @@ import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Ord
+import qualified Data.Text as Text
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import Domain.Action.UI.Location (makeLocationAPIEntity)
 import qualified Domain.Action.UI.Person as UPerson
@@ -122,7 +123,7 @@ getDriverLoc rideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
-    $ throwError $ RideInvalidStatus "Cannot track this ride"
+    $ throwError $ RideInvalidStatus ("Cannot track this ride" <> Text.pack (show ride.status))
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   res <-

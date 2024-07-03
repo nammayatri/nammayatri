@@ -16,6 +16,7 @@ module Domain.Action.Beckn.Rating where
 
 import Data.List.Extra ((!?))
 import Data.Maybe
+import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -157,5 +158,5 @@ validateRequest req = do
     QRide.findActiveByRBId booking.id
       >>= fromMaybeM (RideNotFound booking.id.getId)
   unless (ride.status == DRide.COMPLETED) $
-    throwError $ RideInvalidStatus "Ride is not ready for rating."
+    throwError $ RideInvalidStatus ("Ride is not ready for rating." <> Text.pack (show ride.status))
   return ride
