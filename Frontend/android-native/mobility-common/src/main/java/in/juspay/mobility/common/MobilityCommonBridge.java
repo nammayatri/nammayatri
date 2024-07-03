@@ -216,6 +216,7 @@ import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.mobility.common.services.MobilityCallAPI;
+import in.juspay.mobility.common.RemoteConfigs.MobilityRemoteConfigs;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -226,6 +227,9 @@ public class MobilityCommonBridge extends HyperBridge {
     protected static final int STORAGE_PERMISSION = 67;
     //Constants
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+
+    private MobilityRemoteConfigs remoteConfigs;
+
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final String LOCATE_ON_MAP = "LocateOnMap";
     protected static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
@@ -531,7 +535,10 @@ public class MobilityCommonBridge extends HyperBridge {
         receivers = new Receivers(bridgeComponents);
         receivers.initReceiver();
         callBack = this::callImageUploadCallBack;
+        remoteConfigs = new MobilityRemoteConfigs(true, true);
         Utils.registerCallback(callBack);
+        String mapConfig = remoteConfigs.getString("map_config");
+        KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
         fetchAndUpdateLastKnownLocation();
     }
 
@@ -5057,4 +5064,28 @@ public class MobilityCommonBridge extends HyperBridge {
         storeContactsCallBack = callback;
     }
 
+    @JavascriptInterface
+    public boolean fetchRemoteConfigBool(String key){
+        return remoteConfigs.getBoolean(key);
+    }
+
+    @JavascriptInterface
+    public String fetchRemoteConfigString(String key){
+        return remoteConfigs.getString(key);
+    }
+
+    @JavascriptInterface
+    public double fetchRemoteConfigDouble(String key){
+        return remoteConfigs.getDouble(key);
+    }
+
+    @JavascriptInterface
+    public long fetchRemoteConfigLong(String key){
+        return remoteConfigs.getLong(key);
+    }
+
+    @JavascriptInterface
+    public void fetchAndUpdateRemoteConfig(){
+        remoteConfigs = new MobilityRemoteConfigs(true, false);
+    }
 }
