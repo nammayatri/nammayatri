@@ -1309,3 +1309,4 @@ getEN stringKey =
         YOU_CAN_WRITE_TO_US_AT -> "You can write to us at"
         CHARGEABLE -> "Chargeable" 
         BOOKED -> "Booked"
+        SURCHARGES -> "Surcharges"

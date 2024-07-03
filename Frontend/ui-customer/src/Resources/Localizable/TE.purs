@@ -1322,3 +1322,4 @@ getTE stringKey =
     YOU_CAN_WRITE_TO_US_AT -> "మీరు మాకు వ్రాయవచ్చు"
     CHARGEABLE -> "వసూలు చేసే"
     BOOKED -> "బుక్ చేయబడింది"
+    SURCHARGES -> "అదనపు ఛార్జీలు"
