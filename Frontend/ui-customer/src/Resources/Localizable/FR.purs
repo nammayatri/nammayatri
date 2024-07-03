@@ -1307,3 +1307,5 @@ getFR stringKey =
         WAITING_CHARGES -> "Frais d'attente"
         PLACE_A_CALL -> "Passer un appel"
         YOU_CAN_WRITE_TO_US_AT -> "Vous pouvez nous écrire à"
+        CHARGEABLE -> "Facturable"
+        BOOKED -> "Réservé"

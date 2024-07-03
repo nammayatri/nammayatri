@@ -106,6 +106,7 @@ instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
 
 type RentalTextConfig = {
   title :: String,
+  subTitle :: String,
   estimatedValue :: String,
   actualValue :: String,
   color :: String
@@ -207,7 +208,9 @@ config = {
     actualRideDuration : "",
     actualRideDistance : "",
     startRideOdometerImage: "",
-    endRideOdometerImage: ""
+    endRideOdometerImage: "",
+    rideStartedAt : "",
+    rideEndedAt : ""
   },
   rentalRideTextConfig : {
     rideTime : "Ride Time",
@@ -347,6 +350,7 @@ type InfoCardConfig = {
   margin :: Margin,
   image :: InfoCardImageConfig , 
   heading :: InfocardTextConfig,
+  headingInfo :: InfocardTextConfig,
   subHeading1 :: InfocardTextConfig,
   subHeading2 :: InfocardTextConfig,
   id :: String
@@ -375,7 +379,9 @@ type RentalRideConfig = {
   actualRideDuration :: String,
   actualRideDistance :: String,
   startRideOdometerImage:: String,
-  endRideOdometerImage:: String
+  endRideOdometerImage:: String,
+  rideStartedAt :: String,
+  rideEndedAt :: String
 }
 
 type Toll = {
@@ -390,6 +396,7 @@ type Toll = {
 type RentalRowConfig = {
     rideTime :: String
   , rideDistance :: String
+  , rideDistanceInfo :: String
   , rideStartedAt :: String
   , rideEndedAt :: String
   , estimatedFare :: String
@@ -405,6 +412,7 @@ dummyRentalRowConfig :: RentalRowConfig
 dummyRentalRowConfig = {
     rideTime : ""
   , rideDistance : ""
+  , rideDistanceInfo : ""
   , rideStartedAt : ""
   , rideEndedAt : ""
   , estimatedFare : ""
