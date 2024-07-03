@@ -139,6 +139,7 @@ import Engineering.Helpers.Utils as EHU
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.ProviderModel as PM
 import Common.Types.App as CTP
+import Common.RemoteConfig.Types as CRT
 
 instance showAction :: Show Action where
   show _ = ""
@@ -733,7 +734,8 @@ data ScreenOutput = LogoutUser
                   | UpdateReferralCode HomeScreenState String
                   | GoToSafetySettingScreen 
                   | GoToRideRelatedIssues HomeScreenState
-
+                  | ExitAndEnterHomeScreen HomeScreenState
+                  
 data Action = NoAction
             | BackPressed
             | CancelSearch
@@ -1076,32 +1078,67 @@ eval (BannerStateChanged item) state = do
   let newState = state{data {bannerData{bannerScrollState = item}}}
   continue newState
 
-eval (BannerCarousel (BannerCarousel.OnClick idx)) state = 
-  continueWithCmd state [do
-    let banners = if state.props.currentStage == HomeScreen then getBannerConfigs state BannerCarousel else getDriverInfoCardBanners state BannerCarousel
-    case index banners idx of
-      Just config -> do
-        let _ = runFn2 updatePushInIdMap "bannerCarousel" false
-        case config.type of
-          BannerCarousel.Gender -> pure $ GenderBannerModal $ Banner.OnClick
-          BannerCarousel.Disability -> pure $ DisabilityBannerAC $ Banner.OnClick
-          BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
-          BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
-          BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
-          BannerCarousel.CabLaunch -> pure $ WhereToClick
-          BannerCarousel.Remote link ->
-            if link == "search" then 
-              pure $ WhereToClick 
-            else if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link then  -- To be removed after deep links are added in iOS
-              pure GoToSafetyEducationScreen
-            else if not $ STR.null link then do
-              void $ openUrlInApp link
+eval (BannerCarousel (BannerCarousel.OnClick idx)) state = do
+  let banners = if state.props.currentStage == HomeScreen then getBannerConfigs state BannerCarousel else getDriverInfoCardBanners state BannerCarousel
+  case index banners idx of
+    Just config -> do
+      let _ = runFn2 updatePushInIdMap "bannerCarousel" false
+      case config.type of
+        BannerCarousel.Gender -> continueWithCmd state [pure $ GenderBannerModal $ Banner.OnClick]
+        BannerCarousel.Disability -> continueWithCmd state [pure $ DisabilityBannerAC $ Banner.OnClick]
+        BannerCarousel.ZooTicket -> continueWithCmd state [pure $ TicketBookingFlowBannerAC $ Banner.OnClick]
+        BannerCarousel.MetroTicket -> continueWithCmd state [pure $ MetroTicketBannerClickAC $ Banner.OnClick]
+        BannerCarousel.Safety -> continueWithCmd state [pure $ SafetyBannerAction $ Banner.OnClick]
+        BannerCarousel.CabLaunch -> continueWithCmd state [pure $ WhereToClick]
+        BannerCarousel.Remote link ->
+          if link == "search" then 
+            continueWithCmd state [pure $ WhereToClick ]
+          else if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link then  -- To be removed after deep links are added in iOS
+            continueWithCmd state [pure GoToSafetyEducationScreen]
+          else if not $ STR.null link then do
+            continueWithCmd state [do 
+              void $ JB.openUrlInApp link
               pure NoAction
-            else
+            ]
+          else
+            handleDynamicBannerAC config.dynamicAction
+        _ -> continueWithCmd state [pure NoAction]
+    Nothing -> continueWithCmd state [pure NoAction]
+
+  where 
+    handleDynamicBannerAC action = 
+      case action of 
+        Just actiontype -> case actiontype of 
+          CRT.Destination (CRT.DestinationParams destinationParams)-> do
+            void $ pure $ updateLocalStage GoToConfirmLocation
+            pure $ JB.removeMarker $ getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
+            pure $ setText (getNewIDWithTag "DestinationEditText") $ fromMaybe "" destinationParams.description
+
+            exit $ ExitAndEnterHomeScreen state {
+              data{ 
+                source = getString CURRENT_LOCATION
+              , destination = fromMaybe "" destinationParams.description
+              , destinationAddress = maybe state.data.destinationAddress (\x -> encodeAddress x [] Nothing destinationParams.lat destinationParams.lng) destinationParams.description
+              }
+            , props{
+                destinationPlaceId = destinationParams.placeId
+              , destinationLat = destinationParams.lat
+              , destinationLong = destinationParams.lng
+              , currentStage = GoToConfirmLocation
+              , isSource = Just false
+              }
+            } 
+
+          CRT.WhereTo -> continueWithCmd state [pure WhereToClick]
+          CRT.Profile ->  exit $ GoToMyProfile state false
+          CRT.UpdateProfile -> exit $ GoToMyProfile state true
+          CRT.MetroBooking -> exit $ GoToMetroTicketBookingFlow state
+          CRT.WebLink (CRT.WebLinkParams param) -> do
+            continueWithCmd state [ do
+              void $ JB.openUrlInApp param.url
               pure NoAction
-          _ -> pure NoAction
-      Nothing -> pure NoAction
-  ] 
+            ]
+        Nothing -> continueWithCmd state [pure NoAction]
 
 eval (MetroTicketBannerClickAC Banner.OnClick) state =  exit $ GoToMetroTicketBookingFlow state
 
