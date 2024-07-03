@@ -71,7 +71,8 @@ homeScreen = do
     EditDestLocationSelected selectedItem addToRecents updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ EDIT_LOCATION_SELECTED selectedItem addToRecents)
-    EditDestBackPressed -> do
+    EditDestBackPressed state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> pure EDIT_DEST_BACKPRESSED
     EditDestLocSelected updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
