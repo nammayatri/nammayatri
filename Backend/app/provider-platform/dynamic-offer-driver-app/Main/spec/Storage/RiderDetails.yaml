@@ -43,8 +43,6 @@ RiderDetails:
   constraints:
     id: PrimaryKey
     mobileNumberHash: SecondaryKey
-    merchantId: SecondaryKey
-
 
   queries:
     findById:
