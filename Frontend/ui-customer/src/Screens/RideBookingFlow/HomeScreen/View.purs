@@ -263,7 +263,7 @@ screen initialState =
                     void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "TRUE"
                     void $ launchAff $ flowRunner defaultGlobalState $ getEstimatePolling (getValueToLocalStore TRACKING_ID) GetEstimates CheckFlowStatusAction 3 2000.0 push initialState
                 else if estimatesPolling.shouldPush then do
-                     void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 20 1000.0 push initialState estimatesPolling.id
+                     void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 40 1000.0 push initialState estimatesPolling.id
                 else pure unit
 
               FindingQuotes -> do
