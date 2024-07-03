@@ -103,6 +103,8 @@ updateMultiple rideId ride = do
       Se.Set BeamR.currency (ride.fare <&> (.currency)),
       Se.Set BeamR.chargeableDistance (distanceToHighPrecMeters <$> ride.chargeableDistance),
       Se.Set BeamR.chargeableDistanceValue $ distanceToHighPrecDistance distanceUnit <$> ride.chargeableDistance,
+      Se.Set BeamR.traveledDistance (distanceToHighPrecMeters <$> ride.traveledDistance),
+      Se.Set BeamR.traveledDistanceValue $ distanceToHighPrecDistance distanceUnit <$> ride.traveledDistance,
       Se.Set BeamR.distanceUnit $ Just distanceUnit,
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,

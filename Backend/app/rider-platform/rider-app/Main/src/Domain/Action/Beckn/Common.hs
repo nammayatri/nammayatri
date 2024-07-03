@@ -414,6 +414,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              fare = Just fare,
              totalFare = Just totalFare,
              chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
+             traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
              rideEndTime,
              endOdometerReading
