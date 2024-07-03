@@ -745,7 +745,7 @@ defWaitingChargesConfig :: CTC.WaitingChargesConfig
 defWaitingChargesConfig = {
   cab : {
     freeSeconds : 300,
-    perMinCharges : 1.0
+    perMinCharges : 1.50
   },
   auto : {
     freeSeconds : 180,
