@@ -103,13 +103,13 @@ castCancellationSource = \case
   Common.ByAllocator -> SBCR.ByAllocator
   Common.ByApplication -> SBCR.ByApplication
 
-getTagV2' :: Tag.TagGroup -> Tag.Tag -> Maybe [Spec.TagGroup] -> Maybe Text
+getTagV2' :: Tag.BecknTagGroup -> Tag.BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
 getTagV2' tagGroupCode tagCode mbTagGroups =
   case mbTagGroups of
     Just tagGroups -> getTagV2 tagGroupCode tagCode tagGroups
     Nothing -> Nothing
 
-getTagV2 :: Tag.TagGroup -> Tag.Tag -> [Spec.TagGroup] -> Maybe Text
+getTagV2 :: Tag.BecknTagGroup -> Tag.BecknTag -> [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode tagGroups = do
   tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just (show tagGroupCode)) tagGroups
   case tagGroup.tagGroupList of
@@ -192,7 +192,7 @@ parseRideStartedEvent order msgId = do
         ..
       }
 
-getLocationFromTagV2 :: Maybe [Spec.TagGroup] -> Tag.TagGroup -> Tag.Tag -> Tag.Tag -> Maybe Maps.LatLong
+getLocationFromTagV2 :: Maybe [Spec.TagGroup] -> Tag.BecknTagGroup -> Tag.BecknTag -> Tag.BecknTag -> Maybe Maps.LatLong
 getLocationFromTagV2 tagGroup key latKey lonKey =
   let tripStartLat :: Maybe Double = readMaybe . T.unpack =<< getTagV2' key latKey tagGroup
       tripStartLon :: Maybe Double = readMaybe . T.unpack =<< getTagV2' key lonKey tagGroup

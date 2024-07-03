@@ -11,9 +11,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module BecknV2.OnDemand.Tags where
 
+import qualified BecknV2.OnDemand.Types as Spec
+import Data.Char (toLower, toUpper)
+import Data.Default.Class
+import qualified Data.Map as M
+import qualified Data.Map.Internal as MP
+import qualified Data.Text as T
 import Kernel.Prelude hiding (show)
 import Text.Show
 
@@ -21,7 +26,35 @@ import Text.Show
 -- This section contains type aliases for all TagGroups and Tags
 -- ##############################################################
 
-data TagGroup
+class CompleteTagGroup tagGroup where
+  getTagGroupDescriptor :: Show tagGroup => tagGroup -> Spec.Descriptor
+  getFullTagGroup :: tagGroup -> [Spec.Tag] -> Spec.TagGroup
+  getTagGroupDisplay :: tagGroup -> Bool
+
+class (Show tag, CompleteTagGroup (TagGroupF tag)) => CompleteTag tag where
+  type TagGroupF tag
+  getTagDescriptor :: tag -> Spec.Descriptor
+  getFullTag :: tag -> Maybe Text -> Spec.Tag
+  getTagDisplay :: tag -> Bool
+  getTagGroup :: tag -> TagGroupF tag
+
+type TagList = [(BecknTag, Maybe Text)]
+
+data Taggings = Taggings
+  { categoryTags :: TagList,
+    contactTags :: TagList,
+    fulfillmentTags :: TagList,
+    intentTags :: TagList,
+    itemTags :: TagList,
+    personTags :: TagList,
+    providerTags :: TagList,
+    orderTags :: TagList
+  }
+
+instance Default Taggings where
+  def = Taggings [] [] [] [] [] [] [] []
+
+data BecknTagGroup
   = -- ONDC standard tag groups for ONDC:TRV10 domain
     FARE_POLICY
   | INFO
@@ -49,7 +82,18 @@ data TagGroup
   | RATING_TAGS
   | FORWARD_BATCHING_REQUEST_INFO
   | VEHICLE_INFO
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+
+instance CompleteTagGroup BecknTagGroup where
+  getFullTagGroup tagGroup tags = Spec.TagGroup (Just $ getTagGroupDescriptor tagGroup) (Just $ getTagGroupDisplay tagGroup) (if null tags then Nothing else Just tags)
+
+  getTagGroupDisplay = \case
+    _ -> False -- All tags are display False by default
+
+  -- getDescriptor :: tags -> (description, shortDescription)
+  getTagGroupDescriptor tagGroup = uncurry (Spec.Descriptor . Just . T.pack $ show tagGroup) $ case tagGroup of
+    ROUTE_INFO -> (Just "Route Information", Nothing)
+    _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
   { startDistanceThreshold :: Int,
@@ -81,7 +125,7 @@ instance Show DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE where
   show (DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE startDist (Just endDist)) = "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" <> show startDist <> "_" <> show endDist
   show (DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE startDist Nothing) = "DRIVER_EXTRA_FEE_BOUNDS_STEP_MAX_FEE_" <> show startDist <> "_Above"
 
-data Tag
+data BecknTag
   = -- ## Item tags ##
     -- FARE_POLICY
     MIN_FARE
@@ -221,3 +265,56 @@ data Tag
     RIDER_PHONE_NUMBER
   | SHOULD_FAVOURITE_DRIVER
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+instance CompleteTag BecknTag where
+  type TagGroupF BecknTag = BecknTagGroup
+
+  getTagDisplay = \case
+    _ -> False -- All tags are False by default, Textdd specific tags here that you want to display
+
+  -- getDescriptor :: tags -> (description, shortDescription)
+  getTagDescriptor tag = uncurry (Spec.Descriptor . Just . T.pack $ show tag) $ case tag of
+    DISTANCE_INFO_IN_M -> (Just "Distance Information In Meters", Nothing)
+    DURATION_INFO_IN_S -> (Just "Duration Information In Seconds", Nothing)
+    RETURN_TIME -> (Just "Return time in UTC", Nothing)
+    ROUND_TRIP -> (Just "Round trip", Nothing)
+    WAYPOINTS -> (Just "WAYPOINTS", Nothing)
+    MULTIPLE_ROUTES -> (Just "Multiple Routes", Nothing)
+    _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
+
+  getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
+
+  getTagGroup = \case
+    DISTANCE_INFO_IN_M -> ROUTE_INFO
+    DURATION_INFO_IN_S -> ROUTE_INFO
+    RETURN_TIME -> ROUTE_INFO
+    ROUND_TRIP -> ROUTE_INFO
+    WAYPOINTS -> ROUTE_INFO
+    MULTIPLE_ROUTES -> ROUTE_INFO
+    a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
+
+convertToSentence :: Show a => a -> Text
+convertToSentence = T.pack . toSentence . show
+  where
+    toSentence [] = []
+    toSentence (x : xs) = toUpper x : map toLower' xs
+
+    toLower' '_' = ' '
+    toLower' c = toLower c
+
+convertToTagGroup :: TagList -> Maybe [Spec.TagGroup]
+convertToTagGroup = go . filter (isJust . snd)
+  where
+    go [] = Nothing
+    go tagList = Just $ do
+      let tagsWithGroup =
+            foldl'
+              ( \acc (tag, value) -> do
+                  let tagGroup = getTagGroup tag
+                  flip (M.insert tagGroup) acc $ case M.lookup tagGroup acc of
+                    Nothing -> [getFullTag tag value]
+                    Just tags -> getFullTag tag value : tags
+              )
+              mempty
+              tagList
+      M.elems $ MP.mapWithKey getFullTagGroup tagsWithGroup

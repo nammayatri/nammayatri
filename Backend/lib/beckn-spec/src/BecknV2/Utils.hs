@@ -22,7 +22,7 @@ import Data.Time.Format.ISO8601
 import EulerHS.Prelude
 import Text.Regex.Posix ((=~))
 
-getTagV2 :: TagGroup -> Tag -> Maybe [Spec.TagGroup] -> Maybe Text
+getTagV2 :: BecknTagGroup -> BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode mbTagGroups = do
   case mbTagGroups of
     Nothing -> Nothing
