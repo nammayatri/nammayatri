@@ -14,11 +14,15 @@
 
 module Domain.Action.UI.Search where
 
+import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Monad
 import Data.Aeson
+import Data.Default.Class
 import qualified Data.List.NonEmpty as NE
 import Data.OpenApi hiding (Header)
 import qualified Data.OpenApi as OpenApi hiding (Header)
+import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.Encoding as TE
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
@@ -180,7 +184,8 @@ data SearchRes = SearchRes
     shortestRouteInfo :: Maybe Maps.RouteInfo,
     phoneNumber :: Maybe Text,
     isReallocationEnabled :: Maybe Bool,
-    multipleRoutes :: Maybe [Maps.RouteInfo]
+    multipleRoutes :: Maybe [Maps.RouteInfo],
+    taggings :: Maybe Beckn.Taggings
   }
 
 hotSpotUpdate ::
@@ -321,7 +326,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
   let dSearchRes =
-        SearchRes
+        SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
           { searchId = searchRequest.id,
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
@@ -330,6 +335,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
             distance = shortestRouteDistance,
             duration = shortestRouteDuration,
             disabilityTag = tag,
+            taggings = getTags shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes,
             ..
           }
   fork "updating search counters" $ do
@@ -339,6 +345,18 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
   return dSearchRes
   where
+    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes =
+      Just $
+        def{Beckn.fulfillmentTags =
+              [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
+                (Beckn.DURATION_INFO_IN_S, show . (.getSeconds) <$> duration),
+                (Beckn.RETURN_TIME, show <$> returnTime),
+                (Beckn.ROUND_TRIP, Just $ show roundTrip),
+                (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
+                (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes)
+              ]
+           }
+
     validateServiceability origin stops person' = do
       Serviceability.NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity} <- Serviceability.getNearestOperatingAndCurrentCity (.origin) (person'.id, person'.merchantId) False origin
       stopCitiesAndStates <- traverse (Serviceability.getNearestOperatingAndCurrentCity (.destination) (person'.id, person'.merchantId) False) stops
