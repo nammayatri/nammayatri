@@ -751,7 +751,7 @@ data ScreenOutput = LogoutUser
                   | ReloadFlowStatus HomeScreenState
                   | ExitToPickupInstructions HomeScreenState Number Number String String
                   | EditDestLocSelected HomeScreenState
-                  | EditDestBackPressed
+                  | EditDestBackPressed HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -1809,16 +1809,16 @@ eval BackPressed state = do
                       continue state {props {currentStage = RideCompleted}}
     EditingDestinationLoc -> do
       void $ pure $ performHapticFeedback unit
-      exit EditDestBackPressed
+      exit $ EditDestBackPressed state
     ConfirmEditDestinationLoc -> do
       void $ pure $ performHapticFeedback unit
-      exit EditDestBackPressed
+      exit $ EditDestBackPressed state
     ConfirmingEditDestinationLoc -> do
       void $ pure $ performHapticFeedback unit
-      exit EditDestBackPressed
+      exit $ EditDestBackPressed state
     RevisedEstimate -> do
       void $ pure $ performHapticFeedback unit
-      exit EditDestBackPressed
+      exit $ EditDestBackPressed state
     FavouriteLocationModelEditDest -> do
                       void $ pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else EditingDestinationLoc)
@@ -3463,6 +3463,7 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
 
 eval (EditDestSearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
   void $ pure $ performHapticFeedback unit
+  void $ pure $ exitLocateOnMap ""
   let updatedState = state{props{locateOnMap = false, showShimmer = true}}
   continueWithCmd updatedState
     [ do
