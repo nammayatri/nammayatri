@@ -323,7 +323,7 @@ window.getMerchantConfig = function () {
   }
   , "rateCardScreen" :{
     "showYoutubeVideo" : false,
-    "showRateCard" : true,
+    "showRateCard" : false,
     "showTollCharges" : false
   }
   , "waitTimeConfig" : {
