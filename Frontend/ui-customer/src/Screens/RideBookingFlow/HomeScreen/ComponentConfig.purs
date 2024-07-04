@@ -929,12 +929,22 @@ waitTimeInfoCardConfig state = let
     waitingChargeInfo = case state.data.rateCardCache of
                           Just rateCard -> 
                             {freeMinutes : rateCard.waitingTimeInfo.freeMinutes, chargePerMinute : rateCard.waitingTimeInfo.charge}
-                          Nothing -> {freeMinutes : "0", chargePerMinute : "₹0/min"}
+                          Nothing -> do
+                            let rideType = state.data.fareProductType
+                                cityConfig = state.data.currentCityConfig
+                                autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
+                                cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+                                waitingCharges = 
+                                  if state.data.vehicleVariant == "AUTO_RICKSHAW" then
+                                      autoWaitingCharges
+                                  else 
+                                      cabsWaitingCharges
+                            {freeMinutes : (show waitingCharges.freeMinutes) , chargePerMinute : "₹"<> show waitingCharges.perMinCharges <>"/min"}
 
 rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
-    config' = RateCard.config
+    config' = RateCard.config 
 
     bangaloreCode = HU.getCityCodeFromCity Bangalore
 
