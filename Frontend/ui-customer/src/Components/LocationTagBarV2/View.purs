@@ -61,7 +61,7 @@ tagView item isLast push =
       , margin $ MarginRight rightMargin
       ] <> (if item.enableRipple then [rippleColor item.rippleColor] else []))[
         linearLayout[
-          height MATCH_PARENT
+          height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER
         , orientation item.orientation
@@ -93,5 +93,6 @@ tagView item isLast push =
             [ text textConfig.text
             , textSize textConfig.fontSize
             , color textConfig.color 
+            , padding $ PaddingBottom 2
             ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
       ]]

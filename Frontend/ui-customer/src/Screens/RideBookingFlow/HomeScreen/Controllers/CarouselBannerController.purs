@@ -49,7 +49,9 @@ bannerCarouselAC action state =
             BannerCarousel.Safety -> continueWithCmd state [pure $ SafetyBannerAction $ Banner.OnClick]
             BannerCarousel.CabLaunch -> continueWithCmd state [pure $ WhereToClick]
             BannerCarousel.Remote link ->
-              if link == "search" then 
+              if isJust config.dynamicAction then 
+                handleDynamicBannerAC config.dynamicAction
+              else if link == "search" then 
                 continueWithCmd state [pure $ WhereToClick ]
               else if os == "IOS" && STR.contains (STR.Pattern "vp=sedu&option=video") link then  -- To be removed after deep links are added in iOS
                 continueWithCmd state [pure GoToSafetyEducationScreen]
@@ -59,9 +61,9 @@ bannerCarouselAC action state =
                   pure NoAction
                 ]
               else
-                handleDynamicBannerAC config.dynamicAction
-            _ -> continueWithCmd state [pure NoAction]
-        Nothing -> continueWithCmd state [pure NoAction]
+                update state
+            _ -> update state
+        Nothing -> update state
     _ -> update state
 
     where 
@@ -92,12 +94,15 @@ bannerCarouselAC action state =
             CRT.Profile ->  exit $ GoToMyProfile state false
             CRT.UpdateProfile -> exit $ GoToMyProfile state true
             CRT.MetroBooking -> exit $ GoToMetroTicketBookingFlow state
+            CRT.ZooBooking -> exit $ GoToTicketBookingFlow state
+            CRT.Safety -> exit $ GoToSafetyEducation state
             CRT.WebLink (CRT.WebLinkParams param) -> do
               continueWithCmd state [ do
                 void $ JB.openUrlInApp param.url
                 pure NoAction
               ]
-          Nothing -> continueWithCmd state [pure NoAction]
+            CRT.NoAction -> update state
+          Nothing -> update state
 
 
 genderBannerModal :: Banner.Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState

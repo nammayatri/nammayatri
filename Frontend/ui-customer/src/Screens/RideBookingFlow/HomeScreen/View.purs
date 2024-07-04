@@ -4506,7 +4506,7 @@ additionalServicesView push state = let
     , orientation VERTICAL 
     , padding $ PaddingHorizontal 16 16
     , visibility $ boolToVisibility $ showAdditionalServices && (not state.props.showShimmer)
-    , margin $ MarginVertical 4 15
+    , margin $ MarginVertical 20 15
     ][  linearLayout[
           height WRAP_CONTENT
         , width MATCH_PARENT 
