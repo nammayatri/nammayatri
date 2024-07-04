@@ -168,9 +168,9 @@ Booking:
 
   constraints:
     id: PrimaryKey
-    specialZoneOtpCode: SecondaryKey
-    quoteId: SecondaryKey
-    transactionId: SecondaryKey
+    specialZoneOtpCode: "!SecondaryKey" # forcing to be a secondary key
+    quoteId: "!SecondaryKey" # forcing to be a secondary key
+    transactionId: "!SecondaryKey" # forcing to be a secondary key
 
   extraOperations:
     - EXTRA_QUERY_FILE

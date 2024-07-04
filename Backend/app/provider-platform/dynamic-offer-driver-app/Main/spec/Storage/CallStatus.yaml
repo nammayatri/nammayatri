@@ -21,7 +21,7 @@ CallStatus:
 
   constraints:
     id: PrimaryKey
-    callId: SecondaryKey
+    callId: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     findById:

@@ -32,8 +32,6 @@ BecknConfig:
     onTrackTTLSec: Maybe Int
     onCancelTTLSec: Maybe Int
 
-  constraints:
-    merchantId: SecondaryKey
   types:
     VehicleCategory:
       enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE"

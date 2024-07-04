@@ -25,7 +25,6 @@ MerchantConfig:
 
   constraints:
     id: PrimaryKey
-    merchantOperatingCityId: SecondaryKey
 
   queries:
     findAllByMerchantOperatingCityId:

@@ -45,8 +45,6 @@ BecknConfig:
     vehicleCategory: "'CAB'"
     collectedBy: "'BPP'"
 
-  constraints:
-    merchantId: SecondaryKey
   queries:
     findByMerchantIdDomainAndVehicle:
       kvFunction: findOneWithKV

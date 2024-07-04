@@ -35,7 +35,7 @@ PartnerOrganization:
 
   constraints:
     apiKeyHash: PrimaryKey
-    orgId: SecondaryKey
+    orgId: "!SecondaryKey" # forcing to be a secondary key
 
   sqlType:
     apiKeyHash: text

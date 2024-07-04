@@ -45,6 +45,6 @@ instance B.Table VehicleServiceTierT where
 
 type VehicleServiceTier = VehicleServiceTierT Identity
 
-$(enableKVPG ''VehicleServiceTierT ['id] [['merchantOperatingCityId]])
+$(enableKVPG ''VehicleServiceTierT ['id] [])
 
 $(mkTableInstances ''VehicleServiceTierT "vehicle_service_tier")

@@ -48,6 +48,6 @@ instance B.Table PlanT where
 
 type Plan = PlanT Identity
 
-$(enableKVPG ''PlanT ['id] [['merchantId], ['merchantOpCityId]])
+$(enableKVPG ''PlanT ['id] [])
 
 $(mkTableInstances ''PlanT "plan")

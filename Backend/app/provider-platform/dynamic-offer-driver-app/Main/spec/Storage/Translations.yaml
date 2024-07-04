@@ -22,7 +22,7 @@ Translations:
 
   constraints:
     id: PrimaryKey
-    messageKey: SecondaryKey
+    messageKey: "!SecondaryKey" # forcing to be a secondary key
 
   excludedFields: [merchantOperatingCityId, merchantId]
 

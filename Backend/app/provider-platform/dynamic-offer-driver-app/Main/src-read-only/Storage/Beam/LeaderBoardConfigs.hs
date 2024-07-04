@@ -36,6 +36,6 @@ instance B.Table LeaderBoardConfigsT where
 
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
 
-$(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantOperatingCityId]])
+$(enableKVPG ''LeaderBoardConfigsT ['id] [])
 
 $(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs")

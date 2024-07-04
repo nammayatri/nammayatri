@@ -29,7 +29,6 @@ Toll:
 
   constraints:
     id: PrimaryKey
-    merchantOperatingCityId: SecondaryKey
 
   beamFields:
     price:

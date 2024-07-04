@@ -169,8 +169,8 @@ Person:
 
   constraints:
     id: PrimaryKey
-    mobileNumberHash: SecondaryKey
-    emailHash: SecondaryKey
+    mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    emailHash: "!SecondaryKey" # forcing to be a secondary key
     referralCode: SecondaryKey
     deviceToken: SecondaryKey
     customerReferralCode: SecondaryKey

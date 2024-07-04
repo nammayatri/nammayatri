@@ -373,8 +373,6 @@ MerchantPaymentMethod:
   fromTType:
     paymentType: paymentTypeTrans
 
-  constraints:
-    merchantOperatingCityId: SecondaryKey
 
   excludedDefaultQueries:
    - findByPrimaryKey

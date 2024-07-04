@@ -216,9 +216,9 @@ Ride:
 
   constraints:
     id: PrimaryKey
-    bookingId: SecondaryKey
-    driverId: SecondaryKey
-    driverGoHomeRequestId: SecondaryKey
+    bookingId: "!SecondaryKey" # forcing to be a secondary key
+    driverId: "!SecondaryKey" # forcing to be a secondary key
+    driverGoHomeRequestId: "!SecondaryKey" # forcing to be a secondary key
 
   queries: {}
 
