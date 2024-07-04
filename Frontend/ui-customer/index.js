@@ -211,7 +211,7 @@ window.onMerchantEvent = function (_event, globalPayload) {
       "APP_PERF INDEX_BUNDLE_INITIATE_START : ",
       new Date().getTime()
     );
-    window.storeMerchantId(globalPayload)
+    window.storeMerchantId(window.__payload)
     console.log("MID",window.merchantID);
     try {
       if (

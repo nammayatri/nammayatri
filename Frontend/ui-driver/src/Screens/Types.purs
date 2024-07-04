@@ -1843,6 +1843,7 @@ type RidePreference = {
   priority :: Int,
   rateCardData :: Maybe Common.BreakupList,
   perKmRate :: Maybe Number,
+  perMinRate :: Maybe Number,
   farePolicyHour :: Maybe API.FarePolicyHour,
   currency :: Maybe Common.Currency
 }

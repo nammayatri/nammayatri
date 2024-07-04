@@ -7,5 +7,5 @@ getHi = Keymap
     { str1 : "kjnfviaef  snvkajva"
     , str2 : "fvakoufnviarv b"
     , str3 : "caksjfv ofv"
-    , str4 : "dofvnwrufv svkzfv "
+    , str4 : (\_ -> "w5 fgrgf ergsdbsth t t35ted")
     }

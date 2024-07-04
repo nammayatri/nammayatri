@@ -385,8 +385,8 @@ loginFlow = do
       case resp of
         Right (SocialLoginRes resp) ->do 
           void $ setValueToLocalStore REGISTERATION_TOKEN resp.token
-          void $ pure $ setValueToLocalStore MOBILE_NUMBER_KEY <$> updatedState.data.email
-          getDriverInfoFlow Nothing Nothing Nothing true Nothing
+          -- void $ pure $ setValueToLocalStore MOBILE_NUMBER_KEY <$> updatedState.data.email
+          getDriverInfoFlow Nothing Nothing Nothing true Nothing true
         Left _ -> do 
           pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           void $ lift $ lift $ toggleLoader false
@@ -1798,6 +1798,9 @@ bookingOptionsFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToIntercity = updateDriverResp.canSwitchToIntercity} })
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
+    OPEN_RATE_CARD pref state -> do
+      lift $ lift $ void $ fork $ UI.showRateCard {serviceTier : state.data.rateCard.serviceTierName, rateCardData : state.data.rateCard, ridePreference :pref}
+      bookingOptionsFlow
     EXIT_TO_RATE_CARD_SCREEN bopState -> do
       response <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just RC.defaultSliderDist)
       case response of
@@ -1827,6 +1830,7 @@ bookingOptionsFlow = do
           priority : fromMaybe 0 item.priority,
           rateCardData : Nothing,
           perKmRate : Nothing,
+          perMinRate : Nothing,
           farePolicyHour : Nothing,
           currency : Nothing
         }
@@ -3653,7 +3657,7 @@ updateBannerAndPopupFlags = do
                   { savedLocationCount = fromMaybe 0 $ fromString $ getValueToLocalStore SAVED_GOTO_COUNT
                   }
                 , config = appConfig
-                , isVehicleSupported = fromMaybe true getDriverInfoResp.isVehicleSupported
+                , isVehicleSupported = true --fromMaybe true getDriverInfoResp.isVehicleSupported
                 , cityConfig = cityConfig
                 }
               , props
@@ -3995,7 +3999,7 @@ driverEarningsFlow = do
   logField_ <- lift $ lift $ getLogFields
   let earningScreenState = globalState.driverEarningsScreen
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
-  if false -- getMerchant FunctionCall == BRIDGE TODO: Enable after earnigns is completed.
+  if true -- getMerchant FunctionCall == BRIDGE TODO: Enable after earnigns is completed.
     then flowRouter TA.EarningsV2Daily
     else do
       uiAction <- UI.driverEarningsScreen

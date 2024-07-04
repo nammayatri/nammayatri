@@ -19,7 +19,7 @@ import Mobility.Prelude
 import PrestoDOM.List
 import Screens.HomeScreen.ComponentConfig
 import Timers
-
+import Data.FoldableWithIndex
 import Animation as Anim
 import Animation.Config as AnimConfig
 import CarouselHolder as CarouselHolder
@@ -484,18 +484,19 @@ driverMapsHeaderView push state =
                   [ width MATCH_PARENT
                   , height WRAP_CONTENT
                   , orientation VERTICAL
-                  , background $ Color.white900
-                  , stroke $ (if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then "0," else "1,") <> "#E5E7EB"
                   ][  driverDetail push state
-                    , relativeLayout 
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
-                      , PP.cornerRadii $ PTD.Corners 24.0  false false true true
-                      , padding $ PaddingBottom 12
-                      ][ statsModel push state
-                       , expandedStatsModel push state
-                      ]
+                    , if MU.getMerchant FunctionCall == MU.BRIDGE then 
+                        bridgeStatsView push state 
+                        else
+                        relativeLayout 
+                        [ width MATCH_PARENT
+                        , height WRAP_CONTENT
+                        , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+                        , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+                        , padding $ PaddingBottom 12
+                        ][ statsModel push state
+                        , expandedStatsModel push state
+                        ]
                   ]
                 , offlineNavigationLinks push state
               ] <> [gotoRecenterAndSupport state push]
@@ -516,6 +517,131 @@ driverMapsHeaderView push state =
   ]
   where
     getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
+
+bridgeStatsView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bridgeStatsView push state =
+  linearLayout 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then GONE else VISIBLE
+    , padding $ Padding 16 12 16 12
+    , orientation VERTICAL
+    , background Color.white900
+    , PP.cornerRadii $ PTD.Corners 24.0  false false true true
+    ][   linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background state.data.config.homeScreen.statsBackground
+    , cornerRadius 12.0
+    , padding $ Padding 10 10 10 10
+    , gravity CENTER
+    ]
+    ( foldlWithIndex
+        ( \idx acc item ->
+            let
+              isNotLastIndex = idx /= 2
+            in
+              acc
+                <> ( [ linearLayout
+                        [ height WRAP_CONTENT
+                        , width WRAP_CONTENT
+                        , padding $ PaddingHorizontal 18 18
+                        , gravity CENTER
+                        , orientation VERTICAL
+                        ]
+                        $ [ textView
+                            $ [ text item.title
+                              , color Color.black700
+                              ]
+                            <> FontStyle.tags TypoGraphy 
+                          , linearLayout
+                              [ height WRAP_CONTENT
+                              , gravity CENTER
+                              , width WRAP_CONTENT
+                              , margin $ MarginTop 4
+                              ]$
+                              [ textView
+                                  $ [ text item.value
+                                    , height WRAP_CONTENT
+                                    , gravity CENTER
+                                    , width WRAP_CONTENT
+                                    , color if item.infoView then state.data.config.primaryBackground else Color.black900
+                                    ]
+                                  <> FontStyle.h2 TypoGraphy
+                              ] <> if item.infoView then
+                                      [ imageView 
+                                        [ height $ V 14
+                                        , width $ V 14
+                                        , margin $ MarginLeft 4
+                                        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_purple_info"
+                                        ]
+                                      ] 
+                                    else []
+                          ]
+                    ]
+                  )
+                <> ( if isNotLastIndex then
+                      [ linearLayout
+                          [ height WRAP_CONTENT
+                          , weight 1.0
+                          , gravity CENTER
+                          ]
+                          [ linearLayout
+                              [ width $ V 2
+                              , height $ V 30
+                              , background Color.grey900
+                              ]
+                              []
+                          ]
+                      ]
+                    else
+                      []
+                  )
+        )
+        []
+        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: show state.data.totalEarningsOfDay, infoView: false}, { title: "Tips Earned", value: "12" , infoView: true} ]
+    )
+    , bridgeLocationUpdateview push state
+    ]
+
+bridgeLocationUpdateview :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bridgeLocationUpdateview push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , background state.data.config.homeScreen.statsBackground
+  , cornerRadius 12.0
+  , margin$ MarginTop 16
+  , padding $ Padding 16 13 16 13
+  ][  textView $
+      [ text $ getString UPDATED_AT
+      , color Color.black800
+      ] <> FontStyle.body3 TypoGraphy
+    , textView $
+      [ text $ if state.data.locationLastUpdatedTime == "" then if DA.elem (getValueToLocalStore LOCATION_UPDATE_TIME) ["__failed", "(null)"] then getString NO_LOCATION_UPDATE else getValueToLocalStore LOCATION_UPDATE_TIME else state.data.locationLastUpdatedTime
+      , color Color.black800
+      ] <> FontStyle.body15 TypoGraphy
+    , linearLayout [weight 1.0][]
+    , linearLayout
+      [ width WRAP_CONTENT
+      , height MATCH_PARENT
+      , orientation HORIZONTAL
+      , gravity CENTER
+      , onClick push $ const RetryTimeUpdate
+      ]
+      [ PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshAnimation)]
+        $ imageView
+        [ width $ V 15
+        , height $ V 15
+        , margin $ MarginRight 5
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_refresh"
+        ]
+      , textView $
+        [ text "Update"
+        , color state.data.config.primaryBackground
+        ] <> FontStyle.body27 TypoGraphy
+      ]
+  ]
 
 bookingPreferenceNavView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bookingPreferenceNavView push state =
@@ -676,8 +802,9 @@ gotoRecenterAndSupport state push =
         [ width WRAP_CONTENT
         , height if showReportText then MATCH_PARENT else WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        ]$[ locationUpdateView push state
-        ] <> (if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then [gotoButton push state] else [])
+        ]$[ ]
+          <> if MU.getMerchant FunctionCall /= MU.BRIDGE then [locationUpdateView push state] else []
+          <> (if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then [gotoButton push state] else [])
           <> ([helpAndSupportBtnView push showReportText
           , recenterBtnView state push])
     ]
@@ -960,7 +1087,6 @@ driverDetail push state =
   , gravity CENTER_VERTICAL
   , background Color.white900
   , clickable true
-  , margin (MarginTop 5)
   ] if rideAccStage && state.data.cityConfig.enableAdvancedBooking then [
         tripStageTopBar push state
     ]

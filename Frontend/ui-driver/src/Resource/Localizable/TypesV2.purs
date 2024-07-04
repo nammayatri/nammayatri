@@ -16,7 +16,7 @@ newtype Keymap = Keymap
   { str1 :: String
   , str2 :: String
   , str3 :: String
-  , str4 :: String
+  , str4 :: (String -> String)
   }
 
 derive instance ntL :: Newtype Languages _

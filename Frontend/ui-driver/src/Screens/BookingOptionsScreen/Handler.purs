@@ -32,3 +32,6 @@ bookingOptions = do
     ExitToRateCardScreen updatedState -> do
       modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_RATE_CARD_SCREEN updatedState)
+    OpenRateCard pref updatedState -> do
+      modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ OPEN_RATE_CARD pref updatedState)

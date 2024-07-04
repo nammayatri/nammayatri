@@ -46,10 +46,15 @@ view push state =
     , height WRAP_CONTENT
     , alignParentBottom "true,-1"
     , gravity CENTER
+    , orientation VERTICAL
     ][ linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , background Color.grey900
+        ][] 
+    , linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
-       , stroke ("1,"<> Color.grey900)
        , background Color.white900
        ](mapWithIndex
          (\index item ->

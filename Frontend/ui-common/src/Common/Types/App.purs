@@ -602,7 +602,13 @@ data Currency = INR | USD | EUR
 
 derive instance genericCurrency :: Generic Currency _
 instance standardEncodeCurrency :: StandardEncode Currency where standardEncode _ = standardEncode {}
-instance showCurrency :: Show Currency where show = genericShow
+instance showCurrency :: Show Currency 
+  where 
+    show item = 
+      case item of
+        INR -> "₹"
+        USD -> "$"
+        EUR -> "€"
 instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
 instance encodeCurrency  :: Encode Currency where encode = defaultEnumEncode
 instance eqCurrency :: Eq Currency where eq = genericEq

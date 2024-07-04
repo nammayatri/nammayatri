@@ -643,4 +643,4 @@ rateCardBannerView push state =
         bgColor = if peakTime then Color.green900 else state.data.config.bookingPreferencesConfig.primaryToggleBackground
         cornerRad = if peakTime then 8.0 else 24.0
         txt = if peakTime then "↑  Peak" else CP.getCurrency CS.appConfig
-        gradientColors = (Linear 90.0 state.data.config.primaryGradientColor)
+        gradientColors = (Linear 90.0 state.data.config.bookingPreferencesConfig.rateCardGradient)

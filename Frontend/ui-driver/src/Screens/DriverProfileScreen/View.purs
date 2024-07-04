@@ -467,7 +467,7 @@ profileView push state =
                     [ height MATCH_PARENT
                     , width MATCH_PARENT
                     , orientation VERTICAL
-                    , gradient $ Linear (if EHC.os == "IOS" then 270.0 else 90.0) state.data.config.profile.backgroundGradient
+                    , gradient $ Linear 180.0 state.data.config.profile.backgroundGradient
                     , background state.data.config.profile.background
                     , padding $ PaddingVertical 16 24
                     ]

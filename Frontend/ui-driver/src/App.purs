@@ -470,6 +470,7 @@ data BOOKING_OPTIONS_SCREEN_OUTPUT =
   | CHANGE_RIDE_PREFERENCE BookingOptionsScreenState RidePreference 
   | UPDATE_AC_AVAILABILITY BookingOptionsScreenState Boolean 
   | HOME_SCREEN_FROM_BOOKING_PREFS 
+  | OPEN_RATE_CARD RidePreference BookingOptionsScreenState
   | EXIT_TO_RATE_CARD_SCREEN BookingOptionsScreenState
 
 data ACKNOWLEDGEMENT_SCREEN_OUTPUT = EXIT_TO_HOME_SCREEN | RETRY_PAYMENT

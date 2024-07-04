@@ -70,7 +70,8 @@ type Language =  {
 type BookingPreferencesConfig = {
   primaryToggleBackground :: String,
   vehicleNumberBackground :: String,
-  vehicleNumberRadius :: Number
+  vehicleNumberRadius :: Number,
+  rateCardGradient :: Array String
 }
 
 type LeaderBoard = {

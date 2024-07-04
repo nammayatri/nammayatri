@@ -630,7 +630,7 @@ config =
                 , enableCabsSubscriptionView: false
                 , staticViewPlans: getStaticViewPlans
                 }
-            , showEarningSection: false
+            , showEarningSection: true
             , referral:
                 { domain: "https//nammayatri.in"
                 , customerAppId: "in.juspay.nammayatri"
@@ -851,6 +851,7 @@ config =
       primaryToggleBackground : "#2194FF"
     , vehicleNumberBackground : "#E9BE4D"
     , vehicleNumberRadius : 6.0
+    , rateCardGradient : ["#E2EAFF", "#F5F8FF"]
   }
   , benefitsScreen:
       { learnAndEarnItem:

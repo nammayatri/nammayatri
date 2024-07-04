@@ -277,6 +277,7 @@ window.getMerchantConfig = function () {
       "primaryToggleBackground": "#7D4BFF"
     , "vehicleNumberBackground" : "#E0D1FF"
     , "vehicleNumberRadius" : 15.0
+    , "rateCardGradient": ["#4D996dff", "#1A9747FF"]
   }
   , "benefitsScreen" : {
       "learnAndEarnItem" : {
