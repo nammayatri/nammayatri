@@ -5296,7 +5296,7 @@ safetyEducationFlow = do
   flow <- UI.safetyEducationScreen
   case flow of
     SafetyEducationScreen.Refresh _ -> safetyEducationFlow
-    SafetyEducationScreen.GoToHomeScreen _ -> currentFlowStatus
+    SafetyEducationScreen.GoToHomeScreen _ -> homeScreenFlow
     _ -> safetyEducationFlow
   pure unit
 

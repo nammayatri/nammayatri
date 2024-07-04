@@ -299,65 +299,69 @@ tripDetailsView state =
         , visibility if (isJust state.data.vehicleVariant) then VISIBLE else GONE
         , height $ V 40
         ]
-
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
+      , weight 1.0
       , orientation VERTICAL
-      , margin $ MarginLeft 10
-      ][  linearLayout
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , orientation HORIZONTAL
-          , gravity CENTER_VERTICAL
-          ][  textView $
-              [ text state.data.date
-              , accessibilityHint $ "date : " <> state.data.date
-              , accessibility ENABLE
-              , color Color.darkCharcoal
-              ] <> FontStyle.body1 LanguageStyle
-            , linearLayout
-              [ height MATCH_PARENT
-              , width WRAP_CONTENT
-              , gravity CENTER
-              , orientation VERTICAL
-              ][  linearLayout
-                  [ background Color.greyishBlue
-                  , cornerRadius 2.5
-                  , margin $ Margin 5 3 5 0
-                  , height $ V 5
-                  , width $ V 5
-                  ][]
-               ]
+      ][ linearLayout
+         [ height WRAP_CONTENT
+         , width MATCH_PARENT
+         , margin $ MarginLeft 10
+         ][ linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , gravity CENTER_VERTICAL
+            , weight 1.0
+            ][  textView $
+                [ text state.data.date
+                , accessibilityHint $ "date : " <> state.data.date
+                , accessibility ENABLE
+                , color Color.darkCharcoal
+                ] <> FontStyle.body1 LanguageStyle
+              , linearLayout
+                [ height MATCH_PARENT
+                , width WRAP_CONTENT
+                , gravity CENTER
+                , orientation VERTICAL
+                ][  linearLayout
+                    [ background Color.greyishBlue
+                    , cornerRadius 2.5
+                    , margin $ Margin 5 3 5 0
+                    , height $ V 5
+                    , width $ V 5
+                    ][]
+                ]
+              , textView $
+                [ text state.data.time
+                , color Color.darkCharcoal
+                ] <> FontStyle.body1 LanguageStyle
+              ]
             , textView $
-              [ text state.data.time
-              , color Color.darkCharcoal
-              ] <> FontStyle.body1 LanguageStyle
-            ]
-          , textView $
+              [ text state.data.totalAmount
+              , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
+              , accessibility ENABLE
+              , color Color.black
+              ] <> FontStyle.h2 LanguageStyle
+          ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ MarginLeft 10
+        ][  textView $
             [ text $ capitalize $ DS.toLower state.data.selectedItem.vehicleModel
             , accessibilityHint $ "date : " <> state.data.date
             , accessibility ENABLE
             , color Color.greyShade
+            , weight 1.0
             ] <> FontStyle.body16 LanguageStyle
-        ]
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , gravity RIGHT
-      , orientation VERTICAL
-      ][  textView $
-          [ text state.data.totalAmount
-          , accessibilityHint $  ( DS.replaceAll (DS.Pattern "₹") (DS.Replacement "") state.data.totalAmount) <> "Rupees"
-          , accessibility ENABLE
-          , color Color.black
-          ] <> FontStyle.h2 LanguageStyle
-        , textView $
-          [ text $ if state.data.selectedItem.status == "CANCELLED" then getString CANCELLED else getString PAID <> " " <> if state.data.paymentMode == CASH then getString BY_CASH else getString ONLINE_
-          , color if state.data.selectedItem.status == "CANCELLED" then Color.red else Color.greyShade
-          , accessibility DISABLE
-          ] <> FontStyle.captions LanguageStyle
-        ]
+          , textView $
+            [ text $ if state.data.selectedItem.status == "CANCELLED" then getString CANCELLED else getString PAID <> " " <> if state.data.paymentMode == CASH then getString BY_CASH else getString ONLINE_
+            , color if state.data.selectedItem.status == "CANCELLED" then Color.red else Color.greyShade
+            , accessibility DISABLE
+            ] <> FontStyle.captions LanguageStyle
+          ]
+      ]
     ]
 
 ------------------- separator -------------------

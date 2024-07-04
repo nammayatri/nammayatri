@@ -20,6 +20,9 @@ import Foreign.Class  (class Decode, decode, class Encode, encode)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding  (defaultDecode, defaultDecode, defaultEncode)
+import Control.Monad.Except (runExcept, except)
+import Foreign.Index (readProp)
+import Data.Either as Either
 
 type RemoteConfig a
   = { bangalore :: a
@@ -107,10 +110,13 @@ type TipsConfig
 
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking
 
 derive instance genericRemoteAC :: Generic RemoteAC _
-instance decodeRemoteAC :: Decode RemoteAC where decode = defaultDecode
+instance decodeRemoteAC :: Decode RemoteAC where 
+  decode body = 
+    let default = runExcept $ defaultDecode body
+    in except $ if Either.isRight default then default else Either.Right $ NoAction
 instance encodeRemoteAC :: Encode RemoteAC where encode = defaultEncode
 
 newtype DestinationParams = DestinationParams {
