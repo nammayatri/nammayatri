@@ -20,6 +20,7 @@ import qualified Data.Bool as B
 import qualified Data.Text as T
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.KVConnector.Metrics as KVCM
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -105,6 +106,7 @@ runRiderApp' appCfg = do
             appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
+          >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
       )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do

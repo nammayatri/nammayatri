@@ -18,6 +18,7 @@ module App (startProducer) where
 import Data.Function hiding (id)
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.KVConnector.Metrics as KVCM
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
@@ -56,6 +57,7 @@ startProducerWithEnv flowRt appCfg appEnv = do
       )
         >> L.setOption KafkaConn appEnv.kafkaProducerTools
         >> L.setOption Tables (KUC.Tables [] [] [] False)
+        >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
   runFlowR flowRt appEnv $ do
     loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver
