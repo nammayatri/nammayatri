@@ -22,7 +22,6 @@ import qualified Data.OpenApi as OpenApi hiding (Header)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
-import qualified Domain.Action.UI.Serviceability as Serviceability
 import qualified Domain.Types.Client as DC
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
@@ -59,11 +58,11 @@ import Kernel.Utils.Version
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.Serviceability as Serviceability
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantState as QMMS
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -259,7 +258,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
 
   let sourceLatLong = origin.gps
   let stopsLatLong = map (.gps) stops
-  originCity <- validateServiceability sourceLatLong stopsLatLong person
+  originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
   -- merchant operating city of search-request-origin-location
 
   when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
@@ -339,15 +338,6 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
     mFraudDetected <- SMC.anyFraudDetected personId merchantOperatingCity.id merchantConfigs (Just searchRequest)
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
   return dSearchRes
-  where
-    validateServiceability origin stops person' = do
-      Serviceability.NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity} <- Serviceability.getNearestOperatingAndCurrentCity (.origin) (person'.id, person'.merchantId) False origin
-      stopCitiesAndStates <- traverse (Serviceability.getNearestOperatingAndCurrentCity (.destination) (person'.id, person'.merchantId) False) stops
-      mbMerchantState <- QMMS.findByMerchantIdAndState person'.merchantId currentCity.state
-      let allowedStates = maybe [currentCity.state] (.allowedDestinationStates) mbMerchantState
-      if all (\d -> d.currentCity.state `elem` allowedStates) stopCitiesAndStates
-        then return nearestOperatingCity.city
-        else throwError RideNotServiceable
 
 buildSearchRequest ::
   Id SearchRequest.SearchRequest ->
