@@ -9,7 +9,7 @@ import Data.Functor (map)
 import PrestoDOM.Animation as PrestoAnim
 import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max, mod )
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (+), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max, mod )
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -930,6 +930,8 @@ rentalTripRowView config push description =
       getTextConfig config' description' = 
         let rentalBookingData = config'.rentalBookingData
             rentalRowDetails = config'.rentalRowDetails
+            extraTimeFare = ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraTimeFare))
+            extraDistFare = ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraDistanceFare))
         in
           case description' of
             RideTime -> mkRentalTextConfig rentalRowDetails.rideTime  "" (" / " <> show rentalBookingData.baseDuration <> "hr") ( if rentalBookingData.finalDuration == 0 then "0 hr" else Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
@@ -937,10 +939,10 @@ rentalTripRowView config push description =
             RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt "" rentalBookingData.rideStartedAt "" Color.black600
             RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt "" rentalBookingData.rideEndedAt "" Color.black600
             EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("₹" <> show config'.topCard.initialAmount) "" Color.black600
-            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraTimeFare)))) "" Color.black600
-            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("₹" <> show (ceil ( fromMaybe 0.0 (fromString rentalBookingData.extraDistanceFare)))) "" Color.black600
+            ExtraTimeFare -> mkRentalTextConfig rentalRowDetails.extraTimeFare "" ("₹" <> show extraTimeFare) "" Color.black600
+            ExtraDistanceFare -> mkRentalTextConfig rentalRowDetails.extraDistanceFare "" ("₹" <> show extraDistFare ) "" Color.black600
             TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("₹" <> show config'.topCard.finalAmount) "" Color.black600
-            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("₹" <> show (config'.topCard.finalAmount - config'.topCard.initialAmount)) "" Color.black600
+            Surcharges -> mkRentalTextConfig rentalRowDetails.surcharges "" ("₹" <> show (config'.topCard.finalAmount - (config'.topCard.initialAmount + extraDistFare + extraTimeFare))) "" Color.black600
 
             
       mkRentalTextConfig :: String -> String -> String -> String -> String -> RentalTextConfig

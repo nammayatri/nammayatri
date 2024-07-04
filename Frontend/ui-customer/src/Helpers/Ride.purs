@@ -233,8 +233,8 @@ checkRideStatus rideAssigned = do
                                 , rideEndedAt = case currRideListItem.rideEndTime of
                                               Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
                                               Nothing        -> ""
-                                , extraDistanceFare = show $ getFareFromArray fareBreakup "EXTRA_DISTANCE_FARE"
-                                , extraTimeFare = show $ getFareFromArray fareBreakup "EXTRA_TIME_FARE"
+                                , extraDistanceFare = show $ getFareFromArray fareBreakup "DIST_BASED_FARE"
+                                , extraTimeFare = show $ getFareFromArray fareBreakup "TIME_BASED_FARE"
                                 }
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp)}
