@@ -50,7 +50,7 @@ view push state =
             , width $ V 147
             , accessibilityHint "Namma Yatri"
             , margin $ MarginTop if os == "IOS" then 80 else 50
-            , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ic_namma_yatri_logo"
+            , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET if os == "IOS" then "ic_app_logo" else "ic_namma_yatri_logo"
             ]
             , carouselView state push
             , PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state)

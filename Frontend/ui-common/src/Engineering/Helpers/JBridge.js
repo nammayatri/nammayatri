@@ -1064,6 +1064,16 @@ export const isCoordOnPath = function (data) {
             const json = JSON.stringify(data);
             try {
               console.log("I AM HERE ------------------ IN CHECK ROUTE");
+              if(speed == 0)
+                {
+                  const res = {
+                    "points": data,
+                    "eta": 0,
+                    "distance": 0,
+                    "isInPath": true
+                  };
+                  return res;
+                }
               const res = window.JBridge.isCoordOnPath(json, lat, lon, speed);
               return JSON.parse(res);
             } catch (err) {

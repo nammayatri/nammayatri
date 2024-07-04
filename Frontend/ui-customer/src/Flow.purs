@@ -3216,10 +3216,14 @@ addNewAddressScreenFlow input = do
           $ do
               void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag if os == "IOS" then "CustomerHomeScreenMap" else "CustomerHomeScreen")
         case state.props.fromScreen of
-          homeScreen -> homeScreenFlow
+          homeScreen -> do 
+            void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+            homeScreenFlow
           searchLocationScreen -> do
             searchLocationFlow
-          _ -> homeScreenFlow
+          _ -> do 
+            void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+            homeScreenFlow
       else
         savedLocationFlow
     UPDATE_LOCATION_NAME_ADDRESS state lat lon -> do
