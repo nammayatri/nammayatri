@@ -1,0 +1,1 @@
+update atlas_driver_offer_bpp.vehicle_service_tier set is_air_conditioned = true, air_conditioned = 2, air_conditioned_threshold = 2 where service_tier_type in ('SEDAN', 'SUV', 'HATCHBACK', 'AMBULANCE_AC', 'AMBULANCE_AC_OXY', 'AMBULANCE_VENTILATOR') and merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kolkata');
