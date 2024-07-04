@@ -63,7 +63,7 @@ initData =
       maxDuration : 12
     , minDuration : 1
     , minDistance : 10
-    , maxDistance : 30
+    , maxDistance : 20
     , farePerKm : ""
     , maxDateBooking : 5
     , showRateCard : false
