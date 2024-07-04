@@ -19,6 +19,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.DailyStats as Beam
 import Storage.Queries.DailyStatsExtra as ReExport
+import Storage.Queries.Transformers.DailyStats
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DailyStats.DailyStats -> m ())
 create = createWithKV
@@ -80,8 +81,7 @@ updateReferralStatsByDriverId activatedValidRides referralEarnings payoutStatus 
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.activatedValidRides (Kernel.Prelude.Just activatedValidRides),
-      Se.Set Beam.referralEarnings (Kernel.Prelude.roundToIntegral referralEarnings),
-      Se.Set Beam.referralEarningsAmount (Kernel.Prelude.Just referralEarnings),
+      Se.Set Beam.referralEarnings (Kernel.Prelude.Just referralEarnings),
       Se.Set Beam.payoutStatus (Kernel.Prelude.Just payoutStatus),
       Se.Set Beam.updatedAt _now
     ]
@@ -104,8 +104,7 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.payoutOrderStatus payoutOrderStatus,
       Se.Set Beam.payoutStatus (Kernel.Prelude.Just payoutStatus),
       Se.Set Beam.referralCounts (Kernel.Prelude.Just referralCounts),
-      Se.Set Beam.referralEarnings (Kernel.Prelude.roundToIntegral referralEarnings),
-      Se.Set Beam.referralEarningsAmount (Kernel.Prelude.Just referralEarnings),
+      Se.Set Beam.referralEarnings (Kernel.Prelude.Just referralEarnings),
       Se.Set Beam.totalDistance totalDistance,
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),

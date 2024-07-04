@@ -13,6 +13,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DailyStats as Beam
+import Storage.Queries.Transformers.DailyStats
 
 instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
   fromTType' (Beam.DailyStatsT {..}) = do
@@ -30,7 +31,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
             payoutOrderStatus = payoutOrderStatus,
             payoutStatus = Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying payoutStatus,
             referralCounts = Kernel.Prelude.fromMaybe 0 referralCounts,
-            referralEarnings = Kernel.Types.Common.mkAmountWithDefault referralEarningsAmount referralEarnings,
+            referralEarnings = getHighPrecMoney referralEarnings,
             totalDistance = totalDistance,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
             createdAt = createdAt,
@@ -51,8 +52,7 @@ instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
         Beam.payoutOrderStatus = payoutOrderStatus,
         Beam.payoutStatus = Kernel.Prelude.Just payoutStatus,
         Beam.referralCounts = Kernel.Prelude.Just referralCounts,
-        Beam.referralEarnings = Kernel.Prelude.roundToIntegral referralEarnings,
-        Beam.referralEarningsAmount = Kernel.Prelude.Just referralEarnings,
+        Beam.referralEarnings = Kernel.Prelude.Just referralEarnings,
         Beam.totalDistance = totalDistance,
         Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
         Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,

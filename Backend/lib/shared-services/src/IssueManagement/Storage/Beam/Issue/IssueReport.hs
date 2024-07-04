@@ -40,7 +40,7 @@ data IssueReportT f = IssueReportT
     createdAt :: B.C f Time.LocalTime,
     updatedAt :: B.C f Time.LocalTime,
     chats :: B.C f [Domain.Chat],
-    merchantId :: B.C f Text
+    merchantId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

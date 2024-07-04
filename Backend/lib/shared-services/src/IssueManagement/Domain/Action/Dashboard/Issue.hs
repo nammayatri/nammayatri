@@ -225,7 +225,7 @@ issueUpdate merchantShortId opCity issueReportId issueHandle req merchantId = do
               authorId = cast req.userId,
               comment = "Assignee Updated : " <> assignee,
               createdAt = now,
-              merchantId
+              merchantId = Just merchantId
             }
 
 issueAddComment ::
@@ -255,7 +255,7 @@ issueAddComment merchantShortId opCity issueReportId issueHandle req merchantId 
             comment = req.comment,
             authorId = cast req.userId,
             createdAt = now,
-            merchantId
+            merchantId = Just merchantId
           }
 
 issueFetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => ShortId Merchant -> Text -> m Text

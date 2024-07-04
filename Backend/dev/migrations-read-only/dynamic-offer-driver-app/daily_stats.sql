@@ -32,8 +32,7 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN distance_unit characte
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN referral_earnings_amount double precision ;
-ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN referral_earnings integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN referral_earnings double precision ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN referral_counts integer ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN payout_status text ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN payout_order_status text ;

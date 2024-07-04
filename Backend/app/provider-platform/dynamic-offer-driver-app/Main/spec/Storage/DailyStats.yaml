@@ -35,6 +35,7 @@ DailyStats:
     activatedValidRides: Maybe Int
     referralCounts: Maybe Int
     payoutStatus: Maybe PayoutStatus
+    referralEarnings: Maybe HighPrecMoney
 
   beamFields:
     totalEarnings:
@@ -42,15 +43,12 @@ DailyStats:
       totalEarningsAmount: Maybe HighPrecMoney
     currency:
       currency: Maybe Currency
-    referralEarnings:
-      referralEarnings: Money
-      referralEarningsAmount: Maybe HighPrecMoney
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
-    referralEarnings: Kernel.Types.Common.mkAmountWithDefault referralEarningsAmount referralEarnings|E
+    referralEarnings: getHighPrecMoney
     activatedValidRides:  Kernel.Prelude.fromMaybe 0|I
     referralCounts: Kernel.Prelude.fromMaybe 0|I
     payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying|I
@@ -60,7 +58,7 @@ DailyStats:
     totalEarningsAmount:  Kernel.Prelude.Just|I
     currency: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
-    referralEarnings: Kernel.Prelude.roundToIntegral|I
+    referralEarnings: Kernel.Prelude.Just|I
     referralEarningsAmount: Kernel.Prelude.Just|I
     activatedValidRides:  Kernel.Prelude.Just|I
     referralCounts: Kernel.Prelude.Just|I
@@ -109,3 +107,4 @@ DailyStats:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+

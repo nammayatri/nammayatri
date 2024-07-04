@@ -14,6 +14,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DriverStats as Beam
+import qualified Storage.Queries.Transformers.DailyStats
 import Storage.Queries.Transformers.DriverStats
 import qualified Storage.Queries.Transformers.DriverStats
 
@@ -38,7 +39,7 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
             totalCoinsConvertedCash = Kernel.Prelude.fromMaybe 0 totalCoinsConvertedCash,
             totalDistance = Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
-            totalPayoutEarnings = Kernel.Types.Common.mkAmountWithDefault totalPayoutEarningsAmount totalPayoutEarnings,
+            totalPayoutEarnings = Storage.Queries.Transformers.DailyStats.getHighPrecMoney totalPayoutEarnings,
             totalRatingScore = totalRatingScore,
             totalRatings = totalRatings,
             totalReferralCounts = Kernel.Prelude.fromMaybe 0 totalReferralCounts,
@@ -68,8 +69,7 @@ instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
         Beam.totalDistance = getTotalDistance totalDistance,
         Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
         Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,
-        Beam.totalPayoutEarnings = Kernel.Prelude.roundToIntegral totalPayoutEarnings,
-        Beam.totalPayoutEarningsAmount = Kernel.Prelude.Just totalPayoutEarnings,
+        Beam.totalPayoutEarnings = Kernel.Prelude.Just totalPayoutEarnings,
         Beam.totalRatingScore = totalRatingScore,
         Beam.totalRatings = totalRatings,
         Beam.totalReferralCounts = Kernel.Prelude.Just totalReferralCounts,
