@@ -76,6 +76,7 @@ DriverInformation:
     tollRelatedIssueCount: Maybe Int
     forwardBatchingEnabled: Bool
     payoutVpa: Maybe Text
+    isInteroperable: Bool
 
   default:
     active: "false"
@@ -95,6 +96,7 @@ DriverInformation:
     aadhaarVerified: "false"
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
+    isInteroperable : "false"
   constraints:
     driverId: PrimaryKey
 
@@ -104,6 +106,7 @@ DriverInformation:
     acUsageRestrictionType: Maybe AirConditionedRestrictionType
     hasAdvanceBooking: Maybe Bool
     forwardBatchingEnabled: Maybe Bool
+    isInteroperable: Maybe Bool
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -111,6 +114,7 @@ DriverInformation:
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
     hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    isInteroperable: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -118,6 +122,7 @@ DriverInformation:
     acUsageRestrictionType: Kernel.Prelude.Just|I
     hasAdvanceBooking: Kernel.Prelude.Just|I
     forwardBatchingEnabled: Kernel.Prelude.Just|I
+    isInteroperable: Kernel.Prelude.Just|I
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -198,4 +203,8 @@ DriverInformation:
     updatePayoutVpa:
       kvFunction: updateOneWithKV
       params: [payoutVpa]
+      where: driverId
+    updateIsInteroperable:
+      kvFunction: updateOneWithKV
+      params: [isInteroperable]
       where: driverId
