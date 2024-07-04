@@ -38,3 +38,8 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN status text NOT NULL default 'Acti
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN allow_same_day_booking boolean NOT NULL default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN terms_and_conditions_url text ;

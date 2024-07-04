@@ -34,6 +34,7 @@ TicketPlace:
     shortDesc: Text
     iconUrl: Maybe Text
     termsAndConditions: "[Text]"
+    termsAndConditionsUrl: Maybe Text
     placeType: PlaceType #
     mapImageUrl: Maybe Text
     openTimings: Maybe TimeOfDay

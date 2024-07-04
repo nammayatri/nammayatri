@@ -49,6 +49,7 @@ updateByPrimaryKey (Domain.Types.TicketPlace.TicketPlace {..}) = do
       Se.Set Beam.shortDesc shortDesc,
       Se.Set Beam.status status,
       Se.Set Beam.termsAndConditions termsAndConditions,
+      Se.Set Beam.termsAndConditionsUrl termsAndConditionsUrl,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -76,6 +77,7 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
             shortDesc = shortDesc,
             status = status,
             termsAndConditions = termsAndConditions,
+            termsAndConditionsUrl = termsAndConditionsUrl,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -100,6 +102,7 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
         Beam.shortDesc = shortDesc,
         Beam.status = status,
         Beam.termsAndConditions = termsAndConditions,
+        Beam.termsAndConditionsUrl = termsAndConditionsUrl,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
