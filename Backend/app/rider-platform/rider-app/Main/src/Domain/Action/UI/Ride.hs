@@ -49,6 +49,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude hiding (HasField)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (isNothing)
+import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
@@ -58,6 +59,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Person as SLP
+import qualified SharedLogic.Serviceability as Serviceability
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
@@ -208,6 +210,7 @@ editLocation ::
   ( CacheFlow m r,
     EncFlow m r,
     EsqDBFlow m r,
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
     MonadFlow m,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -217,10 +220,10 @@ editLocation ::
   (Id SPerson.Person, Id DM.Merchant) ->
   EditLocationReq ->
   m EditLocationResp
-editLocation rideId (_, merchantId) req = do
+editLocation rideId (personId, merchantId) req = do
   when (isNothing req.origin && isNothing req.destination) do
     throwError PickupOrDropLocationNotFound
-
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
@@ -295,6 +298,10 @@ editLocation rideId (_, merchantId) req = do
       startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
       oldDropLocMapping <- QLM.getLatestEndByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> booking.id.getId)
       bookingUpdateReq <- buildbookingUpdateRequest booking
+      origin <- QL.findById startLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> startLocMapping.locationId.getId)
+      let sourceLatLong = Maps.LatLong {lat = origin.lat, lon = origin.lon}
+      let stopsLatLong = map (.gps) [destination]
+      void $ Serviceability.validateServiceability sourceLatLong stopsLatLong person
       QBUR.create bookingUpdateReq
       startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       oldDropLocMap <- SLM.buildDropLocationMapping oldDropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)

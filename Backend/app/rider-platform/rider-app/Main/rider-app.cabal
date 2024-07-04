@@ -256,6 +256,7 @@ library
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
+      SharedLogic.Serviceability
       Storage.Beam.BecknRequest
       Storage.Beam.Common
       Storage.Beam.EstimateBreakup
