@@ -124,7 +124,7 @@ DriverFee:
 
   constraints:
     id: PrimaryKey
-    driverId: SecondaryKey
+    driverId: "!SecondaryKey" # forcing to be a secondary key
 
   sqlType:
     platformFee: numeric(30,2)

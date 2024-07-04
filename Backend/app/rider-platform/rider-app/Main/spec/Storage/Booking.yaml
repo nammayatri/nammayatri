@@ -359,7 +359,7 @@ Booking:
     - updateByPrimaryKey
 
   constraints:
-    bppBookingId: SecondaryKey
-    riderId: SecondaryKey
-    quoteId: SecondaryKey
-    riderTransactionId: SecondaryKey
+    bppBookingId: "!SecondaryKey" # forcing to be a secondary key
+    riderId: "!SecondaryKey" # forcing to be a secondary key
+    quoteId: "!SecondaryKey" # forcing to be a secondary key
+    riderTransactionId: "!SecondaryKey" # forcing to be a secondary key

@@ -144,7 +144,7 @@ DriverQuote:
     id: PrimaryKey
     driverId: SecondaryKey
     searchTryId: SecondaryKey
-    requestId: SecondaryKey
+    requestId: "!SecondaryKey" # forcing to be a secondary key
 
   sqlType:
     status: character varying(255)

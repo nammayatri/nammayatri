@@ -29,9 +29,9 @@ Issue:
 
   constraints:
     id: PrimaryKey
-    ticketId: SecondaryKey
-    bookingId: SecondaryKey
-    customerId: SecondaryKey
+    ticketId: "!SecondaryKey" # forcing to be a secondary key
+    bookingId: "!SecondaryKey" # forcing to be a secondary key
+    customerId: "!SecondaryKey" # forcing to be a secondary key
 
   default:
     status: "'OPEN'"

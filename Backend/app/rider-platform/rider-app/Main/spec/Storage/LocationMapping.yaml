@@ -24,7 +24,7 @@ LocationMapping:
 
   constraints:
     id: PrimaryKey
-    entityId: SecondaryKey
+    entityId: "!SecondaryKey" # forcing to be a secondary key
 
   queries: {}
 

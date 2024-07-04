@@ -38,8 +38,8 @@ RegistrationToken:
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
-    token: SecondaryKey
-    entityId: SecondaryKey
+    token: "!SecondaryKey" # forcing to be a secondary key
+    entityId: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     findById:

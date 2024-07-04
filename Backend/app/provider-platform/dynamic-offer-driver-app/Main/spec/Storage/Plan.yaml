@@ -69,8 +69,6 @@ Plan:
 
   constraints:
     id: PrimaryKey
-    merchantId: SecondaryKey
-    merchantOpCityId: SecondaryKey
 
   queries:
     findByIdAndPaymentModeWithServiceName:

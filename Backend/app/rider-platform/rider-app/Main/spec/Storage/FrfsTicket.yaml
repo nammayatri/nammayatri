@@ -39,7 +39,7 @@ FRFSSearch:
     partnerOrgId: Maybe (Id PartnerOrganization)
 
   constraints:
-    riderId: SecondaryKey
+    riderId: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     getTicketPlaces:

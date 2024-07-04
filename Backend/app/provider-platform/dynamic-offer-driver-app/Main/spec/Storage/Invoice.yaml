@@ -47,7 +47,7 @@ Invoice:
   constraints:
     id: PrimaryKey
     driverFeeId: SecondaryKey
-    driverId: SecondaryKey
+    driverId: "!SecondaryKey" # forcing to be a secondary key
     invoiceShortId: SecondaryKey
 
   fromTType:

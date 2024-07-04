@@ -200,7 +200,7 @@ Quote:
   constraints:
     id: PrimaryKey
     requestId: SecondaryKey
-    driverOfferId: SecondaryKey
+    driverOfferId: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     findById:

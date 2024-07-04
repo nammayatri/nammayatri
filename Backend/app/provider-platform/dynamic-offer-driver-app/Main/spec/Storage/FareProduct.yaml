@@ -33,7 +33,6 @@ FareProduct:
 
   constraints:
     id: PrimaryKey
-    merchantOperatingCityId: SecondaryKey
 
   queries:
     findUnboundedByMerchantOpCityIdVariantArea:
