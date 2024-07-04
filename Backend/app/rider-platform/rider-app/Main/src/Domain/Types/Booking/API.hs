@@ -298,6 +298,7 @@ makeRideAPIEntity Ride {..} =
           computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
           chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
           chargeableRideDistanceWithUnit = chargeableDistance,
+          traveledRideDistance = traveledDistance,
           vehicleColor = vehicleColor',
           allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
           allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
