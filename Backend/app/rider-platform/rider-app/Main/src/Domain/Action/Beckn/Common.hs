@@ -263,6 +263,7 @@ rideAssignedReqHandler req = do
   fareBreakups <- traverse (buildFareBreakupV2 req.booking.id.getId DFareBreakup.BOOKING) fareParams
   QFareBreakup.createMany fareBreakups
   QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
+  logError $ "Status updated for booking id: " <> show booking.id.getId <> " to " <> show DRB.TRIP_ASSIGNED
   QRide.createRide ride
   QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
@@ -635,8 +636,8 @@ validateRideStartedReq RideStartedReq {..} = do
   let BookingDetails {..} = bookingDetails
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
+  unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus ("booking status = " <> show booking.status <> " and bookingId: " <> show booking.id.getId))
+  unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus ("Ride status = " <> show ride.status <> " and rideId: " <> show ride.id.getId))
   return $ ValidatedRideStartedReq {..}
 
 validateDriverArrivedReq ::
