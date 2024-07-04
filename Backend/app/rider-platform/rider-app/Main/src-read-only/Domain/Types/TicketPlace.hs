@@ -28,6 +28,7 @@ data TicketPlace = TicketPlace
     shortDesc :: Kernel.Prelude.Text,
     status :: Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: [Kernel.Prelude.Text],
+    termsAndConditionsUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
