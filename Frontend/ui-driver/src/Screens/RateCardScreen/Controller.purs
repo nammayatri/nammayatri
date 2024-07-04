@@ -15,7 +15,6 @@
 
 module Screens.RateCardScreen.Controller where
 
-import Screens.Types (RateCardScreenState)
 import Prelude
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -24,15 +23,16 @@ import Screens (ScreenName(..), getScreen)
 import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
 import Common.Types.App as CTA
-import Data.Array ((!!))
+import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import JBridge as JB
 import Engineering.Helpers.Commons as EHC
+import Screens.Types as ST
 
-data ScreenOutput = Back RateCardScreenState | UpdatePrice RateCardScreenState Int
+data ScreenOutput = Back ST.RateCardScreenState | UpdatePrice ST.RateCardScreenState Int
 
 data Action = BackClick
-    | ShowRateCard Int
+    | ShowRateCard ST.RidePreference
     | PrimaryButtonAC PrimaryButton.Action
     | SliderCallback Int
     | AfterRender
@@ -50,7 +50,7 @@ instance loggableAction :: Loggable Action where
       BackClick -> do
         trackAppBackPress appId (getScreen RATE_CARD_SCREEN)
         trackAppEndScreen appId (getScreen RATE_CARD_SCREEN)
-      ShowRateCard index -> trackAppActionClick appId (getScreen RATE_CARD_SCREEN) "in_screen" "rate_card"
+      ShowRateCard pref -> trackAppActionClick appId (getScreen RATE_CARD_SCREEN) "in_screen" "rate_card"
       OpenLink link -> trackAppActionClick appId (getScreen RATE_CARD_SCREEN) "in_screen" "open_link"
       SliderCallback val -> trackAppActionClick appId (getScreen RATE_CARD_SCREEN) "in_screen" "slider"
       RateCardAction action ->
@@ -70,7 +70,7 @@ instance loggableAction :: Loggable Action where
       
 
 
-eval :: Action -> RateCardScreenState -> Eval Action ScreenOutput RateCardScreenState
+eval :: Action -> ST.RateCardScreenState -> Eval Action ScreenOutput ST.RateCardScreenState
 
 eval BackClick state = 
   if state.props.showRateCard then continue state { props { showRateCard = false}}
@@ -101,23 +101,25 @@ eval (RateCardAction RateCard.GoToDriverAddition) state = continue state { data{
 
 eval (RateCardAction RateCard.GoToTollOrParkingCharges) state = continue state { data{rateCard{currentRateCardType = CTA.TollOrParkingCharges,onFirstPage = true}}}
 
-eval (ShowRateCard index) state = case state.data.ridePreferences !! index of
-  Just ridePreference -> do
-    case ridePreference.rateCardData of
-      Just rateCardData -> 
-        continue state { data { rateCard  {
-            onFirstPage = false,
-            serviceTierName = Just ridePreference.name,
-            currentRateCardType = CTA.DefaultRateCard,
-            driverAdditions = rateCardData.driverAdditions,
-            fareInfoDescription = rateCardData.fareInfo,
-            isNightShift = rateCardData.isNightShift,
-            nightChargeTill = rateCardData.nightChargeEnd,
-            nightChargeFrom = rateCardData.nightChargeStart,
-            extraFare = rateCardData.fareList
-          }} , props {showRateCard = true } }
-      Nothing -> continue state
-  Nothing -> continue state
+eval (ShowRateCard pref) state = do
+  let mbPref = DA.find (\item -> item.serviceTierType == pref.serviceTierType) state.data.ridePreferences
+  case mbPref of
+    Just ridePreference -> do
+      case ridePreference.rateCardData of
+        Just rateCardData -> 
+          continue state { data { rateCard  {
+              onFirstPage = false,
+              serviceTierName = Just ridePreference.name,
+              currentRateCardType = CTA.DefaultRateCard,
+              driverAdditions = rateCardData.driverAdditions,
+              fareInfoDescription = rateCardData.fareInfo,
+              isNightShift = rateCardData.isNightShift,
+              nightChargeTill = rateCardData.nightChargeEnd,
+              nightChargeFrom = rateCardData.nightChargeStart,
+              extraFare = rateCardData.fareList
+            }} , props {showRateCard = true } }
+        Nothing -> continue state
+    Nothing -> continue state
 
 eval (OpenLink link) state = continueWithCmd state [ do 
   void $ JB.openUrlInApp link

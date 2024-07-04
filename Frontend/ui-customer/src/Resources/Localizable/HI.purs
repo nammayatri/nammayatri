@@ -1151,9 +1151,9 @@ getHI stringKey =
         LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "विशेष सुरक्षा सुविधाओं के बारे में जानें" <> merchantName
         OTHER_PROVIDER_NO_RECEIPT -> "अन्य प्रदाताओं द्वारा पूरी की गई सवारी के लिए ड्राइवर रसीद अभी तक उपलब्ध नहीं है।"
         RIDE_FULFILLED_BY merchantName-> "सवारी इसके द्वारा पूरी की गई:" <> merchantName
-        RUSH_HOUR_CHARGES -> "रश हॉर चार्ज*"
+        CONGESTION_CHARGES -> "भीड़भाड़ शुल्क*"
         TIP_CAN_BE_ADDED maxTip -> "राइड किराये में उपेक्ष्य ₹" <> maxTip <> " तक की टिप जोड़ी जा सकती है।"
-        RUSH_HOURS_DESC charges -> "*व्यस्त घंटों के दौरान, उच्च यातायात के समय ड्राइवर के समय को भरने के लिए अतिरिक्त "<> charges <>"% की भाड़ लागू होती है।"
+        CONGESTION_CHARGES_DESC charges -> "*वर्तमान में आपकी सवारी पर "<> charges <>"% का भीड़भाड़ शुल्क लागू है ताकि ड्राइवर के उच्च ट्रैफिक में समय की भरपाई की जा सके या आपके लिए अधिक ड्राइवर उपलब्ध कराए जा सकें।"
         AC_TURNED_OFF -> "एसी बंद था"
         ESTIMATES_EXPIRY_ERROR -> "अनुमान समाप्त हो गया है। कृपया पुनः प्रयास करें।"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "अनुमान समाप्त हो गया है। फिर से ले रहे हैं, कृपया कुछ क्षण"
@@ -1303,3 +1303,8 @@ getHI stringKey =
         NOIDA -> "नोएडा"
         GURUGRAM -> "गुरुग्राम"
         WAITING_CHARGES -> "प्रतीक्षा शुल्क"
+        PLACE_A_CALL -> "कॉल करें"
+        YOU_CAN_WRITE_TO_US_AT -> "आप हमें लिख सकते हैं"
+        CHARGEABLE -> "चार्ज योग्य"
+        BOOKED -> "बुक किया गया"
+        SURCHARGES -> "अधिभार"

@@ -24,9 +24,14 @@ module Lib.Payment.Domain.Action
     buildSDKPayload,
     refundService,
     createPaymentIntentService,
+    createPayoutService,
+    payoutStatusService,
+    payoutStatusUpdates,
   )
 where
 
+import Data.List (sortBy)
+import Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
@@ -34,6 +39,10 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
+import qualified Kernel.External.Payout.Interface as PT
+import qualified Kernel.External.Payout.Interface.Types as Payout
+import qualified Kernel.External.Payout.Juspay.Types as Juspay
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
 import qualified Kernel.Storage.Hedis as Redis
@@ -44,10 +53,14 @@ import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
+import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
+import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 
 data PaymentStatusResp
@@ -83,6 +96,13 @@ data PaymentStatusResp
         responseMessage :: Maybe Text,
         notificationId :: Text
       }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data PayoutPaymentStatus = PayoutPaymentStatus
+  { status :: Payout.PayoutOrderStatus,
+    orderId :: Text,
+    accountDetailsType :: Maybe Text
+  }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 -- create payment intent --------------------------------------------
@@ -696,3 +716,101 @@ txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
 
 refundProccessingKey :: Text -> Text
 refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId
+
+-- payout APIs ---
+
+createPayoutService ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Maybe Text ->
+  Maybe EntityName ->
+  Text ->
+  PT.CreatePayoutOrderReq ->
+  (PT.CreatePayoutOrderReq -> m PT.CreatePayoutOrderResp) ->
+  m (Maybe PT.CreatePayoutOrderResp)
+createPayoutService merchantId _personId mbEntityId mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
+  mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
+  case mbExistingPayoutOrder of
+    Nothing -> do
+      createPayoutOrderResp <- createPayoutOrderCall createPayoutOrderReq -- api call
+      payoutOrder <- buildPayoutOrder createPayoutOrderReq createPayoutOrderResp
+      QPayoutOrder.create payoutOrder
+      return $ Just createPayoutOrderResp
+    Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
+  where
+    buildPayoutOrder req resp = do
+      now <- getCurrentTime
+      uuid <- generateGUID
+      customerEmail <- encrypt req.customerEmail
+      mobileNo <- encrypt req.customerPhone
+      pure $
+        Payment.PayoutOrder
+          { id = uuid,
+            customerId = req.customerId,
+            orderId = req.orderId,
+            merchantId = merchantId.getId,
+            mobileNo = mobileNo,
+            city = city,
+            amount = mkPrice Nothing req.amount,
+            entityId = mbEntityId,
+            entityName = mbEntityName,
+            status = resp.status,
+            accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments, --- for now only one fullfillment supported
+            vpa = Just req.customerVpa,
+            customerEmail = customerEmail,
+            lastStatusCheckedAt = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+
+payoutStatusService ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  PT.PayoutOrderStatusReq ->
+  (PT.PayoutOrderStatusReq -> m PT.PayoutOrderStatusResp) ->
+  m PayoutPaymentStatus
+payoutStatusService _merchantId _personId createPayoutOrderStatusReq createPayoutOrderStatusCall = do
+  _ <- QPayoutOrder.findByOrderId createPayoutOrderStatusReq.orderId >>= fromMaybeM (PayoutOrderNotFound (createPayoutOrderStatusReq.orderId)) -- validation
+  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId}
+  statusResp <- createPayoutOrderStatusCall payoutOrderStatusReq -- api call
+  payoutStatusUpdates statusResp.status createPayoutOrderStatusReq.orderId (Just statusResp)
+  pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
+
+payoutStatusUpdates :: (EncFlow m r, BeamFlow m r) => Payout.PayoutOrderStatus -> Text -> Maybe PT.PayoutOrderStatusResp -> m ()
+payoutStatusUpdates status_ orderId statusResp = do
+  order <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
+  QPayoutOrder.updatePayoutOrderStatus status_ orderId
+  case statusResp of
+    Just Payout.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} -> do
+      let txns = (.transactions) =<< listToMaybe =<< fulfillments
+          mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
+      case mbTxn of
+        Just Payout.Transaction {amount = amount_txn, ..} -> do
+          findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef
+          case findTransaction of
+            Just _ -> QPayoutTransaction.updatePayoutTransactionStatus status transactionRef
+            Nothing -> do
+              uuid <- generateGUID
+              now <- getCurrentTime
+              let payoutTransaction =
+                    PT.PayoutTransaction
+                      { id = uuid,
+                        merchantId = order.merchantId,
+                        payoutOrderId = Id orderId,
+                        transactionRef = transactionRef,
+                        gateWayRefId = gatewayRefId,
+                        fulfillmentMethod = fulfillmentMethod,
+                        amount = mkPrice Nothing (realToFrac amount_txn),
+                        status = status,
+                        createdAt = now,
+                        updatedAt = now
+                      }
+              QPayoutTransaction.create payoutTransaction
+        Nothing -> pure ()
+    Nothing -> pure ()

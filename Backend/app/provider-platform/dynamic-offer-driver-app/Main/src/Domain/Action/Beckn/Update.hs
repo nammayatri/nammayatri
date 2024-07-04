@@ -20,6 +20,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.List (last)
 import Data.Maybe
 import qualified Data.Text as T
+import qualified Data.Text as Text
 import qualified Domain.Action.UI.EditBooking as EditBooking
 import qualified Domain.Action.UI.Location as DL
 import Domain.Action.UI.Ride.EndRide.Internal
@@ -129,7 +130,7 @@ handler (UPaymentCompletedReq req@PaymentCompletedReq {}) = do
     QRide.findById req.rideId
       >>= fromMaybeM (RideNotFound booking.id.getId)
   unless (ride.status == DRide.COMPLETED) $
-    throwError $ RideInvalidStatus "Ride is not completed yet."
+    throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
   logTagInfo "Payment completed : " ("bookingId " <> req.bookingId.getId <> ", rideId " <> req.rideId.getId)
 handler (UAddStopReq AddStopReq {..}) = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
@@ -145,7 +146,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
   when (isNothing origin && isNothing destination) $
     throwError PickupOrDropLocationNotFound
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  when (ride.status == DRide.COMPLETED || ride.status == DRide.CANCELLED) $ throwError $ RideInvalidStatus "Can't edit destination for completed/cancelled ride."
+  when (ride.status == DRide.COMPLETED || ride.status == DRide.CANCELLED) $ throwError $ RideInvalidStatus ("Can't edit destination for completed/cancelled ride." <> Text.pack (show ride.status))
   person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   whenJust origin $ \startLocation -> do
     QL.create startLocation

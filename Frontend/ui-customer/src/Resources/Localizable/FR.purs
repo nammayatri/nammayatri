@@ -1153,9 +1153,9 @@ getFR stringKey =
         LEARN_ABOUT_APP_SAFETY_FEAT merchantName -> "En savoir plus sur les fonctionnalités de sécurité exclusives sur " <> merchantName
         OTHER_PROVIDER_NO_RECEIPT -> "Les reçus du conducteur pour les courses effectuées par d'autres prestataires ne sont pas encore disponibles."
         RIDE_FULFILLED_BY merchantName -> "Trajet effectué par : " <> merchantName
-        RUSH_HOUR_CHARGES -> "Frais de pointe*"
+        CONGESTION_CHARGES -> "Frais de congestion*"
         TIP_CAN_BE_ADDED maxTip -> "Un pourboire allant jusqu'à "<> maxTip <>" peut être ajouté au tarif de la course."
-        RUSH_HOURS_DESC charges -> "*Frais de pointe de " <> charges <> " applicables"
+        CONGESTION_CHARGES_DESC charges -> "*Un frais de congestion de " <> charges <> "% sur votre trajet est actuellement applicable pour compenser le temps du conducteur dans la circulation dense ou pour rendre plus de conducteurs disponibles pour vous."
         AC_TURNED_OFF -> "Climatisation éteinte"
         ESTIMATES_EXPIRY_ERROR -> "Estimates has been expired. Please try again."
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
@@ -1305,3 +1305,8 @@ getFR stringKey =
         NOIDA -> "Noida"
         GURUGRAM -> "Gurugram"
         WAITING_CHARGES -> "Frais d'attente"
+        PLACE_A_CALL -> "Passer un appel"
+        YOU_CAN_WRITE_TO_US_AT -> "Vous pouvez nous écrire à"
+        CHARGEABLE -> "Facturable"
+        BOOKED -> "Réservé"
+        SURCHARGES -> "Suppléments"

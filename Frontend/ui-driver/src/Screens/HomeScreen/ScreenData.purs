@@ -121,6 +121,8 @@ initData =
           , capacity : Nothing
           , serviceTier : ""
           , tollAmbigous : false
+          , tripStartTime : Nothing
+          , tripEndTime : Nothing
           }
       , driverGotoState:
           { gotoCount: 0

@@ -264,7 +264,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
 
   when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
     fork "ride search geohash frequencyUpdater" $ do
-      _ <- hotSpotUpdate person.merchantId mbFavourite origin isSourceManuallyMoved
+      hotSpotUpdate person.merchantId mbFavourite origin isSourceManuallyMoved
       updateForSpecialLocation person.merchantId origin isSpecialLocation
 
   merchantOperatingCity <-
@@ -315,11 +315,10 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       person.totalRidesCount
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
-  let txnId = getId (searchRequest.id)
-  Metrics.startSearchMetrics merchant.name txnId
+  Metrics.startSearchMetrics merchant.name searchRequest.id.getId
   triggerSearchEvent SearchEventData {searchRequest = searchRequest}
-  _ <- QSearchRequest.createDSReq searchRequest
-  _ <- QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
+  QSearchRequest.createDSReq searchRequest
+  QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
   let dSearchRes =
         SearchRes

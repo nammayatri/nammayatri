@@ -373,6 +373,7 @@ initData = let
     , shimmerViewTimer : config.homeScreen.shimmerTimer
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
+    , isContactSupportPopUp : false
   }
 }
 

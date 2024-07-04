@@ -16,6 +16,7 @@
 module Domain.Action.Beckn.Common where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
 import qualified Domain.Types.BecknConfig as BecknConfig
@@ -414,6 +415,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              fare = Just fare,
              totalFare = Just totalFare,
              chargeableDistance = convertHighPrecMetersToDistance distanceUnit <$> chargeableDistance,
+             traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
              rideEndTime,
              endOdometerReading
@@ -654,7 +656,7 @@ validateDriverArrivedReq DriverArrivedReq {..} = do
   let BookingDetails {..} = bookingDetails
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))
   return $ ValidatedDriverArrivedReq {..}
   where
     isValidRideStatus status = status == DRide.NEW

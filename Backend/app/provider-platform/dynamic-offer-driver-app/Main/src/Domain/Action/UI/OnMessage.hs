@@ -20,6 +20,7 @@ where
 
 import Data.HashMap.Strict as HMS
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as Text
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -48,7 +49,7 @@ sendMessageFCM :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m
 sendMessageFCM (_personId, _, _) FCMReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "Cannot send message during this stage of ride"
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("Cannot send message during this stage of ride" <> Text.pack (show ride.status))
   BP.sendNewMessageToBAP booking ride message
   pure APISuccess.Success
   where

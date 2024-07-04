@@ -18,6 +18,8 @@ module Storage.Beam.Payment where
 import qualified Data.Text as T
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
+import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
@@ -28,4 +30,10 @@ instance HasSchemaName BeamPT.PaymentTransactionT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamRF.RefundsT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamP.PayoutOrderT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamT.PayoutTransactionT where
   schemaName _ = T.pack currentSchemaName

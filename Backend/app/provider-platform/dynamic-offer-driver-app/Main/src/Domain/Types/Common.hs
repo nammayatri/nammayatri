@@ -35,7 +35,12 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data UsageSafety = Safe | Unsafe
 
-data TripCategory = OneWay OneWayMode | Rental RentalMode | RideShare RideShareMode | InterCity OneWayMode (Maybe Text) | CrossCity OneWayMode (Maybe Text)
+data TripCategory
+  = OneWay OneWayMode
+  | Rental RentalMode
+  | RideShare RideShareMode
+  | InterCity OneWayMode (Maybe Text)
+  | CrossCity OneWayMode (Maybe Text)
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema)
 
@@ -76,8 +81,8 @@ instance FromJSON TripCategory where
       "OneWay" -> OneWay <$> v .: "contents"
       "Rental" -> Rental <$> v .: "contents"
       "RideShare" -> RideShare <$> v .: "contents"
-      "InterCity" -> InterCity <$> v .: "contents" <*> v .: "city"
-      "CrossCity" -> CrossCity <$> v .: "contents" <*> v .: "city"
+      "InterCity" -> InterCity <$> v .: "contents" <*> v .:? "city"
+      "CrossCity" -> CrossCity <$> v .: "contents" <*> v .:? "city"
       _ -> fail $ "Unknown tag: " ++ tag
 
 data TripOption = TripOption

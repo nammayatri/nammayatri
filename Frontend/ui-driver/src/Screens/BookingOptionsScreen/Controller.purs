@@ -1,12 +1,4 @@
-module Screens.BookingOptionsScreen.Controller
-  ( Action(..)
-  , ScreenOutput(..)
-  , downgradeOptionsConfig
-  , dummyVehicleP
-  , eval
-  , getVehicleCapacity
-  )
-  where
+module Screens.BookingOptionsScreen.Controller where
 
 import Components.ChooseVehicle as ChooseVehicle
 import Components.PrimaryButton as PrimaryButton
@@ -32,6 +24,7 @@ import Common.RemoteConfig.Utils (tipConfigData)
 import Data.Foldable as DF
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils as HU
+import Screens.Types as ST
 
 instance showAction :: Show Action where
   show _ = ""
@@ -55,7 +48,7 @@ data Action
   | ToggleRentalRide 
   | ToggleIntercityRide
   | UpdateRateCard API.GetDriverRateCardRes
-  | ShowRateCard Int
+  | ShowRateCard ST.RidePreference
   | RateCardAction RateCard.Action
   | RateCardBannerClick
 
@@ -113,23 +106,25 @@ eval (UpdateRateCard rateCardResp) state = do
               }) state.data.ridePreferences
   continue state { data { ridePreferences = ridePreferences  }, props { rateCardLoaded = true, peakTime = isJust $ find (\item -> item.farePolicyHour == Just API.Peak) ridePreferences } }
 
-eval (ShowRateCard index) state = case state.data.ridePreferences !! index of
-  Just ridePreference -> do
-    case ridePreference.rateCardData of
-      Just rateCardData -> 
-        continue state { data { rateCard  {
-            onFirstPage = false,
-            serviceTierName = Just ridePreference.name,
-            currentRateCardType = CTA.DefaultRateCard,
-            driverAdditions = rateCardData.driverAdditions,
-            fareInfoDescription = rateCardData.fareInfo,
-            isNightShift = rateCardData.isNightShift,
-            nightChargeTill = rateCardData.nightChargeEnd,
-            nightChargeFrom = rateCardData.nightChargeStart,
-            extraFare = rateCardData.fareList
-          }} , props {showRateCard = true } }
-      Nothing -> continue state
-  Nothing -> continue state
+eval (ShowRateCard pref) state = do
+  let mbPref = find (\item -> item.serviceTierType == pref.serviceTierType) state.data.ridePreferences
+  case mbPref of
+    Just ridePreference -> do
+      case ridePreference.rateCardData of
+        Just rateCardData -> 
+          continue state { data { rateCard  {
+              onFirstPage = false,
+              serviceTierName = Just ridePreference.name,
+              currentRateCardType = CTA.DefaultRateCard,
+              driverAdditions = rateCardData.driverAdditions,
+              fareInfoDescription = rateCardData.fareInfo,
+              isNightShift = rateCardData.isNightShift,
+              nightChargeTill = rateCardData.nightChargeEnd,
+              nightChargeFrom = rateCardData.nightChargeStart,
+              extraFare = rateCardData.fareList
+            }} , props {showRateCard = true } }
+        Nothing -> continue state
+    Nothing -> continue state
 
 eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } , data{rateCard{onFirstPage = false,currentRateCardType = CTA.DefaultRateCard}}}
 

@@ -27,3 +27,12 @@ findAllInRangeByDriverId (Id driverId) from to = do
           Se.Is Beam.merchantLocalDate $ Se.LessThan to
         ]
     ]
+
+findAllByDatesInAndPayoutStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Day] -> PayoutStatus -> m [DailyStats]
+findAllByDatesInAndPayoutStatus dates payoutStatus = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantLocalDate $ Se.In dates,
+          Se.Is Beam.payoutStatus $ Se.Eq (Just payoutStatus)
+        ]
+    ]

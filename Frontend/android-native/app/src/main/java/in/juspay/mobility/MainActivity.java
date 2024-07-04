@@ -922,17 +922,20 @@ public class MainActivity extends AppCompatActivity {
     private Vector<Double> handleGeoSchemeVector(Intent intent){
         Uri data = intent.getData();
         Vector<Double> geoData = new Vector<>();
-        String[] parts = new String[0];
-        if (data != null) {
-            parts = data.getSchemeSpecificPart().split(",");
-        String latitude = parts[0];
-        String uriData = parts[1];
-        String longitude = parts[2];
-        geoData.add(Double.parseDouble(latitude));
-        geoData.add(Double.parseDouble(longitude));
-        Log.d("whatsapp Intent Location", "Intent Long: " + longitude + ", Lat: " + latitude);
-        Log.d("whatsapp Intent Location", "Uri data : " + uriData);
+        String[] parts;
+        try{
+            if (data != null && data.getScheme().equals("geo")){
+                parts = data.getSchemeSpecificPart().split(",");
+                if (parts.length != 3) return geoData;
+                String latitude = parts[0];
+                String longitude = parts[2];
+                geoData.add(Double.parseDouble(latitude));
+                geoData.add(Double.parseDouble(longitude));
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
+
         return geoData;
 
     }
@@ -942,17 +945,12 @@ public class MainActivity extends AppCompatActivity {
             if (data != null && intent.getScheme().equals("geo")) {
                 Vector<Double> geoData = handleGeoSchemeVector(intent);
                 JSONObject geoObj = new JSONObject();
-                try {
-                    geoObj.put("lat", geoData.get(0));
-                    geoObj.put("lon", geoData.get(1));
-                    geoObj.put("name",null);
-                    innerPayload.put("destination", geoObj);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                Log.d("location Scheme Handled", geoData.toString());
+                geoObj.put("lat", geoData.get(0));
+                geoObj.put("lon", geoData.get(1));
+                geoObj.put("name",null);
+                innerPayload.put("destination", geoObj);
             }
-        }catch(NullPointerException e){
+        }catch(Exception e){
             e.printStackTrace();
         }
     }
@@ -960,7 +958,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         Vector<String> res = handleDeepLinkIfAvailable(intent);
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(intent);
-        Vector<Double> geoData = handleGeoSchemeVector(intent);
         String viewParam = null, deepLinkJson =null;
         if (res!=null ){
             viewParam = res.get(0);

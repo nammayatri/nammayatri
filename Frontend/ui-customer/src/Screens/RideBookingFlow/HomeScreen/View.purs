@@ -134,7 +134,7 @@ import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Localizable.EN (getEN)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
+import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType)
@@ -195,6 +195,7 @@ import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils (decodeBookingTimeList, getCityFromString, getLanguageBasedCityName)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
+import Screens.HomeScreen.Controllers.Types
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -263,7 +264,7 @@ screen initialState =
                     void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "TRUE"
                     void $ launchAff $ flowRunner defaultGlobalState $ getEstimatePolling (getValueToLocalStore TRACKING_ID) GetEstimates CheckFlowStatusAction 3 2000.0 push initialState
                 else if estimatesPolling.shouldPush then do
-                     void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
+                     void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 40 1000.0 push initialState estimatesPolling.id
                 else pure unit
 
               FindingQuotes -> do
@@ -416,7 +417,7 @@ screen initialState =
       \action state -> do
         let _ = spy "HomeScreen action " action
         let _ = spy "HomeScreen state " state
-        eval action state
+        eval2 action state
   }
 
 
@@ -573,6 +574,7 @@ view push state =
             , if (state.props.currentStage == EditingDestinationLoc || state.props.currentStage == ConfirmEditDestinationLoc || state.props.currentStage == ConfirmingEditDestinationLoc || state.props.currentStage == RevisedEstimate) then searchLocationView push state else emptyTextView state
             , if (state.props.isCancelRide) then (cancelRidePopUpView push state) else emptyTextView state
             , if (state.props.showConfirmEditDestPopUp) then confirmEditDestPopUp push state else emptyTextView state
+            , if (state.props.isContactSupportPopUp) then contactSupportPopUpView push state else emptyTextView state
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
@@ -1227,7 +1229,7 @@ buttonLayout state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , background if ((null state.data.savedLocations  && null state.data.recentSearchs.predictionArray ) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.white900
-      , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
+      , gradient (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
       , orientation VERTICAL
       , padding $ PaddingTop 16
       ] $ maybe ([]) (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem
@@ -2721,6 +2723,15 @@ logOutPopUpView push state =
     ]
     [ PopUpModal.view (push <<< PopUpModalAction) (logOutPopUpModelConfig state) ]
 
+contactSupportPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+contactSupportPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , accessibility DISABLE
+    ]
+    [ PopUpModal.view (push <<< ContactSupportAction) (CommonComponentConfig.contactSupportPopUpConfig state.data.config) ]
+
 favouriteLocationModel :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 favouriteLocationModel push state =
   linearLayout
@@ -3028,7 +3039,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                   else pure unit
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
-              else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) then do
+              else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) || hasCurrentLocAndPrevDropLoc /= state.data.previousRideDrop then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
                 routeResponseAdvanced <- do
@@ -3397,7 +3408,7 @@ homeScreenViewV2 push state =
               [ weight 1.0
               , background Color.white900
               , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
-              , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.white900, Color.grey700]) else (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
+              , gradient (Linear 180.0 [Color.white900 , Color.white900,  Color.grey700])
               ][ scrollView
                   [ height MATCH_PARENT
                   , width MATCH_PARENT
@@ -3826,7 +3837,7 @@ mapView' push state idTag =
     [ height mapDimensions.height
     , width mapDimensions.width 
     , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-    , margin $ if isHomeScreenView state then MarginLeft 16 else MarginTop 0
+    , margin $ if isHomeScreenView state then Margin 16 (if os == "IOS" then 16 else 0) 0 0 else MarginTop 0
     , padding $ PaddingBottom $ bottomPadding
     ]$[ Tuple ("MapView" <> idTag) $ linearLayout
           ([ height mapDimensions.height
@@ -4432,7 +4443,7 @@ rentalBanner push state =
     , padding $ Padding 8 0 8 0
     , margin $ MarginHorizontal 8 8
     , visibility $ boolToVisibility $ (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) 
-    , gradient if os == "IOS" then (Linear 270.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
+    , gradient (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
     ][  if state.props.showShimmer then 
           textView[]
           else rentalBannerView state push]

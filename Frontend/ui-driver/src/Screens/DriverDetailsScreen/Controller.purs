@@ -138,7 +138,6 @@ eval UploadFileAction state = continue state
 eval NoAction state = continue state
 
 eval ClickAddAlternateButton state = do
-  _ <- pure $ spy "Alternate Number" (getValueToLocalStore SET_ALTERNATE_TIME)
   let curr_time = getCurrentUTC ""
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time

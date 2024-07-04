@@ -12,7 +12,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data TicketPlace = TicketPlace
-  { closeTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
+  { allowSameDayBooking :: Kernel.Prelude.Bool,
+    closeTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gallery :: [Kernel.Prelude.Text],
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

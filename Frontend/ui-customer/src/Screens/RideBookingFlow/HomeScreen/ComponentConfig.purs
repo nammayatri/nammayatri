@@ -1791,6 +1791,7 @@ rideCompletedCardConfig state =
       , rentalRowDetails
         { rideTime = getString RIDE_TIME
         , rideDistance = getString RIDE_DISTANCE
+        , rideDistanceInfo = "( " <> getString CHARGEABLE <> " / " <> getString BOOKED <> " )"
         , rideStartedAt = getString RIDE_STARTED_AT
         , rideEndedAt = getString RIDE_ENDED_AT
         , estimatedFare = getString ESTIMATED_FARE
@@ -1799,7 +1800,7 @@ rideCompletedCardConfig state =
         , totalFare = getString TOTAL_FARE
         , rideDetailsTitle = getString RIDE_DETAILS
         , fareUpdateTitle = getString FARE_UPDATE
-        , surcharges = getString WAITING_CHARGES
+        , surcharges = getString SURCHARGES
         }
       }
   where
@@ -1964,7 +1965,8 @@ getChatSuggestions state = do
 
     isAtPickup = (metersToKm state.data.driverInfoCardState.distance (state.props.currentStage == RideStarted)) == getString AT_PICKUP
   if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion then
-    if state.props.isChatWithEMEnabled then do
+    if state.data.fareProductType ==  FPT.RENTAL && state.props.stageBeforeChatScreen == RideStarted then getSuggestionsfromKey chatSuggestion "csRentalInitial"
+    else if state.props.isChatWithEMEnabled then do
       let
         hideInitial = not $ DA.null state.data.messages
       if didReceiverMessage && hideInitial then
@@ -1973,7 +1975,6 @@ getChatSuggestions state = do
         state.data.chatSuggestionsList
       else
         getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId
-    else if state.data.fareProductType ==  FPT.RENTAL && state.props.stageBeforeChatScreen == RideStarted then getSuggestionsfromKey chatSuggestion "csRentalInitial"
     else if didReceiverMessage && (not $ DA.null state.data.messages) then
       if isAtPickup then getSuggestionsfromKey chatSuggestion "customerDefaultAP" else getSuggestionsfromKey chatSuggestion "customerDefaultBP"
     else if isAtPickup then

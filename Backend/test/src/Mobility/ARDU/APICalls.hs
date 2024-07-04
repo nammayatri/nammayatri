@@ -122,9 +122,9 @@ dashboard merchantId _ token = do
     helperAPIClient :<|> _exotelAPIClient = client (Proxy :: Proxy DashboardAPI.API)
 
     managementAPIClient :<|> _ :<|> _ = helperAPIClient merchantId
-    _ :<|> rideClient :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ = managementAPIClient token
+    _ :<|> rideClient :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ = managementAPIClient token
 
-    _ :<|> _ :<|> _ :<|> _ :<|> rideSync :<|> _ :<|> _ :<|> _ = rideClient
+    _ :<|> _ :<|> _ :<|> rideSync :<|> _ :<|> _ :<|> _ = rideClient
 
 buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =

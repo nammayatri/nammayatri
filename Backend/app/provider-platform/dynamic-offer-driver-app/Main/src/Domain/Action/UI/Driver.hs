@@ -73,6 +73,7 @@ module Domain.Action.UI.Driver
     listScheduledBookings,
     acceptScheduledBooking,
     getInformationV2,
+    clearDriverFeeWithCreate,
   )
 where
 
@@ -203,6 +204,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverFeeExtra as QDFE
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -342,13 +344,13 @@ data UpdateDriverReq = UpdateDriverReq
 newtype ScheduledBookingRes = ScheduledBookingRes
   { bookings :: [ScheduleBooking]
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data ScheduleBooking = ScheduleBooking
   { bookingDetails :: BookingAPIEntity,
     fareDetails :: [DOVT.RateCardItem]
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id DRB.Booking,
@@ -1967,3 +1969,101 @@ acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
   void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId -- handle driver blocked
   pure Success
+
+clearDriverFeeWithCreate ::
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  ServiceNames ->
+  (HighPrecMoney, HighPrecMoney, HighPrecMoney) ->
+  DDF.FeeType ->
+  Currency ->
+  Maybe SPayment.DeepLinkData ->
+  m ClearDuesRes
+clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee, cgst, sgst) feeType currency mbDeepLinkData = do
+  dueDriverFee <- QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.PAYMENT_PENDING] feeType serviceName
+  driverFee <-
+    case dueDriverFee of
+      [] -> do
+        driverFee' <- mkDriverFee
+        QDF.create driverFee'
+        pure [driverFee']
+      dfee -> pure dfee
+  invoices <- mapM (\fee_ -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee_.id (feeTypeToInvoicetype feeType) Domain.ACTIVE_INVOICE)) driverFee
+  subscriptionConfig <-
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
+  let paymentService = subscriptionConfig.paymentServiceName
+  let sortedInvoices = mergeSortAndRemoveDuplicate invoices
+  case sortedInvoices of
+    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing INV.MANUAL_INVOICE Nothing mbDeepLinkData
+    (invoice_ : restinvoices) -> do
+      mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
+      (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ driverFee
+      let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) driverFee
+      let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) driverFee
+      mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice mbDeepLinkData
+  where
+    validateExistingInvoice invoice driverFees = do
+      invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
+      let driverFeeIds = driverFees <&> getId . (.id)
+      let currentDueDriverFee = (invoices <&> getId . (.driverFeeId)) `intersect` driverFeeIds
+      if length currentDueDriverFee <= length invoices
+        then do
+          return (Just (invoice.id, invoice.invoiceShortId), currentDueDriverFee, (driverFees <&> getId . (.id)) \\ (invoices <&> getId . (.driverFeeId)))
+        else do
+          QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
+          return (Nothing, driverFeeIds, [])
+    mkDriverFee = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        DDF.DriverFee
+          { id = id,
+            merchantId = merchantId,
+            payBy = now,
+            status = DDF.PAYMENT_PENDING,
+            numRides = 0,
+            createdAt = now,
+            updatedAt = now,
+            platformFee = DDF.PlatformFee {fee, cgst, sgst, currency},
+            totalEarnings = 0,
+            feeType = feeType,
+            govtCharges = 0,
+            startTime = now,
+            endTime = now,
+            collectedBy = Nothing,
+            driverId = cast personId,
+            offerId = Nothing,
+            planOfferTitle = Nothing, -- change
+            autopayPaymentStage = Nothing,
+            stageUpdatedAt = Nothing,
+            billNumber = Nothing,
+            feeWithoutDiscount = Nothing,
+            schedulerTryCount = 0,
+            collectedAt = Nothing,
+            overlaySent = False,
+            amountPaidByCoin = Nothing,
+            specialZoneRideCount = 0,
+            specialZoneAmount = 0,
+            planId = Nothing,
+            planMode = Nothing,
+            notificationRetryCount = 0,
+            badDebtDeclarationDate = Nothing,
+            vehicleNumber = Nothing,
+            badDebtRecoveryDate = Nothing,
+            merchantOperatingCityId = opCityId,
+            serviceName,
+            currency
+          }
+    mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
+
+    mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
+    mergeSortAndRemoveDuplicate invoices = do
+      let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
+      sortOn (Down . (.createdAt)) uniqueInvoices
+
+    feeTypeToInvoicetype driverFeeType =
+      case driverFeeType of
+        DDF.ONE_TIME_SECURITY_DEPOSIT -> Domain.ONE_TIME_SECURITY_INVOICE
+        DDF.PAYOUT_REGISTRATION -> Domain.PAYOUT_REGISTRATION_INVOICE
+        _ -> Domain.MANUAL_INVOICE

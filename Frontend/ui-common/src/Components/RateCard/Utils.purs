@@ -60,7 +60,7 @@ getFareBreakupList fareBreakup maxTip =
   fareBreakupConstructed = 
     [ { key: getString $ MIN_FARE_UPTO $ (EHU.formatNumber (baseDistance.amount / 1000.0) Nothing) <> " km", val: baseFare } ]
     <> (map constructExtraFareBreakup extraFareBreakup)
-    <> (if congestionCharges.amount > 0.0 then [ { key: getString RUSH_HOUR_CHARGES, val: (EHU.getFixedTwoDecimals congestionCharges.amount) <> "%"}]  else [])
+    <> (if congestionCharges.amount > 0.0 then [ { key: getString CONGESTION_CHARGES, val: (EHU.getFixedTwoDecimals congestionCharges.amount) <> "%"}]  else [])
     <> (if tollCharge.amount > 0.0 then [ { key: getString TOLL_CHARGES_ESTIMATED, val: priceToBeDisplayed tollCharge } ] else [])
     <> [ { key: getString PICKUP_CHARGE, val: pickupCharges } ]
     <> [ { key: getString $ WAITING_CHARGE_LIMIT $ EHU.formatNumber freeWaitingTime.amount Nothing, val: priceToBeDisplayed waitingCharge <> "/min" } ]
@@ -71,7 +71,7 @@ getFareBreakupList fareBreakup maxTip =
     ]
     <> (if nightShiftRate.amount > 1.0 then [getString $ DAYTIME_CHARGES_APPLIED_AT_NIGHT (toStringWith (fixed 2) (1.0 + nightShiftRate.amount/100.0)) (EHC.convertUTCtoISC nightShiftStart "hh a") (EHC.convertUTCtoISC nightShiftEnd "hh a")] else [])
     <> (if maxTip > 0 then [getString $ TIP_CAN_BE_ADDED $ show maxTip] else [])
-    <> (if congestionCharges.amount > 0.0 then [getString $ RUSH_HOURS_DESC $ EHU.getFixedTwoDecimals congestionCharges.amount] else [])
+    <> (if congestionCharges.amount > 0.0 then [getString $ CONGESTION_CHARGES_DESC $ EHU.getFixedTwoDecimals congestionCharges.amount] else [])
 
   -- Base fare calculation
   baseDistance = fetchSpecificFare fareBreakup "BASE_DISTANCE"

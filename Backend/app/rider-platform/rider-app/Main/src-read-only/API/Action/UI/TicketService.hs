@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.TicketService where
+module API.Action.UI.TicketService
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.TicketService
 import qualified Control.Lens

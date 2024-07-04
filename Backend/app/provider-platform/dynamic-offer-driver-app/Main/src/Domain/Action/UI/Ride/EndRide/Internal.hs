@@ -43,6 +43,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
+import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -57,6 +58,7 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.Vehicle as DV
 import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
@@ -65,6 +67,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (forM_, whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
@@ -87,10 +90,12 @@ import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
@@ -152,7 +157,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
 
-  sendReferralFCM ride booking.providerId mbRiderDetails booking.merchantOperatingCityId
+  sendReferralFCM ride booking booking.providerId mbRiderDetails booking.merchantOperatingCityId thresholdConfig
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
   let currency = booking.currency
@@ -184,15 +189,18 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 sendReferralFCM ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    EncFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   Ride.Ride ->
+  SRB.Booking ->
   Id Merchant ->
   Maybe RD.RiderDetails ->
   Id DMOC.MerchantOperatingCity ->
+  TransporterConfig ->
   m ()
-sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
+sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transporterConfig = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   now <- getCurrentTime
   let shouldUpdateRideComplete =
@@ -208,10 +216,70 @@ sendReferralFCM ride merchantId mbRiderDetails merchantOpCityId = do
             let referralMessage = "Congratulations!"
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+            let mobileNumberHash = (.hash) riderDetails.mobileNumber
+            localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+            mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
+            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
+            whenJust mbFlagReason $ \flagReason -> do
+              QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) (Just flagReason) riderDetails.id
+            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
           Nothing -> pure ()
+  where
+    updateReferralStats referredDriverId mbDailyStats localTime = do
+      mbVehicle <- QV.findById referredDriverId
+      let vehicleCategory = fromMaybe DV.CAR ((.category) =<< mbVehicle)
+      payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+      let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
+      driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+      QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId
+      case mbDailyStats of
+        Just stats -> do
+          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referredDriverId.getId) 3 3 $ do
+            QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + referralRewardAmount) DDS.Verifying referredDriverId (utctDay localTime)
+        Nothing -> do
+          id <- generateGUIDText
+          now <- getCurrentTime
+          let dailyStatsOfDriver' =
+                DDS.DailyStats
+                  { id = id,
+                    driverId = referredDriverId,
+                    totalEarnings = 0.0,
+                    numRides = 0,
+                    totalDistance = 0,
+                    merchantLocalDate = utctDay localTime,
+                    currency = ride.currency,
+                    distanceUnit = ride.distanceUnit,
+                    activatedValidRides = 1,
+                    referralEarnings = referralRewardAmount,
+                    referralCounts = 1,
+                    payoutStatus = DDS.Verifying,
+                    payoutOrderId = Nothing,
+                    payoutOrderStatus = Nothing,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          QDailyStats.create dailyStatsOfDriver'
+
+    fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats = do
+      availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
+      let isValidForMinPickupThreshold = maybe True (>= transporterConfig.minPickupDistanceThresholdForReferralPayout) booking.distanceToPickup
+          isValidForMinRideDistance = ride.traveledDistance >= transporterConfig.minRideDistanceThresholdForReferralPayout
+          isMaxReferralExceeded = maybe False ((< transporterConfig.maxPayoutReferralForADay) . (.referralCounts)) mbDailyStats
+          isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
+      let mbFlagReason =
+            case (listToMaybe availablePersonWithNumber, isValidForMinRideDistance, isValidForMinPickupThreshold, isMaxReferralExceeded) of
+              (Just _, _, _, _) -> Just RD.CustomerExistAsDriver
+              (_, False, _, _) -> Just RD.MinRideDistanceInvalid
+              (_, _, False, _) -> Just RD.MinPickupDistanceInvalid
+              (_, _, _, False) -> Just RD.ExceededMaxReferral
+              _ -> Nothing
+      let isValid = null availablePersonWithNumber && isValidForMinPickupThreshold && isValidForMinRideDistance && isMaxReferralExceeded && isMultipleDeviceIdExists
+      return (isValid, mbFlagReason)
+
+    payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
 updateLeaderboardZScore merchantId merchantOpCityId ride = do
@@ -415,25 +483,25 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
-  let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
-        DFare.ProgressiveDetails _ -> (0, 0, 0)
-        DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
-        DFare.RentalDetails _ -> (0, 0, 0)
-        DFare.InterCityDetails _ -> (0, 0, 0)
+  let (platformFee, cgst, sgst, isSpecialZoneCharge) = case newFareParams.fareParametersDetails of
+        DFare.ProgressiveDetails _ -> (0, 0, 0, False)
+        DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
+        DFare.RentalDetails _ -> (0, 0, 0, False)
+        DFare.InterCityDetails _ -> (0, 0, 0, False)
   let totalDriverFee = govtCharges + platformFee + cgst + sgst
-  mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft totalDriverFee
+  mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft isSpecialZoneCharge
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
-  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking)
+  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking) isSpecialZoneCharge
   vehicle <- QV.findById driverId
   let isEnableForVariant = maybe True (`elem` transporterConfig.variantsToEnableForSubscription) (vehicle <&> (.variant))
   let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEnableForVariant
-  when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft totalDriverFee) $ do
+  when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge) $ do
     numRides <- case lastDriverFee of
       Just ldFee ->
         if now >= ldFee.startTime && now < ldFee.endTime
           then do
-            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking
+            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
             return (ldFee.numRides + 1)
           else do
             QDF.create driverFee
@@ -445,13 +513,13 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
     fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
     scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
-    isEligibleForCharge transporterConfig freeTrialDaysLeft totalFee =
-      if totalFee > 0
+    isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge =
+      if isSpecialZoneCharge
         then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
         else freeTrialDaysLeft <= 0
 
-    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Int -> HighPrecMoney -> m (Maybe DriverPlan)
-    getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' totalFee = do
+    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Int -> Bool -> m (Maybe DriverPlan)
+    getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' isSpecialZoneCharge = do
       mbDriverPlan' <- findByDriverIdWithServiceName (cast driverId) serviceName
       let planMandatory = transporterConfig.isPlanMandatory
           chargeSPZRides = transporterConfig.considerSpecialZoneRideChargesInFreeTrial
@@ -459,7 +527,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           isEligibleForDefaultPlanBeforeFreeTrial = freeTrialDaysLeft' > 0 && chargeSPZRides && planMandatory
       if isNothing mbDriverPlan'
         then do
-          case (totalFee > 0, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
+          case (isSpecialZoneCharge, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
             (True, True, _) -> assignDefaultPlan
             (_, _, True) -> assignDefaultPlan
             _ -> return mbDriverPlan'
@@ -525,8 +593,9 @@ mkDriverFee ::
   Currency ->
   TransporterConfig ->
   Maybe SRB.Booking ->
+  Bool ->
   m DF.DriverFee
-mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking = do
+mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking isSpecialZoneCharge = do
   id <- generateGUID
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
@@ -578,7 +647,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
       }
   where
     specialZoneMetricsIntialization totalFee' = do
-      if totalFee' > 0 then (1, totalFee') else (0, 0)
+      if isSpecialZoneCharge then (1, totalFee') else (0, 0)
 
 getPlan ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

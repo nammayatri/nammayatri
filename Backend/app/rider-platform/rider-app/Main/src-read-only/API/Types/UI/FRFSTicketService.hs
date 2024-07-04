@@ -23,7 +23,7 @@ import Tools.Auth
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp, status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSBookingPaymentStatusAPI = NEW | PENDING | SUCCESS | FAILURE | REFUNDED deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSBookingPaymentStatusAPI = NEW | PENDING | SUCCESS | FAILURE | REFUND_PENDING | REFUNDED deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSCanCancelStatus = FRFSCanCancelStatus
   { cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,

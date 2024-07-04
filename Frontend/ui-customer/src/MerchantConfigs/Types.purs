@@ -116,7 +116,8 @@ type RatingConfig = {
 type CancelReasonConfig = {
   secondaryButtonTextColor :: String,
   secondaryButtonStroke :: String,
-  buttonCornerRadius :: Number
+  buttonCornerRadius :: Number,
+  shuffleCancelReasons :: Boolean
 }
 
 type DriverInfoConfig = {
@@ -265,7 +266,8 @@ type Features = {
   enableSpecialPickup :: Boolean,
   enableAcPopup :: Boolean,
   enableRentalReallocation :: Boolean,
-  enableEditDestination :: Boolean
+  enableEditDestination :: Boolean,
+  enableHelpAndSupport :: Boolean
   }
 
 type RideCompletedCardConfig = {

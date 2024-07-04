@@ -1,0 +1,79 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  Text: Data.Text
+  Money: Kernel.Types.Common
+  PayoutStatus: Domain.Types.DailyStats
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+  PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
+
+module: ReferralPayout
+
+types:
+
+  ReferralEarningsRes:
+    totalReferralCount: Int
+    dailyEarnings : [DailyEarning]
+    vpaId: Maybe Text
+    orderId: Maybe Text
+    orderStatus: Maybe OrderStatus
+    referralRewardAmountPerRide: HighPrecMoney
+
+  DailyEarning:
+    earnings: HighPrecMoney
+    activatedItems: Int
+    earningDate: Day
+    referrals: Int
+    status: PayoutStatus
+    payoutOrderId: Maybe Text
+    payoutOrderStatus: Maybe Text
+
+  OrderStatus:
+    enum: "SuccessFul,Failed,Pending"
+
+
+apis:
+  # get API for referral earnings
+  - GET:
+      endpoint: payout/referral/earnings
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        fromDate: Day
+        toDate: Day
+      response:
+        type: API.Types.UI.ReferralPayout.ReferralEarningsRes
+
+  # post API to delete the existing payout vpa
+  - POST:
+      endpoint: payout/delete/vpa
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # get API for payout registration
+  - GET:
+      endpoint: /payout/registration
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: CreateOrderResp
+
+  # post API for create payout order
+  - POST:
+      endpoint: /payout/createOrder
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: Kernel.External.Payout.Interface.Types.CreatePayoutOrderReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # get API for payout order status
+  - GET:
+      endpoint: /payout/order/status
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        orderId: Text
+      query:
+        dailyStatsId: Text
+      response:
+        type: PayoutOrderStatusResp

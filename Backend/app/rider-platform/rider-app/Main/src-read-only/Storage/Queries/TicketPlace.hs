@@ -34,7 +34,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TicketPlace.TicketPlace {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.closeTimings closeTimings,
+    [ Se.Set Beam.allowSameDayBooking allowSameDayBooking,
+      Se.Set Beam.closeTimings closeTimings,
       Se.Set Beam.description description,
       Se.Set Beam.gallery gallery,
       Se.Set Beam.iconUrl iconUrl,
@@ -59,7 +60,8 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
     pure $
       Just
         Domain.Types.TicketPlace.TicketPlace
-          { closeTimings = closeTimings,
+          { allowSameDayBooking = allowSameDayBooking,
+            closeTimings = closeTimings,
             description = description,
             gallery = gallery,
             iconUrl = iconUrl,
@@ -82,7 +84,8 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
 instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
   toTType' (Domain.Types.TicketPlace.TicketPlace {..}) = do
     Beam.TicketPlaceT
-      { Beam.closeTimings = closeTimings,
+      { Beam.allowSameDayBooking = allowSameDayBooking,
+        Beam.closeTimings = closeTimings,
         Beam.description = description,
         Beam.gallery = gallery,
         Beam.iconUrl = iconUrl,

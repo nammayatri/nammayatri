@@ -13,7 +13,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TicketPlaceT f = TicketPlaceT
-  { closeTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
+  { allowSameDayBooking :: B.C f Kernel.Prelude.Bool,
+    closeTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gallery :: B.C f [Kernel.Prelude.Text],
     iconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -98,6 +98,9 @@ import Data.Argonaut.Decode.Class as AD
 import Data.Argonaut.Decode.Parser as ADP
 import Data.Argonaut.Core as AC
 import Data.Argonaut.Encode.Class as AE
+import Data.String.Regex (match, regex)
+import Data.String.Regex.Flags (noFlags)
+import Data.Array.NonEmpty (toArray)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -505,6 +508,9 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   MOBILITY_PM -> "https://" <> assetDomain <> "/beckn/mobilitypaytm/user/"
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/user/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/mobilityredbus/user/"
+
+userCommonAssetBaseUrl :: String
+userCommonAssetBaseUrl = "https://" <> assetDomain <> "/beckn/common/user/"
 
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName = do
@@ -1122,3 +1128,14 @@ getLanguageBasedCityName cityName =
     Noida -> getString NOIDA
     Gurugram -> getString GURUGRAM
     AnyCity -> ""
+
+breakPrefixAndId :: String -> Maybe (Tuple String (Maybe String))
+breakPrefixAndId str = do
+  let pattern = regex "^(.+?)(?:@(.+))?$" noFlags
+  case pattern of
+    Right pat -> do
+      case toArray <$> match pat str of
+          Just [_ , prefix, idPart] -> Just $ Tuple (fromMaybe "" prefix) idPart
+          Just [_ , prefix] -> Just $ Tuple (fromMaybe "" prefix) Nothing
+          _ -> Nothing
+    Left _ -> Nothing

@@ -414,8 +414,9 @@ updateFee ::
   UTCTime ->
   Bool ->
   SRB.Booking ->
+  Bool ->
   m ()
-updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd _booking = do
+updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd _booking isSpecialZoneCharge = do
   driverFeeObject <- findById driverFeeId
   case driverFeeObject of
     Just df -> do
@@ -440,13 +441,11 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd _bo
             Se.Set BeamDF.numRides numRides,
             Se.Set BeamDF.updatedAt now
           ]
-            <> [Se.Set BeamDF.specialZoneRideCount $ specialZoneRideCount' + 1 | toUpdateSpecialZoneMetricsInDriverFee]
-            <> [Se.Set BeamDF.specialZoneAmount $ specialZoneAmount' + totalDriverFee | toUpdateSpecialZoneMetricsInDriverFee]
+            <> [Se.Set BeamDF.specialZoneRideCount $ specialZoneRideCount' + 1 | isSpecialZoneCharge]
+            <> [Se.Set BeamDF.specialZoneAmount $ specialZoneAmount' + totalDriverFee | isSpecialZoneCharge]
         )
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
-  where
-    toUpdateSpecialZoneMetricsInDriverFee = platformFee + cgst + sgst > 0
 
 resetFee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -828,3 +827,20 @@ getLastDayOfMonth :: UTCTime -> Day
 getLastDayOfMonth now = do
   let (year, month, _) = toGregorian (utctDay now)
   addDays (-1) $ fromGregorian year month 1
+
+findAllByStatusAndDriverIdWithServiceNameFeetype ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  [Domain.DriverFeeStatus] ->
+  Domain.FeeType ->
+  ServiceNames ->
+  m [DriverFee]
+findAllByStatusAndDriverIdWithServiceNameFeetype (Id driverId) driverFeeStatus feeType serviceName = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.In [feeType],
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.status $ Se.In driverFeeStatus,
+          Se.Is BeamDF.driverId $ Se.Eq driverId
+        ]
+    ]

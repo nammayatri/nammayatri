@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.RiderPlatform.Merchant
   ( module Dashboard.RiderPlatform.Merchant,
@@ -19,31 +20,15 @@ module Dashboard.RiderPlatform.Merchant
   )
 where
 
+import API.Types.RiderPlatform.Management.Merchant as Reexport
 import Dashboard.Common.Merchant as Reexport
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import Servant
 
 ---------------------------------------------------------
 -- merchant update --------------------------------------
-
-type MerchantUpdateAPI =
-  "update"
-    :> ReqBody '[JSON] MerchantUpdateReq
-    :> Post '[JSON] APISuccess
-
-data MerchantUpdateReq = MerchantUpdateReq
-  { name :: Maybe Text,
-    exoPhones :: Maybe (NonEmpty ExophoneReq),
-    fcmConfig :: Maybe FCMConfigUpdateReq,
-    gatewayUrl :: Maybe BaseUrl,
-    registryUrl :: Maybe BaseUrl
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MerchantUpdateTReq = MerchantUpdateTReq
   { name :: Maybe Text,

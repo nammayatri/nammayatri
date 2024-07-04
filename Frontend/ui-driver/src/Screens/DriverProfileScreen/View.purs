@@ -313,7 +313,7 @@ manageVehicleItem state vehicle push =
             [ width $ V 36
             , height $ V 36
             , margin $ Margin 16 0 16 0
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage vehicle.userSelectedVehicleCategory
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ fromMaybe vehicle.userSelectedVehicleCategory vehicle.verifiedVehicleCategory
             ]
         , linearLayout
             [ width WRAP_CONTENT
@@ -1454,7 +1454,7 @@ vehicleListItem state push vehicle =
             [ width $ V 36
             , height $ V 36
             , margin $ MarginRight 16
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage vehicle.userSelectedVehicleCategory
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ fromMaybe vehicle.userSelectedVehicleCategory vehicle.verifiedVehicleCategory
             ]
         , linearLayout
             [ width WRAP_CONTENT

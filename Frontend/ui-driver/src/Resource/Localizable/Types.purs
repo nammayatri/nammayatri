@@ -1448,10 +1448,10 @@ data STR = LETS_GET_STARTED
         | PARKING_CHARGES_DESC
         | TIP_CAN_BE_ADDED String
         | DAY_TIME_CHARGES String String
-        | RUSH_HOURS_DESC String
+        | CONGESTION_CHARGES_DESC String
         | TOLL_OR_PARKING_CHARGES
         | TOLL_CHARGES_ESTIMATED
-        | RUSH_HOUR_CHARGES
+        | CONGESTION_CHARGES
         | PICKUP_CHARGE
         | NIGHT_TIME_CHARGES String String
         | MIN_FARE_UPTO String

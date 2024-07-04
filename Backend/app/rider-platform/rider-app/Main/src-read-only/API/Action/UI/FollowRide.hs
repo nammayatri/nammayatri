@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.FollowRide where
+module API.Action.UI.FollowRide
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.FollowRide
 import qualified Control.Lens

@@ -130,7 +130,8 @@ data UpdateProfileReq = UpdateProfileReq
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     disability :: Maybe Disability,
-    hasDisability :: Maybe Bool
+    hasDisability :: Maybe Bool,
+    deviceId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -254,6 +255,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       mbClientConfigVersion
       (getDeviceFromText mbDevice)
       deploymentVersion.getDeploymentVersion
+      req.deviceId
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess
@@ -314,9 +316,11 @@ validateRefferalCode personId refCode = do
             else return Nothing -- idempotent behaviour
         Nothing -> do
           merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+          personsWithSameDeviceId <- maybe (return []) (QPerson.findAllByDeviceId . Just) person.deviceId
+          let isMultipleDeviceIdExist = not $ null personsWithSameDeviceId
           case (person.mobileNumber, person.mobileCountryCode) of
             (Just mobileNumber, Just countryCode) -> do
-              void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
+              void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode isMultipleDeviceIdExist
               return $ Just refCode
             _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
 

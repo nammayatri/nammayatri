@@ -20,6 +20,9 @@ where
 
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified API.Dashboard.Management.Subscription as MSubscription
+import qualified API.Types.ProviderPlatform.Management.Merchant as MerchantDSL
+import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
+import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Coin as Coins
@@ -28,7 +31,6 @@ import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
 import qualified Dashboard.ProviderPlatform.Merchant as Merchant
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Message
-import qualified Dashboard.ProviderPlatform.Revenue as Revenue
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
@@ -54,18 +56,20 @@ import qualified Lib.Types.SpecialLocation as SL
 import Servant
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
-import "lib-dashboard" Tools.Metrics
 
+-- TODO remove DSL suffix after move all apis to DSL
 data DriverOperationAPIs = DriverOperationAPIs
   { subscription :: SubscriptionAPIs,
     rides :: RidesAPIs,
-    revenue :: RevenueAPIs,
     overlay :: OverlayAPIs,
     message :: MessageAPIs,
     merchant :: MerchantAPIs,
     issue :: IssueAPIs,
     drivers :: DriversAPIs,
-    bookings :: BookingsAPIs
+    bookings :: BookingsAPIs,
+    merchantDSL :: MerchantDSL.MerchantAPIs,
+    revenueDSL :: RevenueDSL.RevenueAPIs,
+    rideDSL :: RideDSL.RideAPIs
   }
 
 data GoHomeAPIs = GoHomeAPIs
@@ -133,8 +137,7 @@ data DriversAPIs = DriversAPIs
   }
 
 data RidesAPIs = RidesAPIs
-  { rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe HighPrecMoney -> Maybe Currency -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Ride.RideListRes,
-    multipleRideEnd :: Ride.MultipleRideEndReq -> Euler.EulerClient Ride.MultipleRideEndResp,
+  { multipleRideEnd :: Ride.MultipleRideEndReq -> Euler.EulerClient Ride.MultipleRideEndResp,
     multipleRideCancel :: Ride.MultipleRideCancelReq -> Euler.EulerClient Ride.MultipleRideCancelResp,
     rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
     rideSync :: Id Ride.Ride -> Euler.EulerClient Ride.RideSyncRes,
@@ -149,8 +152,7 @@ data BookingsAPIs = BookingsAPIs
   }
 
 data MerchantAPIs = MerchantAPIs
-  { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient Merchant.MerchantUpdateRes,
-    merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
+  { merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
     merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
     driverPoolConfig :: Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Euler.EulerClient Merchant.DriverPoolConfigRes,
     driverPoolConfigUpdate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
@@ -161,7 +163,6 @@ data MerchantAPIs = MerchantAPIs
     documentVerificationConfigUpdate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigUpdateReq -> Euler.EulerClient APISuccess,
     documentVerificationConfigCreate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigCreateReq -> Euler.EulerClient APISuccess,
     serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
-    mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
@@ -197,11 +198,6 @@ data OverlayAPIs = OverlayAPIs
     listOverlay :: Euler.EulerClient Overlay.ListOverlayResp,
     overlayInfo :: Text -> Maybe Text -> Euler.EulerClient Overlay.OverlayInfoResp,
     scheduleOverlay :: Overlay.ScheduleOverlay -> Euler.EulerClient APISuccess
-  }
-
-data RevenueAPIs = RevenueAPIs
-  { getCollectionHistory :: Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Revenue.CollectionList,
-    getAllDriverFeeHistory :: Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient [Revenue.AllFees]
   }
 
 data IssueAPIs = IssueAPIs
@@ -255,19 +251,25 @@ mkDriverOperationAPIs merchantId city token = do
   let merchant = MerchantAPIs {..}
   let message = MessageAPIs {..}
   let issue = IssueAPIs {..}
-  let revenue = RevenueAPIs {..}
   let overlay = OverlayAPIs {..}
+
+  let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
+  let revenueDSL = RevenueDSL.mkRevenueAPIs revenueClientDSL
+  let rideDSL = RideDSL.mkRideAPIs rideClientDSL
   DriverOperationAPIs {..}
   where
     subscriptionClient
       :<|> ridesClient
-      :<|> revenueClient
       :<|> overlayClient
       :<|> messageClient
       :<|> merchantClient
       :<|> issueClient
       :<|> driversClient
-      :<|> bookingsClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> bookingsClient
+      :<|> merchantClientDSL
+      :<|> revenueClientDSL
+      :<|> rideClientDSL =
+        clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     planListV2
       :<|> planSelectV2
@@ -341,8 +343,7 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> driverDocumentInfo
       :<|> updateDocument = driverRegistrationClient
 
-    rideList
-      :<|> multipleRideEnd
+    multipleRideEnd
       :<|> multipleRideCancel
       :<|> rideInfo
       :<|> rideSync
@@ -353,8 +354,7 @@ mkDriverOperationAPIs merchantId city token = do
     stuckBookingsCancel
       :<|> multipleBookingSync = bookingsClient
 
-    merchantUpdate
-      :<|> merchantCommonConfig
+    merchantCommonConfig
       :<|> merchantCommonConfigUpdate
       :<|> driverPoolConfig
       :<|> driverPoolConfigUpdate
@@ -365,7 +365,6 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> documentVerificationConfigUpdate
       :<|> documentVerificationConfigCreate
       :<|> serviceUsageConfig
-      :<|> mapsServiceConfigUpdate
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate
@@ -407,19 +406,13 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> issueFetchMedia
       :<|> ticketStatusCallBack = issueClient
 
-    getCollectionHistory
-      :<|> getAllDriverFeeHistory = revenueClient
-
     driverCoinBulkUpload
       :<|> driverCoinBulkUploadV2
       :<|> driverCoinsHistory = driverCoinsClient
 
 callDriverOfferBPPOperations ::
   forall m r b c.
-  ( CoreMetrics m,
-    HasFlowEnv m r '["dataServers" ::: [DataServer]],
-    CallServerAPI DriverOperationAPIs m r b c
-  ) =>
+  CallServerAPI' DriverOperationAPIs m r b c =>
   CheckedShortId DM.Merchant ->
   City.City ->
   (DriverOperationAPIs -> b) ->

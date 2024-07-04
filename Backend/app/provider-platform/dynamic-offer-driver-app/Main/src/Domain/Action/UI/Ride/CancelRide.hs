@@ -23,6 +23,7 @@ module Domain.Action.UI.Ride.CancelRide
   )
 where
 
+import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -132,7 +133,7 @@ cancelRideImpl ::
   Flow (Maybe Int, Maybe Bool)
 cancelRideImpl ServiceHandle {..} requestorId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
+  unless (isValidRide ride) $ throwError $ RideInvalidStatus ("This ride cannot be canceled" <> Text.pack (show ride.status))
   let driverId = ride.driverId
   booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

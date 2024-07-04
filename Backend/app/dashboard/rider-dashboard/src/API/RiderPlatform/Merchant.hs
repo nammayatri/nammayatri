@@ -42,9 +42,7 @@ import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   "merchant"
-    :> ( MerchantUpdateAPI
-           :<|> ServiceUsageConfigAPI
-           :<|> MapsServiceConfigUpdateAPI
+    :> ( ServiceUsageConfigAPI
            :<|> MapsServiceUsageConfigUpdateAPI
            :<|> SmsServiceConfigUpdateAPI
            :<|> SmsServiceUsageConfigUpdateAPI
@@ -55,17 +53,9 @@ type API =
            :<|> DeleteSpecialLocationGateAPI
        )
 
-type MerchantUpdateAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE
-    :> Common.MerchantUpdateAPI
-
 type ServiceUsageConfigAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SERVICE_USAGE_CONFIG
     :> Common.ServiceUsageConfigAPI
-
-type MapsServiceConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
-    :> Common.MapsServiceConfigUpdateAPI
 
 type MapsServiceUsageConfigUpdateAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
@@ -101,9 +91,7 @@ type DeleteSpecialLocationGateAPI =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  merchantUpdate merchantId city
-    :<|> serviceUsageConfig merchantId city
-    :<|> mapsServiceConfigUpdate merchantId city
+  serviceUsageConfig merchantId city
     :<|> mapsServiceUsageConfigUpdate merchantId city
     :<|> smsServiceConfigUpdate merchantId city
     :<|> smsServiceUsageConfigUpdate merchantId city
@@ -124,19 +112,6 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.MerchantAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
-merchantUpdate ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.MerchantUpdateReq ->
-  FlowHandler APISuccess
-merchantUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  runRequestValidation Common.validateMerchantUpdateReq req
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.MerchantUpdateEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.merchantUpdate) req
-
 serviceUsageConfig ::
   ShortId DM.Merchant ->
   City.City ->
@@ -145,18 +120,6 @@ serviceUsageConfig ::
 serviceUsageConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.merchant.serviceUsageConfig)
-
-mapsServiceConfigUpdate ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.MapsServiceConfigUpdateReq ->
-  FlowHandler APISuccess
-mapsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.MapsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.mapsServiceConfigUpdate) req
 
 mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->

@@ -6,6 +6,7 @@ module Domain.Action.UI.RidePayment where
 import qualified API.Types.UI.RidePayment
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as Text
 import qualified Domain.Types.FareBreakup
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -137,7 +138,7 @@ postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     unless (ride.status == Domain.Types.Ride.COMPLETED) $
-      throwError $ RideInvalidStatus "Ride is not completed yet."
+      throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
     if any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups
       then throwError $ InvalidRequest "Tip already added"

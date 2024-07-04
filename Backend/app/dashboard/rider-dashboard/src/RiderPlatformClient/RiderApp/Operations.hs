@@ -20,6 +20,7 @@ module RiderPlatformClient.RiderApp.Operations
 where
 
 import qualified "rider-app" API.Dashboard as BAP
+import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.Common.Booking as Booking
@@ -62,7 +63,8 @@ data AppBackendAPIs = AppBackendAPIs
     issues :: ListIssueAPIs,
     issuesV2 :: IssueAPIs,
     tickets :: TicketAPIs,
-    hotSpot :: HotSpotAPIs
+    hotSpot :: HotSpotAPIs,
+    merchantDSL :: MerchantDSL.MerchantAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -82,9 +84,7 @@ data BookingsAPIs = BookingsAPIs
   }
 
 data MerchantAPIs = MerchantAPIs
-  { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient APISuccess,
-    serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
-    mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+  { serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
@@ -146,6 +146,8 @@ mkAppBackendAPIs merchantId city token = do
   let issuesV2 = IssueAPIs {..}
   let tickets = TicketAPIs {..}
   let hotSpot = HotSpotAPIs {..}
+
+  let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
   AppBackendAPIs {..}
   where
     customersClient
@@ -155,7 +157,9 @@ mkAppBackendAPIs merchantId city token = do
       :<|> issueClient
       :<|> issueV2Client
       :<|> ticketsClient
-      :<|> hotSpotClient = clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
+      :<|> hotSpotClient
+      :<|> merchantClientDSL =
+        clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
     customerList
       :<|> customerDelete
@@ -179,9 +183,7 @@ mkAppBackendAPIs merchantId city token = do
       :<|> multipleRideSync
       :<|> ticketRideList = ridesClient
 
-    merchantUpdate
-      :<|> serviceUsageConfig
-      :<|> mapsServiceConfigUpdate
+    serviceUsageConfig
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate

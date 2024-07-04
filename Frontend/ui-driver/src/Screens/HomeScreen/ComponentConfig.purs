@@ -1527,7 +1527,9 @@ getRideCompletedConfig state = let
     actualRideDuration = HU.formatSecIntoHourMins $ fromMaybe (fromMaybe 0 $ Int.fromNumber state.data.activeRide.distance) state.data.endRideData.actualRideDuration,
     actualRideDistance = show ((fromMaybe 0 state.data.endRideData.actualRideDistance) / 1000) <> " km",
     startRideOdometerImage = getValueToLocalStore RIDE_START_ODOMETER,
-    endRideOdometerImage = getValueToLocalStore RIDE_END_ODOMETER
+    endRideOdometerImage = getValueToLocalStore RIDE_END_ODOMETER,
+    rideStartedAt = fromMaybe "" state.data.endRideData.tripStartTime,
+    rideEndedAt = fromMaybe "" state.data.endRideData.tripEndTime
   },  
     showContactSupportPopUp = state.props.showContactSupportPopUp,
     driverUpiQrCard {

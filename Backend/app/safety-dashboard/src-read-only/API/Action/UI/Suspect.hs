@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Action.UI.Suspect where
+module API.Action.UI.Suspect
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.Types.UI.Suspect
 import qualified Domain.Action.UI.Suspect as Domain.Action.UI.Suspect

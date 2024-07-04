@@ -403,7 +403,7 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
                   if isNothing mbExistingDFee
                     then do
                       currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
-                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 currency transporterConfig Nothing
+                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 currency transporterConfig Nothing False
                       QDF.create driverFee
                       return $ Just driverFee
                     else return Nothing

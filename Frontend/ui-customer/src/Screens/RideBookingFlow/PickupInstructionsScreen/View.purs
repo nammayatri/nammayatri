@@ -84,7 +84,7 @@ view push state =
           [ width MATCH_PARENT
           , weight 1.0
           , scrollBarY false
-          , margin $ MarginBottom 85
+          , margin $ MarginBottom if EHC.os == "IOS" then 85 else 0
           ][ linearLayout
               [ width MATCH_PARENT
               , height MATCH_PARENT
@@ -96,14 +96,14 @@ view push state =
                     ](map (\item -> instructionItem push item) state.data.pickupInstructions)
               ]
           ]
-        ],
-        linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , alignParentBottom "true,-1"
-        , stroke $ "1," <> Color.grey900
-        , background Color.white900
-        ][ PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
+        , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , alignParentBottom "true,-1"
+            , stroke $ "1," <> Color.grey900
+            , background Color.white900
+            ][ PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
+        ]
     ]
 
 instructionItem :: forall w. (Action -> Effect Unit) -> RC.PickupInstructions -> PrestoDOM (Effect Unit) w
@@ -114,7 +114,7 @@ instructionItem push item =
     , margin $ Margin 16 20 16 0
     ][ linearLayout
         [ width $ V $ (EHC.screenWidth unit)
-        , height $ V $ (EHC.screenHeight unit)/4
+        , height $ V 215
         , gravity CENTER
         ][  progressBar
             [ width WRAP_CONTENT
@@ -127,8 +127,8 @@ instructionItem push item =
         , height WRAP_CONTENT
         , gravity CENTER
         ][  imageView
-            [ width $ V $ (EHC.screenWidth unit)
-            , height $ V $ (EHC.screenHeight unit)/4
+            [ width MATCH_PARENT
+            , height $ V 215
             , imageUrl item.image
             ]
         ],

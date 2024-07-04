@@ -15,6 +15,7 @@
 module Domain.Action.UI.Rating where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as Text
 import Domain.Types.Ride as Ride
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -33,6 +34,6 @@ rating request = do
   unless (request.ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let rideId = request.rideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  unless (ride.status == COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
+  unless (ride.status == COMPLETED) $ throwError (RideInvalidStatus ("Feedback available only for completed rides." <> Text.pack (show ride.status)))
   void $ CallBAPInternal.feedback appBackendBapInternal.apiKey appBackendBapInternal.url request
   pure Success

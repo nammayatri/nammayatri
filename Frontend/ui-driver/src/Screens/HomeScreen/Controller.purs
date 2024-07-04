@@ -432,6 +432,7 @@ data Action = NoAction
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
+            | UpdateSpecialZoneList
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -613,8 +614,12 @@ eval CancelGoOffline state = do
 
 eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
 
-eval (ShowMap key lat lon) state = continueWithCmd state { props { mapRendered = true}} [ do
+eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker state true
+  pure AfterRender
+  ]
+
+eval UpdateSpecialZoneList state = continueWithCmd state { props { mapRendered = true}} [ do
   let specialLocationUpdatedAt = getValueToLocalStore SPECIAL_LOCATION_LIST_EXPIRY
       specialLocationListExpiry = 86400 - (getExpiryTime specialLocationUpdatedAt true)
   if (getValueToLocalStore SPECIAL_LOCATION_LIST == "__failed") || specialLocationListExpiry <= 0 || specialLocationUpdatedAt == "__failed" then do

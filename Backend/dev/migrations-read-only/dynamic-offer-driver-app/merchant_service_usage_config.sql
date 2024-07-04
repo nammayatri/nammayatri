@@ -41,3 +41,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN crea
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN background_verification text NOT NULL default 'Checkr';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN sdk_verification_service text NOT NULL default 'HyperVerge';

@@ -34,6 +34,8 @@ imports:
   FCMActions: Kernel.External.Notification.FCM.Types
   BookingStatus: Domain.Types.Booking
   FCMNotificationType: Kernel.External.Notification.FCM.Types
+  ServiceTierType: Domain.Types.ServiceTierType
+  Category: Domain.Types.Vehicle
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -454,6 +456,7 @@ MerchantServiceUsageConfig:
     retryBankAccountLink: PaymentService
     getBankAccount: PaymentService
     backgroundVerification: BackgroundVerificationService
+    sdkVerificationService: VerificationService
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -499,6 +502,7 @@ MerchantServiceUsageConfig:
     retryBankAccountLink: "'Stripe'"
     getBankAccount: "'Stripe'"
     backgroundVerification: "'Checkr'"
+    sdkVerificationService: "'HyperVerge'"
 
   queries:
     findByMerchantOpCityId:
@@ -790,6 +794,12 @@ TransporterConfig:
     fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
     toNotifyDriverForExtraKmsLimitExceed: Bool
+    payoutBatchLimit: Int
+    updatePayoutStatusBatchSize: Int
+    lastNdaysToCheckForPayoutOrderStatus: Int
+    minRideDistanceThresholdForReferralPayout: HighPrecMeters
+    minPickupDistanceThresholdForReferralPayout: Meters
+    maxPayoutReferralForADay: Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1066,6 +1076,12 @@ TransporterConfig:
     fareRecomputeDailyExtraKmsThreshold: "5000"
     fareRecomputeWeeklyExtraKmsThreshold: "20000"
     toNotifyDriverForExtraKmsLimitExceed: "True"
+    payoutBatchLimit: "10"
+    updatePayoutStatusBatchSize: "20"
+    lastNdaysToCheckForPayoutOrderStatus: "2"
+    minRideDistanceThresholdForReferralPayout: "1500.0"
+    minPickupDistanceThresholdForReferralPayout: "500"
+    maxPayoutReferralForADay: "5"
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1205,3 +1221,50 @@ RideRelatedNotificationConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, timeDiffEvent]
+
+PayoutConfig:
+  tableName : payout_config
+  derives: "Generic,Show,ToJSON,FromJSON"
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    referralRewardAmountPerRide: HighPrecMoney
+    timeDiff: NominalDiffTime
+    isPayoutEnabled: Bool
+    thresholdPayoutAmountPerPerson: HighPrecMoney
+    batchLimit: Int
+    vehicleCategory: Category
+    maxRetryCount: Int
+    payoutRegistrationFee: HighPrecMoney
+    payoutRegistrationCgst: HighPrecMoney
+    payoutRegistrationSgst: HighPrecMoney
+    remark: Text
+    orderType: Text
+  beamType:
+    timeDiff: Seconds
+  toTType:
+    timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+  fromTType:
+    timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+  default:
+    payoutRegistrationAmount: "1.0"
+    referralRewardAmountPerRide: "100.0"
+    timeDiff: "86400"
+    isPayoutEnabled: "False"
+    thresholdPayoutAmountPerPerson: "1000.0"
+    batchLimit: "10"
+    maxRetryCount: "5"
+    payoutRegistrationFee: "1.0"
+    payoutRegistrationCgst: "0"
+    payoutRegistrationSgst: "0"
+    remark: "'Referral Reward From Nammayatri'"
+    orderType: "'FULFILL_ONLY'"
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    vehicleCategory: PrimaryKey
+  queries:
+    findByMerchantOpCityIdAndIsPayoutEnabled:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, isPayoutEnabled]
+

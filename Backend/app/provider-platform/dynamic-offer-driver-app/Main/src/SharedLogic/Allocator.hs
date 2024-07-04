@@ -19,6 +19,7 @@ module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -45,6 +46,7 @@ data AllocatorJobType
   | SendManualPaymentLink
   | RetryDocumentVerification
   | ScheduledRideNotificationsToDriver
+  | DriverReferralPayout
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -63,6 +65,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendManualPaymentLink jobData = AnyJobInfo <$> restoreJobInfo SSendManualPaymentLink jobData
   restoreAnyJobInfo SRetryDocumentVerification jobData = AnyJobInfo <$> restoreJobInfo SRetryDocumentVerification jobData
   restoreAnyJobInfo SScheduledRideNotificationsToDriver jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToDriver jobData
+  restoreAnyJobInfo SDriverReferralPayout jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayout jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -211,3 +214,15 @@ data ScheduledRideNotificationsToDriverJobData = ScheduledRideNotificationsToDri
 instance JobInfoProcessor 'ScheduledRideNotificationsToDriver
 
 type instance JobContent 'ScheduledRideNotificationsToDriver = ScheduledRideNotificationsToDriverJobData
+
+data DriverReferralPayoutJobData = DriverReferralPayoutJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    toScheduleNextPayout :: Bool,
+    statusForRetry :: DS.PayoutStatus
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'DriverReferralPayout
+
+type instance JobContent 'DriverReferralPayout = DriverReferralPayoutJobData

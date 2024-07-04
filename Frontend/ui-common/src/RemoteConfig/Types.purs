@@ -16,10 +16,10 @@ module Common.RemoteConfig.Types where
 
 import Prelude
 import Data.Maybe (Maybe)
-import Foreign.Class (class Decode, decode)
+import Foreign.Class  (class Decode, decode, class Encode, encode)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
-import Presto.Core.Utils.Encoding (defaultDecode)
+import Presto.Core.Utils.Encoding  (defaultDecode, defaultDecode, defaultEncode)
 
 type RemoteConfig a
   = { bangalore :: a
@@ -57,6 +57,7 @@ newtype RCCarousel
   , whitelist :: Maybe (Array String)
   , categoryFilter :: Maybe (Array String)
   , image_banner :: Maybe String
+  , dynamic_action :: Maybe RemoteAC
   }
 
 derive instance genericRCCarousel :: Generic RCCarousel _
@@ -102,3 +103,32 @@ type TipsConfig
       taxiPlus :: Maybe (Array Int),
       default :: Maybe (Array Int)
     }
+
+
+---------------------------------Remote Config Dynamic AC-----------------------------------------------
+
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile
+
+derive instance genericRemoteAC :: Generic RemoteAC _
+instance decodeRemoteAC :: Decode RemoteAC where decode = defaultDecode
+instance encodeRemoteAC :: Encode RemoteAC where encode = defaultEncode
+
+newtype DestinationParams = DestinationParams {
+  lat :: Number,
+  lng :: Number,
+  description :: Maybe String,
+  fullAddress :: Maybe String,
+  placeId :: Maybe String
+}
+
+derive instance genericDestinationParams :: Generic DestinationParams _
+instance decodeDestinationParams :: Decode DestinationParams where decode = defaultDecode
+instance encodeDestinationParams :: Encode DestinationParams where encode = defaultEncode
+
+newtype WebLinkParams = WebLinkParams {
+  url :: String
+}
+
+derive instance genericWebLinkParams :: Generic WebLinkParams _
+instance decodeWebLinkParams :: Decode WebLinkParams where decode = defaultDecode
+instance encodeWebLinkParams :: Encode WebLinkParams where encode = defaultEncode
