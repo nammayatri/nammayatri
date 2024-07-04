@@ -37,6 +37,6 @@ instance B.Table MerchantConfigT where
 
 type MerchantConfig = MerchantConfigT Identity
 
-$(enableKVPG ''MerchantConfigT ['id] [['merchantOperatingCityId]])
+$(enableKVPG ''MerchantConfigT ['id] [])
 
 $(mkTableInstances ''MerchantConfigT "merchant_config")

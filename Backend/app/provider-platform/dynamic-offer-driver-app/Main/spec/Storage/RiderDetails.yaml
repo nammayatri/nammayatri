@@ -45,7 +45,7 @@ RiderDetails:
     currency: Maybe Currency
   constraints:
     id: PrimaryKey
-    mobileNumberHash: SecondaryKey
+    mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     findById:

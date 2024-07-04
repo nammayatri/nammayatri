@@ -30,7 +30,7 @@ PurchaseHistory:
 
   constraints:
     id: PrimaryKey
-    driverId: SecondaryKey
+    driverId: "!SecondaryKey" # forcing to be a secondary key
 
   excludedFields: [merchantOperatingCityId]
 

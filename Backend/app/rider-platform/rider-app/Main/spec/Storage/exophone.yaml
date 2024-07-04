@@ -19,9 +19,8 @@ Exophone:
 
   constraints:
     id: PrimaryKey
-    merchantOperatingCityId: SecondaryKey
-    primaryPhone: SecondaryKey
-    backupPhone: SecondaryKey
+    primaryPhone: "!SecondaryKey" # forcing to be a secondary key
+    backupPhone: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     findAllByMerchantOperatingCityId:

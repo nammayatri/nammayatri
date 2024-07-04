@@ -38,7 +38,6 @@ VehicleServiceTier:
     autoSelectedVehicleVariant: "'{}'"
   constraints:
     id: PrimaryKey
-    merchantOperatingCityId: SecondaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV

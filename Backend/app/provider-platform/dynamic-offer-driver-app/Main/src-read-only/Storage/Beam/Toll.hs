@@ -34,6 +34,6 @@ instance B.Table TollT where
 
 type Toll = TollT Identity
 
-$(enableKVPG ''TollT ['id] [['merchantOperatingCityId]])
+$(enableKVPG ''TollT ['id] [])
 
 $(mkTableInstances ''TollT "toll")

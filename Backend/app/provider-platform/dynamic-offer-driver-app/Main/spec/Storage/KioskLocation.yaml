@@ -18,7 +18,6 @@ KioskLocation:
 
   constraints:
     id: PrimaryKey
-    merchantId: SecondaryKey
 
 
 

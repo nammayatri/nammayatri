@@ -100,8 +100,8 @@ SearchTry:
     serviceTierArray : Kernel.Prelude.Just|I
   constraints:
     id: PrimaryKey
-    requestId: SecondaryKey
-    estimateId: SecondaryKey
+    requestId: "!SecondaryKey" # forcing to be a secondary key
+    estimateId: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     findById:

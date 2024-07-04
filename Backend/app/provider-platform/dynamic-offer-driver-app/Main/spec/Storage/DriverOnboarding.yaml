@@ -140,7 +140,7 @@ DriverLicense:
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
-    licenseNumberHash: SecondaryKey
+    licenseNumberHash: "!SecondaryKey" # forcing to be a secondary key
     documentImageId1: SecondaryKey
 
   queries:
@@ -199,7 +199,7 @@ VehicleRegistrationCertificate:
     rejectReason: Maybe Text
   constraints:
     id: PrimaryKey
-    certificateNumberHash: SecondaryKey
+    certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -522,7 +522,7 @@ FleetRCAssociation:
     associatedTill: Maybe UTCTime
   constraints:
     id: PrimaryKey
-    rcId: SecondaryKey
+    rcId: "!SecondaryKey" # forcing to be a secondary key
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -542,7 +542,7 @@ DriverSSN:
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
-    ssnHash: SecondaryKey
+    ssnHash: "!SecondaryKey" # forcing to be a secondary key
   queries:
     findByDriverId:
       kvFunction: findOneWithKV
@@ -574,7 +574,7 @@ DriverPanCard:
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
-    panCardNumberHash: SecondaryKey
+    panCardNumberHash: "!SecondaryKey" # forcing to be a secondary key
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -603,7 +603,7 @@ DriverBankAccount:
     currentAccountLinkExpiry: Maybe UTCTime
   constraints:
     driverId: PrimaryKey
-    accountId: SecondaryKey
+    accountId: "!SecondaryKey" # forcing to be a secondary key
   beamType:
     currentAccountLink: Maybe Text
   toTType:

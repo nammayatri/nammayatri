@@ -36,6 +36,6 @@ instance B.Table FareProductT where
 
 type FareProduct = FareProductT Identity
 
-$(enableKVPG ''FareProductT ['id] [['merchantOperatingCityId]])
+$(enableKVPG ''FareProductT ['id] [])
 
 $(mkTableInstances ''FareProductT "fare_product")

@@ -28,6 +28,6 @@ instance B.Table KioskLocationT where
 
 type KioskLocation = KioskLocationT Identity
 
-$(enableKVPG ''KioskLocationT ['id] [['merchantId]])
+$(enableKVPG ''KioskLocationT ['id] [])
 
 $(mkTableInstances ''KioskLocationT "kiosk_location")
