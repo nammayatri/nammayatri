@@ -39,6 +39,7 @@ data DriverInformation = DriverInformation
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
+    isInteroperable :: Kernel.Prelude.Bool,
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode,
@@ -98,12 +99,12 @@ data DriverSummary = DriverSummary
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirConditionedRestrictionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 
-$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
+$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverMode)
 
-$(mkHttpInstancesForEnum (''DriverMode))
+$(mkHttpInstancesForEnum ''DriverMode)
