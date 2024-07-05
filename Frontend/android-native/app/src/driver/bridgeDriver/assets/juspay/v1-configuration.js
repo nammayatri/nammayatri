@@ -801,6 +801,10 @@ let defRentalWaitingChargesConfig = {
     "auto" : {
       "freeSeconds" : 180,
       "perMinCharges" : 1.0
+    },
+    "bike" : {
+      "freeSeconds" : 180,
+      "perMinCharges" : 2.0
     }
   }
 
