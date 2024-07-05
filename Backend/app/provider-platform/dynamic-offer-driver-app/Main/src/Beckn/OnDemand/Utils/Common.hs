@@ -222,6 +222,7 @@ castVariant Variant.AMBULANCE_TAXI_OXY = (show Enums.AMBULANCE, "AMBULANCE_TAXI_
 castVariant Variant.AMBULANCE_AC = (show Enums.AMBULANCE, "AMBULANCE_AC")
 castVariant Variant.AMBULANCE_AC_OXY = (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
 castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
+castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
@@ -837,6 +838,7 @@ mapServiceTierToCategory serviceTier =
     DVST.AMBULANCE_AC -> AMBULANCE
     DVST.AMBULANCE_AC_OXY -> AMBULANCE
     DVST.AMBULANCE_VENTILATOR -> AMBULANCE
+    DVST.SUV_PLUS -> CAB
 
 mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =
@@ -1244,6 +1246,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                 Variant.AMBULANCE_AC -> avgSpeed.ambulance.getKilometers
                 Variant.AMBULANCE_AC_OXY -> avgSpeed.ambulance.getKilometers
                 Variant.AMBULANCE_VENTILATOR -> avgSpeed.ambulance.getKilometers
+                Variant.SUV_PLUS -> avgSpeed.suvplus.getKilometers
 
           getDuration pricing.distanceToNearestDriver variantSpeed
 

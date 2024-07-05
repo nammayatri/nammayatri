@@ -190,6 +190,7 @@ castServiceTierToVariant = \case
   DVST.AMBULANCE_AC -> Vehicle.AMBULANCE_AC
   DVST.AMBULANCE_AC_OXY -> Vehicle.AMBULANCE_AC_OXY
   DVST.AMBULANCE_VENTILATOR -> Vehicle.AMBULANCE_VENTILATOR
+  DVST.SUV_PLUS -> Vehicle.SUV_PLUS
   _ -> Vehicle.SEDAN
 
 castVariantToServiceTier :: Vehicle.Variant -> DVST.ServiceTierType
@@ -209,3 +210,4 @@ castVariantToServiceTier = \case
   Vehicle.AMBULANCE_AC -> DVST.AMBULANCE_AC
   Vehicle.AMBULANCE_AC_OXY -> DVST.AMBULANCE_AC_OXY
   Vehicle.AMBULANCE_VENTILATOR -> DVST.AMBULANCE_VENTILATOR
+  Vehicle.SUV_PLUS -> DVST.SUV_PLUS

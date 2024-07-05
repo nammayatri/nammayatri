@@ -288,8 +288,6 @@ MerchantPaymentMethod:
 
   fromTType:
     paymentType: getPaymentType
-  constraints:
-    merchantOperatingCityId: SecondaryKey
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
@@ -344,7 +342,6 @@ Overlay:
     actions2: fromMaybe [] $ Kernel.Utils.JSON.valueToMaybe actions2|E
     secondaryActions2: Kernel.Utils.JSON.valueToMaybe =<< secondaryActions2|E
   constraints:
-    merchantOperatingCityId: SecondaryKey
     overlayKey: SecondaryKey
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -641,6 +638,7 @@ TransporterConfig:
       premiumsedan: Kilometers
       black: Kilometers
       blackxl: Kilometers
+      suvplus: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read
     DashboardMediaSendingLimit:
       sms: Int
