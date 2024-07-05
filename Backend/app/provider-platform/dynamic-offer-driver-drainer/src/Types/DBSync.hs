@@ -100,7 +100,7 @@ dbCommandTaggedObject =
     }
 
 data DBCommandObject = DBCommandObject
-  { cmdVersion :: DBCommandVersion',
+  { cmdVersion :: DBCommandVersion,
     tag :: Tag,
     timestamp :: Double,
     dbName :: DBName,
@@ -108,11 +108,11 @@ data DBCommandObject = DBCommandObject
   }
   deriving (Generic, FromJSON)
 
-data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion' Tag Double DBName Object
+data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
-data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion' Tag Double DBName Object
+data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
-data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion' Tag Double DBName Object
+data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName Object
 
 deriving stock instance Show EL.KVDBStreamEntryID
 
