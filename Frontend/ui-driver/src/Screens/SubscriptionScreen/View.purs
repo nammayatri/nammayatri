@@ -1921,7 +1921,7 @@ lottieView state viewId margin' padding'=
     lottieAnimationView
     [ id (getNewIDWithTag viewId)
     , afterRender (\action-> do
-                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall) state.props.joinPlanProps.isIntroductory, lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = false}
+                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall) state.props.joinPlanProps.isIntroductory, lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = true}
                   )(const NoAction)
     , height $ V 35
     , width MATCH_PARENT
