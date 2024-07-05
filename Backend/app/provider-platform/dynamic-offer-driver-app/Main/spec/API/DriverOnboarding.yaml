@@ -16,6 +16,7 @@ imports:
   SelfieFetchStatus: Domain.Types.Image
   BaseUrl: Servant.Client.Core
   Minutes: Kernel.Types.Common
+  Image: Domain.Types.Image
 
 module: DriverOnboardingV2
 types:

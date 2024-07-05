@@ -21,15 +21,17 @@ data DBCreateObject = DBCreateObject
 
 instance FromJSON DBCreateObject where
   parseJSON = A.withObject "DBCreateObject" $ \o -> do
-    A.Array a <- o A..: "contents" -- TODO remove "contents" field after roll out
-    contentsObj <- flip (A.withObject "last contents") (V.last a) $ \obj -> do
-      -- can we use contents_v2?
-      obj A..: "contents"
     contentsV2 <- o A..: "contents_v2"
     command <- contentsV2 A..: "command"
     tagObject :: DBModelObject <- command A..: "tag"
     contents <- command A..: "contents"
     mbMappings <- o A..:? "mappings"
+    contentsObj <-
+      o A..:? "modelObject" >>= \case
+        Just (A.Object obj) -> pure obj
+        _ -> do
+          A.Array arr <- o A..: "contents"
+          flip (A.withObject "last contents") (V.last arr) $ \obj -> obj A..: "contents"
     let mappings = fromMaybe (Mapping M.empty) mbMappings
         dbModel = tagObject.getDBModelObject
     pure DBCreateObject {..}
