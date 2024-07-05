@@ -145,7 +145,7 @@ handler merchantId req validatedReq = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
-          isTollApplicableForServiceTier = DTC.isTollApplicable driverQuote.vehicleServiceTier
+          isTollApplicable = DTC.isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       pure
@@ -186,7 +186,7 @@ handler merchantId req validatedReq = do
             startTime = searchRequest.startTime,
             returnTime = searchRequest.returnTime,
             roundTrip = searchRequest.roundTrip,
-            tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
+            tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
             estimateId = Just $ Id req.estimateId,
             paymentId = Nothing,
             isDashboardRequest = searchRequest.isDashboardRequest,
