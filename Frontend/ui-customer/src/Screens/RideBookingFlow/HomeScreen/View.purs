@@ -2875,8 +2875,10 @@ getEditLocResults pollingId action exitAction count duration push state = do
           Left err -> do
             let errResp = err.response
                 codeMessage = decodeError errResp.errorMessage "errorMessage"
-            if err.code == 400 && codeMessage == "EDIT_LOCATION_ATTEMPTS_EXHAUSTED" then do
-              void $ pure $ toast "TRIP UPDATE REQUEST LIMIT EXCEEDED."
+            if err.code == 400 then do 
+              if codeMessage == "EDIT_LOCATION_ATTEMPTS_EXHAUSTED" then void $ pure $ toast "TRIP UPDATE REQUEST LIMIT EXCEEDED."
+              else if codeMessage == "RIDE_NOT_SERVICEABLE" then void $ pure $ toast "RIDE NOT SERVICEABLE"
+              else void $ pure $ toast codeMessage
               void $ pure $ setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
               doAff do liftEffect $ push $ exitAction
             else do
