@@ -259,7 +259,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             tollRelatedIssueCount = Nothing,
             forwardBatchingEnabled = False,
             payoutVpa = Nothing,
-            isInteroperable = False
+            isInteroperable = False,
+            payoutRegistrationOrderId = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
