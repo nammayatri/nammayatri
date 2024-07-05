@@ -16,7 +16,6 @@ module Mobility.ARDU.NearestDrivers (spec) where
 
 -- import qualified Kernel.Storage.Esqueleto as Esq
 
-import qualified "dynamic-offer-driver-app" Domain.Types.Beckn.Status as DST
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as DI
 import qualified "dynamic-offer-driver-app" Environment as ARDUEnv
 import EulerHS.Prelude
@@ -107,10 +106,3 @@ setDriversActive isActive mode = do
   -- Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
   forM_ drivers (\driver -> Q.updateActivity isActive mode (Id driver))
-
-scheduledInfo :: DST.ScheduledInfo
-scheduledInfo =
-  DST.ScheduledInfo
-    { routeDistance = Nothing,
-      dropLocation = Nothing
-    }

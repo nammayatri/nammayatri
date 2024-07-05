@@ -91,12 +91,12 @@ data Ride = Ride
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data OdometerReading = OdometerReading {fileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile), value :: Kernel.Types.Common.Centesimal}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data RideEndedBy = Driver | Dashboard | CallBased | CronJob deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

@@ -79,3 +79,9 @@ data DDriverArrivedReq = DDriverArrivedReq
     arrivalTime :: Maybe UTCTime,
     estimateId :: Maybe Text
   }
+
+data CurrentSearchInfo = CurrentSearchInfo
+  { routeDistance :: Maybe Meters,
+    dropLocation :: Maybe LatLong
+  }
+  deriving (Generic, Show)

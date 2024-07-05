@@ -181,7 +181,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
 import SharedLogic.Cac
-import SharedLogic.CallBAP (sendDriverOffer, sendScheduledRideAssignedUpdateToBAP)
+import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -1182,6 +1182,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
   when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
   isBookingCancelled' <- CS.isBookingCancelled booking.id
@@ -1189,26 +1190,26 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
   whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
-  let scheduledPickup = booking.fromLocation
-      scheduledTime = booking.startTime
-      pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
-  void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
   (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       Nothing -> pure []
-  void $ sendScheduledRideAssignedUpdateToBAP booking ride driver vehicle
-  now <- getCurrentTime
-  maxShards <- asks (.maxShards)
-  let jobScheduledTime = (diffUTCTime booking.startTime now) - (30 * 60)
-   in createJobIn @_ @'ScheduledRideAssignedOnUpdate jobScheduledTime maxShards $
-        ScheduledRideAssignedOnUpdateJobData
-          { bookingId = booking.id,
-            rideId = ride.id,
-            driverId = driver.id,
-            ..
-          }
+  void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
+  when booking.isScheduled $ do
+    now <- getCurrentTime
+    let scheduledPickup = booking.fromLocation
+        scheduledTime = booking.startTime
+        pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
+    void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
+    maxShards <- asks (.maxShards)
+    let jobScheduledTime = max 2 ((diffUTCTime booking.startTime now) - transporterConfig.scheduleRideBufferTime)
+    createJobIn @_ @'ScheduledRideAssignedOnUpdate jobScheduledTime maxShards $
+      ScheduledRideAssignedOnUpdateJobData
+        { driverId = driver.id,
+          bookingId = booking.id,
+          rideId = ride.id
+        }
   CS.markBookingAssignmentCompleted booking.id
   return driverFCMPulledList
 
@@ -1965,12 +1966,15 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
   transporterConfig <- SCTC.findByMerchantOpCityId cityId Nothing >>= fromMaybeM (TransporterConfigNotFound cityId.getId)
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
-  driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
-  let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityServiceTiers))
-  scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
-  bookings <- mapM buildBookingAPIEntityFromBooking scheduledBookings
-  return (ScheduledBookingRes bookings)
+  case driverInfo.latestScheduledBooking of
+    Just _ -> return $ ScheduledBookingRes []
+    Nothing -> do
+      driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+      cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
+      let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityServiceTiers))
+      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
+      bookings <- mapM buildBookingAPIEntityFromBooking scheduledBookings
+      return $ ScheduledBookingRes bookings
   where
     buildBookingAPIEntityFromBooking DRB.Booking {..} = do
       quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
@@ -1996,10 +2000,10 @@ acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id
-  unless (isNothing activeRide) $ throwError (RideInvalidStatus "Cannot accept booking during active ride.")
+  upcomingRide <- runInReplica $ QRide.getUpcomingByDriverId driver.id
+  unless (isNothing upcomingRide) $ throwError (RideInvalidStatus "Cannot accept booking during active ride.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
-  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId -- handle driver blocked
+  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId
   pure Success
 
 clearDriverFeeWithCreate ::

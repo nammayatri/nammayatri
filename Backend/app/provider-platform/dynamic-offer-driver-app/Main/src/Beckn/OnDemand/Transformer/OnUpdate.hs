@@ -84,8 +84,8 @@ buildOnUpdateReqOrderV2 ::
   DBC.BecknConfig ->
   m Spec.Order
 buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
-  OU.ScheduledRideAssignedBuildReq req -> Common.tfScheduledAssignedReqToOrder req mbFarePolicy becknConfig
-  OU.RideAssignedBuildReq req -> Common.tfAssignedReqToOrder req mbFarePolicy becknConfig
+  OU.ScheduledRideAssignedBuildReq req -> Common.tfAssignedReqToOrder req mbFarePolicy becknConfig EventEnum.SCHEDULED_RIDE_ASSIGNED
+  OU.RideAssignedBuildReq req -> Common.tfAssignedReqToOrder req mbFarePolicy becknConfig EventEnum.RIDE_ASSIGNED
   OU.RideStartedBuildReq req -> Common.tfStartReqToOrder req mbFarePolicy becknConfig
   OU.RideCompletedBuildReq req -> Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
   OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req becknConfig

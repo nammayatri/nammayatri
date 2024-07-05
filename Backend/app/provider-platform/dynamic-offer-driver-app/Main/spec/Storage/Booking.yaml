@@ -17,7 +17,7 @@ imports:
   Estimate: Domain.Types.Estimate
 
 Booking:
-  derives: "Generic"
+  derives: "Generic,ToJSON,FromJSON"
   types:
     BookingStatus:
       enum: "NEW,TRIP_ASSIGNED,COMPLETED,CANCELLED,REALLOCATED"

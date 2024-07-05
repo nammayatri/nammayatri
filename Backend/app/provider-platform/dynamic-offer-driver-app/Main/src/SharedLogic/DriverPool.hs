@@ -46,6 +46,8 @@ module SharedLogic.DriverPool
     filterOutGoHomeDriversAccordingToHomeLocation,
     PoolCalculationStage (..),
     module Reexport,
+    scheduledRideFilter,
+    getVehicleAvgSpeed,
   )
 where
 
@@ -57,7 +59,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
 import Data.Tuple.Extra (snd3)
 import Domain.Action.UI.Route as DRoute
-import qualified Domain.Types.Beckn.Status as DST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
@@ -70,10 +71,14 @@ import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
 import Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.Vehicle as DVeh
 import Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (find, id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Types
 import Kernel.Prelude (NominalDiffTime, head)
+import qualified Kernel.Prelude as KP
 import qualified Kernel.Randomizer as Rnd
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -86,6 +91,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import qualified SharedLogic.Beckn.Common as DST
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
@@ -96,6 +102,7 @@ import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
 import Tools.Maps as Maps
+import qualified Tools.Maps as TMaps
 import Tools.Metrics
 import Utils.Common.Cac.KeyNameConstants
 
@@ -551,7 +558,6 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           return (goHomeReq, driver)
       )
       randomDriverPool
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) goHomeRequests
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
@@ -576,8 +582,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           driversRoutes
   let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
   let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
-  let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult transporterConfig <$> driversOnWayToHome
-  return (take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
+  let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult <$> driversOnWayToHome
+  return $ (take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
     filterFunc threshold estDist distanceToPickup =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
@@ -610,7 +616,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           points = []
         }
 
-    makeDriverPoolWithActualDistResult transporterConfig (driverPoolRes, _, ghrId, driverGoHomePoolWithActualDistance) = do
+    makeDriverPoolWithActualDistResult (driverPoolRes, _, ghrId, driverGoHomePoolWithActualDistance) = do
       DriverPoolWithActualDistResult
         { driverPoolResult = makeDriverPoolResult driverPoolRes,
           actualDistanceToPickup = driverGoHomePoolWithActualDistance.actualDistanceToPickup, --fromMaybe 0 driverRoute.distance,
@@ -715,16 +721,17 @@ calculateDriverPoolWithActualDist ::
   Bool ->
   Bool ->
   Bool ->
-  DST.ScheduledInfo ->
+  DST.CurrentSearchInfo ->
+  DTC.TransporterConfig ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental isInterCity isValueAddNP scheduledInfo = do
+calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep isRental isInterCity isValueAddNP currentSearchInfo transporterConfig = do
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
   now <- getCurrentTime
   driverPool <- calculateDriverPool cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId onlyNotOnRide mRadiusStep isRental isInterCity isValueAddNP now
   case driverPool of
     [] -> return []
     (a : pprox) -> do
-      filtDriverPoolWithActualDist <-
+      filtDriverPoolWithActualDist' <-
         case poolType of
           SpecialZoneQueuePool -> pure $ map mkSpecialZoneQueueActualDistanceResult driverPool
           _ -> do
@@ -732,7 +739,9 @@ calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg se
             pure $ case driverPoolCfg.actualDistanceThreshold of
               Nothing -> NE.toList driverPoolWithActualDist
               Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip (NE.sortOn (.driverPoolResult.driverId) driverPoolWithActualDist) (NE.sortOn (.driverId) $ a :| pprox)
-      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist
+      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist'
+      filtDriverPoolWithActualDist <- filterM (scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
+      logDebug $ "thirdly scheduled filtered driver pool" <> show filtDriverPoolWithActualDist
       return filtDriverPoolWithActualDist
   where
     mkSpecialZoneQueueActualDistanceResult dpr = do
@@ -753,6 +762,77 @@ calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg se
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
         Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+
+scheduledRideFilter :: (MonadFlow m, MonadTime m, LT.HasLocationService m r, ServiceFlow m r) => DST.CurrentSearchInfo -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Bool -> DTC.TransporterConfig -> DriverPoolWithActualDistResult -> m Bool
+scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isIntercity transporterConfig driverPoolWithActualDistResult = do
+  now <- getCurrentTime
+  let driverInfo = driverPoolWithActualDistResult.driverPoolResult
+  let minimumScheduledBookingLeadTimeInSecs = KP.intToNominalDiffTime (transporterConfig.minmRentalAndScheduledBookingLeadTimeHours.getHours * 3600)
+      scheduledRideFilterExclusionThresholdInSecs = KP.intToNominalDiffTime (transporterConfig.scheduledRideFilterExclusionThresholdHours.getHours * 3600)
+      haveScheduled = isJust driverInfo.latestScheduledBooking
+  if
+      | haveScheduled && isIntercity -> return False
+      | haveScheduled && isRental -> return $ canTakeRental driverInfo.latestScheduledBooking now minimumScheduledBookingLeadTimeInSecs
+      | isScheduledRideUnderFilterExclusionThresholdHours driverInfo.latestScheduledBooking now scheduledRideFilterExclusionThresholdInSecs -> do
+        case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, currentSearchInfo.routeDistance, transporterConfig.avgSpeedOfVehicle) of
+          (Just dropLoc, Just scheduledPickup, Just routeDistance, Just avgSpeeds) -> do
+            currentDroptoScheduledPickupDistance <-
+              TMaps.getDistance merchantId merchantOpCityId $
+                TMaps.GetDistanceReq
+                  { origin = dropLoc,
+                    destination = scheduledPickup,
+                    travelMode = Just TMaps.CAR,
+                    distanceUnit = Meter
+                  }
+            let avgSpeedOfVehicleInKM = getVehicleAvgSpeed driverInfo.variant avgSpeeds
+                destToPickupDistance = currentDroptoScheduledPickupDistance.distance
+                totalDistanceinM = routeDistance + destToPickupDistance + driverPoolWithActualDistResult.actualDistanceToPickup
+                totalDistanceinKM = (fromIntegral (totalDistanceinM.getMeters) :: Double) / 1000
+                totalTimeinDoubleHr = (totalDistanceinKM / fromIntegral (avgSpeedOfVehicleInKM.getKilometers)) :: Double
+                totalTimeInSeconds = realToFrac (totalTimeinDoubleHr * 3600) :: NominalDiffTime
+                expectedEndTime = addUTCTime totalTimeInSeconds now
+            let isRidePossible = case driverInfo.latestScheduledBooking of
+                  Just latestScheduledBooking ->
+                    let timeDifference = diffUTCTime latestScheduledBooking (addUTCTime transporterConfig.scheduleRideBufferTime expectedEndTime)
+                     in timeDifference > 0
+                  Nothing -> False
+            return isRidePossible
+          (_, _, _, _) -> return False
+      | otherwise -> return True
+  where
+    canTakeRental :: Maybe UTCTime -> UTCTime -> NominalDiffTime -> Bool
+    canTakeRental mbLatestScheduledBooking now minimumScheduledBookingLeadTimeInSecs =
+      case mbLatestScheduledBooking of
+        Nothing -> True
+        Just latestScheduledBooking ->
+          let timeDifference = diffUTCTime latestScheduledBooking now
+           in timeDifference >= minimumScheduledBookingLeadTimeInSecs
+    isScheduledRideUnderFilterExclusionThresholdHours :: Maybe UTCTime -> UTCTime -> NominalDiffTime -> Bool
+    isScheduledRideUnderFilterExclusionThresholdHours mbLatestScheduledBooking now scheduledRideFilterExclusionThresholdInSecs =
+      case mbLatestScheduledBooking of
+        Nothing -> False
+        Just latestScheduledBooking ->
+          let timeDifference = diffUTCTime latestScheduledBooking now
+           in timeDifference < scheduledRideFilterExclusionThresholdInSecs
+
+getVehicleAvgSpeed :: DVeh.Variant -> DTC.AvgSpeedOfVechilePerKm -> Kilometers
+getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
+  DVeh.SEDAN -> avgSpeedOfVehicle.sedan
+  DVeh.SUV -> avgSpeedOfVehicle.suv
+  DVeh.HATCHBACK -> avgSpeedOfVehicle.hatchback
+  DVeh.AUTO_RICKSHAW -> avgSpeedOfVehicle.autorickshaw
+  DVeh.TAXI -> avgSpeedOfVehicle.taxi
+  DVeh.TAXI_PLUS -> avgSpeedOfVehicle.taxiplus
+  DVeh.PREMIUM_SEDAN -> avgSpeedOfVehicle.premiumsedan
+  DVeh.BLACK -> avgSpeedOfVehicle.black
+  DVeh.BLACK_XL -> avgSpeedOfVehicle.blackxl
+  DVeh.BIKE -> avgSpeedOfVehicle.bike
+  DVeh.AMBULANCE_TAXI -> avgSpeedOfVehicle.ambulance
+  DVeh.AMBULANCE_TAXI_OXY -> avgSpeedOfVehicle.ambulance
+  DVeh.AMBULANCE_AC -> avgSpeedOfVehicle.ambulance
+  DVeh.AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance
+  DVeh.AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance
+  DVeh.SUV_PLUS -> avgSpeedOfVehicle.suvplus
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
@@ -848,8 +928,10 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   Bool ->
   Bool ->
   Integer ->
+  DST.CurrentSearchInfo ->
+  DTC.TransporterConfig ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId mRadiusStep isRental isInterCity isValueAddNP batchNum = do
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType driverPoolCfg serviceTiers pickup merchantId merchantOpCityId mRadiusStep isRental isInterCity isValueAddNP batchNum currentSearchInfo transporterConfig = do
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
   now <- getCurrentTime
   (thresholdRadius, driverPool) <- calculateDriverPoolCurrentlyOnRide cityServiceTiers poolCalculationStage driverPoolCfg serviceTiers pickup merchantId mRadiusStep isRental isInterCity isValueAddNP (Just batchNum) now
@@ -864,12 +946,14 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage poolType drive
       driverPoolWithActualDistFromDestinationLocation <- computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOpCityId pickup driverPoolResultsWithDriverLocationAsDestinationLocation
       driverPoolWithActualDistFromCurrentLocation <- traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = catMaybes $ zipWith (curry $ combine driverToDestinationDistanceThreshold) (NE.toList driverPoolWithActualDistFromDestinationLocation) (NE.toList driverPoolWithActualDistFromCurrentLocation)
-          filtDriverPoolWithActualDist = case (driverPoolCfg.actualDistanceThresholdOnRide, poolType) of
+          filtDriverPoolWithActualDist' = case (driverPoolCfg.actualDistanceThresholdOnRide, poolType) of
             (_, SpecialZoneQueuePool) -> driverPoolWithActualDist
             (Nothing, _) -> filter (filterFunc thresholdRadius) driverPoolWithActualDist
             (Just threshold, _) -> filter (filterFunc threshold) driverPoolWithActualDist
-      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist
+      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist'
       logDebug $ "driverPoolWithActualDist" <> show driverPoolWithActualDist
+      filtDriverPoolWithActualDist <- filterM (scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInterCity transporterConfig) filtDriverPoolWithActualDist'
+      logDebug $ "thirdly scheduled filtered driver pool" <> show filtDriverPoolWithActualDist
       return filtDriverPoolWithActualDist
   where
     filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold

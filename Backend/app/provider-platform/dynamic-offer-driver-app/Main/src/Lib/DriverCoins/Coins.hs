@@ -26,6 +26,7 @@ module Lib.DriverCoins.Coins
     sendCoinsNotificationV2,
     safeIncrBy,
     getValidRideCountByDriverIdKey,
+    EventFlow,
   )
 where
 

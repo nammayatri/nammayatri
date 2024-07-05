@@ -56,24 +56,8 @@ handler transporterId req = do
   info <- case mbRide of
     Just ride -> do
       case ride.status of
-        DRide.UPCOMING -> do
-          bookingDetails <- SyncRide.fetchBookingDetails ride booking
-          driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-          resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
-          let image = join (eitherToMaybe resp)
-          let isDriverBirthDay = False
-          let isFreeRide = False
-          pure $ RideAssignedReq DRideAssignedReq {..}
-        DRide.NEW -> do
-          bookingDetails <- SyncRide.fetchBookingDetails ride booking
-          driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
-          rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
-          resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
-          let image = join (eitherToMaybe resp)
-          let isDriverBirthDay = False
-          let isFreeRide = False
-          let driverAccountId = Nothing
-          pure $ RideAssignedReq DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
+        DRide.UPCOMING -> syncAssignedReq ride booking estimateId
+        DRide.NEW -> syncAssignedReq ride booking estimateId
         DRide.INPROGRESS -> do
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           let tripStartLocation = bookingDetails.ride.tripStartPos
@@ -107,3 +91,14 @@ handler transporterId req = do
         DBooking.REALLOCATED -> do
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
   pure DStatusRes {transporter, booking, info}
+  where
+    syncAssignedReq ride booking estimateId = do
+      bookingDetails <- SyncRide.fetchBookingDetails ride booking
+      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+      rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
+      resp <- try @_ @SomeException (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
+      let image = join (eitherToMaybe resp)
+      let isDriverBirthDay = False
+      let isFreeRide = False
+      let driverAccountId = Nothing
+      pure $ RideAssignedReq DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}

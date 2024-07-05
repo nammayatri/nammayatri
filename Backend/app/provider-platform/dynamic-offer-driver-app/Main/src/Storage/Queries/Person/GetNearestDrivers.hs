@@ -5,7 +5,6 @@ import qualified Data.List as DL
 import Domain.Types.Common
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import Domain.Types.ServiceTierType as DVST
 import Domain.Types.Vehicle as DV
@@ -26,8 +25,6 @@ import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
-import Tools.Error
-import qualified Tools.Maps as TMaps
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
@@ -48,7 +45,9 @@ data NearestDriversResult = NearestDriversResult
     clientDevice :: Maybe Device,
     vehicleAge :: Maybe Months,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    latestScheduledBooking :: Maybe UTCTime,
+    latestScheduledPickup :: Maybe Maps.LatLong
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -68,8 +67,7 @@ getNearestDrivers ::
   m [NearestDriversResult]
 getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry isRental isInterCity isValueAddNP now = do
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong radiusMeters
-  driverInfos' <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide) isRental isInterCity isValueAddNP
-  driverInfos <- filterM (scheduledRideFilter scheduledInfo merchantId merchantOperatingCityId) driverInfos'
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) onlyNotOnRide (not onlyNotOnRide) isRental isInterCity isValueAddNP
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   driverStats <- QDriverStats.findAllByDriverIds drivers
@@ -117,41 +115,4 @@ getNearestDrivers cityServiceTiers serviceTiers fromLocLatLong radiusMeters merc
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice (getVehicleAge vehicle.mYManufacturing now) person.backendConfigVersion person.backendAppVersion
-
-scheduledRideFilter :: (MonadFlow m, MonadTime m, LT.HasLocationService m r, ServiceFlow m r) => DST.ScheduledInfo -> Id Merchant -> Id DMOC.MerchantOperatingCity -> DriverInfo.DriverInformation -> m Bool
-scheduledRideFilter scheduledInfo merchantId merchantOpCityId driverInfo = do
-  now <- getCurrentTime
-  if checkUsingTime driverInfo.latestScheduledBooking now (2 * 3600)
-    then do
-      dropLoc <- scheduledInfo.dropLocation & fromMaybeM (InternalError "Error: dropLocation not found in scheduledInfo.")
-      scheduledPickup <- driverInfo.latestScheduledPickup & fromMaybeM (InternalError "Error: latestScheduledPickup not found in driverInfo.")
-      currentDroptoScheduledPickupDistance <-
-        TMaps.getDistance merchantId merchantOpCityId $
-          TMaps.GetDistanceReq
-            { origin = dropLoc,
-              destination = scheduledPickup,
-              travelMode = Just TMaps.CAR,
-              distanceUnit = Meter
-            }
-      routeDistance <- scheduledInfo.routeDistance & fromMaybeM (InternalError "Error: routeDistance not found in scheduledInfo.")
-      let destToPickupDistance = currentDroptoScheduledPickupDistance.distance
-      let totalDistance = routeDistance + destToPickupDistance
-          totalTimeinDouble = (fromIntegral (totalDistance.getMeters) / 5.55) :: Double -- can use config here current: 5.55 m/s
-          totalTimeInSeconds = realToFrac totalTimeinDouble :: NominalDiffTime
-          expectedEndTime = addUTCTime totalTimeInSeconds now
-      let isRidePossible = case driverInfo.latestScheduledBooking of --check whether driver can able to reach scheduled pickup after this ride
-            Just latestScheduledBooking ->
-              let timeDifference = diffUTCTime latestScheduledBooking (addUTCTime 1800 expectedEndTime) --can be configured later current : 30mins buffer time
-               in timeDifference > 0
-            Nothing -> False
-      return isRidePossible
-    else return True
-  where
-    checkUsingTime :: Maybe UTCTime -> UTCTime -> NominalDiffTime -> Bool
-    checkUsingTime mbLatestScheduledBooking now seconds =
-      case mbLatestScheduledBooking of
-        Nothing -> False
-        Just latestScheduledBooking ->
-          let timeDifference = diffUTCTime latestScheduledBooking now
-           in timeDifference < seconds
+          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice (getVehicleAge vehicle.mYManufacturing now) person.backendConfigVersion person.backendAppVersion info.latestScheduledBooking info.latestScheduledPickup

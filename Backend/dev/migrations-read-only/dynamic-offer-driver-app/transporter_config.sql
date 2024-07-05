@@ -200,3 +200,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_ride_dist
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_payout_referral_for_a_day integer NOT NULL default 5;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_job_reschedule_time integer  default 300;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_filter_exclusion_threshold_hours integer  default 2;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN minm_rental_and_scheduled_booking_lead_time_hours integer  default 24;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN grace_time_for_scheduled_ride_pickup integer  default 300;

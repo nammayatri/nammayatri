@@ -15,6 +15,7 @@ import Domain.Types.Vehicle as DV
 import Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
@@ -52,12 +53,14 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     clientDevice :: Maybe Device,
     vehicleAge :: Maybe Months,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    latestScheduledBooking :: Maybe UTCTime,
+    latestScheduledPickup :: Maybe LatLong
   }
   deriving (Generic, Show, HasCoordinates)
 
 getNearestDriversCurrentlyOnRide ::
-  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, MonadTime m, MonadReader r m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r) =>
   [DVST.VehicleServiceTier] ->
   [ServiceTierType] ->
   LatLong ->
@@ -163,5 +166,7 @@ getNearestDriversCurrentlyOnRide cityServiceTiers serviceTiers fromLocLatLong ra
                 vehicleAge = getVehicleAge vehicle.mYManufacturing now,
                 clientDevice = person.clientDevice,
                 backendConfigVersion = person.backendConfigVersion,
-                backendAppVersion = person.backendAppVersion
+                backendAppVersion = person.backendAppVersion,
+                latestScheduledBooking = info.latestScheduledBooking,
+                latestScheduledPickup = info.latestScheduledPickup
               }

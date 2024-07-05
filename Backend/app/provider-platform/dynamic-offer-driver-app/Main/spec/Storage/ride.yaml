@@ -25,10 +25,10 @@ imports:
 
 Ride:
   tableName: ride
-  derives: "Generic,Show"
+  derives: "Generic,Show,FromJSON,ToJSON"
   types:
     RideEndedBy:
-      enum: "Driver,Dashboard,CallBased,CronJob"
+      enum: "Driver,Dashboard,CallBased,CronJob,Allocator"
     OdometerReading:
       value: Centesimal
       fileId: Maybe (Id MediaFile)

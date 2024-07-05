@@ -26,7 +26,6 @@ import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as Map
-import qualified Domain.Types.Beckn.Status as DTS
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -49,6 +48,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters
 import Lib.Queries.GateInfo
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
+import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
@@ -147,7 +147,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
       let shouldDoMicroBatching = batchNum /= -1
       prepareDriverPoolBatchEntity <-
         calculateWithFallback poolTypesWithFallback $ \poolType -> do
-          allDriversNotOnRide <- calcDriverPool poolType radiusStep merchantOpCityId_
+          allDriversNotOnRide <- calcDriverPool poolType radiusStep merchantOpCityId_ transporterConfig
           case poolType of
             SkipPool -> do
               incrementBatchNum searchTry.id
@@ -158,6 +158,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               (goHomeDriversInQueue, goHomeInQueueNotToDestination) <-
                 case searchReq.toLocation of
                   Just toLoc | isGoHomeAvailable searchTry.tripCategory -> do
+                    let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
+                        routeDistance = searchReq.estimatedDistance
+                    let currentSearchInfo = DTS.CurrentSearchInfo {..}
                     let goHomeReq =
                           CalculateGoHomeDriverPoolReq
                             { poolStage = DriverSelection,
@@ -194,7 +197,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               logDebug $ "SpecialDriversPool-" <> show specialDriversPool
               pure $ PrepareDriverPoolBatchEntity specialDriversPool poolType (Just goHomeConfig.goHomeBatchDelay) []
             GoHomePool -> do
-              goHomePool <- calcGoHomeDriverPool transporterConfig.specialDrivers merchantOpCityId_
+              goHomePool <- calcGoHomeDriverPool transporterConfig.specialDrivers merchantOpCityId_ transporterConfig
               goHomePoolPostCalc <- calculateGoHomeBatch merchantOpCityId_ transporterConfig intelligentPoolConfig goHomePool blockListedDrivers
               pure $ PrepareDriverPoolBatchEntity goHomePoolPostCalc poolType (Just goHomeConfig.goHomeBatchDelay) []
             NormalPool -> do
@@ -381,9 +384,12 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               ([], filledPoolBatch)
               driverPoolCfg.onRideBatchSplitConfig
 
-        calcGoHomeDriverPool specialDrivers opCityId = do
+        calcGoHomeDriverPool specialDrivers opCityId transporterConfig = do
           case (searchReq.toLocation, isGoHomeAvailable searchTry.tripCategory) of
             (Just toLoc, True) -> do
+              let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
+                  routeDistance = searchReq.estimatedDistance
+              let currentSearchInfo = DTS.CurrentSearchInfo {..}
               calculateGoHomeDriverPoolBatch <-
                 calculateGoHomeDriverPool
                   ( CalculateGoHomeDriverPoolReq
@@ -400,19 +406,23 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
                       }
                   )
                   opCityId
-              return $ filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
+              let res' = filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
+                  merchantId = searchReq.providerId
+                  isRental = isRentalTrip searchTry.tripCategory
+                  isInterCity = isInterCityTrip searchTry.tripCategory
+              res <- filterM (scheduledRideFilter currentSearchInfo merchantId opCityId isRental isInterCity transporterConfig) res'
+              return res
             _ -> return []
 
-        calcDriverPool poolType radiusStep merchantOpCityId = do
+        calcDriverPool poolType radiusStep merchantOpCityId transporterConfig = do
           let serviceTiers = tripQuoteDetails <&> (.vehicleServiceTier)
               merchantId = searchReq.providerId
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          mbDropLocation <- searchReq.toLocation & fromMaybeM (InternalError "drop location not exist")
-          let dropLocation = Just (LatLong mbDropLocation.lat mbDropLocation.lon)
+          let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
               routeDistance = searchReq.estimatedDistance
-          let scheduledInfo = DTS.ScheduledInfo {..}
-          calculateDriverPoolWithActualDist DriverSelection poolType driverPoolCfg serviceTiers pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isInterCityTrip searchTry.tripCategory) isValueAddNP scheduledInfo
+          let currentSearchInfo = DTS.CurrentSearchInfo {..}
+          calculateDriverPoolWithActualDist DriverSelection poolType driverPoolCfg serviceTiers pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isInterCityTrip searchTry.tripCategory) isValueAddNP currentSearchInfo transporterConfig
         calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId batchNum' = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && driverPoolCfg.enableForwardBatching && radiusStep > 0
@@ -420,7 +430,10 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               let serviceTiers = tripQuoteDetails <&> (.vehicleServiceTier)
               let pickupLoc = searchReq.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-              calculateDriverCurrentlyOnRideWithActualDist DriverSelection poolType driverPoolCfg serviceTiers pickupLatLong merchantId merchantOpCityId (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isInterCityTrip searchTry.tripCategory) isValueAddNP (toInteger batchNum')
+              let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
+                  routeDistance = searchReq.estimatedDistance
+              let currentSearchInfo = DTS.CurrentSearchInfo {..}
+              calculateDriverCurrentlyOnRideWithActualDist DriverSelection poolType driverPoolCfg serviceTiers pickupLatLong merchantId merchantOpCityId (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isInterCityTrip searchTry.tripCategory) isValueAddNP (toInteger batchNum') currentSearchInfo transporterConfig
             else pure []
         fillBatch transporterConfig merchantOpCityId allNearbyDrivers batch intelligentPoolConfig blockListedDrivers = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)

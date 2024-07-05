@@ -16,6 +16,7 @@ import Domain.Types.Vehicle as DV
 import Domain.Types.VehicleServiceTier as DVST
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
@@ -64,12 +65,14 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     clientDevice :: Maybe Device,
     vehicleAge :: Maybe Months,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    latestScheduledBooking :: Maybe UTCTime,
+    latestScheduledPickup :: Maybe LatLong
   }
   deriving (Generic, Show, HasCoordinates)
 
 getNearestGoHomeDrivers ::
-  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, ServiceFlow m r) =>
   NearestGoHomeDriversReq ->
   m [NearestGoHomeDriversResult]
 getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
@@ -144,5 +147,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 clientDevice = person.clientDevice,
                 vehicleAge = getVehicleAge vehicle.mYManufacturing now,
                 backendConfigVersion = person.backendConfigVersion,
-                backendAppVersion = person.backendAppVersion
+                backendAppVersion = person.backendAppVersion,
+                latestScheduledBooking = info.latestScheduledBooking,
+                latestScheduledPickup = info.latestScheduledPickup
               }

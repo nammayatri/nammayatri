@@ -200,7 +200,7 @@ isBookingCancellable booking
   | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
     ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
-    pure (ride.status == Ride.NEW)
+    pure (ride.status `elem` [Ride.NEW, Ride.UPCOMING])
   | otherwise = pure False
 
 mkDomainCancelSearch ::

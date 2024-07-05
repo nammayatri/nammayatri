@@ -29,7 +29,6 @@ import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.Vehicle as DVeh
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -231,24 +230,10 @@ instance JobInfoProcessor 'DriverReferralPayout
 
 type instance JobContent 'DriverReferralPayout = DriverReferralPayoutJobData
 
---need to discuss to prevent queries
--- data ScheduledRideAssignedOnUpdateJobData = ScheduledRideAssignedOnUpdateJobData
---   { booking :: DB.Booking,
---     ride :: SRide.Ride,
---     driver :: DP.Person,
---     vehicle :: DVeh.Vehicle
---   }
---   deriving (Generic, Eq, FromJSON, ToJSON)
-
--- instance JobInfoProcessor 'ScheduledRideAssignedOnUpdate
-
--- type instance JobContent 'ScheduledRideAssignedOnUpdate = ScheduledRideAssignedOnUpdateJobData
-
 data ScheduledRideAssignedOnUpdateJobData = ScheduledRideAssignedOnUpdateJobData
   { bookingId :: Id DB.Booking,
     rideId :: Id SRide.Ride,
-    driverId :: Id DP.Person,
-    vehicle :: DVeh.Vehicle
+    driverId :: Id DP.Person
   }
   deriving (Generic, FromJSON, ToJSON)
 

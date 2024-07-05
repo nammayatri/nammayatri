@@ -71,7 +71,7 @@ data Booking = Booking
     vehicleServiceTierName :: Kernel.Prelude.Text,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic)
+  deriving (Generic, ToJSON, FromJSON)
 
 data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
