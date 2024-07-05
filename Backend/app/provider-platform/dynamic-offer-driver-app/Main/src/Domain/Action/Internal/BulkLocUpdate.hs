@@ -53,6 +53,6 @@ bulkLocUpdate req = do
     if DC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
       else pure Nothing
-  let isTollApplicableForServiceTier = DC.isTollApplicable booking.vehicleServiceTier
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicableForServiceTier transportConfig.enableTollCrossedNotifications rideId driverId loc
+  let isTollApplicable = DC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId loc
   pure Success
