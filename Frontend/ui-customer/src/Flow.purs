@@ -64,7 +64,7 @@ import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, showMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, showKeyboard, differenceBetweenTwoUTCInMinutes, shareTextMessage, defaultMarkerConfig, Location, setMapPadding, defaultMarkerImageConfig, timeValidity, removeMarker, setCleverTapProfileData, loginCleverTapUser)
 import JBridge as JB
-import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute, breakPrefixAndId)
+import Helpers.Utils (compareDate, convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getNextDate, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getMetroStationsObjFromLocal, updateLocListWithDistance, getCityConfig, getMockFollowerName, getCityFromString, getMetroConfigFromAppConfig, encodeBookingTimeList, decodeBookingTimeList, bufferTimePerKm, invalidBookingTime, getAndRemoveLatestNotificationType, normalRoute, breakPrefixAndId)
 import Language.Strings (getString)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon, transformGeoJsonFeature, getSpecialTag, getZoneType, transformHotSpotInfo, mapSpecialZoneGates)
 import Language.Types (STR(..)) as STR
@@ -800,9 +800,10 @@ homeScreenFlow = do
     GO_TO_MY_TICKETS -> do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
+      (GetAllBookingsRes cancelledRes) <- Remote.getAllBookingsBT Cancelled
       void $ pure $ spy "bookedRes" bookedRes
       void $ pure $ spy "pendingRes" pendingRes
-      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = true, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) } })
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = true, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes) } })
       modifyScreenState $ TicketingScreenStateType (\ticketingScreen -> ticketingScreen { props { hideMyTickets = true } })
       ticketListFlow
     GO_TO_MY_PROFILE updateProfile -> do
@@ -3586,10 +3587,11 @@ updateFlowStatus eventType = do
             $ do
                 currentFlowStatus
 
-getTicketBookings :: Array TicketBookingItem -> Array TicketBookingItem -> TicketBookings
-getTicketBookings bookedRes pendingRes =
+getTicketBookings :: Array TicketBookingItem -> Array TicketBookingItem -> Array TicketBookingItem -> TicketBookings
+getTicketBookings bookedRes pendingRes cancelledRes =
   { pendingBooking: pendingRes
   , booked: bookedRes
+  , cancelled: cancelledRes
   }
 
 cancelEstimate :: String -> FlowBT String Unit
@@ -3869,7 +3871,8 @@ placeListFlow = do
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
-      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) } })
+      (GetAllBookingsRes cancelledRes) <- Remote.getAllBookingsBT Cancelled
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes) } })
       (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> ticketListFlow)
     PlaceListC.BookTickets updatedState selectedPlace -> do
       modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
@@ -3882,7 +3885,7 @@ placeDetailsFlow = do
   (GlobalState currentState) <- getState
   void $ pure $ spy "ZOO TICKET PLACE DETAILS CALLED" currentState
   liftFlowBT $ hideLoader
-  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { dateOfVisit = (getNextDateV2 "") } })
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { dateOfVisit = if isTodayBookingAllowed ticketBookingScreen then (getNextDateV2 "") else (getNextDate "yyyy-mm-dd")} })
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ PlaceDetailsS.screen state.ticketBookingScreen
   case action of
@@ -3899,6 +3902,12 @@ placeDetailsFlow = do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
   where
+  isTodayBookingAllowed :: ST.TicketBookingScreenState -> Boolean
+  isTodayBookingAllowed state = 
+        case state.data.placeInfo of
+              Just (TicketPlaceResp placeInfo) -> fromMaybe true placeInfo.allowSameDayBooking
+              Nothing -> true
+      
   openGoogleMaps lat long = do
     void $ pure $ openNavigation lat long "DRIVE"
     placeDetailsFlow
@@ -3923,7 +3932,8 @@ ticketStatusFlow = do
     GO_TO_TICKET_LIST state -> do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
-      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) } })
+      (GetAllBookingsRes cancelledRes) <- Remote.getAllBookingsBT Cancelled
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData { props { navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes) (buildBookingDetails cancelledRes)} })
       ticketListFlow
     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId
