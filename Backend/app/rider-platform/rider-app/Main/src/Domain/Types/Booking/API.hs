@@ -278,7 +278,10 @@ buildBookingAPIEntity booking personId = do
             estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
             let fareBreakups = if null updatedFareBreakups then estimatedFareBreakups else updatedFareBreakups
             return (fareBreakups, estimatedFareBreakups)
-          _ -> return ([], [])
+          _ -> do
+            --------- Need to remove it after fixing the status api polling in frontend ---------
+            estimatedFareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityTypeInKV booking.id.getId DFareBreakup.BOOKING
+            return ([], estimatedFareBreakups)
       Nothing -> return ([], [])
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
