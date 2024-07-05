@@ -263,9 +263,11 @@ isDynamicOfferTrip (CrossCity OneWayOnDemandDynamicOffer _) = True
 isDynamicOfferTrip (InterCity OneWayOnDemandDynamicOffer _) = True
 isDynamicOfferTrip _ = False
 
-isTollApplicable :: ServiceTierType -> Bool
-isTollApplicable AUTO_RICKSHAW = False
-isTollApplicable _ = True
+isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
+isTollApplicableForTrip AUTO_RICKSHAW _ = False
+isTollApplicableForTrip _ (Rental _) = False
+isTollApplicableForTrip _ (InterCity _ _) = False
+isTollApplicableForTrip _ _ = True
 
 data NightShiftCharge
   = ProgressiveNightShiftCharge Float
