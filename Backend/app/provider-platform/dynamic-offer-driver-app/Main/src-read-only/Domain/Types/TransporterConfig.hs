@@ -183,6 +183,7 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
     premiumsedan :: Kernel.Types.Common.Kilometers,
     sedan :: Kernel.Types.Common.Kilometers,
     suv :: Kernel.Types.Common.Kilometers,
+    suvplus :: Kernel.Types.Common.Kilometers,
     taxi :: Kernel.Types.Common.Kilometers,
     taxiplus :: Kernel.Types.Common.Kilometers
   }
