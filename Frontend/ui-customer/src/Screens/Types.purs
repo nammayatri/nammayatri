@@ -1792,7 +1792,8 @@ type TicketBookingItem =
 
 type TicketBookings = 
   { pendingBooking :: Array TicketBookingItem,
-    booked :: Array TicketBookingItem
+    booked :: Array TicketBookingItem,
+    cancelled :: Array TicketBookingItem
   }
 
 type TicketBookingScreenProps = {

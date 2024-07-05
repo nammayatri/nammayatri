@@ -3585,10 +3585,15 @@ public class MobilityCommonBridge extends HyperBridge {
         ExecutorManager.runOnMainThread(new Runnable() {
             @Override
             public void run() {
-                final Calendar c = Calendar.getInstance();
-                int mYear = c.get(Calendar.YEAR);
-                int mMonth = c.get(Calendar.MONTH);
-                int mDate = c.get(Calendar.DATE);
+                final Calendar calendar = Calendar.getInstance();
+                switch (label) {
+                    case DatePickerLabels.MINIMUM_NEXT_DATE:
+                        calendar.add(Calendar.DAY_OF_YEAR, 1);
+                        break;
+                }
+                int mYear = calendar.get(Calendar.YEAR);
+                int mMonth = calendar.get(Calendar.MONTH);
+                int mDate = calendar.get(Calendar.DATE);
                 int datePickerTheme = AlertDialog.THEME_HOLO_LIGHT;
                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N) datePickerTheme = 0;
 
@@ -3620,35 +3625,47 @@ public class MobilityCommonBridge extends HyperBridge {
                     @Override
                     public void onDateChanged(@NonNull DatePicker view, int y, int m, int d) {
                         super.onDateChanged(view, y, m, d);
-                        try {
-                            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
-                                if (month != 0) {
-                                    NumberPicker monthPicker = findViewById(month);
-                                    if (monthPicker != null) {
-                                        monthPicker.setDisplayedValues(monthNumbers);
+                        switch (label) {
+                            case DatePickerLabels.MINIMUM_NEXT_DATE:
+                                break;
+                            default:
+                                try {
+                                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
+                                        if (month != 0) {
+                                            NumberPicker monthPicker = findViewById(month);
+                                            if (monthPicker != null) {
+                                                monthPicker.setDisplayedValues(monthNumbers);
+                                            }
+                                        }
                                     }
+                                } catch (Exception e) {
+                                    Log.e(DTUTILS, "Error in onDateChanged : " + e);
                                 }
-                            }
-                        } catch (Exception e) {
-                            Log.e(DTUTILS, "Error in onDateChanged : " + e);
+                                break;
                         }
                     }
 
                     @Override
                     protected void onCreate(Bundle savedInstanceState) {
                         super.onCreate(savedInstanceState);
-                        try {
-                            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
-                                if (month != 0) {
-                                    NumberPicker monthPicker = findViewById(month);
-                                    if (monthPicker != null) {
-                                        monthPicker.setDisplayedValues(monthNumbers);
+                        switch (label) {
+                            case DatePickerLabels.MINIMUM_NEXT_DATE:
+                                break;
+                            default:
+                                try {
+                                    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N) {
+                                        if (month != 0) {
+                                            NumberPicker monthPicker = findViewById(month);
+                                            if (monthPicker != null) {
+                                                monthPicker.setDisplayedValues(monthNumbers);
+                                            }
+                                        }
                                     }
+                                } catch (Exception e) {
+                                    Log.e(DTUTILS, "Error in Date onCreate : " + e);
                                 }
-                            }
-                        } catch (Exception e) {
-                            Log.e(DTUTILS, "Error in Date onCreate : " + e);
-                        }
+                                break;
+                    }
                     }
                 };
                 datePickerDialog.setOnCancelListener(var1 -> {
@@ -3676,6 +3693,15 @@ public class MobilityCommonBridge extends HyperBridge {
                         break;
                     case DatePickerLabels.MAXIMUM_PRESENT_DATE:
                         datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
+                        break;
+                    case DatePickerLabels.MINIMUM_NEXT_DATE:
+                        Calendar minDate = Calendar.getInstance();
+                        minDate.set(Calendar.HOUR_OF_DAY, 0);
+                        minDate.set(Calendar.MINUTE, 0);
+                        minDate.set(Calendar.SECOND, 0);
+                        minDate.set(Calendar.MILLISECOND, 0);
+                        minDate.add(Calendar.DAY_OF_YEAR, 1);
+                        datePickerDialog.getDatePicker().setMinDate(minDate.getTimeInMillis());
                         break;
                 }
                 if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
@@ -4355,6 +4381,8 @@ public class MobilityCommonBridge extends HyperBridge {
         private static final String MINIMUM_EIGHTEEN_YEARS = "MINIMUM_EIGHTEEN_YEARS";
         private static final String MIN_EIGHTEEN_MAX_SIXTY_YEARS = "MIN_EIGHTEEN_MAX_SIXTY_YEARS";
         private static final String MAX_THIRTY_DAYS_FROM_CURRENT_DATE = "MAX_THIRTY_DAYS_FROM_CURRENT_DATE";
+        private static final String MINIMUM_PRESENT_DATE = "MINIMUM_PRESENT_DATE";
+        private static final String MINIMUM_NEXT_DATE = "MINIMUM_NEXT_DATE";
     }
 
     public File checkAndGetFileName(String fileName) {
