@@ -272,7 +272,7 @@ calculateFareParameters params = do
               DFP.RentalDetails _ -> fareParametersDetails
               DFP.InterCityDetails _ -> fareParametersDetails,
             customerCancellationDues = params.customerCancellationDues,
-            tollCharges = addMaybes fp.tollCharges (if isTollApplicable fp.vehicleServiceTier then params.tollCharges else Nothing),
+            tollCharges = addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing),
             updatedAt = now,
             currency = params.currency,
             ..
