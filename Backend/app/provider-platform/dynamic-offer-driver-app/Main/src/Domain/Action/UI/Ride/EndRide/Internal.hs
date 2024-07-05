@@ -90,6 +90,7 @@ import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
@@ -222,15 +223,19 @@ sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transpor
             (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
             whenJust mbFlagReason $ \flagReason -> do
               QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) (Just flagReason) riderDetails.id
-            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime
+            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver
             sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
           Nothing -> pure ()
   where
-    updateReferralStats referredDriverId mbDailyStats localTime = do
+    updateReferralStats referredDriverId mbDailyStats localTime driver = do
+      mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey merchantOpCityId "PAYOUT_REFERRAL_REWARD"
+      whenJust mbMerchantPN $ \merchantPN -> do
+        let entityData = NotifReq {entityId = referredDriverId.getId, title = merchantPN.title, message = merchantPN.body}
+        notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward
       mbVehicle <- QV.findById referredDriverId
-      let vehicleCategory = fromMaybe DV.CAR ((.category) =<< mbVehicle)
+      let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
       payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
       let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
       driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
@@ -276,7 +281,7 @@ sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transpor
               (_, _, False, _) -> Just RD.MinPickupDistanceInvalid
               (_, _, _, False) -> Just RD.ExceededMaxReferral
               _ -> Nothing
-      let isValid = null availablePersonWithNumber && isValidForMinPickupThreshold && isValidForMinRideDistance && isMaxReferralExceeded && isMultipleDeviceIdExists
+      let isValid = null availablePersonWithNumber && isValidForMinPickupThreshold && isValidForMinRideDistance && isMaxReferralExceeded && (not isMultipleDeviceIdExists)
       return (isValid, mbFlagReason)
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
