@@ -47,6 +47,6 @@ instance B.Table OverlayT where
 
 type Overlay = OverlayT Identity
 
-$(enableKVPG ''OverlayT ['id] [['merchantOperatingCityId], ['overlayKey]])
+$(enableKVPG ''OverlayT ['id] [['overlayKey]])
 
 $(mkTableInstances ''OverlayT "merchant_overlay")

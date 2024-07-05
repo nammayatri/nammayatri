@@ -47,6 +47,7 @@ castVariant Variant.AMBULANCE_TAXI_OXY = Common.AMBULANCE_TAXI_OXY
 castVariant Variant.AMBULANCE_AC = Common.AMBULANCE_AC
 castVariant Variant.AMBULANCE_AC_OXY = Common.AMBULANCE_AC_OXY
 castVariant Variant.AMBULANCE_VENTILATOR = Common.AMBULANCE_VENTILATOR
+castVariant Variant.SUV_PLUS = Common.SUV_PLUS
 
 castDPaymentCollector :: DMPM.PaymentCollector -> Payment.PaymentCollector
 castDPaymentCollector DMPM.BAP = Payment.BAP

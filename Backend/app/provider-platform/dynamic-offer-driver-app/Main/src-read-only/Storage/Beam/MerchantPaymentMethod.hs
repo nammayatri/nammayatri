@@ -31,6 +31,6 @@ instance B.Table MerchantPaymentMethodT where
 
 type MerchantPaymentMethod = MerchantPaymentMethodT Identity
 
-$(enableKVPG ''MerchantPaymentMethodT ['id] [['merchantOperatingCityId]])
+$(enableKVPG ''MerchantPaymentMethodT ['id] [])
 
 $(mkTableInstances ''MerchantPaymentMethodT "merchant_payment_method")
