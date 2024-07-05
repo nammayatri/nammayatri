@@ -579,6 +579,7 @@ castDVehicleVariant = \case
   DVeh.AMBULANCE_AC -> Common.AMBULANCE_AC
   DVeh.AMBULANCE_AC_OXY -> Common.AMBULANCE_AC_OXY
   DVeh.AMBULANCE_VENTILATOR -> Common.AMBULANCE_VENTILATOR
+  DVeh.SUV_PLUS -> Common.SUV_PLUS
 
 castDVehicleClassCheckType :: DVC.VehicleClassCheckType -> Common.VehicleClassCheckType
 castDVehicleClassCheckType = \case
@@ -650,6 +651,7 @@ castVehicleVariant = \case
   Common.AMBULANCE_AC -> DVeh.AMBULANCE_AC
   Common.AMBULANCE_AC_OXY -> DVeh.AMBULANCE_AC_OXY
   Common.AMBULANCE_VENTILATOR -> DVeh.AMBULANCE_VENTILATOR
+  Common.SUV_PLUS -> DVeh.SUV_PLUS
 
 castVehicleClassCheckType :: Common.VehicleClassCheckType -> DVC.VehicleClassCheckType
 castVehicleClassCheckType = \case
