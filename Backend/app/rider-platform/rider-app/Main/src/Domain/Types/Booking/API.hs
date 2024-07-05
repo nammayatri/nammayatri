@@ -55,6 +55,7 @@ data BookingAPIEntity = BookingAPIEntity
     agencyName :: Text,
     agencyNumber :: Maybe Text,
     estimatedFare :: Money,
+    isBookingUpdated :: Bool,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     estimatedFareWithCurrency :: PriceAPIEntity,
@@ -98,6 +99,7 @@ data BookingAPIEntity = BookingAPIEntity
 
 data BookingStatusAPIEntity = BookingStatusAPIEntity
   { id :: Id Booking,
+    isBookingUpdated :: Bool,
     bookingStatus :: BookingStatus,
     rideStatus :: Maybe DRide.RideStatus,
     bookingDetails :: BookingAPIDetails
@@ -202,6 +204,7 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       updatedAt = booking.updatedAt,
       hasDisability = hasDisability,
       sosStatus = mbSosStatus,
+      isBookingUpdated = booking.isBookingUpdated,
       isValueAddNP,
       vehicleServiceTierType = booking.vehicleServiceTierType,
       vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
@@ -295,7 +298,7 @@ buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
-  return $ BookingStatusAPIEntity booking.id booking.status rideStatus (mkBookingAPIDetails booking.bookingDetails)
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus (mkBookingAPIDetails booking.bookingDetails)
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity

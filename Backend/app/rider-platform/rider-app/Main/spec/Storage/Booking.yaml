@@ -154,6 +154,7 @@ Booking:
     providerUrl: BaseUrl
     bppEstimateId: Text
     primaryExophone: Text
+    isBookingUpdated: Bool
     startTime: UTCTime
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
@@ -229,6 +230,7 @@ Booking:
     currency: Maybe Currency
     tripTermsId: Maybe Text
     isScheduled: Maybe Bool
+    isBookingUpdated : Maybe Bool
     merchantOperatingCityId: Maybe Text
     clientBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
@@ -287,6 +289,7 @@ Booking:
     fareProductType: "'ONE_WAY'"
     itemId: "''"
     merchantId: "'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51'"
+    isBookingUpdated: "false"
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -299,6 +302,7 @@ Booking:
     estimatedDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance)|E
     stopLocationId: getStopLocationId
     otpCode: getOtpCode
+    isBookingUpdated: (Just isBookingUpdated)|E
     providerUrl: (showBaseUrl providerUrl)|E
     fromLocationId: (Just $ Kernel.Types.Id.getId $ (.id) fromLocation)|E
     estimatedFare: ((.amount) estimatedFare)|E
@@ -325,6 +329,7 @@ Booking:
       - fromLocationAndBookingDetails': Storage.Queries.Transformers.Booking.fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue|EM #check
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
+    isBookingUpdated: (fromMaybe False isBookingUpdated)|E
     fromLocation: (fst fromLocationAndBookingDetails')|E
     bookingDetails: (snd fromLocationAndBookingDetails')|E
     tripTerms: if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing|EM

@@ -228,6 +228,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         primaryExophone = exophone.primaryPhone,
         providerUrl = quote.providerUrl,
         bppEstimateId = quote.itemId,
+        isBookingUpdated = False,
         startTime = searchRequest.startTime,
         returnTime = searchRequest.returnTime,
         roundTrip = searchRequest.roundTrip,
