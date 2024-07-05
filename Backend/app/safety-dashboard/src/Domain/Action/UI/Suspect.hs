@@ -52,8 +52,7 @@ buildTransaction ::
   TokenInfo ->
   Text ->
   m DT.Transaction
-buildTransaction endpoint tokenInfo request =
-  T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo) request
+buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 data ChangeFlagNotificationMetadata = ChangeFlagNotificationMetadata
   { suspect :: Domain.Types.Suspect.Suspect,
@@ -115,7 +114,7 @@ getValidSuspectsToFlagAndAlreadyFlagged merchantId suspects = do
       voterIdListForNeedToFlag = mapMaybe (.voterId) $ newSuspect <> suspectNeedToFlagAgain
       alreadyFlagged = filter (\suspect -> not (isSearchParamPresent suspect.dl dlListForNeedToFlag || isSearchParamPresent suspect.voterId voterIdListForNeedToFlag)) validSuspects
       suspectAlreadyFlagged = API.Types.UI.Suspect.SuspectBulkUploadReq {suspects = alreadyFlagged}
-  return $ (suspectNeedToFlagged, suspectAlreadyFlagged)
+  return (suspectNeedToFlagged, suspectAlreadyFlagged)
 
 isSearchParamPresent :: Maybe Text -> [Text] -> Bool
 isSearchParamPresent (Just param) list = param `elem` list
@@ -124,7 +123,7 @@ isSearchParamPresent Nothing _ = False
 filterLatestApprovedSuspectFlagRequest :: [Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> [Domain.Types.SuspectFlagRequest.SuspectFlagRequest]
 filterLatestApprovedSuspectFlagRequest suspects =
   let groupedSuspects = groupByDlAndVoterId suspects
-   in map (DL.maximumBy (comparing (Domain.Types.SuspectFlagRequest.createdAt))) groupedSuspects
+   in map (DL.maximumBy (comparing Domain.Types.SuspectFlagRequest.createdAt)) groupedSuspects
 
 groupByDlAndVoterId :: [Domain.Types.SuspectFlagRequest.SuspectFlagRequest] -> [[Domain.Types.SuspectFlagRequest.SuspectFlagRequest]]
 groupByDlAndVoterId = DL.groupBy isEqual
@@ -153,7 +152,7 @@ postChangeFlag tokenInfo req = do
     merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
     createNewChangeRequest suspect merchant req.reasonToChange
     updateSuspectStatusHistoryBySuspect tokenInfo merchant.shortId.getShortId [suspect] Nothing
-    let notificationMetadata = encodeToText $ [ChangeFlagNotificationMetadata {suspect = suspect, reasonToChange = req.reasonToChange}]
+    let notificationMetadata = encodeToText [ChangeFlagNotificationMetadata {suspect = suspect, reasonToChange = req.reasonToChange}]
     receiverIds <- getRecieverIdListByAcessType DASHBOARD_ADMIN
     sendNotification tokenInfo merchant notificationMetadata 1 Domain.Types.Notification.CHANGE_REQUEST_PARTNER_ADMIN receiverIds
     return Kernel.Types.APISuccess.Success
@@ -172,11 +171,19 @@ getRecieverIdListByAcessType acessName = do
   receiversList <- QP.findAllByRoleAndReciveNotification role.id
   return $ map (\receiver -> receiver.id) receiversList
 
+getMerchantAdminReceiverIdList :: Environment.Flow [Id Domain.Types.Person.Person]
+getMerchantAdminReceiverIdList = do
+  portalConfig <- PC.findByConfigName "SEND_MERCHANT_NOTIFICATION"
+  let notifyMerchant = case portalConfig of
+        Just config -> read (T.unpack config.value) :: Bool
+        Nothing -> False
+  if notifyMerchant then getRecieverIdListByAcessType MERCHANT_ADMIN else return []
+
 getAllMerchantAdminIdList :: Id Merchant.Merchant -> Environment.Flow [Id Domain.Types.Person.Person]
 getAllMerchantAdminIdList merchantId = do
   adminRole <- QRole.findByDashboardAccessType MERCHANT_ADMIN >>= fromMaybeM (RoleDoesNotExist "MERCHANT_ADMIN")
   allMerchantUsers <- QMerchantAccess.findAllUserAccountForMerchant merchantId
-  let personIds = map (\merchantUser -> merchantUser.personId) allMerchantUsers
+  let personIds = map (.personId) allMerchantUsers
   merchantAdminList <- QP.findAllByIdRoleIdAndReceiveNotification personIds adminRole.id
   return $ map (\receiver -> receiver.id) merchantAdminList
 
@@ -240,7 +247,7 @@ buildSuspectFlagRequest req tokenInfo merchantShortId name approval = do
         updatedAt = now,
         flaggedCategory = req.flaggedCategory,
         mobileNumber = req.mobileNumber,
-        firDetails = req.firDetails,
+        reportDetails = req.reportDetails,
         totalComplaintsCount = req.totalComplaintsCount
       }
 
@@ -292,7 +299,7 @@ buildSuspectStatusHistory tokenInfo approvedBy' approval flaggedStatus' Domain.T
         flaggedStatus = flaggedStatus',
         statusChangedReason = Just flaggedReason,
         voterId = voterId,
-        flaggedBy = Just [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason, agentContactNumber = Nothing, firDetails = Nothing, totalComplaintsCount = Nothing}],
+        flaggedBy = Just [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason, agentContactNumber = mobileNumber, reportDetails = reportDetails, totalComplaintsCount = totalComplaintsCount}],
         createdAt = now,
         updatedAt = now,
         merchantId = Just tokenInfo.merchantId,

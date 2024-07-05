@@ -50,11 +50,11 @@ postCheckSuspectStatusHistory _ mbLimit mbOffset req = do
   case (req.dl, req.voterId) of
     (Nothing, Nothing) -> throwError SuspectDlOrVoterIdRequired
     (Just dl, _) -> do
-      suspect <- SQSH.findAllByDlAndNotAdminApprovalStatus mbLimit mbOffset (Just dl) Domain.Types.SuspectFlagRequest.Rejected
+      suspect <- SQSH.findAllByDlAndAdminApprovalStatus mbLimit mbOffset (Just dl) Domain.Types.SuspectFlagRequest.Approved Nothing
       let resp = map buildCheckSuspectStatusHistoryResp suspect
       return CheckSuspectStatusHistoryResp {suspectStatusHistory = resp}
     _ -> do
-      suspect <- SQSH.findAllByVoterIdAndNotAdminApprovalStatus mbLimit mbOffset req.voterId Domain.Types.SuspectFlagRequest.Rejected
+      suspect <- SQSH.findAllByDlAndAdminApprovalStatus mbLimit mbOffset req.voterId Domain.Types.SuspectFlagRequest.Approved Nothing
       let resp = map buildCheckSuspectStatusHistoryResp suspect
       return CheckSuspectStatusHistoryResp {suspectStatusHistory = resp}
 
@@ -91,7 +91,7 @@ getSuspectList _ mbDl mbFlaggedCategory mbFlaggedStatus mbFrom mbLimit mbOffset 
           defaultFrom = UTCTime (utctDay now) 0
           from_ = fromMaybe defaultFrom mbFrom
           to = fromMaybe now mbTo
-      case (mbFlaggedCategory, mbPartnerName, mbFlaggedStatus) of
+      case (mbFlaggedCategory, mbPartnerName, mbFlaggedStatus) of -- TODO : This query has to be written in a better way
         (Just flaggedCategory, Just partnerName, Just flaggedStatus) -> do
           flagReqList <- SQF.findByFlaggedCategoryAndPartnerNameAndFlaggedStatus flaggedCategory partnerName flaggedStatus limit offset from_ to
           suspectListByFlagRequestList flagReqList
@@ -147,11 +147,11 @@ postMerchantCheckSuspectStatusHistory tokenInfo req = do
   case (req.dl, req.voterId) of
     (Nothing, Nothing) -> throwError SuspectDlOrVoterIdRequired
     (Just dl, _) -> do
-      suspectList <- SQSH.findAllByDlAndMerchantIdAndNotFlagStatus dl merchant.shortId.getShortId Domain.Types.Suspect.Flagged
+      suspectList <- SQSH.findAllByDlAndAdminApprovalStatus Nothing Nothing (Just dl) Domain.Types.SuspectFlagRequest.Approved $ Just merchant.shortId.getShortId
       let resp = map buildCheckSuspectStatusHistoryResp suspectList
       return CheckSuspectStatusHistoryResp {suspectStatusHistory = resp}
     (_, Just voterId) -> do
-      suspectList <- SQSH.findAllByVoterIdAndMerchantIdAndNotFlagStatus voterId merchant.shortId.getShortId Domain.Types.Suspect.Flagged
+      suspectList <- SQSH.findAllByDlAndAdminApprovalStatus Nothing Nothing (Just voterId) Domain.Types.SuspectFlagRequest.Approved $ Just merchant.shortId.getShortId
       let resp = map buildCheckSuspectStatusHistoryResp suspectList
       return CheckSuspectStatusHistoryResp {suspectStatusHistory = resp}
 

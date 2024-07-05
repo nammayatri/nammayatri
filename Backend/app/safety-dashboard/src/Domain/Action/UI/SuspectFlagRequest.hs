@@ -56,8 +56,7 @@ buildTransaction ::
   TokenInfo ->
   Text ->
   m DT.Transaction
-buildTransaction endpoint tokenInfo request =
-  T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo) request
+buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 newtype WebhookReqBody = WebhookReqBody
   { suspectList :: [SuspectBody]
@@ -135,7 +134,7 @@ handlePendingRequests tokenInfo adminApproval pendingFlagReqList = do
       suspectListForNotification <- mapM (\suspect -> addOrUpdateSuspect suspect merchant.shortId.getShortId Domain.Types.Suspect.Flagged) pendingFlagReqList
       let notificationMetadataForOthers = encodeToText suspectListForNotification
       adminReceiverIds <- DS.getRecieverIdListByAcessType DASHBOARD_ADMIN
-      merchantAdminReceiverIds <- DS.getRecieverIdListByAcessType MERCHANT_ADMIN
+      merchantAdminReceiverIds <- DS.getMerchantAdminReceiverIdList
       DS.sendNotification tokenInfo merchant notificationMetadataForMerchantUsers (length pendingFlagReqList) Domain.Types.Notification.FLAG_REQUEST_APPROVED merchantUsersReceiversIdList
       DS.sendNotification tokenInfo merchant notificationMetadataForOthers (length pendingFlagReqList) Domain.Types.Notification.PARTNER_FLAGGED_SUSPECT (adminReceiverIds <> merchantAdminReceiverIds)
       sendingWebhookToPartners merchant.shortId.getShortId pendingFlagReqList
@@ -167,7 +166,7 @@ addOrUpdateSuspect req merchantShortId flaggedStatus = do
 
 updateSuspect :: Domain.Types.Suspect.Suspect -> Domain.Types.SuspectFlagRequest.SuspectFlagRequest -> Text -> Domain.Types.Suspect.FlaggedStatus -> Environment.Flow Domain.Types.Suspect.Suspect
 updateSuspect suspect req merchantShortId flaggedStatus = do
-  let flaggedBy = Domain.Types.Suspect.FlaggedBy {flaggedCategory = req.flaggedCategory, partnerName = Just merchantShortId, flaggedReason = Just req.flaggedReason, agentContactNumber = req.mobileNumber, firDetails = req.firDetails, totalComplaintsCount = req.totalComplaintsCount} : suspect.flaggedBy
+  let flaggedBy = Domain.Types.Suspect.FlaggedBy {flaggedCategory = req.flaggedCategory, partnerName = Just merchantShortId, flaggedReason = Just req.flaggedReason, agentContactNumber = req.mobileNumber, reportDetails = req.reportDetails, totalComplaintsCount = req.totalComplaintsCount} : suspect.flaggedBy
   updateFlaggedCounterByKey (suspect.flaggedCounter + 1) flaggedStatus flaggedBy (getUpdateKey req)
   buildUpdatedSuspect (suspect.flaggedCounter + 1) flaggedBy flaggedStatus suspect
 
@@ -195,7 +194,7 @@ buildSuspect flaggedStatus' Domain.Types.SuspectFlagRequest.SuspectFlagRequest {
         voterId = voterId,
         flaggedStatus = flaggedStatus',
         flagUpdatedAt = now,
-        flaggedBy = [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason, agentContactNumber = mobileNumber, firDetails = firDetails, totalComplaintsCount = totalComplaintsCount}],
+        flaggedBy = [Domain.Types.Suspect.FlaggedBy {flaggedCategory = flaggedCategory, partnerName = merchantShortId, flaggedReason = Just flaggedReason, agentContactNumber = mobileNumber, reportDetails = reportDetails, totalComplaintsCount = totalComplaintsCount}],
         statusChangedReason = Nothing,
         flaggedCounter = 1,
         createdAt = now,

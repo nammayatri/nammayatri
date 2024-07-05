@@ -68,24 +68,23 @@ buildTransaction ::
   TokenInfo ->
   Text ->
   m DT.Transaction
-buildTransaction endpoint tokenInfo request =
-  T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo) request
+buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 postChangeSuspectFlag :: TokenInfo -> API.Types.UI.Admin.SuspectFlagChangeRequestList -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postChangeSuspectFlag tokenInfo req = do
   transaction <- buildTransaction Safety.ChangeSuspectFlagEndpoint tokenInfo (encodeToText req)
   T.withTransactionStoring transaction $ do
-    let idList = map (\id -> Kernel.Types.Id.Id $ id) req.ids
+    let idList = map Kernel.Types.Id.Id req.ids
     suspectList <- SE.findAllByIds idList
-    updatedSuspectList <- mapM (\suspect -> buildUpdateSuspectRequest req suspect) suspectList
-    mapM_ (\updatedSuspect -> SQ.updateByPrimaryKey updatedSuspect) updatedSuspectList
-    let dlList = mapMaybe (\suspect -> suspect.dl) $ updatedSuspectList
-        voterIdList = mapMaybe (\suspect -> suspect.voterId) $ updatedSuspectList
+    updatedSuspectList <- mapM (buildUpdateSuspectRequest req) suspectList
+    mapM_ SQ.updateByPrimaryKey updatedSuspectList
+    let dlList = mapMaybe (\suspect -> suspect.dl) updatedSuspectList
+        voterIdList = mapMaybe (\suspect -> suspect.voterId) updatedSuspectList
     mapM_ (\dl -> updateAllWIthDlAndFlaggedStatus dl req.flaggedStatus) dlList
     mapM_ (\voterId -> updateAllWithVoteIdAndFlaggedStatus voterId req.flaggedStatus) voterIdList
     merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
     adminIdList <- DS.getRecieverIdListByAcessType DASHBOARD_ADMIN
-    merchantAdminIdList <- DS.getRecieverIdListByAcessType MERCHANT_ADMIN
+    merchantAdminIdList <- DS.getMerchantAdminReceiverIdList
     DS.sendNotification tokenInfo merchant (encodeToText updatedSuspectList) (length updatedSuspectList) Domain.Types.Notification.ADMIN_CHANGE_SUSPECT_STATUS (adminIdList <> merchantAdminIdList)
     DS.updateSuspectStatusHistoryBySuspect tokenInfo merchant.shortId.getShortId updatedSuspectList (Just Domain.Types.SuspectFlagRequest.Approved)
     webhookBody <- buildAdminSuspectWebhookBody merchant.shortId.getShortId updatedSuspectList
@@ -110,7 +109,7 @@ postAdminUploadSuspectBulk tokenInfo mbFlaggedStatus req = do
         suspectList <- mapM (\suspect -> SAF.addOrUpdateSuspect suspect merchant.shortId.getShortId (fromMaybe Domain.Types.Suspect.Flagged mbFlaggedStatus)) suspectFlagRequest
         let notificationMetadata = encodeToText $ suspectList
         adminIdList <- DS.getRecieverIdListByAcessType DASHBOARD_ADMIN
-        merchantAdminIdList <- DS.getRecieverIdListByAcessType MERCHANT_ADMIN
+        merchantAdminIdList <- DS.getMerchantAdminReceiverIdList
         personRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
         let notificationType = selectNotificationType personRole.name (fromMaybe Domain.Types.Suspect.Flagged mbFlaggedStatus)
         DS.sendNotification tokenInfo merchant notificationMetadata (length suspectList) notificationType (adminIdList <> merchantAdminIdList)

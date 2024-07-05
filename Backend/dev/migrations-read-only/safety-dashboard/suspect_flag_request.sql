@@ -11,31 +11,11 @@ ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN flagged_reaso
 ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN flagged_status text NOT NULL;
 ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN last_name text NOT NULL;
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN merchant_short_id text ;
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN mobile_number text ;
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN report_details text ;
+ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN total_complaints_count integer ;
 ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN voter_id text ;
 ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD PRIMARY KEY ( id);
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN merchant_short_id text ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN total_complaints_count integer ;
-ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN mobile_number text ;
-ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN fir_details text NOT NULL;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN f_ir_details text ;
-ALTER TABLE atlas_safety_dashboard.suspect_flag_request DROP COLUMN fir_details;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_safety_dashboard.suspect_flag_request ADD COLUMN fir_details text ;
-ALTER TABLE atlas_safety_dashboard.suspect_flag_request DROP COLUMN f_ir_details;

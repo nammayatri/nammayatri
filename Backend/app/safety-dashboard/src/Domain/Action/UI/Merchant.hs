@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.Merchant where
@@ -31,7 +32,7 @@ import "lib-dashboard" Storage.Queries.MerchantAccess as QMCA
 import Storage.Queries.MerchantConfigs as QMC
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import qualified "lib-dashboard" Storage.Queries.Role as QRole
-import "lib-dashboard" Tools.Auth
+import qualified "lib-dashboard" Tools.Auth as Auth
 import Tools.Error
 import "lib-dashboard" Tools.Error
 
@@ -39,19 +40,18 @@ buildTransaction ::
   ( MonadFlow m
   ) =>
   Safety.SafetyEndpoint ->
-  TokenInfo ->
+  Auth.TokenInfo ->
   Text ->
   m DT.Transaction
-buildTransaction endpoint tokenInfo request =
-  T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo) request
+buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
-postSetMerchantConfig :: TokenInfo -> API.Types.UI.Merchant.SetMerchantConfigReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postSetMerchantConfig :: Auth.TokenInfo -> API.Types.UI.Merchant.SetMerchantConfigReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postSetMerchantConfig tokenInfo req = do
   transaction <- buildTransaction Safety.SetMerchantConfigEndpoint tokenInfo (encodeToText req)
   T.withTransactionStoring transaction $ do
     merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
     merchantConfigs <- QMC.findByMerchantId $ Just merchant.id
-    when (not $ isURI $ T.unpack req.webhookUrl) $ throwError InvalidWebhookUrl
+    unless (isURI $ T.unpack req.webhookUrl) $ throwError InvalidWebhookUrl
     case merchantConfigs of
       Nothing -> do
         merchantConfig <- buildMerchantConfig tokenInfo merchant.shortId.getShortId req
@@ -62,13 +62,13 @@ postSetMerchantConfig tokenInfo req = do
         QMC.updateByPrimaryKey merchantConfig
         return Kernel.Types.APISuccess.Success
 
-getMerchantUserList :: TokenInfo -> Environment.Flow API.Types.UI.Merchant.MerchantUserList
+getMerchantUserList :: Auth.TokenInfo -> Environment.Flow API.Types.UI.Merchant.MerchantUserList
 getMerchantUserList tokenInfo = do
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   allMerchantUsers <- QMCA.findAllUserAccountForMerchant tokenInfo.merchantId
-  let personIds = map (\x -> x.personId) allMerchantUsers
+  let personIds = map (.personId) allMerchantUsers
   allPersons <- QP.findAllByIds personIds
-  decryptedPersons <- mapM (\person -> decrypt person) allPersons
+  decryptedPersons <- mapM decrypt allPersons
   personEntityList <-
     mapM
       ( \decPerson -> do
@@ -78,7 +78,7 @@ getMerchantUserList tokenInfo = do
       decryptedPersons
   return $ MerchantUserList {merchantUserList = personEntityList}
 
-postMerchantUserResetPassword :: TokenInfo -> API.Types.UI.Merchant.ResetPasswordReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMerchantUserResetPassword :: Auth.TokenInfo -> API.Types.UI.Merchant.ResetPasswordReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMerchantUserResetPassword tokenInfo req = do
   transaction <- buildTransaction Safety.ResetPasswordEndpoint tokenInfo (encodeToText req)
   T.withTransactionStoring transaction $ do
@@ -88,7 +88,7 @@ postMerchantUserResetPassword tokenInfo req = do
     QP.updatePersonPassword person.id newHash
     return Kernel.Types.APISuccess.Success
 
-getMerchantGetWebhookConfig :: TokenInfo -> Environment.Flow Domain.Types.MerchantConfigs.MerchantConfigs
+getMerchantGetWebhookConfig :: Auth.TokenInfo -> Environment.Flow Domain.Types.MerchantConfigs.MerchantConfigs
 getMerchantGetWebhookConfig tokenInfo = do
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   merchantConfig <- QMC.findByMerchantId $ Just merchant.id
@@ -96,7 +96,7 @@ getMerchantGetWebhookConfig tokenInfo = do
     Just config -> return config
     Nothing -> throwError MerchantConfigNotFound
 
-postMerchantWebhookConfigPreference :: TokenInfo -> API.Types.UI.Merchant.WebHookConfigPreferenceReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMerchantWebhookConfigPreference :: Auth.TokenInfo -> API.Types.UI.Merchant.WebHookConfigPreferenceReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMerchantWebhookConfigPreference tokenInfo req = do
   transaction <- buildTransaction Safety.SetMerchantConfigEndpoint tokenInfo (encodeToText req)
   T.withTransactionStoring transaction $ do
@@ -108,7 +108,7 @@ postMerchantWebhookConfigPreference tokenInfo req = do
         return Kernel.Types.APISuccess.Success
       Nothing -> throwError MerchantConfigNotFound
 
-buildMerchantConfig :: TokenInfo -> Text -> API.Types.UI.Merchant.SetMerchantConfigReq -> Environment.Flow Domain.Types.MerchantConfigs.MerchantConfigs
+buildMerchantConfig :: Auth.TokenInfo -> Text -> API.Types.UI.Merchant.SetMerchantConfigReq -> Environment.Flow Domain.Types.MerchantConfigs.MerchantConfigs
 buildMerchantConfig tokenInfo merchantShortId req = do
   now <- getCurrentTime
   id_ <- generateGUID

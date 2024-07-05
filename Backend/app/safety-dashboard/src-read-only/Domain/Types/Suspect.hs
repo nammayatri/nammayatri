@@ -26,25 +26,31 @@ data Suspect = Suspect
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FIRDetails = FIRDetails {firNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text, policeStation :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
-
 data FlaggedBy = FlaggedBy
   { agentContactNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    firDetails :: Kernel.Prelude.Maybe Domain.Types.Suspect.FIRDetails,
     flaggedCategory :: Kernel.Prelude.Text,
     flaggedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     partnerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    reportDetails :: Kernel.Prelude.Maybe Domain.Types.Suspect.ReportDetails,
     totalComplaintsCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
 
 data FlaggedStatus = Flagged | Confirmed | NotConfirmed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FIRDetails))
+data ReportDetails = ReportDetails {reportNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text, reportPoliceStation :: Kernel.Prelude.Maybe Kernel.Prelude.Text, reportType :: Domain.Types.Suspect.ReportType}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FlaggedBy))
+data ReportType = FIR | NCR deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FlaggedStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FlaggedBy)
 
-$(mkHttpInstancesForEnum (''FlaggedStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FlaggedStatus)
+
+$(mkHttpInstancesForEnum ''FlaggedStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReportDetails)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReportType)
+
+$(mkHttpInstancesForEnum ''ReportType)

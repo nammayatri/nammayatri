@@ -8,7 +8,7 @@ imports:
   WebHookHeaders: Domain.Types.MerchantConfigs
   FlaggedBy : Domain.Types.Suspect
   Value: Data.Aeson
-  FIRDetails : Domain.Types.Suspect
+  ReportDetails : Domain.Types.Suspect
 
 Suspect:
   tableName: suspect
@@ -49,14 +49,18 @@ Suspect:
       flaggedReason : Maybe Text
       agentContactNumber : Maybe Text
       totalComplaintsCount : Maybe Int
-      firDetails : Maybe FIRDetails
+      reportDetails : Maybe ReportDetails
       derive: "Ord,Eq,Read,'ListInstance"
-    FIRDetails:
-      firNumber : Maybe Text
-      policeStation : Maybe Text
+    ReportDetails:
+      reportNumber : Maybe Text
+      reportPoliceStation : Maybe Text
+      reportType : ReportType
       derive: "Ord,Eq,Read,'ListInstance"
     FlaggedStatus:
       enum: "Flagged,Confirmed,NotConfirmed"
+      derive: HttpInstance
+    ReportType:
+      enum: "FIR,NCR"
       derive: HttpInstance
 
   queries:
@@ -129,7 +133,7 @@ SuspectFlagRequest:
     firstName : Text
     lastName : Text
     mobileNumber : Maybe Text
-    firDetails : Maybe FIRDetails
+    reportDetails : Maybe ReportDetails
     totalComplaintsCount : Maybe Int
     adminApproval : AdminApproval
     approvedBy : Maybe Text

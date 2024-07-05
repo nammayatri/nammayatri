@@ -25,7 +25,7 @@ sendWebHook merchants webhookBody = do
             request' =
               request
                 { method = "POST",
-                  requestBody = RequestBodyLBS $ webhookBody,
+                  requestBody = RequestBodyLBS webhookBody,
                   requestHeaders = webHookHeaders
                 }
         manager <- liftIO getGlobalManager
@@ -40,5 +40,4 @@ sendWebHook merchants webhookBody = do
     merchants
   where
     convertToHeaders :: [MC.WebHookHeaders] -> [(HeaderName, ByteString)]
-    convertToHeaders webHookHeaders =
-      map (\header -> (CI.mk $ encodeUtf8 header.key, encodeUtf8 header.value)) webHookHeaders
+    convertToHeaders = map (\header -> (CI.mk $ encodeUtf8 header.key, encodeUtf8 header.value))
