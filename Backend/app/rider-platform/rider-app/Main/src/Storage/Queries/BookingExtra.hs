@@ -304,8 +304,8 @@ upsertToLocationAndMappingForOldData toLocationId bookingId merchantId merchantO
   toLocationMapping <- SLM.buildDropLocationMapping dropLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
   void $ QL.create dropLoc >> QLM.create toLocationMapping
 
-updateMultipleById :: (MonadFlow m, EsqDBFlow m r) => HighPrecMoney -> HighPrecMoney -> Maybe Distance -> Id Booking -> m ()
-updateMultipleById estimatedFare estimatedTotalFare mbEstimatedDistance bookingId = do
+updateMultipleById :: (MonadFlow m, EsqDBFlow m r) => Bool -> HighPrecMoney -> HighPrecMoney -> Maybe Distance -> Id Booking -> m ()
+updateMultipleById isBookingUpdated estimatedFare estimatedTotalFare mbEstimatedDistance bookingId = do
   let estimatedDistanceValue = (\estimatedDistance -> distanceToHighPrecDistance estimatedDistance.unit estimatedDistance) <$> mbEstimatedDistance
   now <- getCurrentTime
   updateOneWithKV
@@ -315,6 +315,7 @@ updateMultipleById estimatedFare estimatedTotalFare mbEstimatedDistance bookingI
       Se.Set BeamB.distance $ distanceToHighPrecMeters <$> mbEstimatedDistance,
       Se.Set BeamB.estimatedDistanceValue estimatedDistanceValue,
       Se.Set BeamB.distanceValue estimatedDistanceValue,
+      Se.Set BeamB.isBookingUpdated (Just isBookingUpdated),
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
