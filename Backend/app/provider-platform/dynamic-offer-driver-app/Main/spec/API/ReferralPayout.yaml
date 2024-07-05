@@ -5,7 +5,7 @@ imports:
   Text: Data.Text
   Money: Kernel.Types.Common
   PayoutStatus: Domain.Types.DailyStats
-  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+  ClearDuesRes: Domain.Action.UI.Driver
   PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
 
 module: ReferralPayout
@@ -19,6 +19,7 @@ types:
     orderId: Maybe Text
     orderStatus: Maybe OrderStatus
     referralRewardAmountPerRide: HighPrecMoney
+    payoutRegistrationAmount: HighPrecMoney
 
   DailyEarning:
     earnings: HighPrecMoney
@@ -27,7 +28,6 @@ types:
     referrals: Int
     status: PayoutStatus
     payoutOrderId: Maybe Text
-    payoutOrderStatus: Maybe Text
 
   OrderStatus:
     enum: "SuccessFul,Failed,Pending"
@@ -56,7 +56,7 @@ apis:
       endpoint: /payout/registration
       auth: TokenAuth PROVIDER_TYPE
       response:
-        type: CreateOrderResp
+        type: ClearDuesRes
 
   # post API for create payout order
   - POST:

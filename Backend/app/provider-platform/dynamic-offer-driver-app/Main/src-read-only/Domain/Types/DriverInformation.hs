@@ -47,6 +47,7 @@ data DriverInformation = DriverInformation
     onRide :: Kernel.Prelude.Bool,
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentPending :: Kernel.Prelude.Bool,
+    payoutRegistrationOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
