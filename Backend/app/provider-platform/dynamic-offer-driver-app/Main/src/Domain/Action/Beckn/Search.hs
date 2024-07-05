@@ -473,7 +473,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
-      isTollApplicableForServiceTier = DTC.isTollApplicable fullFarePolicy.vehicleServiceTier
+      isTollApplicable = DTC.isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
     DQuote.Quote
       { id = quoteId,
@@ -484,7 +484,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         vehicleServiceTierName = Just vehicleServiceTierItem.name,
         tripCategory = fullFarePolicy.tripCategory,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
-        tollNames = if isTollApplicableForServiceTier then tollNames else Nothing,
+        tollNames = if isTollApplicable then tollNames else Nothing,
         createdAt = now,
         updatedAt = now,
         currency = searchRequest.currency,
@@ -544,7 +544,7 @@ buildEstimate merchantOpCityId currency distanceUnit searchReqId startTime isSch
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
-  let isTollApplicableForServiceTier = DTC.isTollApplicable fullFarePolicy.vehicleServiceTier
+  let isTollApplicable = DTC.isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
     DEst.Estimate
       { id = estimateId,
@@ -560,7 +560,7 @@ buildEstimate merchantOpCityId currency distanceUnit searchReqId startTime isSch
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         specialLocationTag = specialLocationTag,
         isScheduled = isScheduled,
-        tollNames = if isTollApplicableForServiceTier then tollNames else Nothing,
+        tollNames = if isTollApplicable then tollNames else Nothing,
         createdAt = now,
         updatedAt = now,
         ..

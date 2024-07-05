@@ -99,7 +99,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge =
-  let isTollApplicableForServiceTier = DTC.isTollApplicable requestedVehicleServiceTier
+  let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
@@ -149,9 +149,9 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           vehicleServiceTier = nearbyReq.vehicleServiceTierName,
           airConditioned = nearbyReq.airConditioned,
           requestedVehicleVariant = castServiceTierToVariant requestedVehicleServiceTier,
-          tollCharges = if isTollApplicableForServiceTier then searchRequest.tollCharges else Nothing,
-          tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> if isTollApplicableForServiceTier then searchRequest.tollCharges else Nothing,
-          tollNames = if isTollApplicableForServiceTier then searchRequest.tollNames else Nothing,
+          tollCharges = if isTollApplicable then searchRequest.tollCharges else Nothing,
+          tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> if isTollApplicable then searchRequest.tollCharges else Nothing,
+          tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
           useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
           isOnRide = nearbyReq.isForwardRequest,
           ..
