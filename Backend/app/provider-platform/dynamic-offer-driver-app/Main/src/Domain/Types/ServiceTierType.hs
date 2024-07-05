@@ -40,6 +40,7 @@ data ServiceTierType
   | AMBULANCE_AC
   | AMBULANCE_AC_OXY
   | AMBULANCE_VENTILATOR
+  | SUV_PLUS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierType)

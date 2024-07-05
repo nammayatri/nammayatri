@@ -200,6 +200,7 @@ castVehicleVariant = \case
   VehVar.AMBULANCE_AC -> Common.AMBULANCE_AC
   VehVar.AMBULANCE_AC_OXY -> Common.AMBULANCE_AC_OXY
   VehVar.AMBULANCE_VENTILATOR -> Common.AMBULANCE_VENTILATOR
+  VehVar.SUV_PLUS -> Common.SUV_PLUS
 
 ---------------------------------------------------------------------
 

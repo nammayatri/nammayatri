@@ -1431,6 +1431,7 @@ castVehicleVariant = \case
   Common.AMBULANCE_AC -> DVeh.AMBULANCE_AC
   Common.AMBULANCE_AC_OXY -> DVeh.AMBULANCE_AC_OXY
   Common.AMBULANCE_VENTILATOR -> DVeh.AMBULANCE_VENTILATOR
+  Common.SUV_PLUS -> DVeh.SUV_PLUS
 
 castVehicleVariantDashboard :: Maybe DVeh.Variant -> Maybe Common.Variant
 castVehicleVariantDashboard = \case
@@ -1449,6 +1450,7 @@ castVehicleVariantDashboard = \case
   Just DVeh.AMBULANCE_AC -> Just Common.AMBULANCE_AC
   Just DVeh.AMBULANCE_AC_OXY -> Just Common.AMBULANCE_AC_OXY
   Just DVeh.AMBULANCE_VENTILATOR -> Just Common.AMBULANCE_VENTILATOR
+  Just DVeh.SUV_PLUS -> Just Common.SUV_PLUS
   _ -> Nothing
 
 ---------------------------------------------------------------------
