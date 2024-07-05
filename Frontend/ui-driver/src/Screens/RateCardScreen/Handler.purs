@@ -18,12 +18,14 @@ module Screens.RateCardScreen.Handler where
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
-import Prelude (bind, pure, ($), (<$>), discard)
+import Prelude (bind, pure, ($), (<$>), discard, void)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.RateCardScreen.Controller (ScreenOutput(..))
 import Screens.RateCardScreen.View as RateCardScreen
 import Types.App (FlowBT, GlobalState(..), RATE_CARD_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Screens.RateCardScreen.RateCardBottomScreen
+import Presto.Core.Types.Language.Flow (fork)
 
 
 rateCardScreen :: FlowBT String RATE_CARD_SCREEN_OUTPUT
@@ -34,4 +36,8 @@ rateCardScreen = do
     UpdatePrice updatedState val -> do
       modifyScreenState $ RateCardScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ RATE_CARD_API updatedState val)
+    OpenRateCard updateState pref -> do
+      modifyScreenState $ RateCardScreenStateType (\_ -> updateState)
+      lift $ lift $ void $ fork $ showRateCard {serviceTier : updateState.data.rateCard.serviceTierName, rateCardData : updateState.data.rateCard, ridePreference :pref, animate :true}
+      rateCardScreen 
     _ -> App.BackT $ pure App.GoBack

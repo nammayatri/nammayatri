@@ -55,7 +55,7 @@ primaryButtonConfig state = let
 appOnboardingNavBarConfig :: ST.RegistrationScreenState -> AppOnboardingNavBar.Config
 appOnboardingNavBarConfig state = 
   AppOnboardingNavBar.config
-  { prefixImageConfig {visibility = GONE,height = V 0, width = V 0},
+  { prefixImageConfig {visibility = if state.props.manageVehicle then VISIBLE else GONE},
     genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
     headerTextConfig {

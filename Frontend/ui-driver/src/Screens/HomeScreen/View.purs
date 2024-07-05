@@ -77,7 +77,8 @@ import Log (printLog)
 import MerchantConfig.Utils as MU
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
-import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
+import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Helpers.Pooling (delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
@@ -108,6 +109,7 @@ import Resource.Constants as RC
 import Data.Function.Uncurried (runFn3)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Control.Alt ((<|>))
+import ConfigProvider
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -599,7 +601,7 @@ bridgeStatsView push state =
                   )
         )
         []
-        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: show state.data.totalEarningsOfDay, infoView: false}, { title: "Tips Earned", value: "12" , infoView: true} ]
+        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: getCurrency appConfig <> show state.data.totalEarningsOfDay, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "12" , infoView: true} ]
     )
     , bridgeLocationUpdateview push state
     ]

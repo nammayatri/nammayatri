@@ -451,10 +451,10 @@ addRCButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = "Add Vehicle"
-      , color = Color.blue900}
+      , color = state.data.config.profile.settingsBtnColor}
       , margin = (Margin 16 15 16 0)
       , cornerRadius = 10.0
-      , background = Color.blue600
+      , background = state.data.config.profile.background
       , height = (V 60)
       , id = "AddRCPrimaryButton" 
       }
@@ -469,7 +469,7 @@ manageRCButtonConfig state = let
       , color = Color.black700}
       , margin = (Margin 16 12 16 18)
       , cornerRadius = 10.0
-      , background = Color.blue600
+      , background = state.data.config.profile.background
       , height = (V 60)
       , id = "ManageRCPrimaryButton" 
       }

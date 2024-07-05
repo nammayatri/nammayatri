@@ -1331,7 +1331,7 @@ export const openNavigation = function (dlat) {
             query = platformConfig.query;
         }
         if (isIOS) {
-          return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
+          window.JBridge.openNavigationWithQuery(dlat, dlong, JBridge.canOpenApp(btoa(platformConfig.packageName)) == "1" ? query : platformConfig.fallbackQuery)
         } else {
           const packageName = platformConfig.packageName;
           return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);

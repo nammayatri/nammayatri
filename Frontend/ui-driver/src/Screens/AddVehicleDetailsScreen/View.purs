@@ -46,7 +46,8 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, when, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-), (+), (<=), (>), (*), (/))
-import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import Presto.Core.Types.Language.Flow (Flow, doAff)
+import Helpers.Pooling (delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, scrollBarY, singleLine, onAnimationEnd, autoCapitalizationType)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)

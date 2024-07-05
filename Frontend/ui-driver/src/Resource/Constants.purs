@@ -238,10 +238,10 @@ getHomeStageFromString localStage =
         _ -> ST.HomeScreen
 
 verifiedVehicleOnly :: Boolean
-verifiedVehicleOnly = true
+verifiedVehicleOnly = false
 
 pendingVehicleOnly :: Boolean
-pendingVehicleOnly = false
+pendingVehicleOnly = true
 
 getCategoryFromVariant :: String -> Maybe ST.VehicleCategory -- check here if any new vehicle category is introduced
 getCategoryFromVariant variant = case variant of

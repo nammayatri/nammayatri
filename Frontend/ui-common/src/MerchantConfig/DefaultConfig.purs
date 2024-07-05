@@ -57,12 +57,14 @@ defaultNavigationAppConfig = {
       , packageName : "com.google.android.apps.maps"
       , walkQuery : "google.navigation:q=%f,%f&mode=w"
       , directionQuery : "http://maps.google.com?saddr=&daddr=%f,%f&dirflg=d"
+      , fallbackQuery : "google.navigation:q=%f,%f"
       }
     , ios : {
-        query : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
-      , walkQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=w"
-      , directionQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
-      , packageName : ""
+        query : "comgooglemaps://?saddr=&daddr=%@,%@"
+      , walkQuery : "comgooglemaps://?saddr=&daddr=%@,%@&directionsmode=walking"
+      , directionQuery : "comgooglemaps://?saddr=&daddr=%@,%@&directionsmode=walking"
+      , packageName : "comgooglemaps://"
+      , fallbackQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
       }
     }
 

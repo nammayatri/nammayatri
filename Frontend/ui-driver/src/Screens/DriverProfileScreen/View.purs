@@ -449,40 +449,43 @@ profileView push state =
             , background Color.grey900
             ]
             []
-        , scrollView
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , weight 1.0
-            , fillViewport true
-            , scrollBarY false
-            ]
-            [ linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                , cornerRadii $ Corners 16.0 false false true true
-                ]
-                [ linearLayout
-                    [ height MATCH_PARENT
-                    , width MATCH_PARENT
-                    , orientation VERTICAL
-                    , gradient $ Linear 180.0 state.data.config.profile.backgroundGradient
-                    , background state.data.config.profile.background
-                    , padding $ PaddingVertical 16 24
-                    ]
-                    [ tabView state push
-                    , tabImageView state push
-                    , infoView state push
-                    , verifiedVehiclesView state push
-                    , pendingVehiclesVerificationList state push
-                    ]
-                , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else vehicleDetailsView push state -- TODO: Once APIs are deployed this code can be uncommented
-                , if state.props.screenType == ST.DRIVER_DETAILS && state.data.config.showPaymentDetails then payment push state else dummyTextView
-                , if state.props.screenType == ST.DRIVER_DETAILS then additionalDetails push state else dummyTextView
-                -- , if (not null state.data.inactiveRCArray) && state.props.screenType == ST.VEHICLE_DETAILS then vehicleRcDetails push state else dummyTextView
-                ]
-            ]
+        , linearLayout
+          [ weight 1.0
+          , width MATCH_PARENT
+          ][ scrollView
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , fillViewport true
+              , scrollBarY false
+              ]
+              [ linearLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , orientation VERTICAL
+                  , cornerRadii $ Corners 16.0 false false true true
+                  ]
+                  [ linearLayout
+                      [ height MATCH_PARENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      , gradient $ Linear 180.0 state.data.config.profile.backgroundGradient
+                      , background state.data.config.profile.background
+                      , padding $ PaddingVertical 16 24
+                      ]
+                      [ tabView state push
+                      , tabImageView state push
+                      , infoView state push
+                      , verifiedVehiclesView state push
+                      ]
+                  , pendingVehiclesVerificationList state push
+                  , if state.props.screenType == ST.DRIVER_DETAILS then driverDetailsView push state else vehicleDetailsView push state -- TODO: Once APIs are deployed this code can be uncommented
+                  , if state.props.screenType == ST.DRIVER_DETAILS && state.data.config.showPaymentDetails then payment push state else dummyTextView
+                  , if state.props.screenType == ST.DRIVER_DETAILS then additionalDetails push state else dummyTextView
+                  -- , if (not null state.data.inactiveRCArray) && state.props.screenType == ST.VEHICLE_DETAILS then vehicleRcDetails push state else dummyTextView
+                  ]
+              ]
+          ]
         , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS  && state.data.config.profile.enableMultipleRC then addRcView state push else dummyTextView
         ]
 
@@ -720,8 +723,8 @@ tabImageView state push =
       mbVehicle = find (\item -> item.isActive == item.isVerified) vehicles
     in
       case mbVehicle of
-        Just vehicle -> fromMaybe ST.AutoCategory vehicle.verifiedVehicleCategory
-        Nothing -> ST.AutoCategory
+        Just vehicle -> fromMaybe ST.CarCategory vehicle.verifiedVehicleCategory
+        Nothing -> ST.CarCategory
 
   getVehicleImage :: ST.VehicleCategory -> String
   getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -1437,7 +1440,7 @@ vehicleListItem state push vehicle =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , onClick push if vehicle.isVerified then (const (ActivateRc vehicle.registrationNo (vehicle.isActive && vehicle.isVerified))) else const $ PendingVehicle vehicle.registrationNo vehicle.userSelectedVehicleCategory
+    , onClick push if vehicle.isVerified || pendingVehicleOnly then (const (ActivateRc vehicle.registrationNo (vehicle.isActive && (vehicle.isVerified || pendingVehicleOnly)))) else const $ PendingVehicle vehicle.registrationNo vehicle.userSelectedVehicleCategory
     , gravity CENTER_VERTICAL
     , visibility $ MP.boolToVisibility $ not $ state.props.screenType == ST.DRIVER_DETAILS
     , background if vehicle.isVerified then Color.white900 else state.data.config.profile.background

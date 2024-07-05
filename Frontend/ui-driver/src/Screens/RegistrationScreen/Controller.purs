@@ -219,6 +219,8 @@ eval Refresh state = updateAndExit state { props { refreshAnimation = true}} Ref
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props{menuOptions = not state.props.menuOptions}}
 
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.PrefixImgOnClick)) state = continueWithCmd state [pure BackPressed]
+
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
 
 eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do

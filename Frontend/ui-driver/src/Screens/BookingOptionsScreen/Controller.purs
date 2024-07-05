@@ -128,7 +128,7 @@ eval (ShowRateCard pref) state = do
               extraFare = rateCardData.fareList
             }}}
           if getMerchant CTA.FunctionCall /= BRIDGE then continue newState {props {showRateCard = true }}
-            else exit $ OpenRateCard ridePreference newState
+            else exit $ OpenRateCard ridePreference newState{props {showRateCard = false}}
         Nothing -> continue state
     Nothing -> continue state
 

@@ -223,7 +223,7 @@ window.getMerchantConfig = function () {
     }
   , "profile" : {
     "showBookingOption" : false
-  , "enableMultipleRC" : false
+  , "enableMultipleRC" : true
   , "backgroundGradient" : ["#E0D1FF" , "#F9F6FF"]
   , "background" : "#F9F6FF"
   , "settingsBtnColor": "#7D4BFF"
@@ -252,18 +252,18 @@ window.getMerchantConfig = function () {
         }
   , "enterMobileNumberScreen" : {
         "headerBackground": "#11032F"
-      , "emailAuth" : false
+      , "emailAuth" : true
       }
   , "defaultCountryCodeConfig" : {
       "countryName" : "UnitedStates"
-    , "countryCode"  : "+91"
+    , "countryCode"  : "+1"
     , "countryShortCode" : "US"
     }
   , "flowConfig" : {
       "chooseCity" : {
         "runFlow" : false,
         "directAuth" : true,
-        "defCity" : "Bangalore",
+        "defCity" : "Minneapolis",
         "useDefault" : true
       }
   }
@@ -288,6 +288,11 @@ window.getMerchantConfig = function () {
           , "driver": "#E0D1FF"
           }
   }
+  , "navigationAppConfig" : {
+      ios : {
+      fallbackQuery : "https://apps.apple.com/us/app/google-maps/id585027354"
+      }
+    }
   , "lmsVideoScreen": {
       "titleBackground" : "#F6F1FF"
     , "enableQuiz" : false

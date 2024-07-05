@@ -62,7 +62,8 @@ import MerchantConfig.Types (SubscriptionConfig)
 import Mobility.Prelude (boolToVisibility)
 import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), identity)
 import Presto.Core.Types.API (ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
+import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
+import Helpers.Pooling (delay)
 import PrestoDOM (alignParentRight, alignParentLeft, Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
@@ -166,7 +167,7 @@ paymentStatusPooling orderId count base power state push action = do
             _ <- pure $ setValueToLocalStore PAYMENT_STATUS_POOLING "false"
             doAff do liftEffect $ push $ action resp.status
         else do
-            void $ delay $ Seconds $ toNumber $ pow base power
+            void $ delay $ Milliseconds $ 1000.0 * (toNumber $ pow base power)
             paymentStatusPooling orderId (count - 1) base (power+1) state push action
       Left err -> pure unit
     else pure unit
@@ -253,15 +254,16 @@ joinPlanView push state visibility' =
     , gradient $ Linear 180.0 state.data.config.profile.backgroundGradient
     ][
       if state.data.config.subscriptionConfig.showLottieSubscriptionScreen then lottieView state "lottieSubscriptionScreen" (Margin 0 0 0 0) (Padding 16 16 16 0) else textView[]
-    , relativeLayout
+    , linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
+      , margin $ MarginTop 20
       ][  imageView
           [ width $ V 116
           , height $ V 368
-          , margin $ MarginTop 20
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImageType
           ]
+        , linearLayout [weight 1.0][]
         , enjoyBenefitsView push state
       ]
     ]
@@ -276,28 +278,29 @@ joinPlanView push state visibility' =
 enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 enjoyBenefitsView push state = 
   linearLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , gravity RIGHT
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
     , orientation VERTICAL
-    , margin $ Margin 136 10 16 0
+    , margin $ Margin 15 10 16 0
+    , gravity CENTER_HORIZONTAL
     ][  linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , orientation VERTICAL
         ][  commonTV push (getString $ GET_READY_FOR_YS_SUBSCRIPTION "GET_READY_FOR_YS_SUBSCRIPTION") Color.black800 (FontStyle.h1 TypoGraphy) 0 LEFT state.props.joinPlanProps.isIntroductory
-          , commonTV push (getString WE_GUARANTEE_YOU) Color.black800 (FontStyle.body4 TypoGraphy) 0 LEFT true
+          , commonTV push (getString WE_GUARANTEE_YOU) Color.black800 (FontStyle.body4 TypoGraphy) 11 LEFT true
           , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , orientation VERTICAL
+            , margin $ MarginTop 2
             ](map
                 (\(item) ->
                     linearLayout
                       [ width MATCH_PARENT
                       , height WRAP_CONTENT
                       , gravity CENTER_VERTICAL
-                      , margin $ MarginTop 5
+                      , margin $ MarginVertical 6 6
                       ][ imageView
                           [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_check_green"
                           , width $ V 11
@@ -308,6 +311,8 @@ enjoyBenefitsView push state =
                           , text item
                           , color Color.black700
                           , height WRAP_CONTENT
+                          , ellipsize true
+                          , maxLines 2
                           , width WRAP_CONTENT
                           ] <> FontStyle.body1 TypoGraphy
                       ]
@@ -482,18 +487,27 @@ plansBottomView push state =
           , background Color.grey700
           , margin $ MarginVertical 10 10
           ][]
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          ](map 
-              (\item ->
-                let selectedPlan = state.props.joinPlanProps.selectedPlanItem
-                in case selectedPlan of
-                    Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] config
-                    Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] config
-              ) state.data.joinPlanData.allPlans)
-        , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
+        , scrollView
+          [ width MATCH_PARENT
+          , height $ V $ JB.getHeightFromPercent 25
+          ][ linearLayout
+              [ orientation VERTICAL
+              , width MATCH_PARENT
+              , height MATCH_PARENT
+              ][ linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              ](map 
+                  (\item ->
+                    let selectedPlan = state.props.joinPlanProps.selectedPlanItem
+                    in case selectedPlan of
+                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] config
+                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] config
+                  ) state.data.joinPlanData.allPlans)
+            , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
+            ]
+          ]
       ]
   ]
 

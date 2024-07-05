@@ -81,15 +81,33 @@ driverProfileScreen = do
     GoToBookingOptions state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ App.BackPoint <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
-    VerifyAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (VERIFY_OTP1 state)
-    ResendAlternateNumberOTP state -> App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP1 state)
-    ValidateAlternateNumber  updatedState -> App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
-    RemoveAlternateNumber state -> App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE1 state)
-    UpdateGender state -> App.BackT $ App.NoBack <$> pure (DRIVER_GENDER1 state)
-    ActivatingOrDeactivatingRC state -> App.BackT $ App.NoBack <$> pure (GO_TO_ACTIVATE_OR_DEACTIVATE_RC state)
-    DeletingRc state -> App.BackT $ App.NoBack <$> pure (GO_TO_DELETE_RC state)
-    CallingDriver state -> App.BackT $ App.NoBack <$> pure (GO_TO_CALL_DRIVER state)
-    AddingRC state -> App.BackT $ App.NoBack <$> pure (ADD_RC state)
+    VerifyAlternateNumberOTP state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> pure (VERIFY_OTP1 state)
+    ResendAlternateNumberOTP state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> pure (RESEND_ALTERNATE_OTP1 state)
+    ValidateAlternateNumber  updatedState -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> pure (DRIVER_ALTERNATE_CALL_API1 updatedState)
+    RemoveAlternateNumber state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> pure (ALTERNATE_NUMBER_REMOVE1 state)
+    UpdateGender state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> pure (DRIVER_GENDER1 state)
+    ActivatingOrDeactivatingRC state ->do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> pure (GO_TO_ACTIVATE_OR_DEACTIVATE_RC state)
+    DeletingRc state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> pure (GO_TO_DELETE_RC state)
+    CallingDriver state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> pure (GO_TO_CALL_DRIVER state)
+    AddingRC state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.NoBack <$> pure (ADD_RC state)
     SubscriptionScreen -> App.BackT $ App.NoBack <$> pure (SUBCRIPTION )
     UpdateLanguages updatedState language -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> updatedState)

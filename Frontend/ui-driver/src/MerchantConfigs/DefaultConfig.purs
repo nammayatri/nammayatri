@@ -53,7 +53,7 @@ config =
     whatsappSupportLink : "",
     myPlanYoutubeLink : "",
     overlayYoutubeLink : "",
-    enableIntroductoryView : false,
+    enableIntroductoryView : true,
     optionsMenuItems : {
       managePlan : false,
       paymentHistory : false,
@@ -625,10 +625,10 @@ config =
             , vehicleNSImg : ""
             , registration: registrationConfig{defVariantList = [CTA.CarCategory], enableAc = false, enableDataOfIssue = false, emailSupport = true}
             , variantSubscriptionConfig:
-                { enableVariantBasedSubscription: false
+                { enableVariantBasedSubscription: true
                 , variantList: []
-                , enableCabsSubscriptionView: false
-                , staticViewPlans: getStaticViewPlans
+                , enableCabsSubscriptionView: true
+                , staticViewPlans: getBridgePlans 
                 }
             , showEarningSection: true
             , referral:
@@ -884,6 +884,12 @@ getStaticViewPlans = [
   {price : 45.0, frequency : "PER_DAY", variantCategory : "CarCategory", name : "DAILY_UNLIMITED", introductoryOffer : "FREE_RIDE_OFFER", showSelected : false, planDesc : "CAB_DAILY_UNLIMITED_OFFER"},
   {price : 9.0, frequency : "PER_RIDE", variantCategory : "CarCategory", name : "DAILY_PER_RIDE", introductoryOffer : "", showSelected : false, planDesc : "CAB_DAILY_PER_RIDE_OFFER"},
   {price : 25.0, frequency : "PER_DAY", variantCategory : "AutoCategory", name : "DAILY_UNLIMITED", introductoryOffer : "NO_CHARGES_TILL", showSelected : true, planDesc : ""}
+]
+
+getBridgePlans :: Array CTC.StaticViewPlans
+getBridgePlans = [
+  {price : 3.90, frequency : "PER_DAY", variantCategory : "CarCategory", name : "DAILY_UNLIMITED", introductoryOffer : "FREE_RIDE_OFFER", showSelected : false, planDesc : "CAB_DAILY_UNLIMITED_OFFER"},
+  {price : 0.90, frequency : "PER_RIDE", variantCategory : "CarCategory", name : "DAILY_PER_RIDE", introductoryOffer : "", showSelected : false, planDesc : "CAB_DAILY_PER_RIDE_OFFER"}
 ]
 
 defWaitingChargesConfig :: CTC.WaitingChargesConfig

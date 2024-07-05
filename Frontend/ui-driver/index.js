@@ -452,6 +452,23 @@ window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyp
   }
 }
 
+// window.onFileUpdated = function () {
+//   console.log("arguments -=>", arguments)
+//   //JBridge.toast("GOT UPDATE");
+//   if (arguments[0].includes("v1-index_bundle.jsa")) {
+//     //JBridge.toast("BUNDLE UPDATE AVAILABLE");
+//     JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
+//       event: "reboot",
+//       service: "in.juspay.becknui",
+//       payload: {},
+//       error: false,
+//       errorMessage: "",
+//       errorCode: ""
+//     }), "");
+//     console.log("arguments after -=>", arguments)
+//   }
+
+// }
 
 
 
@@ -460,6 +477,7 @@ if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onEvent")(); // adding onEvent listener for hyperPay
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
+  // window.JOS.addEventListener("onFileUpdated")();
   console.error("Calling action DUI_READY");
   JOS.emitEvent("java")("onEvent")(JSON.stringify({ action: "DUI_READY", event: "initiate",service : JOS.self }))()();
 } else {

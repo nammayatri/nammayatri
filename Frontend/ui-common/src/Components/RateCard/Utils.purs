@@ -36,7 +36,7 @@ fetchSpecificFare fareBreakup fareType =
     dummyPriceEntity = { amount: 0.0, currency: INR }
 
 priceToBeDisplayed :: Price -> String
-priceToBeDisplayed price = show price.currency <> show value
+priceToBeDisplayed price = show price.currency <> value
   where
     value = EHU.getFixedTwoDecimals price.amount
 

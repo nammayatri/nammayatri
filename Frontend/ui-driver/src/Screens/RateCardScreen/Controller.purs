@@ -23,13 +23,16 @@ import Screens (ScreenName(..), getScreen)
 import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
 import Common.Types.App as CTA
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import JBridge as JB
 import Engineering.Helpers.Commons as EHC
 import Screens.Types as ST
 
-data ScreenOutput = Back ST.RateCardScreenState | UpdatePrice ST.RateCardScreenState Int
+data ScreenOutput = Back ST.RateCardScreenState 
+  | UpdatePrice ST.RateCardScreenState Int
+  | OpenRateCard ST.RateCardScreenState ST.RidePreference
 
 data Action = BackClick
     | ShowRateCard ST.RidePreference
@@ -109,8 +112,8 @@ eval (ShowRateCard pref) state = do
   case mbPref of
     Just ridePreference -> do
       case ridePreference.rateCardData of
-        Just rateCardData -> 
-          continue state { data { rateCard  {
+        Just rateCardData -> do
+          let  newState = state { data { rateCard  {
               onFirstPage = false,
               serviceTierName = Just ridePreference.name,
               currentRateCardType = CTA.DefaultRateCard,
@@ -120,9 +123,12 @@ eval (ShowRateCard pref) state = do
               nightChargeTill = rateCardData.nightChargeEnd,
               nightChargeFrom = rateCardData.nightChargeStart,
               extraFare = rateCardData.fareList
-            }} , props {showRateCard = true } }
+            }}}
+          if getMerchant CTA.FunctionCall /= BRIDGE then continue newState {props {showRateCard = true }}
+            else exit $ OpenRateCard newState ridePreference
         Nothing -> continue state
     Nothing -> continue state
+
 
 eval (OpenLink link) state = continueWithCmd state [ do 
   void $ JB.openUrlInApp link

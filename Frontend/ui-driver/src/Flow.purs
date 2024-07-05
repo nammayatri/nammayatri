@@ -1798,9 +1798,6 @@ bookingOptionsFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToIntercity = updateDriverResp.canSwitchToIntercity} })
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
-    OPEN_RATE_CARD pref state -> do
-      lift $ lift $ void $ fork $ UI.showRateCard {serviceTier : state.data.rateCard.serviceTierName, rateCardData : state.data.rateCard, ridePreference :pref}
-      bookingOptionsFlow
     EXIT_TO_RATE_CARD_SCREEN bopState -> do
       response <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just RC.defaultSliderDist)
       case response of
