@@ -32,8 +32,7 @@ buildTransaction ::
   TokenInfo ->
   Text ->
   m DT.Transaction
-buildTransaction endpoint tokenInfo request =
-  T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo) request
+buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 getListNotification :: TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow API.Types.UI.Notification.NotificationList
 getListNotification tokenInfo mbLimit mbOffset readStatus = do

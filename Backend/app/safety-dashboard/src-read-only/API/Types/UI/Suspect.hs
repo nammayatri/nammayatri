@@ -21,12 +21,12 @@ data SuspectFlagStatusChangeReq = SuspectFlagStatusChangeReq {dl :: Kernel.Prelu
 
 data SuspectUploadReq = SuspectUploadReq
   { dl :: Kernel.Prelude.Maybe Data.Text.Text,
-    firDetails :: Kernel.Prelude.Maybe Domain.Types.Suspect.FIRDetails,
     firstName :: Data.Text.Text,
     flaggedCategory :: Data.Text.Text,
     flaggedReason :: Data.Text.Text,
     lastName :: Data.Text.Text,
     mobileNumber :: Kernel.Prelude.Maybe Data.Text.Text,
+    reportDetails :: Kernel.Prelude.Maybe Domain.Types.Suspect.ReportDetails,
     totalComplaintsCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     voterId :: Kernel.Prelude.Maybe Data.Text.Text
   }

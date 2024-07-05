@@ -34,8 +34,7 @@ buildTransaction ::
   TokenInfo ->
   Text ->
   m DT.Transaction
-buildTransaction endpoint tokenInfo request =
-  T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo) request
+buildTransaction endpoint tokenInfo = T.buildTransactionForSafetyDashboard (DT.SafetyAPI endpoint) (Just tokenInfo)
 
 postAddFlagCategory :: TokenInfo -> API.Types.UI.FlaggedCategory.AddFlagCategoryReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postAddFlagCategory tokenInfo req = do
