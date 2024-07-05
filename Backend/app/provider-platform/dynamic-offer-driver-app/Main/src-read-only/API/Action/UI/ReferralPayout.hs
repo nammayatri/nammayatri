@@ -11,13 +11,13 @@ import qualified API.Types.UI.ReferralPayout
 import qualified Control.Lens
 import qualified Data.Text
 import qualified Data.Time.Calendar
+import qualified Domain.Action.UI.Driver
 import qualified Domain.Action.UI.ReferralPayout as Domain.Action.UI.ReferralPayout
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
-import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.External.Payout.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -44,7 +44,7 @@ type API =
       :> "registration"
       :> Get
            '[JSON]
-           Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp
+           Domain.Action.UI.Driver.ClearDuesRes
       :<|> TokenAuth
       :> "payout"
       :> "createOrder"
@@ -97,7 +97,7 @@ getPayoutRegistration ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Environment.FlowHandler Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp
+    Environment.FlowHandler Domain.Action.UI.Driver.ClearDuesRes
   )
 getPayoutRegistration a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.getPayoutRegistration (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 

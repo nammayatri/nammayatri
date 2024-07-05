@@ -107,7 +107,7 @@ callPayout ::
   m ()
 callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutConfigList statusForRetry = do
   mbVehicle <- QV.findById driverId
-  let vehicleCategory = fromMaybe DV.CAR ((.category) =<< mbVehicle)
+  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
   let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
   case payoutConfig' of
     Just payoutConfig -> do
@@ -119,6 +119,7 @@ callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutConfigList statu
         Just vpa -> do
           Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
             QDailyStats.updatePayoutStatusById DS.Processing id
+            QDailyStats.updatePayoutOrderId (Just uid) id
           phoneNo <- mapM decrypt person.mobileNumber
           let entityName = DLP.DRIVER_DAILY_STATS
               createPayoutOrderReq =
