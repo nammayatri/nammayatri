@@ -2065,7 +2065,7 @@ instance encodeSPersonStatsRes :: Encode PersonStatsRes where encode = defaultEn
 
 -- =========================================== Zoo Booking API's ================================================================
 
-data BookingStatus = Pending | Failed | Booked
+data BookingStatus = Pending | Failed | Booked | Cancelled
 
 derive instance genericBookingStatus :: Generic BookingStatus _
 instance standardEncodeBookingStatus :: StandardEncode BookingStatus where standardEncode _ = standardEncode {}
@@ -2325,7 +2325,9 @@ newtype TicketPlaceResp = TicketPlaceResp
     mapImageUrl :: Maybe String,
     termsAndConditions :: Array String,
     placeType :: String,
-    status :: Maybe TicketPlaceStatus
+    status :: Maybe TicketPlaceStatus,
+    allowSameDayBooking :: Maybe Boolean,
+    termsAndConditionsUrl :: Maybe String
   }
 
 data GetTicketStatusReq = GetTicketStatusReq String
