@@ -100,7 +100,7 @@ screen initialState =
                     EHU.toggleLoader true
                     summaryResponse <- Remote.driverProfileSummary ""
                     let cityConfig = getCityConfig initialState.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-                    profileResponse <- Remote.getDriverInfoApi (DriverInfoReq { isAdvancedBookingEnabled : Just cityConfig.enableAdvancedBooking})
+                    profileResponse <- Remote.getDriverInfoApi ""
                     case summaryResponse, profileResponse of
                       Right summaryResp, Right profileResp -> do
                         liftFlow $ push $ DriverSummary summaryResp

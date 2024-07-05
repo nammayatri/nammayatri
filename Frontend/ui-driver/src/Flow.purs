@@ -415,7 +415,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
   case driverInfoResp of
     Just driverInfoResp -> runDriverInfoFlow driverInfoResp true
     Nothing -> do
-      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : isAdvancedBookingEnabled})
+      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi ""
       runDriverInfoFlow getDriverInfoApiResp false
   where    
     runDriverInfoFlow driverInfoRes updateFeatureFlags = do
@@ -429,7 +429,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
           maybe (pure unit) (setValueToLocalStore MOBILE_NUMBER_KEY) getDriverInfoResp.mobileNumber
           let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
           when (updateFeatureFlags && cityConfig.callDriverInfoPost) $ do
-            void $ lift $ lift $ fork $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : isAdvancedBookingEnabled})
+            void $ lift $ lift $ fork $ Remote.getDriverInfoApi ""
           if getDriverInfoResp.enabled 
             then do
               deleteValueFromLocalStore ENTERED_RC
@@ -1099,7 +1099,7 @@ addVehicleDetailsflow addRcFromProf = do
           driverProfileFlow
         where 
           refreshDriverProfile = do 
-            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Nothing})
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi ""
             case getDriverInfoApiResp of
               Right getDriverInfoResp -> do
                 modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just getDriverInfoResp}
@@ -1258,7 +1258,7 @@ driverProfileFlow = do
           driverProfileFlow
       where 
           refreshDriverProfile = do 
-            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Nothing})
+            getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi ""
             case getDriverInfoApiResp of
               Right getDriverInfoResp -> do
                 modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just getDriverInfoResp}
@@ -2356,7 +2356,7 @@ homeScreenFlow = do
       case (endRideResp) of
         Right (API.EndRideResponse response) -> do
           when state.data.driverGotoState.isGotoEnabled do
-            getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Nothing })
+            getDriverInfoResp <- Remote.getDriverInfoBT ""
             modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
               { driverInformation = Just getDriverInfoResp,
                 gotoPopupType = case response.homeLocationReached of 
@@ -2406,7 +2406,7 @@ homeScreenFlow = do
                                                                                             {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
             void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
             if getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "true" then do
-              getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq { isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking})
+              getDriverInfoResp <- Remote.getDriverInfoBT ""
 
               let (GetDriverInfoResp getDriverInfoResp) = getDriverInfoResp
               modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just (GetDriverInfoResp getDriverInfoResp)}
@@ -2506,7 +2506,7 @@ homeScreenFlow = do
       void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       void $ updateStage $ HomeScreenStage HomeScreen
       when state.data.driverGotoState.isGotoEnabled do
-        driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq { isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking})
+        driverInfoResp <- Remote.getDriverInfoBT ""
         modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = if (fromMaybe false cancelRideResp.isGoHomeDisabled) then ST.REDUCED 0 else ST.NO_POPUP_VIEW})
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
@@ -2542,7 +2542,7 @@ homeScreenFlow = do
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {rideActionModal = false, cancelRideModalShow = false, enterOtpModal = false, routeVisible = false, refreshAnimation = false}})
-      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Nothing})
+      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi ""
       case getDriverInfoApiResp of
         Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
         Left _ -> pure unit
@@ -2708,7 +2708,7 @@ homeScreenFlow = do
         Right resp -> do 
           void $ pure $ toast $ getString GOTO_LOC_IS_ENABLED
           modifyScreenState $ HomeScreenStateType (\_ -> state { data { driverGotoState { showGoto = false}}})
-          driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking})
+          driverInfoResp <- Remote.getDriverInfoBT ""
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
           updateDriverDataToStates
         Left errorPayload ->if (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_CLOSE_TO_HOME_LOCATION" then modifyScreenState $ HomeScreenStateType (\_ -> state{data { driverGotoState {gotoLocInRange = true
@@ -2730,7 +2730,7 @@ homeScreenFlow = do
         Right _ -> do
           void $ pure $ toast $ getString GOTO_LOC_IS_DISABLED
           void $ pure $ clearTimerWithId state.data.driverGotoState.timerId
-          driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking })
+          driverInfoResp <- Remote.getDriverInfoBT ""
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
           updateDriverDataToStates
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
@@ -2744,7 +2744,7 @@ homeScreenFlow = do
     REFRESH_GOTO state -> do
       let defState = HomeScreenData.initData
       modifyScreenState $ HomeScreenStateType (\_ -> state { data { driverGotoState = defState.data.driverGotoState}})
-      driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just state.data.cityConfig.enableAdvancedBooking })
+      driverInfoResp <- Remote.getDriverInfoBT ""
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = ST.NO_POPUP_VIEW})
       updateDriverDataToStates
       homeScreenFlow
@@ -2843,7 +2843,7 @@ clearPendingDuesFlow showLoader = do
             Nothing -> pure unit
         Left err -> pure $ toast $ Remote.getCorrespondingErrorMessage err 
     Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-  getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Nothing})
+  getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi ""
   case getDriverInfoApiResp of
     Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
     Left _ -> pure unit
@@ -2906,7 +2906,7 @@ setSubscriptionStatus paymentStatus apiPaymentStatus planCardConfig = do
       void $ pure $ cleverTapCustomEvent "ny_driver_subscription_success"
       void $ pure $ JB.metaLogEvent "ny_driver_subscription_success"
       liftFlowBT $ JB.firebaseLogEvent "ny_driver_subscription_success"
-      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq{isAdvancedBookingEnabled : Just globalState.homeScreen.data.cityConfig.enableAdvancedBooking})
+      getDriverInfoApiResp <- lift $ lift $ Remote.getDriverInfoApi ""
       case getDriverInfoApiResp of
         Right resp -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just resp}
         Left _ -> pure unit
@@ -2931,7 +2931,7 @@ paymentHistoryFlow = do
         resumeMandate <- lift $ lift $ Remote.resumeMandate ""
         case resumeMandate of 
           Right resp -> do
-            getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq { isAdvancedBookingEnabled : Nothing})
+            getDriverInfoResp <- Remote.getDriverInfoBT ""
             modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
             updateDriverDataToStates
             let (GlobalState defGlobalState) = defaultGlobalState
@@ -3080,7 +3080,7 @@ subScriptionFlow = do
       suspendMandate <- lift $ lift $ Remote.suspendMandate state.data.driverId
       case suspendMandate of 
         Right resp -> do 
-          getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Nothing })
+          getDriverInfoResp <- Remote.getDriverInfoBT ""
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
           updateDriverDataToStates
           let (GlobalState defGlobalState) = defaultGlobalState
@@ -3109,7 +3109,7 @@ subScriptionFlow = do
       resumeMandate <- lift $ lift $ Remote.resumeMandate state.data.driverId
       case resumeMandate of 
         Right resp -> do
-          getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq { isAdvancedBookingEnabled : Nothing})
+          getDriverInfoResp <- Remote.getDriverInfoBT ""
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
           updateDriverDataToStates
           let (GlobalState defGlobalState) = defaultGlobalState
@@ -3129,7 +3129,7 @@ subScriptionFlow = do
       subScriptionFlow
     REFRESH_SUSCRIPTION -> do
       (GlobalState state) <- getState
-      getDriverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Nothing })
+      getDriverInfoResp <- Remote.getDriverInfoBT ""
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just getDriverInfoResp})
       updateDriverDataToStates
       let (GlobalState defGlobalState) = defaultGlobalState
@@ -3260,7 +3260,7 @@ getDriverInfoDataFromCache (GlobalState globalState) mkCall = do
     let driverInfoResp = fromMaybe dummyDriverInfo globalState.globalProps.driverInformation
     pure driverInfoResp
   else do
-    driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just globalState.homeScreen.data.cityConfig.enableAdvancedBooking})
+    driverInfoResp <- Remote.getDriverInfoBT ""
     modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ driverInfoResp}
     updateDriverDataToStates
     pure driverInfoResp

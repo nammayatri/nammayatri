@@ -373,8 +373,8 @@ logOutBT payload = do
 
 --------------------------------- getDriverInfoBT ---------------------------------------------------------------------------------------------------------------------------------
 
-getDriverInfoBT :: DriverInfoReq -> FlowBT String GetDriverInfoResp
-getDriverInfoBT payload = do
+getDriverInfoBT :: String -> FlowBT String GetDriverInfoResp
+getDriverInfoBT dummy = do
      headers <- getHeaders' "" true
      let config = getAppConfig appConfig
          cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -393,14 +393,15 @@ getDriverInfoBTGet = do
 getDriverInfoBTPost :: Boolean -> FlowBT String GetDriverInfoResp
 getDriverInfoBTPost enabled = do
     headers <- getHeaders' "" true
-    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" )) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enabled}))
+    let config = getAppConfig appConfig
+    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" )) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enabled, isInteroperable: Just config.feature.enableInterOperability}))
     pure (resp1)
     where
         errorHandler (ErrorPayload errorPayload) =  do
                 BackT $ pure GoBack
 
-getDriverInfoApi :: DriverInfoReq -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
-getDriverInfoApi payload = do
+getDriverInfoApi :: String -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
+getDriverInfoApi dummy = do
      _ <-pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) before" (getValueToLocalStore REGISTERATION_TOKEN)
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) before effect" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
@@ -425,7 +426,8 @@ getDriverInfoApiGet = do
 getDriverInfoApiPost :: Boolean -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
 getDriverInfoApiPost enableAdvancedBooking = do
     headers <- getHeaders "" true
-    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" )) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking})
+    let config = getAppConfig appConfig
+    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" )) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking, isInteroperable: Just config.feature.enableInterOperability})
     case resp1 of
         Right (UpdateFeatureInDInfoResp resp1) -> do
             let (GetDriverInfoResp resp ) = resp1

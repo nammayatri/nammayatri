@@ -437,7 +437,8 @@ newtype GetDriverInfoReq = GetDriverInfoReq {
  }
 
 newtype DriverInfoReq = DriverInfoReq {
-  isAdvancedBookingEnabled :: Maybe Boolean
+  isAdvancedBookingEnabled :: Maybe Boolean,
+  isInteroperable :: Maybe Boolean
  }
 
 newtype GetDriverInfoResp = GetDriverInfoResp
