@@ -15,3 +15,9 @@ findAllByBookingId bookingId = findAllWithKVAndConditionalDB [Se.Is BeamFB.booki
 
 deleteAllByBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> m ()
 deleteAllByBookingId bookingId = deleteWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
+
+findAllByEntityIdAndEntityTypeInKV :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> FareBreakupEntityType -> m [FareBreakup]
+findAllByEntityIdAndEntityTypeInKV entityId entityType =
+  findAllWithKVAndConditionalDB
+    [Se.And [Se.Is BeamFB.bookingId $ Se.Eq entityId, Se.Is BeamFB.entityType $ Se.Eq entityType]]
+    Nothing
