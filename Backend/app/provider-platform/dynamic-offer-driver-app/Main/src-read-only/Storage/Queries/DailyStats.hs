@@ -58,6 +58,9 @@ updateByDriverId totalEarnings numRides totalDistance driverId merchantLocalDate
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 
+updatePayoutOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Text.Text -> Data.Text.Text -> m ())
+updatePayoutOrderId payoutOrderId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.payoutOrderId payoutOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+
 updatePayoutStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DailyStats.PayoutStatus -> Data.Text.Text -> m ())
 updatePayoutStatusById payoutStatus id = do
   _now <- getCurrentTime

@@ -1245,7 +1245,6 @@ PayoutConfig:
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
   default:
-    payoutRegistrationAmount: "1.0"
     referralRewardAmountPerRide: "100.0"
     timeDiff: "86400"
     isPayoutEnabled: "False"

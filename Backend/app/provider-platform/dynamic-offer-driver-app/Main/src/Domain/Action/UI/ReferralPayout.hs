@@ -5,7 +5,7 @@ module Domain.Action.UI.ReferralPayout where
 
 import qualified API.Types.UI.ReferralPayout
 import Data.OpenApi (ToSchema)
-import Data.Text hiding (map)
+import Data.Text hiding (filter, map)
 import Data.Time.Calendar
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
@@ -21,7 +21,6 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payment.Juspay.Types.Common as JuspayT
-import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (ServiceFlow)
@@ -30,6 +29,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Error
+import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Price (Currency (..))
 import Kernel.Utils.Common
@@ -41,6 +41,7 @@ import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
+import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as PersonQuery
@@ -60,23 +61,24 @@ getPayoutReferralEarnings ::
   )
 getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate toDate = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  let dates = [fromDate .. toDate]
-  earnings <- catMaybes <$> forM dates (\date -> QDS.findByDriverIdAndDate personId date)
+  earnings_ <- QDSE.findAllInRangeByDriverId personId fromDate toDate
+  let earnings = filter (\ern -> ern.referralCounts > 0) earnings_
   driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   dInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
   mbVehicle <- QVeh.findById personId
-  let vehicleCategory = fromMaybe DV.CAR ((.category) =<< mbVehicle)
+  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
   let dailyEarnings = map parseDailyEarnings earnings
-  mbRegistrationOrder <- QOrder.findLatestByPersonId personId.getId
+  mbRegistrationOrder <- maybe (return Nothing) QOrder.findById (Id <$> dInfo.payoutRegistrationOrderId)
   return $
     API.Types.UI.ReferralPayout.ReferralEarningsRes
       { totalReferralCount = driverStats.totalReferralCounts,
         dailyEarnings = dailyEarnings,
         vpaId = dInfo.payoutVpa,
-        orderId = show <$> ((.id) <$> mbRegistrationOrder),
+        orderId = dInfo.payoutRegistrationOrderId,
         orderStatus = fmap castPayoutRegistrationStatus ((.status) <$> mbRegistrationOrder),
-        referralRewardAmountPerRide = payoutConfig.referralRewardAmountPerRide
+        referralRewardAmountPerRide = payoutConfig.referralRewardAmountPerRide,
+        payoutRegistrationAmount = sum [payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst]
       }
   where
     parseDailyEarnings earning =
@@ -86,8 +88,7 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
           earningDate = earning.merchantLocalDate,
           referrals = earning.referralCounts,
           status = earning.payoutStatus,
-          payoutOrderId = earning.payoutOrderId,
-          payoutOrderStatus = show <$> earning.payoutOrderStatus
+          payoutOrderId = earning.payoutOrderId
         }
     castPayoutRegistrationStatus status = case status of
       JuspayT.CHARGED -> API.Types.UI.ReferralPayout.SuccessFul
@@ -116,17 +117,18 @@ getPayoutRegistration ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Environment.Flow Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp
+    Environment.Flow DD.ClearDuesRes
   )
 getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   mbVehicle <- QVeh.findById personId
-  let vehicleCategory = fromMaybe DV.CAR ((.category) =<< mbVehicle)
+  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
   unless payoutConfig.isPayoutEnabled $ throwError $ InvalidRequest "Payout Registration is Not Enabled"
   let (fee, cgst, sgst) = (payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst)
   clearDuesRes <- DD.clearDriverFeeWithCreate (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION (fee, cgst, sgst) DFee.PAYOUT_REGISTRATION INR Nothing
-  pure clearDuesRes.orderResp
+  DrInfo.updatePayoutRegistrationOrderId (Just clearDuesRes.orderId.getId) personId
+  pure clearDuesRes
 
 postPayoutCreateOrder ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

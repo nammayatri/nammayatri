@@ -18,7 +18,6 @@ data DailyEarning = DailyEarning
     earningDate :: Data.Time.Calendar.Day,
     earnings :: Kernel.Types.Common.HighPrecMoney,
     payoutOrderId :: Kernel.Prelude.Maybe Data.Text.Text,
-    payoutOrderStatus :: Kernel.Prelude.Maybe Data.Text.Text,
     referrals :: Kernel.Prelude.Int,
     status :: Domain.Types.DailyStats.PayoutStatus
   }
@@ -30,6 +29,7 @@ data ReferralEarningsRes = ReferralEarningsRes
   { dailyEarnings :: [API.Types.UI.ReferralPayout.DailyEarning],
     orderId :: Kernel.Prelude.Maybe Data.Text.Text,
     orderStatus :: Kernel.Prelude.Maybe API.Types.UI.ReferralPayout.OrderStatus,
+    payoutRegistrationAmount :: Kernel.Types.Common.HighPrecMoney,
     referralRewardAmountPerRide :: Kernel.Types.Common.HighPrecMoney,
     totalReferralCount :: Kernel.Prelude.Int,
     vpaId :: Kernel.Prelude.Maybe Data.Text.Text

@@ -45,6 +45,7 @@ data DriverInformationT f = DriverInformationT
     onRide :: B.C f Kernel.Prelude.Bool,
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentPending :: B.C f Kernel.Prelude.Bool,
+    payoutRegistrationOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
