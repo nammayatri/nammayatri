@@ -333,7 +333,7 @@ onUpdate ::
   ValidatedOnUpdateReq ->
   m ()
 onUpdate = \case
-  OUValidatedScheduledRideAssignedReq req -> Common.scheduledAssignedReqHandler req
+  OUValidatedScheduledRideAssignedReq req -> Common.rideAssignedReqHandler req
   OUValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
   OUValidatedRideStartedReq req -> Common.rideStartedReqHandler req
   OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
@@ -374,7 +374,8 @@ onUpdate = \case
     bookingId <- generateGUID
     quoteId_ <- generateGUID
     let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
-        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = False, bppBookingId = Just newBppBookingId, startTime = booking.startTime, createdAt = now, updatedAt = now}
+        newIsScheduled = booking.isScheduled && ride.status == DRide.UPCOMING
+        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = booking.startTime, createdAt = now, updatedAt = now}
     void $ SQQ.createQuote newQuote
     void $ QRB.createBooking newBooking
     void $ QRB.updateStatus booking.id DRB.REALLOCATED

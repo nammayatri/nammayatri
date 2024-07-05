@@ -45,6 +45,7 @@ import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Location as DL
 import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as SSR
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import Domain.Types.VehicleServiceTier as DVST
@@ -208,7 +209,8 @@ processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r Retry
 processActiveBooking booking cancellationStage = do
   mbRide <- QRide.findActiveByRBId booking.id
   case mbRide of
-    Just _ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
+    Just ride -> do
+      unless (ride.status == DRide.UPCOMING) $ throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
     Nothing -> do
       now <- getCurrentTime
       if addUTCTime 900 booking.startTime < now || not (isRentalOrInterCity booking.bookingDetails) || (addUTCTime 120 booking.startTime < now && isHighPriorityBooking booking.bookingDetails)

@@ -229,3 +229,8 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [latestScheduledBooking, latestScheduledPickup]
       where: driverId
+    updateOnRideAndLatestScheduledBookingAndPickup:
+      kvFunction: updateOneWithKV
+      params: [onRide, latestScheduledBooking, latestScheduledPickup]
+      where: driverId
+

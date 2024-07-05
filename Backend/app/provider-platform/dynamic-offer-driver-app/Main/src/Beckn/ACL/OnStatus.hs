@@ -33,6 +33,7 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder as NewBook
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as RideAssignedOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as RideCompletedOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
+import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as CU
@@ -226,7 +227,7 @@ tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConf
         orderCreatedAt = Nothing,
         orderUpdatedAt = Nothing --------To do keep booking created and updated time
       }
-tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig = Common.tfAssignedReqToOrder req mbFarePolicy becknConfig
+tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig = Common.tfAssignedReqToOrder req mbFarePolicy becknConfig EventEnum.RIDE_ASSIGNED
 tfOrder (DStatus.RideStartedReq req) mbFarePolicy becknConfig = Common.tfStartReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.RideCompletedReq req) mbFarePolicy becknConfig = Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.BookingCancelledReq req) _ becknConfig = Common.tfCancelReqToOrder req becknConfig

@@ -16,13 +16,18 @@ module Domain.Action.UI.Ride.CancelRide
   ( CancelRideReq (..),
     CancelRideResp (..),
     ServiceHandle (..),
+    RequestorId (..),
     cancelRideHandle,
     driverCancelRideHandler,
     dashboardCancelRideHandler,
     driverDistanceToPickup,
+    cancelRideImpl,
   )
 where
 
+import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.Map as M
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
@@ -37,13 +42,20 @@ import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import Lib.Scheduler (SchedulerType)
+import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.Queries.Booking as QRB
@@ -52,17 +64,47 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
+import qualified Tools.Metrics as Metrics
+import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> m (),
+    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: SRB.Booking -> LatLong -> LatLong -> m Meters
   }
 
-cancelRideHandle :: ServiceHandle Flow
+cancelRideHandle ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    Metrics.HasSendSearchRequestToDriverMetrics m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    TranslateFlow m r,
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasShortDurationRetryCfg r c,
+    Redis.HedisFlow m r,
+    EventStreamFlow m r,
+    MonadFlow m,
+    Metrics.HasCoreMetrics r
+  ) =>
+  ServiceHandle m
 cancelRideHandle =
   ServiceHandle
     { findRideById = QRide.findById,
@@ -84,7 +126,7 @@ data CancelRideResp = CancelRideResp
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant, Id DMOC.MerchantOperatingCity)
+data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant, Id DMOC.MerchantOperatingCity) | ApplicationRequestorId Text | MerchantRequestorId (Id DM.Merchant, Id DMOC.MerchantOperatingCity)
 
 driverCancelRideHandler ::
   ServiceHandle Flow ->
@@ -105,7 +147,7 @@ dashboardCancelRideHandler ::
   Flow APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $ do
-    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req
+    void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req False
     return APISuccess.Success
 
 cancelRideHandler ::
@@ -115,7 +157,7 @@ cancelRideHandler ::
   CancelRideReq ->
   Flow CancelRideResp
 cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
-  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req
+  (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req False
   pure $ buildCancelRideResp cancellationCnt isGoToDisabled
   where
     buildCancelRideResp cancelCnt isGoToDisabled =
@@ -126,12 +168,19 @@ cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.ge
         }
 
 cancelRideImpl ::
-  ServiceHandle Flow ->
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    EsqDBReplicaFlow m r,
+    LT.HasLocationService m r,
+    DC.EventFlow m r
+  ) =>
+  ServiceHandle m ->
   RequestorId ->
   Id DRide.Ride ->
   CancelRideReq ->
-  Flow (Maybe Int, Maybe Bool)
-cancelRideImpl ServiceHandle {..} requestorId rideId req = do
+  Bool ->
+  m (Maybe Int, Maybe Bool)
+cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus ("This ride cannot be canceled" <> Text.pack (show ride.status))
   let driverId = ride.driverId
@@ -184,11 +233,18 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
       unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
-  cancelRide rideId rideEndedBy rideCancelationReason
+    ApplicationRequestorId jobId -> do
+      logTagInfo "Allocator -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id <> "JobId " <> jobId)
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByApplication ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Allocator)
+    MerchantRequestorId (reqMerchantId, mocId) -> do
+      unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
+      logTagInfo "Allocator : ByMerchant -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Allocator)
+
+  cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation
   pure (cancellationCnt, isGoToDisabled)
   where
-    isValidRide ride =
-      ride.status == DRide.NEW
+    isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]
     buildRideCancelationReason currentDriverLocation disToPickup mbDriverId source ride merchantId = do
       let CancelRideReq {..} = req
       return $

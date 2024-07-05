@@ -36,6 +36,7 @@ imports:
   FCMNotificationType: Kernel.External.Notification.FCM.Types
   ServiceTierType: Domain.Types.ServiceTierType
   Category: Domain.Types.Vehicle
+  Hours: Kernel.Types.Common
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -780,6 +781,10 @@ TransporterConfig:
     dummyFromLocation: DummyLocationInfo
     dummyToLocation: DummyLocationInfo
     scheduleRideBufferTime: NominalDiffTime
+    scheduledRideJobRescheduleTime: NominalDiffTime
+    graceTimeForScheduledRidePickup: NominalDiffTime
+    minmRentalAndScheduledBookingLeadTimeHours: Hours
+    scheduledRideFilterExclusionThresholdHours: Hours
     fakeOtpMobileNumbers: '[Text]'
     fakeOtpEmails: '[Text]'
     variantsToEnableForSubscription: '[Domain.Types.Vehicle.Variant]'
@@ -831,6 +836,10 @@ TransporterConfig:
     arrivedPickupThreshold: Maybe HighPrecMeters
     dummyToLocation: Maybe Value
     scheduleRideBufferTime: Seconds
+    scheduledRideJobRescheduleTime: Maybe Seconds
+    graceTimeForScheduledRidePickup: Maybe Seconds
+    minmRentalAndScheduledBookingLeadTimeHours: Maybe Int
+    scheduledRideFilterExclusionThresholdHours: Maybe Int
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -872,6 +881,10 @@ TransporterConfig:
     arrivedPickupThreshold: Just arrivedPickupThreshold|E
     dummyToLocation: Just $ toJSON dummyToLocation|E
     scheduleRideBufferTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    scheduledRideJobRescheduleTime: Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    graceTimeForScheduledRidePickup: Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    minmRentalAndScheduledBookingLeadTimeHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
+    scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -915,6 +928,10 @@ TransporterConfig:
     dummyToLocation: |-
       fromMaybe Domain.Types.Location.dummyToLocationData ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< dummyToLocation)|E
     scheduleRideBufferTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    scheduledRideJobRescheduleTime: Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> scheduledRideJobRescheduleTime)|E
+    graceTimeForScheduledRidePickup: Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> graceTimeForScheduledRidePickup)|E
+    minmRentalAndScheduledBookingLeadTimeHours: fromMaybe 24 (Kernel.Types.Common.Hours <$> minmRentalAndScheduledBookingLeadTimeHours)|E
+    scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1051,6 +1068,10 @@ TransporterConfig:
     canSwitchToRental: "true"
     considerDriversForSearch: "true"
     scheduleRideBufferTime: "1800"
+    scheduledRideJobRescheduleTime: "300"
+    graceTimeForScheduledRidePickup: "300"
+    minmRentalAndScheduledBookingLeadTimeHours: "24"
+    scheduledRideFilterExclusionThresholdHours: "2"
     fakeOtpMobileNumbers: "'{}'"
     arrivedStopThreshold: "900"
     canSuvDowngradeToHatchback: "false"

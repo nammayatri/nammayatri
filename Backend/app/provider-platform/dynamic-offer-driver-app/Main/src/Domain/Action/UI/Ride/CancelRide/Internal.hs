@@ -14,21 +14,29 @@
 
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
+import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.Map as M
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
-import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Scheduler (SchedulerType)
+import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.Cancel
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.Ride (updateOnRideStatusWithAdvancedRideCheck)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -41,10 +49,43 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
+import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
+import TransactionLogs.Types
 
-cancelRideImpl :: Id DRide.Ride -> DRide.RideEndedBy -> SBCR.BookingCancellationReason -> Flow ()
-cancelRideImpl rideId rideEndedBy bookingCReason = do
+cancelRideImpl ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    Metrics.HasSendSearchRequestToDriverMetrics m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    TranslateFlow m r,
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasShortDurationRetryCfg r c,
+    Redis.HedisFlow m r,
+    EventStreamFlow m r,
+    Metrics.HasCoreMetrics r
+  ) =>
+  Id DRide.Ride ->
+  DRide.RideEndedBy ->
+  SBCR.BookingCancellationReason ->
+  Bool ->
+  m ()
+cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
@@ -64,7 +105,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
     Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
 
   fork "cancelRide/ReAllocate - Notify BAP" $ do
-    isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason
+    isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
     unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
 
 cancelRideTransaction ::

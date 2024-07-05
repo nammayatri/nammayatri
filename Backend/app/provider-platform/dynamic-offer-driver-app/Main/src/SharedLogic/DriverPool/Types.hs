@@ -41,6 +41,7 @@ import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
@@ -49,6 +50,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Lib.Scheduler.Types
+import qualified SharedLogic.Beckn.Common as DTS
 import Tools.Maps as Google
 
 type PoolBatchNum = Int
@@ -69,7 +71,9 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     merchantId :: Id DM.Merchant,
     isRental :: Bool,
     isInterCity :: Bool,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    currentSearchInfo :: DTS.CurrentSearchInfo,
+    transporterConfig :: DTC.TransporterConfig
   }
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
@@ -98,7 +102,9 @@ data DriverPoolResult = DriverPoolResult
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    latestScheduledBooking :: Maybe UTCTime,
+    latestScheduledPickup :: Maybe Maps.LatLong
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -123,7 +129,9 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
     backendConfigVersion :: Maybe Version,
-    backendAppVersion :: Maybe Text
+    backendAppVersion :: Maybe Text,
+    latestScheduledBooking :: Maybe UTCTime,
+    latestScheduledPickup :: Maybe Maps.LatLong
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 

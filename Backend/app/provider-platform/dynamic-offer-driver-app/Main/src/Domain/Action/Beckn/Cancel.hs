@@ -54,6 +54,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
@@ -97,6 +98,7 @@ cancel req merchant booking mbActiveSearchTry = do
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
       void $ LF.rideDetails ride.id SRide.CANCELLED merchant.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
       QRide.updateStatus ride.id SRide.CANCELLED
+      when (booking.isScheduled) $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing ride.driverId
 
     bookingCR <- buildBookingCancellationReason
     QBCR.upsert bookingCR
@@ -136,7 +138,7 @@ cancel req merchant booking mbActiveSearchTry = do
             Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCR.source
           isValueAddNP <- CQVAN.isValueAddNP booking.bapId
           vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-          reAllocateBookingIfPossible isValueAddNP (fromMaybe False req.userReallocationEnabled) merchant booking ride driver vehicle bookingCR
+          reAllocateBookingIfPossible isValueAddNP (fromMaybe False req.userReallocationEnabled) merchant booking ride driver vehicle bookingCR False
         Nothing -> return False
     whenJust mbActiveSearchTry $ cancelSearch merchant.id
     return isReallocated

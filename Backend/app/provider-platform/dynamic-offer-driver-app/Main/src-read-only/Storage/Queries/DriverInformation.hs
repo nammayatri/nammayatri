@@ -155,6 +155,20 @@ updatePayoutRegistrationOrderId payoutRegistrationOrderId driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateOnRideAndLatestScheduledBookingAndPickup ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking latestScheduledPickup driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.onRide onRide,
+      Se.Set Beam.latestScheduledBooking latestScheduledBooking,
+      Se.Set Beam.latestScheduledPickupLat (Kernel.Prelude.fmap (.lat) latestScheduledPickup),
+      Se.Set Beam.latestScheduledPickupLon (Kernel.Prelude.fmap (.lon) latestScheduledPickup),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpa payoutVpa driverId = do
   _now <- getCurrentTime

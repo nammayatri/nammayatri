@@ -103,6 +103,8 @@ data HandlerEnv = HandlerEnv
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
     cacConfig :: CacConfig,
     modelNamesHashMap :: HMS.HashMap Text Text,
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    searchRequestExpirationSeconds :: NominalDiffTime,
     s3Env :: S3Env Flow
   }
   deriving (Generic)
@@ -136,7 +138,8 @@ buildHandlerEnv HandlerCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   let s3Env = buildS3Env s3Config
-  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
+  let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
+  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do
