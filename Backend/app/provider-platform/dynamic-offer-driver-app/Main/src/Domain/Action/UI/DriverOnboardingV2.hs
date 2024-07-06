@@ -474,6 +474,9 @@ postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
   let verificationStatus = maybe Documents.PENDING Image.convertValidationStatusToVerificationStatus req.validationStatus
   mbPanInfo <- QDPC.findUnInvalidByPanNumber req.panNumber
   whenJust mbPanInfo $ \panInfo -> do
+    when (panInfo.driverId /= personId) $ do
+      ImageQuery.deleteById req.imageId1
+      throwError $ DocumentAlreadyLinkedToAnotherDriver "PAN"
     when (panInfo.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentUnderManualReview "PAN"
