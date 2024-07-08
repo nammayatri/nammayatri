@@ -66,9 +66,29 @@ newtype BookingListRes = BookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+checkBookingsForStatus :: [SRB.Booking] -> Flow ()
+checkBookingsForStatus (currBooking : bookings) = do
+  riderConfig <- QRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
+  case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
+    (Just timeDiffThreshold, Just estimatedEndDuration) -> do
+      now <- getCurrentTime
+      let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.createdAt
+      let diff = DT.diffUTCTime now estimatedEndTime
+      let callStatusCondition = currBooking.status /= SRB.CANCELLED && currBooking.status /= SRB.COMPLETED && diff > fromIntegral timeDiffThreshold
+      when callStatusCondition $ do
+        merchant <- CQMerchant.findById currBooking.merchantId >>= fromMaybeM (MerchantNotFound currBooking.merchantId.getId)
+        city <- CQMOC.findById currBooking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound currBooking.merchantOperatingCityId.getId)
+        let dStatusReq = StatusACL.DStatusReq currBooking merchant city
+        becknStatusReq <- StatusACL.buildStatusReqV2 dStatusReq
+        void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id
+        checkBookingsForStatus bookings
+    (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
+checkBookingsForStatus [] = pure ()
+
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
 bookingStatus bookingId _ = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  fork "booking status update" $ checkBookingsForStatus [booking]
   logInfo $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
   SRB.buildBookingAPIEntity booking booking.riderId
@@ -102,25 +122,6 @@ bookingStatusPolling bookingId _ = do
   logInfo $ "booking: test " <> show booking
   handleConfirmTtlExpiry booking
   SRB.buildBookingStatusAPIEntity booking
-
-checkBookingsForStatus :: [SRB.Booking] -> Flow ()
-checkBookingsForStatus (currBooking : bookings) = do
-  riderConfig <- QRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
-  case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
-    (Just timeDiffThreshold, Just estimatedEndDuration) -> do
-      now <- getCurrentTime
-      let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.createdAt
-      let diff = DT.diffUTCTime now estimatedEndTime
-      let callStatusCondition = currBooking.status /= SRB.CANCELLED && currBooking.status /= SRB.COMPLETED && diff > fromIntegral timeDiffThreshold
-      when callStatusCondition $ do
-        merchant <- CQMerchant.findById currBooking.merchantId >>= fromMaybeM (MerchantNotFound currBooking.merchantId.getId)
-        city <- CQMOC.findById currBooking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound currBooking.merchantOperatingCityId.getId)
-        let dStatusReq = StatusACL.DStatusReq currBooking merchant city
-        becknStatusReq <- StatusACL.buildStatusReqV2 dStatusReq
-        void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id
-        checkBookingsForStatus bookings
-    (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
-checkBookingsForStatus [] = pure ()
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Flow BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
