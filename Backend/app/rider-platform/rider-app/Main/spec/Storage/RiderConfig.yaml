@@ -41,6 +41,7 @@ RiderConfig:
     exotelAppIdMapping: Maybe ExotelMapping
     hardLimitForSafetyJobs: Int
     incidentReportSupport: Bool
+    settleCancellationFeeBeforeNextRide: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

@@ -205,6 +205,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         tripEndPos = Nothing,
         rideEndedBy = Nothing,
         previousRideTripEndPos = LatLong <$> (previousRideToLocation <&> (.lat)) <*> (previousRideToLocation <&> (.lon)),
+        previousRideTripEndTime = Nothing,
         isAdvanceBooking = isJust previousRideToLocation,
         startOdometerReading = Nothing,
         endOdometerReading = Nothing,
@@ -244,7 +245,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         vehicleServiceTierName = Just booking.vehicleServiceTierName,
         vehicleVariant = Just $ vehicle.variant,
         onlinePayment = onlinePayment,
-        enableOtpLessRide = enableOtpLessRide
+        enableOtpLessRide = enableOtpLessRide,
+        cancellationFeeIfCancelled = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

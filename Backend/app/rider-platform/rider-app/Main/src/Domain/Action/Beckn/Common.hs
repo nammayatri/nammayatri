@@ -49,11 +49,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MerchantConfig as SMC
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRRN
@@ -275,6 +278,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
         paymentDone = False,
         vehicleAge = req.vehicleAge,
+        cancellationFeeIfCancelled = Nothing,
         ..
       }
 
@@ -564,9 +568,6 @@ driverArrivedReqHandler ValidatedDriverArrivedReq {..} = do
     void $ QRide.updateDriverArrival ride.id arrivalTime
     QPFS.clearCache booking.riderId
 
--- TODO (Rupak): this is being called by BPP if cancellation initiated by driver.
---  We can make it common as `onCancel` function in  Domain.Action.Beckn.OnCancel is also doing the same thing
--- Also add stripe function call in this
 bookingCancelledReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -585,6 +586,28 @@ bookingCancelledReqHandler ::
   m ()
 bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
+  cancellationTransaction booking mbRide cancellationSource Nothing
+
+cancellationTransaction ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    CacheFlow m r,
+    EsqDBFlow m r,
+    ClickhouseFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasBAPMetrics m r,
+    EventStreamFlow m r
+  ) =>
+  DRB.Booking ->
+  Maybe DRide.Ride ->
+  DBCR.CancellationSource ->
+  Maybe PriceAPIEntity ->
+  m ()
+cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   fork "incrementing fraud counters" $ do
@@ -605,11 +628,34 @@ bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
   unless (booking.status == DRB.CANCELLED) $ void $ QRB.updateStatus booking.id DRB.CANCELLED
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
+  fork "Cancellation Settlement" $ do
+    whenJust cancellationFee $ \fee -> do
+      riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "RiderConfig not found")
+      merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+      person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+      merchantCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+      mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide, person.mobileCountryCode) of
+        (Just True, Just ride, Just countryCode) -> do
+          SPayment.makeCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.riderId ride fee
+          --TODO: We can move this to stripe confirmation of payment
+          void $
+            CallBPPInternal.customerCancellationDuesSync
+              (merchant.driverOfferApiKey)
+              (merchant.driverOfferBaseUrl)
+              (merchant.driverOfferMerchantId)
+              mobileNumber
+              countryCode
+              (Just fee.amount)
+              cancellationFee
+              Nothing
+              True
+              (merchantCity.city)
+        _ -> pure ()
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
-
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide
 
 mkBookingCancellationReason ::

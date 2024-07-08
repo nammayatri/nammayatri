@@ -61,6 +61,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QR
 import Tools.Error
 import qualified Tools.Maps as Maps
 
@@ -120,7 +121,7 @@ softCancel bookingId _ = do
         transactionId = booking.transactionId,
         merchant = merchant,
         cancelStatus = show Enums.SOFT_CANCEL,
-        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- TODO: fix it
+        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
         ..
       }
 
@@ -179,7 +180,7 @@ cancel booking mRide req cancellationSource = do
         transactionId = booking.transactionId,
         merchant = merchant,
         cancelStatus = show Enums.CONFIRM_CANCEL,
-        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- TODO: fix it
+        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
         ..
       }
   where
@@ -241,7 +242,7 @@ mkDomainCancelSearch personId estimateId = do
             estimateStatus = estStatus,
             sendToBpp = isEstimateNotNew && isValueAddNP,
             merchant = merchant,
-            vehicleVariant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix it
+            vehicleVariant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType,
             ..
           }
 
@@ -296,13 +297,20 @@ driverDistanceToPickup booking merchantOperatingCityId tripStartPos tripEndPos =
 --       CallBPPInternal.disputeCancellationDues merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
 --     _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
 
-getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
-getCancellationDuesDetails (personId, merchantId) = do
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  -- TODO (Rupak): Add the logic to get the cancellation dues from fare parameters instead of BPP
-  case (person.mobileNumber, person.mobileCountryCode) of
-    (Just mobileNumber, Just countryCode) -> do
-      res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
-      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDuesWithCurrency, disputeChancesUsed = Just res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
-    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+getCancellationDuesDetails :: Maybe (Id SRB.Booking) -> (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
+getCancellationDuesDetails mbBookingId (personId, merchantId) = do
+  mbBooking <- maybe (return Nothing) QRB.findById mbBookingId
+  mbRide <- maybe (return Nothing) QR.findActiveByRBId mbBookingId
+  let cancellationFees = (.cancellationFeeIfCancelled) =<< mbRide
+      currency = (.estimatedFare.currency) <$> mbBooking
+  case (cancellationFees, currency) of
+    (Just customerCancellationDues, Just bookingCurrency) -> do
+      return $ CancellationDuesDetailsRes {cancellationDues = Just PriceAPIEntity {amount = customerCancellationDues, currency = bookingCurrency}, disputeChancesUsed = Nothing, canBlockCustomer = Nothing}
+    _ -> do
+      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      case (person.mobileNumber, person.mobileCountryCode) of
+        (Just mobileNumber, Just countryCode) -> do
+          res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
+          return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDuesWithCurrency, disputeChancesUsed = Just res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
+        _ -> throwError (PersonMobileNumberIsNULL person.id.getId)

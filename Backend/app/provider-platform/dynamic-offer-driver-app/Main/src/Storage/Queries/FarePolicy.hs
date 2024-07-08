@@ -128,6 +128,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.fixedCardCharge = cardCharge >>= (.fixed),
         BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
         BeamFP.description = description,
+        BeamFP.cancellationFarePolicyId = getId <$> cancellationFarePolicyId,
         BeamFP.createdAt = createdAt,
         BeamFP.updatedAt = updatedAt
       }
@@ -227,6 +228,7 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
                       fixed = fixedCardCharge
                     },
               description = description,
+              cancellationFarePolicyId = Id <$> cancellationFarePolicyId,
               createdAt = createdAt,
               updatedAt = updatedAt
             }

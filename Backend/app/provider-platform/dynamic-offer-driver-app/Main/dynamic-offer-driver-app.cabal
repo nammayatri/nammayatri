@@ -619,6 +619,7 @@ library
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
+      Domain.Types.CancellationFarePolicy
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
@@ -732,6 +733,7 @@ library
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
+      Storage.Beam.CancellationFarePolicy
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
@@ -830,6 +832,7 @@ library
       Storage.Beam.VehicleServiceTier
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.CancellationFarePolicy
       Storage.CachedQueries.SurgePricing
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
@@ -846,6 +849,7 @@ library
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges
+      Storage.Queries.CancellationFarePolicy
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats

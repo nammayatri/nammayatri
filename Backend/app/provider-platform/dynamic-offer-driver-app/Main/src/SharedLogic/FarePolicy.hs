@@ -35,6 +35,7 @@ import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareProduct as FareProduct
 import qualified Storage.Cac.FarePolicy as QFP
+import qualified Storage.CachedQueries.CancellationFarePolicy as QCCFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 import qualified Storage.CachedQueries.SurgePricing as SurgePricing
 import Tools.Error
@@ -128,7 +129,8 @@ getFullFarePolicy sourceLatLong txnId fareProduct = do
           Just congestionChargeMultiplier -> Just $ FarePolicyD.BaseFareAndExtraDistanceFare congestionChargeMultiplier
           Nothing -> farePolicy'.congestionChargeMultiplier
   let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier
-  return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
+  cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy.cancellationFarePolicyId
+  return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy farePolicy
 
 updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> FarePolicyD.FarePolicy
 updateCongestionChargeMultiplier FarePolicyD.FarePolicy {..} congestionMultiplier = FarePolicyD.FarePolicy {congestionChargeMultiplier = congestionMultiplier, ..}

@@ -466,9 +466,9 @@ sendBookingCancelledUpdateToBAP ::
   DRB.Booking ->
   DM.Merchant ->
   SRBCR.CancellationSource ->
+  Maybe PriceAPIEntity ->
   m ()
-sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
-  let cancellationFee = Nothing
+sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFee = do
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {..}
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing

@@ -87,6 +87,7 @@ Ride:
     driverAccountId: Maybe AccountId
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
+    cancellationFeeIfCancelled: Maybe HighPrecMoney
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -229,6 +230,10 @@ Ride:
       kvFunction: updateOneWithKV
       params: [paymentDone]
       where: id
+    updateCancellationFeeIfCancelledField:
+      kvFunction: updateOneWithKV
+      params: [cancellationFeeIfCancelled]
+      where: id
   excludedDefaultQueries:
     - create
     - createMany
@@ -237,3 +242,4 @@ Ride:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
