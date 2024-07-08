@@ -2164,7 +2164,8 @@ public class MobilityCommonBridge extends HyperBridge {
                             this.googleMap = googleMap;
                             googleMap.getUiSettings().setRotateGesturesEnabled(false);
                             googleMap.getUiSettings().setMyLocationButtonEnabled(false);
-                            markers = markersElement.get(pureScriptId);
+                            HashMap <String, Marker> markersByGmapInstance = markersElement.get(pureScriptId);
+                            markers = markersByGmapInstance != null ? markersByGmapInstance : new HashMap<>();
                         });
                     }
                 }
