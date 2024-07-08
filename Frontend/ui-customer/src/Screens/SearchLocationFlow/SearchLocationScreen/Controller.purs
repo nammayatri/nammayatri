@@ -83,7 +83,7 @@ instance loggableAction :: Loggable Action where
 data Action = NoAction 
             | MapReady String String String
             | AfterRender
-            | InputChanged String
+            | InputChanged Int String
             | TextFieldFocusChanged SearchLocationTextField Boolean
             | UpdateLocAndLatLong (Array LocationListItemState) String String 
             | RecenterCurrentLocation 
@@ -280,7 +280,7 @@ eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag)) state
         pure (LocationListItemAC savedLoc (LocationListItemController.OnClick loc))
       ]
 
-eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText hasFocus)) state = do
+eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText index hasFocus)) state = do
   if (DA.any (_ == state.props.searchLocStage) [PredictionsStage, LocateOnMapStage]) then do
     let 
       setTextTo = case textField of 
@@ -328,7 +328,7 @@ eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchange
     autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
     else continue state
 
-eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
+eval (InputViewAC _ (InputViewController.InputChanged _ value)) state = do 
   if state.props.actionType == MetroStationSelectionAction && not (STR.null value) then do
     void $ pure $ spy "InputChanged" value
     let newArray = findStationWithPrefix value state.data.metroStations
@@ -344,7 +344,7 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
         pure NoAction
       ]
   
-eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
+eval (InputViewAC _ (InputViewController.InputChanged _ value)) state = do 
   let canClearText = STR.length value > 2
   continueWithCmd state {props { canClearText = canClearText, isAutoComplete = canClearText}} [ do 
     void $ pure $ updateInputString value 

@@ -28,13 +28,17 @@ import Prelude(negate)
 import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
-import PrestoDOM (BottomSheetState(..), Margin(..))
+import PrestoDOM 
 import Data.Map as Map 
 import JBridge (Location)
 import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
+import Language.Strings
+import Language.Types
+import Components.InputView.Controller
+import Styles.Colors as Color
 
 initData :: HomeScreenState
 initData = let
@@ -180,6 +184,7 @@ initData = let
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
     , famousDestinations : []
+    , selectedBoxId : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -374,6 +379,114 @@ initData = let
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
+    , inputView: [
+      { padding : Padding 0 0 0 0
+        , height : V 37
+        , gravity : CENTER
+        , canClearText : true
+        , isEditable : true 
+        , isClickable : true
+        , prefixImage : dummyImageConfig  -- confused ki konsa rakhna h?
+        , stroke : ""
+        , imageSeparator : separatorConfig 
+        , clearTextIcon : dummyImageConfig   
+        , fontStyle : []
+        , destinationAddress : dummyAddress
+        , destination : ""
+        , destinationPlaceId : Nothing
+        , destinationLat : 0.0
+        , destinationLong : 0.0
+        , index : 0
+        , inputTextViewContainerMargin : Margin 0 0 0 0 
+        , inputTextConfig : {
+          textValue : ""
+        , isFocussed : false
+        , imageName : ""
+        , margin : Margin 0 12 0 5
+        , placeHolder : "Start"
+        , id : "abc"
+        , hint : "Start"
+        , cornerRadius : 4.0
+        , textColor : ""
+        , prefixImageVisibility : GONE
+        , prefixImageConfig : 
+                    dummyImageConfig
+                      { height = V 12
+                      , width = V 12
+                      , padding = Padding 0 0 0 0 
+                      , imageName = "ny_ic_green_circle"
+                      , layoutWidth = V 16
+                      , layoutHeight = V 16
+                      }
+        , postfixImageConfig :
+                    dummyImageConfig
+                      { imageName = ""
+                      , height = V 20
+                      , width = V 20
+                      , padding = PaddingTop 0
+                      , layoutWidth = V 32
+                      , layoutHeight = V 32
+                      , layoutCornerRadius = 26.0
+                      , layoutPadding = Padding 10 10 10 10
+                      , layoutMargin = Margin 10 0 0 0
+                      , layoutColor = ""
+                      }
+        }
+        },{
+          padding : Padding 0 0 0 0
+        , height : V 37
+        , gravity : CENTER
+        , canClearText : true
+        , isEditable : true  
+        , isClickable : true
+        , prefixImage : dummyImageConfig 
+        , stroke : ""
+        , imageSeparator : separatorConfig 
+        , clearTextIcon : dummyImageConfig    
+        , fontStyle : []
+        , inputTextViewContainerMargin : Margin 0 0 0 0 
+        , destinationAddress : dummyAddress
+        , destination : ""
+        , destinationPlaceId : Nothing
+        , destinationLat : 0.0
+        , destinationLong : 0.0
+        , index : 1 
+        , inputTextConfig : {
+            textValue : ""
+          , isFocussed : true
+          , imageName : ""
+          , margin : Margin 0 12 0 5
+          , placeHolder : getString WHERE_TO 
+          , id : "dest"
+          , hint : getString WHERE_TO
+          , cornerRadius : 4.0
+          , textColor : ""
+          , prefixImageVisibility : GONE
+          , prefixImageConfig : 
+                    dummyImageConfig
+                      { height = V 12
+                      , width = V 12
+                      , padding = PaddingTop 0  
+                      , imageName = "ny_ic_red_circle"
+                      , layoutWidth = V 16
+                      , layoutHeight = V 16
+                      }
+          , postfixImageConfig : 
+                    dummyImageConfig
+                      { imageName = "ny_ic_add"
+                      , height = V 20
+                      , width = V 20
+                      , padding = Padding 0 0 0 0
+                      , layoutWidth = V 32
+                      , layoutHeight = V 32
+                      , layoutCornerRadius = 26.0
+                      , layoutPadding = Padding 10 10 10 10
+                      , layoutMargin = Margin 10 0 0 0
+                      , layoutColor = Color.squidInkBlue
+                      }
+                    }
+                }]  
+  , selectedIndex : -1                  
   }
 }
 

@@ -53,6 +53,9 @@ import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
+import Components.InputView (InputView(..), InputViewConfig, dummyImageConfig)
+import Components.SeparatorView.View as SeparatorView
+import Components.LocationListItem.Controller ( dummyAddress)
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
 import Data.Array as DA
@@ -64,6 +67,7 @@ import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
 import Data.String.CodeUnits (stripPrefix, stripSuffix)
+import Debug
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
@@ -1240,6 +1244,8 @@ searchLocationModelViewState state =
     , currentLocationText: state.props.currentLocation.place
     , isEditDestination : false
     , isDestViewEditable : true
+    , selectedBoxId : state.data.selectedBoxId
+    , inputViewConfig :  getInputViewConfig state
     }
   where
   formatDate :: String -> String
@@ -1249,6 +1255,100 @@ searchLocationModelViewState state =
     in
       EHC.convertUTCtoISC startTime formatSTR
 
+getInputViewConfig :: ST.HomeScreenState -> InputViewConfig
+getInputViewConfig state = 
+  { backIcon : dummyImageConfig {
+    imageName = "ny_ic_cross_white"
+    , height = V 24
+    , width = V 24
+    , padding = PaddingTop 0 
+  }
+  , headerText : ""
+  , headerVisibility : false
+  , imageLayoutMargin : MarginLeft 0
+  , imageLayoutWidth : V 20
+  , inputLayoutPading : PaddingLeft 0 
+  , inputView : getInputViewItemConfig state 
+  , suffixButton : {
+    text : "",
+    fontStyle : [],
+    prefixImage : "",
+    suffixImage : "",
+    padding : Padding 0 0 0 0,
+    gravity : CENTER_VERTICAL
+  }
+  , imageLayoutVisibility : GONE
+  , suffixButtonVisibility : GONE
+  }
+
+getInputViewItemConfig :: ST.HomeScreenState -> Array InputView
+getInputViewItemConfig state = state.props.inputView
+
+defaultAddStopConfig :: InputView
+defaultAddStopConfig = {
+    padding : Padding 0 0 0 0 
+  , height : V 37
+  , canClearText : true
+  , isEditable : true  
+  , isClickable : true
+  , prefixImage : dummyImageConfig 
+  , stroke : ""
+  , gravity : CENTER
+  , imageSeparator : separatorConfig
+  , clearTextIcon : dummyImageConfig 
+  , fontStyle : []
+  , inputTextViewContainerMargin : Margin 0 0 0 0   
+  , destinationAddress : dummyAddress
+  , destination : ""
+  , destinationPlaceId : Nothing
+  , destinationLat : 0.0
+  , destinationLong : 0.0
+  , index : 0
+  , inputTextConfig : {
+      textValue : "ADD" 
+    , isFocussed : true
+    , imageName : ""
+    , margin : Margin 0 12 0 5
+    , placeHolder : getString WHERE_TO
+    , id : "Stop" 
+    , hint : getString WHERE_TO
+    , cornerRadius : 4.0
+    , textColor : ""
+    , prefixImageVisibility : GONE
+    , postfixImageConfig : dummyImageConfig
+                { imageName = "ny_ic_add"
+                , height = V 20
+                , width = V 20
+                , padding = PaddingTop 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 10 10 10 10
+                , layoutMargin = Margin 10 0 0 0
+                , layoutColor = Color.squidInkBlue
+                }
+    , prefixImageConfig : dummyImageConfig{ height = V 12
+                , width = V 12
+                , padding = Padding 0 0 0 0   
+                , imageName = "ny_ic_grey_circle"
+                , layoutWidth = V 16
+                , layoutHeight = V 16
+                }
+        }
+}
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  { orientation : VERTICAL
+  , count : 7
+  , height : V 4
+  , width : V 1
+  , layoutWidth : V 12
+  , layoutHeight : V 15
+  , color : Color.black500
+  , margin : Margin 0 0 0 0
+  }
+  
 editDestSearchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.currentStage == EditingDestinationLoc then state.props.isSearchLocation else ST.RouteMap
                                     , locationList: state.data.locationList
@@ -1281,6 +1381,8 @@ editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.
                                         }
                                     , headerText: getString TRIP_DETAILS_
                                     , isDestViewEditable : state.props.currentStage == EditingDestinationLoc
+                                    , selectedBoxId : Nothing
+                                    , inputViewConfig : getInputViewConfig state
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

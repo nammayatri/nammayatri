@@ -1308,3 +1308,4 @@ getBN stringKey =
         CHARGEABLE -> "চার্জযোগ্য"
         BOOKED -> "বুক করা হয়েছে"
         SURCHARGES -> " অতিরিক্ত চার্জ"
+        ADD -> "ಸೇರಿಸು"

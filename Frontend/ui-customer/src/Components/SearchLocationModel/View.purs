@@ -25,7 +25,7 @@ import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
 import Components.SeparatorView.View as SeparatorView
-import Data.Array (mapWithIndex, length, take, null)
+import Data.Array (mapWithIndex, length, take, null, (..))
 import Data.Function (flip)
 import Data.Function.Uncurried (runFn3)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -45,7 +45,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
 import Prelude ((<>))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void, show)
 import PrestoDOM (Accessiblity(..), InputType(..),  Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, inputType, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
@@ -257,6 +257,25 @@ locationUnserviceableView state push =
         ]
     ]
 
+addStopImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
+addStopImageView state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width $ V 20 
+    , orientation VERTICAL
+    , gravity CENTER
+    ][ linearLayout
+      [ height $ V 16
+      , width $  V 16
+      , gravity CENTER
+      ][ imageView
+            [ height $ V 12
+            , width $ V 12
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_grey_circle"
+            ]
+        ],
+        SeparatorView.view separatorConfig 
+      ]
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
 sourceDestinationImageView state =
@@ -444,7 +463,7 @@ editableSourceView state push =
             SourceChanged
         , inputTypeI if isMapSearchLocation then 0 else 1
         , inputType if isMapSearchLocation then Disabled else TypeText
-        , onFocus push $ const $ EditTextFocusChanged "S"
+        , onFocus push $ const $ EditTextFocusChanged "S" 
           , selectAllOnFocus true
         , autoCorrectionType 1
         ] <> FontStyle.subHeading1 LanguageStyle
@@ -757,4 +776,5 @@ separatorConfig =
   , layoutWidth : V 12
   , layoutHeight : V 15
   , color : Color.black500
+  , margin : Margin 0 0 0 0
   }

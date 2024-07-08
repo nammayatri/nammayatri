@@ -1310,3 +1310,5 @@ getML stringKey =
         CHARGEABLE -> "ചാർജ്ജുചെയ്യാവുന്ന"
         BOOKED -> "ബുക്ക് ചെയ്തു"
         SURCHARGES -> "അധിക ചാർജ്"
+        ADD -> "ചേർക്കുക"
+        ADD_STOP -> "നിർത്തുക"

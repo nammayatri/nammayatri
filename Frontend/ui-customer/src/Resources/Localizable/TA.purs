@@ -1326,3 +1326,5 @@ getTA stringKey =
     CHARGEABLE -> "கட்டணமாகும்"
     BOOKED -> "பதிவு செய்யப்பட்டது"
     SURCHARGES -> "கூடுதல் கட்டணம்"
+    ADD -> "சேர்"
+    ADD_STOP -> "நிறுத்தத்தை சேர்க்கவும்"

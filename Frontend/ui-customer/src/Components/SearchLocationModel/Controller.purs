@@ -29,6 +29,8 @@ import Common.Types.App (LazyCheck(..))
 import Prelude
 import Foreign.Object (Object)
 import Foreign (Foreign)
+import Components.InputView (InputViewConfig(..))
+import Components.InputView.Controller as InputViewController
 
 data Action = GoBack
             | NoAction
@@ -39,7 +41,7 @@ data Action = GoBack
             | DestinationClear
             | SetLocationOnMap
             | SetCurrentLocation
-            | EditTextFocusChanged String
+            | EditTextFocusChanged String 
             | LocationListItemActionController LocationListItem.Action
             | PrimaryButtonActionController PrimaryButton.Action
             | DebounceCallBack String Boolean
@@ -47,6 +49,7 @@ data Action = GoBack
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation
             | DateTimePickerButtonClicked
+            | InputViewAction InputViewController.Action
 
 type SearchLocationModelState = {
     isSearchLocation :: SearchLocationModelType
@@ -73,6 +76,8 @@ type SearchLocationModelState = {
   , suffixButton :: ButtonLayoutConfig
   , headerVisibility :: Boolean
   , headerText :: String
+  , selectedBoxId :: Maybe Int
+  , inputViewConfig :: InputViewConfig
 }
 
 type ButtonLayoutConfig = 

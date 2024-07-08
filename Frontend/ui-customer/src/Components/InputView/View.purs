@@ -21,7 +21,7 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor, layoutGravity)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
@@ -177,7 +177,7 @@ nonEditableTextView push config = let
     , margin $ config.inputTextConfig.margin
     , cornerRadius $ config.inputTextConfig.cornerRadius
     , clickable $ config.isClickable 
-    , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true true
+    , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true config.index true
     , rippleColor $ Color.rippleShade
     , stroke $ strokeValue 
     ]
@@ -227,13 +227,13 @@ inputTextField push config =
           , id $ getNewIDWithTag $ config.inputTextConfig.id
           , onChange (\action -> do 
               case action of 
-                InputChanged text -> if text /= "false" && text /= config.inputTextConfig.textValue then do 
+                InputChanged _ text -> if text /= "false" && text /= config.inputTextConfig.textValue then do 
                   void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.inputTextConfig.isFocussed
                   void $ push action
                   else pure unit 
                 _ -> push action
               pure unit
-            ) InputChanged
+            ) $ (InputChanged config.index)      
           , afterRender (\_ -> do 
               if (config.inputTextConfig.isFocussed) then do
                 void $ pure $ showKeyboard $ getNewIDWithTag config.inputTextConfig.id 
@@ -244,14 +244,14 @@ inputTextField push config =
           , onFocus 
               (\action -> do 
                 case action of 
-                  TextFieldFocusChanged _ _ hasFocus -> do 
+                  TextFieldFocusChanged _ _ _ hasFocus -> do 
                     if (isTrue hasFocus) then do 
                       push action
-                      else  
+                      else       
                         pure unit
                   _ -> pure unit
 
-              ) $ TextFieldFocusChanged config.inputTextConfig.id true
+              ) $ TextFieldFocusChanged config.inputTextConfig.id true config.index
           , cursorColor Color.yellow900
           ] <> FontStyle.subHeading1 TypoGraphy
         , crossButtonView push config
@@ -284,4 +284,84 @@ bottomStrokeView bottomStrokeVisibility =
   , visibility $ bottomStrokeVisibility
   , background Color.white900
   ][] 
-    
+
+postfixImageView :: forall w. (Action -> Effect Unit ) -> InputView -> Int -> PrestoDOM (Effect Unit) w
+postfixImageView push config len = 
+  linearLayout[
+    width WRAP_CONTENT,
+    height MATCH_PARENT,
+    margin $ MarginTop 12
+  ][
+    linearLayout 
+    [ width config.inputTextConfig.postfixImageConfig.layoutWidth 
+    , height config.inputTextConfig.postfixImageConfig.layoutHeight
+    , cornerRadius config.inputTextConfig.postfixImageConfig.layoutCornerRadius
+    , gravity CENTER
+    , padding config.inputTextConfig.postfixImageConfig.layoutPadding
+    , margin config.inputTextConfig.postfixImageConfig.layoutMargin 
+    , background config.inputTextConfig.postfixImageConfig.layoutColor
+    , onClick push $ const $ (determineAction config len) 
+
+    ][ imageView
+      [ height config.inputTextConfig.postfixImageConfig.height 
+      , width config.inputTextConfig.postfixImageConfig.width 
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET (if config.index == 0 then "" else if config.index == len-1 then "ny_ic_add" else "ny_ic_cross_white") 
+      ]
+    ]
+  ]
+  where
+    determineAction :: InputView -> Int -> Action
+    determineAction inputView len =
+      if inputView.index == len - 1 && inputView.index /= 0
+        then AddRemoveStopAction "D" inputView.index 
+        else AddRemoveStopAction "ADD" inputView.index 
+
+prefixDotImageView :: forall w. (Action -> Effect Unit ) -> InputView -> Int -> PrestoDOM (Effect Unit) w
+prefixDotImageView push config len =
+  linearLayout
+    [ height $ V 16
+    , width $ V 16
+    , orientation VERTICAL
+    , gravity CENTER_VERTICAL
+    , layoutGravity "center_vertical"
+    ][
+      imageView
+        [ height $ V 12
+        , width $ V 12
+        , margin $ config.inputTextViewContainerMargin
+        , imageWithFallback $
+            if config.index == 0 then
+              "ny_ic_green_circle"
+            else if config.index == len-1 then
+              "ny_ic_red_circle"
+            else
+              "ny_ic_grey_circle"
+        ]
+    ]
+
+-- inputImageView :: forall w. (Action -> Effect Unit ) -> InputView -> InputViewConfig -> Int -> PrestoDOM (Effect Unit) w
+-- inputImageView push config config' index= let 
+--   lastIndex = (length config'.inputView) - 1
+--   in
+--   linearLayout
+--               [ height WRAP_CONTENT
+--               , width WRAP_CONTENT
+--               , orientation VERTICAL 
+--               , gravity CENTER
+--               ][ (SeparatorView.view (config.imageSeparator)) 
+--               ]   (commenting mine)
+
+getVerticalMargins margin = 
+  case margin of
+    Margin _ mt _ mb -> mt + mb
+    MarginBottom mb -> mb
+    MarginHorizontal _ _ -> 0
+    MarginVertical mt mb -> mt + mb
+    MarginLeft _ -> 0
+    MarginRight _ -> 0
+    MarginTop mt -> mt
+
+getHeight height = 
+  case height of
+    V h -> h
+    _ -> 37 
