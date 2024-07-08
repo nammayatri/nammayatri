@@ -194,7 +194,7 @@ getQuotes searchRequestId = do
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
-    estimates <- getEstimates searchRequestId
+    estimates <- getEstimates searchRequestId -- TODO(MultiModal): only check for estimates which are done
     return $
       GetQuotesRes
         { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,

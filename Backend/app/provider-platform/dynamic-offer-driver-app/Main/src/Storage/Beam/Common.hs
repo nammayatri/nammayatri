@@ -30,6 +30,7 @@ import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.Geometry
 import Storage.Beam.IdfyVerification
 import Storage.Beam.Image
+import Storage.Beam.InterCityTravelCities
 import Storage.Beam.Invoice
 import Storage.Beam.Message
 import Storage.Beam.MessageReport
@@ -50,6 +51,7 @@ atlasDB =
     `B.withDbModification` B.dbModification
       { exophone = exophoneTable,
         geometry = geometryTable,
+        interCityTravelCities = interCityTravelCitiesTable,
         vehicle = vehicleTable,
         image = imageTable,
         person = personTable,
@@ -80,6 +82,7 @@ atlasDB =
 data AtlasDB f = AtlasDB
   { exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
+    interCityTravelCities :: f (B.TableEntity InterCityTravelCitiesT),
     vehicle :: f (B.TableEntity VehicleT),
     image :: f (B.TableEntity ImageT),
     person :: f (B.TableEntity PersonT),

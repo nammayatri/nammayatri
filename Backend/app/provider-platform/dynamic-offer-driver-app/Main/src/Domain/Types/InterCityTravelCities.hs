@@ -17,6 +17,7 @@ data InterCityTravelCities = InterCityTravelCities
     lng :: Kernel.Prelude.Double,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     state :: Kernel.Types.Beckn.Context.IndianState,
+    geom :: Maybe Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
