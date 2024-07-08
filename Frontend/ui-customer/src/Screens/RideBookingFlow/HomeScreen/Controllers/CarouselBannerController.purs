@@ -21,6 +21,7 @@ import Storage
 import Helpers.Utils
 import Resources.Constants 
 import Debug
+import Components.LocationTagBarV2 as LocationTagBarV2
 
 
 updateBanner :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -102,6 +103,8 @@ bannerCarouselAC action state =
                 pure NoAction
               ]
             CRT.NoAction -> update state
+            CRT.Rentals -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "RENTALS")]
+            CRT.Intercity -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "INTER_CITY")]
           Nothing -> update state
 
 
@@ -128,8 +131,7 @@ ticketBookingFlowBannerAC action state =
 metroTicketBannerClickAC :: Banner.Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 metroTicketBannerClickAC action state = 
   case action of 
-    Banner.OnClick -> do 
-       exit $ GoToMetroTicketBookingFlow state
+    Banner.OnClick -> exit $ GoToMetroTicketBookingFlow state
     Banner.NoAction -> update state
 
 safetyBannerAction :: Banner.Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
