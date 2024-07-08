@@ -225,7 +225,7 @@ nonEditableTextView push config config' index = let
     , margin $ config.inputTextConfig.margin
     , cornerRadius $ config.inputTextConfig.cornerRadius 
     , clickable $ config.isClickable 
-    , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true true
+    , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true config.index true
     , rippleColor $ Color.rippleShade
     , stroke $ strokeValue 
     -- , background Color.red900
@@ -310,13 +310,13 @@ inputTextField push config config' index =
           , id $ (spy ("edit text id "<> show index) (getNewIDWithTag $ config.inputTextConfig.id )) 
           , onChange (\action -> do 
               case action of 
-                InputChanged text -> if text /= "false" && text /= config.inputTextConfig.textValue then do 
+                InputChanged _ text -> if text /= "false" && text /= config.inputTextConfig.textValue then do 
                   void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.inputTextConfig.isFocussed
                   void $ push action
                   else pure unit 
                 _ -> push action
               pure unit
-            ) InputChanged
+            ) $ (InputChanged config.index)      
           , afterRender (\_ -> do 
               if (config.inputTextConfig.isFocussed) then do
                 void $ pure $ showKeyboard $ getNewIDWithTag config.inputTextConfig.id 
@@ -328,10 +328,10 @@ inputTextField push config config' index =
               (\action -> do 
                 let _ = spy "action" action 
                 case action of 
-                  TextFieldFocusChanged _ _ hasFocus -> do 
+                  TextFieldFocusChanged _ _ _ hasFocus -> do 
                     if (isTrue hasFocus) then do 
                       push action
-                      else  
+                      else       
                         pure unit
                   _ -> pure unit
               ) $ TextFieldFocusChanged config.inputTextConfig.id false index--config.index

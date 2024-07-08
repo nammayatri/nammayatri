@@ -17,18 +17,36 @@ module Components.InputView.Controller where
 
 import Effect (Effect)
 import Components.SeparatorView.View as SeparatorView
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Prelude
-import PrestoDOM ( Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), Prop)
+import PrestoDOM ( Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), Prop, layoutGravity, PrestoDOM(..), Orientation(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, afterRender, clickable, relativeLayout, frameLayout)
+import Data.Maybe
+import Styles.Colors as Color
+import Styles.Types (Color) 
 
-data Action = TextFieldFocusChanged String Boolean Boolean
+data Action = TextFieldFocusChanged String Boolean Int Boolean
             | ClearTextField String 
-            | InputChanged String 
+            | InputChanged Int String 
             | AutoCompleteCallBack String Boolean
             | BackPress
             | DateTimePickerButtonClicked
             | BackPressed
             | NoAction
+            | AddStopAction
+            | SetSelectedBoxId String
+            | AddRemoveStopAction String Int
+
+type Address =
+  { area :: Maybe String
+  , state :: Maybe String
+  , country :: Maybe String
+  , building  :: Maybe String
+  , door :: Maybe String
+  , street :: Maybe String
+  , city :: Maybe String
+  , areaCode :: Maybe String
+  , ward :: Maybe String
+  , placeId :: Maybe String
+  }
 
 type InputViewConfig = 
   { backIcon :: ImageConfig
@@ -61,6 +79,8 @@ type InputView =
   , placeLat :: Number
   , placeLong :: Number
   , inputTextConfig :: InputTextConfig
+  , inputTextViewContainerMargin :: Margin 
+  , index :: Int
   }
   
 
@@ -71,6 +91,7 @@ type InputTextConfig =
   , margin :: Margin
   , placeHolder :: String
   , id :: String
+  , hint :: String 
   , cornerRadius :: Number
   , textColor :: String
   , prefixImageVisibility :: Visibility
@@ -84,6 +105,12 @@ type ImageConfig =
   , height :: Length 
   , width :: Length 
   , padding :: Padding
+  , layoutWidth :: Length
+  , layoutHeight :: Length
+  , layoutCornerRadius :: Number
+  , layoutPadding :: Padding
+  , layoutMargin :: Margin
+  , layoutColor :: Color
   }
 
 type ButtonLayoutConfig = 
@@ -97,11 +124,11 @@ type ButtonLayoutConfig =
 
 config :: InputViewConfig
 config = {
-  backIcon : {
-    imageName : "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/mobilitypaytm/user/ny_ic_chevron_left_white.png"
-    , height : V 24
-    , width : V 24
-    , padding : PaddingTop 16 
+  backIcon : dummyImageConfig {
+    imageName = "ny_ic_chevron_left_white,https://assets.moving.tech/beckn/mobilitypaytm/user/ny_ic_chevron_left_white.png"
+    , height = V 24
+    , width = V 24
+    , padding = PaddingTop 16 
   },
   headerText : "",
   headerVisibility : true,
@@ -127,4 +154,36 @@ dummyImageConfig = {
   height : V 0,
   width : V 0,
   padding : Padding 0 0 0 0
+  , layoutWidth : V 0
+  , layoutHeight : V 0
+  , layoutCornerRadius : 0.0
+  , layoutPadding : Padding 0 0 0 0
+  , layoutMargin : Margin 0 0 0 0
+  , layoutColor : ""
 }
+
+-- defaultImageConfig :: ImageConfig
+-- defaultImageConfig = { 
+--       imageName : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/mobilitypaytm/user/ny_ic_chevron_left_white.png"
+--     , height : V 24
+--     , width : V 24
+--     , padding : PaddingTop 16 
+--     , layoutWidth : V 0
+--     , layoutHeight : V 0
+--     , layoutCornerRadius : 0.0
+--     , layoutPadding : Padding 0 0 0 0
+--     , layoutMargin : Margin 0 0 0 0
+--     , layoutColor : ""
+-- }
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  { orientation : VERTICAL
+  , count : 4 
+  , height : V 4
+  , width : V 1
+  , layoutWidth : V 12
+  , layoutHeight : V 15
+  , color : Color.black500
+  , margin : MarginVertical 2 2
+  }

@@ -1337,3 +1337,5 @@ getHI stringKey =
         RENTAL_BOOKING -> "रेंटल बुकिंग"
         INTERCITY_BOOKING -> "इंटरसिटी बुकिंग"
         BOOKING -> "बुकिंग"
+        ADD -> "जोड़ें"
+        ADD_STOP -> "स्टॉप जोड़ें"

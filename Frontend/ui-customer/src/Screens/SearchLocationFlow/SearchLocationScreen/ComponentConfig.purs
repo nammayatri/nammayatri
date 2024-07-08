@@ -24,6 +24,7 @@ import Components.ChooseYourRide as ChooseYourRide
 import Components.InputView as InputView
 import Components.LocationTagBarV2 as LTB
 import Components.MenuButton as MenuButton
+import Components.LocationListItem.Controller ( dummyAddress)
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
@@ -31,6 +32,7 @@ import Components.SeparatorView.View as SeparatorView
 import Data.Array as DA
 import Data.Maybe (isJust, maybe, Maybe(..)) as MB
 import Data.String as DS
+import Data.Maybe
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -107,12 +109,13 @@ locationTagBarConfig state globalProps =
 separatorConfig :: SeparatorView.Config
 separatorConfig = 
   { orientation : VERTICAL
-  , count : 3
+  , count : 4
   , height : V 4
   , width : V 1
   , layoutWidth : V 12
   , layoutHeight : V 15
   , color : Color.black500
+  , margin : MarginVertical 2 2
   }
 
 
@@ -216,7 +219,7 @@ mapInputViewConfig state isEditable =
       , suffixButtonVisibility = GONE
       , headerVisibility = headerVisibility
       , imageLayoutMargin = imageLayoutMargin
-      , inputView = map (\item -> transformInputViewArray item) (inputViewArray state)
+      -- , inputView = map (\item -> transformInputViewArray item) (inputViewArray state)
       }
   in inputViewConfig'
 
@@ -275,7 +278,7 @@ mapInputViewConfig state isEditable =
       , inputTextConfig : 
          { textValue : item.textValue
          , isFocussed : item.isFocussed
-         , id : show item.id
+         , id : item.id--show item.id
          , placeHolder : item.placeHolder 
          , cornerRadius : 4.0
          , margin : item.margin
@@ -313,6 +316,7 @@ mapInputViewConfig state isEditable =
           , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
           , id : ST.SearchLocPickup
           , isEditable : not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
+          , index : 0
           } ,
           { textValue : destLoc
           , isFocussed : dropLocFocussed
@@ -322,6 +326,7 @@ mapInputViewConfig state isEditable =
           , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
           , id : ST.SearchLocDrop
           , isEditable : true
+          , index : 1
           }
         ]
       

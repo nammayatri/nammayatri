@@ -53,6 +53,8 @@ import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Components.Referral as ReferralComponent
+import Components.InputView as InputView
+import Components.InputView.Controller as InputViewController
 import Constants (defaultDensity, languageKey)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
@@ -3040,15 +3042,32 @@ locationSelected item addToRecents state isEditDestination = do
         newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, rideSearchProps{ sourceSelectType = sourceSelectType } }}
     pure $ setText (getNewIDWithTag "SourceEditText") item.title
     updateAndExit state $ LocationSelected item addToRecents newState
+    -- else do
+    --   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : unsafeToForeign item.title},
+    --                                                                                                                 {key : "Favourite", value : unsafeToForeign favClick}]
+    --   let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
+    --   pure $ setText (getNewIDWithTag "DestinationEditText") item.title
+    --   if isEditDestination then 
+    --     updateAndExit state{props{currentStage = stage'}} $ EditDestLocationSelected item addToRecents newState
+    --   else
+    --     updateAndExit state{props{currentStage = stage'}} $ LocationSelected item addToRecents newState
     else do
-      let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : unsafeToForeign item.title},
-                                                                                                                    {key : "Favourite", value : unsafeToForeign favClick}]
-      let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
-      pure $ setText (getNewIDWithTag "DestinationEditText") item.title
-      if isEditDestination then 
-        updateAndExit state{props{currentStage = stage'}} $ EditDestLocationSelected item addToRecents newState
-      else
-        updateAndExit state{props{currentStage = stage'}} $ LocationSelected item addToRecents newState
+    let index = state.props.selectedIndex
+    let updatedInputView = mapWithIndex (\idx inputField -> 
+          if idx == index
+          then inputField{ destination = item.title,
+              destinationAddress = encodeAddress (item.title <> ", " <> item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon),
+              destinationPlaceId = item.placeId,
+              destinationLat = fromMaybe 0.0 item.lat,
+              destinationLong = fromMaybe 0.0 item.lon}
+          else inputField) state.props.inputView
+    let _ = spy "UPDATED INPUT VIEW AFTER LOCATION SELECTED" updatedInputView
+    let newState = state 
+          { props {
+              inputView = updatedInputView
+            }
+          }
+    continue newState
 
 locationSelected2 :: LocationListItemState -> Boolean -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState
 locationSelected2 item addToRecents state isEditDestination = do

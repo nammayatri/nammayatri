@@ -53,6 +53,9 @@ import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
+import Components.InputView (InputView(..), InputViewConfig, dummyImageConfig)
+import Components.SeparatorView.View as SeparatorView
+import Components.LocationListItem.Controller ( dummyAddress)
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
 import Data.Array as DA
@@ -64,6 +67,7 @@ import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
 import Data.String.CodeUnits (stripPrefix, stripSuffix)
+import Debug
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
@@ -1250,6 +1254,8 @@ searchLocationModelViewState state =
     , currentLocationText: state.props.currentLocation.place
     , isEditDestination : false
     , isDestViewEditable : true
+    , selectedBoxId : state.data.selectedBoxId
+    , inputViewConfig :  getInputViewConfig state
     }
   where
   formatDate :: String -> String
@@ -1397,6 +1403,8 @@ editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.
                                         }
                                     , headerText: getString TRIP_DETAILS_
                                     , isDestViewEditable : state.props.currentStage == EditingDestinationLoc
+                                    , selectedBoxId : Nothing
+                                    , inputViewConfig : getInputViewConfig state
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

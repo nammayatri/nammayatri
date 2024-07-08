@@ -28,13 +28,17 @@ import Prelude(negate)
 import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
-import PrestoDOM (BottomSheetState(..), Margin(..))
+import PrestoDOM 
 import Data.Map as Map 
 import JBridge (Location)
 import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
+import Language.Strings
+import Language.Types
+import Components.InputView.Controller
+import Styles.Colors as Color
 
 initData :: HomeScreenState
 initData = let
@@ -180,6 +184,7 @@ initData = let
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
     , famousDestinations : []
+    , selectedBoxId : Nothing
     },
     props: {
       rideRequestFlow : false
