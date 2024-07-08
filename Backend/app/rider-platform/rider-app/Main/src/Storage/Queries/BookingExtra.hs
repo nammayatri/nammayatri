@@ -187,10 +187,16 @@ findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId
 
 findBookingIdAssignedByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> [BookingStatus] -> m (Maybe (Id Booking))
 findBookingIdAssignedByEstimateId (Id estimateId) statusList = do
-  driverOffer <- findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
-  quote <- findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In $ map (\x -> Just (getId x.id)) driverOffer]
-  booking <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In $ map (\x -> Just (getId x.id)) quote, Se.Is BeamB.status $ Se.In statusList]
-  return $ listToMaybe $ Domain.id <$> booking
+  driverOfferIds <- map (Just . getId . (.id)) <$> findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
+  if null driverOfferIds
+    then return Nothing
+    else do
+      quoteIds <- map (Just . getId . (.id)) <$> findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In driverOfferIds]
+      if null quoteIds
+        then return Nothing
+        else do
+          bookings <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In quoteIds, Se.Is BeamB.status $ Se.In statusList]
+          return $ listToMaybe $ Domain.id <$> bookings
 
 updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Price -> Maybe Price -> Price -> Maybe Text -> m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare mbPaymentUrl = do
