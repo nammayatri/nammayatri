@@ -192,8 +192,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
         vehicleDetails <-
           CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel vehicleModelYear
             |<|>| CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel Nothing
-              >>= fromMaybeM (InternalError $ "Vehicle Make, Model, Year Combination not found. " <> show vehicleManufacturer <> ", " <> show vehicleModel <> ", " <> show vehicleModelYear)
-        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId (Just vehicleDetails.vehicleVariant) vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator
+        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel) req.vehicleCategory mbAirConditioned req.imageId ((vehicleDetails <&> (.vehicleVariant)) <|> Just Vehicle.HATCHBACK) vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator
       Nothing -> verifyRCFlow person merchantOpCityId documentVerificationConfig.checkExtraction req.vehicleRegistrationCertNumber req.imageId req.dateOfRegistration req.multipleRC req.vehicleCategory mbAirConditioned mbOxygen mbVentilator
   return Success
   where
@@ -214,7 +213,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           insuranceValidity = Nothing,
           vehicleClass = Nothing,
           vehicleCategory = Nothing,
-          seatingCapacity = Just $ String $ show vehicleDetails.capacity,
+          seatingCapacity = (Just . String . show) <$> (.capacity) =<< vehicleDetails,
           manufacturer = Just vehicleManufacturer,
           permitValidityFrom = Nothing,
           permitValidityUpto = Nothing,
