@@ -207,7 +207,7 @@ eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed 
 
 eval (InputViewAC (InputViewController.DateTimePickerButtonClicked)) state = openDateTimePicker state
 
-eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFocus)) state = do
+eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused _ hasFocus)) state = do
   case state.data.currentStage of
     RENTAL_SELECT_PACKAGE -> exit $ SearchLocationForRentals state id
     RENTAL_SELECT_VARIANT -> 

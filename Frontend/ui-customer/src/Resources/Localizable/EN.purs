@@ -1310,3 +1310,5 @@ getEN stringKey =
         CHARGEABLE -> "Chargeable" 
         BOOKED -> "Booked"
         SURCHARGES -> "Surcharges"
+        ADD -> "Add"
+        

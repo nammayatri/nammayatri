@@ -1308,3 +1308,5 @@ getHI stringKey =
         CHARGEABLE -> "चार्ज योग्य"
         BOOKED -> "बुक किया गया"
         SURCHARGES -> "अधिभार"
+        ADD -> "जोड़ें"
+        ADD_STOP -> "स्टॉप जोड़ें"

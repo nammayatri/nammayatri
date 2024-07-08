@@ -24,6 +24,7 @@ import Components.PopUpModal as PopUpModal
 import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
 import Components.RequestInfoCard as RequestInfoCard
+import Components.LocationListItem.Controller ( dummyAddress)
 import Data.Array ((!!), singleton, null)
 import Data.Maybe as MB
 import Engineering.Helpers.Commons as EHC
@@ -157,16 +158,16 @@ mapInputViewConfig state =
       , canClearText : false
       , isEditable : false
       , isClickable : true
-      , prefixImage : { 
-          imageName : item.imageName,
-          height : V 15,
-          width : V 15 ,
-          padding : Padding 0 0 0 0 }
-      , clearTextIcon : { 
-          imageName : "ny_ic_close_circle",
-          height : V 15,
-          width : V 15 ,
-          padding : Padding 0 0 0 0 }
+      , prefixImage : InputView.dummyImageConfig{ 
+          imageName = item.imageName,
+          height = V 15,
+          width = V 15 ,
+          padding = Padding 0 0 0 0 }
+      , clearTextIcon : InputView.dummyImageConfig{ 
+          imageName = "ny_ic_close_circle",
+          height = V 15,
+          width = V 15 ,
+          padding = Padding 0 0 0 0 }
       , stroke : ((if item.isFocussed then "1," else "0,") <> Color.yellow900)
       , imageSeparator : separatorConfig
       , fontStyle : if isSelectPackageStage then FontStyle.body6 LanguageStyle else FontStyle.subHeading2 LanguageStyle
@@ -195,15 +196,16 @@ mapInputViewConfig state =
         , id : if isSelectPackageStage then "PickUpLoc" else "DateAndTime"
         , cornerRadius : 4.0
         , prefixImageVisibility : boolToVisibility $ not isSelectPackageStage
-        , prefixImageConfig : {
-            height : V 24,
-            width : V 24,
-            padding : Padding 0 0 0 0,
-            imageName : "ny_ic_clock_unfilled_white"
+        , prefixImageConfig :  InputView.dummyImageConfig{
+            height = V 24,
+            width = V 24,
+            padding = Padding 0 0 0 0,
+            imageName = "ny_ic_clock_unfilled_white"
           }
         , postfixImageConfig : InputView.dummyImageConfig
         , swapImageConfig : InputView.dummyImageConfig
         , textColor : if isSelectPackageStage then Color.black600 else Color.white900
+        , hint : ""
         } ,
         { textValue : if isSelectPackageStage then dropLocText else " " <> show state.data.rentalBookingData.baseDuration <> " hr · " <> show state.data.rentalBookingData.baseDistance <> " km"
         , isFocussed : false
@@ -217,6 +219,7 @@ mapInputViewConfig state =
         , postfixImageConfig : InputView.dummyImageConfig
         , swapImageConfig : InputView.dummyImageConfig
         , textColor : if isSelectPackageStage then Color.black700 else Color.white900
+        , hint : ""
         }
       ]
 
@@ -273,6 +276,7 @@ separatorConfig =
   , layoutWidth : V 12
   , layoutHeight : V 15
   , color : Color.grey900
+  , margin : Margin 0 0 0 0
   }
 
 rentalPolicyInfoConfig :: RentalScreenState -> RequestInfoCard.Config

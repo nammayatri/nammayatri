@@ -46,6 +46,7 @@ import RemoteConfig as RC
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
+import Components.InputView.Controller (ImageConfig(..), InputView(..))
 import Screens(ScreenName)
 import PrestoDOM.List
 import JBridge (Location)
@@ -671,6 +672,7 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
+  , selectedBoxId :: Maybe Int
   }
 
 type InteroperabilityState = {
@@ -936,6 +938,8 @@ type HomeScreenStateProps =
   , shimmerViewTimerId :: String
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
+  , inputView :: Array InputView
+  , selectedIndex :: Int
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

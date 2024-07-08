@@ -1323,3 +1323,5 @@ getTE stringKey =
     CHARGEABLE -> "వసూలు చేసే"
     BOOKED -> "బుక్ చేయబడింది"
     SURCHARGES -> "అదనపు ఛార్జీలు"
+    ADD -> "జోడించు"
+    ADD_STOP -> "స్టాప్ జోడించండి"
