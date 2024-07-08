@@ -8,3 +8,5 @@ ALTER TABLE atlas_driver_offer_bpp.inter_city_travel_cities ADD COLUMN state tex
 ALTER TABLE atlas_driver_offer_bpp.inter_city_travel_cities ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.inter_city_travel_cities ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.inter_city_travel_cities ADD PRIMARY KEY ( city_name, merchant_id);
+
+ALTER TABLE atlas_driver_offer_bpp.inter_city_travel_cities ADD COLUMN geom public.geometry(MultiPolygon);

@@ -556,7 +556,7 @@ bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs Nothing
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = DRB.CANCELLED}}
-  _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
+  QPFS.updateStatus booking.riderId DPFS.IDLE
   unless (booking.status == DRB.CANCELLED) $ void $ QRB.updateStatus booking.id DRB.CANCELLED
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED

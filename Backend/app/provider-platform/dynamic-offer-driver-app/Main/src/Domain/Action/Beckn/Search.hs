@@ -677,9 +677,14 @@ getDestinationCity merchant dropLatLong = do
           find (\geom -> geom.city == Context.AnyCity) geoms & \case
             Just anyCityGeom -> do
               interTravelCities <- CQITC.findByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong (LatLong m.lat m.lng), m.cityName))
-              operatingCities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong m.location, show m.city))
-              let cities = interTravelCities <> operatingCities
-              let mbNearestCity = snd <$> (listToMaybe $ sortBy (comparing fst) cities)
+              mbNearestCity <-
+                if null interTravelCities
+                  then do
+                    operatingCities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong m.location, show m.city))
+                    return $ snd <$> (listToMaybe $ sortBy (comparing fst) operatingCities)
+                  else do
+                    intercityTravelAreas <- CQITC.findInterCityAreasContainingGps dropLatLong
+                    return $ (.cityName) <$> listToMaybe intercityTravelAreas
               return (CityState {city = anyCityGeom.city, state = anyCityGeom.state}, mbNearestCity)
             Nothing -> do
               logError $ "No geometry found for dropLatLong: " <> show dropLatLong <> " for regions: " <> show regions

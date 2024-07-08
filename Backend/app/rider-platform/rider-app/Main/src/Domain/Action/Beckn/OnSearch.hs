@@ -234,6 +234,19 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       pure ()
     else do
       deploymentVersion <- asks (.version)
+      -- TODO(MultiModal)
+      {-
+      case searchRequest.parentSearchId of
+        Just parentSearchId -> do
+          parentEstimates <- getEstimates parentSearchId -- getEstimates using parent searchId and check if multimodal estimate if available
+          if null parentEstimates
+            then do
+              create estimate with parent searchId and check if allroutes estimates came if yes then mark estimate as done else mark with ongoing
+            else do
+              update estimates price with new estimate price
+              check if allroutes estimates came if yes then mark estimate as done else mark with ongoing
+        Nothing -> pure ()
+      -}
       estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo)
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo)
       forM_ estimates $ \est -> do
@@ -280,6 +293,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
             updatedAt = now
           }
 
+-- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
   MonadFlow m =>
   ProviderInfo ->
