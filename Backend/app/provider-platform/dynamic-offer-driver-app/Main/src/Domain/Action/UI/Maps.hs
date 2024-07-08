@@ -48,6 +48,7 @@ data AutoCompleteReq = AutoCompleteReq
     sessionToken :: Maybe Text,
     location :: Text,
     radius :: Integer,
+    types_ :: Maybe Text,
     radiusWithUnit :: Maybe Distance,
     language :: Maps.Language,
     strictbounds :: Maybe Bool,
