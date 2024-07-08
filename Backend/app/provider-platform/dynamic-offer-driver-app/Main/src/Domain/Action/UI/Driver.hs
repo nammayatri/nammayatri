@@ -1133,6 +1133,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         calculateFareParameters
           CalculateFareParametersParams
             { farePolicy = farePolicy,
+              sourceLatLong = Just $ Maps.getCoordinates searchReq.fromLocation,
               actualDistance = searchReq.estimatedDistance,
               rideTime = sReqFD.startTime,
               returnTime = searchReq.returnTime,

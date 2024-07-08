@@ -193,6 +193,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance mbService
         calculateFareParameters
           CalculateFareParametersParams
             { farePolicy = fullFarePolicy,
+              sourceLatLong = Nothing,
               actualDistance = mbDistance,
               rideTime = now,
               waitingTime = Nothing,
