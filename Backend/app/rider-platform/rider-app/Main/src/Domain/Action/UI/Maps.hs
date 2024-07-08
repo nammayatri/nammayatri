@@ -61,6 +61,7 @@ data AutoCompleteReq = AutoCompleteReq
     radius :: Integer,
     radiusWithUnit :: Maybe Distance,
     language :: Maps.Language,
+    types_ :: Maybe Text,
     strictbounds :: Maybe Bool,
     origin :: Maybe Maps.LatLong,
     autoCompleteType :: Maybe AutoCompleteType
