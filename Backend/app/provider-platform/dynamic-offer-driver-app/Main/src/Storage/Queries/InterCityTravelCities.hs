@@ -4,18 +4,24 @@
 
 module Storage.Queries.InterCityTravelCities where
 
+import Data.Either
+import qualified Database.Beam as B
 import qualified Domain.Types.InterCityTravelCities
 import qualified Domain.Types.Merchant
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.InterCityTravelCities as Beam
+import qualified Storage.Beam.InterCityTravelCities.InterCityTravelCitiesGeom as BeamGeom
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.InterCityTravelCities.InterCityTravelCities -> m ())
 create = createWithKV
@@ -44,6 +50,20 @@ updateByPrimaryKey (Domain.Types.InterCityTravelCities.InterCityTravelCities {..
         ]
     ]
 
+findInterCityAreasContainingGps :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> m [Domain.Types.InterCityTravelCities.InterCityTravelCities]
+findInterCityAreasContainingGps gps = do
+  dbConf <- getMasterBeamConfig
+  geoms <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            ( \Beam.InterCityTravelCitiesT {} ->
+                containsPoint' (gps.lon, gps.lat)
+            )
+            $ B.all_ (BeamCommon.interCityTravelCities BeamCommon.atlasDB)
+  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+
 instance FromTType' Beam.InterCityTravelCities Domain.Types.InterCityTravelCities.InterCityTravelCities where
   fromTType' (Beam.InterCityTravelCitiesT {..}) = do
     pure $
@@ -54,18 +74,20 @@ instance FromTType' Beam.InterCityTravelCities Domain.Types.InterCityTravelCitie
             lng = lng,
             merchantId = Kernel.Types.Id.Id merchantId,
             state = state,
+            geom = Nothing,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
 
-instance ToTType' Beam.InterCityTravelCities Domain.Types.InterCityTravelCities.InterCityTravelCities where
+instance ToTType' BeamGeom.InterCityTravelCitiesGeom Domain.Types.InterCityTravelCities.InterCityTravelCities where
   toTType' (Domain.Types.InterCityTravelCities.InterCityTravelCities {..}) = do
-    Beam.InterCityTravelCitiesT
-      { Beam.cityName = cityName,
-        Beam.lat = lat,
-        Beam.lng = lng,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.state = state,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
+    BeamGeom.InterCityTravelCitiesGeomT
+      { BeamGeom.cityName = cityName,
+        BeamGeom.lat = lat,
+        BeamGeom.lng = lng,
+        BeamGeom.geom = geom,
+        BeamGeom.merchantId = Kernel.Types.Id.getId merchantId,
+        BeamGeom.state = state,
+        BeamGeom.createdAt = createdAt,
+        BeamGeom.updatedAt = updatedAt
       }

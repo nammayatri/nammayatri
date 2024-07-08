@@ -30,6 +30,7 @@ Location:
       area: Maybe Text
       ward: Maybe Text
       placeId: Maybe Text
+      derive: "Eq"
 
   beamFields:
     address:

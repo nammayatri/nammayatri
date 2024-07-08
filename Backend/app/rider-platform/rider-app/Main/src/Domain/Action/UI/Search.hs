@@ -182,6 +182,20 @@ data SearchRes = SearchRes
     multipleRoutes :: Maybe [Maps.RouteInfo]
   }
 
+data SearchDetails = SearchDetails
+  { riderPreferredOption :: SearchRequest.RiderPreferredOption,
+    origin :: SearchReqLocation,
+    roundTrip :: Bool,
+    stops :: [SearchReqLocation],
+    isSourceManuallyMoved :: Maybe Bool,
+    isSpecialLocation :: Maybe Bool,
+    startTime :: UTCTime,
+    returnTime :: Maybe UTCTime,
+    isReallocationEnabled :: Maybe Bool,
+    quotesUnifiedFlow :: Maybe Bool
+  }
+  deriving (Generic, Show)
+
 hotSpotUpdate ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -219,6 +233,16 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation = do
         Just _ -> frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation
         Nothing -> return ()
 
+{-
+# /search
+#  -> Make one normal search to BAP (no change in this)
+#     => create entry in search table
+#     => initiate search to BPP
+#  -> check if metro route possible (we have to add this logic in BAP itself as BPP always expect metro stations)
+#     => if yes, then make a search to metro BPP with metro stations
+#         => create entry in frfs search table with along with parent search id (multi-modal parent search id)
+#     => also make a first and last miles search to BPP with parent search id as above search id (multi-modal parent search id)
+-}
 search ::
   Id Person.Person ->
   SearchReq ->
@@ -228,23 +252,14 @@ search ::
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Bool ->
+  Bool ->
   Flow SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion clientId device isDashboardRequest_ = do
+search personId req bundleVersion clientVersion clientConfigVersion clientId device isDashboardRequest_ makeMultiModalSearch = do
   now <- getCurrentTime
-  let (riderPreferredOption, origin, roundTrip, stops, isSourceManuallyMoved, isSpecialLocation, startTime, returnTime, isReallocationEnabled, quotesUnifiedFlow) =
-        case req of
-          OneWaySearch oneWayReq ->
-            (SearchRequest.OneWay, oneWayReq.origin, False, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, fromMaybe now oneWayReq.startTime, Nothing, oneWayReq.isReallocationEnabled, oneWayReq.quotesUnifiedFlow)
-          RentalSearch rentalReq ->
-            (SearchRequest.Rental, rentalReq.origin, False, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing, rentalReq.isReallocationEnabled, rentalReq.quotesUnifiedFlow)
-          InterCitySearch interCityReq ->
-            (SearchRequest.InterCity, interCityReq.origin, interCityReq.roundTrip, fromMaybe [] interCityReq.stops, interCityReq.isSourceManuallyMoved, interCityReq.isSpecialLocation, interCityReq.startTime, interCityReq.returnTime, interCityReq.isReallocationEnabled, interCityReq.quotesUnifiedFlow)
+  let SearchDetails {..} = extractSearchDetails now req
+  validateStartAndReturnTime now startTime returnTime
 
   let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with this, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
-  whenJust returnTime $ \rt -> do
-    when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
-
-  unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
 
@@ -253,19 +268,13 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
     _ -> return Nothing
 
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  mbFavourite <- CSavedLocation.findByLatLonAndRiderId personId origin.gps
-  HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
-
   let sourceLatLong = origin.gps
   let stopsLatLong = map (.gps) stops
   originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
+
+  updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation
+
   -- merchant operating city of search-request-origin-location
-
-  when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
-    fork "ride search geohash frequencyUpdater" $ do
-      _ <- hotSpotUpdate person.merchantId mbFavourite origin isSourceManuallyMoved
-      updateForSpecialLocation person.merchantId origin isSpecialLocation
-
   merchantOperatingCity <-
     CQMOC.findByMerchantIdAndCity merchant.id originCity
       >>= fromMaybeM
@@ -320,6 +329,12 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   _ <- QSearchRequest.createDSReq searchRequest
   _ <- QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   QPFS.clearCache person.id
+
+  fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
+
+  when makeMultiModalSearch $ do
+    fork "multi-modal search" $ multiModalSearch searchRequest
+
   let dSearchRes =
         SearchRes
           { searchId = searchRequest.id,
@@ -332,12 +347,75 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
             disabilityTag = tag,
             ..
           }
-  fork "updating search counters" $ do
-    merchantConfigs <- QMC.findAllByMerchantOperatingCityId person.merchantOperatingCityId
-    SMC.updateSearchFraudCounters personId merchantConfigs
-    mFraudDetected <- SMC.anyFraudDetected personId merchantOperatingCity.id merchantConfigs (Just searchRequest)
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
+
   return dSearchRes
+  where
+    validateStartAndReturnTime :: UTCTime -> UTCTime -> Maybe UTCTime -> Flow ()
+    validateStartAndReturnTime now startTime returnTime = do
+      whenJust returnTime $ \rt -> do
+        when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
+      unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
+    extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
+    extractSearchDetails now = \case
+      OneWaySearch OneWaySearchReq {..} ->
+        SearchDetails
+          { riderPreferredOption = SearchRequest.OneWay,
+            roundTrip = False,
+            stops = [destination],
+            startTime = fromMaybe now startTime,
+            returnTime = Nothing,
+            ..
+          }
+      RentalSearch RentalSearchReq {..} ->
+        SearchDetails
+          { riderPreferredOption = SearchRequest.Rental,
+            roundTrip = False,
+            stops = fromMaybe [] stops,
+            returnTime = Nothing,
+            ..
+          }
+      InterCitySearch InterCitySearchReq {..} ->
+        SearchDetails
+          { riderPreferredOption = SearchRequest.InterCity,
+            stops = fromMaybe [] stops,
+            ..
+          }
+
+    updateRideSearchHotSpot :: DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> Flow ()
+    updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
+      mbFavourite <- CSavedLocation.findByLatLonAndRiderId person.id origin.gps
+      HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
+      when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
+        fork "ride search geohash frequencyUpdater" $ do
+          hotSpotUpdate person.merchantId mbFavourite origin isSourceManuallyMoved
+          updateForSpecialLocation person.merchantId origin isSpecialLocation
+
+    fraudCheck :: DPerson.Person -> DMOC.MerchantOperatingCity -> SearchRequest.SearchRequest -> Flow ()
+    fraudCheck person merchantOperatingCity searchRequest = do
+      merchantConfigs <- QMC.findAllByMerchantOperatingCityId person.merchantOperatingCityId
+      SMC.updateSearchFraudCounters person.id merchantConfigs
+      mFraudDetected <- SMC.anyFraudDetected person.id merchantOperatingCity.id merchantConfigs (Just searchRequest)
+      whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id)
+
+-- TODO(MultiModal): Move all multimodal related code to a separate module
+data MultiModalRoute = Metro [LatLong] | None
+
+multiModalSearch :: SearchRequest.SearchRequest -> Flow ()
+multiModalSearch searchRequest = do
+  multiModalRoute <- checkIfMultModalRoutePossible searchRequest
+  case multiModalRoute of
+    Metro _metroRoute -> do
+      -- TODO(MultiModal):
+      -- make a search to metro BAP (call FRFS function, also pass parent searchId to aggregate information) with metro stations
+      -- if firstMile and lastMile is not walk then call
+      -- search personId req bundleVersion clientVersion clientConfigVersion clientId device isDashboardRequest_ False parentSearchId
+      -- check on_status information for more details
+      throwError (InternalError "Not implemented")
+    None -> return ()
+
+-- TODO(MultiModal)
+checkIfMultModalRoutePossible :: SearchRequest.SearchRequest -> Flow MultiModalRoute
+checkIfMultModalRoutePossible _ = throwError (InternalError "Not implemented")
 
 buildSearchRequest ::
   Id SearchRequest.SearchRequest ->

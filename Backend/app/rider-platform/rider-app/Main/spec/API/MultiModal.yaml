@@ -1,0 +1,92 @@
+imports:
+  TravelMode: Domain.Types.Common
+  Estimate: Domain.Types.Estimate
+  Booking: Domain.Types.Booking
+  PriceAPIEntity: Kernel.Types.Common
+  LatLong: Kernel.External.Maps
+  LocationAPIEntity: Domain.Types.Location
+  SearchRequest: Domain.Types.SearchRequest
+
+module: MultiModal
+types:
+  MultiModalEstimate:
+    id: Id Estimate
+    serviceTierName: Text
+    serviceTierShortDesc: Text
+    travelModes: "[TravelMode]"
+    estimatedFare: PriceAPIEntity
+    isValueAddNP: Bool
+    validTill: UTCTime
+    derive: "Eq, Show"
+
+  MultiModalRouteDetails:
+    estimatedFare: PriceAPIEntity
+    totalDistance: Distance
+    totalDuration: Seconds
+    automaticBooking: Bool
+    routeLegs: "[MultiModalRouteLeg]"
+    derive: "Eq, Show"
+
+  MultiModalRouteLeg:
+    distance: Distance
+    duration: Seconds
+    status: MultiModalRouteLegStatus
+    legInfo: MultiModalRouteLegInfo
+    derive: "Eq, Show"
+
+  MultiModalRouteLegInfo:
+    enum: "WalkLeg WalkLegInfo, MetroLeg MetroLegInfo, TaxiLeg TaxiLegInfo"
+
+  MultiModalRouteLegStatus:
+    enum: "Pending, Completed"
+
+  WalkLegInfo:
+    startLocation: LocationAPIEntity
+    endLocation: LocationAPIEntity
+    derive: "Eq, Show"
+
+  MetroLegInfo:
+    metroLines: "[MetroLineInfo]"
+    derive: "Eq, Show"
+
+  MetroLineInfo:
+    lineName: Text
+    lineColor: Text
+    lineTimings: MetroLineTiming
+    estimatedFare: PriceAPIEntity
+    startStation: MetroStationInfo
+    endStation: MetroStationInfo
+    lineStations: "[MetroStationInfo]"
+    derive: "Eq, Show"
+
+  MetroStationInfo:
+    stationName: Text
+    stationCode: Text
+    stationLocation: LatLong
+    platform: Maybe Text
+    exit: Maybe Text
+    derive: "Eq, Show"
+
+  MetroLineTiming:
+    startTime: TimeOfDay
+    endTime: TimeOfDay
+    frequency: Seconds
+    derive: "Eq, Show"
+
+  TaxiLegInfo:
+    startLocation: LocationAPIEntity
+    endLocation: LocationAPIEntity
+    legStage: TaxiLegStage
+    derive: "Eq, Show"
+
+  TaxiLegStage:
+    enum: "SearchStage (Id SearchRequest) (Maybe (Id Estimate)), SearchingForDriverStage (Id Estimate), PickupStage (Id Booking), OngoingStage (Id Booking), CompletedStage"
+
+apis:
+  # add multiModalEstimates object in search/{searchId}/results api response
+  - POST:
+      endpoint: /multiModal/{estimateId}/routeDetails
+      params:
+        estimateId: Id Estimate
+      response:
+        type: MultiModalRouteDetails
