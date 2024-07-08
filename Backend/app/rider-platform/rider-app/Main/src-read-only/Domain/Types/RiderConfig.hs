@@ -41,6 +41,7 @@ data RiderConfig = RiderConfig
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
+    settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     specialZoneRadius :: Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Text,

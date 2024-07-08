@@ -396,6 +396,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
                endOdometerReading = mbOdometer
               }
+    fork "updating time and latlong in advance ride if any" $ do
+      advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
+      whenJust advanceRide $ \advanceRide' -> do
+        QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
+
     -- we need to store fareParams only when they changed
     withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig
     withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId

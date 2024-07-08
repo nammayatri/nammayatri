@@ -60,6 +60,7 @@ import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
+import Domain.Types.CancellationFarePolicy as DTCFP
 import qualified Domain.Types.Common as Common
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -133,6 +134,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
@@ -1011,7 +1013,15 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     extraKmRateStartDistance :: Text,
     perExtraKmRate :: Text,
     peakTimings :: Text,
-    peakDays :: Text
+    peakDays :: Text,
+    cancellationFarePolicyDescription :: Text,
+    freeCancellationTimeSeconds :: Text,
+    maxCancellationCharge :: Text,
+    maxWaitingTimeAtPickupSeconds :: Text,
+    minCancellationCharge :: Text,
+    perMetreCancellationCharge :: Text,
+    perMinuteCancellationCharge :: Text,
+    percentageOfRideFareToBeCharged :: Text
   }
   deriving (Show)
 
@@ -1053,6 +1063,14 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "per_extra_km_rate"
       <*> r .: "peak_timings"
       <*> r .: "peak_days"
+      <*> r .: "cancellation_fare_policy_description"
+      <*> r .: "free_cancellation_time_seconds"
+      <*> r .: "max_cancellation_charge"
+      <*> r .: "max_waiting_time_at_pickup_seconds"
+      <*> r .: "min_cancellation_charge"
+      <*> r .: "per_metre_cancellation_charge"
+      <*> r .: "per_minute_cancellation_charge"
+      <*> r .: "percentage_of_ride_fare_to_be_charged"
 
 upsertFarePolicy :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 upsertFarePolicy merchantShortId opCity req = do
@@ -1241,6 +1259,37 @@ upsertFarePolicy merchantShortId opCity req = do
                 { perDistanceUnitMultiplier = Nothing,
                   fixed = Nothing
                 }
+
+      cancellationFarePolicyId <- do
+        let cancellationFarePolicyDescription :: Maybe Text = readMaybeCSVField idx row.cancellationFarePolicyDescription "Cancellation Fare Policy Description"
+        case cancellationFarePolicyDescription of
+          Nothing -> return Nothing
+          Just cancellationFarePolicyDesc -> do
+            freeCancellationTimeSeconds :: Seconds <- readCSVField idx row.freeCancellationTimeSeconds "Free Cancellation Time Seconds"
+            maxCancellationCharge :: HighPrecMoney <- readCSVField idx row.maxCancellationCharge "Max Cancellation Charge"
+            maxWaitingTimeAtPickupSeconds :: Seconds <- readCSVField idx row.maxWaitingTimeAtPickupSeconds "Max Waiting Time At Pickup Seconds"
+            minCancellationCharge :: HighPrecMoney <- readCSVField idx row.minCancellationCharge "Min Cancellation Charge"
+            perMetreCancellationCharge :: HighPrecMoney <- readCSVField idx row.perMetreCancellationCharge "Per Metre Cancellation Charge"
+            perMinuteCancellationCharge :: HighPrecMoney <- readCSVField idx row.perMinuteCancellationCharge "Per Minute Cancellation Charge"
+            percentageOfRideFareToBeCharged :: Centesimal <- readCSVField idx row.percentageOfRideFareToBeCharged "Percentage Of Ride Fare To Be Charged"
+            newId <- generateGUID
+            let cancellationFarePolicy =
+                  DTCFP.CancellationFarePolicy
+                    { id = newId,
+                      description = cancellationFarePolicyDesc,
+                      freeCancellationTimeSeconds,
+                      maxCancellationCharge,
+                      maxWaitingTimeAtPickupSeconds,
+                      minCancellationCharge,
+                      perMetreCancellationCharge,
+                      perMinuteCancellationCharge,
+                      percentageOfRideFareToBeCharged,
+                      currency,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            QCFP.create cancellationFarePolicy
+            return (Just newId)
 
       farePolicyDetails <-
         case farePolicyType of

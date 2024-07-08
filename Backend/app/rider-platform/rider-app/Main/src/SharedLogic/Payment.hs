@@ -91,3 +91,13 @@ paymentErrorHandler booking exec = do
               }
       dCancelRes <- DCancel.cancel booking Nothing req SBCR.ByApplication
       void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
+
+makeCancellationPayment ::
+  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Person.Person ->
+  Ride.Ride ->
+  PriceAPIEntity ->
+  m ()
+makeCancellationPayment _ _ _ _ _ = logDebug "Cancellation payment not implemented yet."

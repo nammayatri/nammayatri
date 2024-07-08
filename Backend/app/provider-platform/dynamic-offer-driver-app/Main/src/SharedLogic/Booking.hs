@@ -63,7 +63,7 @@ cancelBooking booking mbDriver transporter = do
     void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   fork "cancelBooking - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
+    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing
   whenJust mbRide $ \ride ->
     case mbDriver of
       Nothing -> throwError (PersonNotFound ride.driverId.getId)
