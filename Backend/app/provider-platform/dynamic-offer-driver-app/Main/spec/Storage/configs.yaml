@@ -11,6 +11,7 @@ imports:
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
   TimeBound : Domain.Types.TimeBound
+  DayOfWeek: Data.Time
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -120,37 +121,6 @@ MerchantState:
       where:
         and: [merchantId, state]
 
-InterCityTravelCities:
-  tableName: inter_city_travel_cities
-
-  fields:
-    merchantId: Id Merchant
-    cityName: Text
-    state: IndianState
-    lat: Double
-    lng: Double
-
-  excludedFields: [merchantOperatingCityId]
-
-  constraints:
-    merchantId: PrimaryKey
-    cityName: PrimaryKey
-
-  queries:
-    findByMerchantAndState:
-      kvFunction: findAllWithKV
-      where:
-        and: [merchantId, state]
-
-  cachedQueries:
-    findByMerchantIdAndState:
-      returnType: Array
-      withCrossAppRedis: true
-      queryType: FindAndCache
-      dbQuery: findByMerchantAndState
-      dbQueryParams: [merchantId, state]
-      keyParams: [merchantId, state]
-
 ValueAddNP:
   tableName: value_add_np
 
@@ -167,3 +137,33 @@ ValueAddNP:
     findAll:
       kvFunction: findAllWithKV
       where: enabled
+
+SurgePricing:
+  tableName: surge_pricing
+
+  fields:
+    id: Id SurgePricing
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    sourceHex: Text
+    dayOfWeek: Text
+    hourOfDay: Int
+    surgeMultiplier: Double
+
+  queries:
+    findByHexDayHourForMerchantOpCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, sourceHex, dayOfWeek, hourOfDay]
+
+  constraints:
+    id: PrimaryKey
+
+  cachedQueries:
+    findByHexDayHourForMerchantOpCity:
+      returnType: One
+      withCrossAppRedis: true
+      queryType: FindAndCache
+      dbQuery: findByHexDayHourForMerchantOpCity
+      dbQueryParams: [merchantOperatingCityId, sourceHex, dayOfWeek, hourOfDay]
+      keyParams: [merchantOperatingCityId, sourceHex, dayOfWeek, hourOfDay]

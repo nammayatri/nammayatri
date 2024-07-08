@@ -267,6 +267,7 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.Geometry
+      Domain.Types.InterCityTravelCities
       Domain.Types.LmsEnumTypes
       Domain.Types.OnCancel
       Domain.Types.OnUpdate
@@ -364,6 +365,9 @@ library
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.GovtDataRC
+      Storage.Beam.InterCityTravelCities
+      Storage.Beam.InterCityTravelCities.InterCityTravelCities
+      Storage.Beam.InterCityTravelCities.InterCityTravelCitiesGeom
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
       Storage.Beam.Quote
@@ -396,6 +400,7 @@ library
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
       Storage.CachedQueries.GoHomeConfig
+      Storage.CachedQueries.InterCityTravelCities
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation
       Storage.CachedQueries.Lms
@@ -480,6 +485,7 @@ library
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.Geometry
       Storage.Queries.ImageExtra
+      Storage.Queries.InterCityTravelCities
       Storage.Queries.InvoiceExtra
       Storage.Queries.KioskLocationExtra
       Storage.Queries.LocationExtra
@@ -636,7 +642,6 @@ library
       Domain.Types.GoHomeConfig
       Domain.Types.IdfyVerification
       Domain.Types.Image
-      Domain.Types.InterCityTravelCities
       Domain.Types.Invoice
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
@@ -685,6 +690,7 @@ library
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
       Domain.Types.SubscriptionConfig
+      Domain.Types.SurgePricing
       Domain.Types.Toll
       Domain.Types.Translations
       Domain.Types.TransporterConfig
@@ -748,7 +754,6 @@ library
       Storage.Beam.GoHomeConfig
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
-      Storage.Beam.InterCityTravelCities
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
@@ -797,6 +802,7 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.SubscriptionConfig
+      Storage.Beam.SurgePricing
       Storage.Beam.Toll
       Storage.Beam.Translations
       Storage.Beam.TransporterConfig
@@ -811,7 +817,7 @@ library
       Storage.Beam.VehicleServiceTier
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
-      Storage.CachedQueries.InterCityTravelCities
+      Storage.CachedQueries.SurgePricing
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
@@ -861,7 +867,6 @@ library
       Storage.Queries.GoHomeConfig
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
-      Storage.Queries.InterCityTravelCities
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
@@ -967,6 +972,7 @@ library
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
       Storage.Queries.SubscriptionConfig
+      Storage.Queries.SurgePricing
       Storage.Queries.Toll
       Storage.Queries.Translations
       Storage.Queries.TransporterConfig

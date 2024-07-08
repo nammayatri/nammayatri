@@ -14,4 +14,11 @@
 
 module Domain.Types.Common where
 
+import Data.Aeson
+import Data.OpenApi
+import Kernel.Prelude
+
 data UsageSafety = Safe | Unsafe
+
+data TravelMode = Metro | Bus | Walk | Taxi
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show, Eq)

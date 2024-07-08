@@ -6,6 +6,7 @@ module Storage.CachedQueries.InterCityTravelCities where
 
 import qualified Domain.Types.InterCityTravelCities
 import qualified Domain.Types.Merchant
+import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context
@@ -27,3 +28,6 @@ findByMerchantIdAndState merchantId state = do
               )
                 /=<< Queries.findByMerchantAndState merchantId state
         )
+
+findInterCityAreasContainingGps :: forall m r. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LatLong -> m [Domain.Types.InterCityTravelCities.InterCityTravelCities]
+findInterCityAreasContainingGps = Queries.findInterCityAreasContainingGps

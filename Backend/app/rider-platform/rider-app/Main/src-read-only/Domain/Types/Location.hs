@@ -35,4 +35,4 @@ data LocationAPIEntity = LocationAPIEntity
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ward :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
