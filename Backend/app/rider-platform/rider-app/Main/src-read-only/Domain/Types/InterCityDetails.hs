@@ -25,6 +25,7 @@ data InterCityDetails = InterCityDetails
     perHourCharge :: Kernel.Types.Common.Price,
     plannedPerKmRateOneWay :: Kernel.Types.Common.Price,
     plannedPerKmRateRoundTrip :: Kernel.Types.Common.Price,
+    roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

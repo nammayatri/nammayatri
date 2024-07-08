@@ -30,6 +30,7 @@ InterCityDetails:
     plannedPerKmRateRoundTrip: Price
     perDayMaxHourAllowance: Hours
     nightShiftInfo: Maybe NightShiftInfo
+    roundTrip: Maybe Bool
 
   sqlType:
     baseFare: numeric(30, 2)
