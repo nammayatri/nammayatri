@@ -45,7 +45,6 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude as KP
 import Kernel.Storage.Esqueleto
 import Kernel.Tools.Metrics.CoreMetrics
-import qualified Kernel.Types.Price as Price
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 import qualified Storage.CachedQueries.SurgePricing as SurgePricing
 
