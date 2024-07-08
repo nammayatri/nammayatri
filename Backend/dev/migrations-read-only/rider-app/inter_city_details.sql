@@ -22,3 +22,8 @@ ALTER TABLE atlas_app.inter_city_details ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.inter_city_details ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.inter_city_details ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.inter_city_details ADD COLUMN round_trip boolean ;

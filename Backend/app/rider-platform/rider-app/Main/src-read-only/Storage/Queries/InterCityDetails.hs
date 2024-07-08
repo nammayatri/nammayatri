@@ -39,6 +39,7 @@ instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCit
             perHourCharge = Kernel.Utils.Common.mkPrice (Just currency) perHourCharge,
             plannedPerKmRateOneWay = Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateOneWay,
             plannedPerKmRateRoundTrip = Kernel.Utils.Common.mkPrice (Just currency) plannedPerKmRateRoundTrip,
+            roundTrip = roundTrip,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -61,6 +62,7 @@ instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityD
         Beam.perHourCharge = (.amount) perHourCharge,
         Beam.plannedPerKmRateOneWay = (.amount) plannedPerKmRateOneWay,
         Beam.plannedPerKmRateRoundTrip = (.amount) plannedPerKmRateRoundTrip,
+        Beam.roundTrip = roundTrip,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
