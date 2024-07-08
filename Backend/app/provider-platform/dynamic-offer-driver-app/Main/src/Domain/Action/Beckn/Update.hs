@@ -212,6 +212,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               calculateFareParameters
                 CalculateFareParametersParams
                   { farePolicy,
+                    sourceLatLong = Just srcPt,
                     actualDistance = Just estimatedDistance,
                     rideTime = booking.startTime,
                     returnTime = booking.returnTime,

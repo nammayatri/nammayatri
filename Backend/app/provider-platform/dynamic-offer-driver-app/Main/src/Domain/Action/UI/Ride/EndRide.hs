@@ -442,6 +442,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
     calculateFareParameters
       Fare.CalculateFareParametersParams
         { farePolicy = farePolicy,
+          sourceLatLong = Just $ getCoordinates booking.fromLocation,
           actualDistance = Just recalcDistance,
           estimatedDistance = Just oldDistance,
           rideTime = booking.startTime,

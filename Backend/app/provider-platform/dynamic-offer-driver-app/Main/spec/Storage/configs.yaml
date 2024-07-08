@@ -12,6 +12,7 @@ imports:
   Common: Domain.Types.Common
   TimeBound : Domain.Types.TimeBound
   DayOfWeek: Data.Time
+  Centesimal: Kernel.Types.Common
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -143,27 +144,30 @@ SurgePricing:
 
   fields:
     id: Id SurgePricing
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
     sourceHex: Text
     dayOfWeek: Text
     hourOfDay: Int
-    surgeMultiplier: Double
+    surgeMultiplier: Centesimal
 
   queries:
-    findByHexDayHourForMerchantOpCity:
+    findByHexDayAndHour:
       kvFunction: findOneWithKV
       where:
-        and: [merchantOperatingCityId, sourceHex, dayOfWeek, hourOfDay]
+        and: [sourceHex, dayOfWeek, hourOfDay]
 
   constraints:
     id: PrimaryKey
 
+  sqlType:
+    surgeMultiplier: double precision
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
   cachedQueries:
-    findByHexDayHourForMerchantOpCity:
+    findByHexDayAndHour:
       returnType: One
       withCrossAppRedis: true
       queryType: FindAndCache
-      dbQuery: findByHexDayHourForMerchantOpCity
-      dbQueryParams: [merchantOperatingCityId, sourceHex, dayOfWeek, hourOfDay]
-      keyParams: [merchantOperatingCityId, sourceHex, dayOfWeek, hourOfDay]
+      dbQuery: findByHexDayAndHour
+      dbQueryParams: [sourceHex, dayOfWeek, hourOfDay]
+      keyParams: [sourceHex, dayOfWeek, hourOfDay]

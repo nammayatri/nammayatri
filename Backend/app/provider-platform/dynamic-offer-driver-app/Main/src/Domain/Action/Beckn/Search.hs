@@ -47,6 +47,7 @@ import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.Beam.Functions as B
+import qualified Kernel.External.Maps as EMaps
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -216,7 +217,7 @@ handler ValidatedDSearchReq {..} sReq = do
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
-  let buildEstimateHelper = buildEstimate merchantOpCityId currency distanceUnit searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute searchReq.estimatedDuration
+  let buildEstimateHelper = buildEstimate merchantOpCityId currency distanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute searchReq.estimatedDuration
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
@@ -445,6 +446,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
+          sourceLatLong = Just $ EMaps.getCoordinates searchRequest.fromLocation,
           actualDistance = Just dist,
           rideTime = pickupTime,
           returnTime,
@@ -497,7 +499,7 @@ buildEstimate ::
   Id DMOC.MerchantOperatingCity ->
   Currency ->
   DistanceUnit ->
-  Id DSR.SearchRequest ->
+  Maybe DSR.SearchRequest ->
   UTCTime ->
   Bool ->
   Maybe UTCTime ->
@@ -512,12 +514,13 @@ buildEstimate ::
   Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantOpCityId currency distanceUnit searchReqId startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute mbEstimatedDuration nightShiftOverlapChecking fullFarePolicy = do
+buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute mbEstimatedDuration nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
+          sourceLatLong = (EMaps.getCoordinates . (.fromLocation)) <$> mbSearchReq,
           actualDistance = Just dist,
           rideTime = startTime,
           returnTime,
@@ -548,7 +551,7 @@ buildEstimate merchantOpCityId currency distanceUnit searchReqId startTime isSch
   pure
     DEst.Estimate
       { id = estimateId,
-        requestId = searchReqId,
+        requestId = maybe (Id "") (.id) mbSearchReq,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
         vehicleServiceTierName = Just vehicleServiceTierItem.name,
         tripCategory = fullFarePolicy.tripCategory,
