@@ -29,6 +29,7 @@ data InterCityDetailsT f = InterCityDetailsT
     perHourCharge :: B.C f Kernel.Types.Common.HighPrecMoney,
     plannedPerKmRateOneWay :: B.C f Kernel.Types.Common.HighPrecMoney,
     plannedPerKmRateRoundTrip :: B.C f Kernel.Types.Common.HighPrecMoney,
+    roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

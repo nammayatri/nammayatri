@@ -362,7 +362,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
     OneWaySpecialZoneDetails details -> do
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
     InterCityDetails details -> do
-      DQuote.InterCityDetails <$> buildInterCityQuoteDetails searchRequest.distanceUnit details
+      DQuote.InterCityDetails <$> buildInterCityQuoteDetails searchRequest.distanceUnit searchRequest.roundTrip details
   pure
     DQuote.Quote
       { id = uid,
@@ -405,8 +405,8 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
       updatedAt = now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
-buildInterCityQuoteDetails :: MonadFlow m => DistanceUnit -> InterCityQuoteDetails -> m DInterCityDetails.InterCityDetails
-buildInterCityQuoteDetails distanceUnit InterCityQuoteDetails {..} = do
+buildInterCityQuoteDetails :: MonadFlow m => DistanceUnit -> Maybe Bool -> InterCityQuoteDetails -> m DInterCityDetails.InterCityDetails
+buildInterCityQuoteDetails distanceUnit roundTrip InterCityQuoteDetails {..} = do
   let id = Id quoteId
   now <- getCurrentTime
   let createdAt = now
