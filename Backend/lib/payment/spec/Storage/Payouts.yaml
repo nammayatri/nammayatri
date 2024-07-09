@@ -22,7 +22,6 @@ PayoutOrder:
     amount : Price
     status : PayoutOrderStatus
     accountDetailsType : Maybe AccountDetailsType
-    entityId : Maybe Text
     entityName : Maybe EntityName
     vpa : Maybe Text
     mobileNo : (EncryptedHashedField e Text)
@@ -30,6 +29,7 @@ PayoutOrder:
     lastStatusCheckedAt : Maybe UTCTime
     createdAt : UTCTime
     updatedAt : UTCTime
+    entityIds : Maybe [Text]
   beamFields:
     amount:
       currency: Maybe Currency
@@ -57,16 +57,12 @@ PayoutOrder:
     findByOrderId:
       kvFunction: findOneWithKV
       where: orderId
-    findAllByEntityNameAndEntityIds:
-      kvFunction: findAllWithOptionsKV
-      where:
-        and:
-          - eq: [entityName]
-          - in: [entityId]
     updatePayoutOrderStatus:
       kvFunction: updateOneWithKV
       params: [status]
       where: orderId
+  extraOperations:
+  - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
 
@@ -113,4 +109,5 @@ PayoutTransaction:
       where: transactionRef
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
+
 
