@@ -64,3 +64,9 @@ getFamousDestinations city = do
     getLanguage lang = 
       let language = DS.toLower $ DS.take 2 lang
       in if not (DS.null language) then "_" <> language else "_en"
+
+getEstimatesOrder :: String -> Array String
+getEstimatesOrder city = do
+    let config = fetchRemoteConfigString "estimates_order"
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ["AUTO_RICKSHAW", "BOOK_ANY"]
+    getCityBasedConfig value city
