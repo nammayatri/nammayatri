@@ -772,7 +772,7 @@ getAutoRickshawNearImage  =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
     case city of 
-    Kochi -> "ny_ic_driver_near_auto_yellow.png"
+    Kochi -> "ny_ic_driver_near_auto_yellow"
     Hyderabad -> "ny_ic_driver_near_auto_black"
     Chennai -> "ny_ic_driver_near_auto_black"
     _ -> "ny_ic_driver_near_auto_green"
@@ -783,7 +783,7 @@ getAutoRickshawStartedImage  =
    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
       case city of 
-       Kochi -> "ny_ic_driver_started_auto_yellow.png"
+       Kochi -> "ny_ic_driver_started_auto_yellow"
        Hyderabad -> "ny_ic_driver_started_auto_black"
        Chennai -> "ny_ic_driver_started_auto_black"
        _ -> "ny_ic_driver_started_auto_green"
