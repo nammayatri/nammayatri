@@ -187,7 +187,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
     getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.ServiceTierType.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
     getRateCardForServiceTier mbDistance mbDuration transporterConfig tripCategory distanceUnit serviceTierType = do
       now <- getCurrentTime
-      eitherFullFarePolicy <- try @_ @SomeException $ getFarePolicy merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
+      eitherFullFarePolicy <- try @_ @SomeException $ getFarePolicy Nothing merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing
       case eitherFullFarePolicy of
         Left _ -> return Nothing
         Right fullFarePolicy -> do
@@ -206,7 +206,6 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
             calculateFareParameters
               CalculateFareParametersParams
                 { farePolicy = fullFarePolicy,
-                  sourceLatLong = Nothing,
                   actualDistance = mbDistance,
                   rideTime = now,
                   waitingTime = Nothing,

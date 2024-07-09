@@ -4,6 +4,7 @@
 
 module Storage.CachedQueries.SurgePricing where
 
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.SurgePricing
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -11,11 +12,11 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
 import qualified Storage.Queries.SurgePricing as Queries
 
-findByHexDayAndHour ::
+findByHexDayHourAndVehicleServiceTier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> m (Kernel.Prelude.Maybe Domain.Types.SurgePricing.SurgePricing))
-findByHexDayAndHour sourceHex dayOfWeek hourOfDay = do
-  Hedis.withCrossAppRedis (Hedis.safeGet $ "driverOfferCachedQueries:SurgePricing:" <> ":SourceHex-" <> show sourceHex <> ":DayOfWeek-" <> show dayOfWeek <> ":HourOfDay-" <> show hourOfDay)
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> Domain.Types.ServiceTierType.ServiceTierType -> m (Kernel.Prelude.Maybe Domain.Types.SurgePricing.SurgePricing))
+findByHexDayHourAndVehicleServiceTier sourceHex dayOfWeek hourOfDay vehicleServiceTier = do
+  Hedis.withCrossAppRedis (Hedis.safeGet $ "driverOfferCachedQueries:SurgePricing:" <> ":SourceHex-" <> show sourceHex <> ":DayOfWeek-" <> show dayOfWeek <> ":HourOfDay-" <> show hourOfDay <> ":VehicleServiceTier-" <> show vehicleServiceTier)
     >>= ( \case
             Just a -> pure (Just a)
             Nothing ->
@@ -23,7 +24,7 @@ findByHexDayAndHour sourceHex dayOfWeek hourOfDay = do
                 whenJust
                 ( \dataToBeCached -> do
                     expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                    Hedis.withCrossAppRedis $ Hedis.setExp ("driverOfferCachedQueries:SurgePricing:" <> ":SourceHex-" <> show sourceHex <> ":DayOfWeek-" <> show dayOfWeek <> ":HourOfDay-" <> show hourOfDay) dataToBeCached expTime
+                    Hedis.withCrossAppRedis $ Hedis.setExp ("driverOfferCachedQueries:SurgePricing:" <> ":SourceHex-" <> show sourceHex <> ":DayOfWeek-" <> show dayOfWeek <> ":HourOfDay-" <> show hourOfDay <> ":VehicleServiceTier-" <> show vehicleServiceTier) dataToBeCached expTime
                 )
-                /=<< Queries.findByHexDayAndHour sourceHex dayOfWeek hourOfDay
+                /=<< Queries.findByHexDayHourAndVehicleServiceTier sourceHex dayOfWeek hourOfDay vehicleServiceTier
         )

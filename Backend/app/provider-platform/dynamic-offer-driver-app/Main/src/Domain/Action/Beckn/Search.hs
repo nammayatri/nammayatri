@@ -47,7 +47,6 @@ import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.Beam.Functions as B
-import qualified Kernel.External.Maps as EMaps
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -447,7 +446,6 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
-          sourceLatLong = Just $ EMaps.getCoordinates searchRequest.fromLocation,
           actualDistance = Just dist,
           rideTime = pickupTime,
           returnTime,
@@ -523,7 +521,6 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
     let params =
           CalculateFareParametersParams
             { farePolicy = fullFarePolicy,
-              sourceLatLong = (EMaps.getCoordinates . (.fromLocation)) <$> mbSearchReq,
               actualDistance = Just dist,
               rideTime = startTime,
               returnTime,

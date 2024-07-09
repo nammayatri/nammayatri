@@ -138,7 +138,6 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
           Fare.CalculateFareParametersParams
             { farePolicy = farePolicy,
               actualDistance = searchReq.estimatedDistance,
-              sourceLatLong = Just $ EMaps.getCoordinates searchReq.fromLocation,
               estimatedDistance = searchReq.estimatedDistance,
               rideTime = searchReq.startTime,
               returnTime = searchReq.returnTime,
@@ -188,7 +187,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do
-          farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing (Just (TransactionId (Id searchReq.transactionId)))
+          farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing (Just (TransactionId (Id searchReq.transactionId)))
           getBaseFare farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
         _ -> pure tripQuoteDetail.baseFare
       deploymentVersion <- asks (.version)

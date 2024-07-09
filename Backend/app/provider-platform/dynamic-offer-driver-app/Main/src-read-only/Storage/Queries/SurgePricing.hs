@@ -4,6 +4,7 @@
 
 module Storage.Queries.SurgePricing where
 
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.SurgePricing
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -21,8 +22,18 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SurgePricing.SurgePricing] -> m ())
 createMany = traverse_ create
 
-findByHexDayAndHour :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> m (Maybe Domain.Types.SurgePricing.SurgePricing))
-findByHexDayAndHour sourceHex dayOfWeek hourOfDay = do findOneWithKV [Se.And [Se.Is Beam.sourceHex $ Se.Eq sourceHex, Se.Is Beam.dayOfWeek $ Se.Eq dayOfWeek, Se.Is Beam.hourOfDay $ Se.Eq hourOfDay]]
+findByHexDayHourAndVehicleServiceTier ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> Domain.Types.ServiceTierType.ServiceTierType -> m (Maybe Domain.Types.SurgePricing.SurgePricing))
+findByHexDayHourAndVehicleServiceTier sourceHex dayOfWeek hourOfDay vehicleServiceTier = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.sourceHex $ Se.Eq sourceHex,
+          Se.Is Beam.dayOfWeek $ Se.Eq dayOfWeek,
+          Se.Is Beam.hourOfDay $ Se.Eq hourOfDay,
+          Se.Is Beam.vehicleServiceTier $ Se.Eq (Kernel.Prelude.Just vehicleServiceTier)
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SurgePricing.SurgePricing -> m (Maybe Domain.Types.SurgePricing.SurgePricing))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -35,6 +46,7 @@ updateByPrimaryKey (Domain.Types.SurgePricing.SurgePricing {..}) = do
       Se.Set Beam.hourOfDay hourOfDay,
       Se.Set Beam.sourceHex sourceHex,
       Se.Set Beam.surgeMultiplier surgeMultiplier,
+      Se.Set Beam.vehicleServiceTier (Kernel.Prelude.Just vehicleServiceTier),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -50,6 +62,7 @@ instance FromTType' Beam.SurgePricing Domain.Types.SurgePricing.SurgePricing whe
             id = Kernel.Types.Id.Id id,
             sourceHex = sourceHex,
             surgeMultiplier = surgeMultiplier,
+            vehicleServiceTier = Kernel.Prelude.fromMaybe Domain.Types.ServiceTierType.HATCHBACK vehicleServiceTier,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -62,6 +75,7 @@ instance ToTType' Beam.SurgePricing Domain.Types.SurgePricing.SurgePricing where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.sourceHex = sourceHex,
         Beam.surgeMultiplier = surgeMultiplier,
+        Beam.vehicleServiceTier = Kernel.Prelude.Just vehicleServiceTier,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
