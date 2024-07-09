@@ -70,7 +70,7 @@ view push state =
     relativeLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
-     , background Color.grey700
+     , background Color.white900
      , onBackPressed push $ const BackClick
      , margin $ Margin 0 safeMarginTop 0 0
      ] $
@@ -108,40 +108,28 @@ view push state =
 
 instructionItem :: forall w. (Action -> Effect Unit) -> RC.PickupInstructions -> PrestoDOM (Effect Unit) w
 instructionItem push item =
-    relativeLayout
+    linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
+    , gravity CENTER_HORIZONTAL
+    , orientation VERTICAL
     , margin $ Margin 16 20 16 0
-    ][ linearLayout
-        [ width $ V $ (EHC.screenWidth unit)
-        , height $ V 215
-        , gravity CENTER
-        ][  progressBar
-            [ width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , gravity CENTER
-            ]
-        ],
-        linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity CENTER
-        ][  imageView
-            [ width MATCH_PARENT
-            , height $ V 215
-            , imageUrl item.image
-            ]
-        ],
+    , background Color.blue650
+    , stroke $ "1," <> Color.grey900
+    , cornerRadius 8.0
+    ][  
         textView $ 
         [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , gravity CENTER
-        , alignParentBottom "true,-1"
+        , height WRAP_CONTENT
         , text item.title
-        , color Color.white900
-        , margin $ MarginHorizontal 26 26 
-        , padding $ PaddingBottom 5
+        , color Color.black800
+        , padding $ Padding 12 12 12 12
         ] <> FontStyle.body1 CT.TypoGraphy
+      , imageView
+        [ width MATCH_PARENT
+        , height $ V 240
+        , imageUrl item.image
+        ]
     ]
 
 
