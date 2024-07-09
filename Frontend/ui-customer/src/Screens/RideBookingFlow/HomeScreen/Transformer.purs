@@ -35,7 +35,7 @@ import Data.Array as DA
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
-import Data.String (Pattern(..), drop, indexOf, length, split, trim, null)
+import Data.String (Pattern(..), drop, indexOf, length, split, trim, null, toLower)
 import Data.Function.Uncurried (runFn1)
 import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices)
 import Engineering.Helpers.BackTrack (liftFlowBT)
@@ -83,6 +83,7 @@ import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), Lo
 import Storage (isLocalStageOn)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.TipConfig
+import RemoteConfig as RC
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -425,13 +426,14 @@ isFareRangePresent estimates =
 getFilteredEstimate :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
 getFilteredEstimate estimates estimateAndQuoteConfig =
   let
+    estimatesOrder = RC.getEstimatesOrder $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
     filteredEstimate = case (getMerchant FunctionCall) of
       YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
       _ -> estimates
 
     sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
   in
-    sortEstimateWithVariantOrder sortWithFare estimateAndQuoteConfig.variantOrder
+    sortEstimateWithVariantOrder sortWithFare estimatesOrder
   where
   sortEstimateWithVariantOrder :: Array EstimateAPIEntity -> Array String -> Array EstimateAPIEntity
   sortEstimateWithVariantOrder estimates orderList =
