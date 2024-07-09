@@ -78,7 +78,6 @@ type MainAPI =
          )
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> QueryParam "city" Context.City
-             :> QueryParam "serviceName" Plan.ServiceNames
              :> "v2"
              :> JuspayPayout.JuspayPayoutWebhookAPI
          )
@@ -198,14 +197,13 @@ juspayPayoutWebhookHandler ::
   Value ->
   FlowHandler AckResponse
 juspayPayoutWebhookHandler merchantShortId secret value' =
-  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId Nothing Nothing secret value'
+  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId Nothing secret value'
 
 juspayPayoutWebhookHandlerV2 ::
   ShortId DM.Merchant ->
   Maybe Context.City ->
-  Maybe Plan.ServiceNames ->
   BasicAuthData ->
   Value ->
   FlowHandler AckResponse
-juspayPayoutWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
-  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
+juspayPayoutWebhookHandlerV2 merchantShortId mbOpCity secret value' =
+  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity secret value'
