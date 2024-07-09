@@ -149,15 +149,25 @@ SurgePricing:
     dayOfWeek: Text
     hourOfDay: Int
     surgeMultiplier: Centesimal
+    vehicleServiceTier: ServiceTierType|NoRelation
 
   queries:
-    findByHexDayAndHour:
+    findByHexDayHourAndVehicleServiceTier:
       kvFunction: findOneWithKV
       where:
-        and: [sourceHex, dayOfWeek, hourOfDay]
+        and: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]
 
   constraints:
     id: PrimaryKey
+
+  fromTType:
+    vehicleServiceTier: Kernel.Prelude.fromMaybe Domain.Types.ServiceTierType.HATCHBACK|I
+
+  toTType:
+    vehicleServiceTier: Kernel.Prelude.Just|I
+
+  beamType:
+    vehicleServiceTier: Maybe ServiceTierType
 
   sqlType:
     surgeMultiplier: double precision
@@ -165,10 +175,10 @@ SurgePricing:
   excludedFields: [merchantId, merchantOperatingCityId]
 
   cachedQueries:
-    findByHexDayAndHour:
+    findByHexDayHourAndVehicleServiceTier:
       returnType: One
       withCrossAppRedis: true
       queryType: FindAndCache
-      dbQuery: findByHexDayAndHour
-      dbQueryParams: [sourceHex, dayOfWeek, hourOfDay]
-      keyParams: [sourceHex, dayOfWeek, hourOfDay]
+      dbQuery: findByHexDayHourAndVehicleServiceTier
+      dbQueryParams: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]
+      keyParams: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]

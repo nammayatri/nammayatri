@@ -28,11 +28,8 @@ where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (NightShiftChargeAPIEntity (..), Variant (..), WaitingChargeAPIEntity (..))
-import qualified Data.Geohash as Geohash
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
-import Data.Time.Calendar.WeekDate
 import Domain.Types.Common
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
@@ -41,12 +38,8 @@ import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (id, map, sum)
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude as KP
-import Kernel.Storage.Esqueleto
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
-import qualified Storage.CachedQueries.SurgePricing as SurgePricing
 
 mkFareParamsBreakups :: (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
@@ -197,40 +190,8 @@ perRideKmFareParamsSum fareParams = do
     + fromMaybe 0.0 fareParams.nightShiftCharge
     + fromMaybe 0.0 fareParams.congestionCharge
 
-localTimeToDayOfWeekAndHour :: LocalTime -> (DayOfWeek, Int)
-localTimeToDayOfWeekAndHour localTime =
-  let (year, month, day) = toGregorian $ localDay localTime
-      (_, _, dayOfWeekNum) = toWeekDate $ fromGregorian year month day
-      dayWeek = toEnum (dayOfWeekNum - 1) :: DayOfWeek
-      hourOfDay = todHour $ localTimeOfDay localTime
-   in (dayWeek, hourOfDay)
-
-getCongestionChargeMultiplierFromModel ::
-  ( MonadFlow m,
-    MonadReader r m,
-    CoreMetrics m,
-    CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r
-  ) =>
-  Seconds ->
-  UTCTime ->
-  Maybe Maps.LatLong ->
-  m (Maybe Centesimal)
-getCongestionChargeMultiplierFromModel _ _ Nothing = pure Nothing
-getCongestionChargeMultiplierFromModel timeDiffFromUtc now (Just sourceLatLong) = do
-  let localTime = utcToIst (secondsToMinutes timeDiffFromUtc) now
-  let (dayWeek, hourOfDay) = localTimeToDayOfWeekAndHour localTime
-  let mbSourceHash = Geohash.encode 5 (sourceLatLong.lat, sourceLatLong.lon)
-  case mbSourceHash of
-    Nothing -> pure Nothing
-    Just sourceHash -> do
-      surgePrice <- SurgePricing.findByHexDayAndHour (T.pack sourceHash) (T.pack . show $ dayWeek) hourOfDay
-      return $ surgePrice <&> (.surgeMultiplier)
-
 data CalculateFareParametersParams = CalculateFareParametersParams
   { farePolicy :: FullFarePolicy,
-    sourceLatLong :: Maybe Maps.LatLong,
     actualDistance :: Maybe Meters,
     rideTime :: UTCTime,
     waitingTime :: Maybe Minutes,
@@ -251,16 +212,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     distanceUnit :: DistanceUnit
   }
 
-calculateFareParameters ::
-  ( MonadFlow m,
-    MonadReader r m,
-    CoreMetrics m,
-    CacheFlow m r,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r
-  ) =>
-  CalculateFareParametersParams ->
-  m FareParameters
+calculateFareParameters :: MonadFlow m => CalculateFareParametersParams -> m FareParameters
 calculateFareParameters params = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| params.farePolicy.merchantId ||+ " and vehicle service tier " +|| params.farePolicy.vehicleServiceTier ||+ ""
   now <- getCurrentTime
@@ -271,7 +223,6 @@ calculateFareParameters params = do
         _ -> now
   id <- generateGUID
   let localTimeZoneSeconds = fromMaybe 19800 params.timeDiffFromUtc
-  mbCongestionChargeMultiplierFromModel <- getCongestionChargeMultiplierFromModel localTimeZoneSeconds now params.sourceLatLong
   let isNightShiftChargeIncluded = if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds params.rideTime rideEndTime localTimeZoneSeconds else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime
       (baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
@@ -282,9 +233,9 @@ calculateFareParameters params = do
       resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
       congestionChargeResult =
         fp.congestionChargeMultiplier <&> \case
-          DFP.BaseFareAndExtraDistanceFare congestionCharge -> HighPrecMoney (fullRideCost.getHighPrecMoney * toRational (fromMaybe congestionCharge mbCongestionChargeMultiplierFromModel)) - fullRideCost
-          DFP.ExtraDistanceFare congestionCharge -> HighPrecMoney (partOfNightShiftCharge.getHighPrecMoney * toRational (fromMaybe congestionCharge mbCongestionChargeMultiplierFromModel)) - partOfNightShiftCharge
-      fullRideCostN {-without govtCharges and platformFee-} =
+          DFP.BaseFareAndExtraDistanceFare congestionCharge -> HighPrecMoney (fullRideCost.getHighPrecMoney * toRational congestionCharge) - fullRideCost
+          DFP.ExtraDistanceFare congestionCharge -> HighPrecMoney (partOfNightShiftCharge.getHighPrecMoney * toRational congestionCharge) - partOfNightShiftCharge
+      fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge

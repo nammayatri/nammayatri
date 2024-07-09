@@ -19,3 +19,8 @@ ALTER TABLE atlas_driver_offer_bpp.surge_pricing ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_driver_offer_bpp.surge_pricing ALTER COLUMN merchant_operating_city_id DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.surge_pricing ALTER COLUMN merchant_id DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.surge_pricing ADD COLUMN vehicle_service_tier text ;
