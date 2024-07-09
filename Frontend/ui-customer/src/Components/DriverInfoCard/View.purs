@@ -649,6 +649,7 @@ driverInfoView push state =
       rideStarted = not $ rideNotStarted state
       currentCityConfig = HU.getCityConfig  state.data.config.cityConfig (show state.props.merchantCity)
       brandingBannerViewVis = if currentCityConfig.iopConfig.enable then INVISIBLE else GONE
+      airportZone = state.props.zoneType.sourceTag == AIRPORT && isJust state.data.addressWard
   in
   linearLayout
   [ width MATCH_PARENT
@@ -727,7 +728,8 @@ driverInfoView push state =
                   , onClick push $ const ToggleBottomSheet
                   , cornerRadius if os == "IOS" then 2.0 else 4.0
                   ][]
-                  , contactView push state
+                  , contactView push state airportZone
+                  , airportPickupView push state airportZone
                   , if rideStarted then distanceView push state else dummyView push
                   , if rideStarted then maybe (dummyView push) (\item -> CarouselHolder.carouselView push $ getCarouselConfig item state) state.data.bannerData.bannerItem else dummyView push
                   , linearLayout
@@ -892,8 +894,8 @@ cancelRideLayout push state =
   ]
 
 ---------------------------------- contactView ---------------------------------------
-contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-contactView push state =
+contactView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> Boolean -> PrestoDOM (Effect Unit) w
+contactView push state airportZone =
   linearLayout
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
@@ -916,7 +918,15 @@ contactView push state =
                 , color Color.black900
                 ] <> FontStyle.body7 TypoGraphy
               ]
-          , walkToDirectionView
+          , textView $
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , color Color.blue900
+              , text $ getString SHOW_WALKING_DIRECTION
+              , accessibilityHint "Show walking direction : Button"
+              , visibility $ boolToVisibility $ not airportZone
+              , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
+              ] <> FontStyle.body6 TypoGraphy
          ]
       , textView [weight 1.0, visibility $ boolToVisibility $ state.props.zoneType.priorityTag /= SPECIAL_PICKUP]
       , chatButtonView push state
@@ -932,26 +942,20 @@ contactView push state =
                       then state.data.driverName <> " is waiting for you."
                       else state.data.driverName <> " is " <> distance <> "away"
           else state.data.driverName <> " is waiting for you."
-      walkToDirectionView = 
-        case state.props.zoneType.sourceTag, state.data.addressWard of
-          AIRPORT , Just ward ->  airportPickupView push state $ getString $ WALK_TO ward
-          _ , _ ->  textView $
-                    [ width WRAP_CONTENT
-                    , height WRAP_CONTENT
-                    , color Color.blue900
-                    , text $ getString SHOW_WALKING_DIRECTION
-                    , accessibilityHint "Show walking direction : Button"
-                    , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
-                    ] <> FontStyle.body6 TypoGraphy
-                  
 
-airportPickupView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> String -> PrestoDOM (Effect Unit) w
-airportPickupView push state directionText = 
+airportPickupView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> Boolean -> PrestoDOM (Effect Unit) w
+airportPickupView push state airportZone = 
   linearLayout
-    [ width WRAP_CONTENT
+    [ width MATCH_PARENT
     , height WRAP_CONTENT
     , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
     , accessibilityHint "Show walking direction : Button"
+    , visibility $ boolToVisibility $ airportZone
+    , background Color.blue600
+    , stroke $ "1,"<> Color.blue700
+    , padding $ Padding 8 8 8 8
+    , margin $ Margin 16 5 16 12
+    , cornerRadius 8.0
     , gravity CENTER_VERTICAL
     ][  PrestoAnim.animationSet[ Anim.triggerOnAnimationEnd true] $ 
         lottieAnimationView
@@ -966,15 +970,15 @@ airportPickupView push state directionText =
           ) (const NoAction)
         ]
       , textView $
-        [ width (V (((screenWidth unit)/3)+27))
+        [ weight 1.0
         , height WRAP_CONTENT
         , color Color.blue900
-        , text directionText
+        , text $ getString $ WALK_TO $ fromMaybe "" state.data.addressWard
         ] <> FontStyle.body6 TypoGraphy
       , imageView
         [ width $ V 14
         , height $ V 14
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"
+        , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_right_arrow_blue_2"
         ]
     ]
 
