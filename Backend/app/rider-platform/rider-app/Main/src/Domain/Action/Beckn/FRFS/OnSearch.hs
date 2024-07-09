@@ -26,8 +26,10 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.Queries.FRFSConfig as QFRFSConfig
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
+import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.Station as QStation
 
 data DOnSearch = DOnSearch
@@ -59,34 +61,57 @@ data DStation = DStation
     stopSequence :: Maybe Int
   }
 
-validateRequest :: DOnSearch -> Flow (Merchant, Search.FRFSSearch)
+data ValidatedDOnSearch = ValidatedDOnSearch
+  { merchant :: Merchant,
+    search :: Search.FRFSSearch,
+    ticketsBookedInEvent :: Int,
+    isEventOngoing :: Bool,
+    mbFreeTicketInterval :: Maybe Int,
+    mbMaxFreeTicketCashback :: Maybe Int
+  }
+
+validateRequest :: DOnSearch -> Flow ValidatedDOnSearch
 validateRequest DOnSearch {..} = do
   search <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   let merchantId = search.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  return (merchant, search)
+  frfsConfig <- QFRFSConfig.findByMerchantOperatingCityId search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
+  if frfsConfig.isEventOngoing == Just True
+    then do
+      stats <- QPStats.findByPersonId search.riderId >>= fromMaybeM (InternalError "Person stats not found")
+      return ValidatedDOnSearch {merchant, search, ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent, isEventOngoing = True, mbFreeTicketInterval = frfsConfig.freeTicketInterval, mbMaxFreeTicketCashback = frfsConfig.maxFreeTicketCashback}
+    else return ValidatedDOnSearch {merchant, search, ticketsBookedInEvent = 0, isEventOngoing = False, mbFreeTicketInterval = Nothing, mbMaxFreeTicketCashback = Nothing}
 
 onSearch ::
   DOnSearch ->
-  Search.FRFSSearch ->
+  ValidatedDOnSearch ->
   Flow ()
-onSearch onSearchReq search = do
-  quotes <- traverse (mkQuotes onSearchReq search) (onSearchReq.quotes)
+onSearch onSearchReq validatedReq = do
+  quotes <- traverse (mkQuotes onSearchReq validatedReq) (onSearchReq.quotes)
   QQuote.createMany quotes
   return ()
 
-mkQuotes :: DOnSearch -> Search.FRFSSearch -> DQuote -> Flow Quote.FRFSQuote
-mkQuotes dOnSearch search DQuote {..} = do
+mkQuotes :: DOnSearch -> ValidatedDOnSearch -> DQuote -> Flow Quote.FRFSQuote
+mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
 
   startStation <- QStation.findByStationCode dStartStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dStartStation.stationCode)
   endStation <- QStation.findByStationCode dEndStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dEndStation.stationCode)
 
+  let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
+  let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
   uid <- generateGUID
   now <- getCurrentTime
-
+  (discountedTickets, eventDiscountAmount) <-
+    if isEventOngoing
+      then do
+        let discountPerTicket = min maxFreeTicketCashback (price.amountInt.getMoney `div` search.quantity)
+            discountedTickets = ((ticketsBookedInEvent + search.quantity) `div` freeTicketInterval) - (ticketsBookedInEvent `div` freeTicketInterval)
+            eventDiscountAmount = toHighPrecMoney $ discountedTickets * discountPerTicket
+        return (Just discountedTickets, Just eventDiscountAmount)
+      else return (Nothing, Nothing)
   let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 900) now) dOnSearch.validTill -- If validTill is not present, set it to 15 minutes from now
   return
     Quote.FRFSQuote
@@ -112,7 +137,8 @@ mkQuotes dOnSearch search DQuote {..} = do
         Quote.partnerOrgId = search.partnerOrgId,
         Quote.partnerOrgTransactionId = search.partnerOrgTransactionId,
         Quote.createdAt = now,
-        Quote.updatedAt = now
+        Quote.updatedAt = now,
+        ..
       }
 
 getStartStation :: [DStation] -> Maybe DStation

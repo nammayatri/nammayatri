@@ -614,7 +614,8 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
             weekendPeakRides = 0,
             referralCount = 0,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            ticketsBookedInEvent = Just 0
           }
 
 checkPersonExists :: (CacheFlow m r, EsqDBFlow m r) => Text -> m SP.Person

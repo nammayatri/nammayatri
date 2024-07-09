@@ -18,6 +18,7 @@ PersonStats:
     morningPeakRides : Int
     weekendPeakRides : Int
     referralCount : Int
+    ticketsBookedInEvent: Maybe Int
     createdAt : UTCTime
     updatedAt : UTCTime
 
@@ -26,6 +27,7 @@ PersonStats:
 
   default:
     referralCount: "0"
+    ticketsBookedInEvent: "0"
 
   beamType:
     createdAt: Maybe UTCTime

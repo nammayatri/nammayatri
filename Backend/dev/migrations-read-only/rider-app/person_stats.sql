@@ -23,3 +23,8 @@ ALTER TABLE atlas_app.person_stats ADD COLUMN referral_count integer NOT NULL de
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person_stats ALTER COLUMN created_at DROP NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_stats ADD COLUMN tickets_booked_in_event integer  default 0;

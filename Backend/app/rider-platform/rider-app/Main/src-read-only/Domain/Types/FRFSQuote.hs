@@ -21,6 +21,8 @@ data FRFSQuote = FRFSQuote
     bppItemId :: Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
+    discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

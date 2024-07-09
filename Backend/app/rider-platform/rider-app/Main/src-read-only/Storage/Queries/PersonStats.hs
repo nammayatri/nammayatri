@@ -45,6 +45,7 @@ updateByPrimaryKey (Domain.Types.PersonStats.PersonStats {..}) = do
       Se.Set Beam.morningPeakRides morningPeakRides,
       Se.Set Beam.offPeakRides offPeakRides,
       Se.Set Beam.referralCount referralCount,
+      Se.Set Beam.ticketsBookedInEvent ticketsBookedInEvent,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.userCancelledRides userCancelledRides,
       Se.Set Beam.weekdayRides weekdayRides,
