@@ -161,7 +161,15 @@ data GetQuotesRes = GetQuotesRes
     toLocation :: Maybe DL.LocationAPIEntity,
     quotes :: [OfferRes],
     estimates :: [UEstimate.EstimateAPIEntity],
-    paymentMethods :: [DMPM.PaymentMethodAPIEntity]
+    paymentMethods :: [DMPM.PaymentMethodAPIEntity],
+    allServices :: [VehicleService]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data VehicleService = VehicleService
+  { serviceTierName :: Text,
+    vehicleImageUrl :: Text,
+    selectByDefault :: Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -201,7 +209,8 @@ getQuotes searchRequestId = do
           toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
           quotes = offers,
           estimates,
-          paymentMethods = []
+          paymentMethods = [],
+          allServices = []
         }
 
 processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> CancellationStage -> m ()

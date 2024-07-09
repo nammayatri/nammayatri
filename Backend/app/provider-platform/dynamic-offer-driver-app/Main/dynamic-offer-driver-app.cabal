@@ -74,6 +74,7 @@ library
       API.Internal.KnowYourDriver
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
+      API.Internal.VehicleService
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -169,6 +170,7 @@ library
       Domain.Action.Internal.KnowYourDriver
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
+      Domain.Action.Internal.VehicleService
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent

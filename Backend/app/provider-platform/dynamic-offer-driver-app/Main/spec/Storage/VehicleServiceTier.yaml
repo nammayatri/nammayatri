@@ -28,6 +28,8 @@ VehicleServiceTier:
     autoSelectedVehicleVariant: '[Variant]'
     defaultForVehicleVariant: '[Variant]'
     priority: Int
+    vehicleImageUrl: Maybe Text
+    selectedByDefaul: Maybe Bool
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]

@@ -388,3 +388,41 @@ getKnowYourFavDriverDetails ::
 getKnowYourFavDriverDetails apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getKnowYourDriverClient bppRideId (Just apiKey)) "KnowYourFavDriver" getKnowYourFavDriverApi
+
+-- newtype VehicleServiceResp = VehicleServiceResp
+--   { allServices = [VehicleService]
+--   }
+--   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+-- data VehicleService = VehicleService
+--   { serviceTierName :: Text,
+--     vehicleImageUrl :: Text,
+--     selectByDefault :: Bool
+--   } deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+-- type VehicleServiceAPI =
+--     :> Capture "merchantId" Text
+--     :> Capture "merchantCity" Context.City
+--     :> "serviceTierWithAssets"
+--     :> Header "token" Text
+--     :> Post '[JSON] VehicleServiceResp
+
+-- vehicleServiceApi :: Proxy VehicleServiceAPI
+-- vehicleServiceApi = Proxy
+
+-- vehicleServiceClient :: Text -> Context.City -> EulerClient VehicleServiceResp
+-- vehicleServiceClient = client vehicleServiceApi
+
+-- serviceTierWithAssets ::
+--   (MonadFlow m,
+--   CacheFlow m r,
+--   EsqDBFlow m r
+--   ) =>
+--   Text ->
+--   BaseUrl ->
+--   Text ->
+--   Context.City ->
+--   m VehicleServiceResp
+-- serviceTierWithAssets apiKey internalUrl merchantId merchantCity = do
+--   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+--   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (vehicleServiceClient merchantId merchantCity (Just apiKey)) "serviceTierWithAssets" vehicleServiceApi

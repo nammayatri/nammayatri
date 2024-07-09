@@ -15,6 +15,7 @@ import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
+import qualified API.Internal.VehicleService as VehicleService
 import Environment
 import Servant
 import Tools.Auth ()
@@ -32,6 +33,7 @@ type API =
            :<|> Cac.API
            :<|> FavouriteDrivers.API
            :<|> KnowYourDriver.API
+           :<|> VehicleService.API
        )
 
 handler :: FlowServer API
@@ -47,3 +49,4 @@ handler =
     :<|> Cac.handler
     :<|> FavouriteDrivers.handler
     :<|> KnowYourDriver.handler
+    :<|> VehicleService.handler

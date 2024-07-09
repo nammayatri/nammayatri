@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.VehicleServiceTier.VehicleServiceTier]))
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByServiceTierTypeAndCityId ::
@@ -61,8 +61,10 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.oxygen oxygen,
       Se.Set Beam.priority priority,
       Se.Set Beam.seatingCapacity seatingCapacity,
+      Se.Set Beam.selectedByDefaul selectedByDefaul,
       Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.shortDescription shortDescription,
+      Se.Set Beam.vehicleImageUrl vehicleImageUrl,
       Se.Set Beam.vehicleRating vehicleRating,
       Se.Set Beam.ventilator ventilator,
       Se.Set Beam.createdAt createdAt,
@@ -90,8 +92,10 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             oxygen = oxygen,
             priority = priority,
             seatingCapacity = seatingCapacity,
+            selectedByDefaul = selectedByDefaul,
             serviceTierType = serviceTierType,
             shortDescription = shortDescription,
+            vehicleImageUrl = vehicleImageUrl,
             vehicleRating = vehicleRating,
             ventilator = ventilator,
             createdAt = createdAt,
@@ -116,8 +120,10 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.oxygen = oxygen,
         Beam.priority = priority,
         Beam.seatingCapacity = seatingCapacity,
+        Beam.selectedByDefaul = selectedByDefaul,
         Beam.serviceTierType = serviceTierType,
         Beam.shortDescription = shortDescription,
+        Beam.vehicleImageUrl = vehicleImageUrl,
         Beam.vehicleRating = vehicleRating,
         Beam.ventilator = ventilator,
         Beam.createdAt = createdAt,
