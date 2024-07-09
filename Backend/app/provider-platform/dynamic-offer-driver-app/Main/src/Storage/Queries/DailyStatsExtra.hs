@@ -36,3 +36,13 @@ findAllByDatesInAndPayoutStatus dates payoutStatus = do
           Se.Is Beam.payoutStatus $ Se.Eq (Just payoutStatus)
         ]
     ]
+
+findAllByPayoutStatusAndReferralEarningsAndDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => PayoutStatus -> Id SP.Person -> m [DailyStats]
+findAllByPayoutStatusAndReferralEarningsAndDriver status (Id driverId) = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.payoutStatus $ Se.Eq (Just status),
+          Se.Is Beam.driverId $ Se.Eq driverId,
+          Se.Is Beam.referralEarnings $ Se.GreaterThanOrEq (Just 0.0)
+        ]
+    ]

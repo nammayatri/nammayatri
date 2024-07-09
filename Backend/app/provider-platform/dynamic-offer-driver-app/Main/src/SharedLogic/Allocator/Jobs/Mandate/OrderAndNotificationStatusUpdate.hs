@@ -76,10 +76,10 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
   forM_ allPendingPayoutOrders $ \payoutOrder -> do
     fork ("payout orderStatus call for payout order id : " <> payoutOrder.orderId) $ do
       mbPersonId <-
-        case payoutOrder.entityId of
-          Just dStatsId -> pure $ (.driverId) <$> find (\ds -> ds.id == dStatsId) dailyStatsForLastNDays
+        case payoutOrder.entityIds of
+          Just dStatsIds -> pure $ (.driverId) <$> find (\ds -> (Just ds.id) == listToMaybe dStatsIds) dailyStatsForLastNDays
           Nothing -> pure Nothing
-      void $ Payout.getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) payoutOrder.entityId payoutOrder.orderId
+      void $ Payout.getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) (listToMaybe =<< payoutOrder.entityIds) payoutOrder.orderId
 
   if null allPendingNotification && null allPendingOrders && null allPendingPayoutOrders
     then do

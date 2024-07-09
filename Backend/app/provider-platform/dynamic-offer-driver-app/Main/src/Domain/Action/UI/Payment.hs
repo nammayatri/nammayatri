@@ -23,6 +23,7 @@ module Domain.Action.UI.Payment
   )
 where
 
+import qualified Domain.Action.UI.Payout as PayoutA
 import qualified Domain.Action.UI.Plan as ADPlan
 import Domain.Action.UI.Ride.EndRide.Internal
 import Domain.Types.DriverFee
@@ -143,7 +144,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
             isRetried = Just $ order.isRetried,
             isRetargeted = Just $ order.isRetargeted,
             retargetLink = order.retargetLink,
-            refunds = []
+            refunds = [],
+            payerVpa = Nothing
           }
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
@@ -160,6 +162,9 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
           notifyAndUpdateInvoiceStatusIfPaymentFailed personId order.id status Nothing bankErrorCode False (serviceName, serviceConfig)
         DPayment.PaymentStatus {..} -> do
+          when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && status == Payment.CHARGED) do
+            whenJust payerVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
+            fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa
           unless (status /= Payment.CHARGED) $ do
             processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
@@ -204,6 +209,9 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     Payment.OrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
+      when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && transactionStatus == Payment.CHARGED) do
+        whenJust payerVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
+        fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa
       when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
         unless (transactionStatus /= Payment.CHARGED) $ do
           processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
