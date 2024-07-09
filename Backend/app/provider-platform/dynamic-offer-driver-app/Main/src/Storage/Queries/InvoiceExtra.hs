@@ -163,7 +163,7 @@ findLatestNonAutopayActiveByDriverId driverId serviceName = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.driverId $ Se.Eq (getId driverId),
-          Se.Is BeamI.paymentMode $ Se.Not $ Se.Eq Domain.AUTOPAY_INVOICE,
+          Se.Is BeamI.paymentMode $ Se.Not $ Se.In [Domain.AUTOPAY_INVOICE, Domain.PAYOUT_REGISTRATION_INVOICE, Domain.ONE_TIME_SECURITY_INVOICE],
           Se.Is BeamI.serviceName $ Se.Eq (Just serviceName)
         ]
     ]

@@ -9,7 +9,7 @@ data Person
 
 data Merchant
 
-data EntityName = MANUAL | DRIVER_DAILY_STATS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data EntityName = MANUAL | DRIVER_DAILY_STATS | BACKLOG deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnumAndList ''EntityName)
 

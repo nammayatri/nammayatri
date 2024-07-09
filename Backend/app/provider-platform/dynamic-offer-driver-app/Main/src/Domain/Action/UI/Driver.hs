@@ -2000,7 +2000,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee, cgst
   let paymentService = subscriptionConfig.paymentServiceName
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
   case sortedInvoices of
-    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing INV.MANUAL_INVOICE Nothing mbDeepLinkData
+    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing mbDeepLinkData
     (invoice_ : restinvoices) -> do
       mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
       (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ driverFee

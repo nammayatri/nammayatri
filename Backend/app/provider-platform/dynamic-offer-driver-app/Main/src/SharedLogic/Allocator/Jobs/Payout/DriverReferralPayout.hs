@@ -139,7 +139,7 @@ callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutConfigList statu
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
               let serviceName = DEMSC.PayoutService PT.Juspay
                   createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId serviceName
-              mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast driverId) (Just id) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+              mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
               errorCatchAndHandle id driverId.getId mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
             else do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do

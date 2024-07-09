@@ -24,7 +24,7 @@ data PayoutOrderT f = PayoutOrderT
     customerEmailEncrypted :: B.C f Kernel.Prelude.Text,
     customerEmailHash :: B.C f Kernel.External.Encryption.DbHash,
     customerId :: B.C f Kernel.Prelude.Text,
-    entityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    entityIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     entityName :: B.C f (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName),
     id :: B.C f Kernel.Prelude.Text,
     lastStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
