@@ -181,7 +181,8 @@ defaultGlobalProps = {
 
 defaultGlobalFlowCache :: GlobalFlowCache
 defaultGlobalFlowCache = {
-  savedLocations : Nothing
+    savedLocations : Nothing
+  , savedScheduledRides : Nothing
 }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK

@@ -180,6 +180,7 @@ initData = let
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
     , famousDestinations : []
+    , latestScheduledRides : Nothing
     },
     props: {
       rideRequestFlow : false

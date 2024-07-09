@@ -149,6 +149,7 @@ import Helpers.Utils as HU
 import ConfigProvider
 import Screens.HomeScreen.Controllers.Types
 import Data.Show.Generic 
+import Services.FlowCache as FlowCache
 
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -1984,6 +1985,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
 
 eval (GetRideConfirmation resp) state = do
   logStatus "confirming_ride" resp
+  void $ pure $ FlowCache.fetchAndUpdateScheduledRides true
   -- void $ pure $ setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.props.bookingId) $ decodeBookingTimeList FunctionCall
   case state.props.isSpecialZone of
     false -> normalRideFlow resp state

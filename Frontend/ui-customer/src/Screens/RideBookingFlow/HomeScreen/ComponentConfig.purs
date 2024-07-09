@@ -85,7 +85,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (dummyPrice)
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
-import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
+import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig,dummyRideBooking)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
 import Screens.Types (FareProductType(..)) as FPT
@@ -93,7 +93,7 @@ import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
-
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -2376,7 +2376,8 @@ scheduledRideExistsPopUpConfig state =
           , margin = MarginTop 16
           }
         , secondaryText
-          { text = maybe "" textDetails $ DA.head $ DA.filter (\bookingDetail -> Just bookingDetail.bookingId == state.data.invalidBookingId) $ HU.decodeBookingTimeList FunctionCall
+          { text = (invalidScheduledBookingDetails state)
+          --textDetails $ DA.head $ DA.filter (\bookingDetail -> Just bookingDetail.bookingId == state.data.invalidBookingId) $ HU.decodeBookingTimeList FunctionCall
           , margin = MarginTop 4
           }
         , option1
@@ -2398,13 +2399,48 @@ scheduledRideExistsPopUpConfig state =
   in
     popUpConfig'
   where
+  invalidScheduledBookingDetails :: ST.HomeScreenState -> String
+  invalidScheduledBookingDetails state = 
+    case state.data.latestScheduledRides of
+      Just (API.RideBookingListRes listResp) ->
+        case DA.head $ listResp.list of
+          Just (API.RideBookingRes overLappingBooking) ->
+            let 
+              (API.RideBookingAPIDetails details) = overLappingBooking.bookingDetails
+              (API.RideBookingDetails contents) = details.contents
+              (API.BookingLocationAPIEntity fromLocationResp) = overLappingBooking.fromLocation
+              (API.BookingLocationAPIEntity toLocationResp) =  fromMaybe dummyBookingDetails contents.toLocation
+              rideType = if details.fareProductType =="INTER_CITY" then "intercity" else "rental"
+              rideScheduledTime = fromMaybe "" overLappingBooking.rideScheduledTime
+              rideEndTime = fromMaybe "" overLappingBooking.rideEndTime
+              fromLocation = fetchAddressDetails details.fareProductType overLappingBooking.fromLocation
+              toLocation = fetchAddressDetails details.fareProductType (fromMaybe dummyBookingDetails contents.toLocation)
+            in
+              getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime, rideEndTime ]
+          Nothing -> ""
+      Nothing -> ""
+
+  fetchAddressDetails :: String -> API.BookingLocationAPIEntity -> String
+  fetchAddressDetails fareProductType (API.BookingLocationAPIEntity address) = 
+    let
+      door = fromMaybe "" address.door
+      street = fromMaybe "" address.street
+      area = fromMaybe "" address.area
+    in
+      if (fareProductType == "INTER_CITY" || (DS.null street && DS.null door)) then
+        area
+      else if (not $ DS.null door && (not $ DS.null street)) then
+        door <> ", " <> street <> ", " <> area
+      else if (not $ DS.null door) then
+        door <> ", " <> area
+      else
+        street <> ", " <> area
+
   textDetails :: ST.BookingTime -> String
   textDetails bookingDetails =
     let
       invalidBookingPopUpConfig = fromMaybe dummyInvalidBookingPopUpConfig state.data.invalidBookingPopUpConfig
-
       rideType = if invalidBookingPopUpConfig.fareProductType == FPT.RENTAL then "rental" else "intercity"
-
       rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds invalidBookingPopUpConfig.rideScheduledTime $ (invalidBookingPopUpConfig.maxEstimatedDuration + 30) * 60
     in
       getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, invalidBookingPopUpConfig.fromLocation, invalidBookingPopUpConfig.toLocation, formatDateInHHMM invalidBookingPopUpConfig.rideScheduledTime, rideEndTime ]
