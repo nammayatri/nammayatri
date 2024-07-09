@@ -26,7 +26,6 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.Vehicle as DV
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
@@ -51,7 +50,6 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
-import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
@@ -63,20 +61,16 @@ import qualified Tools.Payout as Payout
 juspayPayoutWebhookHandler ::
   ShortId DM.Merchant ->
   Maybe Context.City ->
-  Maybe DP.ServiceNames ->
   BasicAuthData ->
   Value ->
   Flow AckResponse
-juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
+juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant mbOpCity
   let merchantId = merchant.id
-      serviceName' = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName
-  subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId serviceName'
-      >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId $ show serviceName')
+      serviceName' = DEMSC.PayoutService TPayout.Juspay
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (subscriptionConfig.paymentServiceName) merchanOperatingCityId
+    CQMSC.findByMerchantIdAndServiceWithCity merchantId serviceName' merchanOperatingCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show TPayout.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig psc' -> pure psc'
