@@ -247,7 +247,7 @@ config =
     enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2",
     enableAcPopup : false,
     enableRentalReallocation : true,
-    enableEditDestination : false,
+    enableEditDestination : true,
     enableHelpAndSupport : true
   }
 
