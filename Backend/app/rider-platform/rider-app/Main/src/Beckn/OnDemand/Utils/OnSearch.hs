@@ -221,7 +221,8 @@ buildNightShiftInfo item currency = do
 
 getNightShiftCharge :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getNightShiftCharge tagGroup currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_CHARGE_MULTIPLIER tagGroup
+  let tagValueProgressive = Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_CHARGE_MULTIPLIER tagGroup
+  tagValue <- tagValueProgressive <|> Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_CHARGE tagGroup
   nightShiftCharge <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency nightShiftCharge
 
