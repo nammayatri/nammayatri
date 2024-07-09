@@ -15,9 +15,11 @@
 module Domain.Action.UI.Booking where
 
 import qualified Beckn.ACL.Cancel as CancelACL
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import BecknV2.Utils
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Time as DT
@@ -40,6 +42,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude (intToNominalDiffTime)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -80,6 +83,8 @@ checkBookingsForStatus (currBooking : bookings) = do
         city <- CQMOC.findById currBooking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound currBooking.merchantOperatingCityId.getId)
         let dStatusReq = StatusACL.DStatusReq currBooking merchant city
         becknStatusReq <- StatusACL.buildStatusReqV2 dStatusReq
+        messageId <- Utils.getMessageId becknStatusReq.statusReqContext
+        Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
         void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id
         checkBookingsForStatus bookings
     (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
