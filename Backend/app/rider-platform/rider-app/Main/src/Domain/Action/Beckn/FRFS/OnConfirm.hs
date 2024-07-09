@@ -77,7 +77,8 @@ validateRequest DOrder {..} = do
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm merchant booking' dOrder = do
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
-  tickets <- traverse (mkTicket booking) dOrder.tickets
+  let discountedTickets = fromMaybe 0 booking.discountedTickets
+  tickets <- createTickets booking dOrder.tickets discountedTickets
   void $ QTicket.createMany tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
@@ -176,8 +177,8 @@ totalOrderValue paymentBookingStatus booking =
   where
     refundAmountToPrice = mkPrice (Just INR) (fromMaybe (HighPrecMoney $ toRational (0 :: Int)) booking.refundAmount)
 
-mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket
-mkTicket booking dTicket = do
+mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Bool -> Flow Ticket.FRFSTicket
+mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
   (_, status) <- Utils.getTicketStatus booking dTicket
@@ -196,8 +197,19 @@ mkTicket booking dTicket = do
         Ticket.partnerOrgId = booking.partnerOrgId,
         Ticket.partnerOrgTransactionId = booking.partnerOrgTransactionId,
         Ticket.createdAt = now,
-        Ticket.updatedAt = now
+        Ticket.updatedAt = now,
+        Ticket.isTicketFree = Just isTicketFree
       }
+
+createTickets :: Booking.FRFSTicketBooking -> [DTicket] -> Int -> Flow [Ticket.FRFSTicket]
+createTickets booking dTickets discountedTickets = go dTickets discountedTickets []
+  where
+    go [] _ acc = return (reverse acc)
+    go (d : ds) freeTicketsLeft acc = do
+      let isTicketFree = freeTicketsLeft > 0
+      ticket <- mkTicket booking d isTicketFree
+      let newFreeTickets = if isTicketFree then freeTicketsLeft - 1 else freeTicketsLeft
+      go ds newFreeTickets (ticket : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
 buildRecon recon ticket = do

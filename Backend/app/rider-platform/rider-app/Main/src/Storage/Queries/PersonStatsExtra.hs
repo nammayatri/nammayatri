@@ -150,3 +150,18 @@ incrementWeekendPeakRidesCount (Id personId') = do
         Se.Set BeamPS.updatedAt now
       ]
       [Se.Is BeamPS.personId (Se.Eq personId')]
+
+incrementTicketsBookedInEvent :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Int -> m ()
+incrementTicketsBookedInEvent (Id personId') newTicketsCount = do
+  now <- getCurrentTime
+  findTicketsBookedInEvent (Id personId') >>= \ticketsBookedInEventCount ->
+    updateOneWithKV
+      [ Se.Set (\BeamPS.PersonStatsT {..} -> ticketsBookedInEvent) (Just $ ticketsBookedInEventCount + newTicketsCount),
+        Se.Set BeamPS.updatedAt now
+      ]
+      [Se.Is BeamPS.personId (Se.Eq personId')]
+
+findTicketsBookedInEvent :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
+findTicketsBookedInEvent (Id personId) = do
+  stats <- findOneWithKV [Se.Is BeamPS.personId (Se.Eq personId)]
+  pure $ fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)

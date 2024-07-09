@@ -69,6 +69,7 @@ import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
 import Tools.Auth
 import Tools.Error
@@ -152,6 +153,8 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
               quantity = quote.quantity,
               validTill = quote.validTill,
               vehicleType = quote.vehicleType,
+              discountedTickets = quote.discountedTickets,
+              eventDiscountAmount = quote.eventDiscountAmount,
               ..
             }
     )
@@ -238,6 +241,8 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
           status = booking.status,
           payment = Nothing,
           tickets = [],
+          discountedTickets = booking.discountedTickets,
+          eventDiscountAmount = booking.eventDiscountAmount,
           ..
         }
 
@@ -297,6 +302,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
           buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
       CallBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId_
+      QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
       buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -486,6 +492,8 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         validTill = booking.validTill,
         vehicleType = booking.vehicleType,
         status = booking.status,
+        discountedTickets = booking.discountedTickets,
+        eventDiscountAmount = booking.eventDiscountAmount,
         ..
       }
 
@@ -541,6 +549,7 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
 getFrfsBookingCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow FRFSTicketService.FRFSCancelStatus
 getFrfsBookingCancelStatus _ bookingId = do
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  when (ticketBooking.status == DFRFSTicketBooking.CANCELLED) $ void $ QPS.incrementTicketsBookedInEvent ticketBooking.riderId (- (ticketBooking.quantity))
   pure
     FRFSTicketService.FRFSCancelStatus
       { cancellationCharges = getAbsoluteValue ticketBooking.cancellationCharges,
@@ -558,4 +567,5 @@ getFrfsConfig :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.P
 getFrfsConfig (_, mId) opCity = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
   Domain.Types.FRFSConfig.FRFSConfig {..} <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityId merchantOpCity.id >>= fromMaybeM (InvalidRequest "FRFS Config not found")
-  return FRFSTicketService.FRFSConfigAPIRes {..}
+  let isEventOngoing' = fromMaybe False isEventOngoing
+  return FRFSTicketService.FRFSConfigAPIRes {isEventOngoing = isEventOngoing', ..}

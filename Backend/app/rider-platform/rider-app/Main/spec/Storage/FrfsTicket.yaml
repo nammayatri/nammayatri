@@ -112,6 +112,8 @@ FRFSQuote:
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
+    eventDiscountAmount: Maybe HighPrecMoney
+    discountedTickets: Maybe Int
 
   beamFields:
     price:
@@ -179,6 +181,8 @@ FRFSTicketBooking:
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
+    discountedTickets: Maybe Int
+    eventDiscountAmount: Maybe HighPrecMoney
 
   default:
     customerCancelled: "false"
@@ -295,6 +299,7 @@ FRFSTicket:
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
+    isTicketFree: Maybe Bool
 
   types:
     FRFSTicketStatus:
@@ -445,6 +450,9 @@ FRFSConfig:
     oneWayTicketLimit: Int
     metroStationTtl: Int
     discount: Int
+    isEventOngoing: Maybe Bool
+    freeTicketInterval: Maybe Int
+    maxFreeTicketCashback: Maybe Int
     customDates: '[Text]'
     customEndTime: Text
 
@@ -456,3 +464,7 @@ FRFSConfig:
   constraints:
     merchantOperatingCityId: PrimaryKey
 
+  default:
+    isEventOngoing: "false"
+    freeTicketInterval: "9999"
+    maxFreeTicketCashback: "0"

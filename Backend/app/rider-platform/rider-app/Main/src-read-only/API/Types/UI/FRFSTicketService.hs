@@ -41,6 +41,9 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
     customDates :: [Data.Text.Text],
     customEndTime :: Data.Text.Text,
     discount :: Kernel.Prelude.Int,
+    freeTicketInterval :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    isEventOngoing :: Kernel.Prelude.Bool,
+    maxFreeTicketCashback :: Data.Maybe.Maybe Kernel.Prelude.Int,
     metroStationTtl :: Kernel.Prelude.Int,
     oneWayTicketLimit :: Kernel.Prelude.Int,
     roundTripTicketLimit :: Kernel.Prelude.Int
@@ -49,6 +52,8 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
@@ -83,6 +88,8 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     city :: Kernel.Types.Beckn.Context.City,
     createdAt :: Kernel.Prelude.UTCTime,
+    discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     payment :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,

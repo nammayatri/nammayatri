@@ -13,3 +13,10 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN round_trip_ticket_limit integer NOT
 ALTER TABLE atlas_app.frfs_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_config ADD PRIMARY KEY ( merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN max_free_ticket_cashback integer  default 0;
+ALTER TABLE atlas_app.frfs_config ADD COLUMN is_event_ongoing boolean  default false;
+ALTER TABLE atlas_app.frfs_config ADD COLUMN free_ticket_interval integer  default 9999;

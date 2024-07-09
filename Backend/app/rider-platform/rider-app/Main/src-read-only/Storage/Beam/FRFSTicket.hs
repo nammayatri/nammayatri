@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data FRFSTicketT f = FRFSTicketT
   { frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    isTicketFree :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

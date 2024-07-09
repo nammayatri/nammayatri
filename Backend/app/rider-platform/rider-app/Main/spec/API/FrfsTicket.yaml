@@ -39,6 +39,8 @@ types:
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
     validTill: UTCTime
+    discountedTickets: Maybe Int
+    eventDiscountAmount: Maybe HighPrecMoney
 
   FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking
@@ -55,6 +57,8 @@ types:
     tickets: [FRFSTicketAPI]
     stations: [FRFSStationAPI]
     createdAt: UTCTime
+    discountedTickets: Maybe Int
+    eventDiscountAmount: Maybe HighPrecMoney
 
   FRFSTicketAPI:
     status: FRFSTicketStatus
@@ -102,6 +106,9 @@ types:
     discount: Int
     customDates: [Text]
     customEndTime: Text
+    isEventOngoing: Bool
+    freeTicketInterval: Maybe Int
+    maxFreeTicketCashback: Maybe Int
     derive: "Show"
 
 apis:
