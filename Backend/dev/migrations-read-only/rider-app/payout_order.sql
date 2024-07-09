@@ -20,3 +20,8 @@ ALTER TABLE atlas_app.payout_order ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_app.payout_order ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.payout_order ADD COLUMN vpa text ;
 ALTER TABLE atlas_app.payout_order ADD PRIMARY KEY ( id, order_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN entity_ids text[] ;

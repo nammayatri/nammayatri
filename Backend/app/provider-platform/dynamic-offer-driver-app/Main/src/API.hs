@@ -73,12 +73,10 @@ type MainAPI =
              :> SafetyWebhook.SafetyWebhookAPI
          )
     :<|> HyperVergeResultWebhook.HyperVergeResultWebhookAPI
-    :<|> "payout"
-      :> ( Capture "merchantId" (ShortId DM.Merchant)
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> JuspayPayout.JuspayPayoutWebhookAPI
          )
-    :<|> "payout"
-      :> ( Capture "merchantId" (ShortId DM.Merchant)
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> QueryParam "city" Context.City
              :> QueryParam "serviceName" Plan.ServiceNames
              :> "v2"

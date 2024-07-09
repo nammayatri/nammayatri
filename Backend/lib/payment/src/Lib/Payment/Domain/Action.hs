@@ -71,7 +71,8 @@ data PaymentStatusResp
         isRetried :: Maybe Bool,
         isRetargeted :: Maybe Bool,
         retargetLink :: Maybe Text,
-        refunds :: [Payment.RefundsData]
+        refunds :: [Payment.RefundsData],
+        payerVpa :: Maybe Text
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -450,7 +451,7 @@ orderStatusService personId orderId orderStatusCall = do
         )
         transactionUUID
       mapM_ updateRefundStatus refunds
-      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds}
+      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds, payerVpa = payerVpa}
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
@@ -725,13 +726,13 @@ createPayoutService ::
   ) =>
   Id Merchant ->
   Id Person ->
-  Maybe Text ->
+  Maybe [Text] ->
   Maybe EntityName ->
   Text ->
   PT.CreatePayoutOrderReq ->
   (PT.CreatePayoutOrderReq -> m PT.CreatePayoutOrderResp) ->
   m (Maybe PT.CreatePayoutOrderResp)
-createPayoutService merchantId _personId mbEntityId mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
+createPayoutService merchantId _personId mbEntityIds mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
@@ -755,7 +756,7 @@ createPayoutService merchantId _personId mbEntityId mbEntityName city createPayo
             mobileNo = mobileNo,
             city = city,
             amount = mkPrice Nothing req.amount,
-            entityId = mbEntityId,
+            entityIds = mbEntityIds,
             entityName = mbEntityName,
             status = resp.status,
             accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments, --- for now only one fullfillment supported
