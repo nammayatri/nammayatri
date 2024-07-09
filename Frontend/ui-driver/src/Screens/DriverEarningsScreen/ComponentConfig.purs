@@ -264,17 +264,32 @@ coinsInfoCardConfig _ =
 errorModalConfig :: ST.DriverEarningsScreenState -> ErrorModal.Config
 errorModalConfig state =
   let isVehicleRickshaw = (getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys) == "AUTO_RICKSHAW"
+      isVehicleBike = (getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys) == "BIKE"
+      isVehicleAmbulance = case getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys of
+                             "AMBULANCE" -> true
+                             "AMBULANCE_TAXI" -> true
+                             "AMBULANCE_TAXI_OXY" -> true
+                             "AMBULANCE_AC" -> true
+                             "AMBULANCE_AC_OXY" -> true
+                             "AMBULANCE_VENTILATOR" -> true
+                             _ -> false
   in ErrorModal.config
     { imageConfig
       { imageUrl =
         if isVehicleRickshaw 
-          then
-            HU.fetchImage HU.FF_ASSET
-              if state.props.subView == ST.EARNINGS_VIEW then
-                "ny_ic_no_rides_history"
-              else
-                "ny_ic_no_coins_history"
-          else
+        then
+            HU.fetchImage HU.FF_ASSET $
+                if state.props.subView == ST.EARNINGS_VIEW then
+                    "ny_ic_no_rides_history"
+                else
+                    "ny_ic_no_coins_history"
+        else if isVehicleBike
+        then
+            HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_bike"
+        else if isVehicleAmbulance
+        then
+            HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_ambulance"
+        else
             "ny_ic_no_rides_history_cab,https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
       , height = V if state.props.subView == ST.EARNINGS_VIEW then 110 else 115
       , width = V if state.props.subView == ST.EARNINGS_VIEW then 124 else 200

@@ -652,6 +652,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     double destLng = rideRequestBundle.getDouble("destLng");
                     boolean downgradeEnabled = rideRequestBundle.getBoolean("downgradeEnabled", false);
                     int airConditioned = rideRequestBundle.getInt("airConditioned", -1);
+                    int ventilator = rideRequestBundle.getInt("ventilator",-1 );
                     String vehicleServiceTier = rideRequestBundle.getString("vehicleServiceTier", null);
                     String rideProductType = rideRequestBundle.getString("rideProductType");
                     String rideDuration = String.format("%02d:%02d hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
@@ -699,6 +700,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             specialZoneExtraTip,
                             downgradeEnabled,
                             airConditioned,
+                            ventilator,
                             vehicleServiceTier,
                             rideProductType,
                             rideDuration,

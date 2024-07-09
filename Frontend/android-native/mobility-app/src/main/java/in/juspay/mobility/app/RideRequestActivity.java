@@ -115,6 +115,7 @@ public class RideRequestActivity extends AppCompatActivity {
             double destLng = rideRequestBundle.getDouble("destLng");
             boolean downgradeEnabled = rideRequestBundle.getBoolean("downgradeEnabled", false);
             int airConditioned = rideRequestBundle.getInt("airConditioned", -1);
+            int ventilator = rideRequestBundle.getInt("ventilator", -1);
             String vehicleServiceTier = rideRequestBundle.getString("vehicleServiceTier", null);
             String rideStartTime = rideRequestBundle.getString("rideStartTime");
             String rideStartDate = rideRequestBundle.getString("rideStartDate");
@@ -157,6 +158,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getInt("specialZoneExtraTip"),
                     downgradeEnabled,
                     airConditioned,
+                    ventilator,
                     vehicleServiceTier,
                     rideRequestBundle.getString("rideProductType"),
                     rideDuration,

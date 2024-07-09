@@ -1909,11 +1909,15 @@ goOfflineModal push state =
           case (RC.getCategoryFromVariant state.data.vehicleType) of
             Just ST.AutoCategory -> "ic_vehicle_side_active_auto"
             Just ST.CarCategory -> "ic_vehicle_side_active_car"
+            Just ST.BikeCategory -> "ic_vehicle_side_active_bike"
+            Just ST.AmbulanceCategory -> "ic_vehicle_side_active_ambulance"
             _ -> ""
         inActiveVehicleImage = 
           case (RC.getCategoryFromVariant state.data.vehicleType) of
             Just ST.AutoCategory -> "ic_vehicle_side_inactive_auto"
             Just ST.CarCategory -> "ic_vehicle_side_inactive_car"
+            Just ST.BikeCategory -> "ic_vehicle_side_inactive_bike"
+            Just ST.AmbulanceCategory -> "ic_vehicle_side_inactive_ambulance"
             _ -> ""
 
 

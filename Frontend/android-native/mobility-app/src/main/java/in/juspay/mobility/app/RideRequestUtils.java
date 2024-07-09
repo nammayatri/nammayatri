@@ -589,9 +589,13 @@ public class RideRequestUtils {
     public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         boolean showTier = model.getVehicleServiceTier() != null;
         int airConditioned = model.isAirConditioned();
+        int ventilator = model.isVentilator();
         boolean showAC = airConditioned == 1 && showAcConfig(context);
         boolean showNonAC = airConditioned == 0 && showAcConfig(context);
-        if (showAC) {
+        if (ventilator == 1) {
+            holder.ventilator.setVisibility(View.VISIBLE);
+        }
+        else if (showAC) {
             holder.acView.setVisibility(View.VISIBLE);
         }else if (showNonAC){
             holder.nonAcView.setVisibility(View.VISIBLE);

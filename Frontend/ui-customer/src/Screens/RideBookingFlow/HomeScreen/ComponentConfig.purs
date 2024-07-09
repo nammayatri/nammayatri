@@ -963,12 +963,14 @@ rateCardConfig state =
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
-          {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
+          {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)}
+        ] <> if state.data.config.searchLocationConfig.showAdditionalChargesText then [
           {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
           {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
           {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
           {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
-          {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
+          {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}
+          ] else []
           <> if state.data.rateCard.serviceTierName == Just "Auto" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else [] 
         }
   in
@@ -981,7 +983,9 @@ rateCardConfig state =
       else
         []
     )
-      <> [ { key: "TOLL_OR_PARKING_CHARGES", val: getString TOLL_OR_PARKING_CHARGES } ]
+      <> (if state.data.config.searchLocationConfig.showAdditionalChargesText then 
+              [{key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }]
+          else [])
 
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
@@ -1032,7 +1036,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
-                                  , isRateCardAvailable : isJust state.data.rateCardCache
+                                  , isRateCardAvailable : (spy "rateCardCache" (isJust state.data.rateCardCache)) &&  (spy "fareProductis" state.data.fareProductType /= FPT.INTER_CITY)
                                   , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL
                                   , rideDurationTimer : state.props.rideDurationTimer
                                   , rideDurationTimerId : state.props.rideDurationTimerId

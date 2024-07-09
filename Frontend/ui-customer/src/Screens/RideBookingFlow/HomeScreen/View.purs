@@ -3008,8 +3008,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                 Tuple false _ -> RIDE_TRACKING
                                 _ -> DRIVER_TRACKING
 
-              markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.fareProductType
-              markers' = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city DRIVER_TRACKING state.data.fareProductType
+              markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.fareProductType (Just state.props.currentStage)
+              markers' = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city DRIVER_TRACKING state.data.fareProductType (Just state.props.currentStage)
               sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
               destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
               onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS

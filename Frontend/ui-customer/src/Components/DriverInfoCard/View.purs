@@ -1077,6 +1077,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , gravity CENTER_VERTICAL
           , padding $ Padding 0 5 20 5
           , onClick push $ const RateCardInfo
+          , clickable state.props.isRateCardAvailable 
           ][ textView $
              [ text title
              , color Color.black700
@@ -1085,7 +1086,7 @@ paymentMethodView push state title shouldShowIcon uid =
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
             , height $ V 16
             , width $ V 16
-            , visibility $ boolToVisibility state.props.isRateCardAvailable 
+            , visibility $ boolToVisibility $  spy "Clickable" state.props.isRateCardAvailable 
             , margin $ MarginLeft 2
             ]
           ]

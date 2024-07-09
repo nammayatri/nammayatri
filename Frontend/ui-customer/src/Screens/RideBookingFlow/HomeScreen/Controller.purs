@@ -1936,7 +1936,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
 
     -- topProviderEstimates = filter (\element -> element.providerType == ONUS) quoteList -- filter the ny provider estimates
     -- shouldShowEstimates = not $ null quoteList-- if iop is not enabled then show ny provider else show multi provider
-    
+  let _ = spy "INside quoteList" quoteList
   if not $ null quoteList then do -- if choosing multiple provider is not enabled then only show ny
     let 
       _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"

@@ -473,6 +473,7 @@
                                                         app:cardBackgroundColor="@color/blue800"
                                                         android:theme="@style/Theme.MaterialComponents.Light"
                                                         app:cardCornerRadius="28dp"
+                                                        android:visibility="gone"
                                                         android:layout_marginRight="6dp"
                                                         app:contentPadding="5dp"
                                                         app:cardElevation="0dp">
@@ -538,6 +539,25 @@
                                                                 android:fontFamily="@font/dmsans_bold"
                                                                 android:text="Non-AC"/>
                                                         </LinearLayout>
+
+                                                    </com.google.android.material.card.MaterialCardView>
+                                                            <com.google.android.material.card.MaterialCardView
+                                                        android:id="@+id/ventilator"
+                                                        android:layout_width="wrap_content"
+                                                        android:layout_height="wrap_content"
+                                                        android:layout_gravity="center"
+                                                        app:cardBackgroundColor="@color/blue800"
+                                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                                        app:cardCornerRadius="28dp"
+                                                        android:visibility="gone"
+                                                        android:layout_marginRight="6dp"
+                                                        app:contentPadding="5dp"
+                                                        app:cardElevation="0dp">
+
+                                                        <ImageView
+                                                            android:layout_width="16dp"
+                                                            android:layout_height="16dp"
+                                                            android:src="@drawable/ny_ic_ventilator" />
 
                                                     </com.google.android.material.card.MaterialCardView>
 

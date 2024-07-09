@@ -76,7 +76,7 @@ import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
@@ -768,11 +768,18 @@ quoteModalVariantImage variant =
       else  "ny_ic_no_quotes_color"
 
 getCancellationImage :: String -> Int -> String
-getCancellationImage vehicleVariant distance = 
-  if distance <= 500 
-  then if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawNearImage  else "ny_ic_driver_near"
-  else if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawStartedImage else "ny_ic_driver_started"
-
+getCancellationImage vehicleVariant distance =
+  if distance <= 500
+  then case vehicleVariant of
+    "AUTO_RICKSHAW" -> getAutoRickshawNearImage
+    "BIKE" -> "ny_ic_driver_near_bike"
+    "AMBULANCE" -> "ny_ic_driver_near_ambulance"
+    _ -> "ny_ic_driver_near"
+  else case vehicleVariant of
+    "AUTO_RICKSHAW" -> getAutoRickshawStartedImage
+    "BIKE" -> "ny_ic_driver_started_bike"
+    "AMBULANCE" -> "ny_ic_driver_started_ambulance"
+    _ -> "ny_ic_driver_started"
 getAutoRickshawNearImage :: String
 getAutoRickshawNearImage  = 
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
@@ -1052,23 +1059,23 @@ type Markers = {
 
 data TrackingType = RIDE_TRACKING | DRIVER_TRACKING | ADVANCED_RIDE_TRACKING
 
-getRouteMarkers :: String -> City -> TrackingType -> FareProductType -> Markers
-getRouteMarkers variant city trackingType fareProductType = 
-  { srcMarker : mkSrcMarker city variant,
+getRouteMarkers :: String -> City -> TrackingType -> FareProductType -> Maybe Stage -> Markers
+getRouteMarkers variant city trackingType fareProductType currentStage = 
+  { srcMarker : mkSrcMarker city variant currentStage,
     destMarker : mkDestMarker trackingType fareProductType
   }
 
-mkSrcMarker :: City -> String -> String
+mkSrcMarker :: City -> String ->Maybe Stage -> String
 mkSrcMarker = getCitySpecificMarker
 
-getCitySpecificMarker :: City -> String -> String
-getCitySpecificMarker city variant = 
+getCitySpecificMarker :: City -> String -> Maybe Stage -> String
+getCitySpecificMarker city variant currentStage = 
     case variant of
         "AUTO_RICKSHAW" -> getAutoImage city
         "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
         "SUV"           -> "ny_ic_suv_nav_on_map"
         "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
-        "BIKE"          -> "ny_ic_bike_nav_on_map"
+        "BIKE"          -> if currentStage == Just(RideStarted) then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
         _               -> "ny_ic_vehicle_nav_on_map"
 
 mkDestMarker :: TrackingType -> FareProductType -> String

@@ -125,7 +125,7 @@ view push config =
           , accessibility DISABLE
           , onClick push $ const $ case config.showInfo && isActiveIndex of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo && config.searchResultType == ESTIMATES then ShowRateCard config else NoAction config                        
+                                    true  -> if config.showInfo && (config.searchResultType == ESTIMATES || config.searchResultType == QUOTES RENTAL) then ShowRateCard config else NoAction config                        
           ][]
        ]
     ]

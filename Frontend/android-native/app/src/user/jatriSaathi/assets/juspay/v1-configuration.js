@@ -51,7 +51,7 @@ window.getMerchantConfig = function () {
     ],
     "isReferralEnabled": "true",
     "showBookingPreference": "false",
-    "showRateCard": "false",
+    "showRateCard": "true",
     "showDashboard": "false",
     "enableShareRide": "true",
     "autoVariantEnabled": false,
@@ -113,7 +113,7 @@ window.getMerchantConfig = function () {
     },
     "searchLocationConfig": {
       "enableLocationTagbar" : "true",
-      "showAdditionalChargesText" : true,
+      "showAdditionalChargesText" : false,
       "enableRateCard" : false
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
@@ -289,7 +289,7 @@ window.getMerchantConfig = function () {
   , "features" : {
     "enableAutoReadOtp" : true ,
     "enableZooTicketBookingFlow" : true ,
-    "enableAdditionalServices" : true
+    "enableAdditionalServices" : true,
       }
   , "showDisabilityBanner" : false
   , "showCheckoutRentalBanner" : true
@@ -368,7 +368,7 @@ window.getMerchantConfig = function () {
       "enableZooTicketBookingFlow" : true,
       "enableShareRide" : true,
       "enableAdditionalServices" : true,
-      "enableSafetyFlow" : false,
+      "enableSafetyFlow" : true,
       "enableCustomerSupportForSafety" : true, 
       "enableSupport" : true,
       "enableHelpAndSupport" : false
