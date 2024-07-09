@@ -127,9 +127,9 @@ instance Show TripCategory where
   show (Rental s) = "Rental_" <> show s
   show (RideShare s) = "RideShare_" <> show s
   show (InterCity s Nothing) = "InterCity_" <> show s
-  show (InterCity s (Just city)) = "InterCity_" <> show s <> "_" <> show city
+  show (InterCity s (Just city)) = "InterCity_" <> show s <> "_" <> T.unpack city
   show (CrossCity s Nothing) = "CrossCity_" <> show s
-  show (CrossCity s (Just city)) = "CrossCity_" <> show s <> "_" <> show city
+  show (CrossCity s (Just city)) = "CrossCity_" <> show s <> "_" <> T.unpack city
 
 instance ToParamSchema TripCategory where
   toParamSchema _ =
@@ -176,28 +176,34 @@ instance Read TripCategory where
                    (v1, r2) <- readsPrec (app_prec + 1) r1,
                    r3 <- [r2]
                ]
-            ++ [ (InterCity v1 (Just v2), r4)
-                 | r1 <- stripPrefix "InterCity_" r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1,
-                   let m = case r2 of
-                         ('_' : rest) -> Just rest
-                         _ -> Nothing,
-                   Just r3 <- [m],
-                   (v2, r4) <- readsPrec (app_prec + 1) r3
+            ++ [ (InterCity OneWayRideOtp (Just v1), [])
+                 | r1 <- stripPrefix "InterCity_OneWayRideOtp_" r,
+                   let v1 = T.pack r1
+               ]
+            ++ [ (InterCity OneWayOnDemandStaticOffer (Just v1), [])
+                 | r1 <- stripPrefix "InterCity_OneWayOnDemandStaticOffer_" r,
+                   let v1 = T.pack r1
+               ]
+            ++ [ (InterCity OneWayOnDemandDynamicOffer (Just v1), [])
+                 | r1 <- stripPrefix "InterCity_OneWayOnDemandDynamicOffer_" r,
+                   let v1 = T.pack r1
                ]
             ++ [ (CrossCity v1 Nothing, r3)
                  | r1 <- stripPrefix "CrossCity_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1,
                    r3 <- [r2]
                ]
-            ++ [ (CrossCity v1 (Just v2), r4)
-                 | r1 <- stripPrefix "CrossCity_" r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1,
-                   let m = case r2 of
-                         ('_' : rest) -> Just rest
-                         _ -> Nothing,
-                   Just r3 <- [m],
-                   (v2, r4) <- readsPrec (app_prec + 1) r3
+            ++ [ (CrossCity OneWayRideOtp (Just v1), [])
+                 | r1 <- stripPrefix "CrossCity_OneWayRideOtp_" r,
+                   let v1 = T.pack r1
+               ]
+            ++ [ (CrossCity OneWayOnDemandStaticOffer (Just v1), [])
+                 | r1 <- stripPrefix "CrossCity_OneWayOnDemandStaticOffer_" r,
+                   let v1 = T.pack r1
+               ]
+            ++ [ (CrossCity OneWayOnDemandDynamicOffer (Just v1), [])
+                 | r1 <- stripPrefix "CrossCity_OneWayOnDemandDynamicOffer_" r,
+                   let v1 = T.pack r1
                ]
       )
     where
