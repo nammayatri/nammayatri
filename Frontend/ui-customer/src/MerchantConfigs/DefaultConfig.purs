@@ -549,7 +549,7 @@ defaultCityConfig =
   { cityName : "",
     cityCode : "",
     iopConfig : {
-            enable : false,
+            enable : true,
             autoSelectTime : 8
           },
     estimateAndQuoteConfig : {

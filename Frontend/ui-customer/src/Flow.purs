@@ -1219,10 +1219,10 @@ homeScreenFlow = do
       void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
       let
         topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
+        finalEstimate = if (null topProvider) then filter (\quotes -> quotes.providerType == OFFUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList else topProvider
+        selectedEstimate = fromMaybe ChooseVehicle.config (head topProvider)
+        valid = timeValidity (getCurrentUTC "") selectedEstimate.validTill
 
-        mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
-
-        valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
       if valid then do
         setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindingQuotes } })
@@ -2119,10 +2119,10 @@ homeScreenFlow = do
       cancelEstimate state.props.estimateId
       let
         topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
-
-        mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head topProvider)
-
+        finalEsitmate = if null topProvider then filter (\quotes -> quotes.providerType == OFFUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList else topProvider
+        mbSpecialZoneQuoteList = fromMaybe ChooseVehicle.config (head finalEsitmate)
         valid = timeValidity (getCurrentUTC "") mbSpecialZoneQuoteList.validTill
+
       if (valid) then do
         updateLocalStage SettingPrice
         modifyScreenState $ HomeScreenStateType (\homeScreen -> state { props { currentStage = SettingPrice } })
