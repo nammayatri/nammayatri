@@ -339,11 +339,11 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
         disabilityTag = tag,
-        taggings = getTags shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes,
+        taggings = getTags shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes isReallocationEnabled,
         ..
       }
   where
-    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes =
+    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes isReallocationEnabled =
       Just $
         def{Beckn.fulfillmentTags =
               [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
@@ -351,7 +351,8 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
                 (Beckn.RETURN_TIME, show <$> returnTime),
                 (Beckn.ROUND_TRIP, Just $ show roundTrip),
                 (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
-                (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes)
+                (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
+                (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled)
               ]
            }
 
