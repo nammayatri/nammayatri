@@ -324,7 +324,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , vehicleModel : rideDetails.vehicleModel
   , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
   , providerName : ride.agencyName
-  , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP -- get from API
+  , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt ride.rideScheduledTime ) listRes ))
 
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean

@@ -3020,7 +3020,7 @@ estimatesListFlow estimates state count = do
     repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates estimates state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
     newState = if state.props.isRepeatRide && repeatRideFailCheck then state { props {isRepeatRide = false}} else state -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
     alreadyGotEstimates = not $ null $ state.data.specialZoneQuoteList 
-    showMultiProvider' = if alreadyGotEstimates then state.data.iopState.showMultiProvider else not $ any (\(EstimateAPIEntity element) -> element.isValueAddNP == Just true) estimates -- if we already got the estimate show current screen only else if we have NY show ny provider else show multi provider
+    showMultiProvider' = if alreadyGotEstimates then state.data.iopState.showMultiProvider else not $ any (\(EstimateAPIEntity element) -> element.isValueAddNP /= Just false) estimates -- if we already got the estimate show current screen only else if we have NY show ny provider else show multi provider
 
     quoteList = getEstimateList estimates newState.data.config.estimateAndQuoteConfig (Just count) newState.data.selectedEstimatesObject.activeIndex
 
@@ -3231,7 +3231,7 @@ checkRecentRideVariant :: HomeScreenState -> Boolean
 checkRecentRideVariant state = any (\item -> item.providerType == ONUS && isJust item.serviceTierName && item.serviceTierName == state.props.repeatRideServiceTierName) state.data.specialZoneQuoteList 
 
 checkRecentRideVariantInEstimates :: Array EstimateAPIEntity -> Maybe String -> Boolean
-checkRecentRideVariantInEstimates estimates repeatRideServiceName = any (\(EstimateAPIEntity item) -> item.isValueAddNP == Just true && isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimates 
+checkRecentRideVariantInEstimates estimates repeatRideServiceName = any (\(EstimateAPIEntity item) -> item.isValueAddNP /= Just false && isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimates 
 
 openLiveDashboard :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 openLiveDashboard state = do 
