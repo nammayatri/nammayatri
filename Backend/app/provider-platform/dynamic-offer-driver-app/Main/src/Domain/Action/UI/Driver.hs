@@ -382,7 +382,7 @@ data BookingAPIEntity = BookingAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-newtype UpdateProfileInfoPoints = UpdateProfileInfoPoints {isAdvancedBookingEnabled :: Maybe Bool}
+data UpdateProfileInfoPoints = UpdateProfileInfoPoints {isAdvancedBookingEnabled :: Maybe Bool, isInteroperable :: Maybe Bool}
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 validateUpdateDriverReq :: Validate UpdateDriverReq
@@ -547,6 +547,8 @@ getInformationV2 ::
 getInformationV2 (personId, merchantId, merchantOpCityId) mbToss req = do
   whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
     QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
+  whenJust req.isInteroperable $ \isInteroperable ->
+    QDriverInformation.updateIsInteroperable isInteroperable personId
   getInformation (personId, merchantId, merchantOpCityId) mbToss
 
 getInformation ::
