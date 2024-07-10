@@ -1135,7 +1135,8 @@ upsertFarePolicy merchantShortId opCity req = do
                     return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
           oldFareProducts `forM_` \fp -> do
-            CQFP.delete fp.farePolicyId
+            fareProducts <- CQFProduct.findAllFareProductByFarePolicyId fp.farePolicyId
+            when (length fareProducts == 1) $ CQFP.delete fp.farePolicyId
             CQFProduct.delete fp.id
             CQFProduct.clearCache fp
 
