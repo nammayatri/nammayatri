@@ -461,6 +461,10 @@ config =
         defaultCityConfig
           { cityName = "Hyderabad",
             cityCode = "std:040",
+            iopConfig = {
+            enable : true,
+            autoSelectTime : 8
+          },
             referral
               { domain = "https://www.manayatri.in",
                 customerAppId = "in.mobility.manayatri"
@@ -549,7 +553,7 @@ defaultCityConfig =
   { cityName : "",
     cityCode : "",
     iopConfig : {
-            enable : true,
+            enable : false,
             autoSelectTime : 8
           },
     estimateAndQuoteConfig : {
