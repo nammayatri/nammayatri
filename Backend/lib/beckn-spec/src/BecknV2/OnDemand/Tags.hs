@@ -94,6 +94,7 @@ instance CompleteTagGroup BecknTagGroup where
   -- getDescriptor :: tags -> (description, shortDescription)
   getTagGroupDescriptor tagGroup = uncurry (Spec.Descriptor . Just . T.pack $ show tagGroup) $ case tagGroup of
     ROUTE_INFO -> (Just "Route Information", Nothing)
+    REALLOCATION_INFO -> (Just "Reallocation Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -409,6 +410,7 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> (Just "Round trip", Nothing)
     WAYPOINTS -> (Just "WAYPOINTS", Nothing)
     MULTIPLE_ROUTES -> (Just "Multiple Routes", Nothing)
+    IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -420,6 +422,7 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> ROUTE_INFO
     WAYPOINTS -> ROUTE_INFO
     MULTIPLE_ROUTES -> ROUTE_INFO
+    IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text
