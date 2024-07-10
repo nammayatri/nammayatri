@@ -29,10 +29,8 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info, name)
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.BecknConfig as DBC
-import qualified Domain.Types.FRFSConfig as DFRFSConfig
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
-import qualified Domain.Types.FRFSTicket as DFT
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -41,7 +39,6 @@ import qualified Domain.Types.PartnerOrgStation as DPOS
 import Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
-import qualified Domain.Types.Station as Station
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -58,6 +55,7 @@ import Kernel.Utils.Common as Kernel
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSUtils as Utils
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -67,6 +65,7 @@ import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Station as CQS
 import qualified Storage.Queries.FRFSTicket as QFT
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFTBP
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
@@ -112,6 +111,7 @@ data ShareTicketInfoResp = ShareTicketInfoResp
     fromStation :: FRFSTypes.FRFSStationAPI,
     toStation :: FRFSTypes.FRFSStationAPI,
     bookingPrice :: HighPrecMoney,
+    paymentStatus :: FRFSTypes.FRFSBookingPaymentStatusAPI,
     partnerOrgTransactionId :: Maybe (Id PartnerOrgTransaction)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -150,7 +150,7 @@ upsertPersonAndGetToken pOrgId regPOCfg fromStationMOCId mId mbRegCoordinates re
   regToken <- do
     let entityId = person.id
     RegistrationToken.findAllByPersonId entityId
-      <&> listToMaybe . sortBy (comparing (.updatedAt)) . filter (isJust . (.createdViaPartnerOrgId))
+      <&> listToMaybe . sortOn (.updatedAt) . filter (isJust . (.createdViaPartnerOrgId))
       >>= validateToken
       >>= maybe (makeSessionViaPartner regPOCfg.sessionConfig entityId.getId mId.getId regPOCfg.fakeOtp pOrgId) return
 
@@ -274,21 +274,12 @@ getConfigByStationIds partnerOrg fromPOrgStationId toPOrgStationId = do
   unless (fromStation'.merchantOperatingCityId == toStation'.merchantOperatingCityId) $
     throwError . InvalidRequest $ "origin:" +|| fromStation'.name ||+ "and destination:" +|| toStation'.name ||+ " locations are not of same city"
 
-  fromStation <- mkPOrgStationAPIRes fromStation' partnerOrg.orgId
-  toStation <- mkPOrgStationAPIRes toStation' partnerOrg.orgId
-  let frfsConfig = mkFRFSConfigAPI frfsConfig'
+  fromStation <- Utils.mkPOrgStationAPIRes fromStation' partnerOrg.orgId
+  toStation <- Utils.mkPOrgStationAPIRes toStation' partnerOrg.orgId
+  let frfsConfig = Utils.mkFRFSConfigAPI frfsConfig'
   city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
 
   pure $ GetConfigResp {..}
-  where
-    mkFRFSConfigAPI :: DFRFSConfig.FRFSConfig -> FRFSTypes.FRFSConfigAPIRes
-    mkFRFSConfigAPI DFRFSConfig.FRFSConfig {..} = do
-      FRFSTypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
-
-mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Id PartnerOrganization -> m FRFSTypes.FRFSStationAPI
-mkPOrgStationAPIRes Station.Station {..} pOrgId = do
-  pOrgStation <- B.runInReplica $ CQPOS.findByStationIdAndPOrgId id pOrgId >>= fromMaybeM (PartnerOrgStationNotFoundForStationId pOrgId.getId id.getId)
-  pure $ FRFSTypes.FRFSStationAPI {name = pOrgStation.name, stationType = Nothing, color = Nothing, sequenceNum = Nothing, ..}
 
 shareTicketInfo :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, CallFRFSBPP.BecknAPICallFlow m r) => Id DFTB.FRFSTicketBooking -> m ShareTicketInfoResp
 shareTicketInfo ticketBookingId = do
@@ -298,16 +289,17 @@ shareTicketInfo ticketBookingId = do
   when (null tickets') $
     throwError $ FRFSTicketsForBookingDoesNotExist ticketBookingId.getId
 
-  let tickets = map mkTicketAPI tickets'
+  let tickets = map Utils.mkTicketAPI tickets'
 
   ticketBooking <- B.runInReplica $ QFTB.findById ticketBookingId >>= fromMaybeM (FRFSTicketBookingNotFound ticketBookingId.getId)
+  paymentBooking <- B.runInReplica $ QFTBP.findNewTBPByBookingId ticketBookingId >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBookingId.getId)
   fromStation' <- B.runInReplica $ CQS.findById ticketBooking.fromStationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| ticketBooking.fromStationId.getId ||+ "")
   toStation' <- B.runInReplica $ CQS.findById ticketBooking.toStationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| ticketBooking.toStationId.getId ||+ "")
   city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
   pOrgId <- ticketBooking.partnerOrgId & fromMaybeM (InternalError $ "PartnerOrgId is missing for ticketBookingId:" +|| ticketBookingId.getId ||+ "")
 
-  fromStation <- mkPOrgStationAPIRes fromStation' pOrgId
-  toStation <- mkPOrgStationAPIRes toStation' pOrgId
+  fromStation <- Utils.mkPOrgStationAPIRes fromStation' pOrgId
+  toStation <- Utils.mkPOrgStationAPIRes toStation' pOrgId
 
   void $ bppStatusSync fromStation'.merchantId pOrgId city ticketBooking
 
@@ -315,12 +307,11 @@ shareTicketInfo ticketBookingId = do
     ShareTicketInfoResp
       { returnType = ticketBooking._type,
         bookingPrice = ticketBooking.price.amount,
+        paymentStatus = Utils.mkTBPStatusAPI paymentBooking.status,
         partnerOrgTransactionId = ticketBooking.partnerOrgTransactionId,
         ..
       }
   where
-    mkTicketAPI DFT.FRFSTicket {..} = FRFSTypes.FRFSTicketAPI {..}
-
     whenWithLockRedisWithoutUnlock :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Text -> Int -> m () -> m ()
     whenWithLockRedisWithoutUnlock key expiry action = do
       lockAcquired <- Redis.tryLockRedis key expiry

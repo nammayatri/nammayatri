@@ -55,6 +55,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Servant hiding (throwError)
 import qualified SharedLogic.CallFRFSBPP as CallBPP
+import qualified SharedLogic.FRFSUtils as Utils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -286,8 +287,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
       let paymentStatusAPI =
             case paymentBookingStatus of
-              FRFSTicketService.FAILURE -> Just $ mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
-              FRFSTicketService.SUCCESS -> Just $ mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
+              FRFSTicketService.FAILURE -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
+              FRFSTicketService.SUCCESS -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
               _ -> Nothing
       let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
@@ -385,7 +386,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     DFRFSTicketBooking.CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
-      let mbPaymentObj = paymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = mkTBPStatusAPI tbp.status, paymentOrder = Nothing}
+      let mbPaymentObj = paymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = Utils.mkTBPStatusAPI tbp.status, paymentOrder = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
@@ -443,14 +444,6 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         [transaction] -> return transaction.id
         _ -> throwError $ InvalidRequest "Multiple successful transactions found"
 
-    mkTBPStatusAPI :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> FRFSTicketService.FRFSBookingPaymentStatusAPI
-    mkTBPStatusAPI = \case
-      DFRFSTicketBookingPayment.PENDING -> FRFSTicketService.PENDING
-      DFRFSTicketBookingPayment.SUCCESS -> FRFSTicketService.SUCCESS
-      DFRFSTicketBookingPayment.FAILED -> FRFSTicketService.FAILURE
-      DFRFSTicketBookingPayment.REFUND_PENDING -> FRFSTicketService.REFUND_PENDING
-      DFRFSTicketBookingPayment.REFUNDED -> FRFSTicketService.REFUNDED
-
 updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
 updateTotalOrderValueAndSettlementAmount booking bapConfig = do
   paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -465,7 +458,7 @@ getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Per
 getFrfsBookingList (mbPersonId, _) = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId Nothing Nothing personId
-  mapM (\booking -> buildFRFSTicketBookingStatusAPIRes booking Nothing) bookings
+  mapM (`buildFRFSTicketBookingStatusAPIRes` Nothing) bookings
 
 buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes
 buildFRFSTicketBookingStatusAPIRes booking payment = do
