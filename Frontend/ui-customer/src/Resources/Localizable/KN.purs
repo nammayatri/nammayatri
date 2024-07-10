@@ -496,7 +496,7 @@ getKN stringKey =
         TIP_SELECTED -> "ಸಲಹೆ ಆಯ್ಕೆಮಾಡಲಾಗಿದೆ"
         ADD_A_TIP_TO_FIND_A_RIDE_QUICKER -> "ರೈಡ್ ಅನ್ನು ತ್ವರಿತವಾಗಿ ಹುಡುಕಲು ಟಿಪ್ ಸೇರಿಸಿ!"
         IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL -> "ಇದು ಸಾಮಾನ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚು ಸಮಯ ತೆಗೆದುಕೊಳ್ಳುತ್ತಿರುವಂತೆ ತೋರುತ್ತಿದೆ."
-        CONTINUE_SEARCH_WITH -> "ಯೊಂದಿಗೆ ಸವಾರಿಯನ್ನು ಮುಂದುವರಿಸಿ"
+        CONTINUE_SEARCH_WITH -> "ಯೋಂದಿಗೆ ಮುಂದುವರೆಸಿ"
         CONTINUING_SEARCH_WITH -> "ಇದರೊಂದಿಗೆ ಹುಡುಕಾಟವನ್ನು ಮುಂದುವರಿಸಲಾಗುತ್ತಿದೆ"
         SEARCHING_WITH -> "ಇದರೊಂದಿಗೆ ಹುಡುಕಲಾಗುತ್ತಿದೆ"
         THE_DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_ALREADY_ON_THE_WAY_TO_YOUR_LOCATION -> "ಚಾಲಕರು ನಿಮ್ಮ ವಿಶೇಷ ವಿನಂತಿಗೆ ಆದ್ಯತೆ ನೀಡಿದ್ದಾರೆ ಮತ್ತು ನಿಮ್ಮ ಸ್ಥಳಕ್ಕೆ ಬರುತ್ತಿದ್ದಾರೆ"
