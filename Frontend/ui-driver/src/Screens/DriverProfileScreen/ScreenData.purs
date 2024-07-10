@@ -26,6 +26,7 @@ import ConfigProvider
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
+import Screens.Types as ST
 
 initData :: DriverProfileScreenState
 initData = 
@@ -62,6 +63,7 @@ initData =
     rcDataArray : [],
     inactiveRCArray : [],
     goHomeActive : false,
+    cachedVehicleCategory : ST.UnKnown,
     activeRCData : { rcStatus  : true
                   , rcDetails : { certificateNumber   : ""
                                 , vehicleColor : Nothing
