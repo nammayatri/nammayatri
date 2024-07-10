@@ -15,7 +15,7 @@
 
 module Storage.Clickhouse.Ride where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as DC
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
@@ -61,9 +61,10 @@ $(TH.mkClickhouseInstances ''RideT)
 data RideStats = RideStats
   { totalEarnings :: Int,
     totalDistanceTravelled :: Int,
-    totalRides :: Int,
+    completedRides :: Int,
+    cancelledRides :: Int,
     totalDuration :: Int,
-    rideStatus :: Maybe DRide.RideStatus
+    driverId' :: Maybe (Id DP.Person)
   }
   deriving (Show)
 
@@ -164,28 +165,42 @@ getCompletedRidesStatsByIdsAndDriverId ::
   Maybe (Id DP.Person) ->
   UTCTime ->
   UTCTime ->
+  Int ->
+  Int ->
+  Maybe Bool ->
+  Maybe Common.SortOn ->
   m [RideStats]
-getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to = do
+getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to limit offset sortDesc mbSortOn = do
+  let sortBy = case sortDesc of
+        Just True -> CH.desc
+        _ -> CH.asc
+  let sortOn = case mbSortOn of
+        Just Common.CANCELLED_RIDES -> (\_ (_, _, cancelledRides, _, _, _) -> sortBy cancelledRides)
+        _ -> (\_ (_, _, completedRides, _, _, _) -> sortBy completedRides)
   res <-
     CH.findAll $
       CH.select_
         ( \ride -> do
             let earnings = CH.sum_ ride.fare
             let distanceTravelled = CH.sum_ ride.chargeableDistance
-            let count = CH.count_ ride.id
+            let completedRides = CH.sum_ $ CH.if_ (ride.status CH.==.. CH.valColumn (Just DRide.COMPLETED)) (CH.valColumn 1) (CH.valColumn 0)
+            let cancelledRides = CH.sum_ $ CH.if_ (ride.status CH.==.. CH.valColumn (Just DRide.CANCELLED)) (CH.valColumn 1) (CH.valColumn 0)
             let duration = CH.sum_ (CH.timeDiff ride.createdAt ride.updatedAt)
-            CH.groupBy ride.status $ \status -> do
-              (earnings, distanceTravelled, count, duration, status)
+            CH.groupBy ride.driverId $ \driverId -> do
+              (earnings, distanceTravelled, completedRides, cancelledRides, duration, driverId)
         )
-        $ CH.filter_
-          ( \ride _ ->
-              ride.status `in_` [Just DRide.COMPLETED, Just DRide.CANCELLED]
-                CH.&&. ride.createdAt >=. from
-                CH.&&. ride.createdAt <=. to
-                CH.&&. ride.id `in_` rideIds
-                CH.&&. CH.whenJust_ mbDriverId (\driverId -> ride.driverId CH.==. Just (cast driverId))
-          )
-          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
+        $ CH.orderBy_ sortOn $
+          CH.limit_ limit $
+            CH.offset_ offset $
+              CH.filter_
+                ( \ride _ ->
+                    ride.status `in_` [Just DRide.COMPLETED, Just DRide.CANCELLED]
+                      CH.&&. ride.createdAt >=. from
+                      CH.&&. ride.createdAt <=. to
+                      CH.&&. ride.id `in_` rideIds
+                      CH.&&. CH.whenJust_ mbDriverId (\driverId -> ride.driverId CH.==. Just (cast driverId))
+                )
+                (CH.all_ @CH.APP_SERVICE_CLICKHOUSE rideTTable)
   pure $ mkRideStatsByRideStatus <$> res
 
 totalEarningsByFleetOwnerPerVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> Text -> UTCTime -> UTCTime -> m Int
@@ -221,52 +236,37 @@ totalEarningsByFleetOwnerPerVehicleAndDriver fleetOwnerId vehicleNumber driverId
 totalRidesStatsInFleet :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Maybe Text -> UTCTime -> UTCTime -> m (Int, Int, Int, Int)
 totalRidesStatsInFleet fleetOwnerId from to = do
   rideIds <- findIdsByFleetOwner fleetOwnerId from to
-  rideStats <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) Nothing from to
-  let (totalEarning, totalDistanceTravelled, _, totalCompletedRides, totalCancelledRides) = getFleetStats rideStats
-  pure (totalEarning, totalDistanceTravelled, totalCompletedRides, totalCancelledRides)
+  rideStats <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) Nothing from to (length rideIds) 0 Nothing Nothing
+  let (totalEarning, totalDistanceTravelled, completedRides, cancelledRides, _) = getFleetStats rideStats
+  pure (totalEarning, totalDistanceTravelled, completedRides, cancelledRides)
 
-fleetStatsByDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [Id RideDetails.RideDetails] -> Maybe (Id DP.Person) -> UTCTime -> UTCTime -> m (Int, Int, Int, DC.TotalDuration, Int)
-fleetStatsByDriver rideIds mbDriverId from to = do
-  rideStats <- getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) mbDriverId from to
-  let (totalEarning, totalDistanceTravelled, duration, totalCompletedRides, totalCancelledRides) = getFleetStats rideStats
-  let totalDuration = calculateTimeDifference duration
-  pure (totalEarning, totalDistanceTravelled, totalCompletedRides, totalDuration, totalCancelledRides)
+fleetStatsByDriver :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => [Id RideDetails.RideDetails] -> Maybe (Id DP.Person) -> UTCTime -> UTCTime -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Common.SortOn -> m [RideStats]
+fleetStatsByDriver rideIds mbDriverId from to mbLimit mbOffset mbSortDesc mbSortOn = do
+  let limit = min 10 $ fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+  getCompletedRidesStatsByIdsAndDriverId (cast <$> rideIds) mbDriverId from to limit offset mbSortDesc mbSortOn
 
-fleetStatsByVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Text -> Text -> UTCTime -> UTCTime -> m (Int, Int, Int, DC.TotalDuration, Int)
+fleetStatsByVehicle :: (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Text -> Text -> UTCTime -> UTCTime -> m (Int, Int, Int, Int, Int)
 fleetStatsByVehicle fleetOwnerId vehicleNumber from to = do
   rideIds <- findIdsByFleetOwnerAndVehicle (Just fleetOwnerId) vehicleNumber from to
-  fleetStatsByDriver rideIds Nothing from to
+  rideStats <- fleetStatsByDriver rideIds Nothing from to Nothing Nothing Nothing Nothing
+  pure $ getFleetStats rideStats
 
-calculateTimeDifference :: Int -> DC.TotalDuration
-calculateTimeDifference diffTime = DC.TotalDuration {..}
-  where
-    diffTimeInSeconds :: Double
-    diffTimeInSeconds = realToFrac diffTime
-
-    hours :: Int
-    hours = floor (diffTimeInSeconds / 3600)
-
-    remainingSeconds :: Double
-    remainingSeconds = diffTimeInSeconds - fromIntegral (hours * 3600)
-
-    minutes :: Int
-    minutes = floor (remainingSeconds / 60)
-
-mkRideStatsByRideStatus :: (Maybe Int, Maybe Int, Int, Int, Maybe DRide.RideStatus) -> RideStats
-mkRideStatsByRideStatus (earnings, distanceTravelled, count, duration, status) = RideStats {..}
+mkRideStatsByRideStatus :: (Maybe Int, Maybe Int, Int, Int, Int, Maybe (Id DP.Person)) -> RideStats
+mkRideStatsByRideStatus (earnings, distanceTravelled, completedRides_, cancelledRides_, duration, driverId) = RideStats {..}
   where
     totalEarnings = fromMaybe 0 earnings
     totalDistanceTravelled = fromMaybe 0 distanceTravelled
-    totalRides = count
+    completedRides = completedRides_
+    cancelledRides = cancelledRides_
     totalDuration = duration
-    rideStatus = status
+    driverId' = driverId
 
 getFleetStats :: [RideStats] -> (Int, Int, Int, Int, Int)
 getFleetStats rideStats =
-  let completedRides = filter (\ride -> ride.rideStatus == Just DRide.COMPLETED) rideStats
-      totalEarning = sum $ totalEarnings <$> completedRides
-      distanceTravelled = sum $ totalDistanceTravelled <$> completedRides
-      totalCompletedRides = sum $ totalRides <$> completedRides
-      cancelledRides = sum $ totalRides <$> filter (\ride -> ride.rideStatus == Just DRide.CANCELLED) rideStats
-      duration = sum $ totalDuration <$> completedRides
-   in (totalEarning, distanceTravelled, duration, totalCompletedRides, cancelledRides)
+  let totalEarnings = sum $ map (.totalEarnings) rideStats
+      totalDistanceTravelled = sum $ map (.totalDistanceTravelled) rideStats
+      completedRides = sum $ map (.completedRides) rideStats
+      cancelledRides = sum $ map (.cancelledRides) rideStats
+      totalDuration = sum $ map (.totalDuration) rideStats
+   in (totalEarnings, totalDistanceTravelled, completedRides, cancelledRides, totalDuration)

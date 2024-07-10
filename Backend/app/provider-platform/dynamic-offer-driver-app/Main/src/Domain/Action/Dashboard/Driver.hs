@@ -85,6 +85,7 @@ where
 import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as DC
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
@@ -1889,6 +1890,7 @@ fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOf
   res <- forM listOfAllRc $ \rc -> do
     rcNo <- decrypt rc.certificateNumber
     (totalEarning, distanceTravelled, totalRides, duration, cancelledRides) <- CQRide.fleetStatsByVehicle fleetOwnerId rcNo from to
+    let totalDuration = calculateTimeDifference duration
     pure $
       Common.FleetEarningRes
         { driverId = Nothing,
@@ -1898,7 +1900,7 @@ fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOf
           vehicleNo = Just rcNo,
           status = Nothing,
           vehicleType = castVehicleVariantDashboard rc.vehicleVariant,
-          totalDuration = duration,
+          totalDuration = totalDuration,
           distanceTravelled = fromIntegral distanceTravelled / 1000.0,
           driverPhoneNo = Nothing,
           cancelledRides = cancelledRides
@@ -1906,37 +1908,60 @@ fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOf
   let summary = Common.Summary {totalCount = 10000, count = length res}
   pure $ Common.FleetEarningListRes {fleetEarningRes = res, summary}
 
-fleetDriverEarning :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.FleetEarningListRes
-fleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPhNo mbLimit mbOffset mbFrom mbTo = do
+fleetDriverEarning :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Maybe Common.SortOn -> Flow Common.FleetEarningListRes
+fleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPhNo mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn = do
   now <- getCurrentTime
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
   merchant <- findMerchantByShortId merchantShortId
-  listOfAllDrivers <- getListOfDrivers mbMobileCountryCode mbDriverPhNo fleetOwnerId merchant.id (Just True) mbLimit mbOffset Nothing
-  let driverList = map (\fda -> fda.driverId) listOfAllDrivers
-  driverListWithInfo <- QPerson.findAllPersonAndDriverInfoWithDriverIds driverList
   rideIds <- findIdsByFleetOwner (Just fleetOwnerId) from to
-  res <- forM driverListWithInfo $ \(driver, driverInfo') -> do
-    let dId = cast @DP.Person @Common.Driver driver.id
-    (totalEarning, distanceTravelled, completedRides, duration, cancelledRides) <- CQRide.fleetStatsByDriver rideIds (Just driver.id) from to
+  driverId <- case mbDriverPhNo of
+    Just driverPhNo -> do
+      mobileNumberHash <- getDbHash driverPhNo
+      let countryCode = fromMaybe "+91" mbMobileCountryCode
+      driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
+      fleetDriverAssociation <- FDV.findByDriverIdAndFleetOwnerId driver.id fleetOwnerId True
+      when (isNothing fleetDriverAssociation) $ throwError (InvalidRequest "Driver is not linked to the fleet")
+      pure $ Just driver.id
+    Nothing -> pure Nothing
+  driverStatsList <- CQRide.fleetStatsByDriver rideIds driverId from to mbLimit mbOffset mbSortDesc mbSortOn
+  let driverList = mapMaybe (.driverId') driverStatsList
+  driverListWithInfo <- QPerson.findAllPersonAndDriverInfoWithDriverIds driverList
+  res <- forM (zip driverListWithInfo driverStatsList) $ \((driver, driverInfo'), driverStats) -> do
     let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
+    let totalDuration = calculateTimeDifference driverStats.totalDuration
     pure $
       Common.FleetEarningRes
-        { driverId = Just dId,
+        { driverId = Just $ cast @DP.Person @Common.Driver driver.id,
           driverName = Just driverName,
-          totalRides = completedRides,
-          totalEarning = totalEarning,
+          totalRides = driverStats.completedRides,
+          totalEarning = driverStats.totalEarnings,
           vehicleNo = Nothing,
           status = Just $ castDriverStatus driverInfo'.mode,
           vehicleType = Nothing,
-          totalDuration = duration,
-          distanceTravelled = fromIntegral distanceTravelled / 1000.0,
+          totalDuration = totalDuration,
+          distanceTravelled = fromIntegral driverStats.totalDistanceTravelled / 1000.0,
           driverPhoneNo = driver.unencryptedMobileNumber,
-          cancelledRides = cancelledRides
+          cancelledRides = driverStats.cancelledRides
         }
   let summary = Common.Summary {totalCount = 10000, count = length res}
   pure $ Common.FleetEarningListRes {fleetEarningRes = res, summary}
+
+calculateTimeDifference :: Int -> DC.TotalDuration
+calculateTimeDifference diffTime = DC.TotalDuration {..}
+  where
+    diffTimeInSeconds :: Double
+    diffTimeInSeconds = realToFrac diffTime
+
+    hours :: Int
+    hours = floor (diffTimeInSeconds / 3600)
+
+    remainingSeconds :: Double
+    remainingSeconds = diffTimeInSeconds - fromIntegral (hours * 3600)
+
+    minutes :: Int
+    minutes = floor (remainingSeconds / 60)
 
 ------------------------------------------------------------------------------------------------
 

@@ -717,10 +717,10 @@ fleetVehicleEarning merchantShortId opCity apiTokenInfo mbVehicleNo mbLimit mbOf
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetVehicleEarning) apiTokenInfo.personId.getId mbVehicleNo mbLimit mbOffset mbFrom mbTo
 
-fleetDriverEarning :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.FleetEarningListRes
-fleetDriverEarning merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNo mbLimit mbOffset mbFrom mbTo = withFlowHandlerAPI' $ do
+fleetDriverEarning :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Maybe Common.SortOn -> FlowHandler Common.FleetEarningListRes
+fleetDriverEarning merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNo mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetDriverEarning) apiTokenInfo.personId.getId mbMobileCountryCode mbMobileNo mbLimit mbOffset mbFrom mbTo
+  Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetDriverEarning) apiTokenInfo.personId.getId mbMobileCountryCode mbMobileNo mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn
 
 updateDriverName :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
 updateDriverName merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do

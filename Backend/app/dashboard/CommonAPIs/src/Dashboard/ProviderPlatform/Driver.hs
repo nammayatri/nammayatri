@@ -926,6 +926,9 @@ data FleetEarningListRes = FleetEarningListRes
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
+data SortOn = COMPLETED_RIDES | CANCELLED_RIDES
+  deriving (Generic, ToJSON, ToSchema, FromJSON, ToParamSchema)
+
 type FleetDriverEarningAPI =
   "fleet"
     :> "driverEarning"
@@ -935,6 +938,8 @@ type FleetDriverEarningAPI =
     :> QueryParam "offset" Int
     :> QueryParam "from" UTCTime
     :> QueryParam "to" UTCTime
+    :> QueryParam "sortDesc" Bool
+    :> QueryParam "sortOn" SortOn
     :> Get '[JSON] FleetEarningListRes
 
 ---------------------------------------------------------
@@ -1218,6 +1223,7 @@ $(mkHttpInstancesForEnum ''ServiceNames)
 $(mkHttpInstancesForEnum ''ReasonForDisablingServiceCharge)
 $(mkHttpInstancesForEnum ''FleetVehicleStatus)
 $(mkHttpInstancesForEnum ''DriverMode)
+$(mkHttpInstancesForEnum ''SortOn)
 
 -- change RC INVALID status  Api ------------------------
 -------------------------------------------

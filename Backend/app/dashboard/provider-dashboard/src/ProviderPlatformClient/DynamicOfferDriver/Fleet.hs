@@ -49,7 +49,7 @@ data FleetOperationsAPIs = FleetOperationsAPIs
     fleetRemoveDriver :: Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
     fleetTotalEarning :: Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.FleetTotalEarningResponse,
     fleetVehicleEarning :: Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.FleetEarningListRes,
-    fleetDriverEarning :: Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.FleetEarningListRes,
+    fleetDriverEarning :: Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Maybe Driver.SortOn -> Euler.EulerClient Driver.FleetEarningListRes,
     getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
     getFleetDriverAssociation :: Text -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Driver.DriverMode -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
     getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Driver.FleetVehicleStatus -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
