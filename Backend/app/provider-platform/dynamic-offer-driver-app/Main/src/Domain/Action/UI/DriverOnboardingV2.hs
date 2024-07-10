@@ -268,6 +268,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let personLangauge = fromMaybe ENGLISH person.language
 
   let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False driverStats driverInfo vehicle cityVehicleServiceTiers
+  logDebug $ "driverVehicleServiceTierTypes: " <> show driverVehicleServiceTierTypes <> " and vehicle: " <> show vehicle <> " and cityVehicleServiceTiers: " <> show cityVehicleServiceTiers <> " and merchantOperating city: " <> show merchantOpCityId <> " and personId: " <> show personId
   let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditionedThreshold) driverVehicleServiceTierTypes
   let isACCheckEnabledForCity = any isJust serviceTierACThresholds
   let isACAllowedForDriver = checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
