@@ -150,7 +150,7 @@ postSocialUpdateProfile (mbPersonId, merchantId, _) req = do
       PQ.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId SP.DRIVER >>= \case
         Just existingPerson
           | personId /= existingPerson.id ->
-            throwError $ InternalError $ "Mobile number " <> show req.mobileNumber <> " already exists with another user for merchant " <> show merchantId
+            throwError $ DriverMobileAlreadyExists (show req.mobileNumber)
         _ -> return ()
     _ -> return ()
   let updatedPerson =

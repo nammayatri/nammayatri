@@ -168,6 +168,7 @@ data DriverError
   | DriverUnsubscribed
   | DriverNotFound Text
   | DriverEmailNotFound Text
+  | DriverMobileAlreadyExists Text
   | DriverReferralCodeNotGenerated
   | DriverAlreadyLinkedWithVehicle Text
   | FleetOwnerAccountBlocked
@@ -185,6 +186,7 @@ instance IsBaseError DriverError where
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
   toMessage (DriverNotFound phoneNo) = Just $ "No Driver is found Registered  with this phone number = " <> phoneNo
   toMessage (DriverEmailNotFound personId) = Just $ "Driver email not found driverId = " <> personId
+  toMessage (DriverMobileAlreadyExists phoneNo) = Just $ "Mobile number " <> phoneNo <> " already exists with another user."
   toMessage DriverReferralCodeNotGenerated = Just "Not able to generate driver referral code"
   toMessage (DriverAlreadyLinkedWithVehicle vehicleNo) = Just $ "Driver is already linked with vehicle " <> vehicleNo
   toMessage FleetOwnerAccountBlocked = Just "Fleet Owner account has been blocked."
@@ -202,6 +204,7 @@ instance IsHTTPError DriverError where
     DriverEmailNotFound _ -> "DRIVER_EMAIL_NOT_FOUND"
     DriverReferralCodeNotGenerated -> "DRIVER_REFERRAL_CODE_NOT_GENERATED"
     DriverAlreadyLinkedWithVehicle _ -> "DRIVER_ALREADY_LINKED"
+    DriverMobileAlreadyExists _ -> "DRIVER_MOBILE_ALREADY_EXISTS"
     FleetOwnerAccountBlocked -> "FLEET_OWNER_ACCOUNT_BLOCKED"
     AccountBlocked -> "ACCOUNT_BLOCKED"
   toHttpCode = \case
@@ -215,6 +218,7 @@ instance IsHTTPError DriverError where
     DriverEmailNotFound _ -> E500
     DriverReferralCodeNotGenerated -> E400
     DriverAlreadyLinkedWithVehicle _ -> E403
+    DriverMobileAlreadyExists _ -> E400
     FleetOwnerAccountBlocked -> E403
     AccountBlocked -> E403
 

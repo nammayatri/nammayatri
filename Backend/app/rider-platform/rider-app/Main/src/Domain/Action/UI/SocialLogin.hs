@@ -152,7 +152,7 @@ postSocialUpdateProfile (mbPersonId, merchantId) req = do
       PQ.findByMobileNumberAndMerchantId countryCode mobileNumberHash merchantId >>= \case
         Just existingPerson
           | personId /= existingPerson.id ->
-            throwError $ InternalError $ "Mobile number " <> show req.mobileNumber <> " already exists with another user for merchant " <> show merchantId
+            throwError $ PersonMobileAlreadyExists (show req.mobileNumber)
         _ -> return ()
     _ -> return ()
   let updatedPerson =
