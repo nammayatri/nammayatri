@@ -92,7 +92,7 @@ cacheIssueMessageById issueMessageId identifier issueMessage = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageById issueMessageId identifier) issueMessage expTime
 
 makeIssueMessageById :: Id IssueMessage -> Identifier -> Text
-makeIssueMessageById issueMessageId identifier = show identifier <> "CachedQueries:IssueMessage:Id" <> show issueMessageId
+makeIssueMessageById issueMessageId identifier = show identifier <> ":CachedQueries:IssueMessage:Id-" <> issueMessageId.getId
 
 -- --------- Caching logic for issue message by id & language -------------------
 
@@ -110,7 +110,7 @@ cacheIssueMessageByIdAndLanguage issueMessageId language identifier issueMessage
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByIdAndLanguage issueMessageId language identifier) issueMessageTranslation expTime
 
 makeIssueMessageByIdAndLanguage :: Id IssueMessage -> Language -> Identifier -> Text
-makeIssueMessageByIdAndLanguage issueMessageId language identifier = show identifier <> "CachedQueries:IssueMessage:CategoryId:Language-" <> show issueMessageId <> "-" <> show language
+makeIssueMessageByIdAndLanguage issueMessageId language identifier = show identifier <> ":CachedQueries:IssueMessage:CategoryId-" <> issueMessageId.getId <> ":Language-" <> show language
 
 -- --------- Caching logic for issue message by issueCategoryId & language -------------------
 
@@ -128,7 +128,7 @@ cacheAllIssueMessageByCategoryIdAndLanguage issueCategoryId language identifier 
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByLanguageAndCategory issueCategoryId language identifier) issueMessageTranslation expTime
 
 makeIssueMessageByLanguageAndCategory :: Id IssueCategory -> Language -> Identifier -> Text
-makeIssueMessageByLanguageAndCategory issueCategoryId language identifier = show identifier <> "CachedQueries:IssueMessage:CategoryId:Language-" <> show issueCategoryId <> "-" <> show language
+makeIssueMessageByLanguageAndCategory issueCategoryId language identifier = show identifier <> ":CachedQueries:IssueMessage:CategoryId-" <> issueCategoryId.getId <> ":Language-" <> show language
 
 -- --------- Caching logic for issue message by issueOptionId & language -------------------
 
@@ -146,4 +146,4 @@ cacheAllIssueMessageByOptionIdAndLanguage issueOptionId language identifier issu
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueMessageByLanguageAndOption issueOptionId language identifier) issueMessageTranslation expTime
 
 makeIssueMessageByLanguageAndOption :: Id IssueOption -> Language -> Identifier -> Text
-makeIssueMessageByLanguageAndOption issueOptionId language identifier = show identifier <> "CachedQueries:IssueMessage:OptionId:Language-" <> show issueOptionId <> "-" <> show language
+makeIssueMessageByLanguageAndOption issueOptionId language identifier = show identifier <> ":CachedQueries:IssueMessage:OptionId-" <> issueOptionId.getId <> ":Language-" <> show language

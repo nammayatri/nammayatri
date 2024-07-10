@@ -64,7 +64,7 @@ cacheAllIssueCategoryByMerchantOpCityIdAndLanguage merchantOpCityId language ide
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueCategoryByMerchantOpCityIdAndLanguageKey merchantOpCityId language identifier) issueCategoryTranslation expTime
 
 makeIssueCategoryByMerchantOpCityIdAndLanguageKey :: Id MerchantOperatingCity -> Language -> Identifier -> Text
-makeIssueCategoryByMerchantOpCityIdAndLanguageKey merchantOpCityId language identifier = show identifier <> "CachedQueries:IssueCategory:MerchantOpCityId-" <> show merchantOpCityId <> ":Language-" <> show language
+makeIssueCategoryByMerchantOpCityIdAndLanguageKey merchantOpCityId language identifier = show identifier <> ":CachedQueries:IssueCategory:MerchantOpCityId-" <> merchantOpCityId.getId <> ":Language-" <> show language
 
 --------- Caching logic for issue category by id -------------------
 
@@ -77,7 +77,7 @@ cacheIssueCategoryById issueCategoryId identifier issueCategory = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueCategoryByIdKey issueCategoryId identifier) issueCategory expTime
 
 makeIssueCategoryByIdKey :: Id IssueCategory -> Identifier -> Text
-makeIssueCategoryByIdKey id identifier = show identifier <> "CachedQueries:IssueCategory:Id-" <> show id
+makeIssueCategoryByIdKey id identifier = show identifier <> ":CachedQueries:IssueCategory:Id-" <> id.getId
 
 --------- Caching logic for issue category by id and language -------------------
 
@@ -94,4 +94,4 @@ cacheIssueCategoryByIdAndLanguage issueCategoryId language identifier issueCateg
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueCategoryByIdAndLanguageKey issueCategoryId language identifier) issueCategoryTranslation expTime
 
 makeIssueCategoryByIdAndLanguageKey :: Id IssueCategory -> Language -> Identifier -> Text
-makeIssueCategoryByIdAndLanguageKey id language identifier = show identifier <> "CachedQueries:IssueCategory:Id-" <> show id <> ":Language-" <> show language
+makeIssueCategoryByIdAndLanguageKey id language identifier = show identifier <> ":CachedQueries:IssueCategory:Id-" <> id.getId <> ":Language-" <> show language

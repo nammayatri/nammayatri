@@ -333,7 +333,7 @@ validateCreateIssueMessageReq categoryType messages = do
     DIC.FAQ ->
       mapM_
         ( \message -> do
-            when (isJust message.referenceOptionId && isJust message.referenceCategoryId) $ throwError $ InvalidRequest "IssueMessage for an FAQ category should contain either one of referenceOptionId or referenceCategoryId."
+            when (isJust message.referenceOptionId && not (isJust message.referenceCategoryId)) $ throwError $ InvalidRequest "IssueMessage for an FAQ category should contain a referenceCategoryId along with referenceOptionId."
             unless (null message.options) $ throwError $ InvalidRequest "IssueMessage for an FAQ category should not contain any options."
         )
         messages
@@ -676,17 +676,18 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
     getAndValidateReferenceOptionAnCategoryId :: BeamFlow m r => Maybe DIM.IssueMessage -> Maybe DIC.CategoryType -> m (Maybe (Id DIO.IssueOption), Maybe (Id DIC.IssueCategory))
     getAndValidateReferenceOptionAnCategoryId mbIm mbCategoryType = do
       case mbCategoryType of
-        Just DIC.FAQ ->
-          case (req.referenceOptionId, req.referenceCategoryId, mbIm) of
-            (Just _, Just _, _) -> throwError $ InvalidRequest "IssueMessage can only have either one of reference optionId or categoryId"
-            (Just optionId, _, _) -> do
-              void $ CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionDoesNotExist optionId.getId)
-              return (Just optionId, Nothing)
-            (_, Just categoryId, _) -> do
-              void $ CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
-              return (Nothing, Just categoryId)
-            (_, _, Just issueMessage) -> return (issueMessage.referenceOptionId, issueMessage.referenceCategoryId)
-            _ -> return (Nothing, Nothing)
+        Just DIC.FAQ -> case (req.referenceOptionId, req.referenceCategoryId, mbIm) of
+          (Just _optionId, Nothing, _) -> throwError $ InvalidRequest "IssueMessage should contain a referenceCategoryId along with referenceOptionId."
+          (Just optionId, Just categoryId, _) -> do
+            refIssueOption <- CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionDoesNotExist optionId.getId)
+            void $ CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
+            unless (refIssueOption.issueCategoryId == Just categoryId) $ throwError $ InvalidRequest "Reference IssueOption does not belong to reference category."
+            return (Just optionId, Just categoryId)
+          (Nothing, Just categoryId, _) -> do
+            void $ CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
+            return (Nothing, Just categoryId)
+          (Nothing, Nothing, Just issueMessage) -> return (issueMessage.referenceOptionId, issueMessage.referenceCategoryId)
+          _ -> return (Nothing, Nothing)
         _ -> do
           when (isJust req.referenceOptionId || isJust req.referenceCategoryId) $ throwError $ InvalidRequest "An IssueCategory message should not contain reference optionId or categoryId."
           return (Nothing, Nothing)
@@ -815,7 +816,7 @@ handleMessagePriorityUpdates mbOldIssueMessage mbIssueOptionId mbIssueCategoryId
       Just categoryId -> CQIM.findAllActiveByCategoryIdAndLanguage categoryId ENGLISH identifier
       Nothing -> return []
   let maxPriority = maximum (map (\(message, _, _) -> message.priority) issueMessages)
-  when (messageType /= DIM.FAQ && not (null issueMessages) && priority > maxPriority) $
+  when (messageType /= DIM.FAQ && not (null issueMessages) && priority > maxPriority && messageType /= DIM.Terminal) $
     throwError $ InvalidRequest "Priority is greater than the priority of the Terminal IssueMessage."
   case mbOldIssueMessage of
     Just oldMessage -> when (oldMessage.priority /= priority) $ updatePriorities issueMessages

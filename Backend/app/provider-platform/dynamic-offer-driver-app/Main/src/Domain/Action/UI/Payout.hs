@@ -85,7 +85,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     Just osr' -> pure osr'
   case osr of
     IPayout.OrderStatusPayoutResp {..} -> do
-      payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (InternalError "PayoutOrder Not Found")
+      payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
       case payoutOrder.entityName of
         Just DPayment.DRIVER_DAILY_STATS -> do
           forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
