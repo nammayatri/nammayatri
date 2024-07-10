@@ -10,6 +10,7 @@ import qualified Domain.Types.Ride
 import qualified Domain.Types.VehicleServiceTier
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -42,6 +43,8 @@ data RideT f = RideT
     driverMobileCountryCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverMobileNumber :: B.C f Kernel.Prelude.Text,
     driverName :: B.C f Kernel.Prelude.Text,
+    driverNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     driverRegisteredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driversPreviousRideDropLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

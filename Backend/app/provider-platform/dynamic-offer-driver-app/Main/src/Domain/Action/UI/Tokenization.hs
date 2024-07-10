@@ -13,6 +13,7 @@ import qualified Domain.Types.MerchantServiceConfig as DomainMSC
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Tokenize.Interface.Types as TokenizeIntTypes
 import qualified Kernel.Prelude
@@ -83,13 +84,14 @@ getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec sv
 
     makeGullakOnboardingTokenizeReq personId = do
       person <- SQP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      unencryptedMobileNumber <- mapM decrypt person.mobileNumber
       dl <- QDL.findByDriverId personId
       merchantOperatingCity <- CQMSOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
       let cityLatLon = merchantOperatingCity.location
       return $
         TokenizeIntTypes.OnboardingReq
           { merchantUserId = personId.getId,
-            mobile = fromMaybe "" person.unencryptedMobileNumber,
+            mobile = fromMaybe "" unencryptedMobileNumber,
             email = person.email,
             dob = T.pack . formatTime defaultTimeLocale "%d/%m/%Y" <$> (dl >>= (.driverDob)),
             pan = Nothing,

@@ -36,6 +36,7 @@ import qualified Domain.Action.UI.Person as UPerson
 import qualified Domain.Types.Booking as DB
 import Domain.Types.Booking.API (makeRideAPIEntity)
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
