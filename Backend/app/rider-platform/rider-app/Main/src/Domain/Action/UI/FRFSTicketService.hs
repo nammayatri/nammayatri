@@ -549,7 +549,6 @@ postFrfsBookingCancel (_, merchantId) bookingId = do
 getFrfsBookingCancelStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow FRFSTicketService.FRFSCancelStatus
 getFrfsBookingCancelStatus _ bookingId = do
   ticketBooking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  when (ticketBooking.status == DFRFSTicketBooking.CANCELLED) $ void $ QPS.incrementTicketsBookedInEvent ticketBooking.riderId (- (ticketBooking.quantity))
   pure
     FRFSTicketService.FRFSCancelStatus
       { cancellationCharges = getAbsoluteValue ticketBooking.cancellationCharges,

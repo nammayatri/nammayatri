@@ -32,6 +32,7 @@ import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
+import qualified Storage.Queries.PersonStats as QPS
 
 data DOnCancel = DOnCancel
   { providerId :: Text,
@@ -76,6 +77,7 @@ onCancel _ booking' dOnCancel = do
           void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
           void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
           void $ Redis.del (makecancelledTtlKey booking.id)
+      void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (booking.quantity))
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
   return ()
   where
