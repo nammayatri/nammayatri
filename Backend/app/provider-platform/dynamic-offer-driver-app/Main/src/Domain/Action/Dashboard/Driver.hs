@@ -1978,12 +1978,12 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
   mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   let phoneNumber = countryCode <> mobileNumber
-      sender = smsCfg.sender
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
       SMS -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : SMS") messageKey --whenJust messageKey $ \mkey -> do
-        message <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
+        let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
@@ -2138,14 +2138,14 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
   countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   nowLocale <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let phoneNumber = countryCode <> mobileNumber
-      sender = smsCfg.sender
       timeStamp = show $ utctDay nowLocale
       merchantOpCityId = transporterConfig.merchantOperatingCityId
       mkey = messageKey
   withLogTag ("personId_" <> personId.getId) $ do
     case channel of
       SMS -> do
-        message <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
+        let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
       WHATSAPP -> do

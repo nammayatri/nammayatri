@@ -156,6 +156,7 @@ MerchantMessage:
     templateId: Text
     jsonData: MerchantMessageDefaultDataJSON
     containsUrlButton: Bool
+    senderHeader: Maybe Text
     updatedAt: UTCTime
     createdAt: UTCTime
 

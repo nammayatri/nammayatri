@@ -177,15 +177,15 @@ fleetOwnerLogin req = do
     let otpHash = smsCfg.credConfig.otpHash
     let otpCode = otp
         phoneNumber = countryCode <> mobileNumber
-        sender = smsCfg.sender
     withLogTag ("mobileNumber" <> req.mobileNumber) $
       do
-        message <-
+        (mbSender, message) <-
           MessageBuilder.buildSendOTPMessage merchantOpCityId $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
               }
+        let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
   let key = makeMobileNumberOtpKey mobileNumber
@@ -253,15 +253,15 @@ sendFleetJoiningOtp merchantShortId opCity fleetOwnerName req = do
     Just person -> do
       let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
           phoneNumber = req.mobileCountryCode <> req.mobileNumber
-          sender = smsCfg.sender
       otpCode <- maybe generateOTPCode return useFakeOtpM
       withLogTag ("personId_" <> getId person.id) $ do
-        message <-
+        (mbSender, message) <-
           MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
             MessageBuilder.BuildFleetJoiningMessageReq
               { otp = otpCode,
                 fleetOwnerName = fleetOwnerName
               }
+        let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
         let key = makeFleetDriverOtpKey phoneNumber
@@ -281,13 +281,13 @@ verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req = do
       deviceToken <- fromMaybeM (InvalidRequest "Device Token not found") $ req.deviceToken
       void $ DReg.verify authId True fleetOwnerId Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
-          sender = smsCfg.sender
       withLogTag ("personId_" <> getId person.id) $ do
-        message <-
+        (mbSender, message) <-
           MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
             MessageBuilder.BuildDownloadAppMessageReq
               { fleetOwnerName = fleetOwner.firstName
               }
+        let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
     Nothing -> do

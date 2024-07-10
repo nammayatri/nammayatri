@@ -188,14 +188,14 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
         countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for mobileNumber auth")
         let phoneNumber = countryCode <> mobileNumber
-            sender = smsCfg.sender
         withLogTag ("personId_" <> getId person.id) $ do
-          message <-
+          (mbSender, message) <-
             MessageBuilder.buildSendOTPMessage merchantOpCityId $
               MessageBuilder.BuildSendOTPMessageReq
                 { otp = otpCode,
                   hash = otpHash
                 }
+          let sender = fromMaybe smsCfg.sender mbSender
           Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
             >>= Sms.checkSmsResult
       SP.EMAIL -> do
@@ -465,14 +465,14 @@ resend tokenId = do
   let otpCode = authValueHash
   let otpHash = smsCfg.credConfig.otpHash
       phoneNumber = countryCode <> mobileNumber
-      sender = smsCfg.sender
   withLogTag ("personId_" <> entityId) $ do
-    message <-
+    (mbSender, message) <-
       MessageBuilder.buildSendOTPMessage (Id merchantOperatingCityId) $
         MessageBuilder.BuildSendOTPMessageReq
           { otp = otpCode,
             hash = otpHash
           }
+    let sender = fromMaybe smsCfg.sender mbSender
     Sms.sendSMS person.merchantId (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender)
       >>= Sms.checkSmsResult
   _ <- QR.updateAttempts (attempts - 1) id

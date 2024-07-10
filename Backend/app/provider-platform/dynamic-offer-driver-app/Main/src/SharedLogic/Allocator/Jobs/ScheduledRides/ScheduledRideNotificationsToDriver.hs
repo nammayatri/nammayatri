@@ -97,9 +97,9 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
         sendOverlay merchantOpCityId driver $ mkOverlayReq overlay
       SMS -> do
         smsCfg <- asks (.smsCfg)
-        let sender = smsCfg.sender
         messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
         merchantMessage <- CMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId messageKey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
+        let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq merchantMessage.message phoneNumber sender) >>= Sms.checkSmsResult
       _ -> pure () -- WHATSAPP or Other Notifications can be implemented here
   return Complete
