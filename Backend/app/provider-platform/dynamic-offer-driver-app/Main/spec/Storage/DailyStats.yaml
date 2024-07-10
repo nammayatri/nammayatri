@@ -79,11 +79,6 @@ DailyStats:
       where:
         and: [driverId, merchantLocalDate]
 
-    findAllByDateAndPayoutStatus:
-      kvFunction: findAllWithOptionsKV
-      where:
-        and: [merchantLocalDate, payoutStatus]
-
     updateByDriverId:
       kvFunction: updateOneWithKV
       params: [totalEarnings, numRides, totalDistance]

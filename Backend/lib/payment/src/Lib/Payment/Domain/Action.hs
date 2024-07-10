@@ -745,11 +745,13 @@ createPayoutService merchantId _personId mbEntityIds mbEntityName city createPay
     buildPayoutOrder req resp = do
       now <- getCurrentTime
       uuid <- generateGUID
+      shortId <- generateShortId
       customerEmail <- encrypt req.customerEmail
       mobileNo <- encrypt req.customerPhone
       pure $
         Payment.PayoutOrder
           { id = uuid,
+            shortId = Just shortId,
             customerId = req.customerId,
             orderId = req.orderId,
             merchantId = merchantId.getId,

@@ -46,3 +46,16 @@ findAllByPayoutStatusAndReferralEarningsAndDriver status (Id driverId) = do
           Se.Is Beam.referralEarnings $ Se.GreaterThanOrEq (Just 0.0)
         ]
     ]
+
+findAllByDateAndPayoutStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Int -> Maybe Int -> Day -> PayoutStatus -> m [DailyStats]
+findAllByDateAndPayoutStatus limit offset merchantLocalDate payoutStatus = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate,
+          Se.Is Beam.payoutStatus $ Se.Eq (Just payoutStatus),
+          Se.Is Beam.referralEarnings $ Se.GreaterThanOrEq (Just 0.0)
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset

@@ -8,6 +8,7 @@ import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Types.DailyStats
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Payment.Juspay.Types.Common
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Servant
@@ -23,12 +24,10 @@ data DailyEarning = DailyEarning
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data OrderStatus = SuccessFul | Failed | Pending deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
-
 data ReferralEarningsRes = ReferralEarningsRes
   { dailyEarnings :: [API.Types.UI.ReferralPayout.DailyEarning],
     orderId :: Kernel.Prelude.Maybe Data.Text.Text,
-    orderStatus :: Kernel.Prelude.Maybe API.Types.UI.ReferralPayout.OrderStatus,
+    orderStatus :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.Common.TransactionStatus,
     payoutRegistrationAmount :: Kernel.Types.Common.HighPrecMoney,
     referralRewardAmountPerRide :: Kernel.Types.Common.HighPrecMoney,
     totalReferralCount :: Kernel.Prelude.Int,
