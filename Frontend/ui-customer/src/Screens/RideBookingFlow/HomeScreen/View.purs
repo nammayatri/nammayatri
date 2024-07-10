@@ -4178,10 +4178,11 @@ repeatRideCard push state index trip =
     , accessibilityHint $ (if vehicleVariant /= "" && isJust trip.serviceTierNameV2 then vehicleVariant else "") <>" : trip to " <> getTripTitle trip.destination <> getTripSubTitle trip.destination 
     , rippleColor Color.rippleShade
     ][ frameLayout
-        [ height $ imageLayoutHeight
+        ([ height $ imageLayoutHeight
         , width WRAP_CONTENT
         , gravity CENTER
-        ][ linearLayout
+        ] <> if os == "IOS" then [weight 1.0] else [])
+        [ linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER
@@ -4193,17 +4194,17 @@ repeatRideCard push state index trip =
                 ]
             ]
         , linearLayout
-            [ width MATCH_PARENT -- tag container
+            [ width WRAP_CONTENT
             , height MATCH_PARENT
             , gravity BOTTOM
             , alignParentBottom "true,-1"
             , visibility $ boolToVisibility pillTagVisibility
             ][ linearLayout
                 [ height WRAP_CONTENT
-                , width MATCH_PARENT
+                , width WRAP_CONTENT
                 , gravity CENTER
                 ][ linearLayout -- tag
-                    [ width MATCH_PARENT
+                    [ width WRAP_CONTENT
                     , margin margin'
                     , height WRAP_CONTENT
                     , background Color.lightGrey1
@@ -4224,7 +4225,7 @@ repeatRideCard push state index trip =
           ]
       , linearLayout
         [ height WRAP_CONTENT
-        , weight 1.0
+        , weight if os == "IOS" then 3.0 else 1.0
         , orientation VERTICAL
         , margin $ MarginRight 24
         ][ textView $
