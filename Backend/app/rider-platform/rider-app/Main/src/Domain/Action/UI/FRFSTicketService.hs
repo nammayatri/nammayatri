@@ -33,12 +33,12 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Station as Station
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, id, map, readMaybe)
+import EulerHS.Prelude hiding (all, and, id, map, readMaybe, whenJust)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import Kernel.Prelude
+import Kernel.Prelude hiding (whenJust)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -60,6 +60,7 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -303,6 +304,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     DFRFSTicketBooking.CONFIRMED -> do
       CallBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId_
       QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
+      CQP.clearPSCache booking.riderId
       buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -563,8 +565,10 @@ getAbsoluteValue mbRefundAmount = case mbRefundAmount of
     Just (HighPrecMoney $ abs value)
 
 getFrfsConfig :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Context.City -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
-getFrfsConfig (_, mId) opCity = do
+getFrfsConfig (pId, mId) opCity = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
   Domain.Types.FRFSConfig.FRFSConfig {..} <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityId merchantOpCity.id >>= fromMaybeM (InvalidRequest "FRFS Config not found")
+  stats <- maybe (pure Nothing) CQP.findPersonStatsById pId
   let isEventOngoing' = fromMaybe False isEventOngoing
+      ticketsBookedInEvent = fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
   return FRFSTicketService.FRFSConfigAPIRes {isEventOngoing = isEventOngoing', ..}

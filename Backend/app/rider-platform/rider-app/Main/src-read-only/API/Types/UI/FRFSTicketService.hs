@@ -46,7 +46,8 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
     maxFreeTicketCashback :: Data.Maybe.Maybe Kernel.Prelude.Int,
     metroStationTtl :: Kernel.Prelude.Int,
     oneWayTicketLimit :: Kernel.Prelude.Int,
-    roundTripTicketLimit :: Kernel.Prelude.Int
+    roundTripTicketLimit :: Kernel.Prelude.Int,
+    ticketsBookedInEvent :: Kernel.Prelude.Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

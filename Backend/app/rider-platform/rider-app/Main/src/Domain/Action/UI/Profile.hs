@@ -113,8 +113,7 @@ data ProfileRes = ProfileRes
     followsRide :: Bool,
     frontendConfigHash :: Maybe Text,
     isSafetyCenterDisabled :: Bool,
-    customerReferralCode :: Maybe Text,
-    ticketsBookedInEvent :: Maybe Int
+    customerReferralCode :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -183,7 +182,6 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
 getPersonDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> m ProfileRes
 getPersonDetails (personId, _) mbToss = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  stats <- QPS.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
@@ -209,9 +207,9 @@ getPersonDetails (personId, _) mbToss = do
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide stats
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide stats = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -225,7 +223,6 @@ getPersonDetails (personId, _) mbToss = do
           customerReferralCode = newCustomerReferralCode,
           bundleVersion = clientBundleVersion,
           clientVersion = clientSdkVersion,
-          ticketsBookedInEvent = stats.ticketsBookedInEvent,
           ..
         }
 
