@@ -27,20 +27,6 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DailyStats.DailyStats] -> m ())
 createMany = traverse_ create
 
-findAllByDateAndPayoutStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Data.Time.Calendar.Day -> Domain.Types.DailyStats.PayoutStatus -> m [Domain.Types.DailyStats.DailyStats])
-findAllByDateAndPayoutStatus limit offset merchantLocalDate payoutStatus = do
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate,
-          Se.Is Beam.payoutStatus $ Se.Eq (Kernel.Prelude.Just payoutStatus)
-        ]
-    ]
-    (Se.Desc Beam.createdAt)
-    limit
-    offset
-
 findByDriverIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m (Maybe Domain.Types.DailyStats.DailyStats))
 findByDriverIdAndDate driverId merchantLocalDate = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
 

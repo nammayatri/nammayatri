@@ -25,3 +25,9 @@ ALTER TABLE atlas_app.payout_order ADD PRIMARY KEY ( id, order_id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payout_order ADD COLUMN entity_ids text[] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN short_id character varying(36) ;

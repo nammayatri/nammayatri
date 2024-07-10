@@ -43,6 +43,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDailyStats
+import qualified Storage.Queries.DailyStatsExtra as QDSE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QV
@@ -69,7 +70,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   let reschuleTimeDiff = listToMaybe payoutConfigList <&> (.timeDiff)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let lastDay = addDays (-1) (utctDay localTime)
-  dailyStatsForEveryDriverList <- QDailyStats.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastDay statusForRetry
+  dailyStatsForEveryDriverList <- QDSE.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastDay statusForRetry
   if null dailyStatsForEveryDriverList || null payoutConfigList
     then do
       when toScheduleNextPayout $ do

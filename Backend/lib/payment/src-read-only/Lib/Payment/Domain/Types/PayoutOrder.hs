@@ -26,6 +26,7 @@ data PayoutOrderE e = PayoutOrder
     merchantId :: Kernel.Prelude.Text,
     mobileNo :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     orderId :: Kernel.Prelude.Text,
+    shortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder),
     status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
     updatedAt :: Kernel.Prelude.UTCTime,
     vpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text
@@ -56,6 +57,7 @@ instance EncryptedItem PayoutOrder where
           merchantId = merchantId entity,
           mobileNo = mobileNo_,
           orderId = orderId entity,
+          shortId = shortId entity,
           status = status entity,
           updatedAt = updatedAt entity,
           vpa = vpa entity
@@ -78,6 +80,7 @@ instance EncryptedItem PayoutOrder where
             merchantId = merchantId entity,
             mobileNo = mobileNo_,
             orderId = orderId entity,
+            shortId = shortId entity,
             status = status entity,
             updatedAt = updatedAt entity,
             vpa = vpa entity
