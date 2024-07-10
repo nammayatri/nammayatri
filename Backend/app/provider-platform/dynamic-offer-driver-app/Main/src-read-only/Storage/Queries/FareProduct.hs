@@ -5,6 +5,7 @@
 module Storage.Queries.FareProduct (module Storage.Queries.FareProduct, module ReExport) where
 
 import qualified Domain.Types.Common
+import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.FareProduct
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType
@@ -26,6 +27,9 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FareProduct.FareProduct] -> m ())
 createMany = traverse_ create
+
+findAllFareProductByFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FarePolicy.FarePolicy -> m [Domain.Types.FareProduct.FareProduct])
+findAllFareProductByFarePolicyId farePolicyId = do findAllWithKV [Se.And [Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId)]]
 
 findAllFareProductByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

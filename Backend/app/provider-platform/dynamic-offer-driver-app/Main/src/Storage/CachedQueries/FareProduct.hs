@@ -114,6 +114,9 @@ makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tr
 updateFarePolicyId :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FarePolicy -> Id FareProduct -> m ()
 updateFarePolicyId = Queries.updateFarePolicyId
 
+findAllFareProductByFarePolicyId :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FarePolicy -> m [FareProduct]
+findAllFareProductByFarePolicyId = Queries.findAllFareProductByFarePolicyId
+
 delete :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FareProduct -> m ()
 delete = Queries.delete
 
