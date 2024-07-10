@@ -109,6 +109,7 @@ types:
     isEventOngoing: Bool
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
+    ticketsBookedInEvent: Int
     derive: "Show"
 
 apis:

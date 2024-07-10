@@ -283,8 +283,7 @@ getConfigByStationIds partnerOrg fromPOrgStationId toPOrgStationId = do
   where
     mkFRFSConfigAPI :: DFRFSConfig.FRFSConfig -> FRFSTypes.FRFSConfigAPIRes
     mkFRFSConfigAPI DFRFSConfig.FRFSConfig {..} = do
-      let isEventOngoing' = fromMaybe False isEventOngoing
-      FRFSTypes.FRFSConfigAPIRes {isEventOngoing = isEventOngoing', ..}
+      FRFSTypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
 
 mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Id PartnerOrganization -> m FRFSTypes.FRFSStationAPI
 mkPOrgStationAPIRes Station.Station {..} pOrgId = do
