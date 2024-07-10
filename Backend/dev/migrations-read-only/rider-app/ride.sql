@@ -99,3 +99,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN allowed_edit_pickup_location_attempts int 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN vehicle_age int;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN driver_number_hash bytea ;
+ALTER TABLE atlas_app.ride ADD COLUMN driver_number_encrypted text ;

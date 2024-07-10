@@ -7,6 +7,7 @@ imports:
   Currency: Kernel.Types.Common
   Price: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
+  EncryptedHashedField: Kernel.External.Encryption
   BaseUrl: Kernel.Types.Common
   VehicleVariant: Domain.Types.VehicleVariant
   Booking: Domain.Types.Booking
@@ -20,51 +21,16 @@ imports:
   PaymentIntentId: Kernel.External.Payment.Interface.Types
   AccountId: Kernel.External.Payment.Interface.Types
   Months: Kernel.Types.Time
+  DbHash: Kernel.External.Encryption
 
 Ride:
   tableName: ride
-  derives: "Generic,Show"
+  derives: "Generic"
   types:
     RideStatus:
       enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
       derive: "HttpInstance"
     BPPRide: {}
-    RideAPIEntity:
-      id: Id Ride
-      shortRideId: ShortId Ride
-      status: RideStatus
-      driverName: Text
-      driverNumber: Maybe Text
-      driverRatings: Maybe Centesimal
-      driverRegisteredAt: Maybe UTCTime
-      driverImage: Maybe Text
-      vehicleNumber: Text
-      vehicleColor: Text
-      vehicleVariant: VehicleVariant
-      vehicleServiceTierType: Maybe VehicleServiceTierType
-      vehicleModel: Text
-      rideOtp: Text
-      endOtp: Maybe Text
-      allowedEditLocationAttempts : Int
-      allowedEditPickupLocationAttempts : Int
-      computedPrice: Maybe Money
-      computedPriceWithCurrency: Maybe PriceAPIEntity
-      chargeableRideDistance: Maybe HighPrecMeters
-      chargeableRideDistanceWithUnit: Maybe Distance
-      traveledRideDistance: Maybe Distance
-      tollConfidence: Maybe Confidence
-      driverArrivalTime: Maybe UTCTime
-      rideStartTime: Maybe UTCTime
-      rideEndTime: Maybe UTCTime
-      rideRating: Maybe Int
-      isFreeRide: Maybe Bool
-      startOdometerReading: Maybe Centesimal
-      endOdometerReading: Maybe Centesimal
-      vehicleAge: Maybe Months
-      onlinePayment: Bool
-      createdAt: UTCTime
-      updatedAt: UTCTime
-      bppRideId: Id BPPRide
   fields:
     id: Id Ride
     bppRideId: Id BPPRide
@@ -79,6 +45,7 @@ Ride:
     driverName: Text
     driverRating: Maybe Centesimal
     driverMobileNumber: Text
+    driverPhoneNumber: Maybe (EncryptedHashedField e Text)
     driverMobileCountryCode: Maybe Text
     driverRegisteredAt: Maybe UTCTime
     driverImage: Maybe Text
@@ -148,6 +115,7 @@ Ride:
     vehicleModel: character varying(255)
     vehicleNumber: character varying(255)
     vehicleVariant: character varying(60)
+    driverNumberHash: bytea
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:
@@ -172,6 +140,9 @@ Ride:
     driversPreviousRideDropLoc:
       driversPreviousRideDropLat: Maybe Double
       driversPreviousRideDropLon: Maybe Double
+    driverPhoneNumber:
+      driverNumberEncrypted: Maybe Text
+      driverNumberHash: Maybe DbHash
 
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -191,6 +162,7 @@ Ride:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     paymentDone: Kernel.Prelude.fromMaybe True paymentDone|E
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
+    driverPhoneNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -214,6 +186,8 @@ Ride:
     showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
     paymentDone: Kernel.Prelude.Just paymentDone|E
     onlinePayment: Kernel.Prelude.Just onlinePayment|E
+    driverNumberEncrypted: (driverPhoneNumber <&> unEncrypted . (.encrypted))|E
+    driverNumberHash: (driverPhoneNumber <&> (.hash))|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney

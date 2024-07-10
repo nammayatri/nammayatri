@@ -22,10 +22,10 @@ import qualified Domain.Action.UI.Location as SLoc
 import Domain.Types.Booking
 import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.Exophone as DExophone
+import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Person as Person
-import Domain.Types.Ride (Ride (..), RideAPIEntity (..))
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -162,8 +162,8 @@ data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
 
 makeBookingAPIEntity ::
   Booking ->
-  Maybe Ride ->
-  [Ride] ->
+  Maybe DRide.Ride ->
+  [DRide.Ride] ->
   [FareBreakup] ->
   [FareBreakup] ->
   Maybe DExophone.Exophone ->
@@ -319,8 +319,8 @@ buildBookingStatusAPIEntity booking = do
   return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus
 
 -- TODO move to Domain.Types.Ride.Extra
-makeRideAPIEntity :: Ride -> RideAPIEntity
-makeRideAPIEntity Ride {..} =
+makeRideAPIEntity :: DRide.Ride -> RideAPIEntity
+makeRideAPIEntity DRide.Ride {..} =
   let driverMobileNumber' = if status == DRide.NEW then Just driverMobileNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt

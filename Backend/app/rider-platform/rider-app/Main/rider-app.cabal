@@ -229,6 +229,7 @@ library
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.RentalDetails
+      Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.Geometry

@@ -35,6 +35,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption (encrypt)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -131,7 +132,7 @@ data DUpdatedRide = DUpdatedRide
     rideOldStatus :: DRide.RideStatus
   }
 
-buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
+buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
 buildRideEntity booking updRide newRideInfo = do
   mbExistingRide <- B.runInReplica $ QRide.findByBPPRideId newRideInfo.bppRideId
   case mbExistingRide of
@@ -274,7 +275,7 @@ validateRequest req@DOnStatusReq {..} = do
       let validatedRideDetails = ValidatedBookingReallocationDetails request
       return ValidatedOnStatusReq {..}
 
-buildNewRide :: MonadFlow m => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
+buildNewRide :: (MonadFlow m, EncFlow m r) => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
 buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   id <- generateGUID
   shortId <- generateShortId
@@ -289,6 +290,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
         DB.AmbulanceDetails details -> Just details.toLocation
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
+  driverPhoneNumber' <- encrypt driverMobileNumber
   let createdAt = now
       updatedAt = now
       merchantId = Just booking.merchantId
@@ -325,6 +327,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       paymentDone = False
       driverAccountId = Nothing
       vehicleAge = Nothing
+      driverPhoneNumber = Just driverPhoneNumber'
       onlinePayment = maybe False (.onlinePayment) mbMerchant
   pure $ DRide.Ride {..}
 

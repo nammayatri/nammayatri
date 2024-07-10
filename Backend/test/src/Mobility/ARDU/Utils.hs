@@ -62,6 +62,7 @@ import qualified Storage.Queries.DriverQuote as TDQ
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
 import qualified "rider-app" Storage.Queries.Ride as BQRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.SearchTry as QST
+import Test.HUnit (assertBool)
 import Utils
 
 -- database calls
@@ -99,7 +100,7 @@ getBAPRide ::
   ClientsM BRide.Ride
 getBAPRide bppRideId = do
   mbRide <- liftIO $ runAppFlow "" $ BQRide.findByBPPRideId (cast bppRideId)
-  mbRide `shouldSatisfy` isJust
+  liftIO $ assertBool "Ride should exist" (isJust mbRide)
   return $ fromJust mbRide
 
 getBPPRideById ::

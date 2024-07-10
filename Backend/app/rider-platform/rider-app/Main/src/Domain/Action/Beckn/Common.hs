@@ -35,7 +35,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (decrypt, encrypt)
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -219,11 +219,12 @@ data DFareBreakup = DFareBreakup
     description :: Text
   }
 
-buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> m DRide.Ride
+buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> m DRide.Ride
 buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now status isFreeRide = do
   guid <- generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
+  driverPhoneNumber <- mapM encrypt (Just driverMobileNumber)
   let fromLocation = booking.fromLocation
       toLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
@@ -442,7 +443,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   fork "updating total rides count" $ SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
-  mbAdvRide <- QRide.findLatestByDriverPhoneNumber ride.driverMobileNumber
+  driverPhoneNumber <- mapM decrypt ride.driverPhoneNumber >>= fromMaybeM (RideFieldNotPresent "driverPhoneNumber")
+  mbAdvRide <- QRide.findLatestByDriverPhoneNumber driverPhoneNumber
   mbMerchant <- CQM.findById booking.merchantId
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
   let distanceUnit = ride.distanceUnit
