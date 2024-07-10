@@ -158,6 +158,8 @@ type FleetDriverEarningAPI =
     :> QueryParam "offset" Int
     :> QueryParam "from" UTCTime
     :> QueryParam "to" UTCTime
+    :> QueryParam "sortDesc" Bool
+    :> QueryParam "SortOn" Common.SortOn
     :> Get '[JSON] Common.FleetEarningListRes
 
 type GetFleetDriverVehicleAssociationAPI =
@@ -288,8 +290,8 @@ fleetTotalEarning merchantShortId opCity fleetOwnerId mbFrom mbTo = withFlowHand
 fleetVehicleEarning :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.FleetEarningListRes
 fleetVehicleEarning merchantShortId opCity fleetOwnerId vehicleNo mbLimit mbOffset mbFrom mbTo = withFlowHandlerAPI $ DDriver.fleetVehicleEarning merchantShortId opCity fleetOwnerId vehicleNo mbLimit mbOffset mbFrom mbTo
 
-fleetDriverEarning :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.FleetEarningListRes
-fleetDriverEarning merchantShortId opCity fleetOwnerId mbMobileCountryCode mbMobileNo mbLimit mbOffset mbFrom mbTo = withFlowHandlerAPI $ DDriver.fleetDriverEarning merchantShortId opCity fleetOwnerId mbMobileCountryCode mbMobileNo mbLimit mbOffset mbFrom mbTo
+fleetDriverEarning :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Maybe Common.SortOn -> FlowHandler Common.FleetEarningListRes
+fleetDriverEarning merchantShortId opCity fleetOwnerId mbMobileCountryCode mbMobileNo mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn = withFlowHandlerAPI $ DDriver.fleetDriverEarning merchantShortId opCity fleetOwnerId mbMobileCountryCode mbMobileNo mbLimit mbOffset mbFrom mbTo mbSortDesc mbSortOn
 
 setVehicleDriverRcStatusForFleet :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.RCStatusReq -> FlowHandler APISuccess
 setVehicleDriverRcStatusForFleet merchantShortId opCity driverId fleetOwnerId req = withFlowHandlerAPI $ DDriver.setVehicleDriverRcStatusForFleet merchantShortId opCity driverId fleetOwnerId req
