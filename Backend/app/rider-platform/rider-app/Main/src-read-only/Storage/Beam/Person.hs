@@ -80,7 +80,6 @@ data PersonT f = PersonT
     totalRatingScore :: B.C f Kernel.Prelude.Int,
     totalRatings :: B.C f Kernel.Prelude.Int,
     totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    unencryptedMobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     useFakeOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     whatsappNotificationEnrollStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods)

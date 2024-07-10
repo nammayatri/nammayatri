@@ -84,7 +84,6 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             totalRatingScore = totalRatingScore,
             totalRatings = totalRatings,
             totalRidesCount = totalRidesCount,
-            unencryptedMobileNumber = unencryptedMobileNumber,
             updatedAt = updatedAt,
             useFakeOtp = useFakeOtp,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus
@@ -153,7 +152,6 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.totalRatingScore = totalRatingScore,
         Beam.totalRatings = totalRatings,
         Beam.totalRidesCount = totalRidesCount,
-        Beam.unencryptedMobileNumber = unencryptedMobileNumber,
         Beam.updatedAt = updatedAt,
         Beam.useFakeOtp = useFakeOtp,
         Beam.whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus

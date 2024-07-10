@@ -44,7 +44,6 @@ Person:
     languagesSpoken : "Maybe [Text]"
     identifierType : IdentifierType
     email : Maybe Text
-    unencryptedMobileNumber : Maybe Text
     mobileNumber : Maybe (EncryptedHashedField e Text)
     mobileCountryCode : Maybe Text
     passwordHash : Maybe DbHash
@@ -58,7 +57,6 @@ Person:
     description : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
-    unencryptedAlternateMobileNumber : Maybe Text
     alternateMobileNumber : Maybe (EncryptedHashedField e Text)
     faceImageId : Maybe (Id MediaFile)
     merchantOperatingCityId : Id MerchantOperatingCity
@@ -150,9 +148,7 @@ Person:
     deviceToken: character varying (255)
     description: character varying (255)
     language: character varying (255)
-    unEncryptedMobileNumber: character varying (255)
     whatsappNotificationEnrollStatus: character varying (255)
-    unEncryptedAlternateMobileNumber: character varying (255)
     alternateMobileNumberEncrypted: character varying (255)
     alternateMobileNumberHash: bytea
     hometown: character varying (255)

@@ -389,7 +389,6 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         identifierType,
         email = encEmail,
         passwordHash = Nothing,
-        unencryptedMobileNumber = req.mobileNumber,
         mobileNumber = encMobNum,
         mobileCountryCode = req.mobileCountryCode,
         identifier = Nothing,
