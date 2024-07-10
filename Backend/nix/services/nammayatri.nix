@@ -290,6 +290,8 @@ in
           socketDir = "$HOME/NY/socket/${name}";
         };
         # FIXME: https://github.com/juspay/passetto/issues/2
+        # Devs should install Rosetta for passetto-service to build,
+        # https://github.com/juspay/nix-health/issues/26
         package = lib.getBin
           (if pkgs.stdenv.isDarwin
           then inputs.passetto.packages.x86_64-darwin.passetto-service
