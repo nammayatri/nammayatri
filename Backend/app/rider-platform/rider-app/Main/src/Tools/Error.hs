@@ -22,6 +22,22 @@ import Kernel.Types.Error.BaseError.HTTPError.FromResponse
 import Network.HTTP.Types (Status (statusCode))
 import Servant.Client (ResponseF (responseStatusCode))
 
+data CustomerError = PersonMobileAlreadyExists Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomerError
+
+instance IsBaseError CustomerError where
+  toMessage (PersonMobileAlreadyExists phoneNo) = Just $ "Mobile number " <> phoneNo <> " already exists with another user."
+
+instance IsHTTPError CustomerError where
+  toErrorCode = \case
+    PersonMobileAlreadyExists _ -> "PERSON_MOBILE_ALREADY_EXISTS"
+  toHttpCode = \case
+    PersonMobileAlreadyExists _ -> E400
+
+instance IsAPIError CustomerError
+
 data RatingError
   = InvalidRatingValue
   deriving (Eq, Show, IsBecknAPIError)
