@@ -431,7 +431,7 @@ view push state =
     isEditDestination = spy "isEditDestination -> " $ any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
     extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else 0
   in
-  emptyScreenAnimation $ 
+  (if os == "IOS" then emptyScreenAnimation else PrestoAnim.animationSet[])  $ 
   frameLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
