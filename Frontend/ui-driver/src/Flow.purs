@@ -2234,8 +2234,9 @@ homeScreenFlow = do
   action <- UI.homeScreen
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
   case action of
-    GO_TO_PROFILE_SCREEN -> do
+    GO_TO_PROFILE_SCREEN updatedState -> do
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
+      modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data { cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType}}
       driverProfileFlow
     GO_TO_VEHICLE_DETAILS_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}

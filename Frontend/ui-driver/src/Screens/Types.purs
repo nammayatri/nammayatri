@@ -441,7 +441,8 @@ type DriverProfileScreenData = {
   payerVpa :: String,
   autoPayStatus :: AutoPayStatus,
   config :: AppConfig,
-  goHomeActive :: Boolean
+  goHomeActive :: Boolean,
+  cachedVehicleCategory :: VehicleCategory
 }
 
 type RcData = {

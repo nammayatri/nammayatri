@@ -652,7 +652,7 @@ tabView state push =
 tabImageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tabImageView state push =
   let
-    vc = getVehicleCategory state.data.vehicleDetails
+    vc = getVehicleCategory state
     driverImage = case (fromMaybe "UNKNOWN" state.data.driverGender) of
       "MALE" | vc == ST.AutoCategory -> "ny_ic_new_avatar_profile"
       "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
@@ -709,21 +709,22 @@ tabImageView state push =
               , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
               ]
               [ imageView
-                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ getVehicleCategory state.data.vehicleDetails
+                  [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage $ getVehicleCategory state
                   , height $ V 68
                   , width $ V 68
                   ]
               ]
       ]
   where
-  getVehicleCategory :: Array ST.DriverVehicleDetails -> ST.VehicleCategory
-  getVehicleCategory vehicles =
+  getVehicleCategory :: ST.DriverProfileScreenState -> ST.VehicleCategory
+  getVehicleCategory state =
     let
+      vehicles = state.data.vehicleDetails
       mbVehicle = find (\item -> item.isActive == item.isVerified) vehicles
     in
       case mbVehicle of
-        Just vehicle -> fromMaybe ST.AutoCategory vehicle.verifiedVehicleCategory
-        Nothing -> ST.AutoCategory
+        Just vehicle -> fromMaybe state.data.cachedVehicleCategory vehicle.verifiedVehicleCategory
+        Nothing -> state.data.cachedVehicleCategory
 
   getVehicleImage :: ST.VehicleCategory -> String
   getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
