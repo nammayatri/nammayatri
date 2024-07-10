@@ -243,6 +243,7 @@ library
       SharedLogic.CallBPPInternal
       SharedLogic.CallFRFSBPP
       SharedLogic.Confirm
+      SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler
       SharedLogic.LocationMapping
