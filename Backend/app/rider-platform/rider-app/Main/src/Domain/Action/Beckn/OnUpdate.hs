@@ -356,7 +356,6 @@ onUpdate = \case
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, otherSelectedEstimates = Nothing, validTill = searchReq.validTill, providerId = Just estimate.providerId}
-    QPFS.clearCache searchReq.riderId
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking estimate.id.getId
   OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..} -> do
@@ -377,7 +376,7 @@ onUpdate = \case
     void $ QRB.createBooking newBooking
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    QPFS.clearCache searchReq.riderId
+    QPFS.clearCache searchReq.riderId -- do we need to clear cache here?
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code

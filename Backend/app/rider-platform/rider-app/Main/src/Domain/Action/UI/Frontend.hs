@@ -89,5 +89,4 @@ notifyEvent personId req = do
       activeBooking <- B.runInReplica $ QB.findLatestByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
       QPFS.updateStatus personId DPFS.IDLE
-  QPFS.clearCache personId
   pure APISuccess.Success

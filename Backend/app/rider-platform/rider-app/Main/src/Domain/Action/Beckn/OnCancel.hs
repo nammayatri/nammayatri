@@ -88,7 +88,6 @@ onCancel ValidatedBookingCancelledReq {..} = do
     unless (ride.status == SRide.CANCELLED) $ void $ QRide.updateStatus ride.id SRide.CANCELLED
   unless (cancellationSource_ == Just Enums.CONSUMER) $
     QBCR.upsert bookingCancellationReason
-  QPFS.clearCache booking.riderId
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking (castCancellatonSource cancellationSource_) bppDetails mbRide

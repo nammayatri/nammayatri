@@ -182,7 +182,6 @@ select2 personId estimateId req@DSelectReq {..} = do
 
   when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
     void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
-  QPFS.clearCache searchRequest.riderId
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   pure
