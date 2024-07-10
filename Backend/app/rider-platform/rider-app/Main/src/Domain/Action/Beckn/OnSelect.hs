@@ -39,7 +39,6 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.BppDetails as CQBPP
-import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
@@ -106,7 +105,6 @@ onSelect OnSelectValidatedReq {..} = do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
   _ <- QQuote.createMany quotes
   void $ QEstimate.updateStatus DEstimate.GOT_DRIVER_QUOTE estimate.id
-  QPFS.clearCache searchRequest.riderId
   if searchRequest.autoAssignEnabledV2 == Just True
     then do
       let lowestFareQuote = selectLowestFareQuote quotes

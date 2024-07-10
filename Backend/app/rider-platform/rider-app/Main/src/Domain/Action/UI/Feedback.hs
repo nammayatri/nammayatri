@@ -94,7 +94,6 @@ feedback request personId = do
   issueId' <- getIssueIdForRide booking
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRide.updateRideRating rideId ratingValue
-  QPFS.clearCache booking.riderId
   ratingu <- QRating.findRatingForRide rideId
   _ <- case ratingu of
     Nothing -> do

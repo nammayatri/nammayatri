@@ -254,7 +254,7 @@ cancelSearch personId dcr = do
         _ <- QPFS.updateStatus personId DPFS.IDLE
         void $ QEstimate.updateStatus DEstimate.CANCELLED dcr.estimateId
         QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
-  QPFS.clearCache personId
+  return ()
 
 driverDistanceToPickup ::
   ( EncFlow m r,
