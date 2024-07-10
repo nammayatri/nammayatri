@@ -157,6 +157,10 @@ SearchRequest:
       kvFunction: updateWithKV
       params: [isAdvanceBookingEnabled]
       where: id
+    updateIsReallocationEnabled:
+      kvFunction: updateWithKV
+      params: [isReallocationEnabled]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
