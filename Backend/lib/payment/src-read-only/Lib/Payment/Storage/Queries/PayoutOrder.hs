@@ -56,6 +56,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.mobileNoEncrypted (mobileNo & unEncrypted . encrypted),
       Se.Set Beam.mobileNoHash (mobileNo & hash),
+      Se.Set Beam.shortId (Kernel.Types.Id.getShortId <$> shortId),
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vpa vpa

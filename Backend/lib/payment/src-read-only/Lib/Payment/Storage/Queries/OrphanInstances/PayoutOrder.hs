@@ -32,6 +32,7 @@ instance FromTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.Payout
             merchantId = merchantId,
             mobileNo = EncryptedHashed (Encrypted mobileNoEncrypted) mobileNoHash,
             orderId = orderId,
+            shortId = Kernel.Types.Id.ShortId <$> shortId,
             status = status,
             updatedAt = updatedAt,
             vpa = vpa
@@ -56,6 +57,7 @@ instance ToTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.PayoutOr
         Beam.mobileNoEncrypted = mobileNo & unEncrypted . encrypted,
         Beam.mobileNoHash = mobileNo & hash,
         Beam.orderId = orderId,
+        Beam.shortId = Kernel.Types.Id.getShortId <$> shortId,
         Beam.status = status,
         Beam.updatedAt = updatedAt,
         Beam.vpa = vpa

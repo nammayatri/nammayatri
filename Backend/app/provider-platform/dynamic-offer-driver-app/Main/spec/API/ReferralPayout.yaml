@@ -7,6 +7,7 @@ imports:
   PayoutStatus: Domain.Types.DailyStats
   ClearDuesRes: Domain.Action.UI.Driver
   PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
+  TransactionStatus: Kernel.External.Payment.Juspay.Types.Common
 
 module: ReferralPayout
 
@@ -17,7 +18,7 @@ types:
     dailyEarnings : [DailyEarning]
     vpaId: Maybe Text
     orderId: Maybe Text
-    orderStatus: Maybe OrderStatus
+    orderStatus: Maybe TransactionStatus
     referralRewardAmountPerRide: HighPrecMoney
     payoutRegistrationAmount: HighPrecMoney
 
@@ -28,9 +29,6 @@ types:
     referrals: Int
     status: PayoutStatus
     payoutOrderId: Maybe Text
-
-  OrderStatus:
-    enum: "SuccessFul,Failed,Pending"
 
 
 apis:

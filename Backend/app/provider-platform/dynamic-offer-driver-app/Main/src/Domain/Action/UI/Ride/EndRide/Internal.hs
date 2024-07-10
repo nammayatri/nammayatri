@@ -272,7 +272,7 @@ sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transpor
       availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
       let isValidForMinPickupThreshold = maybe True (>= transporterConfig.minPickupDistanceThresholdForReferralPayout) booking.distanceToPickup
           isValidForMinRideDistance = ride.traveledDistance >= transporterConfig.minRideDistanceThresholdForReferralPayout
-          isMaxReferralExceeded = maybe False ((< transporterConfig.maxPayoutReferralForADay) . (.referralCounts)) mbDailyStats
+          isMaxReferralExceeded = maybe False ((< transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
           isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
       let mbFlagReason =
             case (listToMaybe availablePersonWithNumber, isValidForMinRideDistance, isValidForMinPickupThreshold, isMaxReferralExceeded) of

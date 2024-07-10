@@ -164,7 +164,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
         DPayment.PaymentStatus {..} -> do
           when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && status == Payment.CHARGED) do
             whenJust payerVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
-            fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa
+            fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
           unless (status /= Payment.CHARGED) $ do
             processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
           QIN.updateBankErrorsByInvoiceId bankErrorMessage bankErrorCode (Just now) (cast order.id)
@@ -211,7 +211,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
       when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && transactionStatus == Payment.CHARGED) do
         whenJust payerVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
-        fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa
+        fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchanOperatingCityId
       when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
         unless (transactionStatus /= Payment.CHARGED) $ do
           processPayment merchantId driver order.id True (serviceName, serviceConfig) invoices
