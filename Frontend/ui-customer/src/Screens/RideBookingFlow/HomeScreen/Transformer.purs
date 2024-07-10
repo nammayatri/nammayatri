@@ -151,6 +151,7 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
         }
     (RENTAL contents) -> QLI.config
     (INTER_CITY contents) -> QLI.config
+    (AMBULANCE contents) -> QLI.config
     
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
@@ -900,4 +901,5 @@ getFareProductType fareProductType =
     "RENTAL" -> FPT.RENTAL 
     "ONE_WAY" -> FPT.ONE_WAY
     "DRIVER_OFFER" -> FPT.DRIVER_OFFER
+    "AMBULANCE" -> FPT.AMBULANCE
     _ -> FPT.ONE_WAY

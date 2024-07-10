@@ -482,7 +482,7 @@ newtype SearchReq = SearchReq {
   fareProductType :: String
 }
 
-data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq
+data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq | AmbulanceSearchRequest OneWaySearchReq
 
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
@@ -539,6 +539,7 @@ derive instance genericContentType :: Generic ContentType _
 instance standardEncodeContentType :: StandardEncode ContentType where
   standardEncode (OneWaySearchRequest body) = standardEncode body
   standardEncode (RentalSearchRequest body) = standardEncode body
+  standardEncode (AmbulanceSearchRequest body) = standardEncode body
 instance showContentType :: Show ContentType where show = genericShow
 instance decodeContentType :: Decode ContentType
   where
@@ -546,6 +547,7 @@ instance decodeContentType :: Decode ContentType
 instance encodeContentType  :: Encode ContentType where
   encode (OneWaySearchRequest body) = encode body
   encode (RentalSearchRequest body) = encode body
+  encode (AmbulanceSearchRequest body) = encode body
 
 derive instance genericRentalSearchReq :: Generic RentalSearchReq _
 derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
@@ -689,6 +691,7 @@ data QuoteAPIContents
   | DRIVER_OFFER DriverOfferAPIEntity
   | SPECIAL_ZONE SpecialZoneQuoteAPIDetails
   | INTER_CITY IntercityQuoteAPIDetails
+  | AMBULANCE AmbulanceDetailsAPIEntity
 
 newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
   distanceToNearestDriver :: String
@@ -717,6 +720,18 @@ newtype DeadKmFare = DeadKmFare {
 
 newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
   quoteId :: String
+}
+
+newtype AmbulanceDetailsAPIEntity = AmbulanceDetailsAPIEntity {
+  minEstimatedFare :: Int,
+  maxEstimatedFare :: Int,
+  ambulanceQuoteBreakupList :: Array AmbulanceQuoteBreakupAPIEntity,
+  tollCharges :: Maybe Number
+}
+
+newtype AmbulanceQuoteBreakupAPIEntity = AmbulanceQuoteBreakupAPIEntity {
+  title :: String,
+  price :: Int
 }
 
 newtype DriverOfferAPIEntity = DriverOfferAPIEntity
@@ -845,6 +860,20 @@ instance showIntercityQuoteAPIDetails :: Show IntercityQuoteAPIDetails where sho
 instance decodeIntercityQuoteAPIDetails :: Decode IntercityQuoteAPIDetails where decode = defaultDecode
 instance encodeIntercityQuoteAPIDetails  :: Encode IntercityQuoteAPIDetails where encode = defaultEncode
 
+derive instance genericAmbulanceDetailsAPIEntity :: Generic AmbulanceDetailsAPIEntity _
+derive instance newtypeAmbulanceDetailsAPIEntity :: Newtype AmbulanceDetailsAPIEntity _
+instance standardEncodeAmbulanceDetailsAPIEntity :: StandardEncode AmbulanceDetailsAPIEntity where standardEncode (AmbulanceDetailsAPIEntity body) = standardEncode body
+instance showAmbulanceDetailsAPIEntity :: Show AmbulanceDetailsAPIEntity where show = genericShow
+instance decodeAmbulanceDetailsAPIEntity :: Decode AmbulanceDetailsAPIEntity where decode = defaultDecode
+instance encodeAmbulanceDetailsAPIEntity  :: Encode AmbulanceDetailsAPIEntity where encode = defaultEncode
+
+derive instance genericAmbulanceQuoteBreakupAPIEntity :: Generic AmbulanceQuoteBreakupAPIEntity _
+derive instance newtypeAmbulanceQuoteBreakupAPIEntity :: Newtype AmbulanceQuoteBreakupAPIEntity _
+instance standardEncodeAmbulanceQuoteBreakupAPIEntity :: StandardEncode AmbulanceQuoteBreakupAPIEntity where standardEncode (AmbulanceQuoteBreakupAPIEntity body) = standardEncode body
+instance showAmbulanceQuoteBreakupAPIEntity :: Show AmbulanceQuoteBreakupAPIEntity where show = genericShow
+instance decodeAmbulanceQuoteBreakupAPIEntity :: Decode AmbulanceQuoteBreakupAPIEntity where decode = defaultDecode
+instance encodeAmbulanceQuoteBreakupAPIEntity  :: Encode AmbulanceQuoteBreakupAPIEntity where encode = defaultEncode
+
 
 derive instance genericOfferRes :: Generic OfferRes _
 instance standardEncodeOfferRes :: StandardEncode OfferRes where
@@ -869,16 +898,18 @@ instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where
   standardEncode (SPECIAL_ZONE body) = standardEncode body
   standardEncode (RENTAL body) = standardEncode body
   standardEncode (INTER_CITY body) = standardEncode body
+  standardEncode (AMBULANCE body) = standardEncode body
 instance showQuoteAPIContents :: Show QuoteAPIContents where show = genericShow
 instance decodeQuoteAPIContents :: Decode QuoteAPIContents
   where
-    decode body = (ONE_WAY <$> decode body) <|> (DRIVER_OFFER <$> decode body) <|> (SPECIAL_ZONE <$> decode body) <|> (RENTAL <$> decode body)<|> (fail $ ForeignError "Unknown response")
+    decode body = (ONE_WAY <$> decode body) <|> (DRIVER_OFFER <$> decode body) <|> (SPECIAL_ZONE <$> decode body) <|> (RENTAL <$> decode body)<|> (AMBULANCE <$> decode body) <|> (fail $ ForeignError "Unknown response")
 instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where
   encode (ONE_WAY body) = encode body
   encode (DRIVER_OFFER body) = encode body
   encode (SPECIAL_ZONE body) = encode body
   encode (RENTAL body) = encode body
   encode (INTER_CITY body) = encode body
+  encode (AMBULANCE body) = encode body
 
 
 derive instance genericQuoteAPIEntity :: Generic QuoteAPIEntity _

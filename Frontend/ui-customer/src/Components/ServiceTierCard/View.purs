@@ -148,3 +148,4 @@ parseFpt fpt =
     ONE_WAY -> "Normal"
     ONE_WAY_SPECIAL_ZONE -> "Special Zone"
     DRIVER_OFFER -> "Normal"
+    AMBULANCE -> "Ambulance"

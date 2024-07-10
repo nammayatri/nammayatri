@@ -301,7 +301,7 @@ window.getMerchantConfig = function () {
     , "enableMockLocation" : false
     , "flowConfig" : {
         "chooseCity" : {
-          "runFlow" : true,
+          "runFlow" : false,
           "defCity" : "Kolkata"
         }
       }

@@ -93,6 +93,8 @@ import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Debug(spy)
+import Data.Array (catMaybes)
 
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -2006,47 +2008,61 @@ getChatSuggestions state = do
 locationTagBarConfig :: ST.HomeScreenState -> LocationTagBar.LocationTagBarConfig
 locationTagBarConfig state =
   let
-    locTagList =
-      map
-        ( \item ->
-            { imageConfig:
-                { height: V 32
-                , width: V 32
-                , imageWithFallback: fetchImage FF_ASSET item.image
-                , margin: MarginRight 8
-                }
-            , textConfig:
-                { text: item.text
-                , fontStyle: FontStyle.SubHeading1
-                , fontSize: FontSize.a_14
-                , color: Color.black800
-                }
-            , stroke: "0," <> Color.grey700
-            , cornerRadius: Corners 19.0 true true true true
-            , background: item.background
-            , height: WRAP_CONTENT
-            , width: WRAP_CONTENT
-            , padding: PaddingVertical 16 16
-            , orientation: HORIZONTAL
-            , enableRipple: true
-            , rippleColor: Color.rippleShade
-            , bannerConfig:
-                { text: getString COMING_SOON
-                , color: Color.white900
-                , fontStyle: FontStyle.Body12
-                , textSize: FontSize.a_12
-                , cornerRadii: Corners 6.0 false false true true
-                , background: Color.blue800
-                }
-            , showBanner: item.showBanner
-            , id: item.id
-            }
-        )
-        ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
-          , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
-          ]
-            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
-        )
+    cityName = state.data.currentCityConfig.cityName
+    enableIntercity = state.data.currentCityConfig.enableIntercity
+
+    instantTag = 
+      if cityName /= "Kolkata" 
+      then Just { image: "ny_ic_instant", text: getString INSTANT, id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
+      else Nothing
+
+    rentalTag = Just { image: "ny_ic_rental", text: getString RENTALS_, id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
+
+    interCityTag = 
+      if enableIntercity 
+      then Just { image: "ny_ic_intercity", text: getString INTER_CITY_, id: "INTER_CITY", background: Color.blue600', showBanner: GONE }
+      else Nothing
+
+    ambulanceTag = 
+      if cityName == "Kolkata" 
+      then Just { image: "ny_ic_ambulance", text: "Ambulance", id: "AMBULANCE", background: Color.lightMintGreen, showBanner: GONE }
+      else Nothing
+
+    tags = catMaybes [instantTag, rentalTag, interCityTag, ambulanceTag]
+
+    locTagList = map (\item ->
+      { imageConfig:
+          { height: V 32
+          , width: V 32
+          , imageWithFallback: fetchImage FF_ASSET item.image
+          , margin: MarginRight 8
+          }
+      , textConfig:
+          { text: item.text
+          , fontStyle: FontStyle.SubHeading1
+          , fontSize: FontSize.a_14
+          , color: Color.black800
+          }
+      , stroke: "0," <> Color.grey700
+      , cornerRadius: Corners 19.0 true true true true
+      , background: item.background
+      , height: WRAP_CONTENT
+      , width: WRAP_CONTENT
+      , padding: PaddingVertical 16 16
+      , orientation: HORIZONTAL
+      , enableRipple: true
+      , rippleColor: Color.rippleShade
+      , bannerConfig:
+          { text: getString COMING_SOON
+          , color: Color.white900
+          , fontStyle: FontStyle.Body12
+          , textSize: FontSize.a_12
+          , cornerRadii: Corners 6.0 false false true true
+          , background: Color.blue800
+          }
+      , showBanner: item.showBanner
+      , id: item.id
+      }) tags
   in
     { tagList: locTagList }
 
