@@ -589,7 +589,7 @@ calculateFareParameters params = do
            in HighPrecMoney $ distance.value.getHighPrecDistance * chargePerUnit.getHighPrecMoney
     countCardChargeOnFare :: HighPrecMoney -> Double -> HighPrecMoney
     countCardChargeOnFare fullCompleteRideCost cardCharge =
-      HighPrecMoney ((max 1 fullCompleteRideCost.getHighPrecMoney) * toRational cardCharge) - fullCompleteRideCost
+      HighPrecMoney (fullCompleteRideCost.getHighPrecMoney * toRational (max 1 cardCharge)) - fullCompleteRideCost
 
 countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (HighPrecMoney, HighPrecMoney, HighPrecMoney)
 countFullFareOfParamsDetails = \case
