@@ -331,7 +331,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       chats_ = fromMaybe [] chats
       updatedChats = updateChats chats_ shouldCreateTicket messages uploadedMediaFiles now
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
-  processExternalIssueReporting mbOption mbRide config issueHandle
+  processIssueReportTypeActions personId mbOption mbRide (Just config) True identifier issueHandle
   issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
@@ -439,43 +439,6 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
                    then map (\message -> mkIssueChat IssueMessage message.id.getId now) messages
                    else []
                )
-
-    processExternalIssueReporting :: BeamFlow m r => Maybe D.IssueOption -> Maybe Ride -> MerchantConfig -> ServiceHandle m -> m ()
-    processExternalIssueReporting mbIssueOption mbRide config iHandle =
-      whenJust iHandle.mbReportIssue $ \reportIssue -> do
-        let mbIssueReportType = mbIssueOption >>= (.label) >>= A.decode . A.encode
-        case (mbIssueReportType, mbRide) of
-          (Just issueReportType, Just ride) -> do
-            whenJust ride.counterPartyRideId $ \counterPRideId -> do
-              checkForExistingIssues issueReportType ride.id
-              reportIssueAPIRes <- try @_ @SomeException $ reportIssue config.counterPartyUrl config.counterPartyApiKey counterPRideId issueReportType
-              case reportIssueAPIRes of
-                Right _ -> pure ()
-                Left err -> case issueReportType of
-                  AC_RELATED_ISSUE -> handleACIssueActions mbRide config iHandle
-                  _ -> logTagInfo "Report Issue API failed for " $ show err
-          _ -> pure ()
-
-    checkForExistingIssues :: BeamFlow m r => IssueReportType -> Id Ride -> m ()
-    checkForExistingIssues issueRType rdId = do
-      issueList <- QIR.findAllByPersonAndRideId personId rdId
-      mapM_
-        ( \issueRep -> do
-            mbIssueOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueRep.optionId
-            whenJust mbIssueOption $ \iOption -> do
-              let parsedLabel = A.decode . A.encode =<< iOption.label
-              when (parsedLabel == Just issueRType) $ throwError (IssueReportAlreadyExists rdId.getId)
-        )
-        issueList
-
-    handleACIssueActions :: BeamFlow m r => Maybe Ride -> MerchantConfig -> ServiceHandle m -> m ()
-    handleACIssueActions mbRide config iHandle =
-      whenJust iHandle.mbReportACIssue $ \reportACIssue ->
-        whenJust (mbRide >>= (.counterPartyRideId)) $ \counterPRideId -> do
-          acIssueApiRes <- try @_ @SomeException $ reportACIssue config.counterPartyUrl config.counterPartyApiKey counterPRideId
-          case acIssueApiRes of
-            Right _ -> pure ()
-            Left err -> logTagInfo "Report AC Issue API failed - " $ show err
 
     castIdentifierToClassification :: Identifier -> TIT.Classification
     castIdentifierToClassification = \case
@@ -616,6 +579,61 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
 
+processIssueReportTypeActions ::
+  BeamFlow m r =>
+  Id Person ->
+  Maybe D.IssueOption ->
+  Maybe Ride ->
+  Maybe MerchantConfig ->
+  Bool ->
+  Identifier ->
+  ServiceHandle m ->
+  m ()
+processIssueReportTypeActions personId mbIssueOption mbRide mbMerchantConfig isIssueReportCreated identifier issueHandle = do
+  let mbIssueReportType = mbIssueOption >>= (.label) >>= A.decode . A.encode
+  case mbIssueReportType of
+    Just AC_RELATED_ISSUE -> processExternalIssueReporting AC_RELATED_ISSUE issueHandle
+    Just DRIVER_TOLL_RELATED_ISSUE -> processExternalIssueReporting DRIVER_TOLL_RELATED_ISSUE issueHandle
+    Nothing -> return ()
+  where
+    processExternalIssueReporting :: BeamFlow m r => IssueReportType -> ServiceHandle m -> m ()
+    processExternalIssueReporting issueReportType iHandle =
+      whenJust iHandle.mbReportIssue $ \reportIssue -> do
+        let mbCounterPartyUrl = (.counterPartyUrl) <$> mbMerchantConfig
+            mbCounterPartyApiKey = (.counterPartyApiKey) <$> mbMerchantConfig
+        case (mbRide, mbCounterPartyUrl, mbCounterPartyApiKey, isIssueReportCreated) of
+          (Just ride, Just counterPartyUrl, Just counterPartyApiKey, True) -> do
+            whenJust ride.counterPartyRideId $ \counterPRideId -> do
+              checkForExistingIssues issueReportType ride.id
+              reportIssueAPIRes <- try @_ @SomeException $ reportIssue counterPartyUrl counterPartyApiKey counterPRideId issueReportType
+              case reportIssueAPIRes of
+                Right _ -> pure ()
+                Left err -> case issueReportType of
+                  AC_RELATED_ISSUE -> handleACIssueActions counterPartyUrl counterPartyApiKey iHandle
+                  _ -> logTagInfo "Report Issue API failed for " $ show err
+          _ -> pure ()
+
+    checkForExistingIssues :: BeamFlow m r => IssueReportType -> Id Ride -> m ()
+    checkForExistingIssues issueReportType rideId = do
+      issueList <- QIR.findAllByPersonAndRideId personId rideId
+      mapM_
+        ( \issueRep -> do
+            mbIssueRepOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueRep.optionId
+            whenJust mbIssueRepOption $ \iOption -> do
+              let parsedLabel = A.decode . A.encode =<< iOption.label
+              when (parsedLabel == Just issueReportType) $ throwError (IssueReportAlreadyExists rideId.getId)
+        )
+        issueList
+
+    handleACIssueActions :: BeamFlow m r => BaseUrl -> Text -> ServiceHandle m -> m ()
+    handleACIssueActions counterPartyUrl counterPartyApiKey iHandle =
+      whenJust iHandle.mbReportACIssue $ \reportACIssue ->
+        whenJust (mbRide >>= (.counterPartyRideId)) $ \counterPRideId -> do
+          acIssueApiRes <- try @_ @SomeException $ reportACIssue counterPartyUrl counterPartyApiKey counterPRideId
+          case acIssueApiRes of
+            Right _ -> pure ()
+            Left err -> logTagInfo "Report AC Issue API failed - " $ show err
+
 mkIssueMessageList ::
   Maybe [(D.IssueMessage, D.DetailedTranslation, [Text])] ->
   D.IssueConfig ->
@@ -631,9 +649,9 @@ mkIssueMessageList mbList issueConfig mbRideInfoRes = case mbList of
               messageAction = (detailedTranslation.actionTranslation <&> (.translation)) <|> issueMessage.messageAction
           Common.Message
             { id = issueMessage.id,
-              message = messageTransformer message,
-              messageTitle = messageTransformer <$> messageTitle,
-              messageAction = messageTransformer <$> messageAction,
+              message = messageTransformer mediaFileUrls message,
+              messageTitle = messageTransformer mediaFileUrls <$> messageTitle,
+              messageAction = messageTransformer mediaFileUrls <$> messageAction,
               label = fromMaybe "" issueMessage.label,
               mediaFileUrls,
               referenceCategoryId = issueMessage.referenceCategoryId,
@@ -642,11 +660,11 @@ mkIssueMessageList mbList issueConfig mbRideInfoRes = case mbList of
       )
       list
   where
-    messageTransformer :: Text -> Text
-    messageTransformer = transformText $ getConfigValue issueConfig mbRideInfoRes
+    messageTransformer :: [Text] -> Text -> Text
+    messageTransformer = transformText (getConfigValue issueConfig mbRideInfoRes)
 
-transformText :: (Text -> Text) -> Text -> Text
-transformText getCfgValue text = replaceNewLineChar $ foldl' replacePatterns text patterns
+transformText :: (Text -> Text) -> [Text] -> Text -> Text
+transformText getCfgValue mediaFileUrls text = T.strip $ replaceNewLineChar $ foldl' replacePatterns (appendMediaFileUrls mediaFileUrls text) patterns
   where
     patterns :: [Text]
     patterns = do
@@ -664,6 +682,16 @@ transformText getCfgValue text = replaceNewLineChar $ foldl' replacePatterns tex
 
     replaceNewLineChar :: Text -> Text
     replaceNewLineChar = T.replace "\\n" "<br>"
+
+    appendMediaFileUrls :: [Text] -> Text -> Text
+    appendMediaFileUrls urls text_ = foldl' replaceFirst text_ urls
+
+    replaceFirst :: Text -> Text -> Text
+    replaceFirst txt url =
+      let (before, after) = T.breakOn "{#IMAGE#}" txt
+       in if T.null after
+            then txt
+            else before <> (" {SUBPART}{IMAGE}{!!!} " <> url <> " ") <> T.drop (T.length "{#IMAGE#}") after
 
 getConfigValue :: D.IssueConfig -> Maybe RideInfoRes -> Text -> Text
 getConfigValue issueConfig mbRideInfoRes key = do
@@ -695,6 +723,8 @@ getConfigValue issueConfig mbRideInfoRes key = do
         "TOLL_CHARGES" -> show tollCharges
         "TIP_ADDED" -> show tipAdded
         "DRIVER_ADDITIONS" -> show driverAdditions
+        "HEADING" -> "{SUBPART}{HEADING}{!!!}"
+        "BODY" -> "{SUBPART}{BODY}{!!!}"
         _ -> ""
   where
     getFareFromArray :: Text -> [FareBreakup] -> Maybe FareBreakup
@@ -710,7 +740,7 @@ mkIssueOptionList issueConfig mbRideInfoRes (issueOption, issueTranslation) =
     }
   where
     transformOption :: Text -> Text
-    transformOption = transformText $ getConfigValue issueConfig mbRideInfoRes
+    transformOption = transformText (getConfigValue issueConfig mbRideInfoRes) []
 
 recreateIssueChats :: BeamFlow m r => D.IssueReport -> D.IssueConfig -> Maybe RideInfoRes -> Language -> Identifier -> m [ChatDetail]
 recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =

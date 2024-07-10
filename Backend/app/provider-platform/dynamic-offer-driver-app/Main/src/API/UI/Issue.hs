@@ -18,16 +18,12 @@ import Kernel.Beam.Functions
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
-import SharedLogic.CallBAPInternal as CallBAPInternal
-import SharedLogic.External.LocationTrackingService.Types
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -72,7 +68,7 @@ driverIssueHandle =
       mbReportIssue = Nothing
     }
 
-castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
+castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
 castPersonById driverId = do
   person <- runInReplica $ QP.findById (cast driverId)
   return $ fmap castDriver person
@@ -89,7 +85,7 @@ castPersonById driverId = do
           blocked = Nothing
         }
 
-castRideById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Ride -> Id Common.Merchant -> m (Maybe Common.Ride)
+castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
 castRideById rideId _ = do
   ride <- runInReplica $ QR.findById (cast rideId)
   return $ fmap castRide ride
@@ -97,12 +93,12 @@ castRideById rideId _ = do
     castRide ride =
       Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing
 
-castMOCityById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.MerchantOperatingCity -> m (Maybe Common.MerchantOperatingCity)
+castMOCityById :: Id Common.MerchantOperatingCity -> Flow (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
   moCity <- CQMOC.findById (cast moCityId)
   return $ fmap castMOCity moCity
 
-castMOCityByMerchantShortIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => ShortId Common.Merchant -> Context.City -> m (Maybe Common.MerchantOperatingCity)
+castMOCityByMerchantShortIdAndCity :: ShortId Common.Merchant -> Context.City -> Flow (Maybe Common.MerchantOperatingCity)
 castMOCityByMerchantShortIdAndCity (ShortId merchantShortId) opCity = do
   merchantOpCity <- CQMOC.findByMerchantShortIdAndCity (ShortId merchantShortId) opCity
   return $ fmap castMOCity merchantOpCity
@@ -116,15 +112,10 @@ castMOCity moCity =
     }
 
 castRideInfo ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]
-  ) =>
   Id Common.Merchant ->
   Id Common.MerchantOperatingCity ->
   Id Common.Ride ->
-  m Common.RideInfoRes
+  Flow Common.RideInfoRes
 castRideInfo merchantId merchantOpCityId rideId = do
   rideInfoRes <-
     Redis.safeGet makeRideInfoCacheKey >>= \case
@@ -203,13 +194,13 @@ castRideInfo merchantId merchantOpCityId rideId = do
       let shouldCacheRideInfo = elem (rideInfoRes.bookingStatus) [PPMR.COMPLETED, PPMR.CANCELLED]
       bool (return ()) (Redis.setExp makeRideInfoCacheKey rideInfoRes 259200) shouldCacheRideInfo
 
-castCreateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
+castCreateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> Flow TIT.CreateTicketResp
 castCreateTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId) (cast merchantOpCityId)
 
-castUpdateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
+castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> Flow TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
-buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r, HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal]) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> m Common.MerchantConfig
+buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow Common.MerchantConfig
 buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
   transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) mkCacKey >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   appBackendBapInternal <- asks (.appBackendBapInternal)

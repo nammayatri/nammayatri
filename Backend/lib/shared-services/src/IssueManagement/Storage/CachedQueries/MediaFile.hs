@@ -49,7 +49,7 @@ cacheMediaFileById mediaFileId identifier mediaFile = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMediaFileByIdKey mediaFileId identifier) mediaFile expTime
 
 makeMediaFileByIdKey :: Id MediaFile -> Identifier -> Text
-makeMediaFileByIdKey id identifier = show identifier <> "CachedQueries:MediaFile:Id-" <> show id
+makeMediaFileByIdKey id identifier = show identifier <> ":CachedQueries:MediaFile:Id-" <> id.getId
 
 --------- Caching logic for media files by issue report id -------------------
 
@@ -62,7 +62,7 @@ cacheMediaFileByIssueReportId issueReportId identifier mediaFiles = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMediaFileByIssueReportIdKey issueReportId identifier) mediaFiles expTime
 
 makeMediaFileByIssueReportIdKey :: Id IssueReport -> Identifier -> Text
-makeMediaFileByIssueReportIdKey issueReportId identifier = show identifier <> "CachedQueries:MediaFile:IssueReport:Id-" <> show issueReportId
+makeMediaFileByIssueReportIdKey issueReportId identifier = show identifier <> ":CachedQueries:MediaFile:IssueReport:Id-" <> issueReportId.getId
 
 invalidateMediaFileCache :: CacheFlow m r => [Id MediaFile] -> Maybe (Id IssueReport) -> Identifier -> m ()
 invalidateMediaFileCache mediaFileIds mbIssueReportId identifier = do

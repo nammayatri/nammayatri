@@ -32,9 +32,14 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id, ShortId)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant hiding (Summary)
+import qualified Text.Show
 
 data Identifier = CUSTOMER | DRIVER
-  deriving (Generic, Show, Read, Eq)
+  deriving (Generic, Read, Eq)
+
+instance Show Identifier where
+  show CUSTOMER = "Customer"
+  show DRIVER = "Driver"
 
 data Ride = Ride
   { id :: Id Ride,

@@ -320,7 +320,7 @@ reportIssue ::
   m APISuccess
 reportIssue apiKey internalUrl bppRideId issueReportType = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportIssueClient bppRideId issueReportType (Just apiKey)) "ReportACIssue" reportACIssueApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportIssueClient bppRideId issueReportType (Just apiKey)) "ReportIssue" reportIssueApi
 
 data DriverProfileRes = DriverProfileRes
   { certificates :: [Text],

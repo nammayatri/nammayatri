@@ -70,7 +70,7 @@ cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language identifier iss
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier) issueOptionTranslation expTime
 
 makeIssueOptionByCategoryAndLanguageKey :: Id IssueCategory -> Language -> Identifier -> Text
-makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier = show identifier <> "CachedQueries:IssueOption:IssueCategoryId-" <> getId issueCategoryId <> ":Language-" <> show language
+makeIssueOptionByCategoryAndLanguageKey issueCategoryId language identifier = show identifier <> ":CachedQueries:IssueOption:IssueCategoryId-" <> getId issueCategoryId <> ":Language-" <> show language
 
 --------- Caching logic for issue option by id -------------------
 
@@ -83,7 +83,7 @@ cacheIssueOptionById issueOptionId identifier issueOption = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdKey issueOptionId identifier) issueOption expTime
 
 makeIssueOptionByIdKey :: Id IssueOption -> Identifier -> Text
-makeIssueOptionByIdKey id identifier = show identifier <> "CachedQueries:IssueOption:Id-" <> show id
+makeIssueOptionByIdKey id identifier = show identifier <> ":CachedQueries:IssueOption:Id-" <> id.getId
 
 --------- Caching logic for issue option by id and language -------------------
 
@@ -101,7 +101,7 @@ cacheIssueOptionByIdAndLanguage issueOptionId language identifier issueOptionTra
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdAndLanguageKey issueOptionId language identifier) issueOptionTranslation expTime
 
 makeIssueOptionByIdAndLanguageKey :: Id IssueOption -> Language -> Identifier -> Text
-makeIssueOptionByIdAndLanguageKey id language identifier = show identifier <> "CachedQueries:IssueOption:Id-" <> show id <> ":Language-" <> show language
+makeIssueOptionByIdAndLanguageKey id language identifier = show identifier <> ":CachedQueries:IssueOption:Id-" <> id.getId <> ":Language-" <> show language
 
 --------- Caching logic for issue option by id and issueCategoryId -------------------
 
@@ -114,7 +114,7 @@ cacheIssueOptionByIdAndIssueCategoryId issueOptionId issueCategoryId identifier 
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdAndIssueCategoryIdKey issueOptionId issueCategoryId identifier) issueOptionTranslation expTime
 
 makeIssueOptionByIdAndIssueCategoryIdKey :: Id IssueOption -> Id IssueCategory -> Identifier -> Text
-makeIssueOptionByIdAndIssueCategoryIdKey id issueCategoryId identifier = show identifier <> "CachedQueries:IssueOption:Id-" <> show id <> ":IssueCategoryId-" <> show issueCategoryId
+makeIssueOptionByIdAndIssueCategoryIdKey id issueCategoryId identifier = show identifier <> ":CachedQueries:IssueOption:Id-" <> id.getId <> ":IssueCategoryId-" <> show issueCategoryId
 
 --------- Caching logic for issue option by issueMessageId & language -------------------
 
@@ -132,4 +132,4 @@ cacheAllIssueOptionByMessageAndLanguage issueMessageId language identifier issue
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier) issueOption expTime
 
 makeIssueOptionByMessageAndLanguageKey :: Id IssueMessage -> Language -> Identifier -> Text
-makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier = show identifier <> "CachedQueries:IssueOption:IssueMessageId-" <> getId issueMessageId <> ":Language-" <> show language
+makeIssueOptionByMessageAndLanguageKey issueMessageId language identifier = show identifier <> ":CachedQueries:IssueOption:IssueMessageId-" <> getId issueMessageId <> ":Language-" <> show language

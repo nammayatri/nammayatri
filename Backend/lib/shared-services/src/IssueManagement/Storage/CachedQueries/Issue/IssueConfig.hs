@@ -42,4 +42,4 @@ cacheAllIssueConfig merchantOpCityId identifier issueConfig = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier) issueConfig expTime
 
 makeIssueConfigKeyByMerchantOpCityId :: Id MerchantOperatingCity -> Identifier -> Text
-makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier = show identifier <> "CachedQueries:IssueConfig:MerchantOperatingCityId-" <> show merchantOpCityId
+makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier = show identifier <> ":CachedQueries:IssueConfig:MerchantOperatingCityId-" <> merchantOpCityId.getId
