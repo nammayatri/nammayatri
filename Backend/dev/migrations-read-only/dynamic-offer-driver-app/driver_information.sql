@@ -80,3 +80,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN toll_related_is
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN forward_batching_enabled boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_interoperable boolean  default false;
