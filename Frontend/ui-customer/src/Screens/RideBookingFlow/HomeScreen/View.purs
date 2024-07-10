@@ -388,7 +388,7 @@ screen initialState =
               TryAgain -> do
                 logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
-                when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
+                when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 40 1000.0 push initialState estimatesPolling.id
                 pure unit
               FindEstimateAndSearch -> do
                 push $ SearchForSelectedLocation
