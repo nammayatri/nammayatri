@@ -52,6 +52,7 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             message = message,
             messageKey = messageKey,
+            senderHeader = senderHeader,
             templateId = fromMaybe "" templateId,
             updatedAt = updatedAt
           }
@@ -66,6 +67,7 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.message = message,
         Beam.messageKey = messageKey,
+        Beam.senderHeader = senderHeader,
         Beam.templateId = Just templateId,
         Beam.updatedAt = updatedAt
       }
