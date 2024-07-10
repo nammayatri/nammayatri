@@ -20,7 +20,6 @@ import qualified Domain.Types.Vehicle as DV
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
-import qualified Kernel.External.Payment.Juspay.Types.Common as JuspayT
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (ServiceFlow)
@@ -75,8 +74,8 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
       { totalReferralCount = driverStats.totalReferralCounts,
         dailyEarnings = dailyEarnings,
         vpaId = dInfo.payoutVpa,
-        orderId = dInfo.payoutRegistrationOrderId,
-        orderStatus = fmap castPayoutRegistrationStatus ((.status) <$> mbRegistrationOrder),
+        orderId = (.shortId.getShortId) <$> mbRegistrationOrder,
+        orderStatus = (.status) <$> mbRegistrationOrder,
         referralRewardAmountPerRide = payoutConfig.referralRewardAmountPerRide,
         payoutRegistrationAmount = sum [payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst]
       }
@@ -90,13 +89,6 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
           status = earning.payoutStatus,
           payoutOrderId = earning.payoutOrderId
         }
-    castPayoutRegistrationStatus status = case status of
-      JuspayT.CHARGED -> API.Types.UI.ReferralPayout.SuccessFul
-      JuspayT.AUTHENTICATION_FAILED -> API.Types.UI.ReferralPayout.Failed
-      JuspayT.AUTHORIZATION_FAILED -> API.Types.UI.ReferralPayout.Failed
-      JuspayT.JUSPAY_DECLINED -> API.Types.UI.ReferralPayout.Failed
-      JuspayT.CLIENT_AUTH_TOKEN_EXPIRED -> API.Types.UI.ReferralPayout.Failed
-      _ -> API.Types.UI.ReferralPayout.Pending
 
 postPayoutDeleteVpa ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -144,7 +136,7 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId serviceName
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.cast personId) Nothing (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall
+  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall
   pure Kernel.Types.APISuccess.Success
 
 getPayoutOrderStatus ::

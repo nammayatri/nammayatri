@@ -15,6 +15,7 @@ PayoutOrder:
   derives: "Generic"
   fields:
     id : Id PayoutOrder
+    shortId : Maybe (ShortId PayoutOrder)
     customerId : Text
     orderId : Text
     merchantId : Text

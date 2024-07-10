@@ -32,6 +32,7 @@ data PayoutOrderT f = PayoutOrderT
     mobileNoEncrypted :: B.C f Kernel.Prelude.Text,
     mobileNoHash :: B.C f Kernel.External.Encryption.DbHash,
     orderId :: B.C f Kernel.Prelude.Text,
+    shortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
