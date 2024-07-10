@@ -45,7 +45,6 @@ Person:
     gender : Gender
     identifierType : IdentifierType
     email : Maybe (EncryptedHashedField e Text)
-    unencryptedMobileNumber : Maybe Text
     mobileNumber : Maybe (EncryptedHashedField e Text)
     mobileCountryCode : Maybe Text
     passwordHash : Maybe DbHash
@@ -193,7 +192,6 @@ Person:
     emailEncrypted: character varying(255)
     emailHash: bytea
     whatsappNotificationEnrollStatus: character varying(255)
-    unencryptedMobileNumber: character varying(255)
     referralCode: character varying(15)
     language: character varying(255)
     notificationToken: character varying(255)

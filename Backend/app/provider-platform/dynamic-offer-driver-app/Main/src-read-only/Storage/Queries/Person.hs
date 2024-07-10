@@ -126,8 +126,6 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.registrationLon registrationLon,
       Se.Set Beam.role role,
       Se.Set Beam.totalEarnedCoins totalEarnedCoins,
-      Se.Set Beam.unencryptedAlternateMobileNumber unencryptedAlternateMobileNumber,
-      Se.Set Beam.unencryptedMobileNumber unencryptedMobileNumber,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.useFakeOtp useFakeOtp,
       Se.Set Beam.usedCoins usedCoins,

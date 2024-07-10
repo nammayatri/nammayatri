@@ -401,7 +401,6 @@ updateAlternateMobileNumberAndCode person = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamP.alternateMobileNumberEncrypted (person.alternateMobileNumber <&> unEncrypted . (.encrypted)),
-      Se.Set BeamP.unencryptedAlternateMobileNumber person.unencryptedAlternateMobileNumber,
       Se.Set BeamP.alternateMobileNumberHash (person.alternateMobileNumber <&> (.hash)),
       Se.Set BeamP.updatedAt now
     ]
@@ -459,7 +458,6 @@ updateMobileNumberAndCode person = do
     [ Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
       Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
-      Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
@@ -473,7 +471,6 @@ updatePersonDetails person = do
       Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
       Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
-      Se.Set BeamP.unencryptedMobileNumber $ person.unencryptedMobileNumber,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq $ getId person.id)]
@@ -488,7 +485,6 @@ updateFleetOwnerDetails (Id personId) req = do
         <> [Se.Set BeamP.mobileCountryCode req.mobileCountryCode | isJust req.mobileCountryCode]
         <> [Se.Set BeamP.mobileNumberEncrypted $ req.mobileNumber <&> unEncrypted . (.encrypted) | isJust req.mobileNumber]
         <> [Se.Set BeamP.mobileNumberHash (req.mobileNumber <&> (.hash)) | isJust req.mobileNumber]
-        <> [Se.Set BeamP.unencryptedMobileNumber (req.unencryptedMobileNumber) | isJust req.mobileNumber]
         <> [Se.Set BeamP.email req.email | isJust req.email]
     )
     [Se.Is BeamP.id (Se.Eq personId)]

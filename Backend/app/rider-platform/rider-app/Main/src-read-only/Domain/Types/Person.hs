@@ -81,7 +81,6 @@ data PersonE e = Person
     totalRatingScore :: Kernel.Prelude.Int,
     totalRatings :: Kernel.Prelude.Int,
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    unencryptedMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     useFakeOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     whatsappNotificationEnrollStatus :: Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods
@@ -157,7 +156,6 @@ instance EncryptedItem Person where
           totalRatingScore = totalRatingScore entity,
           totalRatings = totalRatings entity,
           totalRidesCount = totalRidesCount entity,
-          unencryptedMobileNumber = unencryptedMobileNumber entity,
           updatedAt = updatedAt entity,
           useFakeOtp = useFakeOtp entity,
           whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity
@@ -225,7 +223,6 @@ instance EncryptedItem Person where
             totalRatingScore = totalRatingScore entity,
             totalRatings = totalRatings entity,
             totalRidesCount = totalRidesCount entity,
-            unencryptedMobileNumber = unencryptedMobileNumber entity,
             updatedAt = updatedAt entity,
             useFakeOtp = useFakeOtp entity,
             whatsappNotificationEnrollStatus = whatsappNotificationEnrollStatus entity

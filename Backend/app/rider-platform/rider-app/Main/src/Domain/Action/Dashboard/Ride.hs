@@ -360,13 +360,14 @@ rideInfo merchantId reqRideId = do
         DB.InterCityDetails details -> Just details.distance
         _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
+  unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
         bookingId = cast ride.bookingId,
         rideStatus = mkCommonRideStatus ride.status,
         customerName = person.firstName,
-        customerPhoneNo = person.unencryptedMobileNumber,
+        customerPhoneNo = unencryptedMobileNumber,
         rideOtp = ride.otp,
         customerPickupLocation = mkCommonBookingLocation booking.fromLocation,
         customerDropLocation = mbtoLocation,

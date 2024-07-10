@@ -55,8 +55,6 @@ data PersonT f = PersonT
     registrationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     role :: B.C f Domain.Types.Person.Role,
     totalEarnedCoins :: B.C f Kernel.Prelude.Int,
-    unencryptedAlternateMobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    unencryptedMobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     useFakeOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     usedCoins :: B.C f Kernel.Prelude.Int,
