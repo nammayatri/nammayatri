@@ -107,9 +107,9 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   (discountedTickets, eventDiscountAmount) <-
     if isEventOngoing
       then do
-        let discountPerTicket = min maxFreeTicketCashback (price.amountInt.getMoney `div` search.quantity)
+        let perTicketCashback = min maxFreeTicketCashback price.amountInt.getMoney
             discountedTickets = ((ticketsBookedInEvent + search.quantity) `div` freeTicketInterval) - (ticketsBookedInEvent `div` freeTicketInterval)
-            eventDiscountAmount = toHighPrecMoney $ discountedTickets * discountPerTicket
+            eventDiscountAmount = toHighPrecMoney $ discountedTickets * perTicketCashback
         return (Just discountedTickets, Just eventDiscountAmount)
       else return (Nothing, Nothing)
   let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 900) now) dOnSearch.validTill -- If validTill is not present, set it to 15 minutes from now
