@@ -95,34 +95,34 @@ sendDashboardSms merchantId merchantOpCityId messageType mbRide driverId mbBooki
       case messageType of
         BOOKING -> whenJust mbRide \ride ->
           whenJust mbBooking \booking -> do
-            message <-
+            (mbSender, message) <-
               MessageBuilder.buildBookingMessage merchantOpCityId $
                 MessageBuilder.BuildBookingMessageReq
                   { otp = ride.otp,
                     amount = show booking.estimatedFare
                   }
-            sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+            sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber $ fromMaybe sender mbSender) >>= Sms.checkSmsResult
         ENDRIDE -> whenJust mbRide \ride -> do
-          message <-
+          (mbSender, message) <-
             MessageBuilder.buildEndRideMessage merchantOpCityId $
               MessageBuilder.BuildEndRideMessageReq
                 { rideAmount = show amount,
                   rideShortId = ride.shortId.getShortId
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber $ fromMaybe sender mbSender) >>= Sms.checkSmsResult
         ONBOARDING -> do
-          message <-
+          (mbSender, message) <-
             MessageBuilder.buildOnboardingMessage merchantOpCityId $
               MessageBuilder.BuildOnboardingMessageReq
                 {
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber $ fromMaybe sender mbSender) >>= Sms.checkSmsResult
         CASH_COLLECTED -> do
-          message <-
+          (mbSender, message) <-
             MessageBuilder.buildCollectCashMessage merchantOpCityId $
               MessageBuilder.BuildCollectCashMessageReq
                 { amount = show amount
                 }
-          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber $ fromMaybe sender mbSender) >>= Sms.checkSmsResult
     else do
       logInfo "Merchant not configured to send dashboard sms"

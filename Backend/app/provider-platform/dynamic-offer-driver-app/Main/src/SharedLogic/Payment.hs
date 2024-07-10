@@ -221,13 +221,14 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
       when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
     Just MessageKey.SMS -> do
       smsCfg <- asks (.smsCfg)
-      message <-
+      (mbSender, message) <-
         MessageBuilder.buildSendPaymentLink merchantOpCityId $
           MessageBuilder.BuildSendPaymentLinkReq
             { paymentLink = webPaymentLink,
               amount = show (fromMaybe 0 mbAmount)
             }
-      Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber smsCfg.sender)
+      let sender = fromMaybe smsCfg.sender mbSender
+      Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
     _ -> pure ()
   return ()
