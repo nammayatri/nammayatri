@@ -223,7 +223,7 @@ window.getMerchantConfig = function () {
       , "packageName" : "com.google.android.apps.maps"
     }
     , "subscriptionConfig" : {
-      "enableBlocking" : true,
+      "enableBlocking" : false,
       "completePaymentPopup" : false,
       "supportNumber" : "08069724949",
       "enableSubscriptionPopups" : true,
@@ -421,7 +421,7 @@ window.getMerchantConfig = function () {
       "cityName" : "Siliguri",
       "mapImage" : "ys_ic_siliguri_map",
       "cityCode" : "std:0353",
-      "showSubscriptions" : true,
+      "showSubscriptions" : false,
       "enableAdvancedBooking" : false,
       "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
