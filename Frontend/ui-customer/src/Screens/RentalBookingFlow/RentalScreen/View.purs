@@ -80,7 +80,7 @@ view push state =
   Anim.screenAnimation
     $ relativeLayout
     [ height MATCH_PARENT
-    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom 
+    , padding $ PaddingBottom EHC.safeMarginBottom 
     , width MATCH_PARENT
     , onBackPressed push $ const BackpressAction
     , orientation VERTICAL
@@ -117,7 +117,12 @@ rentalPackageSelectionView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     ]
-    [ InputView.view (push <<< InputViewAC) $ mapInputViewConfig state
+    [ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT 
+      , background Color.black900 
+      , padding $ PaddingTop EHC.safeMarginTop
+      ][InputView.view (push <<< InputViewAC) $ mapInputViewConfig state]
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -252,6 +257,7 @@ fareBreakupView push state = let
         , width MATCH_PARENT
         , orientation VERTICAL
         , background Color.white900
+        , padding $ PaddingTop EHC.safeMarginTop
         , margin $ MarginBottom 80
         ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
           , separatorView state

@@ -2274,7 +2274,7 @@ findEstimates updatedState = do
         ]
   (ServiceabilityRes sourceServiceabilityRespDest) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.destinationLat state.props.destinationLong) DESTINATION
   let
-    isIntercity = any (_ == (Just "*")) [ sourceServiceabilityResp.currentCity, sourceServiceabilityRespDest.currentCity ] || (isJust sourceServiceabilityResp.currentCity && isJust sourceServiceabilityRespDest.currentCity && sourceServiceabilityResp.currentCity /= sourceServiceabilityRespDest.currentCity)
+    isIntercity = updatedState.data.currentCityConfig.enableIntercity && ( any (_ == (Just "*")) [ sourceServiceabilityResp.currentCity, sourceServiceabilityRespDest.currentCity ] || (isJust sourceServiceabilityResp.currentCity && isJust sourceServiceabilityRespDest.currentCity && sourceServiceabilityResp.currentCity /= sourceServiceabilityRespDest.currentCity))
   modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { fareProductType = if isIntercity then FPT.INTER_CITY else homeScreen.data.fareProductType } })
   when (state.data.startTimeUTC /= "" && not isIntercity) do
     modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData { props { showNormalRideNotSchedulablePopUp = true } })

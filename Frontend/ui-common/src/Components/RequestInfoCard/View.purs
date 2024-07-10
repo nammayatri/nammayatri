@@ -101,7 +101,7 @@ genericTextView push config =
 bulletPoints :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 bulletPoints push config = 
   linearLayout
-  [ width WRAP_CONTENT
+  [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
   , margin $ Margin 20 12 0 0
@@ -111,18 +111,18 @@ bulletPoints push config =
 bulletPoint :: forall w. (Action -> Effect Unit) -> String -> PrestoDOM (Effect Unit) w
 bulletPoint push point = 
   linearLayout
-  [ width WRAP_CONTENT
+  [ width MATCH_PARENT
   , height WRAP_CONTENT
   , margin $ MarginTop 5
   ][ linearLayout
       [ width $ V 7
       , height $ V 7
-      , cornerRadius 16.0
+      , cornerRadius 3.5
       , background Color.black700
       , margin $ MarginTop 8
       ][]
     , textView $
-      [ width WRAP_CONTENT
+      [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ MarginLeft 8
       , text point

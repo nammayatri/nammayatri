@@ -377,6 +377,14 @@ screenAnimationFadeInOut screen =
     $ PrestoAnim.exitAnimationSetBackward [fadeOut true]
       screen
 
+emptyScreenAnimation :: forall w. PrestoDOM (Effect Unit) w -> PrestoDOM (Effect Unit) w
+emptyScreenAnimation screen =
+    PrestoAnim.entryAnimationSetForward [PrestoAnim.Animation [PrestoAnim.duration 100] true]
+    $ PrestoAnim.exitAnimationSetForward [PrestoAnim.Animation [PrestoAnim.duration 100] true]
+    $ PrestoAnim.entryAnimationSetBackward [PrestoAnim.Animation [PrestoAnim.duration 100] true]
+    $ PrestoAnim.exitAnimationSetBackward [PrestoAnim.Animation [PrestoAnim.duration 100] true]
+      screen
+
 scaleYAnimWithDelay :: Int -> PrestoAnim.Animation
 scaleYAnimWithDelay delay =
    PrestoAnim.Animation
