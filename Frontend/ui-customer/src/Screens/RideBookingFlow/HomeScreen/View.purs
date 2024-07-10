@@ -33,7 +33,7 @@ import SuggestionUtils
 import Timers
 import Types.App
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
-import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
+import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, emptyScreenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
 import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
@@ -431,6 +431,7 @@ view push state =
     isEditDestination = spy "isEditDestination -> " $ any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
     extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else 0
   in
+  emptyScreenAnimation $ 
   frameLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -3002,8 +3003,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 case (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]), mbPreviousDropLat, mbPreviousDropLon of
                   true, Just previousDropLat, Just previousDropLon  -> Tuple previousDropLat previousDropLon
                   true, _, _ -> Tuple state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
-                  false, _, _ -> Tuple state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng
-
+                  false, _, _ -> Tuple gbState.homeScreen.data.driverInfoCardState.destinationLat gbState.homeScreen.data.driverInfoCardState.destinationLng
               trackingType = case Tuple (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) hasCurrentLocAndPrevDropLoc of
                                 Tuple true true -> ADVANCED_RIDE_TRACKING
                                 Tuple false _ -> RIDE_TRACKING
@@ -3105,7 +3105,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                               rentalRoutePoints = fromMaybe {points : []} rentalPoints
                               normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
                               rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "DOT" true JB.RENTAL mapRouteConfig{isAnimation = false}
-                          liftFlow $ drawRoute [normalRoute,rentalRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
+                              routeArray = ([normalRoute] <> if isNothing rentalPoints then [] else [rentalRouteConfig] )
+                          liftFlow $ drawRoute routeArray (getNewIDWithTag "CustomerHomeScreen")
                         else pure unit
                         _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
                         let duration' = if isJust route then duration else getDuration state.data.config.driverLocationPolling.retryExpFactor expCounter

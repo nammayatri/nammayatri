@@ -52,7 +52,7 @@ import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue, flowRunner, liftFlow)
 import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute)
-import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig)
+import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig, removeAllPolylines)
 import JBridge as JB
 import Log (trackAppActionClick)
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
@@ -513,7 +513,9 @@ handleBackPress state = do
         LocateOnMapStage -> do 
           void $ pure $ exitLocateOnMap ""
           continue state{props{searchLocStage = PredictionsStage}}
-        ChooseYourRide -> exit $ RentalsScreen state
+        ChooseYourRide -> do 
+          void $ pure $ removeAllPolylines ""
+          exit $ RentalsScreen state
         _ -> continue state
 
 findStationWithPrefix :: String -> Array Station -> Array Station

@@ -1067,7 +1067,7 @@ export const isCoordOnPath = function (data) {
               if(speed == 0)
                 {
                   const res = {
-                    "points": data,
+                    "points": (data.points != undefined) ? data.points : [] ,
                     "eta": 0,
                     "distance": 0,
                     "isInPath": true

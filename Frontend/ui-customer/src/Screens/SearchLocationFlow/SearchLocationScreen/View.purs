@@ -124,7 +124,7 @@ view globalProps push state =
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+    , padding $ PaddingBottom EHC.safeMarginBottom
     , background Color.white900
     ][  (if currentStageOn state ChooseYourRide then screenAnimation 
           else PrestoAnim.animationSet
@@ -439,7 +439,13 @@ locateOnMapView push state globalProps = let
 
 inputView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> Boolean -> GlobalProps -> PrestoDOM (Effect Unit) w
 inputView push state isEditable globalProps = 
-  InputView.view (push <<< InputViewAC globalProps ) $ mapInputViewConfig state isEditable
+  linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT 
+  , background Color.black900
+  , padding $ PaddingTop EHC.safeMarginTop
+  ][
+  InputView.view (push <<< InputViewAC globalProps ) $ mapInputViewConfig state isEditable]
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 recenterButtonView push state =
@@ -633,7 +639,6 @@ predictionsView push state globalProps = let
                 else 
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ 
   scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
