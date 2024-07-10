@@ -4639,7 +4639,7 @@ newView push state =
   textView $
     [ text $ "✨ " <> getString NEW_
     , color Color.white900
-    , cornerRadius 16.0
+    , cornerRadius if os == "IOS" then 12.0 else 16.0
     , background Color.blue900
     , padding $ Padding 6 4 6 4
     , margin $ MarginLeft 8
