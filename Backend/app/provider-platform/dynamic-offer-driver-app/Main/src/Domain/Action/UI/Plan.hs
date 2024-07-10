@@ -291,10 +291,10 @@ planList ::
   Maybe Int ->
   Maybe Vehicle.Variant ->
   Flow PlanListAPIRes
-planList (driverId, _, merchantOpCityId) serviceName _mbLimit _mbOffset mbVariant = do
+planList (driverId, _, merchantOpCityId) serviceName _mbLimit _mbOffset _mbVariant = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverIdWithServiceName driverId serviceName
-  plans <- QPD.findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName mbVariant (Just False)
+  plans <- QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName (Just False)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
