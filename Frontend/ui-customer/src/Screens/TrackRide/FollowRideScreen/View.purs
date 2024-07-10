@@ -324,7 +324,7 @@ rideCompletedView push state =
                 ]
               <> FontStyle.h1 TypoGraphy
           , linearLayout
-              [ width WRAP_CONTENT
+              [ width MATCH_PARENT
               , height WRAP_CONTENT
               , margin $ MarginTop 32
               ]

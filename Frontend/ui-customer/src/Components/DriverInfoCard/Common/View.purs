@@ -381,7 +381,7 @@ sourceDestinationView push config =
                 width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , text $ getString EDIT
-                , cornerRadius if os == "IOS" then 20.0 else 32.0
+                , cornerRadius if os == "IOS" then 16.0 else 32.0
                 , stroke $ "1," <> Color.grey900
                 , padding $ Padding 12 8 12 8
                 , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide
