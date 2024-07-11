@@ -98,7 +98,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..))
-import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..), RideBookingDetails(..))
+import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..),RideBookingStatusRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..), RideBookingDetails(..))
 import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..), RideBookingDetails(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -435,6 +435,51 @@ eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
   continue state{props{isMockLocation = false}}
+
+eval (UpdateCurrentStageStatus stage (RideBookingStatusRes resp)) state = do
+  _ <- pure $ spy "updateCurrentPollingStage" stage
+  let fareProductType = getFareProductType $ resp.bookingDetails ^._fareProductType
+      stopLocation = if fareProductType == FPT.RENTAL then _stopLocation else _toLocation
+      stopLocationDetails = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
+      (BookingLocationAPIEntity toLocation) = stopLocationDetails
+      destAddress = getAddressFromBooking stopLocationDetails
+      dest = decodeAddress (Booking stopLocationDetails)
+      newState = state
+        { data = state.data
+            { driverInfoCardState = state.data.driverInfoCardState
+                { destination = dest
+                , destinationLat = toLocation.lat
+                , destinationLng = toLocation.lon
+                , destinationAddress = destAddress
+                }
+            , fareProductType = fareProductType
+            , destinationAddress = destAddress
+            , destination = dest
+            }
+        , props = state.props
+            { stopLoc = Just { lat: stopLocationDetails^._lat, lng: stopLocationDetails^._lon, stopLocAddress: decodeAddress (Booking stopLocationDetails) }
+            , destinationLat = toLocation.lat
+            , destinationLong = toLocation.lon
+            }
+        }
+      isDestChanged = not (state.data.driverInfoCardState.destinationLat == toLocation.lat && state.data.driverInfoCardState.destinationLng == toLocation.lon)
+  if isDestChanged then do
+    void $ pure $ setValueToLocalStore TRACKING_DRIVER "False"
+  else pure unit
+  if stage == "REALLOCATED" then
+    exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
+  else if (stage == "INPROGRESS") && (not $ (isLocalStageOn RideStarted || (isLocalStageOn ChatWithDriver && state.props.stageBeforeChatScreen == RideStarted))) then
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+  else if stage == "INPROGRESS" && isDestChanged then
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+  else if stage == "NEW" && isDestChanged then
+    updateAndExit newState $ NotificationHandler "DRIVER_ASSIGNMENT" newState
+  else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
+    exit $ NotificationHandler "TRIP_FINISHED" newState
+  else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
+    exit $ NotificationHandler "CANCELLED_PRODUCT" newState
+  else
+    continue newState
 
 eval (EditLocation editLocation) state = do
   if (getValueToLocalNativeStore DRIVER_WITHIN_PICKUP_THRESHOLD)  == "false" then do

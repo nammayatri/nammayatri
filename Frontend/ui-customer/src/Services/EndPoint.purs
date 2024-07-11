@@ -83,6 +83,9 @@ rideBookingList limit offset isActive status clientId =
 ridebooking :: String ->  String
 ridebooking bookingId  = (getBaseUrl "17") <> "/rideBooking/"<> bookingId
 
+ridebookingStatus :: String ->  String
+ridebookingStatus bookingId  = (getBaseUrl "17") <> "/rideBooking/v2/"<> bookingId
+
 currentListCaseProduct :: String ->  String
 currentListCaseProduct dummyString = (getBaseUrl "18") <> "/productInstance?limit=1&type=\"RIDEORDER\""
 

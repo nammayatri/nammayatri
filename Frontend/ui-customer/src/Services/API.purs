@@ -966,6 +966,8 @@ instance encodeDeadKmFare  :: Encode DeadKmFare where encode = defaultEncode
 
 data RideBookingReq = RideBookingReq String
 
+data RideBookingStatusReq = RideBookingStatusReq String
+
 newtype RideBookingRes = RideBookingRes {
   agencyName :: String,
   agencyNumber :: Maybe String,
@@ -1003,6 +1005,15 @@ newtype RideBookingRes = RideBookingRes {
   driversPreviousRideDropLocLat :: Maybe Number,
   driversPreviousRideDropLocLon :: Maybe Number
 , estimatedFareBreakup :: Array FareBreakupAPIEntity
+}
+
+newtype RideBookingStatusRes = RideBookingStatusRes {
+  id :: String,
+  isBookingUpdated :: Boolean,
+  bookingStatus :: String,
+  rideStatus :: Maybe String,
+  bookingDetails :: RideBookingAPIDetails
+  
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -1089,6 +1100,25 @@ instance standardEncodeRideBookingRes :: StandardEncode RideBookingRes where sta
 instance showRideBookingRes :: Show RideBookingRes where show = genericShow
 instance decodeRideBookingRes :: Decode RideBookingRes where decode = defaultDecode
 instance encodeRideBookingRes  :: Encode RideBookingRes where encode = defaultEncode
+
+
+instance makeRideBookingStatus :: RestEndpoint RideBookingStatusReq RideBookingStatusRes where
+ makeRequest reqBody@(RideBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.ridebooking bookingId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericRideBookingStatusReq :: Generic RideBookingStatusReq _
+instance standardEncodeRideBookingStatusReq :: StandardEncode RideBookingStatusReq where standardEncode (RideBookingStatusReq body) = standardEncode body
+instance showRideBookingStatusReq :: Show RideBookingStatusReq where show = genericShow
+instance decodeRideBookingStatusReq :: Decode RideBookingStatusReq where decode = defaultDecode
+instance encodeRideBookingStatusReq  :: Encode RideBookingStatusReq where encode = defaultEncode
+
+derive instance genericRideBookingStatusRes :: Generic RideBookingStatusRes _
+derive instance newtypeRideBookingStatusRes :: Newtype RideBookingStatusRes _
+instance standardEncodeRideBookingStatusRes :: StandardEncode RideBookingStatusRes where standardEncode (RideBookingStatusRes body) = standardEncode body
+instance showRideBookingStatusRes :: Show RideBookingStatusRes where show = genericShow
+instance decodeRideBookingStatusRes :: Decode RideBookingStatusRes where decode = defaultDecode
+instance encodeRideBookingStatusRes  :: Encode RideBookingStatusRes where encode = defaultEncode
 
 derive instance genericFareBreakupAPIEntity :: Generic FareBreakupAPIEntity _
 derive instance newtypeFareBreakupAPIEntity :: Newtype FareBreakupAPIEntity _
