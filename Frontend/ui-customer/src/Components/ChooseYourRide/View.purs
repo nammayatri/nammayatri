@@ -39,11 +39,14 @@ import Data.Array (groupBy, head, sortBy, fromFoldable, all)
 import Data.Maybe 
 import Data.Ord (comparing)
 import Data.Traversable (traverse)
+import Data.String as DS
 import Data.Foldable (minimumBy, maximumBy)
 import Data.Ord (compare)
 import Data.Function (on)
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
+import RemoteConfig as RC
+import Storage as ST
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -611,8 +614,9 @@ quoteListView push config =
                     , orientation VERTICAL
                     ] $ mapWithIndex
                         ( \index item -> do
-                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) item.selectedServices) variantBasedList else []
-                                services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
+                            let userCity = DS.toLower $ ST.getValueToLocalStore ST.CUSTOMER_LOCATION
+                                estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) item.selectedServices) variantBasedList else []
+                                services = if item.vehicleVariant == "BOOK_ANY" then RC.getBookAnyServices userCity else []
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
@@ -625,8 +629,9 @@ quoteListView push config =
                     , orientation VERTICAL
                     ] $ mapWithIndex
                         ( \index item -> do
-                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) item.selectedServices) topProviderList else []
-                                services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
+                            let userCity = DS.toLower $ ST.getValueToLocalStore ST.CUSTOMER_LOCATION
+                                estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) item.selectedServices) topProviderList else []
+                                services = if item.vehicleVariant == "BOOK_ANY" then RC.getBookAnyServices userCity else []
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates

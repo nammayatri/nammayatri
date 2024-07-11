@@ -960,6 +960,7 @@ intersection :: forall a. Eq a => Array a -> Array a -> Array a
 intersection arr1 arr2 =
   filter (\x -> elem x arr2) arr1
 
+-- Deprecated function (using remote configs instead) 11th July 2024
 getAllServices :: LazyCheck -> Array String 
 getAllServices dummy = 
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
@@ -977,6 +978,7 @@ getAllServices dummy =
     Gurugram -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
     _ ->  ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
 
+-- Deprecated function (using remote configs instead) 11th July 2024
 getSelectedServices :: LazyCheck -> Array String
 getSelectedServices dummy = 
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION

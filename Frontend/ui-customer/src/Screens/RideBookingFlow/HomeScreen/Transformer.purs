@@ -531,9 +531,10 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
 getEstimates :: EstimateAPIEntity -> Array EstimateAPIEntity -> Int -> Boolean -> Int -> Int -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count activeIndex =
   let currency = getCurrency appConfig
-      allSelectedServices = getSelectedServices FunctionCall
+      userCity = toLower $ getValueToLocalStore CUSTOMER_LOCATION
+      allSelectedServices = RC.getBookAnySelectedServices userCity
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
-      config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      config = getCityConfig (getAppConfig appConfig).cityConfig userCity
       tipConfig = getTipConfig estimate.vehicleVariant
       maxTip = fromMaybe 0 (maximum tipConfig.customerTipArrayWithValues)
       fareBreakup = fromMaybe [] estimate.estimateFareBreakup
@@ -746,7 +747,8 @@ estimatesWithBookAny :: Array EstimateAPIEntity -> Array EstimateAPIEntity
 estimatesWithBookAny estimates =
   let
     config = getAppConfig appConfig
-    selectedServices = getSelectedServices FunctionCall
+    userCity = toLower $ getValueToLocalStore CUSTOMER_LOCATION
+    selectedServices = RC.getBookAnySelectedServices userCity
     bookAny =
       EstimateAPIEntity
         { agencyNumber: ""

@@ -33,21 +33,23 @@ foreign import isWhiteListed :: String -> Array String -> Boolean
 
 defaultRemoteConfig :: forall a. a -> RemoteConfig a
 defaultRemoteConfig defaultValue =
-  { bangalore : defaultValue
-  , kolkata : defaultValue
-  , chennai : defaultValue
-  , tumakuru : defaultValue
-  , mysore : defaultValue
-  , kochi : defaultValue
-  , delhi : defaultValue
-  , hyderabad : defaultValue
-  , mumbai : defaultValue
-  , coimbatore : defaultValue
-  , pondicherry : defaultValue
-  , goa : defaultValue
-  , pune : defaultValue
-  , tamilnaducities : defaultValue
+  { bangalore : Just defaultValue
+  , kolkata : Just defaultValue
+  , chennai : Just defaultValue
+  , tumakuru : Just defaultValue
+  , mysore : Just defaultValue
+  , kochi : Just defaultValue
+  , delhi : Just defaultValue
+  , hyderabad : Just defaultValue
+  , mumbai : Just defaultValue
+  , coimbatore : Just defaultValue
+  , pondicherry : Just defaultValue
+  , goa : Just defaultValue
+  , pune : Just defaultValue
+  , tamilnaducities : Just defaultValue
   , default : defaultValue
+  , noida : Just defaultValue
+  , gurugram : Just defaultValue
   , config: Nothing
   }
 
@@ -113,20 +115,22 @@ forwardBatchConfigData city =
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
 getCityBasedConfig config city = case city of
-  "bangalore" -> config.bangalore
-  "kolkata" -> config.kolkata
-  "chennai" -> config.chennai
-  "mysore" -> config.mysore
-  "tumakuru" -> config.tumakuru
-  "kochi" -> config.kochi
-  "delhi" -> config.delhi
-  "hyderabad" -> config.hyderabad
-  "mumbai" -> config.mumbai
-  "coimbatore" -> config.coimbatore
-  "pondicherry" -> config.pondicherry
-  "goa" -> config.goa
-  "pune" -> config.pune
-  "tamilnaducities" -> config.tamilnaducities
+  "bangalore" -> fromMaybe config.default config.bangalore
+  "kolkata" -> fromMaybe config.default config.kolkata
+  "chennai" -> fromMaybe config.default config.chennai
+  "mysore" -> fromMaybe config.default config.mysore
+  "tumakuru" -> fromMaybe config.default config.tumakuru
+  "kochi" -> fromMaybe config.default config.kochi
+  "delhi" -> fromMaybe config.default config.delhi
+  "hyderabad" -> fromMaybe config.default config.hyderabad
+  "mumbai" -> fromMaybe config.default config.mumbai
+  "coimbatore" -> fromMaybe config.default config.coimbatore
+  "pondicherry" -> fromMaybe config.default config.pondicherry
+  "goa" -> fromMaybe config.default config.goa
+  "pune" -> fromMaybe config.default config.pune
+  "tamilnaducities" -> fromMaybe config.default config.tamilnaducities
+  "noida" -> fromMaybe config.default config.noida
+  "gurugram" -> fromMaybe config.default config.gurugram
   _ -> config.default
 
 tipConfigData :: String -> String -> Array Int
