@@ -104,7 +104,9 @@ data AppCfg = AppCfg
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     kvConfigUpdateFrequency :: Int,
     metricsPort :: Int,
-    encTools :: EncTools
+    encTools :: EncTools,
+    batchSize :: Integer,
+    numberOfShards :: Integer
   }
   deriving (Generic, FromDhall)
 
@@ -139,7 +141,9 @@ data AppEnv = AppEnv
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     isShuttingDown :: Shutdown,
     httpClientOptions :: HttpClientOptions,
-    encTools :: EncTools
+    encTools :: EncTools,
+    batchSize :: Integer,
+    numberOfShards :: Integer
   }
   deriving (Generic)
 

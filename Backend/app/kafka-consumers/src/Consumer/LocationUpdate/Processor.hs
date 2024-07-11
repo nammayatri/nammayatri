@@ -15,6 +15,7 @@
 module Consumer.LocationUpdate.Processor
   ( processLocationData,
     createDriverIdTokenKey,
+    processLocationData',
   )
 where
 
@@ -32,7 +33,25 @@ processLocationData T.LocationUpdates {..} driverId = do
   let newUpdatedAt = ts
   logDebug $ "driver updated time " <> show newUpdatedAt <> driverId
   let encodedVal = createDriverIdTokenKey driverId
-  Redis.zAdd "driver-last-location-update" [(utcToDouble newUpdatedAt, encodedVal)]
+  key <- incrementCounterAndReturnShard
+  Redis.zAdd key [(utcToDouble newUpdatedAt, encodedVal)]
+
+processLocationData' :: [(T.LocationUpdates, T.DriverId)] -> Flow ()
+processLocationData' locationData = do
+  key <- incrementCounterAndReturnShard
+  let encodedVals = map (\(T.LocationUpdates {..}, driverId) -> (utcToDouble ts, createDriverIdTokenKey driverId)) locationData
+  Redis.zAdd key encodedVals
+
+incrementCounterAndReturnShard :: Flow Text
+incrementCounterAndReturnShard = do
+  numberOfShards <- asks (.numberOfShards)
+  getKeyWithShard . (`mod` numberOfShards) <$> Redis.incr incrementCountKey
+
+incrementCountKey :: Text
+incrementCountKey = "driver-location-update-batch-count"
+
+getKeyWithShard :: Integer -> Text
+getKeyWithShard shardNo = "driver-last-location-update-{shard-" <> show shardNo <> "}"
 
 utcToDouble :: UTCTime -> Double
 utcToDouble = realToFrac . utcTimeToPOSIXSeconds

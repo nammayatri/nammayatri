@@ -16,6 +16,7 @@
 module Consumer.Flow where
 
 import qualified Consumer.AvailabilityTime.Processor as ATProcessor
+import qualified Consumer.AvailabilityTime.Types as T
 import qualified Consumer.BroadcastMessage.Processor as BMProcessor
 import qualified Consumer.CustomerStats.Processor as PSProcessor
 import qualified Consumer.LocationUpdate.Processor as LCProcessor
@@ -112,11 +113,30 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
         extract = id
 
 locationUpdateConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
-locationUpdateConsumer flowRt appEnv kafkaConsumer =
+locationUpdateConsumer flowRt appEnv kafkaConsumer = do
+  let batchSize = fromIntegral appEnv.batchSize
   readMessages kafkaConsumer
-    & S.mapM (\(message, messageKey, cr) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey, cr))
+    & S.mapM (\(message, messageKey, _) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey))
+    & S.chunksOf batchSize addToList
+    & S.mapM processRealtimeLocationUpdates'
     & S.drain
   where
+    addToList ::
+      MonadIO m =>
+      SF.Fold
+        m
+        (T.LocationUpdates, T.DriverId)
+        [(T.LocationUpdates, T.DriverId)]
+    addToList = SF.mkFold step start extract
+      where
+        step acc val = SF.Partial (val : acc)
+        start = SF.Partial []
+        extract = id
+    processRealtimeLocationUpdates' locationUpdate =
+      runFlowR flowRt appEnv . withLogTag "pushing location batch to redis" $
+        generateGUID
+          >>= flip withLogTag (LCProcessor.processLocationData' locationUpdate)
+
     processRealtimeLocationUpdates locationUpdate driverId =
       runFlowR flowRt appEnv . withLogTag driverId $
         generateGUID
