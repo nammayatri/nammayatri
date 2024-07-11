@@ -3,6 +3,7 @@ module MerchantConfig.DefaultConfig where
 import MerchantConfig.Types
 import Common.DefaultConfig
 import Engineering.Helpers.Commons as EHC
+import Prelude ((/=))
 
 config :: AppConfig 
 config =
@@ -462,7 +463,7 @@ config =
           { cityName = "Hyderabad",
             cityCode = "std:040",
             iopConfig = {
-            enable : true,
+            enable :EHC.os /= "IOS",
             autoSelectTime : 8
           },
             referral
