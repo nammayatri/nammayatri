@@ -274,8 +274,8 @@ getConfigByStationIds partnerOrg fromPOrgStationId toPOrgStationId = do
   unless (fromStation'.merchantOperatingCityId == toStation'.merchantOperatingCityId) $
     throwError . InvalidRequest $ "origin:" +|| fromStation'.name ||+ "and destination:" +|| toStation'.name ||+ " locations are not of same city"
 
-  fromStation <- Utils.mkPOrgStationAPIRes fromStation' partnerOrg.orgId
-  toStation <- Utils.mkPOrgStationAPIRes toStation' partnerOrg.orgId
+  fromStation <- Utils.mkPOrgStationAPIRes fromStation' (Just partnerOrg.orgId)
+  toStation <- Utils.mkPOrgStationAPIRes toStation' (Just partnerOrg.orgId)
   let frfsConfig = Utils.mkFRFSConfigAPI frfsConfig'
   city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
 
@@ -298,8 +298,8 @@ shareTicketInfo ticketBookingId = do
   city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
   pOrgId <- ticketBooking.partnerOrgId & fromMaybeM (InternalError $ "PartnerOrgId is missing for ticketBookingId:" +|| ticketBookingId.getId ||+ "")
 
-  fromStation <- Utils.mkPOrgStationAPIRes fromStation' pOrgId
-  toStation <- Utils.mkPOrgStationAPIRes toStation' pOrgId
+  fromStation <- Utils.mkPOrgStationAPIRes fromStation' (Just pOrgId)
+  toStation <- Utils.mkPOrgStationAPIRes toStation' (Just pOrgId)
 
   void $ bppStatusSync fromStation'.merchantId pOrgId city ticketBooking
 

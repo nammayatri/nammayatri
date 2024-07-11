@@ -20,20 +20,23 @@ import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Station as Station
+import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
+import qualified Storage.CachedQueries.Station as CQS
 import Tools.Error
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
 
-mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Id DPO.PartnerOrganization -> m APITypes.FRFSStationAPI
-mkPOrgStationAPIRes Station.Station {..} pOrgId = do
-  pOrgStation <- B.runInReplica $ CQPOS.findByStationIdAndPOrgId id pOrgId >>= fromMaybeM (PartnerOrgStationNotFoundForStationId pOrgId.getId id.getId)
-  pure $ APITypes.FRFSStationAPI {name = pOrgStation.name, stationType = Nothing, color = Nothing, sequenceNum = Nothing, ..}
+mkPOrgStationAPIRes :: (CacheFlow m r, EsqDBFlow m r) => Station.Station -> Maybe (Id DPO.PartnerOrganization) -> m APITypes.FRFSStationAPI
+mkPOrgStationAPIRes Station.Station {..} mbPOrgId = do
+  pOrgStation <- mbPOrgId `forM` \pOrgId -> B.runInReplica $ CQPOS.findByStationIdAndPOrgId id pOrgId >>= fromMaybeM (PartnerOrgStationNotFoundForStationId pOrgId.getId id.getId)
+  let pOrgStationName = pOrgStation <&> (.name)
+  pure $ APITypes.FRFSStationAPI {name = fromMaybe name pOrgStationName, stationType = Nothing, color = Nothing, sequenceNum = Nothing, ..}
 
 mkTBPStatusAPI :: DTBP.FRFSTicketBookingPaymentStatus -> APITypes.FRFSBookingPaymentStatusAPI
 mkTBPStatusAPI = \case
@@ -46,3 +49,8 @@ mkTBPStatusAPI = \case
 mkFRFSConfigAPI :: Config.FRFSConfig -> APITypes.FRFSConfigAPIRes
 mkFRFSConfigAPI Config.FRFSConfig {..} = do
   APITypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
+
+mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
+mkPOrgStationAPI mbPOrgId stationAPI = do
+  station <- B.runInReplica $ CQS.findByStationCode stationAPI.code >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "")
+  mkPOrgStationAPIRes station mbPOrgId
