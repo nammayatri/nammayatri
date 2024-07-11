@@ -176,112 +176,95 @@ vehicleListView push state =
 
 serviceTierItem :: forall w. (Action -> Effect Unit) -> ST.RateCardScreenState -> ST.RidePreference -> Int -> PrestoDOM (Effect Unit) w
 serviceTierItem push state service index =
-  relativeLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ Padding 12 2 12 2
+  , margin $ MarginVertical 5 5
+  , orientation HORIZONTAL
+  , stroke $ "1," <> Color.grey900
+  , background Color.white900
+  , cornerRadius 8.0
+  , gravity CENTER_VERTICAL
+  ]
+  [ imageView
+      [ imageWithFallback $ HU.getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType
+      , width $ V 64
+      , height $ V 48
+      ]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , orientation VERTICAL
+    , width WRAP_CONTENT
+    ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      , onClick push $ const $ ShowRateCard service
+      ][ textView $
+          [ height WRAP_CONTENT
+          , text service.name
+          , margin $ MarginHorizontal 12 2
+          , color Color.black800
+          , singleLine true
+          ] <> FontStyle.body25 CT.TypoGraphy
+        , imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
+          , width $ V 12
+          , height $ V 12
+          , visibility $ boolToVisibility $ isJust service.rateCardData
+          ]
+      ]
     ]
-    [ linearLayout
+  , relativeLayout
+    [ weight 1.0
+    , height WRAP_CONTENT
+    , padding $ PaddingVertical 12 12
+    , orientation VERTICAL
+    , gravity RIGHT
+    ][  PrestoAnim.animationSet [ Anim.fadeIn $ not state.props.sliderLoading ] $
+        linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , padding $ Padding 12 2 12 2
-        , margin $ MarginVertical 5 5
-        , orientation HORIZONTAL
-        , stroke $ "1," <> Color.grey900
-        , background Color.white900
-        , cornerRadius 8.0
-        , gravity CENTER_VERTICAL
-        ]
-        [ imageView
-            [ imageWithFallback $ HU.getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType
-            , width $ V 64
-            , height $ V 48
-            ]
-        , linearLayout
+        , orientation VERTICAL
+        , gravity RIGHT
+        ] [ textView $
+            [ height WRAP_CONTENT
+            , text primaryText
+            , color primaryTextColor
+            ] <> FontStyle.h2 CT.TypoGraphy
+        , textView $
           [ height WRAP_CONTENT
-          , orientation VERTICAL
-          , width WRAP_CONTENT
-          ][ linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , gravity CENTER_VERTICAL
-            , onClick push $ const $ ShowRateCard service
-            ][ textView $
-                [ height WRAP_CONTENT
-                , text service.name
-                , margin $ MarginHorizontal 12 2
-                , color Color.black800
-                , singleLine true
-                ] <> FontStyle.body25 CT.TypoGraphy
-              , imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
-                , width $ V 12
-                , height $ V 12
-                , visibility $ boolToVisibility $ isJust service.rateCardData
-                ]
-            ]
-          ]
-        , relativeLayout
-          [ weight 1.0
-          , height WRAP_CONTENT
-          , padding $ PaddingVertical 12 12
-          , orientation VERTICAL
-          , gravity RIGHT
-          ][  PrestoAnim.animationSet [ Anim.fadeIn $ not state.props.sliderLoading ] $
-              linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation VERTICAL
-              , gravity RIGHT
-              ] [ textView $
-                  [ height WRAP_CONTENT
-                  , text primaryText
-                  , color primaryTextColor
-                  ] <> FontStyle.h2 CT.TypoGraphy
-              , textView $
-                [ height WRAP_CONTENT
-                , text secondaryText
-                , color secondaryTextColor
-                , margin $ MarginTop 3
-                ]  <> FontStyle.body3 CT.TypoGraphy
-              ]
-            , linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation VERTICAL
-              , gravity RIGHT
-              , background Color.white900
-              , visibility $ boolToVisibility $ state.props.sliderLoading
-              ] [ shimmerFrameLayout
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , cornerRadius 8.0
-                    , background Color.grey900
-                    , padding $ PaddingHorizontal 5 5
-                    ][  textView $
-                        [ height WRAP_CONTENT
-                        , width MATCH_PARENT
-                        , text primaryText
-                        , visibility INVISIBLE
-                        ] <> FontStyle.h2 CT.TypoGraphy
-                    ]
-                , shimmerFrameLayout
-                    [ height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , cornerRadius 4.0
-                    , background Color.grey900
-                    , padding $ PaddingHorizontal 5 5
-                    , margin $ MarginTop 3
-                    ][  textView $
-                        [ height WRAP_CONTENT
-                        , width MATCH_PARENT
-                        , text secondaryText
-                        , visibility INVISIBLE
-                        ]  <> FontStyle.body3 CT.TypoGraphy
-                    ]
-              ]
-          ]
+          , text secondaryText
+          , color secondaryTextColor
+          , margin $ MarginTop 3
+          ]  <> FontStyle.body3 CT.TypoGraphy
+        ]
+      , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , gravity RIGHT
+        , background Color.white900
+        , visibility $ boolToVisibility $ state.props.sliderLoading
+        ] [ shimmerFrameLayout
+              [ height $ V $ 23
+              , width $ V $ 50
+              , cornerRadius 8.0
+              , background Color.grey900
+              , padding $ PaddingHorizontal 5 5
+              ][]
+          , shimmerFrameLayout
+              [ height $ V $ 15
+              , width $ V $ 60
+              , cornerRadius 4.0
+              , background Color.grey900
+              , padding $ PaddingHorizontal 5 5
+              , margin $ MarginTop 3
+              ][]
         ]
     ]
+  ]
     where primaryTextColor = if peakTime then Color.green900 else Color.black800
           secondaryTextColor = if peakTime then Color.green900 else Color.black600
           curr = EHC.getCurrencySymbol $ fromMaybe CT.INR service.currency

@@ -288,15 +288,15 @@ window.getMerchantConfig = function () {
           , "driver": "#E0D1FF"
           }
   }
-  , "navigationAppConfig" : {
-      ios : {
-      fallbackQuery : "https://apps.apple.com/us/app/google-maps/id585027354"
-      }
-    }
   , "lmsVideoScreen": {
       "titleBackground" : "#F6F1FF"
     , "enableQuiz" : false
   }
+  , "navigationAppConfig" : {
+      "ios" : {
+      "fallbackQuery" : "https://apps.apple.com/us/app/google-maps/id585027354"
+      }
+    }
   , "homeScreen": {
           "offlineBtnColor" : "#7D4BFF",
           "statsBackground" : "#F9F6FF",

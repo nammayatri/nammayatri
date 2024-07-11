@@ -161,7 +161,7 @@ function callInitiateResult () {
   const payload = {
     event: "initiate_result"
     , service: "in.juspay.becknui"
-    , payload: { action : "initiate", status: "SUCCESS" }
+    , payload: { action : "initiate", status: "SUCCESS" , fromDriver : true}
     , error: false
     , errorMessage: ""
     , errorCode: ""
@@ -305,6 +305,8 @@ window.onMerchantEvent = function (_event, payload) {
         purescript.main(makeEvent("", ""))(parsedPayload.payload.driverInfoResponse)(!parsedPayload.payload.onNewIntent)();
       }
     }
+  } else if (_event == "update"){
+    window.__payload = JSON.parse(payload)
   } else {
     console.error("unknown event: ", _event, payload);
   }
