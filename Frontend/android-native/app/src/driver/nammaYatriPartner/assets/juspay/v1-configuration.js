@@ -185,6 +185,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:080",
         "showSubscriptions" : true,
         "enableAdvancedBooking" : true,
+        "enableGullak": true,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.971599,
@@ -230,6 +231,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:040",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 17.402113,
@@ -288,6 +290,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0821",
         "showSubscriptions" : true,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.295810,
@@ -333,6 +336,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:011",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 28.618978,
@@ -391,6 +395,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:044",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 13.067439,
@@ -449,6 +454,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0422",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 11.023481,
@@ -494,6 +500,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0413",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 11.943852,
@@ -539,6 +546,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0816",
         "showSubscriptions" : true,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 15.32383804957557,
@@ -584,6 +592,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0124",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 28.457523,
@@ -629,6 +638,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:01189",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 28.535517,
@@ -674,6 +684,7 @@ window.getMerchantConfig = function () {
         "cityCode" :  "std:0422",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 11.1271,
@@ -719,6 +730,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:01189",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 44.977753,
@@ -764,6 +776,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0484",
         "showSubscriptions" : true,
         "enableAdvancedBooking": false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink": "",
         "callDriverInfoPost": false, 
         "cityLat" : 9.931233,
@@ -809,6 +822,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0431",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 10.80942,
@@ -867,6 +881,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:04362",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 10.778442,
@@ -925,6 +940,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0427",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 11.656077,
@@ -983,6 +999,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0462",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 8.723441,
@@ -1041,6 +1058,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:04344",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.738274,
@@ -1099,6 +1117,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0452",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 9.920995,
@@ -1157,6 +1176,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0416",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
+        "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.929078,

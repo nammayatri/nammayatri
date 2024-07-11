@@ -348,6 +348,7 @@ window.getMerchantConfig = function () {
       "mapImage" : "ys_ic_kolkata_map",
       "cityCode" : "std:033",
       "showSubscriptions" : true,
+      "enableGullak": false,
       "enableAdvancedBooking" : false,
       "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
@@ -420,6 +421,7 @@ window.getMerchantConfig = function () {
       "cityCode" : "std:0353",
       "showSubscriptions" : true,
       "enableAdvancedBooking" : false,
+      "enableGullak": false,
       "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 26.708845,

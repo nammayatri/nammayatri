@@ -663,6 +663,7 @@ dummyCityConfig = {
   cityCode : "",
   showSubscriptions : false,
   enableAdvancedBooking : false,
+  enableGullak : false,
   advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
   callDriverInfoPost : false,
   cityLat : 0.0,

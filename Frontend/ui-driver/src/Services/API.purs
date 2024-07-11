@@ -4543,15 +4543,16 @@ instance showPayoutRegisterRes :: Show PayoutRegisterRes where show = genericSho
 instance decodePayoutRegisterRes :: Decode PayoutRegisterRes where decode = defaultDecode
 instance encodePayoutRegisterRes :: Encode PayoutRegisterRes where encode = defaultEncode
 
+--------------------------------- SdkToken API ---------------------------------------------------------------------------------------------------------------------------
 
---------------------------------------------------------- Get Sdk Token Api ------------------------------------------------
-data ServiceName = HyperVerge
+data ServiceName = Gullak | HyperVerge
 
 data GetSdkTokenReq = GetSdkTokenReq String ServiceName
-newtype GetSdkTokenResp = GetSdkTokenResp {
-  token :: String
-}
 
+newtype GetSdkTokenResp = GetSdkTokenResp {
+  token :: String,
+  expiry :: Maybe String
+}
 
 instance makeGetSdkTokenReq  :: RestEndpoint GetSdkTokenReq where
     makeRequest reqBody@(GetSdkTokenReq exp svc) headers = defaultMakeRequest GET (EP.getSdkToken exp (show svc)) headers reqBody Nothing

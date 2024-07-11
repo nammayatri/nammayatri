@@ -11,8 +11,11 @@ package in.juspay.mobility;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
+import static in.juspay.mobility.Utils.getInnerPayload;
+import static in.juspay.mobility.Utils.handleGlResp;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
+import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
@@ -43,6 +46,10 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -54,6 +61,7 @@ import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
+import com.clevertap.android.sdk.ActivityLifecycleCallback;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
@@ -126,8 +134,6 @@ import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.services.HyperServices;
 
-import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
-
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import java.util.Iterator;
@@ -162,6 +168,7 @@ public class MainActivity extends AppCompatActivity {
     private JSONObject currentLocationRes = new JSONObject();
     private JSONObject preInitFutureTaskResult = null;
     long onCreateTimeStamp = 0;
+    private ActivityResultLauncher<Intent> startForResult;
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     ActivityResultLauncher<HyperKycConfig> launcher;
     private String registeredCallBackForHV;
@@ -407,6 +414,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         Log.i("APP_PERF", "ON_CREATE_START : " + System.currentTimeMillis());
         onCreateTimeStamp = System.currentTimeMillis();
+        ActivityLifecycleCallback.register(this.getApplication());
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -483,6 +491,7 @@ public class MainActivity extends AppCompatActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
+        startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> handleGlResp(result, hyperServices, MainActivity.this));
     }
 
     public void initiateHvLauncher() {
@@ -496,7 +505,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                         JSONObject processPL = new JSONObject();
-                        JSONObject innerPayload = getInnerPayload(new JSONObject(),"process_hv_resp");
+                        JSONObject innerPayload = getInnerPayload(new JSONObject(),"process_hv_resp", MainActivity.this);
                         innerPayload.put("callback", registeredCallBackForHV)
                                 .put("hv_response", jsonStr);
                         processPL.put(PaymentConstants.PAYLOAD, innerPayload)
@@ -739,7 +748,7 @@ public class MainActivity extends AppCompatActivity {
             json.put("requestId", UUID.randomUUID());
             json.put("service", getService());
             json.put("betaAssets", false);
-            payload = getInnerPayload(payload,"initiate");
+            payload = getInnerPayload(payload,"initiate", MainActivity.this);
             payload.put("onCreateTimeStamp", onCreateTimeStamp);
             payload.put("initiateTimeStamp" , initiateTimeStamp);
             json.put(PaymentConstants.PAYLOAD, payload);
@@ -826,6 +835,9 @@ public class MainActivity extends AppCompatActivity {
                         hyperServices.terminate();
                         hyperServices = null;
                         initApp();
+                        break;
+                    case "gl_sdk" :
+                        in.juspay.mobility.Utils.onGullakEvent(jsonObject, MainActivity.this, sharedPref, startForResult );
                         break;
                     case "in_app_notification":
                         showInAppNotificationApp(jsonObject, context);
@@ -938,7 +950,7 @@ public class MainActivity extends AppCompatActivity {
     private void processDeeplink(String viewParam, String deepLinkJson){
         try {
             JSONObject processPayloadDL = new JSONObject();
-            JSONObject innerPayloadDL = getInnerPayload(new JSONObject(),"process");
+            JSONObject innerPayloadDL = getInnerPayload(new JSONObject(),"process", MainActivity.this);
             if (viewParam != null && deepLinkJson != null) {
                 innerPayloadDL.put("view_param", viewParam)
                         .put("deepLinkJSON", deepLinkJson)
@@ -1062,7 +1074,7 @@ public class MainActivity extends AppCompatActivity {
                 innerPayload.put("fullNotificationBody", fullNotification);
             }
             if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
-                getInnerPayload(innerPayload, "OpenChatScreen");
+                getInnerPayload(innerPayload, "OpenChatScreen", MainActivity.this);
                 NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 notificationManager.cancel(NotificationUtils.chatNotificationId);
                 innerPayload.put("notification_type", "CHAT_MESSAGE");
@@ -1072,7 +1084,7 @@ public class MainActivity extends AppCompatActivity {
                 String type = jsonData.getString("notification_type");
                 innerPayload.put("notification_type", type);
                 if (type.equals("NEW_MESSAGE")) {
-                    getInnerPayload(innerPayload, "callDriverAlert");
+                    getInnerPayload(innerPayload, "callDriverAlert", MainActivity.this);
                     innerPayload.put("id", id)
                             .put("popType", type);
                 }
@@ -1288,26 +1300,7 @@ public class MainActivity extends AppCompatActivity {
         oldSharedPref.edit().clear().apply();
         return true;
     }
-
-    private JSONObject getInnerPayload(JSONObject payload, String action) throws JSONException{
-        String appName = "";
-        try{
-            appName = context.getApplicationInfo().loadLabel(context.getPackageManager()).toString();
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        payload.put("clientId", getResources().getString(R.string.client_id));
-        payload.put("merchantId", getResources().getString(R.string.merchant_id));
-        payload.put("appName", appName);
-        payload.put("action", action);
-        payload.put("logLevel",1);
-        payload.put("isBootable",true);
-        payload.put(PaymentConstants.ENV, "prod");
-        int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(in.juspay.mobility.app.R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
-        payload.put("bundleTimeOut",bundleTimeOut);
-        return payload;
-    }
-
+    
     public void initHyperVergeSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
         if (isClassAvailable ("co.hyperverge.hyperkyc.data.models.HyperKycConfig")) {
                 HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
