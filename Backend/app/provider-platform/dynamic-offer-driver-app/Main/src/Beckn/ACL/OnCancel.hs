@@ -183,7 +183,7 @@ tfQuotationPrice booking =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show booking.currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ encodeToText booking.estimatedFare,
@@ -200,7 +200,7 @@ mkQuotationBreakup booking =
       Just
         Spec.Price
           { priceComputedValue = Nothing,
-            priceCurrency = Just "INR",
+            priceCurrency = Just $ show booking.currency,
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Nothing,
@@ -243,7 +243,7 @@ tfItemPrice booking =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show booking.currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Nothing,

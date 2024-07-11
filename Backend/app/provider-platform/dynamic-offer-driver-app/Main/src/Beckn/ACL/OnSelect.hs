@@ -191,7 +191,7 @@ mkItemDescriptor vehicleServiceTierItem =
 mkPriceV2 :: DQuote.DriverQuote -> Spec.Price
 mkPriceV2 quote =
   Spec.Price
-    { priceCurrency = Just "INR",
+    { priceCurrency = Just $ show quote.currency,
       priceValue = Just $ show $ quote.estimatedFare,
       priceMaximumValue = Nothing,
       priceMinimumValue = Nothing,
@@ -284,7 +284,7 @@ mkQuoteBreakupInner quote = do
       Just
         Spec.Price
           { priceComputedValue = Nothing,
-            priceCurrency = Just "INR",
+            priceCurrency = Just $ show quote.currency,
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
             priceOfferedValue = Nothing,
@@ -312,7 +312,7 @@ mkQuotationPrice quote =
   Just
     Spec.Price
       { priceComputedValue = Nothing,
-        priceCurrency = Just "INR",
+        priceCurrency = Just $ show quote.currency,
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ encodeToText quote.estimatedFare,
