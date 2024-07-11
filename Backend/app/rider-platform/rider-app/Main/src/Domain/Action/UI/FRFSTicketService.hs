@@ -70,7 +70,6 @@ import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
 import Tools.Auth
 import Tools.Error
@@ -303,8 +302,6 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
           buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
       CallBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId_
-      QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
-      CQP.clearPSCache booking.riderId
       buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")

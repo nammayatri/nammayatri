@@ -42,6 +42,7 @@ import qualified SharedLogic.CallFRFSBPP as CallBPP
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QRecon
@@ -50,6 +51,7 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
 import qualified Tools.SMS as Sms
 
@@ -85,6 +87,8 @@ onConfirm merchant booking' dOrder = do
   mRiderNumber <- mapM decrypt person.mobileNumber
   buildReconTable merchant booking dOrder tickets mRiderNumber
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode
+  void $ QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
+  void $ CQP.clearPSCache booking.riderId
   return ()
   where
     sendTicketBookedSMS :: Maybe Text -> Maybe Text -> Flow ()
