@@ -98,4 +98,6 @@ in  { hedisCfg
     , kvConfigUpdateFrequency
     , cacConfig
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
+    , batchSize = +100
+    , numberOfShards = +10
     }

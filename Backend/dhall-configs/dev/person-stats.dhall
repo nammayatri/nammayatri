@@ -93,4 +93,6 @@ in  { hedisCfg
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
     , cacConfig
+    , batchSize = +100
+    , numberOfShards = +10
     }
