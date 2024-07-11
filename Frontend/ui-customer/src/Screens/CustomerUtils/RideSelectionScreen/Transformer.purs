@@ -106,9 +106,12 @@ myRideListTransformer isSrcServiceable listRes config = filter (\item -> any (_ 
     rideType = getFareProductType rideApiDetails.fareProductType
     autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
     cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+    bikeWaitingCharges = cityConfig.waitingChargeConfig.cabs
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
           autoWaitingCharges
+      else if rideDetails.vehicleVariant == "BIKE" then
+          bikeWaitingCharges
       else 
           cabsWaitingCharges
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"

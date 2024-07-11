@@ -103,7 +103,7 @@ genericHeaderConfigManageVehicle state = let
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = "Manage Vehicles"
+        text = getString MANAGE_VEHICLE
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {
@@ -452,7 +452,7 @@ addRCButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = "Add Vehicle"
+      { text = getString ADD_VEHICLE
       , color = Color.blue900}
       , margin = (Margin 16 15 16 0)
       , cornerRadius = 10.0
@@ -467,7 +467,7 @@ addRCButtonConfigs state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = "Manage Vehicles"
+      { text = getString MANAGE_VEHICLE
       , color = Color.black700}
       , margin = (Margin 16 12 16 18)
       , cornerRadius = 10.0

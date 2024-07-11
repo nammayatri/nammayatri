@@ -347,6 +347,16 @@ getLatestAndroidVersion merchant =
     MOBILITY_RS -> 1
     PASSCULTURE -> 1
 
+getMerchantName :: Merchant -> String
+getMerchantName merchant =
+  case merchant of
+    NAMMAYATRI -> "Nammayatri"
+    YATRI -> "Yatri"
+    YATRISATHI -> "YatriSathi"
+    MOBILITY_PM -> "MobilityPM"
+    MOBILITY_RS -> "MobilityRS"
+    PASSCULTURE -> "PassCulture"
+
 ifNotRegistered :: Unit -> Boolean
 ifNotRegistered _ = getValueToLocalStore REGISTERATION_TOKEN == "__failed"
 
@@ -636,6 +646,7 @@ onBoardingFlow = do
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
+      merchantName = getMerchantName $ getMerchant FunctionCall
   permissions <- checkAllPermissions false config.permissions.locationPermission
   if isNothing allState.globalProps.onBoardingDocs then updateOnboardingDocs registrationState.props.manageVehicle else pure unit
   GlobalState updatedGs <- getState
@@ -656,8 +667,10 @@ onBoardingFlow = do
       uiCurrentCategory = if manageVehicle then registrationState.props.manageVehicleCategory else  RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY
       registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
+      registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
+      registerationStepsAmbulance = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.ambulances) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
-      variantList = (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
+      variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else []) <> (if checkAvailability _.ambulances then [ST.AmbulanceCategory] else [])
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -680,7 +693,9 @@ onBoardingFlow = do
                       enteredRC = localStoreRC,
                       registerationStepsCabs = registerationStepsCabs,
                       registerationStepsAuto = registerationStepsAutos,
+                      registerationStepsAmbulance = registerationStepsAmbulance,
                       documentStatusList = filteredVehicleDocs,
+                      registerationStepsBike = registerationStepsBike,
                       variantList = variantList,
                       linkedRc = rcNo,
                       vehicleTypeMismatch = vehicleTypeMismatch,
@@ -716,15 +731,16 @@ onBoardingFlow = do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing }
         modifyScreenState $ AcknowledgementScreenType $ \_ -> AckScreenInitData.initData { data {
           title = Just $ getString CONGRATULATIONS,
-          description = Just $ getString YOU_ARE_ALL_SET_TO_TAKE_RIDES,
+          description = Just $ getString (YOU_ARE_ALL_SET_TO_TAKE_RIDES merchantName),
           primaryButtonText = Just $ getString CONTINUE,
           illustrationAsset = "success_lottie.json"}}
         ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false (Just state.data.cityConfig.enableAdvancedBooking) true
     REFRESH_REGISTERATION_SCREEN -> do
       modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { props { refreshAnimation = false}})
       onBoardingFlow
-    GO_TO_ONBOARD_SUBSCRIPTION -> do
+    GO_TO_ONBOARD_SUBSCRIPTION state -> do
       let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
+      modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data{vehicleCategory = state.data.vehicleCategory}})
       onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
     REFERRAL_CODE_SUBMIT state -> do
       activateReferralCode state state.data.referralCode
@@ -983,7 +999,7 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex)
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex state.data.oxygen state.data.ventilator )
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
@@ -1032,7 +1048,7 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex)
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex state.data.oxygen state.data.ventilator)
           void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
@@ -1229,7 +1245,7 @@ driverProfileFlow = do
                                                                                             , vehicleName = state.data.vehicleModelName
                                                                                             , vehicleCapacity = state.data.capacity
                                                                                             , downgradeOptions = downgradeOptions}
-                                                                                     , props{ downgraded = not (length (filter (not _.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) , canSwitchToRental = state.props.canSwitchToRental, canSwitchToIntercity = state.props.canSwitchToIntercity}
+                                                                                     , props{ downgraded = not (length (filter (not _.isSelected) downgradeOptions) > 0) && not (null downgradeOptions) , canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity}
                                                                                      })
       bookingOptionsFlow
     GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do
@@ -1237,13 +1253,17 @@ driverProfileFlow = do
       case res of
         Right (MakeRcActiveOrInactiveResp response) -> do
           pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> (getString IS_ACTIVE_NOW)
+          globalstate <- getState
           if state.data.isRCActive then do
-            globalstate <- getState
             (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate false
-            let status = getDriverStatus $ fromMaybe "" getDriverInfoResp.mode
+            let status = getDriverStatus $ fromMaybe "" getDriverInfoResp.mode  
             when (status /= Offline) $ changeDriverStatus Offline
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = false, rcDeactivePopup = true}})
-          else modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}}) 
+          else do
+            (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate true
+            let status = getDriverStatus $ fromMaybe "" getDriverInfoResp.mode
+            when (status /= Offline && not (fromMaybe false getDriverInfoResp.isVehicleSupported)) $ changeDriverStatus Offline
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {rcActive = true, rcDeactivePopup = false}}) 
           modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> state {props = driverProfileScreen.props { openSettings = false, alreadyActive = false,screenType = ST.VEHICLE_DETAILS}})
           refreshDriverProfile
           driverProfileFlow
@@ -1292,7 +1312,6 @@ driverProfileFlow = do
     TA.GO_HOME state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {gender = fromMaybe "UNKNOWN" state.data.driverGender}})
       homeScreenFlow
-
     DRIVER_ALTERNATE_CALL_API1 updatedState -> do
       let number =  updatedState.data.driverEditAlternateMobile
       getAlternateMobileResp <- lift $ lift $ Remote.validateAlternateNumber (makeValidateAlternateNumberRequest (fromMaybe "" (number)))
@@ -1637,14 +1656,14 @@ bookingOptionsFlow = do
 
   modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
    { data { airConditioned = resp.airConditioned
-           , vehicleType = show defaultRide.serviceTierType
+           , vehicleType = HU.getVehicleMapping defaultRide.serviceTierType
            , vehicleName = defaultRide.name
            , ridePreferences = ridePreferences'
            , defaultRidePreference = defaultRide 
           }, 
      props {
              canSwitchToRental = canSwitchToRental',
-             canSwitchToIntercity = canSwitchToInterCity'
+             canSwitchToInterCity = canSwitchToInterCity'
            } 
     })
 
@@ -1683,9 +1702,9 @@ bookingOptionsFlow = do
         driverProfileFlow
     ENABLE_RENTAL_INTERCITY_RIDE state -> do
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
-          requiredData = initialData{canSwitchToRental = Just state.props.canSwitchToRental, canSwitchToIntercity = state.props.canSwitchToIntercity}
+          requiredData = initialData{canSwitchToRental = Just state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity}
       (UpdateDriverInfoResp (GetDriverInfoResp updateDriverResp)) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
-      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToIntercity = updateDriverResp.canSwitchToIntercity} })
+      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToInterCity = updateDriverResp.canSwitchToInterCity} })
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
     EXIT_TO_RATE_CARD_SCREEN bopState -> do
@@ -3137,7 +3156,7 @@ subScriptionFlow = do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> defGlobalState.subscriptionScreen{props{isEndRideModal = isEndRideModal}})
       subScriptionFlow
     GO_TO_MANAGE_PLAN state -> do
-      uiPlans <- Remote.getUiPlansBT ""
+      uiPlans <- Remote.getUiPlansBT "null"
       modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{ data { managePlanData { alternatePlans = alternatePlansTransformer uiPlans state}}, props {subView = ManagePlan, showShimmer = false}})
       subScriptionFlow
     GO_TO_FIND_HELP_CENTRE state -> do
@@ -3375,7 +3394,7 @@ updateDriverDataToStates = do
     , capacity = fromMaybe 2 linkedVehicle.capacity
     , downgradeOptions = getDowngradeOptions linkedVehicle.variant
     , vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp)
-    , profileImg = getDriverInfoResp.aadhaarCardPhoto},props {canSwitchToRental =  (getDriverInfoResp.canSwitchToRental),canSwitchToIntercity = getDriverInfoResp.canSwitchToIntercity}})
+    , profileImg = getDriverInfoResp.aadhaarCardPhoto},props {canSwitchToRental =  (getDriverInfoResp.canSwitchToRental),canSwitchToInterCity = getDriverInfoResp.canSwitchToInterCity}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  
     {  driverName = getDriverInfoResp.firstName
     , driverMobile = getDriverInfoResp.mobileNumber
@@ -3600,6 +3619,7 @@ logoutFlow = do
   deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   deleteValueFromLocalStore REFERRAL_CODE_ADDED
+  deleteValueFromLocalStore VEHICLE_CATEGORY
   deleteValueFromLocalStore ENTERED_RC
   pure $ factoryResetApp ""
   void $ lift $ lift $ liftFlow $ logEvent logField_ "logout"

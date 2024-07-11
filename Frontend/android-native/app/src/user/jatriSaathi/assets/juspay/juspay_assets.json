@@ -364,6 +364,7 @@
       "ny_ic_home_illustration_hyderabad" : true,
       "ny_ic_home_illustration_kochi" : true,
       "ny_ic_home_illustration_kolkata" : true,
+      "ny_ic_home_illustration_siliguri" : true,
       "ny_ic_home_illustration_mysore" : true,
       "ny_ic_home_illustration_tumakuru" : true,
       "ny_ic_horizontal_dash" : true,
@@ -646,6 +647,14 @@
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_bike_side" : true,
+      "ny_ic_bike_nav_on_map" : true,
+      "ny_ic_bike_left_side" : true,
+      "carousel_1" : true,
+      "carousel_2" : true,
+      "carousel_3" : true,
+      "carousel_4" : true,
+      "ic_namma_yatri_logo" : true
    }
 }

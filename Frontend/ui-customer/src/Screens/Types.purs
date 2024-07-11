@@ -480,7 +480,7 @@ type IndividualRideCardState =
   }
 
 
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
@@ -926,7 +926,6 @@ type HomeScreenStateProps =
   , showNormalRideNotSchedulablePopUp :: Boolean
   , zoneOtpExpired :: Boolean
   , stageBeforeChatScreen :: Stage
-  , specialZoneType :: String
   , scheduledRidePollingDelay :: Number
   , startScheduledRidePolling :: Boolean
   , showScheduledRideExistsPopUp :: Boolean
@@ -971,6 +970,7 @@ data City
   | Pune
   | Mysore
   | Tumakuru
+  | Siliguri
   | AnyCity
   | Gurugram
   | Noida
@@ -1137,6 +1137,13 @@ type ReferralScreenState =
   }
 
 
+type EstimatesAndQuotesInfo = {
+    defaultQuote :: ChooseVehicle.Config
+  , nearByDrivers :: Maybe Int
+  , zoneType :: SpecialTags
+  , hasToll :: Boolean
+}
+
 -- ################################## SelectLanguageScreenState ###############################
 
 type SelectLanguageScreenState = {
@@ -1298,6 +1305,7 @@ type DriverInfoCard =
   , driversPreviousRideDropLocLon :: Maybe Number
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
+  , currentSearchResultType :: SearchResultType
   }
 
 type RatingCard =
@@ -1477,7 +1485,7 @@ instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 
-data SearchResultType = QUOTES | ESTIMATES | RENTALS | INTERCITY
+data SearchResultType = QUOTES FareProductType | ESTIMATES
 
 derive instance genericSearchResultType :: Generic SearchResultType _
 instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
@@ -2372,7 +2380,7 @@ derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStag
 instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
 instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
 
-data TicketType = ONE_WAY_TRIP | ROUND_TRIP
+data TicketType = ONE_WAY_TICKET | ROUND_TRIP_TICKET
 
 derive instance genericTicketType :: Generic TicketType _
 instance eqTicketType :: Eq TicketType where eq = genericEq

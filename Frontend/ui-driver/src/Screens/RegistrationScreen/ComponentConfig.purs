@@ -63,6 +63,8 @@ appOnboardingNavBarConfig state =
               _ | state.props.manageVehicle -> getString ADD_VEHICLE
               Just ST.CarCategory -> getString REGISTER_YOUR_CAR
               Just ST.AutoCategory -> getString REGISTER_YOUR_AUTO
+              Just ST.BikeCategory -> getString REGISTER_YOUR_BIKE
+              Just ST.AmbulanceCategory -> getString REGISTER_YOUR_AMBULANCE
               Just ST.UnKnown -> getString REGISTRATION
               Nothing -> getString REGISTRATION
       },

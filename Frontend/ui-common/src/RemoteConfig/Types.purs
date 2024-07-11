@@ -104,6 +104,7 @@ type TipsConfig
       bookAny :: Maybe (Array Int),
       taxi :: Maybe (Array Int),
       taxiPlus :: Maybe (Array Int),
+      bike :: Maybe (Array Int),
       default :: Maybe (Array Int)
     }
 

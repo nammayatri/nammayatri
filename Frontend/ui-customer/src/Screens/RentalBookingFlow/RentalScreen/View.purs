@@ -44,7 +44,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
-import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getVariantDescription, getVehicleName)
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..))
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
 import JBridge (renderSlider, sliderConfig, toast)
 import Language.Strings (getString, getVarString)

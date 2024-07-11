@@ -1310,3 +1310,6 @@ getFR stringKey =
         CHARGEABLE -> "Facturable"
         BOOKED -> "Réservé"
         SURCHARGES -> "Suppléments"
+        SILIGURI -> "Siliguri"
+        CLEAN_BIKE -> "Vélo propre"
+        UNCOMFORTABLE_BIKE -> "Vélo inconfortable"

@@ -235,8 +235,8 @@ bannerView push cityMetroConfig state =
 roundTripCheckBox :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> forall w . PrestoDOM (Effect Unit) w
 roundTripCheckBox push state metroConfig = 
   let
-    isRoundTripSelected = ST.ROUND_TRIP == state.data.ticketType
-    ticketType = if isRoundTripSelected then ST.ONE_WAY_TRIP else ST.ROUND_TRIP
+    isRoundTripSelected = ST.ROUND_TRIP_TICKET == state.data.ticketType
+    ticketType = if isRoundTripSelected then ST.ONE_WAY_TICKET else ST.ROUND_TRIP_TICKET
   in
     linearLayout
     [ height WRAP_CONTENT
@@ -370,8 +370,8 @@ headerView state push =
 incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> PrestoDOM (Effect Unit) w
 incrementDecrementView push state metroConfig =
   let (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
-      ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then metroBookingConfigResp.roundTripTicketLimit else metroBookingConfigResp.oneWayTicketLimit
-      limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY_TRIP && state.data.ticketCount >= ticketLimit)
+      ticketLimit = if state.data.ticketType == ST.ROUND_TRIP_TICKET then metroBookingConfigResp.roundTripTicketLimit else metroBookingConfigResp.oneWayTicketLimit
+      limitReached = (state.data.ticketType == ST.ROUND_TRIP_TICKET && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY_TICKET && state.data.ticketCount >= ticketLimit)
   in 
     linearLayout
     [ height WRAP_CONTENT

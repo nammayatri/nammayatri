@@ -229,16 +229,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.currency.setText(String.valueOf(model.getCurrency()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.tollTag.setVisibility(model.getTollCharges() > 0? View.VISIBLE : View.GONE);
-
-            if( key.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
-                holder.durationToPickup.setVisibility(View.VISIBLE);
-                holder.durationToPickupImage.setVisibility(View.VISIBLE);
-                holder.durationToPickup.setText(model.getDurationToPickup() + " min");
-            } else {
-                holder.durationToPickup.setVisibility(View.GONE);
-                holder.durationToPickupImage.setVisibility(View.GONE);
-            }
-
+            RideRequestUtils.handleDurationToPickup(holder, model, mainLooper, OverlaySheetService.this);
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
@@ -1101,10 +1092,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         handler.post(() -> {
             if (progressDialog != null) {
                 TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
-                if (key != null && key.equals("yatrisathiprovider")) {
-                    ImageView loader = progressDialog.findViewById(R.id.image_view_waiting);
-                    loader.setImageResource(R.drawable.ic_ride_assigned);
-                }
                 LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                 loaderText.setText(ackText);
                 if (lottieAnimationView.getVisibility() != View.GONE) {

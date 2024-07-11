@@ -101,6 +101,7 @@ import Data.Argonaut.Encode.Class as AE
 import Data.String.Regex (match, regex)
 import Data.String.Regex.Flags (noFlags)
 import Data.Array.NonEmpty (toArray)
+import Data.Array as DA
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -530,7 +531,7 @@ instance encodeFetchImageFrom :: Encode FetchImageFrom where encode = defaultEnu
 instance decodeFetchImageFrom :: Decode FetchImageFrom where decode = defaultEnumDecode
 
 showCarouselScreen :: LazyCheck -> Boolean
-showCarouselScreen a = if os == "IOS" then not ( isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.3.1" ) && getMerchant FunctionCall == NAMMAYATRI else getMerchant FunctionCall == NAMMAYATRI
+showCarouselScreen a = if os == "IOS" then not ( isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.3.1" ) && getMerchant FunctionCall == NAMMAYATRI else getMerchant FunctionCall == NAMMAYATRI || getMerchant FunctionCall == YATRISATHI
 
 terminateApp :: Stage -> Boolean -> Unit
 terminateApp stage exitApp = emitTerminateApp (Just $ getScreenFromStage stage) exitApp
@@ -668,13 +669,14 @@ getVehicleVariantImage variant viewType =
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.leftViewImage
           "BOOK_ANY"      -> case getMerchant FunctionCall of 
-                              YATRISATHI -> variantConfig.bookAny.leftViewImage
                               _ -> case city of 
                                       Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       Kochi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      Kolkata -> variantConfig.bookAny.leftViewImage
                                       _ -> variantConfig.bookAny.leftViewImage
+          "BIKE"          -> fetchImage FF_ASSET "ny_ic_bike_left_side"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -700,6 +702,7 @@ getVehicleVariantImage variant viewType =
                                       Kochi -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
+          "BIKE"          -> fetchImage FF_ASSET "ny_ic_bike_side"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -708,6 +711,7 @@ getVariantRideType variant =
     YATRISATHI -> case variant of
                     "TAXI" -> getString NON_AC_TAXI
                     "SUV"  -> getString AC_SUV
+                    "BIKE" -> "Bike Taxi"
                     _      -> getString AC_CAB
     _          -> getString AC_CAB
 
@@ -717,6 +721,7 @@ getTitleConfig vehicleVariant =
         "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
         "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
         "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
+        "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
         _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
   where mkReturnObj text' color' = 
           {
@@ -743,6 +748,7 @@ cityCodeMap =
   , Tuple (Just "std:0816") Tumakuru
   , Tuple (Just "std:01189") Noida
   , Tuple (Just "std:0124") Gurugram
+  , Tuple (Just "std:0353") Siliguri
   , Tuple Nothing AnyCity
   ]
 
@@ -807,6 +813,7 @@ getCityFromString cityString =
     "Tumakuru" -> Tumakuru
     "Noida" -> Noida
     "Gurugram" -> Gurugram
+    "Siliguri" -> Siliguri
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
@@ -969,7 +976,8 @@ getAllServices dummy =
     Delhi -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
     Chennai -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
-    Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
+    Kolkata -> ["Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
+    Siliguri -> ["Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     Kochi -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Pondicherry -> ["Auto", "Eco"]
     Noida -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
@@ -986,39 +994,13 @@ getSelectedServices dummy =
     Delhi -> ["AC Mini", "AC Sedan"]
     Chennai -> ["Eco", "Hatchback", "Sedan"]
     Mysore -> ["Non-AC Mini", "AC Mini", "Sedan"]
-    Kolkata -> ["Non-AC", "Hatchback", "Sedan"]
+    Kolkata -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Siliguri -> ["Non-AC Mini", "AC Mini", "Sedan"]
     Kochi -> ["Eco", "Hatchback", "Sedan"]
     Pondicherry -> ["Eco", "Auto"]
     Noida -> ["AC Mini", "AC Sedan"]
     Gurugram -> ["AC Mini", "AC Sedan"]
     _ ->  ["Eco", "Hatchback", "Sedan"] 
-
-getVariantDescription :: String -> { text :: String, airConditioned :: Boolean}
-getVariantDescription variant = 
-  case variant of
-    "AUTO_RICKSHAW" -> { text : "Commute friendly", airConditioned : false}
-    "TAXI" ->{text : "Non-AC Taxi" , airConditioned : false}
-    "TAXI_PLUS" ->{text : "AC Taxi" , airConditioned : false}
-    "SEDAN" ->{text : "AC, Plush rides" , airConditioned : true}
-    "SUV" ->{text : "AC , Spacious rides" , airConditioned : true}
-    "HATCHBACK" ->{text : "Non-AC , Budget rides " , airConditioned : false}
-    _ ->{text : "Non-AC Taxi" , airConditioned : false}
-
-getVehicleName :: String -> String
-getVehicleName vaiant = 
-  case (getMerchant FunctionCall) of
-    YATRISATHI -> case vaiant of
-                    "TAXI" -> "Non AC Taxi"
-                    "SUV"  -> "AC SUV"
-                    _      -> "AC Cab"
-    _          -> case vaiant of
-                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
-                    "TAXI" -> "Non-AC Taxi"
-                    "TAXI_PLUS" -> "AC Taxi"
-                    "SEDAN" -> "Comfy" 
-                    "SUV" -> "SUV"
-                    "HATCHBACK" -> "Eco" 
-                    _ -> "Non-AC Taxi"
 
 encodeBookingTimeList :: Array BookingTime -> String
 encodeBookingTimeList bookingTimeList = do
@@ -1086,6 +1068,7 @@ getCitySpecificMarker city variant =
         "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
         "SUV"           -> "ny_ic_suv_nav_on_map"
         "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
+        "BIKE"          -> "ny_ic_bike_nav_on_map"
         _               -> "ny_ic_vehicle_nav_on_map"
 
 mkDestMarker :: TrackingType -> FareProductType -> String
@@ -1127,6 +1110,7 @@ getLanguageBasedCityName cityName =
     Tumakuru -> getString TUMAKURU
     Noida -> getString NOIDA
     Gurugram -> getString GURUGRAM
+    Siliguri -> getString SILIGURI
     AnyCity -> ""
 
 breakPrefixAndId :: String -> Maybe (Tuple String (Maybe String))

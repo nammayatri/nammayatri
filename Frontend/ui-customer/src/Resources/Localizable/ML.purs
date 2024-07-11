@@ -1310,3 +1310,6 @@ getML stringKey =
         CHARGEABLE -> "ചാർജ്ജുചെയ്യാവുന്ന"
         BOOKED -> "ബുക്ക് ചെയ്തു"
         SURCHARGES -> "അധിക ചാർജ്"
+        SILIGURI -> "സിലിഗുരി"
+        CLEAN_BIKE -> "വൃത്തിയാക്കിയ ബൈക്ക്"
+        UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"

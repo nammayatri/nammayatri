@@ -1308,3 +1308,6 @@ getBN stringKey =
         CHARGEABLE -> "চার্জযোগ্য"
         BOOKED -> "বুক করা হয়েছে"
         SURCHARGES -> " অতিরিক্ত চার্জ"
+        SILIGURI -> "শিলিগুড়ি"
+        CLEAN_BIKE -> "পরিষ্কার বাইক"
+        UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"

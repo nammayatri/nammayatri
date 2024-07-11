@@ -1323,3 +1323,6 @@ getTE stringKey =
     CHARGEABLE -> "వసూలు చేసే"
     BOOKED -> "బుక్ చేయబడింది"
     SURCHARGES -> "అదనపు ఛార్జీలు"
+    SILIGURI -> "సిలిగురి"
+    CLEAN_BIKE -> "స్వచ్ఛంగా బైక్"
+    UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"

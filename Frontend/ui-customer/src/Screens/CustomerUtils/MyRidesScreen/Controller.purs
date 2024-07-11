@@ -207,6 +207,9 @@ myRideListTransformerProp listRes =
                     Nothing -> if isJust ride.vehicleServiceTierType then split (Pattern ",") (getVehicleVariantImage (fromMaybe "" ride.vehicleServiceTierType) RIGHT_VIEW) else ["",""]
         imageName = fromMaybe "" $ imageInfo !!0
         imageUrl = fromMaybe "" $ imageInfo !!1
+        _ = spy "imageInfo" imageInfo
+        _ = spy "imageName" imageName
+        _ = spy "imageUrl" imageUrl
     in
       {
         date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC rideStartTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC rideStartTime "Do MMM") )),
@@ -261,9 +264,12 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     rideType = getFareProductType rideApiDetails.fareProductType
     autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
     cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+    bikeWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.bike else cityConfig.waitingChargeConfig.bike
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
           autoWaitingCharges
+      else if rideDetails.vehicleVariant == "BIKE" then 
+          bikeWaitingCharges
       else 
          cabsWaitingCharges
      in {
@@ -321,7 +327,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , showDestination : if (decodeAddress $ Booking destination) == "" then "gone" else "visible" 
   , rideScheduledTime : fromMaybe "" ride.rideScheduledTime
   , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
-  , vehicleModel : rideDetails.vehicleModel
+  , vehicleModel : if rideDetails.vehicleModel == "" && rideDetails.vehicleVariant == "BIKE" then "Bike Taxi" else rideDetails.vehicleModel
   , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
   , providerName : ride.agencyName
   , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP -- get from API

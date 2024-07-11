@@ -85,6 +85,13 @@ view push state =
   let showSubscriptionsOption = (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
       completedStatusCount = length $ filter (\doc -> (getStatus doc.stage state) == ST.COMPLETED) documentList
       progressPercent = floor $ (toNumber completedStatusCount) / toNumber (length documentList) * 100.0
+      variantImage = case state.data.vehicleCategory of
+        Just ST.AutoCategory -> "ny_ic_auto_side"
+        Just ST.BikeCategory -> "ny_ic_bike_side"
+        Just ST.AmbulanceCategory -> "ny_ic_ambulance_side"
+        Just ST.CarCategory -> "ny_ic_sedan_side"
+        Just ST.UnKnown -> ""
+        Nothing -> ""
   in
     Anim.screenAnimation
       $ relativeLayout
@@ -138,7 +145,7 @@ view push state =
                             [ width $ V 32
                             , height $ V 32
                             , margin $ MarginRight 4
-                            , imageWithFallback $ fetchImage FF_ASSET if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_sedan_side" else "ny_ic_auto_side"
+                            , imageWithFallback $ fetchImage FF_ASSET variantImage 
                             ]
                         , textView
                             $ [ width WRAP_CONTENT
@@ -302,6 +309,10 @@ cardsListView push state =
         , weight 1.0
         ][ if state.data.vehicleCategory == Just ST.CarCategory then
             vehicleSpecificList push state state.data.registerationStepsCabs
+          else if state.data.vehicleCategory == Just ST.BikeCategory then
+            vehicleSpecificList push state state.data.registerationStepsBike
+          else if state.data.vehicleCategory == Just ST.AmbulanceCategory then
+            vehicleSpecificList push state state.data.registerationStepsAmbulance
           else
             vehicleSpecificList push state state.data.registerationStepsAuto
         ]
@@ -418,7 +429,7 @@ listItem push item state =
       compImage item = 
         fetchImage FF_ASSET $ case item.stage of
           ST.DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue"
-          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else "ny_ic_vehicle_onboard"
+          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else if state.data.vehicleCategory == Just ST.BikeCategory then "ny_ic_bike_onboard" else if state.data.vehicleCategory == Just ST.AmbulanceCategory then "ny_ic_ambulance_onboard"  else "ny_ic_vehicle_onboard"
           ST.GRANT_PERMISSION -> "ny_ic_grant_permission"
           ST.SUBSCRIPTION_PLAN -> "ny_ic_plus_circle_blue"
           ST.PROFILE_PHOTO -> "ny_ic_profile_image_blue"
@@ -497,7 +508,13 @@ popupModal push state =
 
 refreshView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 refreshView push state =
-  let documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
+  let documentList = case state.data.vehicleCategory of
+                      Just ST.CarCategory -> state.data.registerationStepsCabs
+                      Just ST.BikeCategory -> state.data.registerationStepsBike
+                      Just ST.AutoCategory -> state.data.registerationStepsAuto
+                      Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance
+                      Just ST.UnKnown -> state.data.registerationStepsCabs
+                      Nothing -> state.data.registerationStepsCabs
       showRefresh = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
   in 
     linearLayout
@@ -647,20 +664,24 @@ variantListView push state =
                       case item of
                         ST.AutoCategory -> cityConfig.assets.onboarding_auto_image
                         ST.CarCategory -> "ny_ic_sedan_side"
+                        ST.BikeCategory -> "ny_ic_bike_side"
+                        ST.AmbulanceCategory -> "ny_ic_ambulance_side"
                         ST.UnKnown -> "ny_ic_silhouette"
-                  ]
-                , textView $
-                  [ width WRAP_CONTENT
-                  , height WRAP_CONTENT
-                  , text case item of
-                            ST.AutoCategory -> getString AUTO_RICKSHAW
-                            ST.CarCategory -> getString CAR
-                            ST.UnKnown -> "Unknown"
-                  , color Color.black800
-                  , margin $ MarginLeft 20
-                  ] <> FontStyle.subHeading1 TypoGraphy
               ]
-          ) (state.data.variantList))
+            , textView $
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text case item of
+                        ST.AutoCategory -> getString AUTO_RICKSHAW
+                        ST.CarCategory -> getString CAR
+                        ST.BikeCategory -> getString BIKE_TAXI
+                        ST.AmbulanceCategory -> getString AMBULANCE
+                        ST.UnKnown -> "Unknown"
+              , color Color.black800
+              , margin $ MarginLeft 20
+              ] <> FontStyle.subHeading1 TypoGraphy
+          ]
+      ) (state.data.variantList))
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 

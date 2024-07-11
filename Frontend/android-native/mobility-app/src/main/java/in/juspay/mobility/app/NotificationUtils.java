@@ -875,15 +875,7 @@ public class NotificationUtils {
 //        if (driverVehicle.equals(variant)) return NO_VARIANT; TODO :: if driver's variant is same then don't show
         String buildType = context.getResources().getString(R.string.service);
         switch (buildType){
-            case  "yatrisathiprovider" :
-                switch (variant){
-                    case "SEDAN" :
-                    case "HATCHBACK" :
-                    case "TAXI_PLUS" : return "AC Cab";
-                    case "SUV" : return "AC SUV";
-                    case "TAXI" : return "Non AC Taxi";
-                    default : return NO_VARIANT;
-                }
+            case  "yatrisathiprovider" : return NO_VARIANT;
             case "nammayatriprovider" : return NO_VARIANT;
 
             case "yatriprovider" :

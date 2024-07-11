@@ -2,7 +2,7 @@ module Components.ChooseVehicle.View where
 
 import Common.Types.App
 
-import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
+import Components.ChooseVehicle.Controller (Action(..), Config, SearchResultType(..), FareProductType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/), (>), (-), (/=), (<), discard, void)
@@ -31,7 +31,8 @@ import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
-  let
+  let 
+    _ = spy "chooseVehicleConfigComponent" config
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
@@ -69,7 +70,7 @@ view push config =
             [ width MATCH_PARENT
           , height WRAP_CONTENT
           , cornerRadius 6.0
-          , id $ EHC.getNewIDWithTag config.id
+          , id $ EHC.getNewIDWithTag $ config.id <> show config.index
           , margin $ config.layoutMargin
           , padding padding'
           , orientation VERTICAL
@@ -124,7 +125,7 @@ view push config =
           , accessibility DISABLE
           , onClick push $ const $ case config.showInfo && isActiveIndex of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo then ShowRateCard config else NoAction config                        
+                                    true  -> if config.showInfo && config.searchResultType == ESTIMATES then ShowRateCard config else NoAction config                        
           ][]
        ]
     ]
@@ -176,7 +177,7 @@ variantsView push state =
                             Nothing -> 0
                           isActiveIndex = elem item state.selectedServices
                           itemCount = if (length state.services) == 4 then 2 else 3
-                          isInActive = not $ elem item state.availableServices
+                          isInActive = not $ elem item state.availableServices 
                           widthFactor = if (length listItem < 3) && item == "Non-AC Mini" then 20 else if itemCount == 2 then 36 else 28
                           shadowOpacity = if isInActive then 0.0 else 1.0
                         in
@@ -189,6 +190,7 @@ variantsView push state =
                             , shadow $ Shadow 0.0 1.0 4.0 0.0 Color.black12 shadowOpacity
                             , stroke $ "1," <> (if isActiveIndex then Color.blue800 else Color.grey900)
                             , clickable $ true
+                            , visibility $ boolToVisibility $ item /= "Hatchback"
                             , alpha if isInActive then 0.5 else 1.0
                             , background $ if isInActive then Color.grey900 else if isActiveIndex then Color.blue600 else Color.white900
                             , gravity CENTER
@@ -211,7 +213,7 @@ variantsView push state =
                                  , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_check_blue"
                                  ] 
                               , textView $ 
-                                 [ text $ item
+                                 [ text item
                                  , height MATCH_PARENT
                                  , width WRAP_CONTENT
                                  , gravity CENTER
@@ -232,7 +234,7 @@ variantsView push state =
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 vehicleDetailsView push config =
-  let selectedVehicle = maybe (getVehicleName config) (\name -> name) config.serviceTierName
+  let selectedVehicle = getVehicleName config
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -278,25 +280,22 @@ vehicleDetailsView push config =
 
 getVehicleName :: Config -> String
 getVehicleName config = 
-  case (getMerchant FunctionCall) of
-    YATRISATHI -> case config.vehicleVariant of
-                    "TAXI" -> "Non AC Taxi"
-                    "SUV"  -> "AC SUV"
-                    _      -> "AC Cab"
-    _          -> case config.vehicleVariant of
-                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
-                    "TAXI" -> "Non-AC Taxi"
-                    "TAXI_PLUS" -> "AC Taxi"
-                    "SEDAN" -> "Sedan"
-                    "SUV" -> "SUV"
-                    "HATCHBACK" -> "Hatchback"
-                    _ -> "Non-AC Taxi"
+  case config.vehicleVariant of
+    "AUTO_RICKSHAW" -> "Auto Rickshaw"
+    "TAXI" -> "Non-AC Mini"
+    "TAXI_PLUS" -> "AC Mini"
+    "SEDAN" -> "Sedan"
+    "SUV" -> "XL Cab"
+    "HATCHBACK" -> "AC Mini"
+    "BIKE" -> "Bike Taxi"
+    "BOOK_ANY" -> "Book Any"
+    _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY"
+      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails
       isBookAny = config.vehicleVariant == "BOOK_ANY"
   in
   linearLayout

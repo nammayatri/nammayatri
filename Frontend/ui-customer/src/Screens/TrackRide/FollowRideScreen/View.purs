@@ -56,7 +56,7 @@ import Presto.Core.Types.Language.Flow (Flow, getState, modifyState)
 import Helpers.Pooling(delay)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), SearchResultType(..), Stage(..))
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), Stage(..))
 import Styles.Colors as Color
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -72,6 +72,7 @@ import Components.MessagingView.Common.Types (MessageNotificationView)
 import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
 import Foreign (unsafeToForeign)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon)
+import Screens.Types as ST
 
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput

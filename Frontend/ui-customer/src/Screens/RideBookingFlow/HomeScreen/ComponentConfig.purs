@@ -990,6 +990,7 @@ getVehicleTitle vehicle =
       "SUV" -> (getString SUV)
       "SEDAN" -> (getString SEDAN)
       "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
+      "BIKE" -> "Bike Taxi"
       _ -> ""
   )
     <> " - "
@@ -1092,14 +1093,12 @@ messagingViewConfig state =
     messagingViewConfig'
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
-getDefaultPeekHeight state = do
-  let
-    isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
-
-    height = case state.props.currentStage == ST.RideAccepted of
-      true -> if isQuotes then 285 else 381
-      false -> if isQuotes then 377 else 368
-  height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
+getDefaultPeekHeight state =
+  let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+      height = case state.props.currentStage == ST.RideAccepted of
+        true -> if isQuotes then 285 else 381
+        false -> if isQuotes then 377 else 368
+  in height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
 metersToKm :: Int -> Boolean -> String
 metersToKm distance towardsDrop =
@@ -1500,16 +1499,15 @@ chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
 chooseYourRideConfig state =
   let
     tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-
+    _ = spy "chooseYourRideConfig TipConfig" tipConfig
     city = getValueToLocalStore CUSTOMER_LOCATION
-
     isIntercity = state.data.fareProductType == FPT.INTER_CITY
   in
     ChooseYourRide.config
       { rideDistance = state.data.rideDistance
       , rideDuration = state.data.rideDuration
       , activeIndex = state.data.selectedEstimatesObject.index
-      , quoteList = if (DA.any (_ == state.data.fareProductType) [ FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY ]) then state.data.quoteList else state.data.specialZoneQuoteList
+      , quoteList = if isIntercity then state.data.quoteList else state.data.specialZoneQuoteList
       , showTollExtraCharges = state.props.hasToll
       , nearByDrivers = state.data.nearByDrivers
       , showPreferences = state.data.showPreferences
@@ -1714,7 +1712,7 @@ chooseVehicleConfig state = let
     , id = selectedEstimates.id
     , maxPrice = selectedEstimates.maxPrice
     , basePrice = selectedEstimates.basePrice
-    , showInfo = selectedEstimates.showInfo
+    , showInfo = state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && selectedEstimates.showInfo
     , searchResultType = selectedEstimates.searchResultType
     , isBookingOption = false
     , pickUpCharges = selectedEstimates.pickUpCharges 
@@ -1873,7 +1871,7 @@ feedbackPillDataWithRating3 state =
     , { id: "8", text: getString RASH_DRIVING }
     ]
   , [ { id: "8", text: getString DRIVER_CHARGED_MORE }
-    , { id: "11", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB }
+    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "3", text: getString TRIP_GOT_DELAYED }
     , { id: "3", text: getString FELT_UNSAFE }
@@ -1886,7 +1884,7 @@ feedbackPillDataWithRating4 state =
     , { id: "9", text: getString EXPERT_DRIVING }
     ]
   , [ { id: "9", text: getString ASKED_FOR_EXTRA_FARE }
-    , { id: "11", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB }
+    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "4", text: getString TRIP_GOT_DELAYED }
     , { id: "4", text: getString SAFE_RIDE }
@@ -1898,7 +1896,7 @@ feedbackPillDataWithRating5 state =
   [ [ { id: "10", text: getString POLITE_DRIVER }
     , { id: "5", text: getString EXPERT_DRIVING }
     ]
-  , [ { id: "12", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else getString CLEAN_CAB }
+  , [ {id : "12", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if state.data.vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB}
     , { id: "10", text: getString ON_TIME }
     ]
   , [ { id: "10", text: getString SKILLED_NAVIGATOR }

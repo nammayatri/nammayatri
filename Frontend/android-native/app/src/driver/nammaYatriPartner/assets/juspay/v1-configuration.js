@@ -100,6 +100,13 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "acExplanation" : true
+    , "rcLimit" : 3
+    , "rateCardScreen" :{
+        "showYoutubeVideo" : false,
+        "showRateCard" : true,
+        "showTollCharges" : false
+      }
     , "showGenderBanner" : true
     , "defaultLanguage" : "EN_US"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
@@ -265,6 +272,10 @@ window.getMerchantConfig = function () {
           "auto" : {
             "freeSeconds" : 180,
             "perMinCharges" : 2.00
+          },
+          "bike" : {
+            "freeSeconds" : 300,
+            "perMinCharges" : 1.0
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -360,6 +371,10 @@ window.getMerchantConfig = function () {
         "auto" : {
           "freeSeconds" : 180,
           "perMinCharges" : 0.75
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -411,6 +426,10 @@ window.getMerchantConfig = function () {
         },
         "auto" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        },
+        "bike" : {
+          "freeSeconds" : 300,
           "perMinCharges" : 1.0
         }
       },
@@ -808,6 +827,10 @@ window.getMerchantConfig = function () {
         "auto" : {
           "freeSeconds" : 180,
           "perMinCharges" : 1.0
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -859,6 +882,10 @@ window.getMerchantConfig = function () {
         },
         "auto" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        },
+        "bike" : {
+          "freeSeconds" : 300,
           "perMinCharges" : 1.0
         }
       },
@@ -912,6 +939,10 @@ window.getMerchantConfig = function () {
         "auto" : {
           "freeSeconds" : 180,
           "perMinCharges" : 1.0
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -963,6 +994,10 @@ window.getMerchantConfig = function () {
         },
         "auto" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        },
+        "bike" : {
+          "freeSeconds" : 300,
           "perMinCharges" : 1.0
         }
       },
@@ -1016,6 +1051,10 @@ window.getMerchantConfig = function () {
         "auto" : {
           "freeSeconds" : 180,
           "perMinCharges" : 1.0
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1068,6 +1107,10 @@ window.getMerchantConfig = function () {
         "auto" : {
           "freeSeconds" : 180,
           "perMinCharges" : 1.0
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1119,6 +1162,10 @@ window.getMerchantConfig = function () {
         },
         "auto" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 1.0
+        },
+        "bike" : {
+          "freeSeconds" : 300,
           "perMinCharges" : 1.0
         }
       },
@@ -1184,6 +1231,10 @@ let defWaitingChargesConfig = {
     "auto" : {
       "freeSeconds" : 180,
       "perMinCharges" : 1.50
+    },
+    "bike" : {
+      "freeSeconds" : 300,
+      "perMinCharges" : 1.0
     }
   }
 
@@ -1194,6 +1245,10 @@ let defRentalWaitingChargesConfig = {
     "perMinCharges" : 2.0
   },
   "auto" : {
+    "freeSeconds" : 180,
+    "perMinCharges" : 1.0
+  },
+  "bike" : {
     "freeSeconds" : 180,
     "perMinCharges" : 2.0
   }
