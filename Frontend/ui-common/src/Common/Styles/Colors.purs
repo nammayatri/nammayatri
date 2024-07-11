@@ -370,5 +370,30 @@ greyBackDarkColor = "#D3D3D3"
 
 black12 :: Color
 black12 = "#1F000000"
+
 aliceBlueLight :: Color
 aliceBlueLight = "#F4F7FF"
+
+pumpkin30 :: Color
+pumpkin30 = "#4DFF8533"
+
+pumpkin10 :: Color 
+pumpkin10 = "#1AFF8533"
+
+seaShell :: Color
+seaShell = "#FFF8F4"
+
+darkOrange :: Color 
+darkOrange = "#F88600"
+
+dodgerBlue30 :: Color 
+dodgerBlue30 = "#4D2194FF"
+
+dodgerBlue8 :: Color 
+dodgerBlue8 = "#142194FF"
+
+indianRed8 :: Color
+indianRed8 = "#14E55454"
+
+lightBlue80 :: Color
+lightBlue80 = "#CC80B2FF"

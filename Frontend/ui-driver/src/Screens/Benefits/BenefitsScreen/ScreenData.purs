@@ -44,6 +44,7 @@ initData = {
       driverReferralType : CUSTOMER,
       referralInfoPopType : NO_REFERRAL_POPUP,
       selectedModule : Nothing,
-      showShimmer : true
+      showShimmer : true,
+      isPayoutEnabled: Nothing
     }
 }

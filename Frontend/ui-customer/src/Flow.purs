@@ -224,7 +224,6 @@ baseAppFlow gPayload callInitUI = do
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
   liftFlowBT $ resetAllTimers
-  let _ = spy "MediaDRM ID " $ JB.getDeviceID unit
   let
     showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   when callInitUI $ lift $ lift $ initUI -- TODO:: Can we move this to Main
@@ -666,6 +665,8 @@ accountSetUpScreenFlow = do
       void $ lift $ lift $ toggleLoader false
       let
         gender = getGenderValue state.data.gender
+        
+        deviceId = JB.getDeviceID unit
 
         selectedDisability = state.data.disabilityOptions.selectedDisability
 
@@ -676,6 +677,7 @@ accountSetUpScreenFlow = do
             { firstName = (Just state.data.name)
             , gender = gender
             , hasDisability = Just (isJust selectedDisability)
+            , deviceId = Just deviceId
             , disability =
               case selectedDisability of
                 Just disability -> Just (Remote.mkDisabilityData disability (fromMaybe "" state.data.disabilityOptions.otherDisabilityReason))

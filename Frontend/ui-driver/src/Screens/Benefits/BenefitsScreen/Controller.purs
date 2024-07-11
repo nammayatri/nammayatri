@@ -63,6 +63,7 @@ instance loggableAction :: Loggable Action where
     UpdateModuleList _ ->  trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list" "update_module_list"
     UpdateModuleListErrorOccurred -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list_error_occurred" "update_module_list"
     ShareQRLink -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "render_qr_link"
+    GoToCustomerReferralTracker -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "go_to_customer_referral_tracker"
 
 data Action = BackPressed
             | AfterRender
@@ -82,6 +83,7 @@ data Action = BackPressed
             | OpenModule LmsModuleRes
             | UpdateModuleList LmsGetModuleRes
             | UpdateModuleListErrorOccurred
+            | GoToCustomerReferralTracker
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -90,6 +92,7 @@ data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | EarningsScreen BenefitsScreenState
                   | GoBack
                   | GoToLmsVideoScreen BenefitsScreenState
+                  | GoToCustomerReferralTrackerScreen BenefitsScreenState
 
 eval :: Action -> BenefitsScreenState -> Eval Action ScreenOutput BenefitsScreenState
 
@@ -99,6 +102,8 @@ eval BackPressed state =
   else if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then 
     continue state{props{referralInfoPopType = NO_REFERRAL_POPUP}}
   else exit $ GoToHomeScreen state
+
+eval GoToCustomerReferralTracker state = exit $ GoToCustomerReferralTrackerScreen state
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
 
@@ -137,7 +142,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     _ -> continue state
 
 eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do 
-  continue state {data {totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, totalActivatedCustomers = resp.referrals.totalActivatedCustomers, totalReferredCustomers = resp.referrals.totalReferredCustomers}}
+  continue state {data {totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, totalActivatedCustomers = resp.referrals.totalActivatedCustomers, totalReferredCustomers = resp.referrals.totalReferredCustomers}, props{isPayoutEnabled = Just resp.referrals.isPayoutEnabled}}
 
 eval (UpdateLeaderBoard (LeaderBoardRes resp)) state = do
   let currentDriverRank = case find (\(DriversInfo driverInfo) -> driverInfo.isCurrentDriver && driverInfo.totalRides /= 0) resp.driverList of

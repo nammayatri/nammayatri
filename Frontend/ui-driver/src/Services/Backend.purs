@@ -1545,3 +1545,36 @@ getRideStatusPastDays payload = do
     withAPIResult (EP.getRideStatusPastDays "")  unwrapResponse $ callAPI headers (RideStatusPastDaysReq)
     where
         unwrapResponse x = x
+
+--------------------------------- getReferralEarnings --------------------------------------------------------------------------------------------------
+
+getReferralEarnings fromDate toDate = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getReferralEarnings fromDate toDate) unwrapResponse $ callAPI headers (ReferralEarningsReq fromDate toDate)
+    where
+        unwrapResponse (x) = x
+
+getReferralEarningsBT :: String -> String -> FlowBT String ReferralEarningsResp
+getReferralEarningsBT fromDate toDate = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getReferralEarnings fromDate toDate) (\x → x) errorHandler (lift $ lift $ callAPI headers (ReferralEarningsReq fromDate toDate))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+--------------------------------- getReferralEarnings ---------------------------------------------------------------------------------------------------
+
+deleteVPA vpaId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.deleteVPA vpaId) unwrapResponse $ callAPI headers (DeleteVPAReq vpaId)
+    where
+        unwrapResponse (x) = x
+
+--------------------------------- payoutCreateOrderRes ---------------------------------------------------------------------------------------------------
+
+payoutRegistration :: String -> Flow GlobalState (Either ErrorResponse PayoutRegisterRes)
+payoutRegistration dummy = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.registerPayout dummy) unwrapResponse $ callAPI headers (PayoutRegisterReq dummy)
+    where
+        unwrapResponse (x) = x

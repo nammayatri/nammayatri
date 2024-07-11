@@ -1384,6 +1384,7 @@ newtype UpdateProfileReq = UpdateProfileReq
   , clientVersion :: Maybe Version
   , disability :: Maybe Disability
   , hasDisability :: Maybe Boolean
+  , deviceId :: Maybe String
   }
 
 
