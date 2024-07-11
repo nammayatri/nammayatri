@@ -623,6 +623,7 @@ library
       Domain.Types.DriverBlockReason
       Domain.Types.DriverFee
       Domain.Types.DriverGoHomeRequest
+      Domain.Types.DriverGullakAssociation
       Domain.Types.DriverHomeLocation
       Domain.Types.DriverInformation
       Domain.Types.DriverIntelligentPoolConfig
@@ -735,6 +736,7 @@ library
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
       Storage.Beam.DriverGoHomeRequest
+      Storage.Beam.DriverGullakAssociation
       Storage.Beam.DriverHomeLocation
       Storage.Beam.DriverInformation
       Storage.Beam.DriverIntelligentPoolConfig
@@ -848,6 +850,7 @@ library
       Storage.Queries.DriverBlockReason
       Storage.Queries.DriverFee
       Storage.Queries.DriverGoHomeRequest
+      Storage.Queries.DriverGullakAssociation
       Storage.Queries.DriverHomeLocation
       Storage.Queries.DriverInformation
       Storage.Queries.DriverIntelligentPoolConfig

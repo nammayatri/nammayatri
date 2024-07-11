@@ -64,6 +64,7 @@ getConfigJSON = \case
     Notification.GRPCConfig cfg -> toJSON cfg
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
     Tokenize.HyperVergeTokenizationServiceConfig cfg -> toJSON cfg
+    Tokenize.GullakTokenizationServiceConfig cfg -> toJSON cfg
   Domain.BackgroundVerificationServiceConfig backgroundVerificationCfg -> case backgroundVerificationCfg of
     BackgroundVerification.CheckrConfig cfg -> toJSON cfg
 
@@ -108,6 +109,7 @@ getServiceName = \case
     Notification.GRPCConfig _ -> Domain.NotificationService Notification.GRPC
   Domain.TokenizationServiceConfig tokenizationConfig -> case tokenizationConfig of
     Tokenize.HyperVergeTokenizationServiceConfig _ -> Domain.TokenizationService Tokenize.HyperVerge
+    Tokenize.GullakTokenizationServiceConfig _ -> Domain.TokenizationService Tokenize.Gullak
   Domain.BackgroundVerificationServiceConfig backgroundVerificationCfg -> case backgroundVerificationCfg of
     BackgroundVerification.CheckrConfig _ -> Domain.BackgroundVerificationService BackgroundVerification.Checkr
 
@@ -141,6 +143,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> eitherValue configJSON
   Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> eitherValue configJSON
+  Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> eitherValue configJSON
   Domain.BackgroundVerificationService BackgroundVerification.Checkr -> Domain.BackgroundVerificationServiceConfig . BackgroundVerification.CheckrConfig <$> eitherValue configJSON
   where
     eitherValue :: FromJSON a => A.Value -> Either Text a

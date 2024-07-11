@@ -3,6 +3,8 @@ module: Tokenization
 types:
   GetTokenRes:
     token: Text
+    expiry: Maybe UTCTime
+
 apis:
  # GET /driver/sdkToken
   - GET:
