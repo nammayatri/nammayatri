@@ -145,7 +145,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
   when (isNothing origin && isNothing destination) $
     throwError PickupOrDropLocationNotFound
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  when (ride.status == DRide.COMPLETED || ride.status == DRide.CANCELLED) $ throwError $ RideInvalidStatus "Can't edit destination for completed/cancelled ride."
+  when (ride.status == DRide.COMPLETED || ride.status == DRide.CANCELLED) $ throwError $ RideInvalidStatus ("Can't edit destination for completed/cancelled ride." <> T.pack (show ride.status))
+  let udf1 = if ride.status == DRide.INPROGRESS then "RIDE_INPROGRESS" else "RIDE_PICKUP"
   person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   whenJust origin $ \startLocation -> do
     QL.create startLocation
@@ -267,7 +268,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                           oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
                           validTill = bookingUpdateReq.validTill
                         }
-                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf booking.merchantOperatingCityId "UPDATE_LOC_FCM" ENGLISH Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
+                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
                 let actions2 = map (mkActions2 bookingUpdateReq.id.getId dropLocation.lat dropLocation.lon) overlay.actions2
                 let secondaryActions2 = fmap (map (mkSecondaryActions2 bookingUpdateReq.id.getId)) overlay.secondaryActions2
                 let overlay' = overlay{actions2, secondaryActions2}
