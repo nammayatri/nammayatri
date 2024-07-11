@@ -124,6 +124,7 @@ handleConfirmTtlExpiry booking = do
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
 bookingStatusPolling bookingId _ = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  fork "booking status update" $ checkBookingsForStatus [booking]
   logInfo $ "booking: test " <> show booking
   handleConfirmTtlExpiry booking
   SRB.buildBookingStatusAPIEntity booking
