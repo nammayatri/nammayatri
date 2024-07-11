@@ -40,7 +40,7 @@ import Data.Maybe (Maybe)
 import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 
-import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes, SelectListRes)
+import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes,RideBookingStatusRes, SelectListRes)
 import Common.Types.App as CTP
 
 import RemoteConfig as RemoteConfig
@@ -179,6 +179,7 @@ data Action = NoAction
   | SourceUnserviceableActionController ErrorModalController.Action
   | UpdateCurrentLocation String String
   | UpdateCurrentStage String RideBookingRes
+  | UpdateCurrentStageStatus String RideBookingStatusRes
   | GoBackToSearchLocationModal
   | SkipButtonActionController PrimaryButtonController.Action
   | SearchExpireCountDown Int String String
