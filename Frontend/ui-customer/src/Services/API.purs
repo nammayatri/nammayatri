@@ -1011,8 +1011,7 @@ newtype RideBookingStatusRes = RideBookingStatusRes {
   id :: String,
   isBookingUpdated :: Boolean,
   bookingStatus :: String,
-  rideStatus :: Maybe String,
-  bookingDetails :: RideBookingAPIDetails
+  rideStatus :: Maybe String
   
 }
 
@@ -1102,11 +1101,10 @@ instance decodeRideBookingRes :: Decode RideBookingRes where decode = defaultDec
 instance encodeRideBookingRes  :: Encode RideBookingRes where encode = defaultEncode
 
 
-instance makeRideBookingStatus :: RestEndpoint RideBookingStatusReq RideBookingStatusRes where
+instance makeRideBookingStatus :: RestEndpoint RideBookingStatusReq where
  makeRequest reqBody@(RideBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.ridebooking bookingId) headers reqBody Nothing
- decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
-
+  
 derive instance genericRideBookingStatusReq :: Generic RideBookingStatusReq _
 instance standardEncodeRideBookingStatusReq :: StandardEncode RideBookingStatusReq where standardEncode (RideBookingStatusReq body) = standardEncode body
 instance showRideBookingStatusReq :: Show RideBookingStatusReq where show = genericShow

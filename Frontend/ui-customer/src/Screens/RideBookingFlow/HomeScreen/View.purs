@@ -3243,20 +3243,14 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     isSpecialPickupZone = state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area && state.data.config.feature.enableSpecialPickup
 
     handleRideBookingStatus (RideBookingStatusRes respBooking) = do
-      if respBooking.isBookingUpdated then do
+      if respBooking.isBookingUpdated || respBooking.bookingStatus == "REALLOCATED" then do
         updatedResp <- rideBooking respBooking.id
         either (const $ pure unit) handleRideBookingResp updatedResp
       else do
-        let bookingStatus = respBooking.bookingStatus
-            fareProductType = respBooking.bookingDetails ^. _fareProductType
-        case bookingStatus of
-          "REALLOCATED" -> do
-              doAff do liftEffect $ push $ UpdateCurrentStageStatus bookingStatus ( RideBookingStatusRes respBooking)
-          _ -> do
-            case respBooking.rideStatus of
-              Just rideStatus -> do
-                doAff do liftEffect $ push $ UpdateCurrentStageStatus rideStatus ( RideBookingStatusRes respBooking)
-              Nothing -> pure unit
+        case respBooking.rideStatus of
+          Just rideStatus -> do
+            doAff do liftEffect $ push $ UpdateCurrentStageStatus rideStatus ( RideBookingStatusRes respBooking)
+          Nothing -> pure unit
 
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
