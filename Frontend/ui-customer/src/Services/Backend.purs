@@ -507,6 +507,11 @@ rideBooking bookingId = do
     where
         unwrapResponse (x) = x
 
+ridebookingStatus bookingId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.ridebookingStatus bookingId) unwrapResponse $ callAPI headers (RideBookingStatusReq bookingId)
+    where
+        unwrapResponse (x) = x
 ------------------------------------------------------------------------ CancelRideBT Function ----------------------------------------------------------------------------------------
 cancelRideBT :: CancelReq -> String -> FlowBT String APISuccessResp
 cancelRideBT payload bookingId = do
