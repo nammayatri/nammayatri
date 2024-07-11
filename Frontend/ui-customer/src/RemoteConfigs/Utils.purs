@@ -70,3 +70,15 @@ getEstimatesOrder city = do
     let config = fetchRemoteConfigString "estimates_order"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ["AUTO_RICKSHAW", "BOOK_ANY"]
     getCityBasedConfig value city
+
+getBookAnyServices :: String -> Array String
+getBookAnyServices city = do
+    let config = fetchRemoteConfigString "book_any_services"
+        value = decodeForeignObject (parseJSON (spy "book_any_services" config)) $ defaultRemoteConfig ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
+    getCityBasedConfig value city
+
+getBookAnySelectedServices :: String -> Array String
+getBookAnySelectedServices city = do
+    let config = fetchRemoteConfigString "book_any_selected_services"
+        value = decodeForeignObject (parseJSON (spy "book_any_selected_services" config)) $ defaultRemoteConfig ["Auto", "Non-AC Mini", "AC Mini"]
+    getCityBasedConfig value city

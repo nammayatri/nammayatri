@@ -25,21 +25,23 @@ import Foreign.Index (readProp)
 import Data.Either as Either
 
 type RemoteConfig a
-  = { bangalore :: a
-    , kolkata :: a
-    , chennai :: a
-    , tumakuru :: a
-    , mysore :: a
-    , kochi :: a
-    , delhi :: a
-    , hyderabad :: a
-    , mumbai :: a
-    , coimbatore :: a
-    , pondicherry :: a
-    , goa :: a
-    , pune :: a
-    , tamilnaducities :: a
+  = { bangalore :: Maybe a
+    , kolkata :: Maybe a
+    , chennai :: Maybe a
+    , tumakuru :: Maybe a
+    , mysore :: Maybe a
+    , kochi :: Maybe a
+    , delhi :: Maybe a
+    , hyderabad :: Maybe a
+    , mumbai :: Maybe a
+    , coimbatore :: Maybe a
+    , pondicherry :: Maybe a
+    , goa :: Maybe a
+    , pune :: Maybe a
+    , tamilnaducities :: Maybe a
     , default :: a
+    , noida :: Maybe a
+    , gurugram :: Maybe a
     , config :: Maybe Config
     }
 
