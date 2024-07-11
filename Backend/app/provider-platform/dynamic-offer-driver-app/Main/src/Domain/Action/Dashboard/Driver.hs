@@ -2043,7 +2043,7 @@ changeOperatingCity merchantShortId opCity driverId req = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   merchantOpCityId' <- CQMOC.getMerchantOpCityId Nothing merchant (Just $ req.operatingCity)
   QPerson.updateMerchantOperatingCityId personId merchantOpCityId'
-  QReg.updateMerchantOperatingCityId personId.getId merchantOpCityId'.getId merchant.id.getId
+  QReg.updateMerchantOperatingCityId merchantOpCityId'.getId personId.getId merchant.id.getId
   DReg.cleanCachedTokens personId
   pure Success
 
