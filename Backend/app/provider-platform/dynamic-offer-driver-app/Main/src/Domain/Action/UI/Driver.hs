@@ -1006,12 +1006,6 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     SMerchant.checkCurrencies searchTry.currency [req.offeredFareWithCurrency]
     now <- getCurrentTime
     when (searchTry.validTill < now) $ throwError SearchRequestExpired
-    searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-    merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
-    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo
     mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
     sReqFD <-
       case mSReqFD of
@@ -1019,6 +1013,14 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         Nothing -> do
           logError $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
           throwError RideRequestAlreadyAccepted
+    let expiryTimeWithBuffer = addUTCTime 10 sReqFD.searchRequestValidTill ----- added 10 secs buffer so that if driver is accepting at last second then because of api latency it sholuldn't fail.
+    when (expiryTimeWithBuffer < now) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")
+    searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+    merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo
     when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
     driverFCMPulledList <-
       case req.response of
