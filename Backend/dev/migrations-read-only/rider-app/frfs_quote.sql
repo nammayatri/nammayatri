@@ -39,3 +39,9 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN partner_org_id character varying(36)
 
 ALTER TABLE atlas_app.frfs_quote ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 ALTER TABLE atlas_app.frfs_quote ALTER COLUMN merchant_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN event_discount_amount double precision ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN discounted_tickets integer ;

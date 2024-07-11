@@ -48,7 +48,7 @@ mkTBPStatusAPI = \case
 
 mkFRFSConfigAPI :: Config.FRFSConfig -> APITypes.FRFSConfigAPIRes
 mkFRFSConfigAPI Config.FRFSConfig {..} = do
-  APITypes.FRFSConfigAPIRes {..}
+  APITypes.FRFSConfigAPIRes {isEventOngoing = False, ticketsBookedInEvent = 0, ..}
 
 mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrganization) -> APITypes.FRFSStationAPI -> m APITypes.FRFSStationAPI
 mkPOrgStationAPI mbPOrgId stationAPI = do
