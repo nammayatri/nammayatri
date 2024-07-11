@@ -3696,9 +3696,11 @@ welcomeScreenFlow = do
 benefitsScreenFlow :: FlowBT String Unit
 benefitsScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
-  _ <- lift $ lift $ liftFlow $ logEvent logField_ "benefitsScreenFlow"
+  void $ lift $ lift $ liftFlow $ logEvent logField_ "benefitsScreenFlow"
+  appConfig <- getAppConfigFlowBT Constants.appConfig
   let referralCode = getValueToLocalStore REFERRAL_CODE
-  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { data {referralCode = referralCode}})
+      cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { data {referralCode = referralCode, cityConfig = cityConfig}})
   benefitsScreen <- UI.benefitsScreen
   case benefitsScreen of
     DRIVER_REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs

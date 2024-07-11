@@ -28,6 +28,7 @@ import Foreign (unsafeToForeign)
 import Data.Array (find)
 import Services.API
 import Effect.Uncurried (runEffectFn4)
+import JBridge as JB
 import Screens.Benefits.BenefitsScreen.Transformer (buildLmsModuleRes)
 import PrestoDOM.List (ListItem)
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -102,6 +103,7 @@ data Action = BackPressed
             | BannerChanged String
             | BannerStateChanged String
             | NoAction
+            | GullakSDKResponse String
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -124,6 +126,8 @@ eval BackPressed state =
 eval GoToCustomerReferralTracker state = exit $ GoToCustomerReferralTrackerScreen state
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
+
+eval (GullakSDKResponse _ ) state = continue state
 
 eval ShowQRCode state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_app_qr_code_click"

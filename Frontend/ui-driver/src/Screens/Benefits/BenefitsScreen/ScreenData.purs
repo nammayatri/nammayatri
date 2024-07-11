@@ -22,6 +22,7 @@ import Services.API (ModuleCompletionCriteria(..), LmsModuleRes(..), LmsCategory
 import Foreign.Object (empty)
 import ConfigProvider
 import Prelude
+import Screens.RegistrationScreen.ScreenData as RSD
 
 initData :: BenefitsScreenState
 initData = {
@@ -33,6 +34,7 @@ initData = {
          , referralCode : ""
          , rank : Nothing
          , totalEligibleDrivers : Nothing
+         , cityConfig : RSD.dummyCityConfig
          , moduleList : {
             completed : [],
             remaining : []

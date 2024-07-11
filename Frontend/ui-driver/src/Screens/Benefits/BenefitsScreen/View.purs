@@ -14,7 +14,6 @@ import Components.GenericHeader as GenericHeader
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import Helpers.Utils
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
@@ -34,7 +33,7 @@ import Effect.Class (liftEffect)
 import Debug (spy)
 import Mobility.Prelude
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Data.Maybe (isJust, fromMaybe, Maybe(..), maybe)
 import Effect.Uncurried (runEffectFn4)
 import ConfigProvider
@@ -50,6 +49,19 @@ import Components.BannerCarousel as BannerCarousel
 import PrestoDOM.List (ListItem, preComputeListItem)
 import Engineering.Helpers.Commons as EHC
 import Presto.Core.Flow (Flow)
+import Data.Function.Uncurried as UC
+import JBridge as JB
+import DecodeUtil (getAnyFromWindow)
+import Data.Function.Uncurried (runFn3)
+import Presto.Core.Types.Language.Flow (Flow)
+import Presto.Core.Types.API (ErrorResponse(..))
+import Data.Function.Uncurried (runFn2)
+import Data.Either (Either(..))
+import Helpers.API as HelperAPI
+import Helpers.Utils as HU
+import Services.API as API
+import Data.String as DS
+import Data.Array as DA
 
 screen :: BenefitsScreenState -> Screen Action BenefitsScreenState ScreenOutput
 screen initialState =
@@ -66,7 +78,7 @@ screen initialState =
                     (LeaderBoardRes leaderBoardResp) <- Remote.leaderBoardBT $ DailyRequest (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
                     lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard (LeaderBoardRes leaderBoardResp)
             void $ launchAff $ flowRunner defaultGlobalState do
-                moduleResp <- Remote.getAllLmsModules (getLanguageTwoLetters $ Just (getLanguageLocale languageKey))
+                moduleResp <- Remote.getAllLmsModules (HU.getLanguageTwoLetters $ Just (getLanguageLocale languageKey))
                 case moduleResp of
                   Right modules -> liftFlow $ push $ UpdateModuleList modules
                   Left err -> liftFlow $ push $ UpdateModuleListErrorOccurred
@@ -130,7 +142,8 @@ separatorView push state =
 
 referralScreenInnerBody :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralScreenInnerBody push state = 
-  linearLayout
+  let loadDynamicModule = state.data.cityConfig.enableGullak && (fromMaybe false $ runFn3 getAnyFromWindow "loadDynamicModule" Nothing Just)
+  in linearLayout
   [ width $ MATCH_PARENT
   , height $ WRAP_CONTENT
   , orientation VERTICAL
@@ -142,6 +155,7 @@ referralScreenInnerBody push state =
       , margin $ Margin 16 0 16 12
       , orientation VERTICAL
       ][ if shouldShowReferral state then driverReferralCode push state else dummyView
+      , if loadDynamicModule then savingWithGullak push state else dummyView
       , rideLeaderBoardView push state
       ]
     , learnAndEarnShimmerView push state
@@ -165,7 +179,7 @@ tabView push state =
     ,  tabItem push (state.props.driverReferralType == DRIVER) (getString REFER_DRIVER) "ny_ic_new_avatar_profile" DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
     ]
   where
-  cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
   bothTabsEnabled = (cityConfig.showDriverReferral || state.data.config.enableDriverReferral) && (cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral)
 
@@ -187,7 +201,7 @@ tabItem push isActive text' img referralType bothTabsEnabled visibility' =
     , visibility $ boolToVisibility visibility'
     ]
     [ imageView
-        [ imageWithFallback $ fetchImage FF_ASSET img
+        [ imageWithFallback $ HU.fetchImage HU.FF_ASSET img
         , height $ V 24
         , width $ V 24
         , margin $ MarginRight 12
@@ -209,7 +223,7 @@ tabItem push isActive text' img referralType bothTabsEnabled visibility' =
 shouldShowReferral :: BenefitsScreenState -> Boolean
 shouldShowReferral state =
   let
-    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
 
     driverReferral = cityConfig.showDriverReferral || state.data.config.enableDriverReferral
 
@@ -250,7 +264,7 @@ driverReferralCode push state =
                 , gravity CENTER
                 , padding (Padding 5 5 5 5)
                 , afterRender (\action -> do
-                                runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) (getNewIDWithTag "ReferralQRCode") 500 0
+                                runEffectFn4 HU.generateQR (HU.generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) (getNewIDWithTag "ReferralQRCode") 500 0
                               ) (const RenderQRCode)
                 ]
             , textView
@@ -302,7 +316,7 @@ driverReferralCode push state =
                   [ height $ V 30
                   , width $ V 30
                   , padding $ PaddingHorizontal 10 5
-                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_grey"
+                  , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_share_grey"
                   ]
                 , textView
                   $ [ height MATCH_PARENT
@@ -348,7 +362,7 @@ driverReferralCode push state =
              , padding $ PaddingHorizontal 8 8
              , gravity CENTER_VERTICAL
              ][imageView
-               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_star_black"
+               [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_star_black"
                , height $ V 15
                , width $ V 12
                , margin $ MarginRight 4
@@ -369,7 +383,7 @@ driverReferralCode push state =
                ][ imageView
                    [ height $ V 16
                    , width $ V 16
-                   , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_chevron_right_black_900"
+                   , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_right_black_900"
                    ]
                 ]
               ]
@@ -451,7 +465,7 @@ referralCountView showStar text' count visibility' push popupType =
         , gravity CENTER_VERTICAL
         ]
         [ imageView
-            $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_star_black"
+            $ [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_star_black"
               , height $ V 13
               , width $ V 13
               , margin $ MarginRight 4
@@ -464,7 +478,7 @@ referralCountView showStar text' count visibility' push popupType =
               ]
             <> FontStyle.tags TypoGraphy
         , imageView
-            $ [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_black"
+            $ [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_info_black"
               , height $ V 14
               , width $ V 14
               , margin $ Margin 4 2 0 0
@@ -520,7 +534,7 @@ appQRCodeView push state =
             , id (getNewIDWithTag "ExpandedReferralQRCode")
             , padding (Padding 5 5 5 5)
             , afterRender (\action -> do
-                            runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) (getNewIDWithTag "ExpandedReferralQRCode") 280 0
+                            runEffectFn4 HU.generateQR (HU.generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType) (getNewIDWithTag "ExpandedReferralQRCode") 280 0
                           ) (const RenderQRCode)
             ]
         , PrimaryButton.view (push <<< PrimaryButtonActionController state) (primaryButtonConfig state)
@@ -587,6 +601,38 @@ referralInfoPop push state =
     ACTIVATED_CUSTOMERS_POPUP -> { heading: getString ACTIVATED_CUSTOMERS, subtext: getString ACTIVATED_CUSTOMERS_INFO }
     _ -> { heading: "", subtext: "" }
 
+savingWithGullak :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+savingWithGullak push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginVertical 10 10
+    ]
+    [ textView
+        $ [ text "Invest in gold"
+          , color Color.black800
+          , margin $ MarginBottom 12
+          ]
+        <> FontStyle.h2 TypoGraphy
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , cornerRadius 12.0
+        ][ imageView
+            [ width MATCH_PARENT
+            , height $ V 180
+            , onClick (\action -> do
+                  void $ launchAff $ flowRunner defaultGlobalState $ checkTokenAndInitSDK push GullakSDKResponse
+                  pure unit)
+                (const AfterRender)
+            , gravity CENTER
+            , imageUrl "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/Gullak%2Fgullak_banner.png?alt=media&token=68fd4f55-e23a-4c77-ba66-ac4b094cbb14"
+            ]
+        ]
+    ]
+
 rideLeaderBoardView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 rideLeaderBoardView push state =
   linearLayout
@@ -614,7 +660,7 @@ rideLeaderBoardView push state =
             [ width $ V 77
             , height $ V 97
             , gravity CENTER
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_leaderboard"
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_leaderboard"
             ]
         , linearLayout
             [ height WRAP_CONTENT
@@ -656,7 +702,7 @@ rideLeaderBoardView push state =
             [ width $ V 32
             , height $ V 32
             , gravity CENTER
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_arrow_right_circle_green"
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_arrow_right_circle_green"
             ]
         ]
     ]
@@ -818,7 +864,7 @@ statusPillView push state status pillMargin =
      [ width $ V 10
      , height $ V 10
      , visibility $ if pillProperty.shouldImageBeVisible then VISIBLE else GONE
-     , imageWithFallback $ fetchImage FF_ASSET pillProperty.pillImage
+     , imageWithFallback $ HU.fetchImage HU.FF_ASSET pillProperty.pillImage
      , margin $ MarginRight 3]
   ,  textView $
      [ text $ pillProperty.text
@@ -865,3 +911,28 @@ getCarouselConfig view state = {
   , layoutHeight : V 100
   , overlayScrollIndicator : true
 }
+
+checkTokenAndInitSDK :: forall action. (action -> Effect Unit) ->  (String -> action) -> Flow GlobalState Unit
+checkTokenAndInitSDK push action = do
+  let tokenWithExp = DS.split (DS.Pattern "<$>") (getValueToLocalStore GULLAK_TOKEN)
+      cachedToken = fromMaybe "" (tokenWithExp DA.!! 0)
+      isTokenValid = (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" (tokenWithExp DA.!! 1)) (HU.getCurrentUTC "")) > 0
+  if isTokenValid && not (DS.null cachedToken) then do
+    void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = cachedToken, param2 = "false"}) push action
+    pure unit
+  else do
+    response <- HelperAPI.callApi $ API.GetSdkTokenReq "0" API.Gullak
+    case response of
+      Left _ -> do
+        void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        pure unit
+      Right (API.GetSdkTokenResp resp) -> do
+        void $ pure $ setValueToLocalStore GULLAK_TOKEN $ resp.token <> "<$>" <> fromMaybe "" resp.expiry
+        void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = resp.token, param2 = "false"}) push action
+        pure unit
+  pure unit
+
+-- checkTokenAndInitSDK :: forall action. (action -> Effect Unit) ->  (String -> action) -> Flow GlobalState Unit
+-- checkTokenAndInitSDK push action = do
+--   void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = "e68c7673a76b44ffb0e1237f239503c0", param2 = "false"}) push action -- Get token from API a2ff7b6f29b242479291757dd819b66a
+--   pure unit

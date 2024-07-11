@@ -191,6 +191,7 @@ window.onMerchantEvent = function (_event, payload) {
   const clientPaylod = JSON.parse(payload);
   const clientId = clientPaylod.payload.clientId;
   const appName = clientPaylod.payload.appName;
+  window.loadDynamicModule = clientPaylod.payload.loadDynamicModule;
   window.appName = appName;
   if (_event == "initiate") {
     console.log("APP_PERF INDEX_BUNDLE_INITIATE_START : ", new Date().getTime());
@@ -282,6 +283,8 @@ window.onMerchantEvent = function (_event, payload) {
         if (!checkForReferral(parsedPayload.payload.viewParamNewIntent, "REFERRAL_NEW_INTENT")) {
           purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
         }
+      } else if (parsedPayload.payload.action == "gl_process" && parsedPayload.payload.callback && parsedPayload.payload.value) {
+        window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.value);
       } else {
         purescript.main(makeEvent("", ""))(parsedPayload.payload.driverInfoResponse)();
       }

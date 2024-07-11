@@ -1067,15 +1067,15 @@ export const isCoordOnPath = function (data) {
             try {
               console.log("I AM HERE ------------------ IN CHECK ROUTE");
               if(speed == 0)
-                {
-                  const res = {
-                    "points": (data.points != undefined) ? data.points : [] ,
-                    "eta": 0,
-                    "distance": 0,
-                    "isInPath": true
-                  };
-                  return res;
-                }
+              {
+                const res = {
+                  "points": (data.points != undefined) ? data.points : [] ,
+                  "eta": 0,
+                  "distance": 0,
+                  "isInPath": true
+                };
+                return res;
+              }
               const res = window.JBridge.isCoordOnPath(json, lat, lon, speed);
               return JSON.parse(res);
             } catch (err) {
@@ -2716,4 +2716,11 @@ export const getFromUTC = (timestamp) => (val) => {
     default:
       return date.getUTCDate();
   }
+}
+
+export const emitJOSEventWithCb = function (eventName, innerPayload, cb, action) {
+  const callback = callbackMapper.map(function (stringifyPayload) {
+    cb(action(stringifyPayload))();
+  });
+  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({ event: eventName, action: callback, innerPayload: JSON.stringify(innerPayload)}))()(); //token: extraParam
 }

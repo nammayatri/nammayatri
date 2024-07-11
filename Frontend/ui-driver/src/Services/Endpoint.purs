@@ -360,3 +360,6 @@ deleteVPA dummy = (getBaseUrl "") <> "/payout/delete/vpa"
 
 registerPayout :: String -> String
 registerPayout dummy = (getBaseUrl "") <> "/payout/registration"
+
+getSdkToken :: String -> String -> String
+getSdkToken expiry serviceName = (getBaseUrl "") <> "/driver/sdkToken?expiry=" <> "0" <> "&service=" <> "Gullak"
