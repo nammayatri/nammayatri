@@ -293,7 +293,7 @@ bookingStatusBody state push paymentStatus =
   let 
     (API.MetroTicketBookingStatus resp) = state.data.resp
     city = getCityNameFromCode $ Just resp.city
-    (CityMetroConfig config) = getMetroConfigFromCity city
+    (CityMetroConfig config) = getMetroConfigFromCity city Nothing
     headerImgConfig = {
                         src : fetchImage FF_COMMON_ASSET config.logoImage
                       , width : V 41

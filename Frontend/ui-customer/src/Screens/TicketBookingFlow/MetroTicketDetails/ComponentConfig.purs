@@ -51,7 +51,7 @@ cancelBookingButtonConfig :: ST.MetroTicketDetailsScreenState -> PrimaryButton.C
 cancelBookingButtonConfig state = 
   let
     config = PrimaryButton.config
-    (CityMetroConfig cityMetroConfig) = getMetroConfigFromCity state.data.city
+    (CityMetroConfig cityMetroConfig) = getMetroConfigFromCity state.data.city Nothing
     (StatusPillConfig pillConfig) = getStatusPillConfig state
     cancelButtonVisibility = case pillConfig.ticketStatus of
       "ACTIVE" -> true

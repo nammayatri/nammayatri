@@ -128,3 +128,12 @@ startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLow
 
 noView :: forall w . PD.PrestoDOM (Effect Unit) w
 noView = PD.textView [ PD.width $ PD.V 0 , PD.height $ PD.V 0, PD.visibility PD.GONE]
+
+getNumberWithSuffix :: Int -> String
+getNumberWithSuffix n
+  | n `mod` 100 >= 11 && n `mod` 100 <= 13 = show n <> "th"
+  | otherwise = show n <> case n `mod` 10 of
+      1 -> "st"
+      2 -> "nd"
+      3 -> "rd"
+      _ -> "th"

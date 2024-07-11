@@ -71,7 +71,7 @@ tagView item isLast push =
             , width MATCH_PARENT
             , background item.bannerConfig.background
             , cornerRadii item.bannerConfig.cornerRadii
-            , visibility $ item.showBanner
+            -- , visibility $ item.showBanner
             , margin $ MarginHorizontal 8 8
             , gravity CENTER
             ][  textView $

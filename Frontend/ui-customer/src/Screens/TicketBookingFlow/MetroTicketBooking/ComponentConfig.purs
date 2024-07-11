@@ -22,7 +22,7 @@ import PrestoDOM
 import Styles.Colors as Color
 import Helpers.Utils (convertTo12HourFormat , fetchImage, FetchImageFrom(..), getCityFromString)
 import Prelude ((<>))
-import Common.Types.App(LazyCheck(..))
+import Common.Types.App(LazyCheck(..), Price)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Maybe
 import Font.Style as FontStyle
@@ -39,6 +39,7 @@ import Data.Function.Uncurried (runFn3)
 import MerchantConfig.Types (MetroConfig)
 import Storage
 import Services.API (MetroBookingConfigRes(..))
+import Mobility.Prelude (getNumberWithSuffix)
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -70,11 +71,13 @@ updateButtonConfig state = let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     config = PrimaryButton.config
     price = state.data.ticketPrice * state.data.ticketCount
+    eventDiscountAmount = fromMaybe 0 state.data.eventDiscountAmount
     (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
     priceWithoutDiscount = ((metroBookingConfigResp.discount * price) / 100) + price
+    discountText = if price /= priceWithoutDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> (show priceWithoutDiscount) <> " </strike>" <> " ") else ""
+    cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
     updateButtonConfig' = config 
-        { 
-          textConfig{ textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection && price /= priceWithoutDiscount) then ((getString PAY)<>"&nbsp;&nbsp; " <> " ₹ " <> "<strike> " <> (show priceWithoutDiscount) <> " </strike>" <> " " <> (show price)) else if (state.props.currentStage /= ST.MetroTicketSelection) then ((getString PAY)<>" " <> " ₹" <> (show price) )  else (getString GET_FARE)}
+        { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection) then ((getString PAY) <> discountText <> " ₹" <> (show price) <> cashbackText) else (getString GET_FARE)}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
@@ -90,6 +93,14 @@ metroBannerConfig (CityMetroConfig cityMetroConfig) state =
   let
     config = Banner.config
     appName = fromMaybe state.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+    (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+    title' = if (metroBookingConfigResp.isEventOngoing == Just true) then (getString $ METRO_FREE_TICKET_EVENT $ getNumberWithSuffix $ fromMaybe 0 metroBookingConfigResp.freeTicketInterval) else getString $ EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName
+    actionText' = config.actionText { 
+                      text = if (metroBookingConfigResp.isEventOngoing == Just true) then (getString $ METRO_FREE_TICKET_EVENT_DESC (getNumberWithSuffix $ fromMaybe 0 metroBookingConfigResp.freeTicketInterval) (maybe "" show metroBookingConfigResp.maxFreeTicketCashback)) else ""
+                    , textColor = Color.metroBlue
+                    , style = FontStyle.Tags
+                  }
+    imageUrl' = if (metroBookingConfigResp.isEventOngoing == Just true) then fetchImage FF_ASSET "ny_ic_metro_offer" else fetchImage FF_COMMON_ASSET cityMetroConfig.bannerImage
     config' = config
       {
         backgroundColor = cityMetroConfig.bannerBackgroundColor
@@ -98,13 +109,15 @@ metroBannerConfig (CityMetroConfig cityMetroConfig) state =
       , imageWidth = V 124
       , margin = MarginVertical 12 12
       , imagePadding = PaddingVertical 0 0
-      , title = getString $ EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName
+      , title = title'
       , titleColor = cityMetroConfig.bannerTextColor
       , padding = PaddingLeft 5
-      , actionTextVisibility = false
+      , actionTextVisibility = metroBookingConfigResp.isEventOngoing == Just true 
       , cornerRadius = 8.0
-      , imageUrl = fetchImage FF_COMMON_ASSET cityMetroConfig.bannerImage
+      , imageUrl = imageUrl'
       , imageMargin = Margin 18 6 6 6
+      , actionText = actionText'
+      , actionPadding = PaddingHorizontal 0 0
       }
   in config'
 

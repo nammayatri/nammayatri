@@ -50,7 +50,8 @@ type Config = {
   imageMargin :: Margin,
   actionText :: TextConfig,
   alertText :: TextConfig,
-  actionTextImgType :: ArrowType 
+  actionTextImgType :: ArrowType,
+  actionPadding :: Padding
 }
 
 data ArrowType = DownArrow | RightArrow
@@ -65,7 +66,7 @@ type TextConfig = {
   margin :: Margin,
   style :: Style,
   text :: String,
-  textColor :: String 
+  textColor :: String
 }
 
 config :: Config
@@ -107,5 +108,6 @@ config = {
       style : Tags,
       text : "",
       textColor : ""
-    }
+    },
+    actionPadding : PaddingHorizontal 12 12
 }

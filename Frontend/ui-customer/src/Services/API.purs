@@ -3292,6 +3292,8 @@ newtype MetroQuote = MetroQuote {
   , price :: Int
   , stations :: Array FRFSStationAPI 
   , validTill :: String
+  , discountedTickets :: Maybe Int
+  , eventDiscountAmount :: Maybe Number
 }
 
 -- For understanding and debugging types 
@@ -3908,7 +3910,11 @@ newtype MetroBookingConfigRes = MetroBookingConfigRes {
   metroStationTtl :: Int,
   discount :: Int,
   customEndTime :: String,
-  customDates :: Array String 
+  customDates :: Array String,
+  isEventOngoing :: Maybe Boolean,
+  freeTicketInterval :: Maybe Int,
+  maxFreeTicketCashback :: Maybe Int,
+  ticketsBookedInEvent :: Maybe Int
 }
 
 instance makeMetroBookingConfigReq :: RestEndpoint MetroBookingConfigReq MetroBookingConfigRes where

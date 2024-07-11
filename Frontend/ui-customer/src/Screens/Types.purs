@@ -2359,6 +2359,7 @@ type MetroTicketBookingScreenData = {
   , quoteId :: String
   , quoteResp :: Array MetroQuote
   , metroBookingConfigResp :: MetroBookingConfigRes
+  , eventDiscountAmount :: Maybe Int
 }
 
 type MetroTicketBookingScreenProps = {
