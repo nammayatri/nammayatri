@@ -42,6 +42,7 @@ import qualified SharedLogic.CallFRFSBPP as CallBPP
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QRecon
@@ -50,6 +51,7 @@ import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.Station as QStation
 import qualified Tools.SMS as Sms
 
@@ -76,13 +78,16 @@ validateRequest DOrder {..} = do
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm merchant booking' dOrder = do
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
-  tickets <- traverse (mkTicket booking) dOrder.tickets
+  let discountedTickets = fromMaybe 0 booking.discountedTickets
+  tickets <- createTickets booking dOrder.tickets discountedTickets
   void $ QTicket.createMany tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM decrypt person.mobileNumber
   buildReconTable merchant booking dOrder tickets mRiderNumber
   void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode
+  void $ QPS.incrementTicketsBookedInEvent booking.riderId booking.quantity
+  void $ CQP.clearPSCache booking.riderId
   return ()
   where
     sendTicketBookedSMS :: Maybe Text -> Maybe Text -> Flow ()
@@ -175,8 +180,8 @@ totalOrderValue paymentBookingStatus booking =
   where
     refundAmountToPrice = mkPrice (Just INR) (fromMaybe (HighPrecMoney $ toRational (0 :: Int)) booking.refundAmount)
 
-mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket
-mkTicket booking dTicket = do
+mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Bool -> Flow Ticket.FRFSTicket
+mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
   (_, status) <- Utils.getTicketStatus booking dTicket
@@ -195,8 +200,19 @@ mkTicket booking dTicket = do
         Ticket.partnerOrgId = booking.partnerOrgId,
         Ticket.partnerOrgTransactionId = booking.partnerOrgTransactionId,
         Ticket.createdAt = now,
-        Ticket.updatedAt = now
+        Ticket.updatedAt = now,
+        Ticket.isTicketFree = Just isTicketFree
       }
+
+createTickets :: Booking.FRFSTicketBooking -> [DTicket] -> Int -> Flow [Ticket.FRFSTicket]
+createTickets booking dTickets discountedTickets = go dTickets discountedTickets []
+  where
+    go [] _ acc = return (reverse acc)
+    go (d : ds) freeTicketsLeft acc = do
+      let isTicketFree = freeTicketsLeft > 0
+      ticket <- mkTicket booking d isTicketFree
+      let newFreeTickets = if isTicketFree then freeTicketsLeft - 1 else freeTicketsLeft
+      go ds newFreeTickets (ticket : acc)
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
 buildRecon recon ticket = do

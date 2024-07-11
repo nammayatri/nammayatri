@@ -19,6 +19,8 @@ data FRFSQuoteT f = FRFSQuoteT
     bppItemId :: B.C f Kernel.Prelude.Text,
     bppSubscriberId :: B.C f Kernel.Prelude.Text,
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
+    discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,

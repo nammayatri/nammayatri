@@ -67,3 +67,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN partner_org_id character va
 
 ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN merchant_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN event_discount_amount double precision ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounted_tickets integer ;

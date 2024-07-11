@@ -20,6 +20,7 @@ data PersonStatsT f = PersonStatsT
     offPeakRides :: B.C f Kernel.Prelude.Int,
     personId :: B.C f Kernel.Prelude.Text,
     referralCount :: B.C f Kernel.Prelude.Int,
+    ticketsBookedInEvent :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     userCancelledRides :: B.C f Kernel.Prelude.Int,
     weekdayRides :: B.C f Kernel.Prelude.Int,

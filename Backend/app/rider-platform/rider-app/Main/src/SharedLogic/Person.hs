@@ -56,6 +56,7 @@ backfillPersonStats personId merchantOpCityid = do
             createdAt = now,
             updatedAt = now,
             referralCount = 0,
+            ticketsBookedInEvent = Just 0,
             ..
           }
   QP.incrementOrSetPersonStats personStatsValues
