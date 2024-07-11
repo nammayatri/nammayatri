@@ -1,0 +1,26 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Person: Domain.Types.Person
+
+
+DriverGullakAssociation:
+  tableName: driver_gullak_association
+
+  fields:
+    driverId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    gullakToken : Text
+    tokenExpiry: UTCTime
+
+  constraints:
+    driverId: PrimaryKey
+
+
+  queries:
+    updateGullakToken:
+      kvFunction: updateOneWithKV
+      params: [gullakToken, tokenExpiry]
+      where: driverId

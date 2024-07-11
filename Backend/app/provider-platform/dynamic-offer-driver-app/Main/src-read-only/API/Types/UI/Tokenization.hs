@@ -9,4 +9,4 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data GetTokenRes = GetTokenRes {token :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data GetTokenRes = GetTokenRes {expiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, token :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
