@@ -101,8 +101,7 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
   { id :: Id Booking,
     isBookingUpdated :: Bool,
     bookingStatus :: BookingStatus,
-    rideStatus :: Maybe DRide.RideStatus,
-    bookingDetails :: BookingAPIDetails
+    rideStatus :: Maybe DRide.RideStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -313,7 +312,7 @@ buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus (mkBookingAPIDetails booking.bookingDetails)
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity
