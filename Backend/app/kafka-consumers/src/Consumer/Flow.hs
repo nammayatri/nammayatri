@@ -16,6 +16,7 @@
 module Consumer.Flow where
 
 import qualified Consumer.AvailabilityTime.Processor as ATProcessor
+import qualified Consumer.AvailabilityTime.Types as T
 import qualified Consumer.BroadcastMessage.Processor as BMProcessor
 import qualified Consumer.CustomerStats.Processor as PSProcessor
 import qualified Consumer.LocationUpdate.Processor as LCProcessor

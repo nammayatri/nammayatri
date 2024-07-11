@@ -15,7 +15,6 @@
 
 module DriverTrackingHealthCheck.Service.Runner where
 
-import Consumer.LocationUpdate.Processor
 import Consumer.LocationUpdate.Types (DriverIdTokenKey)
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS

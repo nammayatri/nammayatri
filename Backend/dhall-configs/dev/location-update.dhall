@@ -114,4 +114,6 @@ in  { hedisCfg
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = Some healthCheckAppCfg
     , cacConfig
+    , batchSize = +100
+    , numberOfShards = +10
     }
