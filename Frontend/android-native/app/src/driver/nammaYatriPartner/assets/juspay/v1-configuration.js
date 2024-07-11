@@ -1172,7 +1172,7 @@ window.getMerchantConfig = function () {
   ]
   , "coinsConfig" : {
     "minCoinSliderValue" : 50,
-    "stepFunctionForCoinConversion" : 10,
+    "stepFunctionForCoinConversion" : 50,
     "eightPlusRidesCoins" : "+25",
     "purpleRideCoins" : "+5",
     "customerReferralCoins" : "+200",
