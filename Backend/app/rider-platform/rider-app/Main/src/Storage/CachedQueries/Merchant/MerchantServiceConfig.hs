@@ -28,6 +28,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
@@ -35,6 +36,7 @@ import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -102,6 +104,12 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         Payment.StripeConfig _ -> MetroPaymentService Payment.Stripe
       IssueTicketServiceConfig ticketCfg -> case ticketCfg of
         Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
+      IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
+        IncidentReport.ERSSConfig _ -> IncidentReportService IncidentReport.ERSS
+      TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
+        Tokenize.JourneyMonitoringTokenizationServiceConfig _ -> TokenizationService Tokenize.JourneyMonitoring
+        Tokenize.HyperVergeTokenizationServiceConfig _ -> TokenizationService Tokenize.HyperVerge
+        Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName

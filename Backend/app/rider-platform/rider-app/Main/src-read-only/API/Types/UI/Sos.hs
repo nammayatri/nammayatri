@@ -13,6 +13,8 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
+data CallPoliceAPI = CallPoliceAPI {rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride} deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data MarkAsSafeReq = MarkAsSafeReq {isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data MockSosReq = MockSosReq {onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, startDrill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema)

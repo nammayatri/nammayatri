@@ -7,6 +7,7 @@ module Storage.Beam.TransporterConfig where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.UtilsTH
 import qualified Domain.Types.Vehicle
 import qualified Email.Types
@@ -92,6 +93,7 @@ data TransporterConfigT f = TransporterConfigT
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: B.C f Kernel.Prelude.Bool,
     enableUdfForOffers :: B.C f Kernel.Prelude.Bool,
+    exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping),
     fakeOtpEmails :: B.C f [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: B.C f [Kernel.Prelude.Text],
     fareRecomputeDailyExtraKmsThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,

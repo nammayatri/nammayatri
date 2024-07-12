@@ -12,6 +12,7 @@ import Domain.Types.PlaceBasedServiceConfig
 import Domain.Types.TicketPlace
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
@@ -19,6 +20,7 @@ import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -71,3 +73,9 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Payment.StripeConfig _ -> MetroPaymentService Payment.Stripe
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
+  IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
+    IncidentReport.ERSSConfig _ -> IncidentReportService IncidentReport.ERSS
+  TokenizationServiceConfig tokenizeCfg -> case tokenizeCfg of
+    Tokenize.JourneyMonitoringTokenizationServiceConfig _ -> TokenizationService Tokenize.JourneyMonitoring
+    Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
+    Tokenize.HyperVergeTokenizationServiceConfig _ -> TokenizationService Tokenize.HyperVerge

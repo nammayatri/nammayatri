@@ -122,6 +122,8 @@ dependencies:
   - http-client-tls
   - http-conduit
   - split
+  - hashable
+
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie

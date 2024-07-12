@@ -28,6 +28,11 @@ findByMerchantOpCityId ::
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.TransporterConfig.TransporterConfig))
 findByMerchantOpCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+findExotelAppletMappingByMOCID ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.TransporterConfig.TransporterConfig))
+findExotelAppletMappingByMOCID merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 update :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TransporterConfig.TransporterConfig -> m ())
 update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
   _now <- getCurrentTime

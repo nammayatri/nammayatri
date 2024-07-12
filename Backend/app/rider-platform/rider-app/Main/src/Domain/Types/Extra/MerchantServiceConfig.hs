@@ -13,6 +13,7 @@ import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
+import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Notification as Notification
@@ -20,6 +21,7 @@ import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Tokenize as Tokenize
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -38,6 +40,8 @@ data ServiceName
   | PaymentService Payment.PaymentService
   | MetroPaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
+  | TokenizationService Tokenize.TokenizationService
+  | IncidentReportService IncidentReport.IncidentReportService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -53,6 +57,8 @@ instance Show ServiceName where
   show (PaymentService s) = "Payment_" <> show s
   show (MetroPaymentService s) = "MetroPayment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
+  show (TokenizationService s) = "Tokenization_" <> show s
+  show (IncidentReportService s) = "IncidentReport_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -95,6 +101,14 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (TokenizationService v1, r2)
+                 | r1 <- stripPrefix "Tokenization_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (IncidentReportService v1, r2)
+                 | r1 <- stripPrefix "IncidentReport_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -110,6 +124,8 @@ data ServiceConfigD (s :: UsageSafety)
   | PaymentServiceConfig !PaymentServiceConfig
   | MetroPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
+  | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
+  | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe

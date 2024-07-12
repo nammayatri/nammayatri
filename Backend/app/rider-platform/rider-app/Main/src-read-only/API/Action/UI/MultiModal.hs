@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "multiModal" :> Capture "estimateId" (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate) :> "routeDetails" :> Post ('[JSON]) API.Types.UI.MultiModal.MultiModalRouteDetails)
+type API = (TokenAuth :> "multiModal" :> Capture "estimateId" (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate) :> "routeDetails" :> Post '[JSON] API.Types.UI.MultiModal.MultiModalRouteDetails)
 
 handler :: Environment.FlowServer API
 handler = postMultiModalRouteDetails

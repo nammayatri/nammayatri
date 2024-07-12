@@ -15,11 +15,13 @@
 module SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider where
 
 import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.Booking as DB
 import Domain.Types.CallStatus
 import Domain.Types.RideRelatedNotificationConfig
+import Domain.Types.RiderConfig
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Encryption (decrypt)
@@ -32,11 +34,13 @@ import Lib.Scheduler
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Tools.Call as Call
+import Tools.Error
 import Tools.Notifications
 import qualified Tools.SMS as Sms
 
@@ -63,7 +67,9 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   ride <- QR.findByRBId bookingId >>= fromMaybeM (RideDoesNotExist bookingId.getId)
-  let phoneNumber = countryCode <> mobileNumber
+  riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< riderConfig.exotelAppIdMapping
+      phoneNumber = countryCode <> mobileNumber
 
   when (booking.status == bookingStatus) do
     case notificationType of
@@ -73,7 +79,8 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
               Call.InitiateCallReq
                 { fromPhoneNum = phoneNumber,
                   toPhoneNum = Nothing,
-                  attachments = Call.Attachments $ DCall.CallAttachments {callStatusId = callStatusId, rideId = ride.id}
+                  attachments = Call.Attachments $ DCall.CallAttachments {callStatusId = callStatusId, rideId = ride.id},
+                  appletId = maybeAppId
                 }
         exotelResponse <- Call.initiateCall booking.merchantId merchantOpCityId callReq
         logTagInfo ("RideId: " <> bookingId.getId) "IVR Call initiated to rider."
@@ -127,5 +134,6 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
             callService = Just Call.Exotel,
             callError = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            customerIvrResponse = Nothing
           }

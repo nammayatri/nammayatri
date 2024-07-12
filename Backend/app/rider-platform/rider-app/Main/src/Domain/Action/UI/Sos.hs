@@ -6,12 +6,16 @@ module Domain.Action.UI.Sos where
 import API.Types.UI.Sos
 import AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
+import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import Data.Text as T
 import qualified Domain.Action.UI.FollowRide as DFR
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Profile as DP
+import qualified Domain.Types.CallStatus as DCall
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
@@ -25,7 +29,11 @@ import GHC.IO.IOMode (IOMode (..))
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
+import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Encryption
+import qualified Kernel.External.IncidentReport as IncidentReport
+import Kernel.External.IncidentReport.Interface.Types as IncidentReportTypes
+import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
@@ -34,13 +42,18 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
+import SharedLogic.Scheduler.Jobs.CallPoliceApi
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Sos as CQSos
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Ride as QRide
@@ -374,3 +387,76 @@ buildSosDetails person req ticketId = do
         createdAt = now,
         updatedAt = now
       }
+
+getSosIvrOutcome :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow APISuccess.APISuccess
+getSosIvrOutcome mbCallFrom mbCallSid mbCallStatus mbDigitPressed = do
+  logDebug $ "IVR response from Exotel: " <> show mbCallSid <> ", " <> show mbDigitPressed <> ", " <> show mbCallStatus <> ", " <> show mbCallFrom
+  when (isNothing mbCallSid) $
+    throwError CallSidNullError
+  let callSid = fromMaybe "" mbCallSid
+      validStatus = fromMaybe Call.INVALID_STATUS $ (A.decode . A.encode) =<< mbCallStatus
+  callRecord <- QCallStatus.findByCallId callSid
+  case callRecord of
+    Just res -> processCallRecord callSid mbDigitPressed validStatus res
+    Nothing -> throwError $ CallRecordNotFoundError callSid
+  pure APISuccess.Success
+  where
+    processCallRecord :: Text -> Maybe Text -> Call.CallStatus -> DCall.CallStatus -> Flow ()
+    processCallRecord callSid mbdigitPressed validStatus res = do
+      let digitPressed = fromMaybe "0" $ T.replace "\"" "" <$> mbdigitPressed
+      QCallStatus.updateCustomerIvrResponse callSid (Just digitPressed) validStatus
+      logDebug $ "digitPressed : " <> digitPressed
+      when (digitPressed /= "1") $ handleEmergencyCall callSid res
+
+    handleEmergencyCall :: Text -> DCall.CallStatus -> Flow ()
+    handleEmergencyCall callSid res = case res.rideId of
+      Just rideId -> do
+        ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+        booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+        void $ postSosCallPolice (Just booking.riderId, booking.merchantId) (CallPoliceAPI {rideId = rideId})
+        pure ()
+      Nothing -> throwError $ RideIdEmptyInCallRecord callSid
+
+postSosCallPolice :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> CallPoliceAPI -> Flow APISuccess.APISuccess
+postSosCallPolice (mbPersonId, merchantId) CallPoliceAPI {..} = do
+  logDebug "Calling Police API started for SOS"
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let merchantOpCityId = booking.merchantOperatingCityId
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  unless (riderConfig.incidentReportSupport) $
+    throwError $ IncidentReportServiceUnavailable merchantOpCityId.getId
+  coordinates <- fetchLatLong ride merchantId
+  token <- getTokenofJMService merchantId merchantOpCityId
+  incidentReportHandler person merchantId merchantOpCityId ride.id token coordinates riderConfig
+  return APISuccess.Success
+
+incidentReportHandler :: Person.Person -> Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> Id DRide.Ride -> Text -> Maps.LatLong -> DRC.RiderConfig -> Flow ()
+incidentReportHandler person merchantId merchantOpCityId rideId token coordinates riderConfig = do
+  logDebug "Initiating Incident Report Police Call"
+  merchantIRSvcCfg <- getServiceConfig merchantId merchantOpCityId (DMSC.IncidentReportService ERSS)
+  contactNo <- fmap (fromMaybe "0000000000") $ traverse decrypt person.mobileNumber
+  res <-
+    IncidentReport.reportIncident
+      merchantIRSvcCfg
+      IncidentReportTypes.IncidentReportReq
+        { latitude = coordinates.lat,
+          longitude = coordinates.lon,
+          mpin = "",
+          contactNo = contactNo,
+          token = token
+        }
+  logDebug $ "Incident Report API Response: " <> show res
+  scheduleIncidentFollowUp res
+  where
+    scheduleIncidentFollowUp :: IncidentReportRes -> Flow ()
+    scheduleIncidentFollowUp res = do
+      maxShards <- asks (.maxShards)
+      let scheduleAfter = max 2 riderConfig.policeTriggerDelay
+          callPoliceAPIJobData = CallPoliceApiJobData {rideId, personId = person.id, jmCode = res.incidentData.jmCode}
+      logDebug $ "Scheduling safety alert police call after : " <> show scheduleAfter
+      Redis.withCrossAppRedis $ Redis.setExp (mkRideCallPoliceAPIKey rideId) (1 :: Int) riderConfig.hardLimitForSafetyJobs
+      createJobIn @_ @'CallPoliceApi scheduleAfter maxShards callPoliceAPIJobData
+      pure ()

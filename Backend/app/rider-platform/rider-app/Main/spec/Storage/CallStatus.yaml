@@ -20,6 +20,7 @@ CallStatus:
     callService : Maybe CallService
     callError : Maybe Text
     createdAt : UTCTime
+    customerIvrResponse : Maybe Text
 
   sqlType:
     callId: character varying(255)
@@ -40,6 +41,10 @@ CallStatus:
       kvFunction: findOneWithKV
       where: id
 
+    findByCallId:
+      kvFunction: findOneWithKV
+      where: callId
+
     updateCallStatus:
       kvFunction: updateWithKV
       params: [conversationDuration, recordingUrl, status]
@@ -54,6 +59,11 @@ CallStatus:
       kvFunction: updateWithKV
       params: [callError, callService, merchantId]
       where: id
+
+    updateCustomerIvrResponse:
+      kvFunction: updateWithKV
+      params: [callId, customerIvrResponse, status]
+      where: callId
 
   excludedFields: [merchantOperatingCityId]
 

@@ -31,6 +31,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import qualified Environment as App
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -105,6 +106,7 @@ feedback request personId = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  riderPhoneNum <- mapM decrypt person.mobileNumber
   pure
     FeedbackRes
       { wasOfferedAssistance = request.wasOfferedAssistance,
@@ -115,7 +117,6 @@ feedback request personId = do
         vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,
         shouldFavDriver = request.shouldFavDriver,
-        riderPhoneNum = person.unencryptedMobileNumber,
         ..
       }
   where

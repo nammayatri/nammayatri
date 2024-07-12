@@ -598,3 +598,33 @@ instance IsHTTPError CacAuthError where
     CacInvalidToken -> E401
 
 instance IsAPIError CacAuthError
+
+data SafetyError
+  = IncidentReportServiceUnavailable Text
+  | CallSidNullError
+  | CallRecordNotFoundError Text
+  | RideIdEmptyInCallRecord Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SafetyError
+
+instance IsBaseError SafetyError where
+  toMessage = \case
+    IncidentReportServiceUnavailable merchantId -> Just ("Incident Report Service not available for merchantOperatingCityId : " <> show merchantId <> ".")
+    CallSidNullError -> Just "CallSid not found in IVR response from Exotel."
+    CallRecordNotFoundError sid -> Just $ "Call Record not found in DB against callSid : " <> show sid
+    RideIdEmptyInCallRecord sid -> Just $ "RideId is empty in Call Record against callSid : " <> show sid
+
+instance IsHTTPError SafetyError where
+  toErrorCode = \case
+    IncidentReportServiceUnavailable _ -> "INCIDENT_REPORT_SERVICE_UNAVAILABLE"
+    CallSidNullError -> "CALL_SID_NULL_ERROR"
+    CallRecordNotFoundError _ -> "CALL_RECORD_NOT_FOUND_ERROR"
+    RideIdEmptyInCallRecord _ -> "RIDE_ID_EMPTY_IN_CALL_RECORD"
+  toHttpCode = \case
+    IncidentReportServiceUnavailable _ -> E400
+    CallSidNullError -> E500
+    CallRecordNotFoundError _ -> E500
+    RideIdEmptyInCallRecord _ -> E500
+
+instance IsAPIError SafetyError

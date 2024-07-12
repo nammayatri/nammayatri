@@ -22,6 +22,9 @@ import Storage.Queries.CallStatusExtra as ReExport
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.CallStatus.CallStatus] -> m ())
 createMany = traverse_ create
 
+findByCallId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.CallStatus.CallStatus))
+findByCallId callId = do findOneWithKV [Se.Is Beam.callId $ Se.Eq callId]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m (Maybe Domain.Types.CallStatus.CallStatus))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -59,6 +62,11 @@ updateCallStatusInformation merchantId rideId callService dtmfNumberUsed id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateCustomerIvrResponse :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Call.Interface.Types.CallStatus -> m ())
+updateCustomerIvrResponse callId customerIvrResponse status = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.callId callId, Se.Set Beam.customerIvrResponse customerIvrResponse, Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.callId $ Se.Eq callId]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m (Maybe Domain.Types.CallStatus.CallStatus))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -71,6 +79,7 @@ updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
       Se.Set Beam.callService callService,
       Se.Set Beam.conversationDuration conversationDuration,
       Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.customerIvrResponse customerIvrResponse,
       Se.Set Beam.dtmfNumberUsed dtmfNumberUsed,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.recordingUrl recordingUrl,

@@ -18,6 +18,7 @@ data CallStatus = CallStatus
     callService :: Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService,
     conversationDuration :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
+    customerIvrResponse :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dtmfNumberUsed :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus,
     merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -15,6 +15,7 @@ import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
+import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Notification as Notification
@@ -50,6 +51,7 @@ data ServiceName
   | NotificationService Notification.NotificationService
   | TokenizationService Tokenize.TokenizationService
   | BackgroundVerificationService BackgroundVerification.BackgroundVerificationService
+  | IncidentReportService IncidentReport.IncidentReportService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -70,6 +72,7 @@ instance Show ServiceName where
   show (NotificationService s) = "Notification_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
   show (BackgroundVerificationService s) = "BackgroundVerification_" <> show s
+  show (IncidentReportService s) = "IncidentReport_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -132,6 +135,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "BackgroundVerification_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (IncidentReportService v1, r2)
+                 | r1 <- stripPrefix "IncidentReport_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -152,6 +159,7 @@ data ServiceConfigD (s :: UsageSafety)
   | NotificationServiceConfig !NotificationServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
   | BackgroundVerificationServiceConfig !BackgroundVerification.BackgroundVerificationServiceConfig
+  | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe
