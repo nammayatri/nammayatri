@@ -2474,7 +2474,8 @@ newtype TicketPlaceResp = TicketPlaceResp
     mapImageUrl :: Maybe String,
     termsAndConditions :: Array String,
     placeType :: String,
-    status :: Maybe TicketPlaceStatus
+    status :: Maybe TicketPlaceStatus,
+    termsAndConditionsUrl :: Maybe String
   }
 
 data GetTicketStatusReq = GetTicketStatusReq String
