@@ -56,7 +56,7 @@ startProducerWithEnv flowRt appCfg appEnv = do
           appCfg.kvConfigUpdateFrequency
       )
         >> L.setOption KafkaConn appEnv.kafkaProducerTools
-        >> L.setOption Tables (KUC.Tables [] [] [] False)
+        >> L.setOption Tables (KUC.Tables [] [] [] False [])
         >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
   runFlowR flowRt appEnv $ do
