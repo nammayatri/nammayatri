@@ -650,6 +650,7 @@ chooseTicketsView state push =
                                                                               "Alipore Zoo" -> "https://docs.google.com/document/d/1Aa5PRGaTTZM4HDdmvU_7_59B58wCQ0-bRezbsu-Inqw"
                                                                               "Kolkata Heritage River Cruise" -> "https://docs.google.com/document/d/1pOirWof7bnNDoYBFgyKknddKPoKE-7SZK6eFPncAmyQ/edit#heading=h.nq90u3fvhtgz"
                                                                               "Millenium Park Shipping Jetty" -> "https://docs.google.com/document/d/1pOirWof7bnNDoYBFgyKknddKPoKE-7SZK6eFPncAmyQ/edit#heading=h.nq90u3fvhtgz"
+                                                                              "Nicco Park" -> "https://assets.moving.tech/beckn/jatrisaathi/user/docs/T_&_C_Nicco_Park.pdf"
                                                                               _ -> ""
                                          ) placeInfo 
     getMessageForSelectedDate state = do
