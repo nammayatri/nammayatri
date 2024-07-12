@@ -79,7 +79,7 @@ getRevenueCollectionHistory merchantShortId opCity mbFrom place mbTo volunteerId
   onlineCollectionFees <- CHDriverFee.findAllByDate merchant.id [Common.CLEARED] (Just from_) (Just to) dayBasis Nothing
   onlineCollection <- getCollectionListElem `mapM` onlineCollectionFees
   offlineCollection <- getCollectionListElem `mapM` offlineCollectionFees
-  pure $ Common.CollectionList onlineCollection offlineCollection
+  pure $ Common.CollectionList {onlineCollection, offlineCollection}
 
 getCollectionListElem :: MonadFlow m => CHDriverFee.DriverFeeAggregated -> m Common.CollectionListElem
 getCollectionListElem CHDriverFee.DriverFeeAggregated {..} = do
