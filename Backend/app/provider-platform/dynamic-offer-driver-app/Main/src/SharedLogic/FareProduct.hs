@@ -58,7 +58,7 @@ getSearchSources isDashboard = [DFareProduct.ALL] <> (if isDashboard then [DFare
 getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> LatLong -> Maybe LatLong -> DTC.TripCategory -> m FareProducts
 getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong tripCategory = do
   mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantOpCityId) =<< QSpecialLocation.findPickupSpecialLocationByLatLong fromLocationLatLong
-  mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantOpCityId) =<< QSpecialLocation.findSpecialLocationByLatLong' toLoc) mToLocationLatLong
+  mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantOpCityId) =<< Esq.runInReplica (QSpecialLocation.findSpecialLocationByLatLong' toLoc)) mToLocationLatLong
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
     (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
       if pickupPriority > dropPriority
@@ -110,11 +110,9 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
       if null fareProducts && area /= SL.Default && null otherFareProducts
         then do
           defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory SL.Default
-          fareProducts' <- mapM getBoundedOrDefaultFareProduct defFareProducts
-          return fareProducts'
+          mapM getBoundedOrDefaultFareProduct defFareProducts
         else do
-          fareProducts' <- mapM getBoundedOrDefaultFareProduct fareProducts
-          return fareProducts'
+          mapM getBoundedOrDefaultFareProduct fareProducts
 
     getBoundedOrDefaultFareProduct fareProduct = do
       boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
