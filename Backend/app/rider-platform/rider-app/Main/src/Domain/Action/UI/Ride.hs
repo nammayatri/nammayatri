@@ -97,8 +97,9 @@ data EditLocationReq = EditLocationReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-newtype EditLocationResp = EditLocationResp
-  { bookingUpdateRequestId :: Maybe (Id DBUR.BookingUpdateRequest)
+data EditLocationResp = EditLocationResp
+  { bookingUpdateRequestId :: Maybe (Id DBUR.BookingUpdateRequest),
+    result :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -289,7 +290,7 @@ editLocation rideId (personId, merchantId) req = do
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
       void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
       QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
-      pure $ EditLocationResp Nothing
+      pure $ EditLocationResp Nothing "Success"
     (_, Just destination) -> do
       let attemptsLeft = fromMaybe merchant.numOfAllowedEditLocationAttemptsThreshold ride.allowedEditLocationAttempts
       when (attemptsLeft == 0) do
@@ -334,7 +335,7 @@ editLocation rideId (personId, merchantId) req = do
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
       void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
-      pure $ EditLocationResp (Just bookingUpdateReq.id)
+      pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
     (_, _) -> throwError PickupOrDropLocationNotFound
 
 buildLocation :: MonadFlow m => EditLocation -> m DL.Location
