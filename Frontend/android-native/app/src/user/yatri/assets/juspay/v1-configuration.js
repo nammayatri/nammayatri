@@ -276,7 +276,7 @@ window.getMerchantConfig = function () {
       }
     ]
     , "specialLocationView" : true
-    , "isAdvancedBookingEnabled" : true
+    , "isAdvancedBookingEnabled" : false
     , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
       , "packageName" : "com.google.android.apps.maps"

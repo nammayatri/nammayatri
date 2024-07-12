@@ -219,7 +219,7 @@ window.getMerchantConfig = function () {
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true
-    , "isAdvancedBookingEnabled" : true
+    , "isAdvancedBookingEnabled" : false
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
       , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]

@@ -207,7 +207,7 @@ window.getMerchantConfig = function () {
         "fontName": "PlusJakartaSans",
 			"enableMockLocation": false,
 			"fontKannada": "NotoSansKannada",
-      "isAdvancedBookingEnabled" : true,
+      "isAdvancedBookingEnabled" : false,
 			"defaultLanguage": "EN_US",
 			"dashboardUrl" : "",
 			"showGenderBanner": false,
