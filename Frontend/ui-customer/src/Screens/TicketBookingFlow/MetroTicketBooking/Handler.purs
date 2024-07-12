@@ -25,11 +25,15 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.TicketBookingFlow.MetroTicketBooking.View as MetroTicketBooking
 import Types.App
 import ModifyScreenState (modifyScreenState)
+import LocalStorage.Cache (setInCache)
+import Data.Function.Uncurried (runFn2)
+import Storage (KeyStore(..))
 
 metroTicketBookingScreen :: FlowBT String METRO_TICKET_SCREEN_OUTPUT
 metroTicketBookingScreen = do
     (GlobalState state) <- getState
     action <- lift $ lift $ runScreen $ MetroTicketBooking.screen state.metroTicketBookingScreen
+    let _ = runFn2 setInCache (show METRO_PAYMENT_SDK_POLLING) false
     case action of
         GoBack updatedState -> do
             App.BackT $ pure App.GoBack
@@ -44,7 +48,7 @@ metroTicketBookingScreen = do
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_ROUTE_MAP)
         SelectSrcDest srcdest updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
-            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH srcdest)
+            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH srcdest updatedState)
         Refresh updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
             App.BackT $ App.NoBack <$> (pure $ REFRESH_METRO_TICKET_SCREEN updatedState)

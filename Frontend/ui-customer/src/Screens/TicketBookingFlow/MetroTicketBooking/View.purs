@@ -50,11 +50,11 @@ import Components.RequestInfoCard as InfoCard
 import Language.Strings
 import Language.Types
 import Data.String as DS
-import Data.Function.Uncurried (runFn1)
+import Data.Function.Uncurried (runFn1, runFn3)
 import Data.Maybe(Maybe(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.BackTrack (liftFlowBT, getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Control.Monad.Trans.Class (lift)
 import Storage 
@@ -65,6 +65,7 @@ import Constants
 import MerchantConfig.Types (MetroConfig)
 import Helpers.API (callApi)
 import Data.Array as DA
+import LocalStorage.Cache (getFromCache)
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -75,11 +76,6 @@ screen initialState =
   , eval : \action state -> do
         let _ = spy "MetroTicketBookingScreenState action " action
         let _ = spy "MetroTicketBookingScreenState state " state 
-        case action of
-          ShowMetroBookingTimeError _ -> pure unit
-          MetroBookingConfigAction _ -> pure unit
-          DisableShimmer -> pure unit
-          _ -> void $ pure $ setValueToLocalStore METRO_PAYMENT_SDK_POLLING "false"
         eval action state
   }
   where
@@ -123,8 +119,9 @@ getQuotesPolling searchId count delayDuration state push action = do
 
 getSDKPolling :: forall action. String -> Number -> ST.MetroTicketBookingScreenState -> (action -> Effect Unit) -> (CreateOrderRes -> action) -> FlowBT String Unit
 getSDKPolling bookingId delayDuration state push action = do
-  let localPoolingStatus = getValueToLocalStore METRO_PAYMENT_SDK_POLLING
-  if state.props.currentStage == PaymentSDKPooling && localPoolingStatus == "true" then do
+  let localPoolingStatus = runFn3 getFromCache (show METRO_PAYMENT_SDK_POLLING) Nothing Just
+      
+  if state.props.currentStage == PaymentSDKPooling && localPoolingStatus == Just true then do
       (GetMetroBookingStatusResp (MetroTicketBookingStatus metroTicketStatusResp)) <- Remote.getMetroStatusBT bookingId 
       let orderResp = metroTicketStatusResp.payment >>= \(FRFSBookingPaymentAPI paymentInfo) -> paymentInfo.paymentOrder 
       case orderResp of
@@ -517,11 +514,12 @@ textViewForLocation label actionId push state =
     , onClick push $ const (SelectLocation actionId)
     ][  textView $ 
         [ height MATCH_PARENT
-        , width WRAP_CONTENT
+        , width MATCH_PARENT
         , text $ fieldConfig.fieldText
         , color Color.black800
         , gravity CENTER_VERTICAL
         , singleLine true
+        , ellipsize true
         , margin $ MarginHorizontal 20 10
         , alpha fieldConfig.alphaValue
         ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)

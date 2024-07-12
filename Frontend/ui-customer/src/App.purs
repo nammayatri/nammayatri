@@ -348,7 +348,7 @@ data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
                                     | GO_METRO_BOOKING_FROM_METRO_MY_TICKETS
 
 data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicketBookingScreenState
-                                 | GO_TO_METRO_STATION_SEARCH LocationActionId
+                                 | GO_TO_METRO_STATION_SEARCH LocationActionId MetroTicketBookingScreenState
                                  | METRO_FARE_AND_PAYMENT MetroTicketBookingScreenState
                                  | GO_TO_MY_METRO_TICKET_SCREEN
                                  | GO_TO_METRO_ROUTE_MAP

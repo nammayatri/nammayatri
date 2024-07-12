@@ -67,7 +67,6 @@ baseAppStorage = do
     let getFirstRide = getValueToLocalStore CUSTOMER_FIRST_RIDE 
         firstRideEvent = if getFirstRide == "__failed" then "false" else getFirstRide
     setValueToLocalStore CUSTOMER_FIRST_RIDE firstRideEvent
-    setValueToLocalStore METRO_PAYMENT_SDK_POLLING "false"
     when (sessionId `elem` ["__failed", "(null)"]) do
         setValueToLocalStore SESSION_ID $ generateSessionId unit
     when (countryCode `elem` ["__failed", "(null)"]) do
