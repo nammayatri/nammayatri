@@ -52,6 +52,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
     Sms.GupShupConfig _ -> SmsService Sms.GupShup
+    Sms.TwillioSmsConfig _ -> SmsService Sms.TwillioSms
   WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
   AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of

@@ -34,6 +34,7 @@ getConfigJSON = \case
     Sms.ExotelSmsConfig cfg -> toJSON cfg
     Sms.MyValueFirstConfig cfg -> toJSON cfg
     Sms.GupShupConfig cfg -> toJSON cfg
+    Sms.TwillioSmsConfig cfg -> toJSON cfg
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> toJSON cfg
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
@@ -77,6 +78,7 @@ getServiceName = \case
     Sms.ExotelSmsConfig _ -> Domain.SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> Domain.SmsService Sms.MyValueFirst
     Sms.GupShupConfig _ -> Domain.SmsService Sms.GupShup
+    Sms.TwillioSmsConfig _ -> Domain.SmsService Sms.TwillioSms
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig _ -> Domain.WhatsappService Whatsapp.GupShup
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
@@ -119,6 +121,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> eitherValue configJSON
   Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> eitherValue configJSON
   Domain.SmsService Sms.GupShup -> Domain.SmsServiceConfig . Sms.GupShupConfig <$> eitherValue configJSON
+  Domain.SmsService Sms.TwillioSms -> Domain.SmsServiceConfig . Sms.TwillioSmsConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> eitherValue configJSON
