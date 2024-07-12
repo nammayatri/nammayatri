@@ -31,7 +31,7 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, Price(..))
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, Price(..), CategoryListType(..))
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (CityConfig(..), GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
@@ -553,13 +553,6 @@ fetchFiles = do
     result <- download item.filePath item.location
     if result then pure unit else liftEffect $ firebaseLogEventWithParams "download_failed" "file_name" item.filePath) files
 
-getDayOfWeek :: String -> Int
-getDayOfWeek dayName =
-  let
-    weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-  in
-    fromMaybe 0 $ DA.elemIndex (DS.take 3 dayName) weekDays
-
 download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
 
@@ -933,3 +926,14 @@ getCurrencyForCity cityName = maybe "$" (\config -> config.currency) (DA.find (\
 
 getDistanceUnitForCity :: String -> String
 getDistanceUnitForCity cityName = maybe "mi" (\config -> config.distanceUnit) (DA.find (\item -> item.cityName == cityName) (getAppConfig "").cityConfig)
+
+categoryTransformer :: Array SA.Category -> String -> Array CategoryListType 
+categoryTransformer categories language = map (\(SA.Category catObj) ->
+                                          { categoryName :
+                                              if (language == "en")
+                                              then EHU.capitalizeFirstChar catObj.category
+                                              else catObj.category
+                                          , categoryId       : catObj.issueCategoryId
+                                          , categoryAction   : catObj.label
+                                          , categoryImageUrl : catObj.logoUrl
+                                          }) categories

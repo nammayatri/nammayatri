@@ -80,6 +80,7 @@ wrapWithKeyedLayout dom key push state =
   [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
+    , onBackPressed push $ const BackPressed
   ][ Tuple key $ dom push state
   ]
 
@@ -91,7 +92,8 @@ rideView push state =
     , orientation VERTICAL
     , background Color.white900
     ]
-    $ [ headerLayout push state
+    $ [ headerLayout push state (getString RIDE_HISTORY)
+      , navigateBtwWeeksView push state
       ]
     <> case state.data.rideListItem of
         Just item ->
@@ -113,7 +115,8 @@ payoutView push state =
     , orientation VERTICAL
     , background Color.white900
     ]
-    $ [ headerLayout push state
+    $ [ headerLayout push state "Payout History"
+      , navigateBtwWeeksView push state
       ]
     <> case state.data.payoutListItem of
         Just item ->
@@ -127,8 +130,8 @@ payoutView push state =
           ]
         Nothing -> []
 
-headerLayout :: forall w. (Action -> Effect Unit) -> State -> Layout w
-headerLayout push state =
+headerLayout :: forall w. (Action -> Effect Unit) -> State -> String -> Layout w
+headerLayout push state headerText =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -145,13 +148,14 @@ headerLayout push state =
             [ width $ V 30
             , height $ V 30
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-            -- , onClick push $ const BackPressed
+            , onClick push $ const BackPressed
             , rippleColor Color.rippleShade
+            , cornerRadius 6.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text (getString RIDE_HISTORY)
+              , text headerText
               , margin $ MarginLeft 10
               , padding $ PaddingBottom 2
               , color Color.black900
@@ -164,6 +168,34 @@ headerLayout push state =
         , background Color.greyLight
         ]
         []
+    ]
+
+navigateBtwWeeksView :: forall w. (Action -> Effect Unit) -> State -> Layout w
+navigateBtwWeeksView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , margin $ Margin 20 16 20 16
+    ]
+    [ imageView 
+        [ height $ V 24
+        , width $ V 24
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+        ]
+    , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ "May 1 - May 7"
+        , gravity CENTER
+        , weight 1.0
+        ] <> FontStyle.subHeading1 TypoGraphy
+    , imageView
+        [ height $ V 24
+        , width $ V 24
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+        , rotation 180.0
+        ]
     ]
 
 historyHolder :: forall w. (Action -> Effect Unit) -> State -> Layout w

@@ -36,11 +36,11 @@ import Data.Number (fromString) as NUM
 import Data.Show (show)
 import Data.String as DS
 import Data.String (Pattern(..), split, take, drop)
-import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, convertUTCtoISC)
+import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, convertUTCtoISC, getDayOfWeek)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendar, saveObject, getCurrentDay)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName, dummyPriceForCity)
+import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName, dummyPriceForCity)
 import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types
@@ -602,9 +602,6 @@ getTotalCurrentWeekData barGraphData = do
     currency = maybe INR (\x -> x.earningsWithCurrency.currency) firstElement
 
     (Distance distance) = maybe dummyDistance (\x -> x.rideDistanceWithUnit) firstElement
-
-    _ = spy "printing distance -> "  distance
-    _ = spy "printing firstElement -> " firstElement
     
   { fromDate: maybe "" (\x -> x.rideDate) firstElement
   , toDate: maybe "" (\x -> x.rideDate) lastElement
