@@ -57,7 +57,7 @@ whenSearchTryCancellable searchTryId actions = do
   gotLock <- lockSearchTry searchTryId
   if gotLock
     then actions
-    else throwError (InternalError "SEARCH_TRY_CANCELLED")
+    else throwError (InternalError ("SEARCH_TRY_CANCELLED" <> getId searchTryId))
 
 mkCancelledKey :: Id SearchTry -> Text
 mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.getId

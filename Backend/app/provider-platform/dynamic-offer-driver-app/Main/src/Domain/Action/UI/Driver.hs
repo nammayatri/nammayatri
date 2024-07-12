@@ -1124,7 +1124,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       when (searchReq.autoAssignEnabled == Just True) $ do
         unlessM (CS.lockSearchTry searchTry.id) $
-          throwError (InternalError "SEARCH_TRY_CANCELLED")
+          throwError (InternalError ("SEARCH_TRY_CANCELLED" <> getId searchTryId))
       logDebug $ "offered fare: " <> show reqOfferedValue
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
