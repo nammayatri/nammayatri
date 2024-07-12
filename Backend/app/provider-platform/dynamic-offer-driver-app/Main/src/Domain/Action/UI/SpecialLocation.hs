@@ -10,12 +10,13 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Types.Id
 import Lib.Queries.SpecialLocation
 import Servant
 import Tools.Auth
 
 getSpecialLocationList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Environment.Flow [SpecialLocationFull]
-getSpecialLocationList (_, _, merchantOperatingCityId) = notNullGateGeoJson <$> findFullSpecialLocationsByMerchantOperatingCityId merchantOperatingCityId.getId
+getSpecialLocationList (_, _, merchantOperatingCityId) = notNullGateGeoJson <$> Esq.runInReplica (findFullSpecialLocationsByMerchantOperatingCityId merchantOperatingCityId.getId)
   where
     notNullGateGeoJson = filter (any (isJust . (.geoJson)) . (.gatesInfo))

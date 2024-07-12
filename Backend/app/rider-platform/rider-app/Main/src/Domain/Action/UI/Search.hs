@@ -52,6 +52,7 @@ import qualified Kernel.External.Maps.NextBillion.Types as NBT
 import qualified Kernel.External.Maps.Utils as Search
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
+import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
@@ -219,6 +220,7 @@ hotSpotUpdate merchantId mbFavourite origin isSourceManuallyMoved = case mbFavou
 updateForSpecialLocation ::
   ( EsqDBFlow m r,
     CacheFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds
@@ -232,7 +234,7 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation = do
     Just isSpecialLocation -> do
       when isSpecialLocation $ frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation
     Nothing -> do
-      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong origin.gps
+      specialLocationBody <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLong origin.gps
       case specialLocationBody of
         Just _ -> frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation
         Nothing -> return ()
