@@ -33,7 +33,7 @@ import Components.RateCard as RateCard
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Monad.Free (runFree)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array(mapWithIndex, length, null, any, elem) as DA
+import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3, runFn1)
 import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
@@ -50,7 +50,6 @@ import Common.Types.App (LazyCheck(..))
 import Components.LocationTagBarV2 as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Data.Array(mapWithIndex, length, null, any) as DA
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Effect.Aff (launchAff)
@@ -61,7 +60,6 @@ import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig)
 import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
-import Data.String (length, null, take) as DS
 import Helpers.CommonView (emptyTextView)
 import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker, storeCallBackCustomer)
 import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker)
@@ -69,7 +67,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
-import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when)
+import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when, (<#>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..))
 import PrestoDOM.Animation as PrestoAnim
@@ -90,6 +88,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Screens.SearchLocationScreen.ScreenData (dummyQuote)
 import Helpers.TipConfig
 import Components.LocationListItem (dummyAddress)
+import Screens (getScreen, ScreenName(..))
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -227,6 +226,7 @@ mapViewLayout push state globalProps =
     , background Color.white900
     , onAnimationEnd (\action -> mapRenderAction action)
               $ const AfterRender
+    , visibility $ boolToVisibility $ not isForMetroTicketBooking
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -250,6 +250,8 @@ mapViewLayout push state globalProps =
       void $ showMap (EHC.getNewIDWithTag "SearchLocationScreenMap") true "satellite" 17.0 0.0 0.0 push MapReady
       void $ fetchAndUpdateCurrentLocation push (UpdateLocAndLatLong globalProps.cachedSearches) RecenterCurrentLocation
       pure unit
+
+    isForMetroTicketBooking = state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN
 
 confirmLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 confirmLocationView push state = let 
@@ -679,7 +681,10 @@ predictionsView push state globalProps = let
               if (DA.null locList && state.props.actionType /= MetroStationSelectionAction) then globalProps.cachedSearches else locList )
 
     metroStationsArray:: Array Station -> Array LocationListItemState
-    metroStationsArray metroStations = 
+    metroStationsArray metroStations = let
+      selectedLocation = (if state.props.focussedTextField == MB.Just SearchLocPickup then state.data.destLoc else state.data.srcLoc) <#> _.stationCode
+      filteredStations = DA.filter (\item -> MB.Just item.stationCode /= selectedLocation) metroStations
+      in 
       map (\item -> { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
               , postfixImageUrl : ""
               , postfixImageVisibility : false
@@ -707,7 +712,7 @@ predictionsView push state globalProps = let
               , frequencyCount : MB.Nothing
               , recencyDate : MB.Nothing
               , locationScore : MB.Nothing
-              }) metroStations
+              }) filteredStations
 
     locationListItemView :: LocationListItemState -> Int -> PrestoDOM (Effect Unit) w
     locationListItemView item index = let 

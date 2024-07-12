@@ -188,7 +188,7 @@ import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBoo
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.Config (getNumbersToWhiteList)
 import SessionCache (getValueFromWindow, setValueInWindow)
-import LocalStorage.Cache (clearCache)
+import LocalStorage.Cache (clearCache, setInCache)
 import DecodeUtil (getAnyFromWindow)
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.FollowRideScreen.Controller (deleteDismisedMockDrills)
@@ -3967,35 +3967,48 @@ metroTicketBookingFlow = do
   flow <- UI.metroTicketBookingScreen
   case flow of
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET state -> homeScreenFlow
-    GO_TO_METRO_STATION_SEARCH srcdest -> do
+    GO_TO_METRO_STATION_SEARCH srcdest state -> do
       let
         searchLocationState = currentState.searchLocationScreen
 
         textFieldFocus = case srcdest of
           Src -> Just SearchLocPickup
           Dest -> Just SearchLocDrop
+        srcLocation = if state.data.srcCode == "" then Nothing else Just $ SearchLocationScreenData.dummyLocationInfo { metroInfo = Just { stationName : state.data.srcLoc, stationCode : state.data.srcCode }, address = state.data.srcLoc, stationCode = state.data.srcCode }
+        destLocation = if state.data.destCode == "" then Nothing else Just $ SearchLocationScreenData.dummyLocationInfo { metroInfo = Just { stationName : state.data.destLoc, stationCode : state.data.destCode }, address = state.data.destLoc, stationCode = state.data.destCode }
       if null searchLocationState.data.metroStations then do
         modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus }, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = parsedMetroStation, updatedMetroStations = parsedMetroStation } })
+        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus }, data { srcLoc = srcLocation, destLoc = destLocation,fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = parsedMetroStation, updatedMetroStations = parsedMetroStation } })
       else do
         modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus }, data { srcLoc = searchLocationState.data.srcLoc, destLoc = searchLocationState.data.destLoc, fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = searchLocationState.data.metroStations, updatedMetroStations = searchLocationState.data.metroStations } })
+        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus }, data { srcLoc = srcLocation, destLoc = destLocation, fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = searchLocationState.data.metroStations, updatedMetroStations = searchLocationState.data.metroStations } })
       searchLocationFlow
     METRO_FARE_AND_PAYMENT state -> do
       if state.props.currentStage == MetroTicketSelection then do
         (SearchMetroResp searchMetroResp) <- Remote.searchMetroBT (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount)
         modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { searchId = searchMetroResp.searchId }, props { currentStage = GetMetroQuote } })
       else if state.props.currentStage == ConfirmMetroQuote then do
-        (MetroTicketBookingStatus metroBookingStatus) <- Remote.confirmMetroQuoteBT state.data.quoteId
-        modifyScreenState
-          $ MetroTicketBookingScreenStateType
-              ( \state ->
-                  state
-                    { data { bookingId = metroBookingStatus.bookingId }
-                    , props { currentStage = ST.PaymentSDKPooling }
-                    }
-              )
-        setValueToLocalStore METRO_PAYMENT_SDK_POLLING "true"
+        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuote state.data.quoteId
+        case metroBookingStatus of
+          Right (MetroTicketBookingStatus metroBookingStatus) -> do
+            modifyScreenState
+                $ MetroTicketBookingScreenStateType
+                    ( \state ->
+                        state
+                          { data { bookingId = metroBookingStatus.bookingId }
+                          , props { currentStage = ST.PaymentSDKPooling }
+                          }
+                    )              
+            let _ = runFn2 setInCache (show METRO_PAYMENT_SDK_POLLING) true
+            pure unit
+          Left err -> do
+            let errResp = err.response
+                errMsg = if err.code == 400 
+                          then decodeError errResp.errorMessage "errorMessage"
+                          else getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+            void $ pure $ toast errMsg
+            modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage = ST.MetroTicketSelection } })
+            pure unit
       else
         pure unit
       metroTicketBookingFlow
@@ -4430,7 +4443,15 @@ metroMyTicketsFlow = do
       modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer bookingStatusResp metroTicketStatusScreen)
       metroTicketStatusFlow
     GO_HOME_FROM_METRO_MY_TICKETS -> homeScreenFlow
-    GO_METRO_BOOKING_FROM_METRO_MY_TICKETS -> metroTicketBookingFlow
+    GO_METRO_BOOKING_FROM_METRO_MY_TICKETS -> do
+      modifyScreenState
+          $ MetroTicketBookingScreenStateType
+              ( \state ->
+                  state
+                    { props { currentStage = ST.ConfirmMetroQuote }
+                    }
+              )
+      metroTicketBookingFlow
     _ -> metroMyTicketsFlow
 
 viewTicketDetialsFlow :: Maybe String -> FlowBT String Unit
