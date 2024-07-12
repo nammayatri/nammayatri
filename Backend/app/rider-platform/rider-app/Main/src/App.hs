@@ -30,6 +30,7 @@ import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
+import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
@@ -133,7 +134,8 @@ runRiderApp' appCfg = do
             $ catMaybes
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
                 Just (Nothing, prepareAuthManagers flowRt appEnv allFRFSSubIds),
-                Just (Just 150000, prepareGridlineHttpManager 150000)
+                Just (Just 150000, prepareGridlineHttpManager 150000),
+                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000)
               ]
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'

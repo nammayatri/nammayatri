@@ -16,6 +16,7 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
+import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.KVConnector.Metrics as KVCM
@@ -33,10 +34,17 @@ import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Time ()
 import qualified Producer.Flow as PF
+import System.Environment (lookupEnv)
+
+getDhallName :: ProducerType -> String
+getDhallName = \case
+  Driver -> "producer"
+  Rider -> "rider-producer"
 
 startProducer :: IO ()
 startProducer = do
-  appCfg :: AppCfg <- readDhallConfigDefault "producer"
+  producerType <- fromMaybe Driver . (>>= readMaybe) <$> lookupEnv "PRODUCER_TYPE"
+  appCfg :: AppCfg <- readDhallConfigDefault $ getDhallName (T.traceShowId producerType)
   Metrics.serve (appCfg.metricsPort)
   appEnv <- buildAppEnv appCfg
   flowRt <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)

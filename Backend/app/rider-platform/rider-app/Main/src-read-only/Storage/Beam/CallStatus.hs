@@ -19,6 +19,7 @@ data CallStatusT f = CallStatusT
     callService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService),
     conversationDuration :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    customerIvrResponse :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dtmfNumberUsed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

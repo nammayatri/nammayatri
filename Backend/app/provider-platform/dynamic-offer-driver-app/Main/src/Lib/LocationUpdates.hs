@@ -85,6 +85,7 @@ updateDeviation _ _ Nothing _ = do
   return False
 updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = do
   let rideId = ride.id
+  logDebug $ "Safety check : " <> show safetyCheckEnabled
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   (alreadyDeviated, safetyAlertAlreadyTriggered) <- getDeviationAndSafetyDetails ride
   if safetyAlertAlreadyTriggered && alreadyDeviated

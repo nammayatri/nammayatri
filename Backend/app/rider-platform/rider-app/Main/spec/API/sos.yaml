@@ -31,6 +31,9 @@ types:
     isMock: Maybe Bool
     isRideEnded: Maybe Bool
 
+  CallPoliceAPI:
+    rideId: Id Ride
+
 apis:
   # GET /sos/getDetails
   - GET:
@@ -41,7 +44,19 @@ apis:
       response:
         type: API.Types.UI.Sos.SosDetailsRes
 
-  # # POST /sos/create
+  # GET /sos/IvrOutcome
+  - GET:
+      endpoint: /sos/IvrOutcome
+      auth: NoAuth
+      query:
+        CallSid: Text
+        CallFrom: Text
+        digits: Text
+        CallStatus: Text
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # POST /sos/create
   - POST:
       endpoint: /sos/create
       auth: TokenAuth
@@ -50,7 +65,7 @@ apis:
       response:
         type: API.Types.UI.Sos.SosRes
 
-  # # POST /sos/{sosId}/status
+  # POST /sos/{sosId}/status
   - POST:
       endpoint: /sos/{sosId}/status
       auth: TokenAuth
@@ -61,7 +76,7 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
-  # # POST /sos/markRideAsSafe/{sosId}
+  # POST /sos/markRideAsSafe/{sosId}
   - POST:
       endpoint: /sos/markRideAsSafe/{sosId}
       auth: TokenAuth
@@ -72,11 +87,20 @@ apis:
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
-  # # POST /sos/createMockSos
+  # POST /sos/createMockSos
   - POST:
       endpoint: /sos/createMockSos
       auth: TokenAuth
       request:
         type: API.Types.UI.Sos.MockSosReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # # POST /sos/callPolice
+  - POST:
+      endpoint: /sos/callPolice
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.CallPoliceAPI
       response:
         type: Kernel.Types.APISuccess.APISuccess

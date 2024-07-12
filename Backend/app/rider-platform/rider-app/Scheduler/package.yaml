@@ -89,6 +89,7 @@ dependencies:
   - safe
   - extra
   - singletons
+  - unordered-containers
 
 ghc-options:
   - -fwrite-ide-info

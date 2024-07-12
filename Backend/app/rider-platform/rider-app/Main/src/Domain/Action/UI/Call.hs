@@ -111,7 +111,8 @@ initiateCallToDriver rideId = do
         Call.InitiateCallReq
           { fromPhoneNum = customerPhone,
             toPhoneNum = Just providerPhone,
-            attachments = Call.Attachments $ CallAttachments {callStatusId = callStatusId, rideId = rideId}
+            attachments = Call.Attachments $ CallAttachments {callStatusId = callStatusId, rideId = rideId},
+            appletId = Nothing
           }
   let merchantOperatingCityId = booking.merchantOperatingCityId
   exotelResponse <- Call.initiateCall booking.merchantId merchantOperatingCityId callReq
@@ -135,7 +136,8 @@ initiateCallToDriver rideId = do
             callService = Just Call.Exotel,
             callError = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            customerIvrResponse = Nothing
           }
 
 callStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => CallCallbackReq -> m CallCallbackRes
@@ -230,7 +232,8 @@ getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
             callService = Nothing,
             callError = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            customerIvrResponse = Nothing
           }
 
 -- getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe (Maybe Text, BT.Booking))

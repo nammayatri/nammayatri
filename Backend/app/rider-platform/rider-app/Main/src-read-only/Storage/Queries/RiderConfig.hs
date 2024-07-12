@@ -9,9 +9,11 @@ import qualified Domain.Types.RiderConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.RiderConfig as Beam
 
@@ -25,6 +27,11 @@ findByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RiderConfig.RiderConfig))
 findByMerchantOperatingCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+findExotelAppletMappingByMOCID ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RiderConfig.RiderConfig))
+findExotelAppletMappingByMOCID merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.RiderConfig.RiderConfig))
 findByPrimaryKey merchantOperatingCityId = do findOneWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
@@ -43,11 +50,16 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
       Se.Set Beam.enableEmergencyContactAddedMessage enableEmergencyContactAddedMessage,
       Se.Set Beam.enableLocalPoliceSupport enableLocalPoliceSupport,
       Se.Set Beam.enableSupportForSafety enableSupportForSafety,
+      Se.Set Beam.exotelAppIdMapping exotelAppIdMapping,
+      Se.Set Beam.hardLimitForSafetyJobs (Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs),
+      Se.Set Beam.incidentReportSupport (Just incidentReportSupport),
       Se.Set Beam.isAvoidToll isAvoidToll,
+      Se.Set Beam.ivrTriggerDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) ivrTriggerDelay),
       Se.Set Beam.kaptureConfig kaptureConfig,
       Se.Set Beam.kaptureQueue kaptureQueue,
       Se.Set Beam.localPoliceNumber localPoliceNumber,
       Se.Set Beam.placeNameCacheExpiryDays placeNameCacheExpiryDays,
+      Se.Set Beam.policeTriggerDelay ((Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) policeTriggerDelay),
       Se.Set Beam.safetyCheckEndTime safetyCheckEndTime,
       Se.Set Beam.safetyCheckStartTime safetyCheckStartTime,
       Se.Set Beam.specialZoneRadius specialZoneRadius,
@@ -75,12 +87,17 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
             enableEmergencyContactAddedMessage = enableEmergencyContactAddedMessage,
             enableLocalPoliceSupport = enableLocalPoliceSupport,
             enableSupportForSafety = enableSupportForSafety,
+            exotelAppIdMapping = exotelAppIdMapping,
+            hardLimitForSafetyJobs = fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs),
+            incidentReportSupport = fromMaybe False incidentReportSupport,
             isAvoidToll = isAvoidToll,
+            ivrTriggerDelay = fromMaybe 3000 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerDelay),
             kaptureConfig = kaptureConfig,
             kaptureQueue = kaptureQueue,
             localPoliceNumber = localPoliceNumber,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             placeNameCacheExpiryDays = placeNameCacheExpiryDays,
+            policeTriggerDelay = fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay),
             safetyCheckEndTime = safetyCheckEndTime,
             safetyCheckStartTime = safetyCheckStartTime,
             specialZoneRadius = specialZoneRadius,
@@ -105,12 +122,17 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Beam.enableEmergencyContactAddedMessage = enableEmergencyContactAddedMessage,
         Beam.enableLocalPoliceSupport = enableLocalPoliceSupport,
         Beam.enableSupportForSafety = enableSupportForSafety,
+        Beam.exotelAppIdMapping = exotelAppIdMapping,
+        Beam.hardLimitForSafetyJobs = Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs,
+        Beam.incidentReportSupport = Just incidentReportSupport,
         Beam.isAvoidToll = isAvoidToll,
+        Beam.ivrTriggerDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) ivrTriggerDelay,
         Beam.kaptureConfig = kaptureConfig,
         Beam.kaptureQueue = kaptureQueue,
         Beam.localPoliceNumber = localPoliceNumber,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.placeNameCacheExpiryDays = placeNameCacheExpiryDays,
+        Beam.policeTriggerDelay = (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds) policeTriggerDelay,
         Beam.safetyCheckEndTime = safetyCheckEndTime,
         Beam.safetyCheckStartTime = safetyCheckStartTime,
         Beam.specialZoneRadius = specialZoneRadius,

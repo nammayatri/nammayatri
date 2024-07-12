@@ -15,6 +15,7 @@
 module SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver where
 
 import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Domain.Action.UI.Call
 import qualified Domain.Types.CallStatus as SCS
@@ -22,6 +23,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverInformation as DInfo
 import qualified Domain.Types.Overlay as DOverlay
 import Domain.Types.RideRelatedNotificationConfig
+import Domain.Types.TransporterConfig
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Call.Interface.Types
 import Kernel.External.Encryption (decrypt)
@@ -29,9 +31,11 @@ import Kernel.External.Types (Language (..), SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.Overlay as CMO
@@ -43,6 +47,7 @@ import Tools.Call
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.SMS as Sms
+import Utils.Common.Cac.KeyNameConstants
 
 sendScheduledRideNotificationsToDriver ::
   ( EncFlow m r,
@@ -68,6 +73,8 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
   let isNotificationRequired = not onlyIfOffline || (driverInfo.mode /= Just DInfo.ONLINE)
 
   when (isNotificationRequired && booking.status == bookingStatus) do
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    let maybeAppId = (HM.lookup RentalAppletID . exotelMap) =<< transporterConfig.exotelAppIdMapping
     driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
     mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
     countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
@@ -79,7 +86,8 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
               InitiateCallReq
                 { fromPhoneNum = phoneNumber,
                   toPhoneNum = Nothing,
-                  attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = bookingId.getId}
+                  attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = bookingId.getId},
+                  appletId = maybeAppId
                 }
         exotelResponse <- initiateCall booking.providerId merchantOpCityId callReq
         logTagInfo ("BookingId: " <> bookingId.getId) "IVR Call initiated to driver."

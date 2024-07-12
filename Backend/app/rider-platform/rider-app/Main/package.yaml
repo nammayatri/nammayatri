@@ -120,6 +120,7 @@ dependencies:
   - lens-aeson
   - http-client
   - http-client-tls
+  - hashable
 
 ghc-options:
   - -fwrite-ide-info

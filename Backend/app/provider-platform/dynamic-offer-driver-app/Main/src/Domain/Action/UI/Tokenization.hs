@@ -46,7 +46,7 @@ getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec sv
     _ -> makeResponse <$> Tokenize.tokenize hvsc (makeTokenizeReq expirySec)
   where
     makeTokenizeReq :: Int -> Tokenize.TokenizationReq
-    makeTokenizeReq expiry = Tokenize.TokenizationReq {..}
+    makeTokenizeReq expiry = Tokenize.TokenizationReq {expiry = Just expiry}
 
     makeResponse :: Tokenize.TokenizationResp -> API.Types.UI.Tokenization.GetTokenRes
     makeResponse Tokenize.TokenizationResp {..} = API.Types.UI.Tokenization.GetTokenRes {expiry = Nothing, ..}

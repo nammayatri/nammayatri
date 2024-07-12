@@ -5,6 +5,7 @@ import qualified Data.HashMap.Strict as HM
 import Domain.Types.FeedbackForm
 import EulerHS.Types (EulerClient, client)
 import IssueManagement.Common (IssueReportType)
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -388,3 +389,29 @@ getKnowYourFavDriverDetails ::
 getKnowYourFavDriverDetails apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getKnowYourDriverClient bppRideId (Just apiKey)) "KnowYourFavDriver" getKnowYourFavDriverApi
+
+type GetDriverCoordinatesDetailsAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "getDriverCoordinates"
+    :> Header "token" Text
+    :> Get '[JSON] (Maybe Maps.LatLong)
+
+getDriverCoordinatesClient :: Text -> Maybe Text -> EulerClient (Maybe Maps.LatLong)
+getDriverCoordinatesClient = client getDriverCoordinatesApi
+
+getDriverCoordinatesApi :: Proxy GetDriverCoordinatesDetailsAPI
+getDriverCoordinatesApi = Proxy
+
+getDriverCoordinatesDetails ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m (Maybe Maps.LatLong)
+getDriverCoordinatesDetails apiKey internalUrl bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getDriverCoordinatesClient bppRideId (Just apiKey)) "GetDriverCoordinates" getDriverCoordinatesApi

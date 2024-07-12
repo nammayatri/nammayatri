@@ -20,7 +20,7 @@ Sos:
       enum: "EmergencyContactId Text"
 
     SosType:
-      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow"
+      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow,PoliceAPI"
 
     SosStatus:
       enum: "Resolved,NotResolved,Pending,MockPending,MockResolved"

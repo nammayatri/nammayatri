@@ -22,6 +22,7 @@ module Environment
   )
 where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
 import "rider-app" Environment (AppCfg (..))
@@ -85,6 +86,7 @@ data HandlerEnv = HandlerEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     cacConfig :: CacConfig
   }
   deriving (Generic)
@@ -112,6 +114,7 @@ buildHandlerEnv HandlerCfg {..} = do
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   coreMetrics <- registerCoreMetricsContainer
   return HandlerEnv {..}
 

@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.UI.Sos
 import qualified Control.Lens
+import qualified Data.Text
 import qualified Domain.Action.UI.Sos as Domain.Action.UI.Sos
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -29,10 +30,25 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.Sos.SosDetailsRes
+      :<|> "sos"
+      :> "IvrOutcome"
+      :> QueryParam "CallFrom" Data.Text.Text
+      :> QueryParam "CallSid" Data.Text.Text
+      :> QueryParam
+           "CallStatus"
+           Data.Text.Text
+      :> QueryParam
+           "digits"
+           Data.Text.Text
+      :> Get
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "sos"
       :> "create"
-      :> ReqBody '[JSON] API.Types.UI.Sos.SosReq
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.Sos.SosReq
       :> Post
            '[JSON]
            API.Types.UI.Sos.SosRes
@@ -69,10 +85,19 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "sos"
+      :> "callPolice"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.Sos.CallPoliceAPI
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
-handler = getSosGetDetails :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos
+handler = getSosGetDetails :<|> getSosIvrOutcome :<|> postSosCreate :<|> postSosStatus :<|> postSosMarkRideAsSafe :<|> postSosCreateMockSos :<|> postSosCallPolice
 
 getSosGetDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -82,6 +107,9 @@ getSosGetDetails ::
     Environment.FlowHandler API.Types.UI.Sos.SosDetailsRes
   )
 getSosGetDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosGetDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getSosIvrOutcome :: (Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+getSosIvrOutcome a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosIvrOutcome a4 a3 a2 a1
 
 postSosCreate :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.Sos.SosReq -> Environment.FlowHandler API.Types.UI.Sos.SosRes)
 postSosCreate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
@@ -114,3 +142,12 @@ postSosCreateMockSos ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postSosCreateMockSos a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreateMockSos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postSosCallPolice ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.Sos.CallPoliceAPI ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postSosCallPolice a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCallPolice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

@@ -1,11 +1,14 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.TransporterConfig where
+module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, module ReExport) where
 
 import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
+import Domain.Types.Extra.TransporterConfig as ReExport
+import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -93,6 +96,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
+    exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,
     fakeOtpEmails :: [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
     fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,

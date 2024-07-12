@@ -741,6 +741,7 @@ notifySafetyAlert ::
   T.Text ->
   m ()
 notifySafetyAlert booking _ = do
+  logDebug "Sending safety alert notification"
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.SAFETY_ALERT_DEVIATION merchantOperatingCityId

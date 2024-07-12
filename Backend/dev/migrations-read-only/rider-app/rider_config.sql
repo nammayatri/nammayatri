@@ -64,3 +64,16 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN email_otp_config json;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN kapture_config json NOT NULL default '{"kaptureQueue":"", "disposition":""}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN police_trigger_delay integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ivr_trigger_delay integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN hard_limit_for_safety_jobs integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN exotel_app_id_mapping json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN incident_report_support boolean ;

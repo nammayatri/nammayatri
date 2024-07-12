@@ -30,6 +30,9 @@ import Kernel.Utils.IOLogging
 import Lib.Scheduler (SchedulerType)
 import System.Environment (lookupEnv)
 
+data ProducerType = Rider | Driver
+  deriving (Generic, Read, Show)
+
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,

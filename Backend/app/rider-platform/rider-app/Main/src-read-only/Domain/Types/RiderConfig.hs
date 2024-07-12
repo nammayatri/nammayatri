@@ -1,10 +1,13 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.RiderConfig where
+module Domain.Types.RiderConfig (module Domain.Types.RiderConfig, module ReExport) where
 
 import Data.Aeson
+import Domain.Types.Extra.RiderConfig as ReExport
+import qualified Domain.Types.Extra.RiderConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Email.Types
@@ -25,12 +28,17 @@ data RiderConfig = RiderConfig
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
+    exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping,
+    hardLimitForSafetyJobs :: Kernel.Prelude.Int,
+    incidentReportSupport :: Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,
+    ivrTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     kaptureConfig :: IssueManagement.Common.KaptureConfig,
     kaptureQueue :: Kernel.Prelude.Text,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
     specialZoneRadius :: Kernel.Prelude.Int,
@@ -41,4 +49,4 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON)

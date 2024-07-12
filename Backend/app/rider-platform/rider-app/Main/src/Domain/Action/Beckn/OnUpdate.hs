@@ -61,9 +61,12 @@ import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -383,7 +386,20 @@ onUpdate = \case
     QPFS.clearCache searchReq.riderId -- do we need to clear cache here?
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
-  OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> Notify.notifySafetyAlert booking code
+  OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
+    logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
+    merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
+    riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    if riderConfig.incidentReportSupport
+      then do
+        logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
+        maxShards <- asks (.maxShards)
+        let scheduleAfter = riderConfig.ivrTriggerDelay
+            safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
+        logDebug $ "Exotel Safety alert scheduleAfter : " <> show scheduleAfter
+        createJobIn @_ @'SafetyIVR scheduleAfter maxShards (safetyIvrJobData :: SafetyIVRJobData)
+      else logError $ "Incident Report Service not available for merchantOperatingCityId : " <> show merchantOperatingCityId
+    Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing
     Notify.notifyOnStopReached booking ride

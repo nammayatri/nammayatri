@@ -66,6 +66,7 @@ library
       API.Internal.BulkLocUpdate
       API.Internal.Cac
       API.Internal.CustomerCancellationDues
+      API.Internal.DriverCoordinates
       API.Internal.DriverInactiveFCM
       API.Internal.DriverMode
       API.Internal.DriverReferee
@@ -161,6 +162,7 @@ library
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.Cac
       Domain.Action.Internal.CustomerCancellationDues
+      Domain.Action.Internal.DriverCoordinates
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverMode
       Domain.Action.Internal.DriverReferee
@@ -254,6 +256,7 @@ library
       Domain.Types.Extra.MessageReport
       Domain.Types.Extra.Notification
       Domain.Types.Extra.Plan
+      Domain.Types.Extra.TransporterConfig
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.DriverExtraFeeBounds
@@ -1067,6 +1070,7 @@ library
     , extra
     , generic-lens
     , geohash ==1.0.1
+    , hashable
     , haskell-cac
     , hspec
     , http-client
@@ -1189,6 +1193,7 @@ executable dynamic-offer-driver-app-exe
     , extra
     , generic-lens
     , geohash ==1.0.1
+    , hashable
     , haskell-cac
     , hspec
     , http-client

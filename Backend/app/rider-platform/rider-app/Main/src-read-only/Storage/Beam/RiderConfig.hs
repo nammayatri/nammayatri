@@ -6,6 +6,7 @@
 module Storage.Beam.RiderConfig where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Extra.RiderConfig
 import qualified Email.Types
 import qualified IssueManagement.Common
 import Kernel.External.Encryption
@@ -25,12 +26,17 @@ data RiderConfigT f = RiderConfigT
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
+    exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping),
+    hardLimitForSafetyJobs :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    incidentReportSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
+    ivrTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     kaptureConfig :: B.C f IssueManagement.Common.KaptureConfig,
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    policeTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,
     specialZoneRadius :: B.C f Kernel.Prelude.Int,

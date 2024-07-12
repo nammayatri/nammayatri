@@ -120,7 +120,8 @@ initiateCallToCustomer rideId merchantOpCityId = do
         InitiateCallReq
           { fromPhoneNum = providerPhone,
             toPhoneNum = Just customerPhone,
-            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = rideId.getId}
+            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = rideId.getId},
+            appletId = Nothing
           }
   exotelResponse <- initiateCall booking.providerId merchantOpCityId callReq
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from driver to customer."
@@ -156,7 +157,8 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
         InitiateCallReq
           { fromPhoneNum = linkedDriverNumber,
             toPhoneNum = Just driverRequestedNumber,
-            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = vehicleRC.id.getId}
+            attachments = Attachments $ CallAttachments {callStatusId = callStatusId, entityId = vehicleRC.id.getId},
+            appletId = Nothing
           }
   exotelResponse <- initiateCall merchantId merchantOpCityId callReq
   callStatus <- buildCallStatus callStatusId exotelResponse (Just vehicleRC.id.getId)

@@ -178,13 +178,20 @@ let hccfg =
 let kvConfigUpdateFrequency = +10
 
 let RiderJobType =
-      < CheckPNAndSendSMS | ScheduledRideNotificationsToRider | OtherJobTypes >
+      < CheckPNAndSendSMS
+      | ScheduledRideNotificationsToRider
+      | SafetyIVR
+      | CallPoliceApi
+      | OtherJobTypes
+      >
 
 let jobInfoMapx =
       [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
       , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
         , mapValue = True
         }
+      , { mapKey = RiderJobType.SafetyIVR, mapValue = False }
+      , { mapKey = RiderJobType.CallPoliceApi, mapValue = False }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
       ]
 
@@ -233,9 +240,9 @@ in  { esqDBCfg
     , hedisClusterCfg = hccfg
     , hedisNonCriticalCfg = hcfg
     , hedisNonCriticalClusterCfg = hccfg
-    , hedisMigrationStage = True
+    , hedisMigrationStage = False
     , cutOffHedisCluster = True
-    , cutOffNonCriticalHedisCluster = False
+    , cutOffNonCriticalHedisCluster = True
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , port = +8013
@@ -289,7 +296,7 @@ in  { esqDBCfg
     , maxShards = +5
     , jobInfoMapx
     , internalEndPointMap = common.internalEndPointMap
-    , schedulerSetName = "rider-scheduler-set"
+    , schedulerSetName = "Scheduled_Jobs_Rider"
     , schedulerType = common.schedulerType.RedisBased
     , _version = "2.0.0"
     , hotSpotExpiry = +604800

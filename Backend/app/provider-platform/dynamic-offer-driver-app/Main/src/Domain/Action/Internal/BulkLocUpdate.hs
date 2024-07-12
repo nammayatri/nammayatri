@@ -44,6 +44,7 @@ bulkLocUpdate req = do
   let driverId = req.driverId
       rideId = req.rideId
       loc = req.loc
+  logDebug $ "BulkLocUpdate = " <> show rideId <> " " <> show driverId <> " " <> show loc
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   transportConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

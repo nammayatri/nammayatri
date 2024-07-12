@@ -3,9 +3,15 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   EmailOTPConfig: Email.Types
   KaptureConfig: IssueManagement.Common
+  ExotelMapping: Domain.Types.Extra.RiderConfig
+  Value: Data.Aeson
+  NominalDiffTime: Kernel.Prelude
+  Seconds: Kernel.Types.Common
 
 RiderConfig:
   tableName: rider_config
+
+  derives: "Show, Generic, ToJSON, FromJSON"
 
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -30,9 +36,32 @@ RiderConfig:
     kaptureQueue: Text # deprecated
     kaptureConfig: IssueManagement.Common.KaptureConfig
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
+    ivrTriggerDelay: NominalDiffTime
+    policeTriggerDelay: NominalDiffTime
+    exotelAppIdMapping: Maybe ExotelMapping
+    hardLimitForSafetyJobs: Int
+    incidentReportSupport: Bool
+
+  beamType:
+    ivrTriggerDelay: Maybe Seconds
+    policeTriggerDelay: Maybe Seconds
+    hardLimitForSafetyJobs: Maybe Seconds
+    incidentReportSupport: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
+
+  fromTType:
+    ivrTriggerDelay: fromMaybe 3000 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerDelay)|E
+    policeTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay)|E
+    hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
+    incidentReportSupport: fromMaybe False incidentReportSupport|E
+
+  toTType:
+    ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    policeTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
+    incidentReportSupport: Just incidentReportSupport|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -55,6 +84,15 @@ RiderConfig:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+
+    findExotelAppletMappingByMOCID:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
+
   sqlType:
     emailOtpConfig: "json"
     kaptureConfig: "json"
+    exotelAppIdMapping: "json"
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE

@@ -229,6 +229,7 @@ library
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
       Domain.Types.Extra.RentalDetails
+      Domain.Types.Extra.RiderConfig
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.Geometry
       Domain.Types.HotSpot
@@ -256,7 +257,9 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
       SharedLogic.ScheduledNotifications
+      SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
+      SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Serviceability
       Storage.Beam.BecknRequest
@@ -761,6 +764,7 @@ library
     , extra
     , filepath
     , geohash ==1.0.1
+    , hashable
     , haskell-cac
     , http-client
     , http-client-tls
@@ -881,6 +885,7 @@ executable rider-app-exe
     , extra
     , filepath
     , geohash ==1.0.1
+    , hashable
     , http-client
     , http-client-tls
     , http-media

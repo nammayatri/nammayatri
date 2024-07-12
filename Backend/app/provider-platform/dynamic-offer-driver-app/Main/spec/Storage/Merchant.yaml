@@ -37,6 +37,7 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   Category: Domain.Types.Vehicle
   Hours: Kernel.Types.Common
+  ExotelMapping: Domain.Types.Extra.TransporterConfig
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -79,7 +80,6 @@ Merchant:
     info: Maybe Text
     registryUrl: BaseUrl
     onlinePayment: Bool
-
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -804,6 +804,7 @@ TransporterConfig:
     minRideDistanceThresholdForReferralPayout: HighPrecMeters
     minPickupDistanceThresholdForReferralPayout: Meters
     maxPayoutReferralForADay: Int
+    exotelAppIdMapping: Maybe ExotelMapping
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -937,6 +938,7 @@ TransporterConfig:
     merchantOperatingCityId: PrimaryKey
 
   sqlType:
+    exotelAppIdMapping: json
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     rideTimeEstimatedThreshold: bigint
@@ -1146,8 +1148,12 @@ TransporterConfig:
         - orderAndNotificationStatusCheckTimeLimit
         - snapToRoadConfidenceThreshold
         - useWithSnapToRoadFallback
+    findExotelAppletMappingByMOCID:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId
   extraOperations:
     - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
 
 MerchantServiceConfig:
   derives: Generic,Show,'UsageSafety
