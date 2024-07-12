@@ -30,7 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, throwError)
+import Kernel.Utils.Common (CacheFlow, logError, throwError)
 
 isSearchTryCancelled ::
   CacheFlow m r =>
@@ -56,8 +56,20 @@ whenSearchTryCancellable ::
 whenSearchTryCancellable searchTryId actions = do
   gotLock <- lockSearchTry searchTryId
   if gotLock
-    then actions
-    else throwError (InternalError "SEARCH_TRY_CANCELLED")
+    then do
+      Hedis.setExp (mkCancelledKey searchTryId) True 60
+      actions
+    else do
+      whenM (notAlreadyCancelled searchTryId) $ logError ("DRIVER_QUOTED sharedLogic for searchTryId: " <> getId searchTryId)
+      throwError (InternalError "SEARCH_TRY_CANCELLED")
+
+notAlreadyCancelled ::
+  CacheFlow m r =>
+  Id SearchTry ->
+  m Bool
+notAlreadyCancelled searchTryId = do
+  isCancelled <- isSearchTryCancelled searchTryId
+  return (not isCancelled)
 
 mkCancelledKey :: Id SearchTry -> Text
 mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.getId
