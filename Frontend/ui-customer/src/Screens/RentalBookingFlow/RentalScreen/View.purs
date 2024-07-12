@@ -44,7 +44,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
-import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getVariantDescription, getVehicleName)
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getVariantDescription, getVehicleName, convertTo12HourFormat)
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
 import JBridge (renderSlider, sliderConfig, toast)
 import Language.Strings (getString, getVarString)
@@ -436,6 +436,11 @@ getDataFromDescType descriptionType state =
       selectedQuote = maybe dummyRentalQuote identity (state.data.selectedQuote)
       currency = getCurrency appConfig
       rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds startTimeUTC $ (state.data.rentalBookingData.baseDuration) * 60 * 60
+      nightShiftInfo = selectedQuote.fareDetails.nightShiftInfo 
+      {defNightShiftStart, defNightShiftEnd, defNightShiftCharge} = { defNightShiftStart : "22:00:00", defNightShiftEnd : "05:00:00" , defNightShiftCharge :250}
+      {nightShiftStart , nightShiftEnd, nightShiftCharge } = case nightShiftInfo of 
+        Just info -> {nightShiftStart : fromMaybe defNightShiftStart (info^. _nightShiftStart), nightShiftEnd : fromMaybe defNightShiftEnd (info ^. _nightShiftEnd) ,nightShiftCharge : info ^. _nightShiftCharge}
+        Nothing -> {nightShiftStart : defNightShiftStart, nightShiftEnd : defNightShiftEnd, nightShiftCharge : Nothing}
   in case descriptionType of 
         BookingTimeAndDist -> {
           title : "<b>Booking from " <> formatDateInHHMM startTimeUTC <> " - " <> rideEndTime <> "</b>",
@@ -446,15 +451,16 @@ getDataFromDescType descriptionType state =
           }
         EstimatedCharges -> {
           title : getString ESTIMATED_CHARGES,
-          subHeadings : [
-            { title : getString ESTIMATED_FARE <> ": <b>" <> selectedQuote.quoteDetails.price <> "</b>" , description : getString ADDITIONAL_CHARGES_DESCRIPTION}
-          ]
+          subHeadings : ([
+            { title : getString ESTIMATED_FARE <> ": <b>" <> selectedQuote.quoteDetails.price <> "</b>" , description : getString ADDITIONAL_CHARGES_DESCRIPTION}]
+            <> case nightShiftCharge of 
+              Just charge -> [{ title : getString NIGHT_CHARGES <> ": <b>" <> currency <> show charge <> "</b>" , description : getVarString SINCE_A_PART_OF_YOUR_TRIP [fromMaybe "" (convertTo12HourFormat nightShiftStart) , fromMaybe "" (convertTo12HourFormat nightShiftEnd) ]}]
+              Nothing -> [])
         }
         AdditionalCharges -> {
           title : getString ADDITIONAL_CHARGES,
           subHeadings : [
-            { title : getString PARKING_AND_OTHER_CHARGES , description : getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED},
-            { title : getString NIGHT_TIME_FEES , description : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge}
+            { title : getString PARKING_AND_OTHER_CHARGES , description : getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED}
           ]
       }
 

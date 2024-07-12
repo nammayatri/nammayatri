@@ -141,7 +141,7 @@ dummyFareQuoteDetails = {
   perExtraMinRate : 0 ,
   perHourCharge : 0 ,
   plannedPerKmRate : 0,
-  nightShiftCharge : 0,
+  nightShiftInfo : Nothing,
   tollCharges : Nothing,
   deadKmFare: Nothing
 }

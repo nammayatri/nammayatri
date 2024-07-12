@@ -547,7 +547,7 @@ dummyFareQuoteDetails = {
   perExtraMinRate : 0 ,
   perHourCharge : 0 ,
   plannedPerKmRate : 0,
-  nightShiftCharge : 0,
+  nightShiftInfo : MB.Nothing,
   tollCharges : MB.Nothing,
   deadKmFare : MB.Nothing
 }
@@ -612,6 +612,7 @@ quotesFlow res state = do
           _  -> dummyFareQuoteDetails
     in { quoteDetails : quoteDetails, index : index, activeIndex : 0 , fareDetails : fareDetails}
     ) sortedByFare)
+
   void $ pure $ setValueToLocalStore HAS_TOLL_CHARGES "false"
   if DA.length rentalsQuoteList == 0 then do 
     void $ pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
@@ -623,7 +624,7 @@ quotesFlow res state = do
   where 
     transFormQuoteDetails quoteDetails = 
         { includedKmPerHr : MB.fromMaybe 0 quoteDetails.includedKmPerHr 
-        , nightShiftCharge : MB.fromMaybe 250 quoteDetails.nightShiftCharge 
+        , nightShiftInfo : quoteDetails.nightShiftInfo
         , perExtraKmRate : MB.fromMaybe 0 quoteDetails.perExtraKmRate 
         , perExtraMinRate : MB.fromMaybe 0 quoteDetails.perExtraMinRate 
         , perHourCharge : MB.fromMaybe 0 quoteDetails.perHourCharge 

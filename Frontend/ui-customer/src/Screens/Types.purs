@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, NightShiftRate)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -52,7 +52,7 @@ import JBridge (Location)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
-import Services.API (DeadKmFare)
+import Services.API (AmountWithCurrency)
 type Contacts = {
   name :: String,
   number :: String
@@ -2543,9 +2543,9 @@ type FareDetails = {
   perExtraKmRate :: Int,
   perExtraMinRate :: Int,
   perHourCharge :: Int,
-  nightShiftCharge :: Int,
   tollCharges :: Maybe Number,
-  deadKmFare :: Maybe DeadKmFare
+  nightShiftInfo :: Maybe NightShiftRate,
+  deadKmFare :: Maybe AmountWithCurrency
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
