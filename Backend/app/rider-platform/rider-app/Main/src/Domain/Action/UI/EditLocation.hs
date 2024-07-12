@@ -8,6 +8,7 @@ import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Location as QL
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -79,6 +80,7 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   QR.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
+  QBUR.updateStatusById DBUR.CONFIRM bookingUpdateReqId
   void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
   return Success
 
