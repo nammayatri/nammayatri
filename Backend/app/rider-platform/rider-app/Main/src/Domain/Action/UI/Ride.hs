@@ -96,8 +96,9 @@ data EditLocationReq = EditLocationReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-newtype EditLocationResp = EditLocationResp
-  { bookingUpdateRequestId :: Maybe (Id DBUR.BookingUpdateRequest)
+data EditLocationResp = EditLocationResp
+  { bookingUpdateRequestId :: Maybe (Id DBUR.BookingUpdateRequest),
+    result :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -289,7 +290,7 @@ editLocation rideId (personId, merchantId) req = do
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
       void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
       QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
-      pure $ EditLocationResp Nothing
+      pure $ EditLocationResp Nothing "Success"
     (_, Just destination) -> do
       when (ride.status == SRide.CANCELLED || ride.status == SRide.COMPLETED) do
         throwError (InvalidRequest $ "Customer is not allowed to change destination as the ride is in terminal state for rideId: " <> ride.id.getId)
@@ -331,7 +332,7 @@ editLocation rideId (personId, merchantId) req = do
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
       void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
-      pure $ EditLocationResp (Just bookingUpdateReq.id)
+      pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
     (_, _) -> throwError PickupOrDropLocationNotFound
 
 buildLocation :: MonadFlow m => EditLocation -> m DL.Location
