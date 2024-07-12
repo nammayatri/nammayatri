@@ -31,6 +31,7 @@ import Resource.Constants (tripDatesCount)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
+import Helpers.Utils (getcurrentdate)
 
 errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
@@ -67,7 +68,7 @@ datePickerConfig state = let
   config = DatePickerModel.config
   datePickerConfig' = config
     { activeIndex = state.datePickerState.activeIndex
-    , dates = getPastDays tripDatesCount
+    , dates = getPastDays (getcurrentdate "")tripDatesCount
     , id = "DatePickerScrollView"
     }
   in datePickerConfig'

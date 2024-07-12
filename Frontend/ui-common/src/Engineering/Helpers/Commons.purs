@@ -53,7 +53,7 @@ import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
 import Common.Types.App (FlowBT, ClevertapEventParams)
 import Effect.Aff.AVar (new)
 import Data.String as DS
-import Data.Array ((!!))
+import Data.Array ((!!), elemIndex)
 import Data.Number.Format as Number
 import Engineering.OS.Permission (checkIfPermissionsGranted, requestPermissions)
 import Data.Function.Uncurried (Fn1(..), runFn2)
@@ -92,10 +92,12 @@ foreign import formatCurrencyWithCommas :: String -> String
 foreign import camelCaseToSentenceCase :: String -> String
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String -> String
-foreign import getPastDays :: Int -> Array CalendarDate
+foreign import getPastDays :: String -> Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
 foreign import getDayName :: String -> String
 foreign import getFutureDate :: String -> Int -> String
+foreign import getPastDate :: String -> Int -> String
+foreign import withinDateRange :: String -> String -> String -> Boolean
 foreign import setEventTimestamp :: String -> Effect Unit
 foreign import getTimeStampObject :: Unit -> Effect (Array ClevertapEventParams)
 foreign import updateIdMap :: EffectFn1 String CarouselHolderData
@@ -355,3 +357,9 @@ getCurrencySymbol cur =
     USD -> "$"
     EUR -> "€"
     _ -> show cur
+
+getDayOfWeek :: String -> Int
+getDayOfWeek dayName = fromMaybe 0 $ elemIndex (DS.take 3 dayName) getWeekDays
+
+getWeekDays :: Array String
+getWeekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]

@@ -14,7 +14,7 @@ import Control.Monad.Except (runExcept)
 import Foreign.Generic (class Decode, decode, encode)
 import JBridge (getKeyInSharedPrefKeys)
 import Data.Either
-import Engineering.Helpers.Commons (convertUTCtoISC)
+import Engineering.Helpers.Commons as EHC
 import Effect.Ref (read, new, write)
 import Constants.Configs
 import Debug
@@ -29,6 +29,13 @@ getDateFromCurrentDate rideDate = if rideDate == "Today" then getCurrentDate els
 getRideData :: String -> Maybe RideData
 getRideData date = lookup date $ getValueFromCache "RIDE_DATA" getSummary
 
+getDatesListV2 :: String -> String -> String -> Boolean -> Array String
+getDatesListV2 todaysDate fromDate toDate isCurrentWeek = do
+  if fromDate /= "" && toDate /= "" && not isCurrentWeek
+  then map (\obj -> EHC.convertUTCtoISC obj.utcDate "YYYY-MM-DD") $ EHC.getPastDays toDate 7
+  else do
+    let dayOfWeek = EHC.getDayOfWeek (EHC.getDayName todaysDate) + 1
+    map (\obj -> EHC.convertUTCtoISC obj.utcDate "YYYY-MM-DD") $ EHC.getPastDays todaysDate dayOfWeek
 
 updateRideDatas :: Array RidesSummary -> Array RidesInfo -> String -> Effect Unit
 updateRideDatas resp list givenDate = do 
@@ -40,7 +47,7 @@ updateRideDatas resp list givenDate = do
                 insert rideSummary.rideDate summary acc
                 ) existing resp
       finalData = foldr (\(RidesInfo rides) acc -> do
-                let date = convertUTCtoISC rides.createdAt "YYYY-MM-DD"
+                let date = EHC.convertUTCtoISC rides.createdAt "YYYY-MM-DD"
                     rideData = case lookup date acc of
                                 Nothing -> fromRidesInfoToRideData (RidesInfo rides) date
                                 Just val -> if val.noSummaryFound then updateRideDataFromRideInfo (RidesInfo rides) val else updateRideInfo (RidesInfo rides) val

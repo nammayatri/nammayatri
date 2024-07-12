@@ -1915,7 +1915,7 @@ helpAndSupportFlow = do
       homeScreenFlow
     GO_BACK_TO_TRIP_DETAILS updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow ""
 
 writeToUsFlow :: FlowBT String Unit
 writeToUsFlow = do
@@ -1988,7 +1988,7 @@ myRidesScreenFlow = do
       goBackTo = ST.RideHistory
       }})
 
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow ""
     NOTIFICATION_FLOW -> notificationFlow
     SELECTED_TAB state -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
@@ -2106,7 +2106,7 @@ referralScreenFlow = do
   (GlobalState allState) <- getState
   let state = allState.referralScreen
   when (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) do
-    let pastDates = getPastDays 7
+    let pastDates = getPastDays (getcurrentdate "") 7
         pastWeeks = getPastWeeks 4
         selectedDay = case last pastDates of
                         Just date -> date
@@ -2136,12 +2136,12 @@ referralScreenFlow = do
     REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
-
-tripDetailsScreenFlow :: FlowBT String Unit
-tripDetailsScreenFlow = do
+    
+tripDetailsScreenFlowV2 :: FlowBT String Unit
+tripDetailsScreenFlowV2 = do
   config <- getAppConfigFlowBT Constants.appConfig
   modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {config = config}} )
-  flow <- UI.tripDetailsScreen
+  flow <- UI.tripDetailsScreenV2
   case flow of
     ON_SUBMIT  -> pure unit
     GO_TO_EARINING -> driverEarningsFlow
@@ -2162,6 +2162,37 @@ tripDetailsScreenFlow = do
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.TRIP_DETAILS_SCREEN} } )
       helpAndSupportFlow
+    _ -> pure unit
+
+
+
+tripDetailsScreenFlow :: String -> FlowBT String Unit
+tripDetailsScreenFlow _ = do
+  if true then tripDetailsScreenFlowV2
+  else do
+    config <- getAppConfigFlowBT Constants.appConfig
+    modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {config = config}} )
+    flow <- UI.tripDetailsScreen
+    case flow of
+      ON_SUBMIT  -> pure unit
+      GO_TO_EARINING -> driverEarningsFlow
+      GO_TO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
+      GO_TO_HOME_SCREEN -> homeScreenFlow
+      OPEN_HELP_AND_SUPPORT -> do
+        let language = ( case getLanguageLocale languageKey of
+                          "HI_IN" -> "hi"
+                          "KN_IN" -> "kn"
+                          "TA_IN" -> "ta"
+                          "TE_IN" -> "te"
+                          _       -> "en"
+                      )
+        let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
+        let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
+        (GetCategoriesRes response) <- Remote.getCategoriesBT language
+        let temp = categoryTransformer response.categories language 
+        let categories' = sortBy compareByOrder temp
+        modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.TRIP_DETAILS_SCREEN} } )
+        helpAndSupportFlow
 
 currentRideFlow :: Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
 currentRideFlow activeRideResp isActiveRide = do
@@ -2831,7 +2862,7 @@ homeScreenFlow = do
       aadhaarVerificationFlow
     GO_TO_RIDE_DETAILS_SCREEN -> do 
       modifyScreenState $ TripDetailsScreenStateType $ \tripDetailsScreen -> tripDetailsScreen { data {goBackTo = ST.Home}}
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow ""
     POST_RIDE_FEEDBACK state-> do 
       void $ lift $ lift $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
       when (state.data.endRideData.rating == 5) $ void $ pure $ JB.launchInAppRatingPopup unit
@@ -3833,7 +3864,7 @@ rideCompletedScreenFlow  = do
   case rcsAction of
     GO_TO_RIDE_DETAILS_SCREEN_FROM_RIDE_COMPLETED_SCREEN -> do 
       modifyScreenState $ TripDetailsScreenStateType $ \tripDetailsScreen -> tripDetailsScreen { data {goBackTo = ST.RideCompletion}}
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow ""
     GO_TO_HOME_SCREEN_FROM_RIDE_COMPLETED_SCREEN state -> do
       let rating = case state.props.selectedRating of
                      ST.SEL_P -> 5
@@ -4130,7 +4161,7 @@ driverEarningsFlow = do
           acRide = selectedCard.acRide,
           vehicleServiceTier = selectedCard.vehicleServiceTier
           }})
-          tripDetailsScreenFlow
+          tripDetailsScreenFlow ""
         LOAD_MORE_HISTORY state -> do
           modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{offsetValue = state.props.offsetValue + 10}})
           driverEarningsFlow

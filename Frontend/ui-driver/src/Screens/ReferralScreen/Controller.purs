@@ -30,7 +30,7 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (setRefreshing, getPastDays, getPastWeeks, convertUTCtoISC, generateQR, incrementValueOfLocalStoreKey, contactSupportNumber)
+import Helpers.Utils (setRefreshing, getPastDays, getPastWeeks, convertUTCtoISC, generateQR, incrementValueOfLocalStoreKey, contactSupportNumber, getcurrentdate)
 import JBridge (hideKeyboardOnNavigation, toast, showDialer, firebaseLogEvent, scrollToEnd, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -185,7 +185,7 @@ eval (UpdateLeaderBoard (LeaderBoardRes leaderBoardRes)) state = do
   let newState = state{ props { rankersData = rankersData, currentDriverData = currentDriverData, showShimmer = false, noData = not (dataLength > 0), lastUpdatedAt = lastUpdatedAt } }
   _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
   if (any (_ == "") [state.props.selectedDay.utcDate, state.props.selectedWeek.utcStartDate, state.props.selectedWeek.utcEndDate]) then do
-    let pastDates = getPastDays 7
+    let pastDates = getPastDays (getcurrentdate "") 7
         pastWeeks = getPastWeeks 4
         selectedDay = case last pastDates of
                         Just date -> date

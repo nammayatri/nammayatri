@@ -261,7 +261,7 @@ rideListResponseTransformer list =
     map (\(RidesInfo ride) -> 
       let specialLocationConfig = getRideLabelData ride.specialLocationTag
       in
-      { date : (convertUTCtoISC (ride.createdAt) "D MMM"),
+      { date : (convertUTCtoISC (ride.createdAt) "DD/MM/YYYY"),
         time : (convertUTCtoISC (ride.createdAt )"h:mm A"),
         total_amount : (case (ride.status) of
                         "CANCELLED" -> 0

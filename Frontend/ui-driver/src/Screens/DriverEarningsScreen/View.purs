@@ -147,11 +147,11 @@ getDatesList todaysDate state =
   where
   getListofPastDays storedRideSummaryData =
     if not null storedRideSummaryData then
-      maybe pastDays (\x -> getPastDays $ (runFn2 differenceBetweenTwoUTC todaysDate x.rideDate) / (24 * 60 * 60)) (last storedRideSummaryData)
+      maybe pastDays (\x -> getPastDays todaysDate ((runFn2 differenceBetweenTwoUTC todaysDate x.rideDate) / (24 * 60 * 60))) (last storedRideSummaryData)
     else
       pastDays
 
-  pastDays = getPastDays (22 + getDayOfWeek (getDayName todaysDate))
+  pastDays = getPastDays todaysDate (22 + EHC.getDayOfWeek (getDayName todaysDate))
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 view push state =

@@ -1,43 +1,97 @@
 module Screens.EarningsScreen.Weekly.View where
 
+import Animation as Anim
+import Animation.Config (Direction(..), animConfig)
 import Common.Types.App
+import Components.BottomNavBar.View as BottomNavBar
+import Components.BottomNavBar.Controller (navData)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Data.Array
+import Data.FoldableWithIndex
+import Data.Int
 import Data.Maybe
+import Data.String as DS
+import Debug
 import Effect
-import Prelude
+import Effect.Aff (launchAff, killFiber, launchAff_, error)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils (intPriceToBeDisplayed, intDistanceTobeDisplayed)
+import Font.Style as FontStyle
+import Helpers.API as API 
+import Helpers.Utils
+import JBridge (getHeightFromPercent, getWidthFromPercent)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Locale.Utils
+import Mobility.Prelude
 import PrestoDOM hiding (tabLayout)
+import PrestoDOM.Events (globalOnScroll)
+import PrestoDOM.Types.DomAttributes (__IS_ANDROID)
+import PrestoDOM.Animation as PrestoAnim
+import Prelude
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.Types as ST
 import Screens.EarningsScreen.Weekly.Controller
 import Screens.EarningsScreen.ScreenData
 import Screens.EarningsScreen.Common.Types
 import Screens.EarningsScreen.Common.View
-import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Commons
-import Font.Style as FontStyle
-import Language.Strings (getString)
-import Language.Types (STR(..))
+import Screens.EarningsScreen.Common.Utils
+import Services.API
+import Services.Backend as Remote
 import Styles.Colors as Color
-import Helpers.Utils
-import PrestoDOM.Types.DomAttributes (__IS_ANDROID)
-import Data.Array
-import Data.FoldableWithIndex
-import PrestoDOM.Animation as PrestoAnim
-import Animation as Anim
-import Mobility.Prelude
-import JBridge (getHeightFromPercent, getWidthFromPercent)
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types as ST
-import Locale.Utils
-import Data.Int
-import Data.String as DS
+import Types.App (defaultGlobalState, GlobalState(..))
 
 screen :: State -> Screen Action State ScreenOutput
 screen initialState =
   { initialState
   , view: view
   , name: "EarningsScreenV2"
-  , globalEvents: [ (\push -> pure $ pure unit) ]
-  , eval
+  , globalEvents: [ globalOnScroll "EarningsScreenV2"
+  , ( \push -> fetchAndUpdateRideSummary push initialState)]
+  , eval: (\action state -> eval (spy "EarningsScreenWeekly action" action) (spy "EarningsScreenWeekly state" state))
   }
+
+fetchAndUpdateRideSummary :: (Action -> Effect Unit) -> State -> Effect (Effect Unit)
+fetchAndUpdateRideSummary push state = do
+  fiber <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+            let datesList = getDatesListV2 (getcurrentdate "") state.props.fromDate state.props.toDate state.props.isCurrentWeek
+                listOfDates = filter (\date -> isNothing $ getRideData date) datesList
+            if null listOfDates then liftFlowBT $ updateRideSummary [] (getcurrentdate "") datesList push state 
+              else do
+                (GetRidesSummaryListResp rideSummaryResp) <-  Remote.getRideSummaryListReqBT listOfDates
+                liftFlowBT $ updateRideSummary rideSummaryResp.list (getcurrentdate "") datesList push state
+            pure unit
+  pure $ (launchAff_ $ killFiber (error "Failed to Cancel") fiber)
+
+
+updateRideSummary ridesSummaryList todaysDate datesList push state = do
+  let fromDate = fromMaybe "" (datesList !! 0)
+  if state.props.toDate /= "" && state.props.toDate /= "" && not state.props.isCurrentWeek then do
+    let missingDatesFromList = getMissingDatesFromList ridesSummaryList datesList
+        _ = map (\date -> updateRideDatas [] [] date) missingDatesFromList
+        _ = map (\(RidesSummary rideSummary) -> updateRideDatas [(RidesSummary rideSummary)] [] rideSummary.rideDate) ridesSummaryList
+        getRideDataForWeek = map (\date -> fromMaybe (dummyRideData date) (getRideData date)) datesList
+        earningsForWeek = mapRideDataWithEarnings getRideDataForWeek
+        currentWeekData = getWeeklyEarningsPercentage earningsForWeek
+        currWeekMaxEarning = foldl getMax 0 currentWeekData
+    push $ UpdateRideSummary currentWeekData currWeekMaxEarning fromDate false (getTotalCurrentWeekData currentWeekData)
+  else do
+    let currWeekDatesBeforeToday = map (\obj -> EHC.convertUTCtoISC obj.utcDate "YYYY-MM-DD") $ EHC.getPastDays  todaysDate (EHC.getDayOfWeek $ EHC.getDayName todaysDate)
+        missingDatesFromList = getMissingDatesFromList ridesSummaryList currWeekDatesBeforeToday
+        ridesSummaryListBeforTodaysDate = filter(\(RidesSummary list) -> list.rideDate /= todaysDate) ridesSummaryList
+        _ = map (\date -> updateRideDatas [] [] date) missingDatesFromList
+        _ = map (\(RidesSummary rideSummary) -> updateRideDatas [(RidesSummary rideSummary)] [] rideSummary.rideDate) ridesSummaryListBeforTodaysDate
+        dayOfWeek = EHC.getDayOfWeek (EHC.getDayName todaysDate)
+        noOfDaysToNearestSunday = 6 - dayOfWeek
+        datesUptoMearestSunday = if noOfDaysToNearestSunday > 0 then map (\x -> EHC.getFutureDate todaysDate x) (1 .. noOfDaysToNearestSunday) else []
+        getRideDataForWeek = map (\date -> fromMaybe (dummyRideData date) (getRideData date)) (datesList <> datesUptoMearestSunday)
+        earningsForWeek = mapRideDataWithEarnings getRideDataForWeek
+        currentWeekData = getWeeklyEarningsPercentage earningsForWeek
+        currWeekMaxEarning = foldl getMax 0 currentWeekData
+    push $ UpdateRideSummary currentWeekData currWeekMaxEarning fromDate true (getTotalCurrentWeekData currentWeekData)
 
 view :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -47,7 +101,6 @@ view push state =
     , background Color.white900
     ]
     $ [ defaultLayout push state
-      -- , rideDistanceInfoPopUp push state
       ]
 
 headerLayout :: forall w. (Action -> Effect Unit) -> State -> Layout w
@@ -86,29 +139,41 @@ defaultLayout push state =
     , width MATCH_PARENT
     , background Color.white900
     , orientation VERTICAL
+    , padding $ PaddingBottom EHC.safeMarginBottom
     ]
     [ headerLayout push state
-    , earnignsTopView push state
-    , weeklyEarningContentView push state
+    , relativeLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      ][weeklyEarningContentView push state
+      , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , margin $ Margin 16 16 16 0]
+        [ tabLayout push ChangeTab TAB_WEEKLY
+        ]
+      ]
+    -- ,  BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN state.data.config.bottomNavConfig)
     ]
 
+weeklyEarningContentView :: forall w. (Action -> Effect Unit) -> State -> Layout w
 weeklyEarningContentView push state =
   linearLayout
     [ weight 1.0
     , width MATCH_PARENT
-    ]
-    [ scrollView
+    ][ scrollView
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , scrollBarY false
-        ]
-        [ linearLayout
+        ][ linearLayout
             [ width MATCH_PARENT
             , height MATCH_PARENT
             , orientation VERTICAL
             ]
-            [ rideHistoryView push state
+            [ earnignsTopView push state
+            , rideHistoryView push state
             , earningSummary push state
+            , seeHistoryButtons push state
             ]
         ]
     ]
@@ -119,11 +184,16 @@ earnignsTopView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 16 16 16 24
-    , gradient $ Linear (if EHC.os == "IOS" then 270.0 else 90.0) [ "#E0D1FF", "#E0D1FF", "#F9F6FF" ]
+    , gradient $ Linear 180.0 [ "#E0D1FF", "#E0D1FF", "#F9F6FF" ]
     , orientation VERTICAL
     , onClick push $ const ToggleInfoView
     ]
-    [ tabLayout push ChangeTab TAB_WEEKLY
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , visibility INVISIBLE]
+        [ tabLayout push ChangeTab TAB_WEEKLY
+        ]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -134,10 +204,11 @@ earnignsTopView push state =
             [ weight 1.0
             , height MATCH_PARENT
             , gravity CENTER
+            , onClick push $ const (GetWeeklyEarnings true)
             ]
             [ imageView
-                [ height $ V 16
-                , width $ V 16
+                [ height $ V 24
+                , width $ V 24
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
                 ]
             ]
@@ -147,16 +218,20 @@ earnignsTopView push state =
             , orientation VERTICAL
             , gravity CENTER
             ]
-            [ dateSelectionView push state
+            [ textView
+                $ [ text $ getText state
+                  , color Color.black800
+                  ]
+                <> FontStyle.subHeading1 TypoGraphy
             , textView
-                $ [ text "$384"
+                $ [ text $ intPriceToBeDisplayed state.props.totalWeeklyEarningsdata.totalEarningsWithCurrency true
                   , margin $ MarginTop 14
                   , color Color.black800
                   ]
                 <> FontStyle.priceFont TypoGraphy
             , textView
                 $ [ text "$72 in Tips Included"
-                  , margin $ MarginTop 14
+                  , margin $ MarginTop 16
                   , color Color.black800
                   ]
                 <> FontStyle.subHeading2 TypoGraphy
@@ -165,16 +240,20 @@ earnignsTopView push state =
             [ height MATCH_PARENT
             , weight 1.0
             , gravity CENTER
+            , clickable $ not state.props.isCurrentWeek
+            , onClick push $ const (GetWeeklyEarnings false)
             ]
             [ imageView
-                [ height $ V 16
-                , width $ V 16
-                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+                [ height $ V 24
+                , width $ V 24
+                , rotation $ if state.props.isCurrentWeek then 0.0 else 180.0
+                , imageWithFallback $ fetchImage FF_ASSET $ if state.props.isCurrentWeek then "ny_ic_chevron_right" else "ny_ic_chevron_left"
                 ]
             ]
         ]
     , ridesStatsView push state
     ]
+  where getText state = if state.props.fromDate /= "" then (convertUTCtoISC state.props.fromDate "MMM DD") <> " - " <> (convertUTCtoISC state.props.toDate "MMM DD") else "__ - __"
 
 dateSelectionView :: forall w. (Action -> Effect Unit) -> State -> Layout w
 dateSelectionView push state =
@@ -268,50 +347,8 @@ ridesStatsView push state =
                   )
         )
         []
-        [ { title: "Rides", value: "12" }, { title: "Total Ride Dist", value: "12" }, { title: "Total Ride Time", value: "12" } ]
+        [ { title: "Rides", value: show state.props.totalWeeklyEarningsdata.totalRides }, { title: "Total Ride Dist", value: intDistanceTobeDisplayed state.props.totalWeeklyEarningsdata.totalDistanceTravelledWithUnit true true}, { title: "Total Ride Time", value: "12" } ]
     )
-
-earningsInfoView :: forall w. (Action -> Effect Unit) -> State -> Layout w
-earningsInfoView push state =
-  PrestoAnim.animationSet
-    [ Anim.expandWithDuration 100 (state.props.showInfoView)
-    , Anim.collapseWithDuration 100 (not state.props.showInfoView)
-    ]
-    $ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , background "#F9F6FF"
-        , margin $ Margin 16 16 16 0
-        , cornerRadius 12.0
-        , padding $ Padding 16 12 16 12
-        , gravity CENTER_VERTICAL
-        , enableAnimateOnGone true
-        , visibility $ boolToVisibility state.props.showInfoView
-        ]
-        [ linearLayout
-            [ height WRAP_CONTENT
-            , weight 1.0
-            , orientation VERTICAL
-            ]
-            [ textView
-                $ [ text "Your daily earnings will be transferred to your account in 4 days from the date of earning"
-                  , color Color.black700
-                  ]
-                <> FontStyle.body3 TypoGraphy
-            , textView
-                $ [ text "Learn more"
-                  , color Color.purple700
-                  ]
-                <> FontStyle.body3 TypoGraphy
-            ]
-        , imageView
-            [ height $ V 16
-            , width $ V 16
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
-            , margin $ MarginLeft 10
-            , onClick push $ const ToggleInfoView
-            ]
-        ]
 
 rideHistoryView :: forall w. (Action -> Effect Unit) -> State -> Layout w
 rideHistoryView push state =
@@ -332,6 +369,7 @@ rideHistoryView push state =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , alpha 0.4
+            , onClick push $ const (GetWeeklyEarnings true)
             ]
             [ imageView
                 [ height $ V 24
@@ -342,7 +380,7 @@ rideHistoryView push state =
         , textView
             $ [ height $ WRAP_CONTENT
               , weight 1.0
-              , text $ "May 1 - May 7"
+              , text $ getText state
               , gravity CENTER
               ]
             <> FontStyle.subHeading1 TypoGraphy
@@ -351,6 +389,8 @@ rideHistoryView push state =
             , width WRAP_CONTENT
             , rotation 180.0
             , alpha 0.4
+            , clickable $ not state.props.isCurrentWeek
+            , onClick push $ const (GetWeeklyEarnings false)
             ]
             [ imageView
                 [ height $ V 24
@@ -361,6 +401,7 @@ rideHistoryView push state =
         ]
     , barGraphView push state
     ]
+  where getText state = if state.props.fromDate /= "" then (convertUTCtoISC state.props.fromDate "MMM DD") <> " - " <> (convertUTCtoISC state.props.toDate "MMM DD") else "__ - __"
 
 barGraphView :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 barGraphView push state =
@@ -368,7 +409,7 @@ barGraphView push state =
     currWeekMaxEarning = if state.props.currentWeekMaxEarning > 0 then state.props.currentWeekMaxEarning else 1500
   in
     relativeLayout
-      [ height $ V 170
+      [ height $ V 150
       , width MATCH_PARENT
       ]
       [ linearLayout
@@ -383,8 +424,8 @@ barGraphView push state =
           , linearLayout
               [ width MATCH_PARENT
               , height $ WRAP_CONTENT
-              -- , background Color.grey900
               , orientation VERTICAL
+              , margin $ MarginTop 10
               ]
               [ linearLayout
                   [ height $ V 2
@@ -415,7 +456,6 @@ barGraphView push state =
           , background Color.transparent
           , orientation HORIZONTAL
           , gravity BOTTOM
-          -- , padding $ PaddingTop $ getHeightFromPercent 1 TODO: FIX MAX Length
           ]
           $ [ linearLayout
                 [ height MATCH_PARENT
@@ -425,10 +465,10 @@ barGraphView push state =
                 , orientation HORIZONTAL
                 , gravity BOTTOM
                 ]
-                (mapWithIndex (\index item -> (barView push index item state (if item.noOfRides > 0 then VISIBLE else INVISIBLE))) state.props.currWeekData)
+                (mapWithIndex (\index item -> (barView push index item state)) state.props.currWeekData)
             , linearLayout
                 [ weight 1.0
-                , width MATCH_PARENT
+                , width WRAP_CONTENT
                 , gravity CENTER
                 ]
                 [ textView
@@ -452,21 +492,21 @@ dottedLineView push margintop earnings =
     ]
     [ imageView
         [ height $ V 2
+        , width MATCH_PARENT
+        , weight 1.0
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_dotted_line"
-        , weight 5.0
         ]
     , textView
         $ [ height $ WRAP_CONTENT
           , width $ WRAP_CONTENT
-          , weight 1.0
           , margin $ MarginLeft 4
           , text $ "$" <> (show earnings)
           ]
         <> FontStyle.paragraphText TypoGraphy
     ]
 
-barView :: forall w. (Action -> Effect Unit) -> Int -> WeeklyEarning -> State -> Visibility -> PrestoDOM (Effect Unit) w
-barView push index item state vis =
+barView :: forall w. (Action -> Effect Unit) -> Int -> WeeklyEarning -> State -> PrestoDOM (Effect Unit) w
+barView push index item state =
   let
     selectedIndex = state.props.selectedBarIndex
 
@@ -478,11 +518,9 @@ barView push index item state vis =
     linearLayout
       [ weight 1.0
       , height MATCH_PARENT
-      -- , margin setMargin
       , orientation VERTICAL
       , alignParentBottom "true,-1"
       , gravity BOTTOM
-      , visibility vis
       ]
       [ linearLayout
           [ height WRAP_CONTENT
@@ -490,9 +528,8 @@ barView push index item state vis =
           , orientation VERTICAL
           , gravity CENTER
           ]
-          [ PrestoAnim.animationSet
-              [ Anim.expandWithDuration 1000 true
-              ]
+          [ (if EHC.os == "IOS" then PrestoAnim.animationSet [Anim.expandWithDuration 1000 true]
+            else PrestoAnim.animationSet [ Anim.translateInYAnim $ animConfig { duration = 1000 + (ceil item.percentLength), fromY = 200 + (ceil item.percentLength) }])
               $ linearLayout
                   [ height $ V if item.percentLength > 0.0 then (ceil item.percentLength) else 1
                   , width $ V $ getWidthFromPercent 7
@@ -505,7 +542,7 @@ barView push index item state vis =
       , textView
           $ [ height $ WRAP_CONTENT
             , width $ MATCH_PARENT
-            , text $ item.rideDate
+            , text $ convertUTCtoISC item.rideDate "DD"
             , color Color.black700
             , gravity CENTER
             ]
@@ -513,7 +550,7 @@ barView push index item state vis =
       , textView
           $ [ height $ WRAP_CONTENT
             , width $ MATCH_PARENT
-            , text $ "MON"
+            , text $ (fromMaybe "" (EHC.getWeekDays !! index))
             , gravity CENTER
             , singleLine true
             , color Color.black700
@@ -522,120 +559,7 @@ barView push index item state vis =
           <> FontStyle.body3 TypoGraphy
       ]
 
-rideDistanceInfoPopUp :: forall w. (Action -> Effect Unit) -> State -> Layout w
-rideDistanceInfoPopUp push state =
-  PrestoAnim.animationSet
-    [ Anim.fadeInWithDuration 100 (state.props.rideDistanceInfoPopUp)
-    ]
-    $ linearLayout
-        [ width MATCH_PARENT
-        , height $ V $ EHC.screenHeight unit
-        , background Color.blackLessTrans
-        , onClick push $ const RemovePopup
-        , gravity BOTTOM
-        , orientation VERTICAL
-        , visibility $ boolToVisibility $ state.props.rideDistanceInfoPopUp
-        ]
-        [ linearLayout
-            [ height $ V $ getHeightFromPercent 30
-            , width MATCH_PARENT
-            , background Color.white900
-            , orientation VERTICAL
-            , padding $ Padding 16 20 16 (EHC.safeMarginBottomWithDefault 16)
-            , cornerRadii $ Corners 24.0 true true false false
-            ]
-            [ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                ]
-                [ textView
-                    $ [ text "Ride Distance"
-                      , color Color.black900
-                      , margin $ MarginBottom 4
-                      , weight 1.0
-                      ]
-                    <> FontStyle.subHeading1 TypoGraphy
-                , linearLayout
-                    [ height $ V 24
-                    , width $ V 24
-                    , gravity CENTER
-                    , onClick push $ const RemovePopup
-                    ]
-                    [ imageView
-                        [ height $ V 16
-                        , width $ V 16
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
-                        ]
-                    ]
-                ]
-            , linearLayout
-                [ height $ V 1
-                , width MATCH_PARENT
-                , margin $ MarginVertical 16 10
-                , background Color.grey900
-                ]
-                []
-            , linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                ]
-                ( map
-                    ( \item ->
-                        linearLayout
-                          [ height WRAP_CONTENT
-                          , width MATCH_PARENT
-                          , margin $ MarginVertical 10 10
-                          ]
-                          [ textView
-                              $ [ text item.text
-                                , color Color.black800
-                                , weight 1.0
-                                ]
-                              <> FontStyle.body6 TypoGraphy
-                          , textView
-                              $ [ text item.value
-                                , color Color.black800
-                                ]
-                              <> FontStyle.body6 TypoGraphy
-                          ]
-                    )
-                    [ { text: "The Pickup distance"
-                      , value: "10 mi"
-                      }
-                    , { text: "Ride Dist."
-                      , value: "60 mi"
-                      }
-                    ]
-                )
-            , linearLayout
-                [ height $ V 1
-                , width MATCH_PARENT
-                , margin $ MarginTop 10
-                , background Color.grey900
-                ]
-                []
-            , linearLayout
-                [ width MATCH_PARENT
-                , height WRAP_CONTENT
-                , margin $ MarginTop 20
-                , gravity CENTER
-                ]
-                [ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-                    , height $ V 16
-                    , width $ V 16
-                    , margin $ MarginRight 5
-                    ]
-                , textView
-                    $ [ text "The pickup distance is the distance you travelled to the pickup point."
-                      , color Color.black800
-                      ]
-                    <> FontStyle.paragraphText TypoGraphy
-                ]
-            ]
-        ]
-
+earningSummary :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 earningSummary push state =
   let
     showAdj = state.data.adjustmentRotation == 180.0
@@ -661,12 +585,6 @@ earningSummary push state =
       , dropDown push "Adjustments" state.data.adjustmentRotation state.data.prevAdjustmentRotation ShowAdjustments
       , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 13) [ Anim.expandWithDuration 150 showAdj, Anim.collapseWithDuration 150 (not showAdj) ] showAdj
       , dropDown push "Tips" 270.0 270.0 ShowTips
-      -- , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 0) [] Map Over Tips
-      -- , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 0) []
-      -- , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 0) []
-      -- , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 0) []
-      -- , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 0) []
-      -- , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 0) []
       , linearLayout
           [ height $ V 1
           , background Color.grey900
@@ -677,6 +595,7 @@ earningSummary push state =
       , tableViewCell state (FontStyle.body22 TypoGraphy) Color.green900 (MarginTop 17) [] true
       ]
 
+dropDown :: forall w. (Action -> Effect Unit) -> String -> Number -> Number -> Action -> PrestoDOM (Effect Unit) w
 dropDown push content rotate prevRotate action =
   linearLayout
     [ height WRAP_CONTENT
@@ -732,3 +651,48 @@ tableViewCell state fontStyle col marg anim vis =
               ]
             <> fontStyle
         ]
+
+seeHistoryButtons :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
+seeHistoryButtons push state = 
+  let array = ["See Ride History", "See Payout History", "Get Help"]
+  in
+  linearLayout 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , padding $ Padding 16 16 16 16
+    , margin $ MarginVertical 12 12
+    , orientation VERTICAL
+    ]
+    (mapWithIndex (\index item ->
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        ]
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation HORIZONTAL
+            , onClick push $ const $ OptionClickedFromList index
+            ]
+            [ textView
+                ([ height WRAP_CONTENT
+                , weight 1.0
+                , text $ item
+                ] <> FontStyle.subHeading1 TypoGraphy)
+            , imageView
+                [ height $ V 24
+                , width $ V 24
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+                ]
+            ]
+        , linearLayout 
+            [ height $ V 1
+            , width MATCH_PARENT
+            , padding $ Padding 16 16 16 16
+            , margin $ MarginVertical 12 12
+            , background Color.grey900
+            , visibility $ boolToVisibility $ (index /= length array - 1)
+            ][]
+          ] 
+    ) array)

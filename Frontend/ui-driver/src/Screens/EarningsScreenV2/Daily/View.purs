@@ -103,6 +103,7 @@ view push state =
     , width MATCH_PARENT
     , background Color.white900
     , afterRender push $ const AfterRender
+    , onBackPressed push (const BackClick)
     ] $
     [ defaultLayout push state
     , rideDistanceInfoPopUp push state

@@ -42,7 +42,11 @@ type Props
     , selectedBarIndex :: Int
     , currentWeekMaxEarning :: Int
     , currWeekData :: Array WeeklyEarning
+    , fromDate :: String
+    , toDate :: String
+    , isCurrentWeek :: Boolean
     , forwardBtnAlpha :: Number
+    , totalWeeklyEarningsdata :: TotalWeeklyEarningsData
     }
 
 type CalendarState = { 
@@ -51,6 +55,14 @@ type CalendarState = {
   selectedTimeSpan :: Common.CalendarModalDateObject,
   startDate :: Maybe Common.CalendarModalDateObject,
   weeks  :: Array Common.CalendarModalWeekObject
+}
+
+type TotalWeeklyEarningsData = {
+  fromDate :: String,
+  toDate :: String,
+  totalEarningsWithCurrency :: Common.Price,
+  totalRides :: Int,
+  totalDistanceTravelledWithUnit :: Common.Distance 
 }
 
 initialState :: State
@@ -81,11 +93,24 @@ initialState =
       , selectedBarIndex: 0
       , currentWeekMaxEarning: 1500
       , currWeekData: dummyEarnings
+      , fromDate: ""
+      , toDate: ""
+      , isCurrentWeek : false
       , forwardBtnAlpha: 1.0
+      , totalWeeklyEarningsdata : dummyTotalWeeklyEarnings
       }
   }
 
 dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
+
+dummyTotalWeeklyEarnings :: TotalWeeklyEarningsData
+dummyTotalWeeklyEarnings = {
+    fromDate : ""
+  , toDate : ""
+  , totalEarningsWithCurrency : dummyEarningsWithCurrency
+  , totalRides : 0
+  , totalDistanceTravelledWithUnit : dummyRideDistanceWithUnit
+  }
 
 type RidesSummaryType = {
     earningsWithCurrency :: String,
@@ -94,15 +119,15 @@ type RidesSummaryType = {
     rideDistanceWithUnit :: String
   }
 
-type WeeklyEarning
-  = { earnings :: Int
-    , earningsWithCurrency :: Price
-    , rideDistance :: Int
-    , rideDistanceWithUnit :: Distance
-    , rideDate :: String
-    , noOfRides :: Int
-    , percentLength :: Number
-    }
+type WeeklyEarning = { 
+    earnings :: Int
+  , earningsWithCurrency :: Price
+  , rideDistance :: Int
+  , rideDistanceWithUnit :: Distance
+  , rideDate :: String
+  , noOfRides :: Int
+  , percentLength :: Number
+  }
 
 dummyEarnings =
   [ { earnings: 1500
@@ -177,7 +202,7 @@ dummyEarningsWithCurrency :: Price
 dummyEarningsWithCurrency = {amount: 100.0, currency: INR}
 
 dummyRideDistanceWithUnit :: Distance
-dummyRideDistanceWithUnit = Distance {value: 100.0, unit: Kilometer}
+dummyRideDistanceWithUnit = Distance {value: 0.0, unit: Kilometer}
 
 type ListProps = {
   serviceTier :: PropValue

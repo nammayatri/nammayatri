@@ -1,14 +1,9 @@
 module Screens.EarningsScreen.Daily.Handler where
 
 import Prelude
-import PrestoDOM.Core.Types.Language.Flow
 import Screens.EarningsScreen.Daily.View
 import Screens.EarningsScreen.ScreenData
-import Prelude
 import PrestoDOM.Core.Types.Language.Flow
-import Screens.EarningsScreen.ScreenData
-import Prelude
-import Screens.EarningsScreen.ScreenData
 import Types.App
 import Presto.Core.Types.Language.Flow
 import Screens.EarningsScreen.Daily.Controller

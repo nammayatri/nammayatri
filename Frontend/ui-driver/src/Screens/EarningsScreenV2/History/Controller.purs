@@ -12,12 +12,14 @@ import Data.Maybe
 data ScreenOutput
   = NextScreen State
   | Back State
+  | GoToWeekly
 
 data Action
   = NextClick
   | BackClick
   | SetRideListItem ListItem
   | SetPayoutListItem ListItem
+  | BackPressed
 
 instance showAction :: Show Action where
   show _ = ""
@@ -31,5 +33,7 @@ eval NextClick state = exit $ NextScreen state
 eval (SetRideListItem item) state = continue state { data { rideListItem = Just item } }
 
 eval (SetPayoutListItem item) state = continue state { data { payoutListItem = Just item } }
+
+eval BackPressed state = exit GoToWeekly
 
 eval _ state = update state
