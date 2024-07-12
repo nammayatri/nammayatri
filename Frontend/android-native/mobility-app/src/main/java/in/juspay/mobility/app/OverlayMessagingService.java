@@ -374,7 +374,7 @@ public class OverlayMessagingService extends Service {
 
             @Override
             public void onFinish() {
-                onDestroy();
+                stopSelf();
 
             }
         };
