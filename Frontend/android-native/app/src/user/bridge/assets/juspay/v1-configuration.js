@@ -234,7 +234,7 @@ window.getMerchantConfig = function () {
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true
-    , "isAdvancedBookingEnabled" : true
+    , "isAdvancedBookingEnabled" : false
     , "metroTicketingConfig" : [
       { "cityName" : "kochi"
       , "cityCode" : "std:0484"
