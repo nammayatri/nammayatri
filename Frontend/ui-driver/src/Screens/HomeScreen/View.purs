@@ -602,7 +602,7 @@ bridgeStatsView push state =
                   )
         )
         []
-        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "12" , infoView: true} ]
+        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "0" , infoView: true} ]
     )
     , bridgeLocationUpdateview push state
     ]

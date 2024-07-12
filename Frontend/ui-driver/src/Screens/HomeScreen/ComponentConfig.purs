@@ -2157,7 +2157,7 @@ bgLocPopup state =
       , height =V 300
       , width = V 300
       , config{
-          rawJson = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie") <> ".json"
+          rawJson = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie" <> if EHC.os == "IOS" then "_ios" else "") <> ".json"
         , lottieId = EHC.getNewIDWithTag "bgLocLottie"
         }
       }
