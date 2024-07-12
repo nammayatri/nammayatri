@@ -53,6 +53,8 @@ getBookingTypeFromTripCategory :: Domain.Types.Common.TripCategory -> Domain.Typ
 getBookingTypeFromTripCategory tripCategory =
   case tripCategory of
     DTC.OneWay DTC.OneWayRideOtp -> Domain.Types.Booking.SpecialZoneBooking
+    DTC.Rental DTC.RideOtp -> Domain.Types.Booking.SpecialZoneBooking
+    DTC.InterCity DTC.OneWayRideOtp _ -> Domain.Types.Booking.SpecialZoneBooking
     _ -> Domain.Types.Booking.NormalBooking
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
