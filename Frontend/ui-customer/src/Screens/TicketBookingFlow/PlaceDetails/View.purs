@@ -697,9 +697,10 @@ individualServiceView push state service =
              ] <> FontStyle.h2 TypoGraphy
           , textView $
              [  text $ fromMaybe "" headingOfShortDesc
+              , padding $ PaddingVertical 4 4
               , visibility $ maybe GONE (\x -> VISIBLE) headingOfShortDesc
               , color $ if bookingClosedForService then Color.greyDark else Color.black800
-             ] <> FontStyle.subHeading1 TypoGraphy
+             ] <> FontStyle.body2 TypoGraphy
           ,  linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
@@ -786,7 +787,7 @@ shortDescListView push bookingClosedForService str =
       [ textFromHtml str
       , color $ if bookingClosedForService then Color.greyDark else Color.black800
       , visibility $ boolToVisibility $ not $ str == ""
-      ] <> FontStyle.paragraphText TypoGraphy
+      ] <> FontStyle.body3 TypoGraphy
     ]
 
 placeClosed :: Maybe TicketPlaceResp -> Boolean
