@@ -2539,7 +2539,7 @@ homeScreenFlow = do
           void $ updateStage $ HomeScreenStage RideRequested
           homeScreenFlow
         "TRIP_STARTED" -> do 
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = false}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = not (homeScreen.data.activeRide.tripType == ST.Rental)}})
           homeScreenFlow
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do

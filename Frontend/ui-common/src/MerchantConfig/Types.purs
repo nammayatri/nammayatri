@@ -86,6 +86,7 @@ type AppDatas = {
   , supportMail :: String
   , name :: String
   , website :: String
+  , logoLight :: String
 }
 
 type CityConfig = {

@@ -26,6 +26,7 @@ import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scr
 import Prelude
 import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
 import Screens.HomeScreen.Transformer (getDriverInfo)
+import Screens.HomeScreen.ScreenData (dummyDriverInfo)
 import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
 import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, setValueToLocalStore)
@@ -209,7 +210,7 @@ eval action state = case action of
       else continueWithCmd newState [ pure StopAudioPlayer]
   UpdateStatus (RideBookingRes resp) -> do
     let
-      driverInfoCardState = getDriverInfo Nothing (RideBookingRes resp) false
+      driverInfoCardState = getDriverInfo Nothing (RideBookingRes resp) false (fromMaybe dummyDriverInfo (state.data.driverInfoCardState))
       sosStatus = getSosStatus resp.sosStatus resp.id
       newState =
         state

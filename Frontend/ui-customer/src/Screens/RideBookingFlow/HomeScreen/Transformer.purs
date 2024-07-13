@@ -152,8 +152,8 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
     (RENTAL contents) -> QLI.config
     (INTER_CITY contents) -> QLI.config
     
-getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
-getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
+getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard -> DriverInfoCard
+getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
       fareProductType = getFareProductType $ resp.bookingDetails ^._fareProductType
       stopLocation = if fareProductType == FPT.RENTAL then _stopLocation else _toLocation
@@ -186,7 +186,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , driverLng : 0.0
       , distance : 0
       , waitingTime : "--"
-      , driverArrived : false
+      , driverArrived : prevState.driverArrived
       , driverArrivalTime : 0
       , bppRideId : rideList.bppRideId
       , driverNumber : rideList.driverNumber

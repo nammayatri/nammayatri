@@ -802,19 +802,21 @@ export const storeCallBackOpenChatScreen = function (cb) {
 
 export const scrollOnResume = function (cb) {
   return function (action) {
-    try {
-      const callback = function () {
-        cb(action)();
-      }
-      const scrollTime = function () {
-        if (getKeyInSharedPrefKeys("LOCAL_STAGE") === "ChatWithCustomer" || getKeyInSharedPrefKeys("LOCAL_STAGE") === "ChatWithDriver") {
-          setTimeout(callback, 500);
+    return function () {
+      try {
+        const callback = function () {
+          cb(action)();
         }
+        const scrollTime = function () {
+          if (getKeyInSharedPrefKeys("LOCAL_STAGE") === "ChatWithCustomer" || getKeyInSharedPrefKeys("LOCAL_STAGE") === "ChatWithDriver") {
+            setTimeout(callback, 500);
+          }
+        }
+        window.scrollAction = scrollTime;
+      } catch (e) {
+        console.error("Error in scrollOnResume : " + e);
       }
-      window.scrollAction = scrollTime;
-    } catch (e) {
-      console.error("Error in scrollOnResume : " + e);
-    }
+    };
   }
 }
 

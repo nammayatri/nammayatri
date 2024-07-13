@@ -333,6 +333,7 @@ window.getMerchantConfig = function () {
       , "supportMail" :"support@nammayatri.in"
       , "name" : "Yatri"
       , "website" : "https://www.getyatri.com"
+      , "logoLight" : "ny_ic_logo_light_yatri"
     }
   })
 }
