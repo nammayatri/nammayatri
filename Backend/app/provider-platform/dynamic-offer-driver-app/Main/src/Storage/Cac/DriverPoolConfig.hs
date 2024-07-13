@@ -19,6 +19,8 @@ module Storage.Cac.DriverPoolConfig (module Storage.Cac.DriverPoolConfig, module
 import qualified Client.Main as CM
 import Data.Aeson as DA
 import Data.Text as Text hiding (find)
+import Data.Time
+import Data.Time.Calendar.WeekDate
 import qualified Domain.Types.Cac as DTC
 import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
@@ -31,7 +33,7 @@ import Kernel.Types.Cac
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (CacheFlow, getLocalCurrentTime, utcTimeToDiffTime)
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
 import qualified Lib.Types.SpecialLocation as SL
@@ -39,6 +41,7 @@ import SharedLogic.DriverPool.Config as DPC
 import SharedLogic.DriverPool.Types as Reexport
 import qualified Storage.Beam.DriverPoolConfig as SBMDPC
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import Storage.Queries.DriverPoolConfig ()
 import Utils.Common.CacUtils as CCU
@@ -50,9 +53,15 @@ getSearchDriverPoolConfig ::
   SL.Area ->
   m (Maybe DriverPoolConfig)
 getSearchDriverPoolConfig merchantOpCityId mbDist area = do
-  let serviceTier = Nothing
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
+      currentDay = utctDay localTime
+      (_, _, currentDayOfWeek) = toWeekDate currentDay
+      serviceTier = Nothing
       tripCategory = "All"
-  getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing
+  getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing (Just currTimeOfDay) (Just currentDayOfWeek)
+    |<|>| getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory mbDist area Nothing Nothing Nothing
 
 getDriverPoolConfigFromCAC ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -62,8 +71,10 @@ getDriverPoolConfigFromCAC ::
   Meters ->
   SL.Area ->
   Maybe CacKey ->
+  Maybe Int ->
+  Maybe Int ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey = do
+getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey currTimeOfDay currentDayOfWeek = do
   let dpcCond =
         [ (MerchantOperatingCityId, toJSON (getId merchantOpCityId)),
           (TripDistance, toJSON (getMeters dist)),
@@ -71,14 +82,18 @@ getDriverPoolConfigFromCAC merchantOpCityId st tc dist area stickyKey = do
           (Area, show area)
         ]
           <> [(VehicleVariant, show (fromJust st)) | isJust st]
+          <> [(CCU.TimeOfDay, show (fromJust currTimeOfDay)) | isJust currTimeOfDay]
+          <> [(DayOfWeek, show (fromJust currentDayOfWeek)) | isJust currentDayOfWeek]
   inMemConfig <- getConfigFromInMemory merchantOpCityId st tc dist
-  config <-
-    CCU.getConfigFromCacOrDB inMemConfig dpcCond stickyKey (KBF.fromCacType @SBMDPC.DriverPoolConfig) CCU.DriverPoolConfig
-      |<|>| ( do
-                logDebug $ "DriverPoolConfig not found in memory, fetching from DB for context: " <> show dpcCond
-                DPC.getDriverPoolConfigFromDB merchantOpCityId st tc area (Just dist)
-            )
-  setConfigInMemory merchantOpCityId st tc dist config
+  config <- CCU.getConfigFromCacOrDB inMemConfig dpcCond stickyKey (KBF.fromCacType @SBMDPC.DriverPoolConfig) CCU.DriverPoolConfig
+  whenJust config $ pure $ void $ setConfigInMemory merchantOpCityId st tc dist config
+  bool
+    (pure Nothing)
+    (pure config)
+    ( (merchantOperatingCityId <$> config) == Just merchantOpCityId && (vehicleVariant <$> config) == Just st
+        && (Domain.Types.DriverPoolConfig.tripCategory <$> config) == Just (Text.pack tc)
+        && (Domain.Types.DriverPoolConfig.area <$> config) == Just area
+    )
 
 doubleToInt :: Double -> Int
 doubleToInt = floor
@@ -91,15 +106,21 @@ getDriverPoolConfigCond ::
   Maybe Meters ->
   SL.Area ->
   Maybe CacKey ->
+  Maybe Int ->
+  Maybe Int ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area stickeyKey = do
+getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area stickeyKey currTimeOfDay currentDayOfWeek = do
   let dist = fromMaybe 0 dist'
-  getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist area stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist SL.Default stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist area stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist SL.Default stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist area stickeyKey
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist SL.Default stickeyKey
+  getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist area stickeyKey currTimeOfDay currentDayOfWeek
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist area stickeyKey currTimeOfDay currentDayOfWeek
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist area stickeyKey currTimeOfDay currentDayOfWeek
+    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
+    |<|>| ( do
+              logDebug $ "DriverPoolConfig not found in memory, fetching from DB for context: " <> show (merchantOpCityId, serviceTier, tripCategory, dist, area)
+              DPC.getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area dist'
+          )
 
 -- TODO :: Need To Handle `area` Properly In CAC
 getConfigFromInMemory ::
@@ -137,7 +158,14 @@ getDriverPoolConfig ::
   Maybe CacKey ->
   m DriverPoolConfig
 getDriverPoolConfig merchantOpCityId serviceTier tripCategory area tripDistance srId = do
-  config <- getDriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area srId
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let currTimeOfDay = round (realToFrac (utcTimeToDiffTime localTime) :: Double)
+      currentDay = utctDay localTime
+      (_, _, currentDayOfWeek) = toWeekDate currentDay
+  config <-
+    getDriverPoolConfigCond merchantOpCityId (Just serviceTier) (show tripCategory) tripDistance area srId (Just currTimeOfDay) (Just currentDayOfWeek)
+      |<|>| getDriverPoolConfigCond merchantOpCityId (Just serviceTier) "All" tripDistance area srId Nothing Nothing
   when (isNothing config) do
     logError $ "Could not find the config for merchantOpCityId:" <> getId merchantOpCityId <> " and serviceTier:" <> show serviceTier <> " and tripCategory:" <> show tripCategory <> " and tripDistance:" <> show tripDistance
     throwError $ InvalidRequest $ "DriverPool Configs not found for MerchantOperatingCity: " <> merchantOpCityId.getId
