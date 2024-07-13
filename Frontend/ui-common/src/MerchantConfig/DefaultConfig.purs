@@ -15,6 +15,7 @@ defaultAppData =  {
   , supportMail :"support@nammayatri.in"
   , name : ""
   , website : "https://nammayatri.in"
+  , logoLight : "ny_ic_logo_light"
   }
 
 defaultPrimaryButtonConfig :: PrimaryButtonConfig

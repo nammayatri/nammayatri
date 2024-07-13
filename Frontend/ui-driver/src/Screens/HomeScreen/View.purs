@@ -58,7 +58,6 @@ import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
 import Domain.Payments (APIPaymentStatus(..))
 import Effect (Effect)
-import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
 import Engineering.Helpers.BackTrack (liftFlowBT)
@@ -76,7 +75,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils as MU
 import PaymentPage (consumeBP)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), ($>), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
@@ -108,6 +107,7 @@ import Resource.Constants as RC
 import Data.Function.Uncurried (runFn3)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Control.Alt ((<|>))
+import Effect.Aff (launchAff, makeAff, nonCanceler)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -198,7 +198,7 @@ screen initialState (GlobalState globalState) =
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages AllChatsLoaded
                                   _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
                                   _ <- JB.startChatListenerService
-                                  _ <- pure $ JB.scrollOnResume push ScrollToBottom
+                                  _ <- JB.scrollOnResume push ScrollToBottom
                                   push InitializeChat
                                   pure unit
                                 else pure unit
@@ -233,14 +233,10 @@ screen initialState (GlobalState globalState) =
                                                         Nothing -> Nothing
                                                         
                                 when (initialState.data.activeRide.tripType /= ST.Rental && isNothing advancedRideId) $ void $ push RemoveChat
+                                let rideId = fromMaybe "" (advancedRideId <|> Just initialState.data.activeRide.id)
                                 when ((initialState.data.activeRide.tripType == ST.Rental || isJust advancedRideId) && not initialState.props.chatcallbackInitiated) $ do
-                                  let rideId = fromMaybe "" (advancedRideId <|> Just initialState.data.activeRide.id)
-                                  _ <- JB.clearChatMessages
-                                  _ <- JB.storeCallBackMessageUpdated push rideId "Driver" UpdateMessages AllChatsLoaded
-                                  _ <- JB.storeCallBackOpenChatScreen push OpenChatScreen
-                                  _ <- JB.startChatListenerService
-                                  _ <- pure $ JB.scrollOnResume push ScrollToBottom
-                                  push InitializeChat
+                                  _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkAndStartChatService push 2 rideId initialState
+                                  pure unit
                                 
                                 -- Launching the Google Map with playing the audio 
                                 pushPlayAudioAndLaunchMap <- runEffectFn1 EHC.getValueFromIdMap "PlayAudioAndLaunchMap"
@@ -285,6 +281,23 @@ screen initialState (GlobalState globalState) =
       eval action state)
   }
 
+checkAndStartChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> HomeScreenState -> Flow GlobalState Unit
+checkAndStartChatService push retry rideId state = 
+  when (retry > 0) $ do 
+    let isChatServiceRunning = runFn1 JB.isServiceRunning "in.juspay.mobility.app.ChatService"
+    let _ = spy "IschatServcie " isChatServiceRunning
+    if isChatServiceRunning then do
+      delay $ Milliseconds 2000.0
+      if state.props.chatcallbackInitiated then pure unit
+        else doAff do liftEffect $ push InitializeChat
+      checkAndStartChatService push (retry-1) rideId state
+    else do 
+      liftFlow $ JB.clearChatMessages
+      liftFlow $ JB.storeCallBackMessageUpdated push rideId "Driver" UpdateMessages AllChatsLoaded
+      liftFlow $ JB.storeCallBackOpenChatScreen push OpenChatScreen
+      liftFlow $ JB.scrollOnResume push ScrollToBottom
+      liftFlow $ JB.startChatListenerService
+      liftFlow $ push InitializeChat
 
 view :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 view push state =

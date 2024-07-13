@@ -102,7 +102,7 @@ screen initialState globalState =
                           void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
                           void $ storeCallBackOpenChatScreen push OpenChatScreen
                           void $ startChatListenerService
-                          void $ pure $ scrollOnResume push ScrollToBottom
+                          void $ scrollOnResume push ScrollToBottom
                           push InitializeChat
                 when tracking.shouldPush $ void $ launchAff $ flowRunner globalState $ driverLocationTracking push UpdateStatus 2000.0 tracking.id "trip"
             pure $ pure unit

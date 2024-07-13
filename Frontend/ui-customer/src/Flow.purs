@@ -728,7 +728,8 @@ homeScreenFlow = do
   -- resp <- lift $ lift $ getCurrentLocationsObjFromLocal currentState.homeScreen
   -- modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{previousCurrentLocations = resp}})
   -- TODO: HANDLE LOCATION LIST INITIALLY
-  updateRideScheduledTime ""
+  when (isLocalStageOn HomeScreen)  do
+    updateRideScheduledTime ""
   void $ pure $ firebaseUserID (getValueToLocalStore CUSTOMER_ID)
   void $ lift $ lift $ toggleLoader false
   let
@@ -1027,7 +1028,7 @@ homeScreenFlow = do
                     , nearByPickUpPoints = pickUpPoints
                     }
                   , props
-                    { defaultPickUpPoint = ""
+                    { defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (pickUpPoints !! 0)).place
                     , city = getCityNameFromCode sourceServiceabilityResp.city
                     , isSpecialZone = (srcSpecialLocation.geoJson) /= Nothing
                     , confirmLocationCategory = if length pickUpPoints > 0 then (getZoneType srcSpecialLocation.category) else NOZONE
@@ -1562,9 +1563,11 @@ homeScreenFlow = do
         cityName = if sourceServiceabilityResp.serviceable then getCityNameFromCode sourceServiceabilityResp.city else updatedState.props.city
 
         srcServiceability = isWhitelisted || sourceServiceabilityResp.serviceable
-      sourcePlaceName <- getPlaceName sourceLat sourceLong HomeScreenData.dummyLocation false
+      sourcePlaceName <- getPlaceName sourceLat sourceLong HomeScreenData.dummyLocation false  
       setValueToLocalStore CUSTOMER_LOCATION (show cityName)
       void $ pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
+      when (updatedState.props.currentStage == ConfirmingLocation) $ do
+        checkForSpecialZoneAndHotSpots updatedState (ServiceabilityRes sourceServiceabilityResp) lat long
       modifyScreenState
         $ HomeScreenStateType
             ( \homeScreen ->
@@ -5384,6 +5387,7 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
                     }
                   , props
                     { city = getCityNameFromCode serviceabilityResp.city
+                    , defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (pickUpPoints !! 0)).place
                     , isSpecialZone = not (DS.null geoJson)
                     , confirmLocationCategory = zoneType
                     , hotSpot { centroidPoint = Nothing }
@@ -6033,6 +6037,9 @@ fcmHandler notification state = do
     "SAFETY_ALERT_DEVIATION" -> do
       logStatus "safety_alert_deviation_notification" ""
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetyAlertType = Just ST.DEVIATION } })
+      homeScreenFlow
+    "STOP_REACHED" -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { driverInfoCardState {destination = "" , destinationLat = 0.0, destinationLng =0.0, destinationAddress = getAddressFromBooking dummyBookingDetails} } }) 
       homeScreenFlow
     _ -> homeScreenFlow
 

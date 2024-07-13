@@ -3152,7 +3152,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
     isSpecialPickupZone = state.props.currentStage == RideAccepted && state.props.zoneType.priorityTag == SPECIAL_PICKUP && isJust state.data.driverInfoCardState.sourceAddress.area && state.data.config.feature.enableSpecialPickup
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
-      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE)}}}
+      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) state.data.driverInfoCardState} } }
       let fareProductType = respBooking.bookingDetails ^. _fareProductType
       case bookingStatus of
         "REALLOCATED" -> do
@@ -3592,7 +3592,10 @@ homescreenHeader push state =
 
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pickupLocationView push state = 
-  let headerLogo = if DS.null state.data.currentCityConfig.appLogoLight then "ny_ic_logo_light" else state.data.currentCityConfig.appLogoLight
+  let headerLogo =  if DS.null state.data.config.appData.logoLight then do 
+                      if DS.null state.data.currentCityConfig.appLogoLight then "ny_ic_logo_light" 
+                      else state.data.currentCityConfig.appLogoLight   
+                    else state.data.config.appData.logoLight 
   in linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -4570,7 +4573,7 @@ startChatServices push rideId chatUser rideStarted = do
   void $ storeCallBackMessageUpdated push rideId chatUser UpdateMessages AllChatsLoaded
   void $ storeCallBackOpenChatScreen push OpenChatScreen
   void $ startChatListenerService
-  void $ pure $ scrollOnResume push ScrollToBottom
+  void $ scrollOnResume push ScrollToBottom
   push InitializeChat
 
 safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
