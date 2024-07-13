@@ -26,6 +26,8 @@ data CacContext
   | VehicleVariant
   | FarePolicyId
   | Area
+  | TimeOfDay
+  | DayOfWeek
   deriving (Eq)
 
 instance Show CacContext where
@@ -36,3 +38,5 @@ instance Show CacContext where
   show VehicleVariant = "vehicleVariant"
   show FarePolicyId = "farePolicyId"
   show Area = "area"
+  show TimeOfDay = "timeOfDay"
+  show DayOfWeek = "dayOfWeek"
