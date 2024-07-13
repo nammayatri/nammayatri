@@ -3735,7 +3735,8 @@ instance standardReferredDriversReq :: StandardEncode ReferredDriversReq where s
 
 newtype DetectCityReq = DetectCityReq {
   lat :: Number,
-  lon :: Number
+  lon :: Number,
+  merchantId :: String
 }
 
 newtype DetectCityResp = DetectCityResp {

@@ -150,6 +150,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Common.Types.App as CTA
 import AssetsProvider (renewFile)
 import Control.Bind
+import Services.Config as SC
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -3671,7 +3672,7 @@ chooseCityFlow = do
       if (has package "manayatri" || has package "movingtech" )
         then modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just "Hyderabad" }, props { locationUnserviceable = false, locationDetectionFailed = false }}
         else do
-          resp <- lift $ lift $ Remote.detectCity lat lon
+          resp <- lift $ lift $ Remote.detectCity lat lon $ if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" )
           case resp of
             Right (API.DetectCityResp resp') -> do
               let unserviceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true },  data { locationSelected = Nothing }}
