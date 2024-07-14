@@ -120,18 +120,21 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) mbOnlyVehicle = do
   autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AUTO_CATEGORY
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.MOTORCYCLE
   ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AMBULANCE
+  deliveryConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.DELIVERY
 
   cabConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
   autoConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
   bikeConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
   ambulanceConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments ambulanceConfigsRaw)
+  deliveryConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments deliveryConfigsRaw)
 
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       { cabs = toMaybe cabConfigs,
         autos = toMaybe autoConfigs,
         bikes = toMaybe bikeConfigs,
-        ambulances = toMaybe ambulanceConfigs
+        ambulances = toMaybe ambulanceConfigs,
+        delivery = toMaybe deliveryConfigs
       }
   where
     toMaybe :: [a] -> Kernel.Prelude.Maybe [a]

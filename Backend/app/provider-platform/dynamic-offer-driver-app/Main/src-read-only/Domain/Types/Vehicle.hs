@@ -43,7 +43,7 @@ data Vehicle = Vehicle
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY | AMBULANCE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY | AMBULANCE | DELIVERY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -64,6 +64,10 @@ data Variant
   | AMBULANCE_AC_OXY
   | AMBULANCE_VENTILATOR
   | SUV_PLUS
+  | DELIVERY_BIKE
+  | DELIVERY_AUTORICKSHAW
+  | DELIVERY_SMALLPICKUP
+  | DELIVERY_LARGEPICKUP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data VehicleAPIEntity = VehicleAPIEntity
