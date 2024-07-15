@@ -383,7 +383,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       InterCitySearch InterCitySearchReq {..} ->
         SearchDetails
           { riderPreferredOption = SearchRequest.InterCity,
-            stops = fromMaybe [] stops,
+            stops = [destination],
             ..
           }
       AmbulanceSearch OneWaySearchReq {..} ->
