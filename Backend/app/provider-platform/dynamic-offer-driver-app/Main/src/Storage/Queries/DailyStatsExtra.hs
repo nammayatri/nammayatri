@@ -59,3 +59,13 @@ findAllByDateAndPayoutStatus limit offset merchantLocalDate payoutStatus = do
     (Se.Desc Beam.createdAt)
     limit
     offset
+
+findAllInRangeByDriverId_ :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id SP.Person -> Day -> Day -> m [DailyStats]
+findAllInRangeByDriverId_ (Id driverId) from to = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq driverId,
+          Se.Is Beam.merchantLocalDate $ Se.GreaterThanOrEq from,
+          Se.Is Beam.merchantLocalDate $ Se.LessThanOrEq to
+        ]
+    ]

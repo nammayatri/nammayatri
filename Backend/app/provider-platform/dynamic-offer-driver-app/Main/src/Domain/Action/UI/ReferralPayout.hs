@@ -60,7 +60,7 @@ getPayoutReferralEarnings ::
   )
 getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate toDate = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  earnings_ <- QDSE.findAllInRangeByDriverId personId fromDate toDate
+  earnings_ <- QDSE.findAllInRangeByDriverId_ personId fromDate toDate
   let earnings = filter (\ern -> ern.referralCounts > 0) earnings_
   driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   dInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
