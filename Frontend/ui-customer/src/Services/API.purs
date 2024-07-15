@@ -3772,8 +3772,9 @@ newtype EditLocationReq = EditLocationReq {
   origin :: Maybe SearchReqLocation
 }
 
-data EditLocationRes = EditLocationRes {
-    bookingUpdateRequestId :: Maybe String
+newtype EditLocationRes = EditLocationRes {
+    bookingUpdateRequestId :: Maybe String, 
+    result :: String
   }
 
 instance makeEditLocationReq :: RestEndpoint EditLocationRequest EditLocationRes  where
@@ -3783,6 +3784,7 @@ instance makeEditLocationReq :: RestEndpoint EditLocationRequest EditLocationRes
 
 
 derive instance genericEditLocationRes :: Generic EditLocationRes _
+derive instance newtypeEditLocationRes :: Newtype EditLocationRes _
 instance standardEncodeEditLocationRes :: StandardEncode EditLocationRes where standardEncode (EditLocationRes res) = standardEncode res
 instance showEditLocationRes :: Show EditLocationRes where show = genericShow
 instance decodeEditLocationRes :: Decode EditLocationRes where decode = defaultDecode
