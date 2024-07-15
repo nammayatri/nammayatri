@@ -561,8 +561,8 @@ view push state =
                     ]
                 ]
             , topLeftIconView state push
-            , preferenceView push state
             , rideRequestFlowView push state
+            , preferenceView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && onUsRide) then messageWidgetView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideDetailsBottomView push state else emptyTextView state
