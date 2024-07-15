@@ -43,7 +43,7 @@ findAllByPayoutStatusAndReferralEarningsAndDriver status (Id driverId) = do
     [ Se.And
         [ Se.Is Beam.payoutStatus $ Se.Eq (Just status),
           Se.Is Beam.driverId $ Se.Eq driverId,
-          Se.Is Beam.referralEarnings $ Se.GreaterThanOrEq (Just 0.0)
+          Se.Is Beam.referralEarnings $ Se.GreaterThan (Just 0.0)
         ]
     ]
 
@@ -53,7 +53,7 @@ findAllByDateAndPayoutStatus limit offset merchantLocalDate payoutStatus = do
     [ Se.And
         [ Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate,
           Se.Is Beam.payoutStatus $ Se.Eq (Just payoutStatus),
-          Se.Is Beam.referralEarnings $ Se.GreaterThanOrEq (Just 0.0)
+          Se.Is Beam.referralEarnings $ Se.GreaterThan (Just 0.0)
         ]
     ]
     (Se.Desc Beam.createdAt)
