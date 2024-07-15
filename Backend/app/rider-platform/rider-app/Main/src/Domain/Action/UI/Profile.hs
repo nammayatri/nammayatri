@@ -113,7 +113,8 @@ data ProfileRes = ProfileRes
     followsRide :: Bool,
     frontendConfigHash :: Maybe Text,
     isSafetyCenterDisabled :: Bool,
-    customerReferralCode :: Maybe Text
+    customerReferralCode :: Maybe Text,
+    deviceId :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -223,6 +224,7 @@ getPersonDetails (personId, _) mbToss = do
           customerReferralCode = newCustomerReferralCode,
           bundleVersion = clientBundleVersion,
           clientVersion = clientSdkVersion,
+          deviceId = maskText <$> deviceId,
           ..
         }
 
@@ -319,7 +321,7 @@ validateRefferalCode personId refCode = do
         Nothing -> do
           merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
           personsWithSameDeviceId <- maybe (return []) (QPerson.findAllByDeviceId . Just) person.deviceId
-          let isMultipleDeviceIdExist = not $ null personsWithSameDeviceId
+          let isMultipleDeviceIdExist = (length personsWithSameDeviceId) > 1
           case (person.mobileNumber, person.mobileCountryCode) of
             (Just mobileNumber, Just countryCode) -> do
               void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode isMultipleDeviceIdExist
