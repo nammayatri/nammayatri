@@ -1311,3 +1311,6 @@ getML stringKey =
         BOOKED -> "ബുക്ക് ചെയ്തു"
         SURCHARGES -> "അധിക ചാർജ്"
         SILIGURI -> "സിലിഗുരി"
+        KOZHIKODE -> "കോഴിക്കോട്"
+        THRISSUR -> "തൃശ്ശൂർ"
+        TRIVANDRUM -> "തിരുവനന്തപുരം"

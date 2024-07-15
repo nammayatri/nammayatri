@@ -1324,3 +1324,6 @@ getTE stringKey =
     BOOKED -> "బుక్ చేయబడింది"
     SURCHARGES -> "అదనపు ఛార్జీలు"
     SILIGURI -> "సిలిగురి"
+    KOZHIKODE -> "కోజికోడ్"
+    THRISSUR -> "తృశూర్"
+    TRIVANDRUM -> "తిరువనంతపురం"

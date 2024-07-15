@@ -1311,3 +1311,6 @@ getEN stringKey =
         BOOKED -> "Booked"
         SURCHARGES -> "Surcharges"
         SILIGURI -> "Siliguri"
+        KOZHIKODE -> "Kozhikode"
+        THRISSUR -> "Thrissur"
+        TRIVANDRUM -> "Trivandrum"

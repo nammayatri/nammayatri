@@ -1309,3 +1309,6 @@ getBN stringKey =
         BOOKED -> "বুক করা হয়েছে"
         SURCHARGES -> " অতিরিক্ত চার্জ"
         SILIGURI -> "শিলিগুড়ি"
+        KOZHIKODE -> "কোজিকোড"
+        THRISSUR -> "ত্রিশূর"
+        TRIVANDRUM -> "তিরুবনন্তপুরম"
