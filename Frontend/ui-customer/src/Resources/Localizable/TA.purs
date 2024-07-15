@@ -1327,3 +1327,6 @@ getTA stringKey =
     BOOKED -> "பதிவு செய்யப்பட்டது"
     SURCHARGES -> "கூடுதல் கட்டணம்"
     SILIGURI -> "சிலிகுரி"
+    KOZHIKODE -> "கோழிக்கோடு"
+    THRISSUR -> "திரிசூர்"
+    TRIVANDRUM -> "திருவநந்தபுரம்"

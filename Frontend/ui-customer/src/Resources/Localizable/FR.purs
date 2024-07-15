@@ -1311,3 +1311,6 @@ getFR stringKey =
         BOOKED -> "Réservé"
         SURCHARGES -> "Suppléments"
         SILIGURI -> "Siliguri"
+        KOZHIKODE -> "Kozhikode"
+        THRISSUR -> "Thrissur"
+        TRIVANDRUM -> "Trivandrum"

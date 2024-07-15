@@ -1310,3 +1310,6 @@ getKN stringKey =
         BOOKED -> "ಬುಕ್ ಮಾಡಲಾಗಿದೆ"
         SURCHARGES -> "ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ"
         SILIGURI -> "ಸಿಲಿಗುರಿ"
+        KOZHIKODE -> "ಕೋಝಿಕೋಡ್"
+        THRISSUR -> "ತೃಶೂರ್"
+        TRIVANDRUM -> "ತಿರುವನಂತಪುರಂ"

@@ -1309,3 +1309,6 @@ getHI stringKey =
         BOOKED -> "बुक किया गया"
         SURCHARGES -> "अधिभार"
         SILIGURI -> "सिलीगुड़ी"
+        KOZHIKODE -> "कोझिकोड"
+        THRISSUR -> "त्रिशूर"
+        TRIVANDRUM -> "तिरुवनंतपुरम"

@@ -280,7 +280,7 @@ getVehicleImage variant vehicleDetail city = do
         case city of 
           Hyderabad -> "ic_auto_rickshaw_black_yellow"
           Chennai -> "ic_auto_rickshaw_black_yellow"
-          Kochi -> "ny_ic_black_auto"
+          _ | Array.elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_black_auto"
           _ -> "ic_auto_rickshaw"
 
 
