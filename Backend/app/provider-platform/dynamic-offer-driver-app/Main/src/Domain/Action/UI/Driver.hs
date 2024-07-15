@@ -1877,9 +1877,7 @@ getCity req = do
         [] ->
           find (\geom -> geom.city == Context.AnyCity) geometry & \case
             Just anyCityGeom -> return GetCityResp {city = Just $ show anyCityGeom.city, status = APISuccess.Success}
-            Nothing -> do
-              logError $ "No geometry found for latLong: " <> show latLng
-              throwError LocationUnserviceable
+            Nothing -> return GetCityResp {city = Nothing, status = APISuccess.Success}
         (g : _) -> return GetCityResp {city = Just $ show g.city, status = APISuccess.Success}
 
 data DriverFeeResp = DriverFeeResp
