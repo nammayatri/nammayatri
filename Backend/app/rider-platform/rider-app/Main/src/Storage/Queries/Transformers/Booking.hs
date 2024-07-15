@@ -43,10 +43,10 @@ getFareProductType = \case
 getOtpCode :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getOtpCode = \case
   DRB.OneWayDetails _ -> Nothing
-  DRB.RentalDetails _ -> Nothing
+  DRB.RentalDetails details -> details.otpCode
   DRB.DriverOfferDetails _ -> Nothing
   DRB.OneWaySpecialZoneDetails details -> details.otpCode
-  DRB.InterCityDetails _ -> Nothing
+  DRB.InterCityDetails details -> details.otpCode
 
 getStopLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getStopLocationId = \case
@@ -150,7 +150,8 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
       pure
         DRB.InterCityBookingDetails
           { toLocation = toLocation,
-            distance = distance'
+            distance = distance',
+            ..
           }
     buildOneWaySpecialZoneDetails mbToLocid = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
@@ -166,7 +167,8 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
       mbStopLocation <- maybe (pure Nothing) (QL.findById . Id) mbStopLocationId
       pure
         DRB.RentalBookingDetails
-          { stopLocation = mbStopLocation
+          { stopLocation = mbStopLocation,
+            ..
           }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
