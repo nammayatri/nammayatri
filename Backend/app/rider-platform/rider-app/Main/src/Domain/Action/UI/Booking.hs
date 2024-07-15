@@ -37,6 +37,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as DTR
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -70,27 +71,6 @@ newtype BookingListRes = BookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-checkBookingsForStatus :: [SRB.Booking] -> Flow ()
-checkBookingsForStatus (currBooking : bookings) = do
-  riderConfig <- QRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
-  case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
-    (Just timeDiffThreshold, Just estimatedEndDuration) -> do
-      now <- getCurrentTime
-      let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.createdAt
-      let diff = DT.diffUTCTime now estimatedEndTime
-      let callStatusCondition = currBooking.status /= SRB.CANCELLED && currBooking.status /= SRB.COMPLETED && diff > fromIntegral timeDiffThreshold
-      when callStatusCondition $ do
-        merchant <- CQMerchant.findById currBooking.merchantId >>= fromMaybeM (MerchantNotFound currBooking.merchantId.getId)
-        city <- CQMOC.findById currBooking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound currBooking.merchantOperatingCityId.getId)
-        let dStatusReq = StatusACL.DStatusReq currBooking merchant city
-        becknStatusReq <- StatusACL.buildStatusReqV2 dStatusReq
-        messageId <- Utils.getMessageId becknStatusReq.statusReqContext
-        Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
-        void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id
-        checkBookingsForStatus bookings
-    (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
-checkBookingsForStatus [] = pure ()
-
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
 bookingStatus bookingId _ = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
@@ -98,6 +78,14 @@ bookingStatus bookingId _ = do
   logInfo $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
   SRB.buildBookingAPIEntity booking booking.riderId
+
+bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
+bookingStatusPolling bookingId _ = do
+  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  fork "booking status update" $ checkBookingsForStatus [booking]
+  logInfo $ "booking: test " <> show booking
+  handleConfirmTtlExpiry booking
+  SRB.buildBookingStatusAPIEntity booking
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
@@ -122,13 +110,36 @@ handleConfirmTtlExpiry booking = do
           reallocate = Nothing
         }
 
-bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
-bookingStatusPolling bookingId _ = do
-  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  fork "booking status update" $ checkBookingsForStatus [booking]
-  logInfo $ "booking: test " <> show booking
-  handleConfirmTtlExpiry booking
-  SRB.buildBookingStatusAPIEntity booking
+callOnStatus :: SRB.Booking -> Flow ()
+callOnStatus currBooking = do
+  merchant <- CQMerchant.findById currBooking.merchantId >>= fromMaybeM (MerchantNotFound currBooking.merchantId.getId)
+  city <- CQMOC.findById currBooking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound currBooking.merchantOperatingCityId.getId)
+  let dStatusReq = StatusACL.DStatusReq currBooking merchant city
+  becknStatusReq <- StatusACL.buildStatusReqV2 dStatusReq
+  messageId <- Utils.getMessageId becknStatusReq.statusReqContext
+  -- TODO: REMOVE ALL THE CHECKS WHICH IS FORWARD COMPATIBLE MEANING FOR BOOKING NEW CAN GO TO CONFIRMED BUT NOT OTHER STATUS CAN GOTO CONFIRM.
+  Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
+  void $ withShortRetry $ CallBPP.callStatusV2 currBooking.providerUrl becknStatusReq merchant.id
+
+checkBookingsForStatus :: [SRB.Booking] -> Flow ()
+checkBookingsForStatus (currBooking : bookings) = do
+  riderConfig <- QRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
+  case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
+    (Just timeDiffThreshold, Just estimatedEndDuration) -> do
+      now <- getCurrentTime
+      let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.createdAt
+      let diff = DT.diffUTCTime now estimatedEndTime
+      let callStatusConditionNew = currBooking.status == SRB.NEW && diff > fromIntegral timeDiffThreshold
+          callStatusConditionTripAssigned = currBooking.status == SRB.TRIP_ASSIGNED && diff > fromIntegral timeDiffThreshold
+      when callStatusConditionNew $ do
+        callOnStatus currBooking
+      when callStatusConditionTripAssigned $ do
+        ride <- QR.findActiveByRBId currBooking.id >>= fromMaybeM (RideNotFound currBooking.id.getId)
+        unless (ride.status == DTR.INPROGRESS) do
+          callOnStatus currBooking
+      checkBookingsForStatus bookings
+    (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
+checkBookingsForStatus [] = pure ()
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Flow BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
