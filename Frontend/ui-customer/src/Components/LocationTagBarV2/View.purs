@@ -17,7 +17,7 @@ module Components.LocationTagBarV2.View where
 
 import Components.LocationTagBarV2.Controller(Action(..), LocationTagBarConfig, TagConfig )
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..),  alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility, singleLine, maxLines)
+import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..), Orientation(..),  alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility, singleLine, maxLines)
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import Prelude(Unit, map, unit, ($), (<>), (-), (==), const)
@@ -29,6 +29,7 @@ import Common.Types.App (LazyCheck(..))
 import Mobility.Prelude (boolToVisibility)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarConfig -> PrestoDOM (Effect Unit) w 
 view push state = let 
@@ -71,7 +72,7 @@ tagView item isLast push =
             , width MATCH_PARENT
             , background item.bannerConfig.background
             , cornerRadii item.bannerConfig.cornerRadii
-            -- , visibility $ item.showBanner
+            , visibility $ item.showBanner
             , margin $ MarginHorizontal 8 8
             , gravity CENTER
             ][  textView $
@@ -89,10 +90,23 @@ tagView item isLast push =
             , imageWithFallback imageConfig.imageWithFallback
             , margin $ imageConfig.margin
             ]
-        , textView $
+        , linearLayout 
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation VERTICAL
+          ]
+          [ textView $
             [ text textConfig.text
-            , textSize textConfig.fontSize
             , color textConfig.color 
             , padding $ PaddingBottom 2
+            , visibility textConfig.visibility
             ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
+          , textView $
+            [ text "secondaryTextConfig.text"
+            , color Color.white900 -- secondaryTextConfig.color 
+            , background Color.red -- secondaryTextConfig.background
+            , padding $ Padding 6 4 6 4
+            , visibility textConfig.visibility -- secondaryTextConfig.visibility
+            ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
+          ]
       ]]

@@ -75,8 +75,16 @@ locationTagBarConfig state globalProps =
             textConfig : 
               { text : item.text
               , fontStyle : FontStyle.Body1
-              , fontSize : FontSize.a_14
               , color : Color.black900 
+              , background : Color.transparent
+              , visibility : VISIBLE
+              },
+            secondaryTextConfig : 
+              { text : ""
+              , fontStyle : FontStyle.Body1
+              , visibility : GONE
+              , background : Color.transparent
+              , color : Color.black900
               },
             stroke : "1," <> Color.grey900 ,
             cornerRadius : Corners 8.0 true true true true ,

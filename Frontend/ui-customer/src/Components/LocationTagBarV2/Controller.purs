@@ -33,6 +33,7 @@ type LocationTagBarConfig = {
 type TagConfig = {
   imageConfig :: ImageConfig ,
   textConfig :: TextConfig,
+  secondaryTextConfig :: TextConfig,
   stroke :: String,
   cornerRadius :: Corners,
   background :: String,
@@ -65,8 +66,9 @@ type ImageConfig = {
 type TextConfig = {
   text :: String ,
   fontStyle :: Style,
-  fontSize :: FontSize,
-  color :: String
+  visibility :: Visibility,
+  color :: String,
+  background :: String
 }
 
 config :: LocationTagBarConfig 

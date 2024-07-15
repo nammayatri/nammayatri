@@ -2016,15 +2016,23 @@ locationTagBarConfig state =
             , textConfig:
                 { text: item.text
                 , fontStyle: FontStyle.SubHeading1
-                , fontSize: FontSize.a_14
                 , color: Color.black800
+                , visibility: VISIBLE
+                , background : Color.transparent
+                }
+            , secondaryTextConfig:
+                { text: item.text
+                , fontStyle: FontStyle.SubHeading1
+                , color: Color.black800
+                , visibility: VISIBLE
+                , background : Color.red -- change
                 }
             , stroke: "0," <> Color.grey700
             , cornerRadius: Corners 19.0 true true true true
             , background: item.background
             , height: WRAP_CONTENT
             , width: WRAP_CONTENT
-            , padding: PaddingVertical 16 16
+            , padding: Padding 16 10 16 10
             , orientation: HORIZONTAL
             , enableRipple: true
             , rippleColor: Color.rippleShade
