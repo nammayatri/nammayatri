@@ -129,6 +129,7 @@ Booking:
       derive': Show
     RentalBookingDetails:
       stopLocation: Maybe Location
+      otpCode: Maybe Text
       derive': Show
     OneWaySpecialZoneBookingDetails:
       toLocation: Location
@@ -138,6 +139,7 @@ Booking:
     InterCityBookingDetails:
       toLocation: Location
       distance: Distance
+      otpCode: Maybe Text
       derive': Show
     AmbulanceBookingDetails:
       toLocation: Location
