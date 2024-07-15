@@ -126,8 +126,8 @@ window.getMerchantConfig = function () {
       "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nYou can get a referral code by asking your Yatri Driver.",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "Your location helps our system to map down all the near by taxis and get you the quickest ride possible.",
       "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "Welcome to Yatri \nTo start booking rides, please allow us to find you!",
-      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
-      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Moving Tech Innovations Private Limited <br> Indiqube Garden, Old no. 648, New No. 130, Grape Garden, 18th Main, 1st A Cross, 6th Block, Koramangala, Bangalore 560095.",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://www.getyatri.com/</u>",
       "CALL_NAMMA_YATRI_SUPPORT" : "Call Yatri Support",
       "YOUR_FEEDBACK_HELPS_US" : "Your feedback helps us improve the Yatri experience",
       "LEARN_HOW_TEXT" : "Learn how Yatri caters to your needs",
@@ -158,8 +158,8 @@ window.getMerchantConfig = function () {
       "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "നിങ്ങളുടെ നമ്മ യാത്രി ഡ്രൈവറോട് ചോദിച്ചാൽ ഒരു റഫറൽ കോഡ് ലഭിക്കും.",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "നിങ്ങളുടെ ലൊക്കേഷൻ ഞങ്ങളുടെ സിസ്റ്റത്തെ ടാക്സികൾ വഴി മാപ്പ് ചെയ്യാൻ സഹായിക്കുന്നു.",
       "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "യാത്രിയിലേക്ക് സ്വാഗതം \nറൈഡുകൾ ബുക്കിംഗ് ആരംഭിക്കാൻ, നിങ്ങളെ കണ്ടെത്താൻ ഞങ്ങളെ അനുവദിക്കൂ!",
-      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
-      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "മൂവിംഗ് ടെക് ഇന്നൊവേഷൻസ് പ്രൈവറ്റ് ലിമിറ്റഡ് <br> ഇൻഡിക്യൂബ് ഗാർഡൻ, പഴയ നമ്പർ. 648, പുതിയ നമ്പർ. 130, ഗ്രേപ്പ് ഗാർഡൻ, 18-ാം മെയിൻ, ഒന്നാം എ ക്രോസ്, ആറാം ബ്ലോക്ക്, കോറമംഗല, ബാംഗ്ലൂർ 560095.",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "വെബ്‌സൈറ്റ്: <u>https://www.getyatri.com/</u>",
       "CALL_NAMMA_YATRI_SUPPORT" : "യാത്രി സപ്പോർട്ടിലേക്ക് വിളിക്കുക",
       "YOUR_FEEDBACK_HELPS_US" : "യാത്രാ അനുഭവം മെച്ചപ്പെടുത്താൻ നിങ്ങളുടെ ഫീഡ്‌ബാക്ക് ഞങ്ങളെ സഹായിക്കുന്നു",
       "LEARN_HOW_TEXT" : "യാത്രി നിങ്ങളുടെ ആവശ്യങ്ങൾ എങ്ങനെ നിറവേറ്റുന്നുവെന്ന് അറിയുക",
@@ -190,8 +190,8 @@ window.getMerchantConfig = function () {
       "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER": "\nआप अपने यात्री ड्राइवर से पूछकर एक रेफरल कोड प्राप्त कर सकते हैं।",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "आपका स्थान हमारे सिस्टम को आस-पास की सभी टैक्सियों को मैप करने और आपको यथासंभव त्वरित यात्रा दिलाने में मदद करता है।",
       "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "यात्री में आपका स्वागत है \nसवारी की बुकिंग शुरू करने के लिए, कृपया हमें आपको ढूंढने की अनुमति दें!",
-      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
-      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
+      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "मूविंग टेक इनोवेशन प्राइवेट लिमिटेड <br> इंडीक्यूब गार्डन, पुराना नंबर। 648, नया नंबर 130, ग्रेप गार्डन, 18वां मुख्य, पहला ए क्रॉस, 6वां ब्लॉक, कोरमंगला, बैंगलोर 560095।",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "वेबसाइट: <u>https://www.getyatri.com/</u>",
       "CALL_NAMMA_YATRI_SUPPORT" : "यात्री सहायता को कॉल करें",
       "YOUR_FEEDBACK_HELPS_US" : "आपका फीडबैक हमें यात्रा अनुभव को बेहतर बनाने में मदद करता है",
       "LEARN_HOW_TEXT" : "जानें कि यात्री आपकी आवश्यकताओं को कैसे पूरा करता है",
@@ -321,7 +321,8 @@ window.getMerchantConfig = function () {
       }
     }
     , "feature" : {
-      "enableShareRide" : true
+      "enableShareRide" : true,
+      "enableSupport": false,
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "termsLink" :"https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
