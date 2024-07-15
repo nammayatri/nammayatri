@@ -415,13 +415,17 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
           messagePriority = Nothing,
           entity = Notification.Entity Notification.Product booking.id.getId (),
           body = getCancellationText orgName,
-          title = title,
+          title = getTitle,
           dynamicParams = RideCancelParam $ showTimeIst (booking.startTime),
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
           ttl = Nothing,
           sound = notificationSound
         }
-    title = T.pack "Ride cancelled!"
+    getTitle = case mbRide of
+      Just _ -> T.pack "Ride cancelled!"
+      Nothing -> case cancellationSource of
+        SBCR.ByUser -> T.pack "Ride cancelled!"
+        _ -> T.pack "Ride Unavailable!"
     subCategory = case cancellationSource of
       SBCR.ByUser -> Notification.ByUser
       SBCR.ByMerchant -> Notification.ByMerchant
@@ -464,12 +468,20 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
             "Please book again to get another ride."
           ]
       SBCR.ByApplication ->
-        unwords
-          [ "Sorry your ride for",
-            showTimeIst (booking.startTime),
-            "was cancelled.",
-            "Please try to book again"
-          ]
+        case mbRide of
+          Nothing ->
+            unwords
+              [ "Sorry, we could not find any driver for your ride at",
+                showTimeIst (booking.startTime) <> ".",
+                "Please try to book again"
+              ]
+          Just _ ->
+            unwords
+              [ "Sorry your ride for",
+                showTimeIst (booking.startTime),
+                "was cancelled.",
+                "Please try to book again"
+              ]
 
 notifyOnBookingReallocated ::
   ServiceFlow m r =>
