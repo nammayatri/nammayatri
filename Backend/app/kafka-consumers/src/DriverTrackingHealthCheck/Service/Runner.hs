@@ -15,7 +15,7 @@
 
 module DriverTrackingHealthCheck.Service.Runner where
 
-import Consumer.LocationUpdate.Processor
+-- import Consumer.LocationUpdate.Processor
 import Consumer.LocationUpdate.Types (DriverIdTokenKey)
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
@@ -78,7 +78,7 @@ driverDevicePingService driverId fcmNofificationSendCount = do
           pingDriver driver
           pure Nothing
         else do
-          let encodedVal = A.encode $ createDriverIdTokenKey driverId
+          let encodedVal = A.encode driverId
           _ <- Redis.del (redisKey driverId)
           pure (Just $ T.decodeUtf8 $ BSL.toStrict encodedVal)
     Nothing -> do
@@ -118,21 +118,18 @@ getAllDrivers locationDelay now = do
 getDriversBatchFromKey :: Text -> Seconds -> UTCTime -> Flow [Text]
 getDriversBatchFromKey key locationDelay now = do
   let presentTime = negate (fromIntegral locationDelay) `addUTCTime` now
-  batchSize <- asks (.batchSize)
+  batchSize <- fromMaybe 100 . fmap (.batchSize) <$> asks (.healthCheckAppCfg)
   redisRes <- Redis.withCrossAppRedis $ Redis.zRangeByScoreByCount key 0 (utcToDouble presentTime) 0 batchSize
-  let mbDecodedVal = map decode redisRes
-      decodedVal = catMaybes mbDecodedVal
-      res = map (.driverId) decodedVal
-  pure res
+  pure $ mapMaybe decode redisRes
   where
-    decode :: BS.ByteString -> Maybe DriverIdTokenKey
+    decode :: BS.ByteString -> Maybe Text
     decode val = do
       let res = A.decode $ BSL.fromStrict val
       res
 
 incrementCounterAndReturnShard :: Flow Text
 incrementCounterAndReturnShard = do
-  numberOfShards <- asks (.numberOfShards)
+  numberOfShards <- fromMaybe 10 . fmap (.numberOfShards) <$> asks (.healthCheckAppCfg)
   getKeyWithShard . (`mod` numberOfShards) <$> Redis.incr incrementCountKey
 
 incrementCountKey :: Text

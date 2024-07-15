@@ -25,6 +25,7 @@ import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
+import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
 import Environment
 import qualified EulerHS.Runtime as L
@@ -114,9 +115,8 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
 
 locationUpdateConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 locationUpdateConsumer flowRt appEnv kafkaConsumer = do
-  let batchSize = fromIntegral appEnv.batchSize
+  let batchSize = maybe 100 (\healthCheckAppCfg -> fromIntegral healthCheckAppCfg.batchSize) appEnv.healthCheckAppCfg
   readMessages kafkaConsumer
-    & S.mapM (\(message, messageKey, _) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey))
     & S.chunksOf batchSize addToList
     & S.mapM processRealtimeLocationUpdates'
     & S.drain
@@ -125,22 +125,17 @@ locationUpdateConsumer flowRt appEnv kafkaConsumer = do
       MonadIO m =>
       SF.Fold
         m
-        (T.LocationUpdates, T.DriverId)
+        (T.LocationUpdates, T.DriverId, ConsumerRecordD)
         [(T.LocationUpdates, T.DriverId)]
     addToList = SF.mkFold step start extract
       where
-        step acc val = SF.Partial (val : acc)
+        step !acc (!val, !key, _) = SF.Partial ((val, key) : acc)
         start = SF.Partial []
-        extract = id
+        extract = reverse . DL.nubBy ((==) `on` snd)
     processRealtimeLocationUpdates' locationUpdate =
       runFlowR flowRt appEnv . withLogTag "pushing location batch to redis" $
         generateGUID
-          >>= flip withLogTag (LCProcessor.processLocationData' locationUpdate)
-
-    processRealtimeLocationUpdates locationUpdate driverId =
-      runFlowR flowRt appEnv . withLogTag driverId $
-        generateGUID
-          >>= flip withLogTag (LCProcessor.processLocationData locationUpdate driverId)
+          >>= flip withLogTag (LCProcessor.processLocationData locationUpdate)
 
 readMessages ::
   (FromJSON message, ConvertUtf8 messageKey ByteString) =>
