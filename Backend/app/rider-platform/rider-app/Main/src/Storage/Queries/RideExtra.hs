@@ -348,6 +348,15 @@ updateEditLocationAttempts rideId attempts = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateEditPickupLocationAttempts :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Int -> m ()
+updateEditPickupLocationAttempts rideId attempts = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.allowedEditPickupLocationAttempts attempts,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 driverMobileNumberKey :: Text -> ByteString
 driverMobileNumberKey driverMobileNumber = TE.encodeUtf8 $ "Ride:DriverMobileNumber:" <> driverMobileNumber
 

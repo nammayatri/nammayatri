@@ -289,7 +289,7 @@ editLocation rideId (personId, merchantId) req = do
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
       void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
-      QRide.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
+      QRide.updateEditPickupLocationAttempts ride.id (Just (attemptsLeft -1))
       pure $ EditLocationResp Nothing "Success"
     (_, Just destination) -> do
       let attemptsLeft = fromMaybe merchant.numOfAllowedEditLocationAttemptsThreshold ride.allowedEditLocationAttempts
