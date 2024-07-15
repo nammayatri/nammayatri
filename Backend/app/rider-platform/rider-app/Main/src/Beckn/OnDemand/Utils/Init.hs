@@ -16,16 +16,19 @@ module Beckn.OnDemand.Utils.Init where
 
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
+import Data.Default.Class
 import Data.List (singleton)
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Location as Location
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import EulerHS.Prelude hiding (id, state)
+import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Utils.Common
@@ -86,8 +89,9 @@ mkStops origin mDestination mStartOtp =
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Context.City -> [Spec.Payment]
 mkPayment _ bapConfig city = do
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
-  singleton $ OUP.mkPayment (show city) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
+  let updatedPaymentTags = def{Beckn.paymentTags = [(Beckn.BUYER_FINDER_FEES_PERCENTAGE, Just $ fromMaybe "0" bapConfig.buyerFinderFee), (Beckn.SETTLEMENT_WINDOW, Just $ fromMaybe "PT1D" bapConfig.settlementWindow), (Beckn.DELAY_INTEREST, Just "0"), (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"), (Beckn.MANDATORY_ARBITRATION, Just "TRUE"), (Beckn.COURT_JURISDICTION, Just $ show city), (Beckn.STATIC_TERMS, Just $ maybe "https://api.example-bap.com/booking/terms" Kernel.Prelude.showBaseUrl bapConfig.staticTermsUrl), (Beckn.SETTLEMENT_TYPE, bapConfig.settlementType)]}
+      mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
+  singleton $ OUP.mkPayment' (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams (Just updatedPaymentTags)
 
 castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT

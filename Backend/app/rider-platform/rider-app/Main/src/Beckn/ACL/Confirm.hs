@@ -17,6 +17,7 @@ module Beckn.ACL.Confirm (buildConfirmReqV2) where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
@@ -24,6 +25,7 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import BecknV2.Utils
 import Control.Lens ((%~))
+import Data.Default.Class
 import qualified Data.List as DL
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -31,6 +33,7 @@ import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id, state, (%~))
+import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
@@ -114,8 +117,9 @@ tfItems res =
 tfPayments :: DOnInit.OnInitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig = do
   let mPrice = Just res.estimatedTotalFare
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
-  Just $ DL.singleton $ OUP.mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice res.paymentId mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
+      updatedPaymentTags = def{Beckn.paymentTags = [(Beckn.BUYER_FINDER_FEES_PERCENTAGE, Just $ fromMaybe "0" bapConfig.buyerFinderFee), (Beckn.SETTLEMENT_WINDOW, Just $ fromMaybe "PT1D" bapConfig.settlementWindow), (Beckn.DELAY_INTEREST, Just "0"), (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"), (Beckn.MANDATORY_ARBITRATION, Just "TRUE"), (Beckn.COURT_JURISDICTION, Just $ show res.city), (Beckn.STATIC_TERMS, Just $ maybe "https://api.example-bap.com/booking/terms" Kernel.Prelude.showBaseUrl bapConfig.staticTermsUrl), (Beckn.SETTLEMENT_TYPE, bapConfig.settlementType)]}
+      mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
+  Just $ DL.singleton $ OUP.mkPayment' (show bapConfig.collectedBy) Enums.NOT_PAID mPrice res.paymentId mkParams (Just updatedPaymentTags)
 
 tfQuotation :: DOnInit.OnInitRes -> Maybe Spec.Quotation
 tfQuotation res =

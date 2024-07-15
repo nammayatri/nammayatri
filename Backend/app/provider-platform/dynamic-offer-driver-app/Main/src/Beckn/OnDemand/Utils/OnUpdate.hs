@@ -19,9 +19,11 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
+import Data.Default.Class
 import qualified Data.List as List
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
@@ -34,6 +36,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
+import Kernel.Prelude hiding (elem)
 import Kernel.Types.Common hiding (mkPrice)
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
@@ -162,8 +165,9 @@ mkRideCompletedQuote ride fareParams = do
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+      mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
+      updatedPaymentTags = def{Beckn.paymentTags = [(Beckn.BUYER_FINDER_FEES_PERCENTAGE, Just $ fromMaybe "0" bppConfig.buyerFinderFee), (Beckn.SETTLEMENT_WINDOW, Just $ fromMaybe "PT1D" bppConfig.settlementWindow), (Beckn.DELAY_INTEREST, Just "0"), (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"), (Beckn.MANDATORY_ARBITRATION, Just "TRUE"), (Beckn.COURT_JURISDICTION, Just $ show merchant.city), (Beckn.STATIC_TERMS, Just $ maybe "https://api.example-bap.com/booking/terms" Kernel.Prelude.showBaseUrl bppConfig.staticTermsUrl), (Beckn.SETTLEMENT_TYPE, bppConfig.settlementType)]}
+  mkPayment' (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams (Just updatedPaymentTags)
 
 mkPaymentParamsSoftUpdate :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> HighPrecMoney -> Currency -> Spec.Payment
 mkPaymentParamsSoftUpdate _paymentMethodInfo _paymentUrl merchant bppConfig estimatedFare currency = do
@@ -278,70 +282,6 @@ castCancellationSource = \case
   SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
   SBCR.ByApplication -> BookingCancelledOU.ByApplication
-
-mkNewMessageTags :: Text -> Maybe [Spec.TagGroup]
-mkNewMessageTags message =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DRIVER_NEW_MESSAGE,
-                  descriptorName = Just "Driver New Message",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just
-              messageSingleton
-        }
-    ]
-  where
-    messageSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.MESSAGE,
-                    descriptorName = Just "New Message",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just message
-          }
-
-mkSafetyAlertTags :: Text -> Maybe [Spec.TagGroup]
-mkSafetyAlertTags reason =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.SAFETY_ALERT,
-                  descriptorName = Just "Safety Alert",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just
-              safetyAlertTriggerSingleton
-        }
-    ]
-  where
-    safetyAlertTriggerSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.DEVIATION,
-                    descriptorName = Just "Safety Alert Trigger",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just reason
-          }
 
 mkUpdatedDistanceTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]
 mkUpdatedDistanceTags mbDistance =

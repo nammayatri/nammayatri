@@ -41,17 +41,20 @@ import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import Beckn.OnDemand.Utils.OnUpdate hiding (mkDistanceTagGroup)
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
+import Data.Default.Class
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
@@ -325,6 +328,11 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
         mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
+
+  let currentRideDropLocation = if isValueAddNP then mkForwardBatchTagGroupV2 ride.previousRideTripEndPos else Nothing
+  let arrivalTimeTagGroup = if isValueAddNP then mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
+  let vehicleAgeTagGroup = if isValueAddNP then mkVehicleAgeTagGroupV2 rideDetails.vehicleAge else Nothing
+  let taggings = Just $ def {Beckn.fulfillmentTags = fromMaybe [] $ currentRideDropLocation <> arrivalTimeTagGroup <> vehicleAgeTagGroup}
   retryConfig <- asks (.shortDurationRetryCfg)
   let rideAssignedBuildReq = (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
@@ -332,6 +340,21 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
   where
+    mkVehicleAgeTagGroupV2 vehicleAge' =
+      vehicleAge' <&> \vehicleAge ->
+        [ (Beckn.VEHICLE_AGE, Just $ show vehicleAge)
+        ]
+
+    mkArrivalTimeTagGroupV2 arrivalTime' =
+      arrivalTime' <&> \arrivalTime ->
+        [ (Beckn.ARRIVAL_TIME, Just $ show arrivalTime)
+        ]
+
+    mkForwardBatchTagGroupV2 previousRideDropLocation' =
+      previousRideDropLocation' <&> \previousRideDropLocation ->
+        [ (Beckn.PREVIOUS_RIDE_DROP_LOCATION_LAT, Just $ show previousRideDropLocation.lat),
+          (Beckn.PREVIOUS_RIDE_DROP_LOCATION_LON, Just $ show previousRideDropLocation.lat)
+        ]
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
     refillVehicleModel = try @_ @SomeException do
@@ -409,6 +432,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
       paymentUrl = Nothing
       bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
+      taggings = Nothing
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideStartedMsgV2 <- ACL.buildOnStatusReqV2 merchant booking rideStartedBuildReq Nothing
@@ -433,6 +457,9 @@ sendRideCompletedUpdateToBAP ::
   Maybe Maps.LatLong ->
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation = do
+  chargeableDistance :: HighPrecMeters <-
+    realToFrac <$> ride.chargeableDistance
+      & fromMaybeM (InternalError "Ride chargeable distance is not present in OnUpdateBuildReq ride.")
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -443,12 +470,30 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+  let traveledDistance :: HighPrecMeters = ride.traveledDistance
+  let endOdometerReading :: Maybe Centesimal = (.value) <$> ride.endOdometerReading
+  let distanceTagGroup = mkDistanceTagGroup traveledDistance endOdometerReading chargeableDistance
+  let arrivalTimeTagGroup = fromMaybe [] $ mkArrivalTimeTagGroupV2 ride.driverArrivalTime
+  let tollConfidences = fromMaybe [] $ mkTollConfidenceTagGroupV2 ride.tollConfidence
+  let taggings = Just $ def {Beckn.fulfillmentTags = if isValueAddNP then arrivalTimeTagGroup <> distanceTagGroup <> tollConfidences else []}
   let bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
       rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
   rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideCompletedBuildReq
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
+  where
+    mkArrivalTimeTagGroupV2 arrivalTime' =
+      arrivalTime' <&> \arrivalTime ->
+        [ (Beckn.ARRIVAL_TIME, Just $ show arrivalTime)
+        ]
+
+    mkDistanceTagGroup traveledDistance endOdometerReading chargeableDistance = [(Beckn.CHARGEABLE_DISTANCE, Just $ show chargeableDistance), (Beckn.TRAVELED_DISTANCE, Just $ show traveledDistance), (Beckn.END_ODOMETER_READING, show <$> endOdometerReading)]
+
+    mkTollConfidenceTagGroupV2 tollConfidence' =
+      tollConfidence' <&> \tollConfidence ->
+        [ (Beckn.TOLL_CONFIDENCE, Just $ show tollConfidence)
+        ]
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -526,7 +571,8 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
             vehicleServiceTierItem,
             driverQuote,
             now,
-            searchRequest
+            searchRequest,
+            taggings = Nothing
           }
 
 sendDriverArrivalUpdateToBAP ::
@@ -562,6 +608,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       paymentUrl = Nothing
       bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
+      taggings = Just $ def {Beckn.fulfillmentTags = if isValueAddNP then [(Beckn.ARRIVAL_TIME, Just $ show arrivalTime)] else []}
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
@@ -597,6 +644,7 @@ sendStopArrivalUpdateToBAP booking ride driver vehicle = do
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
     let bookingDetails = ACL.BookingDetails {..}
+        taggings = Nothing
         stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
     stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing stopArrivedBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)
@@ -635,6 +683,7 @@ sendNewMessageToBAP booking ride message = do
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
     let bookingDetails = ACL.BookingDetails {..}
+        taggings = Just $ def {Beckn.fulfillmentTags = if isValueAddNP then [(Beckn.MESSAGE, Just message)] else []}
         newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing newMessageBuildReq
@@ -676,6 +725,7 @@ sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination curr
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
     let bookingDetails = ACL.BookingDetails {..}
+        taggings = Nothing
         sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     sUpdateEditDestToBAP <- ACL.buildOnUpdateMessageV2 merchant booking (Just bookingUpdateReqDetails.bapBookingUpdateRequestId) sUpdateEditDestToBAPReq
@@ -742,7 +792,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
     let bookingDetails = ACL.BookingDetails {..}
         safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
-
+        taggings = Just $ def {Beckn.fulfillmentTags = [(Beckn.DEVIATION, Just reason)]}
     retryConfig <- asks (.shortDurationRetryCfg)
     safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing safetyAlertBuildReq
     void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig merchant.id
@@ -781,6 +831,7 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
     let bookingDetails = ACL.BookingDetails {..}
+        taggings = Just $ def {Beckn.fulfillmentTags = [(Beckn.CANCELLATION_REASON, Just . show $ castCancellationSource cancellationSource)]}
         estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing estimateRepetitionBuildReq
@@ -820,6 +871,7 @@ sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driv
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
     let bookingDetails = ACL.BookingDetails {..}
+        taggings = Just $ def {Beckn.fulfillmentTags = [(Beckn.CANCELLATION_REASON, Just . show $ castCancellationSource cancellationSource)]}
         quoteRepetitionBuildReq = ACL.QuoteRepetitionBuildReq ACL.DQuoteRepetitionReq {..}
     retryConfig <- asks (.shortDurationRetryCfg)
     quoteRepMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing quoteRepetitionBuildReq
@@ -856,6 +908,7 @@ sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle
         riderPhone = Nothing
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     let bookingDetails = ACL.BookingDetails {..}
+        taggings = Nothing
         tollCrossedUpdateBuildReq = ACL.TollCrossedBuildReq ACL.DTollCrossedBuildReq {..}
     tollCrossedMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing tollCrossedUpdateBuildReq
     retryConfig <- asks (.shortDurationRetryCfg)

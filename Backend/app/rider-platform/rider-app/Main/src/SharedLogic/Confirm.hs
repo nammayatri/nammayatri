@@ -14,6 +14,8 @@
 
 module SharedLogic.Confirm where
 
+import qualified BecknV2.OnDemand.Tags as Beckn
+import Data.Default.Class
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
@@ -77,7 +79,8 @@ data DConfirmRes = DConfirmRes
     merchant :: DM.Merchant,
     city :: Context.City,
     maxEstimatedDistance :: Maybe Distance,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    taggings :: Maybe Beckn.Taggings
   }
   deriving (Show, Generic)
 
@@ -173,9 +176,16 @@ confirm DConfirmReq {..} = do
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = Nothing, -- can be removed later
+        taggings = getTags searchRequest.maxDistance,
         ..
       }
   where
+    getTags distance =
+      Just $
+        def{Beckn.fulfillmentTags =
+              [(Beckn.MAX_ESTIMATED_DISTANCE, (Just . show . distanceToHighPrecMeters) =<< distance)]
+           }
+
     prependZero :: Text -> Text
     prependZero str = "0" <> str
 

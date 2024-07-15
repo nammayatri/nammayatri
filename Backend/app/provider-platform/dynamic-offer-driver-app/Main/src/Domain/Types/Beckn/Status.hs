@@ -15,6 +15,7 @@
 
 module Domain.Types.Beckn.Status where
 
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
@@ -55,7 +56,8 @@ newtype DNewBookingBuildReq = DNewBookingBuildReq
 
 data DBookingReallocationBuildReq = DBookingReallocationBuildReq
   { bookingReallocationInfo :: BookingReallocationInfo,
-    bookingDetails :: Common.BookingDetails
+    bookingDetails :: Common.BookingDetails,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data ScheduledInfo = ScheduledInfo

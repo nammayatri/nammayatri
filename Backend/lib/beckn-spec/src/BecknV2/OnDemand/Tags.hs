@@ -48,11 +48,13 @@ data Taggings = Taggings
     itemTags :: TagList,
     personTags :: TagList,
     providerTags :: TagList,
-    orderTags :: TagList
+    orderTags :: TagList,
+    paymentTags :: TagList
   }
+  deriving (Show, Generic)
 
 instance Default Taggings where
-  def = Taggings [] [] [] [] [] [] [] []
+  def = Taggings [] [] [] [] [] [] [] [] []
 
 data BecknTagGroup
   = -- ONDC standard tag groups for ONDC:TRV10 domain
@@ -83,6 +85,7 @@ data BecknTagGroup
   | RATING_TAGS
   | FORWARD_BATCHING_REQUEST_INFO
   | VEHICLE_INFO
+  | SETTLEMENT_DETAILS
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -319,8 +322,8 @@ data BecknTag
   | PLANNED_PER_KM_CHARGE_ROUND_TRIP
   | PER_KM_RATE
   | PER_DAY_MAX_HOUR_ALLOWANCE
-  | SETTLEMENT_DETAILS
-  | INSURANCE_CHARGE_PER_METER
+  | -- | SETTLEMENT_DETAILS
+    INSURANCE_CHARGE_PER_METER
   | INSURANCE_CHARGE_PER_MILE
   | INSURANCE_CHARGE_PER_KM
   | INSURANCE_CHARGE_PER_YARD
@@ -411,6 +414,31 @@ instance CompleteTag BecknTag where
     WAYPOINTS -> (Just "WAYPOINTS", Nothing)
     MULTIPLE_ROUTES -> (Just "Multiple Routes", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
+    IS_AUTO_ASSIGN_ENABLED -> (Just "Auto Assign Enabled", Nothing)
+    CUSTOMER_TIP -> (Just "Customer Tip", Nothing)
+    OTHER_SELECT_ESTIMATES -> (Just "Other selected estimates for book any", Nothing)
+    IS_FORWARD_BATCH_ENABLED -> (Just "Forward Batch Enabled", Nothing)
+    MAX_ESTIMATED_DISTANCE -> (Just "MAX_ESTIMATED_DISTANCE", Nothing)
+    BUYER_FINDER_FEES_PERCENTAGE -> (Just "Nothing", Nothing)
+    SETTLEMENT_WINDOW -> (Just "Nothing", Nothing)
+    DELAY_INTEREST -> (Just "Nothing", Nothing)
+    SETTLEMENT_BASIS -> (Just "Nothing", Nothing)
+    MANDATORY_ARBITRATION -> (Just "Nothing", Nothing)
+    COURT_JURISDICTION -> (Just "Nothing", Nothing)
+    STATIC_TERMS -> (Just "Nothing", Nothing)
+    SETTLEMENT_TYPE -> (Just "Nothing", Nothing)
+    PREVIOUS_RIDE_DROP_LOCATION_LAT -> (Just "Current Location Lat", Nothing)
+    PREVIOUS_RIDE_DROP_LOCATION_LON -> (Just "Current Location Lat", Nothing)
+    ARRIVAL_TIME -> (Just "Arrival Time", Nothing)
+    VEHICLE_AGE -> (Just "Vehicle Age", Nothing)
+    TRAVELED_DISTANCE -> (Just "Traveled Distance", Nothing)
+    CHARGEABLE_DISTANCE -> (Just "Chargeable Distance", Nothing)
+    END_ODOMETER_READING -> (Just "End Odometer Reading", Nothing)
+    MESSAGE -> (Just "New Message", Nothing)
+    DEVIATION -> (Just "Safety Alert Trigger", Nothing)
+    CANCELLATION_REASON -> (Just "Chargeable Distance", Nothing)
+    START_ODOMETER_READING -> (Just "Start Odometer Reading", Nothing)
+    TOLL_CONFIDENCE -> (Just "Toll Confidence (Sure/Unsure/Neutral)", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -423,6 +451,31 @@ instance CompleteTag BecknTag where
     WAYPOINTS -> ROUTE_INFO
     MULTIPLE_ROUTES -> ROUTE_INFO
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
+    IS_AUTO_ASSIGN_ENABLED -> AUTO_ASSIGN_ENABLED
+    CUSTOMER_TIP -> CUSTOMER_TIP_INFO
+    OTHER_SELECT_ESTIMATES -> ESTIMATIONS
+    IS_FORWARD_BATCH_ENABLED -> FORWARD_BATCHING_REQUEST_INFO
+    MAX_ESTIMATED_DISTANCE -> ESTIMATIONS
+    BUYER_FINDER_FEES_PERCENTAGE -> BUYER_FINDER_FEES
+    SETTLEMENT_WINDOW -> SETTLEMENT_TERMS
+    DELAY_INTEREST -> SETTLEMENT_TERMS
+    SETTLEMENT_BASIS -> SETTLEMENT_TERMS
+    MANDATORY_ARBITRATION -> SETTLEMENT_TERMS
+    COURT_JURISDICTION -> SETTLEMENT_TERMS
+    STATIC_TERMS -> SETTLEMENT_TERMS
+    SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
+    PREVIOUS_RIDE_DROP_LOCATION_LAT -> FORWARD_BATCHING_REQUEST_INFO
+    PREVIOUS_RIDE_DROP_LOCATION_LON -> FORWARD_BATCHING_REQUEST_INFO
+    ARRIVAL_TIME -> DRIVER_ARRIVED_INFO
+    VEHICLE_AGE -> VEHICLE_AGE_INFO
+    CHARGEABLE_DISTANCE -> RIDE_DISTANCE_DETAILS
+    TRAVELED_DISTANCE -> RIDE_DISTANCE_DETAILS
+    END_ODOMETER_READING -> RIDE_DISTANCE_DETAILS
+    MESSAGE -> DRIVER_NEW_MESSAGE
+    DEVIATION -> SAFETY_ALERT
+    CANCELLATION_REASON -> PREVIOUS_CANCELLATION_REASONS
+    START_ODOMETER_READING -> RIDE_ODOMETER_DETAILS
+    TOLL_CONFIDENCE -> TOLL_CONFIDENCE_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

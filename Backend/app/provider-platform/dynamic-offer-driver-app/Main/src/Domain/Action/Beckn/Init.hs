@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Init where
 
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as DDQ
@@ -84,7 +85,8 @@ data InitRes = InitRes
     vehicleVariant :: Veh.Variant,
     paymentId :: Text,
     cancellationFee :: Maybe PriceAPIEntity,
-    estimateId :: Text
+    estimateId :: Text,
+    taggings :: Maybe Beckn.Taggings
   }
 
 handler ::
@@ -122,7 +124,7 @@ handler merchantId req validatedReq = do
       bppSubscriberId = req.bppSubscriberId
       estimateId = req.estimateId
       cancellationFee = Nothing
-  pure InitRes {vehicleVariant = req.vehicleVariant, ..}
+  pure InitRes {vehicleVariant = req.vehicleVariant, taggings = Nothing, ..}
   where
     buildBooking ::
       ( CacheFlow m r,

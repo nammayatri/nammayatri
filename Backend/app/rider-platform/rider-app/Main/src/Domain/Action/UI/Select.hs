@@ -27,10 +27,12 @@ module Domain.Action.UI.Select
   )
 where
 
+import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Applicative ((<|>))
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import Data.Default.Class
 import qualified Domain.Action.UI.Estimate as UEstimate
 import Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Quote as UQuote
@@ -104,7 +106,8 @@ data DSelectRes = DSelectRes
     autoAssignEnabled :: Bool,
     phoneNumber :: Maybe Text,
     isValueAddNP :: Bool,
-    isAdvancedBookingEnabled :: Bool
+    isAdvancedBookingEnabled :: Bool,
+    taggings :: Maybe Beckn.Taggings
   }
 
 newtype DSelectResultRes = DSelectResultRes
@@ -190,12 +193,27 @@ select2 personId estimateId req@DSelectReq {..} = do
         providerUrl = estimate.providerUrl,
         variant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
         isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
+        taggings = if isValueAddNP then getTag remainingEstimateBppIds else Nothing,
         ..
       }
   where
     getPhoneNo = do
       person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       mapM decrypt person.mobileNumber
+
+    mkTags remainingEstimateBppIds =
+      [(Beckn.IS_AUTO_ASSIGN_ENABLED, Just $ show autoAssignEnabled)]
+        <> if isJust customerExtraFee
+          then [(Beckn.CUSTOMER_TIP, (\charges -> Just $ show charges.getMoney) =<< customerExtraFee)]
+          else
+            []
+              <> if not (null remainingEstimateBppIds)
+                then [(Beckn.OTHER_SELECT_ESTIMATES, Just $ show (getId <$> remainingEstimateBppIds))]
+                else
+                  []
+                    <> [(Beckn.IS_FORWARD_BATCH_ENABLED, Just $ show $ fromMaybe False isAdvancedBookingEnabled)]
+
+    getTag remainingEstimateBppIds = Just $ def{Beckn.itemTags = mkTags remainingEstimateBppIds}
 
 --DEPRECATED
 selectList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes

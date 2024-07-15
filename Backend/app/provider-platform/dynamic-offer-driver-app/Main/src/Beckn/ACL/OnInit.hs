@@ -17,8 +17,10 @@ module Beckn.ACL.OnInit where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils hiding (mkStops)
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
+import Data.Default.Class
 import qualified Data.List as L
 import Domain.Action.Beckn.Init as DInit
 import Domain.Types
@@ -72,8 +74,9 @@ tfFulfillments res =
 tfPayments :: DInit.InitRes -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bppConfig = do
   let mPrice = Just $ mkPrice (Just res.booking.currency) res.booking.estimatedFare
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . L.singleton $ mkPayment (show res.transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+      updatedPaymentTags = def {Beckn.paymentTags = [(Beckn.BUYER_FINDER_FEES_PERCENTAGE, Just $ fromMaybe "0" bppConfig.buyerFinderFee), (Beckn.SETTLEMENT_WINDOW, Just $ fromMaybe "PT1D" bppConfig.settlementWindow), (Beckn.DELAY_INTEREST, Just "0"), (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"), (Beckn.MANDATORY_ARBITRATION, Just "TRUE"), (Beckn.COURT_JURISDICTION, Just $ show res.transporter.city), (Beckn.STATIC_TERMS, Just $ maybe "https://api.example-bap.com/booking/terms" Kernel.Prelude.showBaseUrl bppConfig.staticTermsUrl), (Beckn.SETTLEMENT_TYPE, bppConfig.settlementType)]}
+      mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
+  Just . L.singleton $ mkPayment' (show bppConfig.collectedBy) Enums.NOT_PAID mPrice (Just res.paymentId) mkParams (Just updatedPaymentTags)
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle
 tfVehicle res = do

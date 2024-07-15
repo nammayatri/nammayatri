@@ -21,6 +21,7 @@ where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import BecknV2.OnDemand.Utils.Payment
@@ -44,7 +45,8 @@ data DOnSelectReq = DOnSelectReq
     vehicleServiceTierItem :: DVST.VehicleServiceTier,
     searchRequest :: SearchRequest,
     driverQuote :: DQuote.DriverQuote,
-    now :: UTCTime
+    now :: UTCTime,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data TransporterInfo = TransporterInfo
@@ -64,13 +66,13 @@ mkOnSelectMessageV2 ::
   DOnSelectReq ->
   Spec.OnSelectReqMessage
 mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectReq {..} = do
-  let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP]
+  let fulfillment = mkFulfillmentV2 req driverQuote isValueAddNP
   let paymentV2 = mkPaymentV2 bppConfig merchant driverQuote Nothing
   Spec.OnSelectReqMessage $
     Just
       Spec.Order
-        { orderFulfillments = Just fulfillments,
-          orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote isValueAddNP mbFarePolicy) fulfillments,
+        { orderFulfillments = Just [fulfillment],
+          orderItems = Just $ [mkItemV2 fulfillment vehicleServiceTierItem driverQuote isValueAddNP mbFarePolicy],
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [paymentV2],
           orderProvider = mkProvider bppConfig,

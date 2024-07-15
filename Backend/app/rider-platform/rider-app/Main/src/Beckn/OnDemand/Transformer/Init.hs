@@ -6,6 +6,7 @@ module Beckn.OnDemand.Transformer.Init where
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.Init
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
@@ -73,7 +74,7 @@ tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId isValueAddNP =
   let fulfillmentId_ = mbBppFullfillmentId
   let fulfillmentState_ = Nothing
   let fulfillmentStops_ = Beckn.OnDemand.Utils.Init.mkStops uiConfirm.fromLoc uiConfirm.toLoc Nothing
-  let fulfillmentTags_ = if isValueAddNP then Beckn.OnDemand.Utils.Init.mkFulfillmentTags uiConfirm.maxEstimatedDistance else Nothing
+  let fulfillmentTags_ = if isValueAddNP then Tags.convertToTagGroup . (.fulfillmentTags) =<< uiConfirm.taggings else Nothing
   let fulfillmentType_ = Just fulfillmentType
   let fulfillmentVehicle_ = tfFulfillmentVehicle uiConfirm & Just
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}

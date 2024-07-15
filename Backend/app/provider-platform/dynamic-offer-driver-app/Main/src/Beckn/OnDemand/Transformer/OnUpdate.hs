@@ -22,6 +22,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.OnUpdate as UtilsOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
 import qualified BecknV2.OnDemand.Enums as EventEnum
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as CU
@@ -92,7 +93,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let previousCancellationReasonsTags = UtilsOU.mkPreviousCancellationReasonsTags cancellationSource
+    let previousCancellationReasonsTags = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False Nothing (Just $ show Event.ESTIMATE_REPETITION) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
@@ -121,7 +122,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.NewMessageBuildReq OU.DNewMessageReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let newMessageTags = UtilsOU.mkNewMessageTags message
+    let newMessageTags = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
     fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing newMessageTags Nothing False False Nothing (Just $ show Event.NEW_MESSAGE) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
@@ -140,7 +141,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let safetyAlertTags = UtilsOU.mkSafetyAlertTags reason
+    let safetyAlertTags = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False Nothing (Just $ show Event.SAFETY_ALERT) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
@@ -216,7 +217,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.QuoteRepetitionBuildReq OU.DQuoteRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    let previousCancellationReasonsTags = UtilsOU.mkPreviousCancellationReasonsTags cancellationSource
+    let previousCancellationReasonsTags = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False Nothing (Just $ show Event.QUOTE_REPETITION) isValueAddNP Nothing
     pure $
       Spec.Order

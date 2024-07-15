@@ -14,10 +14,12 @@
 
 module BecknV2.OnDemand.Utils.Payment
   ( mkPayment,
+    mkPayment',
   )
 where
 
 import qualified BecknV2.OnDemand.Enums as Spec
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Aeson as A
@@ -36,6 +38,31 @@ type City = Text
 type SettlementType = Text
 
 type SettlementWindow = Text
+
+mkPayment' ::
+  CollectedBy ->
+  Spec.PaymentStatus ->
+  Maybe Price ->
+  Maybe TxnId ->
+  Maybe BknPaymentParams ->
+  Maybe Beckn.Taggings ->
+  Spec.Payment
+mkPayment' collectedBy paymentStatus mPrice mTxnId mPaymentParams taggings = do
+  let mAmount = show . (.amount) <$> mPrice
+  let mCurrency = show . (.currency) <$> mPrice
+  Spec.Payment
+    { paymentCollectedBy = Just collectedBy,
+      paymentId = mTxnId,
+      paymentParams =
+        if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
+          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
+          else Nothing,
+      paymentStatus = encodeToText' paymentStatus,
+      paymentTags = Tag.convertToTagGroup . (.paymentTags) =<< taggings,
+      paymentType = encodeToText' Spec.ON_FULFILLMENT
+    }
+  where
+    anyTrue = or
 
 mkPayment ::
   City ->

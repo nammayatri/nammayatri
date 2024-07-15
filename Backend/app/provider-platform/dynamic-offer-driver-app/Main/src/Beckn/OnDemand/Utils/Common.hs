@@ -17,7 +17,9 @@ module Beckn.OnDemand.Utils.Common where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
+import qualified BecknV2.OnDemand.Enums as Enum
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -26,6 +28,7 @@ import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
+import Data.Default.Class
 import qualified Data.List as List
 import Data.Maybe
 import qualified Data.Text as T
@@ -61,6 +64,7 @@ import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Payment.Interface.Types as Payment
+import Kernel.Prelude as KP hiding (find, length, map, null, readMaybe)
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
@@ -659,35 +663,6 @@ mkLocationTagGroupV2 location' =
                             descriptorShortDesc = Nothing
                           },
                     tagValue = Just $ show location.lon
-                  }
-              ]
-        }
-    ]
-
-mkArrivalTimeTagGroupV2 :: Maybe UTCTime -> Maybe [Spec.TagGroup]
-mkArrivalTimeTagGroupV2 arrivalTime' =
-  arrivalTime' <&> \arrivalTime ->
-    [ Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DRIVER_ARRIVED_INFO,
-                  descriptorName = Just "Driver Arrived Info",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorCode = Just $ show Tags.ARRIVAL_TIME,
-                            descriptorName = Just "Arrival Time",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show arrivalTime
                   }
               ]
         }
@@ -1347,8 +1322,9 @@ tfCancellationTerms cancellationFee state =
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
-  let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
+      updatedPaymentTags = def{Beckn.paymentTags = [(Beckn.BUYER_FINDER_FEES_PERCENTAGE, Just $ fromMaybe "0" bppConfig.buyerFinderFee), (Beckn.SETTLEMENT_WINDOW, Just $ fromMaybe "PT1D" bppConfig.settlementWindow), (Beckn.DELAY_INTEREST, Just "0"), (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"), (Beckn.MANDATORY_ARBITRATION, Just "TRUE"), (Beckn.COURT_JURISDICTION, Just $ show transporter.city), (Beckn.STATIC_TERMS, Just $ maybe "https://api.example-bap.com/booking/terms" KP.showBaseUrl bppConfig.staticTermsUrl), (Beckn.SETTLEMENT_TYPE, bppConfig.settlementType)]}
+      mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
+  Just . List.singleton $ mkPayment' (show bppConfig.collectedBy) Enum.NOT_PAID mPrice booking.paymentId mkParams (Just updatedPaymentTags)
 
 tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
 tfProvider becknConfig =

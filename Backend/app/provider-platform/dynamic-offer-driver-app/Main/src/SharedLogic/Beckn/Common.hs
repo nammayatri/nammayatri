@@ -14,6 +14,7 @@
 
 module SharedLogic.Beckn.Common where
 
+import qualified BecknV2.OnDemand.Tags as Beckn
 import Domain.Types.BecknConfig as DBC
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -50,20 +51,23 @@ data DRideAssignedReq = DRideAssignedReq
     vehicleAge :: Maybe Months,
     isFreeRide :: Bool,
     driverAccountId :: Maybe Payment.AccountId,
-    estimateId :: Maybe Text
+    estimateId :: Maybe Text,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DRideStartedReq = DRideStartedReq
   { bookingDetails :: BookingDetails,
     tripStartLocation :: Maybe Maps.LatLong,
-    estimateId :: Maybe Text
+    estimateId :: Maybe Text,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DRideCompletedReq = DRideCompletedReq
   { bookingDetails :: BookingDetails,
     fareParams :: Fare.FareParameters,
     tripEndLocation :: Maybe Maps.LatLong,
-    estimateId :: Maybe Text
+    estimateId :: Maybe Text,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DBookingCancelledReq = DBookingCancelledReq
@@ -71,13 +75,15 @@ data DBookingCancelledReq = DBookingCancelledReq
     bookingDetails :: Maybe BookingDetails,
     cancellationSource :: SBCR.CancellationSource,
     cancellationFee :: Maybe Common.PriceAPIEntity,
-    estimateId :: Maybe Text
+    estimateId :: Maybe Text,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DDriverArrivedReq = DDriverArrivedReq
   { bookingDetails :: BookingDetails,
     arrivalTime :: Maybe UTCTime,
-    estimateId :: Maybe Text
+    estimateId :: Maybe Text,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data CurrentSearchInfo = CurrentSearchInfo

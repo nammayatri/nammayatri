@@ -34,6 +34,7 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as RideA
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as RideCompletedOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified BecknV2.OnDemand.Enums as EventEnum
+import BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import qualified BecknV2.OnDemand.Utils.Context as CU
@@ -231,11 +232,11 @@ tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig = Common.tfAssign
 tfOrder (DStatus.RideStartedReq req) mbFarePolicy becknConfig = Common.tfStartReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.RideCompletedReq req) mbFarePolicy becknConfig = Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.BookingCancelledReq req) _ becknConfig = Common.tfCancelReqToOrder req becknConfig
-tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) _ becknConfig = do
+tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails, taggings}) _ becknConfig = do
   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
   let Common.BookingDetails {driver, driverStats, vehicle, booking, ride, isValueAddNP} = bookingDetails
   let image = Nothing
-  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
+  let arrivalTimeTagGroup = Tag.convertToTagGroup . (.fulfillmentTags) =<< taggings
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing Nothing isValueAddNP Nothing
   pure
     Spec.Order

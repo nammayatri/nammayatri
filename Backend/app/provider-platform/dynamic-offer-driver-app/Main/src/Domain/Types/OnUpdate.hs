@@ -18,6 +18,7 @@ module Domain.Types.OnUpdate
   )
 where
 
+import qualified BecknV2.OnDemand.Tags as Beckn
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
@@ -48,30 +49,35 @@ data DErrorObject = DErrorObject
     errorMessage :: Text
   }
 
-newtype DStopArrivedBuildReq = DStopArrivedBuildReq
-  { bookingDetails :: BookingDetails
+data DStopArrivedBuildReq = DStopArrivedBuildReq
+  { bookingDetails :: BookingDetails,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DEstimateRepetitionReq = DEstimateRepetitionReq
   { bookingDetails :: BookingDetails,
     estimateId :: Id DEst.Estimate,
-    cancellationSource :: SBCR.CancellationSource
+    cancellationSource :: SBCR.CancellationSource,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DQuoteRepetitionReq = DQuoteRepetitionReq
   { bookingDetails :: BookingDetails,
     newBookingId :: Id DRB.Booking,
-    cancellationSource :: SBCR.CancellationSource
+    cancellationSource :: SBCR.CancellationSource,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DNewMessageReq = DNewMessageReq
   { bookingDetails :: BookingDetails,
-    message :: Text
+    message :: Text,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DSafetyAlertReq = DSafetyAlertReq
   { bookingDetails :: BookingDetails,
-    reason :: Text
+    reason :: Text,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data DEditDestinationUpdateReq = DEditDestinationUpdateReq
@@ -79,11 +85,13 @@ data DEditDestinationUpdateReq = DEditDestinationUpdateReq
     bookingUpdateReqDetails :: DBUR.BookingUpdateRequest,
     newDestination :: Maybe DL.Location,
     currentLocation :: Maybe Maps.LatLong,
-    updateType :: UpdateType
+    updateType :: UpdateType,
+    taggings :: Maybe Beckn.Taggings
   }
 
-newtype DTollCrossedBuildReq = DTollCrossedBuildReq
-  { bookingDetails :: BookingDetails
+data DTollCrossedBuildReq = DTollCrossedBuildReq
+  { bookingDetails :: BookingDetails,
+    taggings :: Maybe Beckn.Taggings
   }
 
 data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE

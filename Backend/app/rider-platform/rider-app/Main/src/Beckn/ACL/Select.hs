@@ -33,7 +33,6 @@ import qualified Domain.Types.Location as Location
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Error
@@ -70,7 +69,7 @@ tfOrder res endLoc isValueAddNP bapConfig =
       orderQuote = Nothing
       orderStatus = Nothing
       startLoc = res.searchRequest.fromLocation
-      orderItem = tfOrderItem res isValueAddNP
+      orderItem = tfOrderItem res
       orderFulfillment = tfFulfillment res startLoc endLoc isValueAddNP
       orderCreatedAt = Nothing
       orderUpdatedAt = Nothing
@@ -118,138 +117,19 @@ tfVehicle res =
       vehicleCapacity = Nothing
    in Spec.Vehicle {..}
 
-tfOrderItem :: DSelect.DSelectRes -> Bool -> Spec.Item
-tfOrderItem res isValueAddNP =
+tfOrderItem :: DSelect.DSelectRes -> Spec.Item
+tfOrderItem res =
   let itemDescriptor = Nothing
       itemFulfillmentIds = Nothing
       itemLocationIds = Nothing
       itemPaymentIds = Nothing
       itemId = Just res.estimate.itemId
-      itemTags =
-        if isValueAddNP
-          then Just $ mkItemTags res
-          else Nothing
+      itemTags = Tags.convertToTagGroup . (.itemTags) =<< res.taggings
       itemPrice = tfPrice res
    in Spec.Item
         { itemPrice = Just itemPrice,
           ..
         }
-
-mkItemTags :: DSelect.DSelectRes -> [Spec.TagGroup]
-mkItemTags res =
-  let itemTags = [mkAutoAssignEnabledTagGroup res]
-      itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
-      itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
-      itemTags''' = mkAdvancedBookingEnabledTagGroup res : itemTags''
-   in itemTags'''
-
-mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
-mkCustomerTipTagGroup res =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tags.CUSTOMER_TIP_INFO,
-              descriptorName = Just "Customer Tip Info",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList =
-        Just
-          [ Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = (\_ -> Just $ show Tags.CUSTOMER_TIP) =<< res.customerExtraFee,
-                        descriptorName = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
-                        descriptorShortDesc = Nothing
-                      },
-                tagDisplay = Just False,
-                tagValue = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
-              }
-          ]
-    }
-
-mkOtheEstimatesTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
-mkOtheEstimatesTagGroup res =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tags.ESTIMATIONS,
-              descriptorName = Just "Customer Tip Info",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList =
-        Just
-          [ Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.OTHER_SELECT_ESTIMATES,
-                        descriptorName = Just "Other selected estimates for book any",
-                        descriptorShortDesc = Nothing
-                      },
-                tagDisplay = Just False,
-                tagValue = Just $ show (getId <$> res.remainingEstimateBppIds)
-              }
-          ]
-    }
-
-mkAutoAssignEnabledTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
-mkAutoAssignEnabledTagGroup res =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tags.AUTO_ASSIGN_ENABLED,
-              descriptorName = Just "Auto Assign Enabled",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList =
-        Just
-          [ Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.IS_AUTO_ASSIGN_ENABLED,
-                        descriptorName = Just "Auto Assign Enabled",
-                        descriptorShortDesc = Nothing
-                      },
-                tagDisplay = Just False,
-                tagValue = Just $ show res.autoAssignEnabled
-              }
-          ]
-    }
-
-mkAdvancedBookingEnabledTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
-mkAdvancedBookingEnabledTagGroup res =
-  Spec.TagGroup
-    { tagGroupDisplay = Just False,
-      tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tags.FORWARD_BATCHING_REQUEST_INFO,
-              descriptorName = Just "Forward Batch Enabled",
-              descriptorShortDesc = Nothing
-            },
-      tagGroupList =
-        Just
-          [ Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tags.IS_FORWARD_BATCH_ENABLED,
-                        descriptorName = Just "Forward Batch Enabled",
-                        descriptorShortDesc = Nothing
-                      },
-                tagDisplay = Just False,
-                tagValue = Just $ show res.isAdvancedBookingEnabled
-              }
-          ]
-    }
 
 tfPrice :: DSelect.DSelectRes -> Spec.Price
 tfPrice res =
