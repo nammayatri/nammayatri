@@ -347,10 +347,9 @@ calculateFareParameters params = do
 
     processFPAmbulanceDetailsSlab DFP.FPAmbulanceDetailsSlab {..} = do
       let estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
-          estimatedDistanceInKm = estimatedDistance `div` 1000
           actualDistance = (.getMeters) <$> params.actualDistance
-          actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
-          distBasedFare = HighPrecMoney $ perKmRate.getHighPrecMoney * toRational actualDistanceInKm
+          distanceInKm = (fromIntegral $ fromMaybe estimatedDistance actualDistance) / 1000
+          distBasedFare = HighPrecMoney $ perKmRate.getHighPrecMoney * distanceInKm
       ( [],
         baseFare,
         nightShiftCharge,
