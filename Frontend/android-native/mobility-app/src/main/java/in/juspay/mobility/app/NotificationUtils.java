@@ -278,9 +278,9 @@ public class NotificationUtils {
                     sheetData.putBoolean("isThirdPartyBooking", entity_payload.has("isValueAddNP") && !entity_payload.optBoolean("isValueAddNP", true));
                     sheetData.putInt("driverDefaultStepFeeWithCurrency", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
                     sheetData.putInt("driverStepFeeWithCurrency", driverStepFeeWithCurrency.optInt("amount", negotiationUnit));
+                    sheetData.putDouble("parkingCharge", entity_payload.optDouble("parkingCharge", 0.0));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
-
                     System.out.println(entity_payload);
                 } catch (Exception e) {
                     Exception exception = new Exception("Error in parse overlay data " + e);

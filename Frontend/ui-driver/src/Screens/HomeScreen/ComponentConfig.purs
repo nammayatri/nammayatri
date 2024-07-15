@@ -80,6 +80,8 @@ import Common.Resources.Constants
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
 import Resource.Constants as RC
+import ConfigProvider 
+import Data.Int 
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -129,7 +131,7 @@ rideActionModalConfig state =
     tripDuration = (\tripDuration -> (if (tripDuration / 3600) < 10 then "0" else "") <> (show ( tripDuration / 3600) <> ":") <> (if (tripDuration `mod` 3600) / 60 < 10 then "0" else "") <> show ( (tripDuration `mod` 3600) / 60)  <> " Hr") <$> state.data.activeRide.tripDuration,
     rideStartTime = state.data.activeRide.tripStartTime,
     startODOReading = fromMaybe "--" $ show <$> state.data.activeRide.startOdometerReading,
-    hasToll = state.data.activeRide.hasToll,
+    estimatedTollCharges = state.data.activeRide.estimatedTollCharges,
     driverVehicle = state.data.activeRide.driverVehicle,
     cityConfig = state.data.cityConfig,
     isOdometerReadingsRequired = state.props.isOdometerReadingsRequired,
@@ -142,8 +144,9 @@ rideActionModalConfig state =
     distance = case state.data.route DA.!! 0 of
                   Just (SA.Route obj) ->  obj.distance
                   Nothing -> 0
-    }
-    in rideActionModalConfig'
+  , parkingCharge = state.data.activeRide.parkingCharge
+  }
+  in rideActionModalConfig'
 
 ---------------------------------------- endRidePopUp -----------------------------------------
 endRidePopUp :: ST.HomeScreenState -> PopUpModal.Config
@@ -1552,16 +1555,25 @@ getRideCompletedConfig state = let
       visible = state.data.config.rideCompletedCardConfig.lottieQRAnim,
       url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
     }
-  , toll {
-      actualAmount =  state.data.endRideData.actualTollCharge
-    , text =if state.data.endRideData.tollAmbigous then getString TOLL_CHARGES_MAYBE_APPLICABLE else if state.data.endRideData.actualTollCharge > 0.0  then getString RIDE_TOLL_FARE_INCLUDES  else getString TOLL_ROAD_CHANGED
-    , visibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0.0 ||  state.data.endRideData.actualTollCharge > 0.0
-    , image = fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
-    , textColor = if state.data.endRideData.actualTollCharge > 0.0 then Color.blue800 else Color.black600
-    , imageVisibility = boolToVisibility $ state.data.endRideData.estimatedTollCharge > 0.0 && state.data.endRideData.actualTollCharge > 0.0
-    }
+  , additionalCharges = additionalCharges
   }
   in config'
+
+  where 
+    additionalCharges = [
+      {
+        text : if state.data.toll.tollAmbigous then getString TOLL_ROAD_CHANGED else if state.data.toll.finalCharge > 0.0  then getString $ RIDE_TOLL_FARE_INCLUDES $  (getCurrency appConfig) <> (show $ round $ state.data.toll.finalCharge) else getString TOLL_ROAD_CHANGED
+      , visibility : boolToVisibility $ state.data.toll.estimatedCharge > 0.0 ||  state.data.toll.finalCharge > 0.0
+      , image : fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
+      , textColor : Color.blue800
+      },
+      {
+        text : maybe "" (\estimatedCharge -> getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <> (show $ round $ estimatedCharge)) state.data.parking.estimatedCharge
+      , visibility : boolToVisibility $ maybe false (\parkingCharge -> parkingCharge >= 0.0) state.data.parking.estimatedCharge 
+      , image : fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_blue"
+      , textColor : Color.blue800
+      }
+    ]
 
 type TopPillConfig = {
   visible :: Boolean,

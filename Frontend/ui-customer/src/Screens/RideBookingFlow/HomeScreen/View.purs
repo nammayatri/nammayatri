@@ -196,6 +196,7 @@ import Helpers.Utils (decodeBookingTimeList, getCityFromString, getLanguageBased
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.Controllers.Types
+import Helpers.Utils as HU
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -603,7 +604,8 @@ view push state =
             , if state.props.showIntercityUnserviceablePopUp || state.props.showNormalRideNotSchedulablePopUp then intercityInSpecialZonePopupView push state else emptyTextView state
             , if state.props.zoneOtpExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
-            , if state.data.rideCompletedData.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
+            , if state.data.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
+            , if state.data.toll.showIncludedPopUp then PopUpModal.view (push <<< TollChargeIncludedPopUpAction) (PopUpConfigs.tollChargesIncluded state) else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -1914,16 +1916,7 @@ estimateHeaderView push state =
         ] 
         <> FontStyle.h1 TypoGraphy
     , estimatedTimeDistanceView push state
-    , textView $
-      [ textFromHtml $ getString TOLL_CHARGES_WILL_BE_EXTRA
-      , color Color.black650
-      , gravity CENTER_HORIZONTAL
-      , height WRAP_CONTENT
-      , gravity CENTER_HORIZONTAL
-      , width MATCH_PARENT
-      , margin $ MarginTop 4
-      , visibility $  boolToVisibility $ state.props.hasToll && state.data.selectedEstimatesObject.serviceTierName /= Just "Auto"
-      ] <> FontStyle.paragraphText TypoGraphy
+    , extraChargesView 
     , linearLayout
         [ height $ V 1
         , width MATCH_PARENT
@@ -1931,6 +1924,45 @@ estimateHeaderView push state =
         , background Color.grey900
         ][]
     ]
+  where 
+    extraChargesView = 
+      linearLayout [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER_HORIZONTAL
+      , margin $ MarginTop 4
+      , visibility $  boolToVisibility $ state.data.selectedEstimatesObject.hasTollCharges || state.data.selectedEstimatesObject.hasParkingCharges
+      ][
+        linearLayout [
+          width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , padding $ Padding 8 8 8 8
+        , background Color.grey700
+        , orientation HORIZONTAL
+        , cornerRadius 16.0
+        , gravity CENTER_VERTICAL
+        ][
+          imageView[
+            height $ V 16
+          , width $ V 16
+          , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET if state.data.selectedEstimatesObject.hasTollCharges then "ny_ic_black_toll" else "ny_ic_parking_logo_grey"
+          , margin $ MarginRight 4
+          ]
+        , textView $ [ 
+            textFromHtml case  state.data.selectedEstimatesObject.hasTollCharges, state.data.selectedEstimatesObject.hasParkingCharges of
+              true, true -> getString APP_TOLL_PARKING_CHARGES
+              true, false -> getString APP_TOLL_CHARGES
+              false, true -> getString APP_PARKING_CHARGES
+              _, _ -> ""
+          , color Color.black800
+          , gravity CENTER_HORIZONTAL
+          , height WRAP_CONTENT
+          , gravity CENTER_HORIZONTAL
+          , width MATCH_PARENT
+          ] <> FontStyle.body1 TypoGraphy
+        ]
+      ]
+  
 
 estimatedTimeDistanceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 estimatedTimeDistanceView push state =

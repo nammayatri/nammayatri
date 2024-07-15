@@ -65,6 +65,7 @@ initData = {
     tripEndTime : Nothing,
     acRide : Nothing,
     vehicleServiceTier : ""
+  , parkingCharge : 0.0
   },
   offsetValue: 0,
   loaderButtonVisibility: false,

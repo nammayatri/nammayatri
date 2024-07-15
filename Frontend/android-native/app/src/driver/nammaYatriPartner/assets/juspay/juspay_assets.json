@@ -545,6 +545,8 @@
       "ny_ic_pan" : true,
       "ny_ic_parallel_arrows" : true,
       "ny_ic_parallel_arrows_horizontal" : true,
+      "ny_ic_parking_logo_blue" : true,
+      "ny_ic_parking_logo_grey" : true,
       "ny_ic_pause_autopay" : true,
       "ny_ic_pause_no_background" : true,
       "ny_ic_pause_recorded_audio" : true,

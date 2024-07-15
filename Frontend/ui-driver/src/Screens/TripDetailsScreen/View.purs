@@ -47,6 +47,7 @@ import Data.Number as NUM
 import Data.Int as INT
 import Helpers.Utils as HU
 import Resource.Constants as RC
+import Data.Int
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -293,6 +294,21 @@ type TripDetailsRow = {
   leftItemLeftAsset :: Maybe String
 }
 
+defaultTripDetailsRow :: TripDetailsRow
+defaultTripDetailsRow = {
+  keyLeft : ""
+, valLeft : ""
+, keyRight : ""
+, valRight : ""
+, leftClick : NoAction
+, rightClick : NoAction
+, leftAsset : ""
+, rightAsset : ""
+, leftVisibility : false
+, rightVisibility : false
+, leftItemLeftAsset : Nothing
+}
+
 tripDataView ::  forall w . (Action -> Effect Unit) ->  ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 tripDataView push state = 
   linearLayout
@@ -300,9 +316,38 @@ tripDataView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER_VERTICAL
-  ][  tripDetailsRow push {  keyLeft : getString RIDE_TYPE, valLeft : rideType, keyRight : (getString TRIP_ID), valRight : state.data.tripId, leftClick : NoAction, rightClick : Copy, leftAsset : "", rightAsset : "ny_ic_copy", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : if state.data.acRide == Just true then Just "ny_ic_ac" else Nothing},
-      tripDetailsRow push {  keyLeft : getString DISTANCE, valLeft : (state.data.distance <> " km"), keyRight : getString RIDE_TIME, valRight : tripTime, leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : true, leftItemLeftAsset : Nothing},
-      tripDetailsRow push {  keyLeft : getString EARNINGS_PER_KM, valLeft : earningPerKm, keyRight : (getString TOLL_INCLUDED), valRight : currency <> (show state.data.tollCharge), leftClick : NoAction, rightClick : NoAction, leftAsset : "", rightAsset : "", leftVisibility : true, rightVisibility : state.data.tollCharge /= 0.0, leftItemLeftAsset : Nothing}
+  ][  tripDetailsRow push defaultTripDetailsRow {  
+        keyLeft = getString RIDE_TYPE
+      , valLeft = rideType
+      , keyRight = getString TRIP_ID
+      , valRight = state.data.tripId
+      , rightClick = Copy
+      , rightAsset = "ny_ic_copy"
+      , leftVisibility = true
+      , rightVisibility = true
+      , leftItemLeftAsset = if state.data.acRide == Just true then Just "ny_ic_ac" else Nothing
+      },
+      tripDetailsRow push defaultTripDetailsRow {  
+        keyLeft = getString DISTANCE
+      , valLeft = state.data.distance <> " km"
+      , keyRight = getString RIDE_TIME
+      , valRight = tripTime
+      , leftVisibility = true
+      , rightVisibility = true
+      },
+      tripDetailsRow push defaultTripDetailsRow {  
+        keyLeft = getString EARNINGS_PER_KM
+      , valLeft = earningPerKm
+      , keyRight = getString TOLL_INCLUDED
+      , valRight = currency <> show state.data.tollCharge
+      , leftVisibility = true
+      , rightVisibility = state.data.tollCharge /= 0.0
+      }
+    , tripDetailsRow push defaultTripDetailsRow {  
+        keyLeft = getString PARKING_CHARGE
+      , valLeft = currency <> (show $ round $ state.data.parkingCharge) <>  " (" <> (getString INCLUDED) <> ")"
+      , leftVisibility = state.data.parkingCharge > 0.0
+      }
   ]
   where 
     tripTime = case state.data.tripStartTime, state.data.tripEndTime of

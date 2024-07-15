@@ -212,4 +212,5 @@ mockDriverInfo =
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
   , addressWard : Nothing
+  , hasToll : false
   }

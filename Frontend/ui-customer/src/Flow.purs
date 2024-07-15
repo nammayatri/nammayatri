@@ -5952,7 +5952,7 @@ fcmHandler notification state = do
           isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
           hasAccessibilityIssue' = resp.hasDisability == Just true 
           hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isBlindPerson
-          hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isBlindPerson
+          hasTollIssue' = (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.fareBreakup) && not isBlindPerson
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->
@@ -5988,10 +5988,10 @@ fcmHandler notification state = do
                         , hasTollIssue = hasTollIssue'
                         , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
                         }
-                      , toll {
+                        }
+                       , toll {
                           confidence = ride.tollConfidence
                         , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
-                        }
                         }
                       }
                     , props

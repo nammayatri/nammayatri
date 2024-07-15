@@ -1093,35 +1093,74 @@ paymentMethodView push state title shouldShowIcon uid =
           , color Color.black800
           , width MATCH_PARENT
           ] <> FontStyle.h2 TypoGraphy
-        , textView $
-          [ text $ "(" <> (getString TOLL_CHARGES_INCLUDED) <> ")"
-          , color Color.black900
-          , margin $ MarginTop 4
-          , visibility $ boolToVisibility $ (STO.getValueToLocalStore STO.HAS_TOLL_CHARGES) == "true" && state.data.vehicleVariant /= "AUTO_RICKSHAW" -- @TODO: Change once backend was DONE
-          ] <> FontStyle.body3 TypoGraphy
       ]
       , linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
         ][]
-      , linearLayout
-          [ orientation HORIZONTAL
-          , width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , gravity CENTER
-          , visibility if shouldShowIcon then VISIBLE else GONE
-          ][  imageView
-              [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_wallet_filled"
-              , height $ V 20
-              , width $ V 20
+      , linearLayout[
+          width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER 
+        , orientation VERTICAL
+        ][
+          extraChargesView
+        , linearLayout
+            [ orientation HORIZONTAL
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity CENTER
+            , visibility $ boolToVisibility shouldShowIcon
+            , margin $ MarginTop 4
+            ][  imageView
+                [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_wallet_filled"
+                , height $ V 20
+                , width $ V 20
+                ]
+              , textView $
+                [ text $ getString PAY_BY_CASH_OR_UPI
+                , color Color.black700
+                , padding $ PaddingLeft 4
+                ] <> FontStyle.body3 TypoGraphy
               ]
-            , textView $
-              [ text $ getString PAY_BY_CASH_OR_UPI
-              , color Color.black700
-              , padding $ PaddingLeft 4
-              ] <> FontStyle.body3 TypoGraphy
-            ]
-    ]
+          ]
+      ]
+  where 
+    extraChargesView = 
+      linearLayout [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER_HORIZONTAL
+      , margin $ MarginTop 4
+      , visibility $ boolToVisibility state.data.hasToll
+      ][
+        linearLayout [
+          width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , padding $ Padding 8 8 8 8
+        , background Color.grey700
+        , orientation HORIZONTAL
+        , cornerRadius 16.0
+        , gravity CENTER_VERTICAL
+        ][
+          imageView[
+            height $ V 16
+          , width $ V 16
+          , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_black_toll"
+          , margin $ MarginRight 4
+          ]
+        , textView $ [ 
+            textFromHtml $ getString TOLL_CHARGES_INCLUDED
+            , color Color.black800
+            , gravity CENTER_HORIZONTAL
+            , height WRAP_CONTENT
+            , gravity CENTER_HORIZONTAL
+            , width MATCH_PARENT
+            ] <> FontStyle.tags TypoGraphy
+        ]
+      ] 
+
+
 
 specialZoneShimmerView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 specialZoneShimmerView push state = 

@@ -65,6 +65,8 @@ import Debug
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.String as DS
 import JBridge (fromMetersToKm)
+import Data.Maybe
+import Data.Int
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = do
@@ -962,28 +964,35 @@ normalRideInfoView push config =
           , separator true
           , totalDistanceView push config
           ]
-      , linearLayout[
-          height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , visibility $ boolToVisibility config.hasToll
-        , margin $ MarginTop 12
-        ][
-          imageView[
-            height $ V 20
-          , width $ V 20
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
-          ]
-        , textView $
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text $ getString RIDE_TOLL_FARE_INCLUDES
-          , color Color.blue800
-          , margin $ MarginLeft 4
-          ] <> FontStyle.body1 TypoGraphy
-        ]
+      , if config.estimatedTollCharges > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_blue_toll") (getString $ RIDE_TOLL_FARE_INCLUDES $ (getCurrency appConfig) <> (show $ round config.estimatedTollCharges)) else noView 
+      , if config.parkingCharge > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_blue") (getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <> (show $ round config.parkingCharge) ) else noView
       ] 
   ]
-  
+
+
+extraChargesView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
+extraChargesView img txt = 
+  linearLayout[
+    height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , margin $ MarginTop 12
+  ][
+    imageView[
+      height $ V 20
+    , width $ V 20
+    , imageWithFallback img
+    ]
+  , textView $ [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , text txt
+    , color Color.blue800
+    , margin $ MarginLeft 4
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
+
+
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
 separator visibility' =
   linearLayout
@@ -1079,13 +1088,7 @@ lineImageView val =
     , margin $ MarginLeft 7
     ]
 
-dummyView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-dummyView push config =
-  textView
-    [ afterRender push $ const NoAction
-    , width $ V 0
-    , height $ V 0
-    ]
+
 
 destAddressTextView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 destAddressTextView config push=

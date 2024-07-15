@@ -606,7 +606,6 @@ quotesFlow res state = do
           _  -> dummyFareQuoteDetails
     in { quoteDetails : quoteDetails, index : index, activeIndex : 0 , fareDetails : fareDetails}
     ) sortedByFare)
-  void $ pure $ setValueToLocalStore HAS_TOLL_CHARGES "false"
   if DA.length rentalsQuoteList == 0 then do 
     void $ pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
     exit $ RentalsScreen state {props {showLoader = false}}
