@@ -225,7 +225,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance() + " km ");
-            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
+            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.currency.setText(String.valueOf(model.getCurrency()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.tollTag.setVisibility(model.getTollCharges() > 0? View.VISIBLE : View.GONE);

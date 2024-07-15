@@ -230,6 +230,7 @@ public class NotificationUtils {
                     JSONObject driverStepFeeWithCurrency = new JSONObject(entity_payload.has("driverStepFeeWithCurrency") && !entity_payload.isNull("driverStepFeeWithCurrency") ? entity_payload.get("driverStepFeeWithCurrency").toString() : "{}");
                     int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
                     String[] specialZoneSplit = entity_payload.optString("specialLocationTag", "None").split("_");
+                    int specialZoneExtraTip = entity_payload.optInt("specialZoneExtraTip", 0);
                     boolean isPickupZone = entity_payload.optBoolean("pickupZone", false);
                     boolean isSpecialPickupZone = false;
                     if(specialZoneSplit.length > 0) {
@@ -264,7 +265,7 @@ public class NotificationUtils {
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
                     sheetData.putInt("driverPickUpCharges", entity_payload.has("driverPickUpCharges") ? entity_payload.optInt("driverPickUpCharges", 0): 0);
-                    sheetData.putInt("specialZoneExtraTip", entity_payload.optInt("specialZoneExtraTip", 0)); 
+                    sheetData.putInt("specialZoneExtraTip",specialZoneExtraTip);
                     sheetData.putBoolean("specialZonePickup", isSpecialPickupZone); 
                     sheetData.putBoolean("downgradeEnabled", entity_payload.optBoolean("downgradeEnabled", true));
                     sheetData.putInt("airConditioned", entity_payload.has("airConditioned") && !entity_payload.isNull("airConditioned") ? (entity_payload.getBoolean("airConditioned") ? 1 : 0) : -1);
@@ -276,7 +277,7 @@ public class NotificationUtils {
                     sheetData.putString("rideStartDate", rideStartDate);
                     sheetData.putString("notificationSource", source);
                     sheetData.putBoolean("isThirdPartyBooking", entity_payload.has("isValueAddNP") && !entity_payload.optBoolean("isValueAddNP", true));
-                    sheetData.putInt("driverDefaultStepFeeWithCurrency", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
+                    sheetData.putInt("driverDefaultStepFeeWithCurrency", driverDefaultStepFeeWithCurrency.optInt("amount", 0) + specialZoneExtraTip);
                     sheetData.putInt("driverStepFeeWithCurrency", driverStepFeeWithCurrency.optInt("amount", negotiationUnit));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");

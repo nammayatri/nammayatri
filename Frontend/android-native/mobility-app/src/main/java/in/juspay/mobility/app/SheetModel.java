@@ -100,10 +100,10 @@ public class SheetModel {
         this.driverMaxExtraFee = driverMaxExtraFee;
         this.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration;
         this.negotiationUnit = negotiationUnit;
-        this.buttonIncreasePriceAlpha = specialZoneExtraTip <= 0 ? 1.0f : 0.5f;
-        this.buttonIncreasePriceClickable = specialZoneExtraTip <= 0;
-        this.buttonDecreasePriceAlpha = specialZoneExtraTip > 0 ? 1.0f : 0.5f;
-        this.buttonDecreasePriceClickable = specialZoneExtraTip > 0;
+        this.buttonIncreasePriceAlpha = 1.0f;
+        this.buttonIncreasePriceClickable = true;
+        this.buttonDecreasePriceAlpha = 0.5f;
+        this.buttonDecreasePriceClickable = false;
         this.currency = currency;
         this.specialLocationTag = specialLocationTag;
         this.customerExtraFee = customerExtraFee;
