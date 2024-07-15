@@ -653,7 +653,8 @@ newtype RidesInfo = RidesInfo
       tollConfidence :: Maybe CTA.Confidence,
       bookingType :: Maybe BookingTypes,
       bapName :: Maybe String,
-      isValueAddNP :: Boolean
+      isValueAddNP :: Boolean,
+      enableOtpLessRide :: Maybe Boolean
   }
 
 newtype OdometerReading = OdometerReading

@@ -1116,7 +1116,8 @@ type ActiveRide = {
   estimatedTollCharge :: Maybe Number,
   acRide :: Maybe Boolean,
   bapName :: String,
-  bookingFromOtherPlatform :: Boolean
+  bookingFromOtherPlatform :: Boolean,
+  enableOtpLessRide :: Maybe Boolean
 }
 
 type HomeScreenProps =  {

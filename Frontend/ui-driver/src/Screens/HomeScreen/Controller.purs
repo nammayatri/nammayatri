@@ -879,8 +879,12 @@ eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index
   continue state { props = state.props { odometerValue = odometerValue} }
 
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
-eval (RideActionModalAction (RideActionModal.StartRide)) state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
+eval (RideActionModalAction (RideActionModal.StartRide)) state = 
+  case state.data.activeRide.enableOtpLessRide of
+    Just true -> continueWithCmd state [ do
+      pure $ InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone "0000")
+    ]
+    _ -> continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
   if state.data.activeRide.tripType == ST.Rental then continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue=""}, data{route = []}}
   else if state.data.activeRide.tripType == ST.Intercity then continue state { props{ endRideOtpModal = true, enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp = "" } }
@@ -1607,7 +1611,8 @@ activeRideDetail state (RidesInfo ride) =
   estimatedTollCharge : ride.estimatedTollCharges,
   acRide : ride.isVehicleAirConditioned,
   bapName : transformBapName $ fromMaybe "" ride.bapName,
-  bookingFromOtherPlatform : not ride.isValueAddNP
+  bookingFromOtherPlatform : not ride.isValueAddNP,
+  enableOtpLessRide : ride.enableOtpLessRide
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

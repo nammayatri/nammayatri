@@ -305,4 +305,5 @@ dummyRideData = {
       , acRide : Nothing
       , bapName : ""
       , bookingFromOtherPlatform : false
+      , enableOtpLessRide : Nothing
       }

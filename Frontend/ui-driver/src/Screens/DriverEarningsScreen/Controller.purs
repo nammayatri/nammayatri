@@ -792,7 +792,8 @@ dummyRideHistoryItem = RidesInfo {
       tollConfidence : Nothing,
       bookingType : Nothing,
       bapName : Nothing,
-      isValueAddNP : false
+      isValueAddNP : false,
+      enableOtpLessRide : Nothing
   }
 
 dummyLocationInfo :: LocationInfo
