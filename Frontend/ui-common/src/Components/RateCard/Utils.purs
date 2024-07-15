@@ -145,21 +145,21 @@ getFareBreakupList fareBreakup maxTip =
         Just limit -> fromMaybe 0.0 $ DN.fromString limit
         Nothing -> 0.0
     in
-      { lLimit: lowerlimit, uLimit: upperlimit, price: priceToBeDisplayed price <> " / km" }
+      { lLimit: lowerlimit, uLimit: upperlimit, price: priceToBeDisplayed price }
 
   constructExtraFareBreakup :: StepFare -> FareList
   constructExtraFareBreakup item =
     let
       lowerlimit = EHU.formatNumber ( item.lLimit / 1000.0) Nothing <> "km"
     in
-      { key: getString $ FARE_FOR $ lowerlimit <> item.uLimit, val: item.price }
+      { key: getString $ FARE_FOR $ lowerlimit <> item.uLimit, val: item.price <> " / km" }
 
   constructDriverAdditions :: StepFare -> FareList
   constructDriverAdditions item =
     let
       lowerlimit = EHU.formatNumber (item.lLimit / 1000.0) Nothing <> "km"
     in
-      { key: lowerlimit <> item.uLimit, val: item.price }
+      { key: lowerlimit <> item.uLimit, val: "Upto " <> item.price }
 
   driverAdditionsParsed =
     DA.sortBy compareByLimit

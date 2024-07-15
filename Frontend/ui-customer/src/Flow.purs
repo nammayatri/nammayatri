@@ -2614,7 +2614,7 @@ rideSearchFlow flowType = do
                 if (cityConfig.geoCodeConfig.strictBounds && response.distance >= cityConfig.geoCodeConfig.radius) then do
                   void $ pure $ updateLocalStage DistanceOutsideLimits
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = DistanceOutsideLimits, rideRequestFlow = true, isSearchLocation = SearchLocation } })
-                else if ((response.distance < 500 || isDistMoreThanThreshold) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ]) then do
+                else if ((response.distance < 500 || isDistMoreThanThreshold) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ] && flowType /= "REPEAT_RIDE_FLOW") then do
                   let
                     currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
                   void $ pure $ updateLocalStage currentStage

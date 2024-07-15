@@ -196,7 +196,7 @@ defaultRateCardView push config =
         , imageView
           [ width MATCH_PARENT
           , height $ V 2 
-          , visibility if config.showDetails then VISIBLE else GONE
+          , visibility $ boolToVisibility $ config.showDetails && (not $ DA.null config.otherOptions)
           , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_horizontal_dash"
           , margin $ Margin 20 12 20 0
           ]

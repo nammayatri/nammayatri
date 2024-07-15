@@ -981,7 +981,7 @@ rateCardConfig state =
       else
         []
     )
-      <> [ { key: "TOLL_OR_PARKING_CHARGES", val: getString TOLL_OR_PARKING_CHARGES } ]
+      <> if state.data.rateCard.serviceTierName /= Just "Auto" then [ { key: "TOLL_OR_PARKING_CHARGES", val: getString TOLL_OR_PARKING_CHARGES } ] else []
 
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
