@@ -222,6 +222,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 refundAmount = Nothing,
                 isBookingCancellable = Nothing,
                 customerCancelled = False,
+                payerVpa = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -326,7 +327,9 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
               let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
-              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing
+              let payerVpa = paymentStatusResp.payerVpa
+                  updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing
+              void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent payerVpa bookingId
               paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id
               let paymentObj =
                     Just $

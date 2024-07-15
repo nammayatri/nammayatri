@@ -318,6 +318,7 @@ library
       Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackFormExtra
       Storage.Queries.FRFSTicketBokingPayment
+      Storage.Queries.FRFSTicketBookingExtra
       Storage.Queries.Geometry
       Storage.Queries.IssueExtra
       Storage.Queries.LocationMappingExtra
@@ -636,6 +637,7 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup
       Storage.Queries.OrphanInstances.FeedbackForm
+      Storage.Queries.OrphanInstances.FRFSTicketBooking
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Merchant
