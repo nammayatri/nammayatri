@@ -119,7 +119,7 @@ buildHandlerEnv HandlerCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
-  hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
+  hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
@@ -128,7 +128,7 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("driver-offer-allocator:" <>)
+      else connectHedisCluster hedisClusterCfg ("dynamic-offer-driver-app:" <>)
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
