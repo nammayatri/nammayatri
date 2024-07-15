@@ -104,9 +104,7 @@ data AppCfg = AppCfg
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     kvConfigUpdateFrequency :: Int,
     metricsPort :: Int,
-    encTools :: EncTools,
-    batchSize :: Integer,
-    numberOfShards :: Integer
+    encTools :: EncTools
   }
   deriving (Generic, FromDhall)
 
@@ -141,9 +139,7 @@ data AppEnv = AppEnv
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     isShuttingDown :: Shutdown,
     httpClientOptions :: HttpClientOptions,
-    encTools :: EncTools,
-    batchSize :: Integer,
-    numberOfShards :: Integer
+    encTools :: EncTools
   }
   deriving (Generic)
 
@@ -157,7 +153,9 @@ data HealthCheckAppCfg = HealthCheckAppCfg
     fcmNofificationSendCount :: Int,
     smsCfg :: SmsConfig,
     driverInactiveSmsTemplate :: Text,
-    loggerConfig :: LoggerConfig
+    loggerConfig :: LoggerConfig,
+    batchSize :: Integer,
+    numberOfShards :: Integer
   }
   deriving (Generic, FromDhall)
 

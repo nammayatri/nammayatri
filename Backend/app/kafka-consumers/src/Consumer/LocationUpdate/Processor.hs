@@ -14,13 +14,10 @@
 
 module Consumer.LocationUpdate.Processor
   ( processLocationData,
-    createDriverIdTokenKey,
-    processLocationData',
   )
 where
 
 import qualified Consumer.AvailabilityTime.Types as T
-import qualified Consumer.LocationUpdate.Types as LT
 import Data.Time
 import Data.Time.Clock.POSIX
 import Environment
@@ -28,23 +25,16 @@ import EulerHS.Prelude hiding (toStrict)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Logging (logDebug)
 
-processLocationData :: T.LocationUpdates -> T.DriverId -> Flow ()
-processLocationData T.LocationUpdates {..} driverId = do
-  let newUpdatedAt = ts
-  logDebug $ "driver updated time " <> show newUpdatedAt <> driverId
-  let encodedVal = createDriverIdTokenKey driverId
+processLocationData :: [(T.LocationUpdates, T.DriverId)] -> Flow ()
+processLocationData locationData = do
+  logDebug $ "driver updated time locationData: " <> show locationData
   key <- incrementCounterAndReturnShard
-  Redis.zAdd key [(utcToDouble newUpdatedAt, encodedVal)]
-
-processLocationData' :: [(T.LocationUpdates, T.DriverId)] -> Flow ()
-processLocationData' locationData = do
-  key <- incrementCounterAndReturnShard
-  let encodedVals = map (\(T.LocationUpdates {..}, driverId) -> (utcToDouble ts, createDriverIdTokenKey driverId)) locationData
+  let encodedVals = map (\(T.LocationUpdates {..}, driverId) -> (utcToDouble ts, driverId)) locationData
   Redis.zAdd key encodedVals
 
 incrementCounterAndReturnShard :: Flow Text
 incrementCounterAndReturnShard = do
-  numberOfShards <- asks (.numberOfShards)
+  numberOfShards <- fromMaybe 10 . fmap (.numberOfShards) <$> asks (.healthCheckAppCfg)
   getKeyWithShard . (`mod` numberOfShards) <$> Redis.incr incrementCountKey
 
 incrementCountKey :: Text
@@ -55,9 +45,3 @@ getKeyWithShard shardNo = "driver-last-location-update-{shard-" <> show shardNo 
 
 utcToDouble :: UTCTime -> Double
 utcToDouble = realToFrac . utcTimeToPOSIXSeconds
-
-createDriverIdTokenKey :: T.DriverId -> LT.DriverIdTokenKey
-createDriverIdTokenKey driverId =
-  LT.DriverIdTokenKey
-    { driverId = driverId
-    }

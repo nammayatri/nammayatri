@@ -75,6 +75,8 @@ let healthCheckAppCfg =
       , loggerConfig =
               appCfg.loggerConfig
           //  { logFilePath = "/tmp/driver-tracking-healthcheck.log" }
+      , batchSize = +100
+      , numberOfShards = +10
       }
 
 let cacConfig =
@@ -112,6 +114,4 @@ in  { hedisCfg
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = Some healthCheckAppCfg
     , cacConfig
-    , batchSize = +100
-    , numberOfShards = +10
     }
