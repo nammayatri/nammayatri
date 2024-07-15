@@ -620,6 +620,8 @@ DriverBankAccount:
       kvFunction: updateOneWithKV
       params: [chargesEnabled, detailsSubmitted]
       where: driverId
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FleetOwnerDocumentVerificationConfig:
   tableName: fleet_owner_document_verification_config

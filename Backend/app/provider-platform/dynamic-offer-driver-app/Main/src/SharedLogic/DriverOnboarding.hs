@@ -22,7 +22,6 @@ import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverRCAssociation
-import qualified Domain.Types.DriverStats as DS
 import qualified Domain.Types.FleetRCAssociation as FRCA
 import qualified Domain.Types.Image as Domain
 import qualified Domain.Types.Merchant as DTM
@@ -250,10 +249,10 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> DS.DriverStats -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
-makeFullVehicleFromRC vehicleServiceTiers driverInfo driver driverStats merchantId_ certificateNumber rc merchantOpCityId now = do
+makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Vehicle
+makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverStats driverInfo vehicle vehicleServiceTiers
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo vehicle vehicleServiceTiers
   addSelectedServiceTiers availableServiceTiersForDriver vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle

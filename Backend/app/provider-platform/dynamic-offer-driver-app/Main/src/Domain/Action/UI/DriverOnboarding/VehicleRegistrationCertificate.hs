@@ -50,7 +50,6 @@ import qualified Domain.Types.Vehicle as Vehicle
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRegistrationCertificate as Domain
 import Environment
-import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
@@ -70,7 +69,6 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -328,9 +326,9 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant) $ do
               driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
               driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
-              driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+              -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
               vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
-              let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver driverStats person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now
+              let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now
               VQuery.upsert updatedVehicle
           whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
     Nothing -> pure ()
@@ -509,8 +507,8 @@ activateRC driverInfo merchantId merchantOpCityId now rc = do
           DIQuery.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi driverInfo.driverId
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
       person <- Person.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
-      driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person driverStats merchantId rcNumber rc merchantOpCityId now
+      -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
+      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now
       VQuery.create vehicle
 
 deactivateCurrentRC :: Id Person.Person -> Flow ()

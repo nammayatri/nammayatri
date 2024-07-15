@@ -15,13 +15,12 @@
 module SharedLogic.VehicleServiceTier where
 
 import qualified Domain.Types.DriverInformation as DI
-import qualified Domain.Types.DriverStats as DS
 import qualified Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Prelude
 
-selectVehicleTierForDriverWithUsageRestriction :: Bool -> DS.DriverStats -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> [(DVST.VehicleServiceTier, Bool)]
-selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverStats driverInfo vehicle cityVehicleServiceTiers =
+selectVehicleTierForDriverWithUsageRestriction :: Bool -> DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> [(DVST.VehicleServiceTier, Bool)]
+selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehicle cityVehicleServiceTiers =
   map mapUsageRestriction $ filter filterVehicleTier cityVehicleServiceTiers
   where
     mapUsageRestriction :: DVST.VehicleServiceTier -> (DVST.VehicleServiceTier, Bool)
@@ -31,7 +30,7 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverStats driv
           airConditionedCheck =
             (compareNumber vehicleServiceTier.airConditionedThreshold driverInfo.airConditionScore)
               && (isNothing vehicleServiceTier.airConditionedThreshold || vehicle.airConditioned /= Just False)
-          driverRatingCheck = compareNumber driverStats.rating vehicleServiceTier.driverRating
+          driverRatingCheck = compareNumber Nothing vehicleServiceTier.driverRating -- driverStats.rating (Fix this later, removed due to perf issues)
           vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
 
       let usageRestricted = not (luggageCapacityCheck && airConditionedCheck && driverRatingCheck && vehicleRatingCheck) -- && seatingCapacityCheck)

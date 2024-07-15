@@ -72,6 +72,7 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     isRental :: Bool,
     isInterCity :: Bool,
     isValueAddNP :: Bool,
+    onlinePayment :: Bool,
     currentSearchInfo :: DTS.CurrentSearchInfo,
     transporterConfig :: DTC.TransporterConfig
   }

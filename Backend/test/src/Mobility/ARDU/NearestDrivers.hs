@@ -45,12 +45,27 @@ spec = do
 hour :: Seconds
 hour = 3600
 
+createNearestDriverReq :: Meters -> UTCTime -> S.NearestDriversReq
+createNearestDriverReq nearestRadius now =
+  S.NearestDriversReq
+    { cityServiceTiers = [],
+      serviceTiers = [],
+      fromLocLatLong = pickupPoint,
+      merchantId = org1,
+      driverPositionInfoExpiry = Just hour,
+      isRental = False,
+      isInterCity = False,
+      isValueAddNP = True,
+      onlinePayment = False,
+      ..
+    }
+
 testOrder :: IO ()
 testOrder = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test ordering" $
-      S.getNearestDrivers [] [] pickupPoint 5000 org1 False (Just hour) False False True now <&> getIds
+      S.getNearestDrivers (createNearestDriverReq 5000 now) <&> getIds
   res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
@@ -58,7 +73,7 @@ testInRadius = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test radius filtration" $
-      S.getNearestDrivers [] [] pickupPoint 800 org1 False (Just hour) False False True now <&> getIds
+      S.getNearestDrivers (createNearestDriverReq 800 now) <&> getIds
   res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
@@ -66,7 +81,7 @@ testNotInRadius = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test outside radius filtration" $
-      S.getNearestDrivers [] [] pickupPoint 10 org1 False (Just hour) False False True now <&> getIds
+      S.getNearestDrivers (createNearestDriverReq 10 now) <&> getIds
   res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]

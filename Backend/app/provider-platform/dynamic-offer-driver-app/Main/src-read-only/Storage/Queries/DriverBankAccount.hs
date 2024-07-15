@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.DriverBankAccount where
+module Storage.Queries.DriverBankAccount (module Storage.Queries.DriverBankAccount, module ReExport) where
 
 import qualified Domain.Types.DriverBankAccount
 import qualified Domain.Types.Person
@@ -16,6 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Servant.Client.Core
 import qualified Storage.Beam.DriverBankAccount as Beam
+import Storage.Queries.DriverBankAccountExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverBankAccount.DriverBankAccount -> m ())
 create = createWithKV
@@ -58,36 +59,3 @@ updateByPrimaryKey (Domain.Types.DriverBankAccount.DriverBankAccount {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
-
-instance FromTType' Beam.DriverBankAccount Domain.Types.DriverBankAccount.DriverBankAccount where
-  fromTType' (Beam.DriverBankAccountT {..}) = do
-    currentAccountLink' <- Kernel.Prelude.mapM parseBaseUrl currentAccountLink
-    pure $
-      Just
-        Domain.Types.DriverBankAccount.DriverBankAccount
-          { accountId = accountId,
-            chargesEnabled = chargesEnabled,
-            currentAccountLink = currentAccountLink',
-            currentAccountLinkExpiry = currentAccountLinkExpiry,
-            detailsSubmitted = detailsSubmitted,
-            driverId = Kernel.Types.Id.Id driverId,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.DriverBankAccount Domain.Types.DriverBankAccount.DriverBankAccount where
-  toTType' (Domain.Types.DriverBankAccount.DriverBankAccount {..}) = do
-    Beam.DriverBankAccountT
-      { Beam.accountId = accountId,
-        Beam.chargesEnabled = chargesEnabled,
-        Beam.currentAccountLink = Kernel.Prelude.fmap showBaseUrl currentAccountLink,
-        Beam.currentAccountLinkExpiry = currentAccountLinkExpiry,
-        Beam.detailsSubmitted = detailsSubmitted,
-        Beam.driverId = Kernel.Types.Id.getId driverId,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

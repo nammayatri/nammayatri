@@ -451,6 +451,7 @@ library
       Storage.Queries.DailyStatsExtra
       Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
+      Storage.Queries.DriverBankAccountExtra
       Storage.Queries.DriverBlockReasonExtra
       Storage.Queries.DriverFeeExtra
       Storage.Queries.DriverGoHomeRequestExtra
@@ -911,6 +912,7 @@ library
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
+      Storage.Queries.OrphanInstances.DriverBankAccount
       Storage.Queries.OrphanInstances.DriverBlockReason
       Storage.Queries.OrphanInstances.DriverFee
       Storage.Queries.OrphanInstances.DriverGoHomeRequest

@@ -899,7 +899,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
+  -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
 
   -- merchant access checking
   let merchantId = driver.merchantId
@@ -939,7 +939,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
       fork "Parallely verifying RC for add Vehicle: " $ runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
       driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver driverStats merchant.id req.registrationNo newRC merchantOpCityId now
+      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
       QVehicle.create vehicle
       when (vehicle.variant == DVeh.SUV) $
         QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
@@ -2225,9 +2225,9 @@ updateVehicleVariantAndServiceTier :: DVeh.Variant -> DVeh.Vehicle -> Flow ()
 updateVehicleVariantAndServiceTier variant vehicle = do
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   driverInfo' <- QDriverInfo.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-  driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+  -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverStats driverInfo' vehicle vehicleServiceTiers
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo' vehicle vehicleServiceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver vehicle.driverId
 
 updateDriverTag :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverTagReq -> Flow APISuccess

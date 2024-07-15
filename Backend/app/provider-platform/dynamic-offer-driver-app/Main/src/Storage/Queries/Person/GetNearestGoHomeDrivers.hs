@@ -7,6 +7,7 @@ where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import qualified Data.Text as T
 import Domain.Types.Common
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
@@ -26,9 +27,11 @@ import Kernel.Utils.Common hiding (Value)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal as Int
+-- import qualified Storage.Queries.DriverStats as QDriverStats
+
+import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
 
@@ -42,8 +45,9 @@ data NearestGoHomeDriversReq = NearestGoHomeDriversReq
     driverPositionInfoExpiry :: Maybe Seconds,
     isRental :: Bool,
     isInterCity :: Bool,
-    now :: UTCTime,
-    isValueAddNP :: Bool
+    onlinePayment :: Bool,
+    isValueAddNP :: Bool,
+    now :: UTCTime
   }
 
 data NearestGoHomeDriversResult = NearestGoHomeDriversResult
@@ -81,31 +85,36 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverInfos <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity isValueAddNP
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
-  driverStats <- QDriverStats.findAllByDriverIds drivers
+  -- driverStats <- QDriverStats.findAllByDriverIds drivers
+  driverBankAccounts <-
+    if onlinePayment
+      then QDBA.getDrivers (driverLocs <&> (.driverId))
+      else return []
 
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
-  let res = linkArrayList driverLocs driverInfos vehicle drivers driverStats
+  let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts
   logDebug $ "GetNearestGoHomeDrivers Result:- " <> show (length res)
   return res
   where
-    linkArrayList driverLocations driverInformations vehicles persons driverStats =
+    linkArrayList driverLocations driverInformations vehicles persons driverBankAccounts =
       let personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
           vehicleHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> vehicles
-          driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
-       in concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverStatsHashMap) driverLocations
+          driverBankAccountHashMap = HashMap.fromList $ (\dba -> (dba.driverId, dba.accountId)) <$> driverBankAccounts
+       in -- driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
+          concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap) driverLocations
 
-    buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverStatsHashMap location = do
+    buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap location = do
       let driverId' = location.driverId
       person <- HashMap.lookup driverId' personHashMap
       vehicle <- HashMap.lookup driverId' vehicleHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
-      driverStats <- HashMap.lookup driverId' driverStatsHashMap
-
+      _ <- if onlinePayment then HashMap.lookup driverId' driverBankAccountHashMap else Just T.empty -- is there any better way to do this?
+      -- driverStats <- HashMap.lookup driverId' driverStatsHashMap
       let dist = (realToFrac $ distanceBetweenInMeters fromLocation $ LatLong {lat = location.lat, lon = location.lon}) :: Double
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       let mbDefaultServiceTierForDriver = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
-      let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False driverStats info vehicle cityServiceTiers
+      let availableTiersWithUsageRestriction = selectVehicleTierForDriverWithUsageRestriction False info vehicle cityServiceTiers
       let ifUsageRestricted = any (\(_, usageRestricted) -> usageRestricted) availableTiersWithUsageRestriction
       let selectedDriverServiceTiers =
             if ifUsageRestricted

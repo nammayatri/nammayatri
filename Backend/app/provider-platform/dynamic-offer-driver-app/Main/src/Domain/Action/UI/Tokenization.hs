@@ -1,11 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Action.UI.Tokenization where
 
 import qualified API.Types.UI.Tokenization
-import Data.Char (toUpper)
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time.Format
 import qualified Data.Time.LocalTime as LT
@@ -20,13 +17,11 @@ import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Tokenize.Interface.Types as TokenizeIntTypes
 import qualified Kernel.Prelude
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Common (fromMaybeM, throwError)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMSOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.DriverGullakAssociation as QDGA
-import qualified Storage.Queries.DriverInformationExtra as QDI
+import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.Person as SQP
 import Tools.Error
 
@@ -88,7 +83,7 @@ getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec sv
 
     makeGullakOnboardingTokenizeReq personId = do
       person <- SQP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      dInfo <- QDI.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+      dl <- QDL.findByDriverId personId >>= fromMaybeM (DriverDLNotFound personId.getId)
       merchantOperatingCity <- CQMSOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
       let cityLatLon = merchantOperatingCity.location
       return $
@@ -96,7 +91,7 @@ getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec sv
           { merchantUserId = personId.getId,
             mobile = fromMaybe "" person.unencryptedMobileNumber,
             email = person.email,
-            dob = T.pack . formatTime defaultTimeLocale "%d/%m/%Y" <$> (dInfo . driverDob),
+            dob = T.pack . formatTime defaultTimeLocale "%d/%m/%Y" <$> (dl.driverDob),
             pan = Nothing,
             name = Just $ T.intercalate "" (catMaybes [Just person.firstName, person.middleName, person.lastName]),
             isKycVerified = Nothing,
