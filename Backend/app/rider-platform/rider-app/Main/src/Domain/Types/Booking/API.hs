@@ -115,8 +115,9 @@ instance FromJSON BookingAPIDetails where
 instance ToSchema BookingAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
-newtype RentalBookingAPIDetails = RentalBookingAPIDetails
-  { stopLocation :: Maybe LocationAPIEntity
+data RentalBookingAPIDetails = RentalBookingAPIDetails
+  { stopLocation :: Maybe LocationAPIEntity,
+    otpCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -130,6 +131,7 @@ data OneWayBookingAPIDetails = OneWayBookingAPIDetails
 data InterCityBookingAPIDetails = InterCityBookingAPIDetails
   { toLocation :: LocationAPIEntity,
     estimatedDistance :: HighPrecMeters,
+    otpCode :: Maybe Text,
     estimatedDistanceWithUnit :: Distance
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
