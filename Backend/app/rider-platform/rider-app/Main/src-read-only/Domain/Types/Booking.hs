@@ -90,11 +90,12 @@ data BookingDetails
   | AmbulanceDetails Domain.Types.Booking.AmbulanceBookingDetails
   deriving (Show)
 
-data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Show)
+data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
+  deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Show)
 
 data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Show)
 
-data RentalBookingDetails = RentalBookingDetails {stopLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location} deriving (Show)
+data RentalBookingDetails = RentalBookingDetails {otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, stopLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location} deriving (Show)
