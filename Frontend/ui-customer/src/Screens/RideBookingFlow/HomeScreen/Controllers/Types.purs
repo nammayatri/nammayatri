@@ -324,6 +324,7 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | TollChargeIncludedPopUpAction PopUpModal.Action
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

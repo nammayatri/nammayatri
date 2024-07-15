@@ -51,7 +51,7 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), FareBreakupAPIEntity(..))
 import Services.Backend as Remote
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -215,6 +215,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , driversPreviousRideDropLocLon : resp.driversPreviousRideDropLocLon
       , spLocationName : resp.specialLocationName
       , addressWard : bookingLocationAPIEntity.ward
+      , hasToll : DA.any (\(FareBreakupAPIEntity fare) ->  fare.description == "TOLL_CHARGES") resp.estimatedFareBreakup
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -540,9 +541,7 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       fareBreakup = fromMaybe [] estimate.estimateFareBreakup
       breakupConfig = getFareBreakupList fareBreakup maxTip
       additionalFare = maybe 20 calculateFareRangeDifference (estimate.totalFareRange)
-      extractFare f = case estimate.totalFareRange of
-                        Just (FareRange fareRange) -> Just (f fareRange)
-                        _ -> Nothing
+      extractFare f =  estimate.totalFareRange >>= \(FareRange fareRange) -> Just (f fareRange)
       calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
       availableServices =
         if estimate.vehicleVariant == "BOOK_ANY" then
@@ -590,7 +589,16 @@ getEstimates (EstimateAPIEntity estimate) estimates index isFareRange count acti
       , availableServices = availableServices
       , selectedServices = selectedServices
       , validTill = estimate.validTill
+      , hasTollCharges = if estimate.vehicleVariant == "BOOK_ANY" then checkSelectedServicesHasFareKey estimates selectedServices "TOLL_CHARGES" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "TOLL_CHARGES"
+      , hasParkingCharges = if estimate.vehicleVariant == "BOOK_ANY" then checkSelectedServicesHasFareKey estimates selectedServices "PARKING_CHARGE" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "PARKING_CHARGE"
       }
+    
+    where 
+      checkSelectedServicesHasFareKey :: Array EstimateAPIEntity -> Array String -> String -> Boolean
+      checkSelectedServicesHasFareKey estimates selectedServices key = DA.any (\service -> DA.any (\(EstimateAPIEntity estimateObj) ->  (Just service) == estimateObj.serviceTierName &&  checkFareBreakupHasKey (EstimateAPIEntity estimateObj) key) estimates) selectedServices
+
+      checkFareBreakupHasKey :: EstimateAPIEntity -> String -> Boolean
+      checkFareBreakupHasKey (EstimateAPIEntity estimate) key = maybe false ( DA.any (\ (CT.EstimateFares fare) -> fare.title == key)) estimate.estimateFareBreakup 
 
 mapServiceTierName :: String -> Maybe Boolean -> Maybe String -> Maybe String
 mapServiceTierName vehicleVariant isValueAddNP serviceTierName = 

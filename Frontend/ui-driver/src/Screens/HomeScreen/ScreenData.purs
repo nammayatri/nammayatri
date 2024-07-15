@@ -116,8 +116,6 @@ initData =
           , disability: Nothing
           , payerVpa: ""
           , specialZonePickup: Nothing
-          , actualTollCharge : 0.0
-          , estimatedTollCharge : 0.0
           , capacity : Nothing
           , serviceTier : ""
           , tollAmbigous : false
@@ -151,6 +149,8 @@ initData =
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
+      , parking : initialParkingData
+      , toll : initialTollState
     }
   , props:
       { isFreeRide: false
@@ -228,7 +228,6 @@ initData =
       , showAcWorkingPopup: Nothing
       , acExplanationPopup : false
       , isOdometerReadingsRequired: false
-      , toll : initialTollState
       , showInterOperablePopUp : false
       , referralEarned : false
       }
@@ -238,6 +237,9 @@ initialTollState :: TollState
 initialTollState = { 
   showTollChargePopup: true
 , showTollChargeAmbigousPopup: true
+, finalCharge : 0.0
+, tollAmbigous : false
+, estimatedCharge : 0.0
 }
 
 dummyDriverRideStats :: DriverProfileStatsResp
@@ -296,9 +298,15 @@ dummyRideData = {
       , endOdometerReading: Nothing
       , serviceTier : ""
       , capacity : Nothing
-      , hasToll: false
-      , estimatedTollCharge : Nothing
+      , estimatedTollCharges : 0.0
       , acRide : Nothing
       , bapName : ""
       , bookingFromOtherPlatform : false
+      , parkingCharge : 0.0
       }
+
+initialParkingData :: ParkingData
+initialParkingData = {
+  estimatedCharge : Nothing
+, finalCharge : Nothing
+}

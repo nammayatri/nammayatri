@@ -254,7 +254,7 @@ getDisabilityType disabilityString = case disabilityString of
                                       _ -> Nothing
 
 rideListResponseTransformer :: Array RidesInfo -> Array IndividualRideCardState
-rideListResponseTransformer list = 
+rideListResponseTransformer = 
     map (\(RidesInfo ride) -> 
       let specialLocationConfig = getRideLabelData ride.specialLocationTag
       in
@@ -295,8 +295,9 @@ rideListResponseTransformer list =
         tripStartTime : ride.tripStartTime,
         tripEndTime : ride.tripEndTime,
         acRide : ride.isVehicleAirConditioned,
-        vehicleServiceTier : ride.vehicleServiceTier
-      }) list
+        vehicleServiceTier : ride.vehicleServiceTier,
+        parkingCharge : fromMaybe 0.0 ride.parkingCharge
+      }) 
 
 
 prestoListFilter :: String -> Array ItemState -> Array ItemState
@@ -341,4 +342,5 @@ dummyCard =  {
     tripEndTime : Nothing,
     acRide : Nothing,
     vehicleServiceTier : ""
+  , parkingCharge : 0.0
   }

@@ -16,7 +16,7 @@ public class SheetModel {
     private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate, notificationSource;
     private String requestId;
     private int startTime, specialZoneExtraTip;
-    private double updatedAmount;
+    private double updatedAmount, parkingCharge;
     private double offeredPrice;
     private int customerExtraFee;
     private final int airConditioned;
@@ -76,7 +76,8 @@ public class SheetModel {
                       String rideStartDate,
                       String notificationSource,
                       Boolean isThirdPartyBooking,
-                      int offeredPrice
+                      int offeredPrice,
+                      double parkingCharge
                       ){
 
         this.srcLat = srcLat;
@@ -127,6 +128,7 @@ public class SheetModel {
         this.rideStartDate = rideStartDate;
         this.notificationSource = notificationSource;
         this.isThirdPartyBooking = isThirdPartyBooking;
+        this.parkingCharge = parkingCharge;
     }
 
     public String getVehicleServiceTier() {
@@ -358,5 +360,9 @@ public class SheetModel {
 
     public double getDestLng() {
         return destLng;
+    }
+
+    public double getParkingCharges() {
+        return parkingCharge;
     }
 }

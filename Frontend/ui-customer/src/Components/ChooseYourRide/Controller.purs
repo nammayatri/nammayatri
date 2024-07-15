@@ -28,7 +28,6 @@ type Config
     , rideTime :: String
     , activeIndex :: Int
     , quoteList :: Array ChooseVehicleController.Config
-    , showTollExtraCharges :: Boolean
     , nearByDrivers :: Maybe Int
     , showPreferences :: Boolean
     , bookingPreferenceEnabled :: Boolean
@@ -60,7 +59,6 @@ config =
   , rideTime: ""
   , activeIndex: 0
   , quoteList: []
-  , showTollExtraCharges : (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText
   , nearByDrivers : Nothing
   , showPreferences : false
   , bookingPreferenceEnabled : false

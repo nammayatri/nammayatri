@@ -24,6 +24,7 @@ import Screens.Types as ST
 import Helpers.Utils as HU
 import Prelude (negate, ($))
 import Storage (KeyStore(..), getValueToLocalStore)
+import Data.Maybe 
 
 data Action = StartRide 
             | EndRide 
@@ -69,7 +70,7 @@ type Config = {
   tripDuration :: Mb.Maybe String,
   durationTravelled :: String,
   rideStartRemainingTime :: Int,
-  hasToll :: Boolean,
+  estimatedTollCharges :: Number,
   driverVehicle :: String,
   cityConfig :: CTC.CityConfig,
   capacity :: Mb.Maybe Int,
@@ -80,7 +81,8 @@ type Config = {
   bapName :: String,
   isOdometerReadingsRequired :: Boolean,
   distance ::  Int
-  }
+, parkingCharge :: Number
+}
 
 type AddressConfig = {
   titleText :: String,
@@ -125,7 +127,7 @@ config = {
   durationTravelled : "0",
   rideStartRemainingTime : -1,
   rideStartTime : Mb.Nothing,
-  hasToll : false,
+  estimatedTollCharges : 0.0,
   capacity : Mb.Nothing,
   serviceTierAndAC : "",
   acRide : Mb.Nothing,
@@ -134,4 +136,5 @@ config = {
   bapName : "",
   isOdometerReadingsRequired : false,
   distance : 0
+, parkingCharge : 0.0
 }

@@ -82,7 +82,7 @@ type Config = {
   rentalRideTextConfig :: RentalRideTextConfig,
   capacity :: Maybe Int,
   serviceTierAndAC :: String,
-  toll :: Toll,
+  additionalCharges :: Array AdditionalCharges,
   rentalRowDetails :: RentalRowConfig,
   rentalBookingData :: RentalBookingConfig,
   showRentalRideDetails :: Boolean
@@ -230,14 +230,7 @@ config = {
   },
   needHelpText : "",
   safetyTitle : "",
-  toll : {
-    actualAmount : 0.0,
-    text : "",
-    visibility : GONE,
-    textColor : Color.black600,
-    imageVisibility : GONE,
-    image : ""
-  },
+  additionalCharges : [],
   rentalRowDetails : dummyRentalRowConfig,
   rentalBookingData : dummyRentalBookingConfig,
   showRentalRideDetails : false
@@ -387,12 +380,10 @@ type RentalRideConfig = {
   rideEndedAt :: String
 }
 
-type Toll = {
-  actualAmount :: Number
-, text :: String
+type AdditionalCharges = {
+  text :: String
 , visibility :: Visibility
 , textColor :: Color
-, imageVisibility :: Visibility
 , image :: String
 }
 

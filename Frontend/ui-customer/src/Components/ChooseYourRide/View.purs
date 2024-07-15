@@ -389,12 +389,13 @@ multipleOfferInfoView push menuImage autoAssign =
 
 chooseYourRideView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 chooseYourRideView push config =
-  let estimateConfig = (getAppConfig appConfig).estimateAndQuoteConfig
-      anims = if EHC.os == "IOS"
-              then [fadeIn true]
-              else [translateYAnimFromTop $ Animation.chooseRideAnimConfig]
-      tagConfig = HS.specialZoneTagConfig config.zoneType
-      showTag = any (_ == config.zoneType) [SPECIAL_PICKUP, METRO]
+  let 
+    estimateConfig = (getAppConfig appConfig).estimateAndQuoteConfig
+    anims = if EHC.os == "IOS" then [fadeIn true] else [translateYAnimFromTop $ Animation.chooseRideAnimConfig]
+    tagConfig = HS.specialZoneTagConfig config.zoneType
+    showTag = any (_ == config.zoneType) [SPECIAL_PICKUP, METRO]
+    selectedVehicle = fromMaybe ChooseVehicle.config $ config.quoteList !! config.activeIndex 
+      
   in
   PrestoAnim.animationSet anims $
   linearLayout
@@ -501,15 +502,7 @@ chooseYourRideView push config =
                 , accessibility ENABLE
                 ] <> FontStyle.h1 TypoGraphy)
                 , estimatedTimeAndDistanceView push config
-                , textView $
-                  [ textFromHtml $ getString TOLL_CHARGES_WILL_BE_EXTRA
-                  , color Color.black650
-                  , gravity CENTER_HORIZONTAL
-                  , height WRAP_CONTENT
-                  , gravity CENTER_HORIZONTAL
-                  , width MATCH_PARENT
-                  , visibility $ boolToVisibility $ config.showTollExtraCharges && maybe false (\item -> not $ item.serviceTierName == Just "Auto" || (item.vehicleVariant == "BOOK_ANY"  && all (_ ==  "Auto") item.selectedServices )) (config.quoteList !! config.activeIndex)
-                  ] <> FontStyle.paragraphText TypoGraphy
+                , extraChargesView
                 , linearLayout
                   [ height $ V 1
                   , width MATCH_PARENT
@@ -533,6 +526,46 @@ chooseYourRideView push config =
           ]  
        ]
   ]
+  where 
+    selectedVehicle = fromMaybe ChooseVehicle.config $ config.quoteList !! config.activeIndex 
+
+    extraChargesView = 
+      linearLayout [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER_HORIZONTAL
+      , margin $ MarginTop 4
+      ][
+        linearLayout [
+          width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , padding $ Padding 8 8 8 8
+        , background Color.grey700
+        , orientation HORIZONTAL
+        , visibility $ boolToVisibility $ selectedVehicle.hasTollCharges || selectedVehicle.hasParkingCharges
+        , cornerRadius 16.0
+        , gravity CENTER_VERTICAL
+        ][
+          imageView[
+            height $ V 16
+          , width $ V 16
+          , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET if selectedVehicle.hasTollCharges then "ny_ic_black_toll" else "ny_ic_parking_logo_grey"
+          , margin $ MarginRight 4
+          ]
+        , textView $ [ 
+            textFromHtml case selectedVehicle.hasTollCharges, selectedVehicle.hasParkingCharges of
+                  true, true -> getString APP_TOLL_PARKING_CHARGES
+                  true, false -> getString APP_TOLL_CHARGES
+                  false, true -> getString APP_PARKING_CHARGES
+                  _, _ -> ""
+            , color Color.black800
+            , gravity CENTER_HORIZONTAL
+            , height WRAP_CONTENT
+            , gravity CENTER_HORIZONTAL
+            , width MATCH_PARENT
+            ] <> FontStyle.body1 TypoGraphy
+        ]
+      ]
 
 estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 estimatedTimeAndDistanceView push config =

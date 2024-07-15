@@ -2565,15 +2565,13 @@ homeScreenFlow = do
                     tripEndTime = response.tripEndTime,
                     acRide = response.isVehicleAirConditioned,
                     vehicleServiceTier = response.vehicleServiceTier
+                  , parkingCharge = fromMaybe 0.0 response.parkingCharge
                   }})
                 let payerVpa = fromMaybe "" response.payerVpa
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
                   { data {
                       activeRide {endOdometerReading = (\(API.OdometerReading {value}) -> value) <$> response.endOdometerReading}, 
                       endRideData { 
-                        actualTollCharge = fromMaybe 0.0 response.tollCharges, 
-                        estimatedTollCharge = fromMaybe 0.0 response.estimatedTollCharges, 
-                        tollAmbigous = response.tollConfidence == Just CTA.Unsure,
                         actualRideDuration = response.actualDuration,
                         actualRideDistance = if state.data.activeRide.tripType == ST.Rental then round <$> response.actualRideDistance else response.chargeableDistance, 
                         finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, 
@@ -2587,7 +2585,15 @@ homeScreenFlow = do
                         specialZonePickup = if isSpecialPickUpZone then Just true else Nothing,
                         capacity = response.vehicleCapacity,
                         serviceTier = response.vehicleServiceTierName
-                        }
+                      }
+                    , parking {
+                        estimatedCharge = response.parkingCharge
+                      }
+                    , toll {
+                        tollAmbigous = response.tollConfidence == Just CTA.Unsure
+                      , finalCharge = fromMaybe 0.0 response.tollCharges
+                      , estimatedCharge = fromMaybe 0.0 response.estimatedTollCharges
+                      }
                     },
                     props {
                       isFreeRide = fromMaybe false response.isFreeRide
@@ -2704,8 +2710,8 @@ homeScreenFlow = do
             void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
             liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_i_have_arrived_clicked" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
                                                                                                     {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle},
-                                                                                                    {key : "Estimated Toll Charge", value : unsafeToForeign (fromMaybe 0.0 state.data.activeRide.estimatedTollCharge)},
-                                                                                                    {key : "Has Toll", value : unsafeToForeign state.data.activeRide.hasToll}]
+                                                                                                    {key : "Estimated Toll Charge", value : unsafeToForeign (state.data.toll.estimatedCharge)},
+                                                                                                    {key : "Has Toll", value : unsafeToForeign $ state.data.activeRide.estimatedTollCharges > 0.0}]
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
           Left _ -> pure unit
       homeScreenFlow
@@ -4095,34 +4101,37 @@ driverEarningsFlow = do
     GOTO_TRIP_DETAILS  selectedCard -> do
       sourceMod <- translateString selectedCard.source 400
       destinationMod <- if selectedCard.tripType == ST.Rental then pure "" else translateString selectedCard.destination 400
-      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
-      tripId = selectedCard.id,
-      date = selectedCard.date,
-      time = selectedCard.time,
-      source = sourceMod,
-      destination = destinationMod,
-      totalAmount = selectedCard.total_amount,
-      distance = selectedCard.rideDistance,
-      status = selectedCard.status,
-      vehicleType = selectedCard.vehicleType,
-      rider = selectedCard.riderName,
-      customerExtraFee = selectedCard.customerExtraFee,
-      purpleTagVisibility = selectedCard.purpleTagVisibility,
-      gotoTagVisibility = selectedCard.gotoTagVisibility,
-      spLocTagVisibility = selectedCard.spLocTagVisibility,
-      specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
-      specialZoneImage = selectedCard.specialZoneImage,
-      specialZoneText = selectedCard.specialZoneText,
-      specialZonePickup = selectedCard.specialZonePickup,
-      tollCharge = selectedCard.tollCharge,
-      goBackTo = ST.Earning,
-      rideType = selectedCard.rideType,
-      tripStartTime = selectedCard.tripStartTime,
-      tripEndTime = selectedCard.tripEndTime,
-      vehicleModel = selectedCard.vehicleModel,
-      acRide = selectedCard.acRide,
-      vehicleServiceTier = selectedCard.vehicleServiceTier
-      }})
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {
+        data {
+          tripId = selectedCard.id,
+          date = selectedCard.date,
+          time = selectedCard.time,
+          source = sourceMod,
+          destination = destinationMod,
+          totalAmount = selectedCard.total_amount,
+          distance = selectedCard.rideDistance,
+          status = selectedCard.status,
+          vehicleType = selectedCard.vehicleType,
+          rider = selectedCard.riderName,
+          customerExtraFee = selectedCard.customerExtraFee,
+          purpleTagVisibility = selectedCard.purpleTagVisibility,
+          gotoTagVisibility = selectedCard.gotoTagVisibility,
+          spLocTagVisibility = selectedCard.spLocTagVisibility,
+          specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
+          specialZoneImage = selectedCard.specialZoneImage,
+          specialZoneText = selectedCard.specialZoneText,
+          specialZonePickup = selectedCard.specialZonePickup,
+          tollCharge = selectedCard.tollCharge,
+          goBackTo = ST.Earning,
+          rideType = selectedCard.rideType,
+          tripStartTime = selectedCard.tripStartTime,
+          tripEndTime = selectedCard.tripEndTime,
+          vehicleModel = selectedCard.vehicleModel,
+          acRide = selectedCard.acRide,
+          vehicleServiceTier = selectedCard.vehicleServiceTier
+        , parkingCharge = selectedCard.parkingCharge
+        }
+      })
       tripDetailsScreenFlow
     LOAD_MORE_HISTORY state -> do
       modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{offsetValue = state.props.offsetValue + 10}})

@@ -93,6 +93,7 @@ import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Data.Int
 
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -967,7 +968,7 @@ rateCardConfig state =
           {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
           {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
           {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
-          {key : "PARKING_CHARGES", val : (getString PARKING_CHARGES)},
+          {key : "PARKING_CHARGE", val : (getString PARKING_CHARGE)},
           {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
           <> if state.data.rateCard.serviceTierName == Just "Auto" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else [] 
         }
@@ -1158,6 +1159,7 @@ driverInfoTransformer state =
     , fareProductType : cardState.fareProductType
     , spLocationName : cardState.spLocationName
     , addressWard : cardState.addressWard
+    , hasToll : cardState.hasToll
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1322,6 +1324,7 @@ quoteListModelViewState state =
     , showAnim: not $ state.data.iopState.showMultiProvider && isLocalStageOn FindingQuotes
     , animEndTime: state.data.currentCityConfig.iopConfig.autoSelectTime
     , isRentalSearch: isLocalStageOn ConfirmingQuotes
+    , hasToll : state.data.selectedEstimatesObject.hasTollCharges
     }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig
@@ -1510,7 +1513,6 @@ chooseYourRideConfig state =
       , rideDuration = state.data.rideDuration
       , activeIndex = state.data.selectedEstimatesObject.index
       , quoteList = if (DA.any (_ == state.data.fareProductType) [ FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY ]) then state.data.quoteList else state.data.specialZoneQuoteList
-      , showTollExtraCharges = state.props.hasToll
       , nearByDrivers = state.data.nearByDrivers
       , showPreferences = state.data.showPreferences
       , bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore
@@ -1732,19 +1734,22 @@ chooseVehicleConfig state = let
     , showEditButton = true
     , editBtnText = getString CHANGE
     , validTill = selectedEstimates.validTill
+    , hasTollCharges = selectedEstimates.hasTollCharges
+    , hasParkingCharges = selectedEstimates.hasParkingCharges
     }
   in chooseVehicleConfig'
 
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 rideCompletedCardConfig state = 
-  let topCardConfig = state.data.config.rideCompletedCardConfig.topCard
-      topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, topCardConfig.gradient] else [topCardConfig.background, topCardConfig.background]
-      waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
-      appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-      isRecentRide = EHC.getExpiryTime (fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
-      actualPrice =  maybe dummyPrice (\(API.FareBreakupAPIEntity obj) ->  obj.amountWithCurrency) $ DA.find (\entity  -> entity ^._description == "TOLL_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
-      actualTollCharge =  actualPrice.amount
-      serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
+  let 
+    rideBookingRes = state.data.ratingViewState.rideBookingRes
+    topCardConfig = state.data.config.rideCompletedCardConfig.topCard
+    topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, topCardConfig.gradient] else [topCardConfig.background, topCardConfig.background]
+    waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (rideBookingRes ^._fareBreakup)
+    appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+    isRecentRide = EHC.getExpiryTime (fromMaybe "" (rideBookingRes ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
+      
+      
 
   in RideCompletedCard.config {
         isDriver = false,
@@ -1780,13 +1785,6 @@ rideCompletedCardConfig state =
         safetyTitle = getString SAFETY_CENTER,
         needHelpText = getString NEED_HELP,
         serviceTierAndAC = serviceTier
-      , toll {
-          actualAmount = actualTollCharge
-        , text = if state.data.rideCompletedData.toll.confidence == (Just Unsure) then (getString TOLL_CHARGES_MAYBE_APPLICABLE) else if actualTollCharge > 0.0 then getString TOLL_CHARGES_INCLUDED  else getString TOLL_ROAD_CHANGED -- Handle after design finalized 
-        , visibility = boolToVisibility $ (actualTollCharge > 0.0 || (getValueToLocalStore HAS_TOLL_CHARGES == "true")) && serviceTier /= "Auto"
-        , image = fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
-        , imageVisibility = boolToVisibility $ actualTollCharge > 0.0
-        }
       , showRentalRideDetails = state.data.fareProductType == FPT.RENTAL
       , rentalBookingData
         { baseDuration = state.data.driverInfoCardState.rentalData.baseDuration
@@ -1812,6 +1810,7 @@ rideCompletedCardConfig state =
         , fareUpdateTitle = getString FARE_UPDATE
         , surcharges = getString SURCHARGES
         }
+      , additionalCharges = additionalCharges
       }
   where
     getCustomerIssueConfig = {
@@ -1821,6 +1820,31 @@ rideCompletedCardConfig state =
     , customerIssueCards : issueReportBannerConfigs state
     , showIssueBanners : state.data.rideCompletedData.issueReportData.showIssueBanners
     }
+
+    additionalCharges = 
+      let 
+        (API.RideBookingRes rideBookingRes) = state.data.ratingViewState.rideBookingRes
+        finalFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (rideBookingRes.fareBreakup)
+        estimateFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (rideBookingRes.estimatedFareBreakup)
+
+        parkingCharges = DA.find (\entity  -> entity ^._description == "PARKING_CHARGE") (rideBookingRes.fareBreakup)
+      in 
+      [
+        {
+          text :  getString if state.data.toll.confidence == (Just Unsure) then  TOLL_ROAD_CHANGED else if finalFareHasToll then  TOLL_CHARGES_INCLUDED else TOLL_ROAD_CHANGED 
+        , visibility :  boolToVisibility $ finalFareHasToll || estimateFareHasToll
+        , image :  fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
+        , textColor : Color.black600
+        },
+        {
+          text : maybe "" (\parking ->  getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <>  (show $ ceil $ parking ^. _amount)) parkingCharges
+        , visibility : boolToVisibility $ isJust parkingCharges 
+        , image : fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_grey"
+        , textColor : Color.black600
+        }
+      ]
+    
+    serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
 
 getFareUpdatedStr :: Int -> Boolean -> String
 getFareUpdatedStr diffInDist waitingChargeApplied = do

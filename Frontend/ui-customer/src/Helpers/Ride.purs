@@ -86,7 +86,12 @@ checkRideStatus rideAssigned = do
                       , fareProductType : fareProductType
                       , nearestRideScheduledAtUTC : ""
                       , vehicleVariant : fromMaybe "" resp.vehicleServiceTierType
-                      }))},
+                      }))
+                    , toll {
+                        estimatedCharges = getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES"
+                      , showIncludedPopUp = rideStatus == RideAccepted && (getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES" > 0.0)
+                      }
+                      },
                   props
                     { currentStage = rideStatus
                     , rideRequestFlow = true
@@ -180,7 +185,7 @@ checkRideStatus rideAssigned = do
                   isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
                   hasAccessibilityIssue' =  resp.hasDisability == Just true 
                   hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isBlindPerson
-                  hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isBlindPerson
+                  hasTollIssue' =  (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.estimatedFareBreakup) && not isBlindPerson
 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
@@ -246,13 +251,14 @@ checkRideStatus rideAssigned = do
                               , hasTollIssue = hasTollIssue'
                               , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
                               }
-                            , toll{
-                                confidence = ride.tollConfidence
-                              , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
-                              }
                             }
+                          , toll {
+                            confidence = ride.tollConfidence
+                          , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
                           }
-                        })
+                        }
+                      }
+                    )
                 updateLocalStage RideCompleted
               when (length listResp.list == 0 && not state.props.isSharedLocationFlow) $ do 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})

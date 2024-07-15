@@ -11,7 +11,6 @@ import Screens.HomeScreen.Controllers.Types
 import Language.Strings
 import Language.Types
 import Data.Maybe
-import Screens.HomeScreen.Controllers.Types
 import Screens.RideBookingFlow.HomeScreen.BannerConfig
 import Data.Array
 import Data.Function.Uncurried

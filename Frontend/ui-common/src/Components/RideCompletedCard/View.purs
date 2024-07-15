@@ -5,7 +5,7 @@ import Components.RideCompletedCard.Controller
 import PrestoDOM 
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
-import Data.Functor (map)
+import Data.Functor 
 import PrestoDOM.Animation as PrestoAnim
 import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
@@ -87,13 +87,13 @@ topGradientView config push =
       radii = if config.isDriver then 16.0 else 0.0
     
 
-tollTextVew :: forall w. Toll -> PrestoDOM (Effect Unit) w
-tollTextVew config = 
+additionalChargesView :: forall w. AdditionalCharges -> PrestoDOM (Effect Unit) w
+additionalChargesView config = 
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , margin $ MarginHorizontal 16 16
+  , margin $ MarginBottom 8
   , visibility config.visibility
   ][
     imageView[
@@ -248,7 +248,12 @@ priceAndDistanceUpdateView config push =
               , visibility if config.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
-        , tollTextVew config.toll
+        , linearLayout [
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          , orientation VERTICAL
+          ] $ additionalChargesView <$> config.additionalCharges
         , pillView config push
       ]
 
@@ -270,7 +275,6 @@ pillView config push =
         [ width $ V 20
         , height $ V 20
         , imageWithFallback config.topCard.infoPill.image 
-        , visibility config.topCard.infoPill.imageVis
         , margin $ MarginRight 12
         ]
     , textView $
