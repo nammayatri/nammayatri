@@ -271,9 +271,11 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                           validTill = bookingUpdateReq.validTill
                         }
                 overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
-                let actions2 = map (mkActions2 bookingUpdateReq.id.getId dropLocation.lat dropLocation.lon) overlay.actions2
-                let secondaryActions2 = fmap (map (mkSecondaryActions2 bookingUpdateReq.id.getId)) overlay.secondaryActions2
-                let overlay' = overlay{actions2, secondaryActions2}
+                let locationLat = if ride.status == DRide.INPROGRESS then dropLocation.lat else ride.fromLocation.lat
+                    locationLon = if ride.status == DRide.INPROGRESS then dropLocation.lon else ride.fromLocation.lon
+                    actions2 = map (mkActions2 bookingUpdateReq.id.getId locationLat locationLon) overlay.actions2
+                    secondaryActions2 = fmap (map (mkSecondaryActions2 bookingUpdateReq.id.getId)) overlay.secondaryActions2
+                    overlay' = overlay{actions2, secondaryActions2}
                 Notify.sendUpdateLocOverlay merchantOperatingCity.id person (Notify.mkOverlayReq overlay') entityData
               else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
           _ -> throwError (InvalidRequest "Invalid status for edit location request")
