@@ -1267,7 +1267,6 @@ bannersCarousal view state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , margin $ MarginTop 12
-        , visibility $ boolToVisibility $ state.props.city /= ST.AnyCity
         ][CarouselHolder.carouselView push $ getCarouselConfig view state banners]
       else dummyView state
       
@@ -3472,9 +3471,12 @@ homeScreenContent push state =  let
     ]
   where 
     contentView state = 
+      let banners = getBannerConfigs state BannerCarousel 
+      in
       linearLayout
       [ width $ V $ screenWidth unit
       , height $ V 160
+      , visibility $ boolToVisibility $ state.props.city /= ST.AnyCity && (not $ null banners)
       ]$[ 
         -- imageView
         --   [ imageWithFallback "ny_ic_cab_banner,https://assets.moving.tech/beckn/nammayatri/nammayatricommon/images/ny_ic_cab_banner.png"

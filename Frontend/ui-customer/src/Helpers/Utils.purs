@@ -812,6 +812,9 @@ getCityFromString cityString =
     "Noida" -> Noida
     "Gurugram" -> Gurugram
     "Siliguri" -> Siliguri
+    "Trivandrum" -> Trivandrum
+    "Thrissur" -> Thrissur
+    "Kozhikode" -> Kozhikode
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
