@@ -153,7 +153,9 @@ data HealthCheckAppCfg = HealthCheckAppCfg
     fcmNofificationSendCount :: Int,
     smsCfg :: SmsConfig,
     driverInactiveSmsTemplate :: Text,
-    loggerConfig :: LoggerConfig
+    loggerConfig :: LoggerConfig,
+    batchSize :: Integer,
+    numberOfShards :: Integer
   }
   deriving (Generic, FromDhall)
 

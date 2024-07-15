@@ -51,10 +51,13 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- getAllDrivers locationDelay now
+    key <- incrementCounterAndReturnShard
+    drivers <- getDriversBatchFromKey key locationDelay now
     case nonEmpty drivers of
       Just allDrivers -> do
-        mapM_ (flip driverDevicePingService fcmNofificationSendCount) allDrivers
+        results <- mapM (flip driverDevicePingService fcmNofificationSendCount) (toList allDrivers)
+        let memberScores = catMaybes results
+        Redis.zRem key memberScores
         log INFO ("Drivers to ping: " <> show allDrivers)
       Nothing -> log INFO "No drivers to ping"
     threadDelay (secondsToMcs serviceInterval).getMicroseconds
@@ -62,7 +65,7 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
 redisKey :: Text -> Text
 redisKey driverId = "beckn:driver-tracking-healthcheck:drivers-to-ping:" <> driverId
 
-driverDevicePingService :: Text -> Int -> Flow ()
+driverDevicePingService :: Text -> Int -> Flow (Maybe Text)
 driverDevicePingService driverId fcmNofificationSendCount = do
   log INFO "Ping driver"
   driver <- SQP.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
@@ -73,15 +76,16 @@ driverDevicePingService driverId fcmNofificationSendCount = do
         then do
           void $ Redis.incr (redisKey driverId)
           pingDriver driver
+          pure Nothing
         else do
-          let encodedVal = A.encode $ createDriverIdTokenKey driverId
-          _ <- Redis.zRem "driver-last-location-update" [T.decodeUtf8 $ BSL.toStrict encodedVal]
+          let encodedVal = A.encode driverId
           _ <- Redis.del (redisKey driverId)
-          pure ()
+          pure (Just $ T.decodeUtf8 $ BSL.toStrict encodedVal)
     Nothing -> do
       void $ Redis.incr (redisKey driverId)
       Redis.expire (redisKey driverId) 86400
       pingDriver driver
+      pure Nothing
   where
     pingDriver :: DP.Person -> Flow ()
     pingDriver driver = do
@@ -110,6 +114,29 @@ getAllDrivers locationDelay now = do
     decode val = do
       let res = A.decode $ BSL.fromStrict val
       res
+
+getDriversBatchFromKey :: Text -> Seconds -> UTCTime -> Flow [Text]
+getDriversBatchFromKey key locationDelay now = do
+  let presentTime = negate (fromIntegral locationDelay) `addUTCTime` now
+  batchSize <- fromMaybe 100 . fmap (.batchSize) <$> asks (.healthCheckAppCfg)
+  redisRes <- Redis.withCrossAppRedis $ Redis.zRangeByScoreByCount key 0 (utcToDouble presentTime) 0 batchSize
+  pure $ mapMaybe decode redisRes
+  where
+    decode :: BS.ByteString -> Maybe Text
+    decode val = do
+      let res = A.decode $ BSL.fromStrict val
+      res
+
+incrementCounterAndReturnShard :: Flow Text
+incrementCounterAndReturnShard = do
+  numberOfShards <- fromMaybe 10 . fmap (.numberOfShards) <$> asks (.healthCheckAppCfg)
+  getKeyWithShard . (`mod` numberOfShards) <$> Redis.incr incrementCountKey
+
+incrementCountKey :: Text
+incrementCountKey = "driver-location-consume-batch-count"
+
+getKeyWithShard :: Integer -> Text
+getKeyWithShard shardNo = "driver-last-location-update-{shard-" <> show shardNo <> "}"
 
 utcToDouble :: UTCTime -> Double
 utcToDouble = realToFrac . utcTimeToPOSIXSeconds
