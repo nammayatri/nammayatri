@@ -113,7 +113,8 @@ data ProfileRes = ProfileRes
     followsRide :: Bool,
     frontendConfigHash :: Maybe Text,
     isSafetyCenterDisabled :: Bool,
-    customerReferralCode :: Maybe Text
+    customerReferralCode :: Maybe Text,
+    deviceId :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -130,7 +131,8 @@ data UpdateProfileReq = UpdateProfileReq
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     disability :: Maybe Disability,
-    hasDisability :: Maybe Bool
+    hasDisability :: Maybe Bool,
+    deviceId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -254,6 +256,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       mbClientConfigVersion
       (getDeviceFromText mbDevice)
       deploymentVersion.getDeploymentVersion
+      if isJust ((.deviceId) =<< mPerson) then Nothing else req.deviceId
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess

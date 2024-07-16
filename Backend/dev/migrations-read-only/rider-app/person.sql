@@ -80,3 +80,9 @@ ALTER TABLE atlas_app.person ADD COLUMN customer_payment_id text ;
 
 ALTER TABLE atlas_app.person ADD COLUMN default_payment_method_id text ;
 ALTER TABLE atlas_app.person ADD COLUMN total_rides_count integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN device_id text ;
