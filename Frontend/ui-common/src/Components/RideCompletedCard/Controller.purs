@@ -44,6 +44,7 @@ data Action = Support
             | BannerChanged String
             | BannerMoving String
 
+
 type RentalRideTextConfig = {
   rideTime :: String,
   rideDistance :: String,
@@ -156,6 +157,7 @@ config = {
   , bannerComputedView : Nothing
   , customerIssueCards : []
   , showIssueBanners : true
+
   }
 , customerBottomCard : {
     visible : false,
@@ -247,6 +249,7 @@ type CustomerIssue = {
 , bannerComputedView :: Maybe ListItem
 , customerIssueCards :: Array CustomerIssueCard
 , showIssueBanners :: Boolean
+
 }
 
 type CustomerIssueCard = {

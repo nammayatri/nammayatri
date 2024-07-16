@@ -6,7 +6,7 @@ import Components.ChooseVehicle.Controller (Action(..), Config, SearchType(..))
 import Effect (Effect)
 import Font.Style as FontStyle
 import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, (||), negate, (*), (/), (>), (-), (/=), (<), discard, void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines, accessibilityHint, accessibility, Accessiblity(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines, accessibilityHint, accessibility, Accessiblity(..), accessibilityFocusable)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -44,6 +44,7 @@ view push config =
     priceRange = DS.split(DS.Pattern ("-")) config.price
     fromPrice = fromMaybe "" (priceRange DA.!! 0)
     toPrice = fromMaybe "" (priceRange DA.!! 1)
+    accessibilityText = selectedVehicle <> (if isActiveIndex then " selected : " else " Un Selected : ") <> fromPrice <> (if toPrice /= "" then " to " <> toPrice else "") <> " with capacity of " <> config.capacity
   in
     frameLayout
       [ width MATCH_PARENT
@@ -93,7 +94,8 @@ view push config =
                  , orientation VERTICAL
                  , gravity CENTER_VERTICAL
                  , padding $ PaddingLeft 8
-                 , accessibilityHint $ selectedVehicle <> (if isActiveIndex then " selected : " else " : ") <> fromPrice <> (if toPrice /= "" then " to " <> toPrice else "") <> " with capacity of " <> config.capacity
+                 , accessibility ENABLE
+                 , accessibilityHint accessibilityText
                  ][ linearLayout
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
@@ -197,7 +199,7 @@ variantsView push state =
                                                      pure unit
                                                   else push action ) $ const $ ServicesOnClick state item
                             , accessibility if isInActive then DISABLE else ENABLE
-                            , accessibilityHint $ item <> if isActiveIndex && (not isInActive) then " Checkbox : selected " else " Checkbox : Un Selected"
+                            , accessibilityHint $ "Inside Book Any : " <> item <> if isActiveIndex && (not isInActive) then " Checkbox : selected " else " Checkbox : Un Selected"
                             ][ linearLayout
                               [ height MATCH_PARENT
                               , width MATCH_PARENT

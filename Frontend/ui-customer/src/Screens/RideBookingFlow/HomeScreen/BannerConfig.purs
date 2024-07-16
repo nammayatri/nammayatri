@@ -26,7 +26,6 @@ import Debug
 import MerchantConfig.Types (CityConfig)
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
-
 import Components.RideCompletedCard as RideCompletedCard
 import Data.Foldable
 import ConfigProvider (getAppConfig)
