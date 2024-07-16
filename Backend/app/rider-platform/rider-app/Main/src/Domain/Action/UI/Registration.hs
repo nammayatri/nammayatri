@@ -297,7 +297,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevic
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` req.email
       _ <- RegistrationToken.setDirectAuth regToken.id
-      _ <- Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
+      _ <- Person.updatePersonalInfo person.id (req.firstName <|> person.firstName <|> Just "User") req.middleName req.lastName Nothing mbEncEmail deviceToken notificationToken (req.language <|> person.language <|> Just Language.ENGLISH) (req.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion Nothing
       personAPIEntity <- verifyFlow person regToken req.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
@@ -374,7 +374,8 @@ buildPerson req mobileNumber notificationToken clientBundleVersion clientSdkVers
         falseSafetyAlarmCount = 0,
         safetyCenterDisabledOnDate = Nothing,
         referredByCustomer = Nothing,
-        customerReferralCode = Nothing
+        customerReferralCode = Nothing,
+        deviceId = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing

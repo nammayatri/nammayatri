@@ -131,8 +131,9 @@ updatePersonalInfo ::
   Maybe Version ->
   Maybe Device ->
   Text ->
+  Maybe Text ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion mbDeviceId = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -155,6 +156,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.clientOsType ((.deviceType) <$> mbDevice) | isJust mbDevice]
         <> [Se.Set BeamP.clientOsVersion ((.deviceVersion) <$> mbDevice) | isJust mbDevice]
         <> [Se.Set BeamP.backendAppVersion (Just deploymentVersion)]
+        <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
@@ -365,6 +367,9 @@ updateCustomerReferralCode personId refferalCode = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+findAllByDeviceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Text -> m [Person])
+findAllByDeviceId deviceId = do findAllWithKV [Se.Is BeamP.deviceId $ Se.Eq deviceId]
+
 instance FromTType' BeamP.Person Person where
   fromTType' BeamP.PersonT {..} = do
     clientBundleVersion' <- mapM readVersion (strip <$> clientBundleVersion)
@@ -463,5 +468,6 @@ instance ToTType' BeamP.Person Person where
         BeamP.falseSafetyAlarmCount = Just falseSafetyAlarmCount,
         BeamP.safetyCenterDisabledOnDate = safetyCenterDisabledOnDate,
         BeamP.referredByCustomer = referredByCustomer,
-        BeamP.customerReferralCode = customerReferralCode
+        BeamP.customerReferralCode = customerReferralCode,
+        BeamP.deviceId = deviceId
       }
