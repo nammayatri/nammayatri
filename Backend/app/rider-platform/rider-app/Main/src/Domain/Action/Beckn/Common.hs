@@ -93,7 +93,8 @@ data RideAssignedReq = RideAssignedReq
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
     driverAccountId :: Maybe Payment.AccountId,
-    previousRideEndPos :: Maybe LatLong
+    previousRideEndPos :: Maybe LatLong,
+    driverTrackingUrl :: Maybe BaseUrl
   }
 
 data OnlinePaymentParameters = OnlinePaymentParameters
@@ -111,7 +112,8 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     onlinePaymentParameters :: Maybe OnlinePaymentParameters,
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
-    fareParams :: Maybe [DFareBreakup]
+    fareParams :: Maybe [DFareBreakup],
+    driverTrackingUrl :: Maybe BaseUrl
   }
 
 data RideStartedReq = RideStartedReq
@@ -238,7 +240,7 @@ rideAssignedReqHandler req = do
   let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
-  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now
+  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos req.driverTrackingUrl now
 
   whenJust req.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
     -- handle error flow properly
@@ -276,8 +278,8 @@ rideAssignedReqHandler req = do
   notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
   where
-    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> m DRide.Ride
-    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now = do
+    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> Maybe BaseUrl -> UTCTime -> m DRide.Ride
+    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos driverTrackingUrl now = do
       guid <- generateGUID
       shortId <- generateShortId
       deploymentVersion <- asks (.version)
@@ -298,7 +300,7 @@ rideAssignedReqHandler req = do
             merchantOperatingCityId = Just booking.merchantOperatingCityId,
             clientId = booking.clientId,
             status = DRide.NEW,
-            trackingUrl = Nothing,
+            trackingUrl = driverTrackingUrl,
             fare = Nothing,
             totalFare = Nothing,
             chargeableDistance = Nothing,
