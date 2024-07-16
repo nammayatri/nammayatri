@@ -41,6 +41,7 @@ import qualified Kernel.Utils.Servant.Server as Server
 import Kernel.Utils.Shutdown
 import Network.Wai.Handler.Warp
 import Servant
+import "dynamic-offer-driver-app" Storage.Beam.SystemConfigs ()
 import System.Environment (lookupEnv)
 
 startKafkaConsumer :: IO ()
