@@ -24,9 +24,11 @@ where
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
+import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
@@ -34,7 +36,10 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Ride as QR
 import Tools.Auth
+import Tools.Error
 
 type API =
   SoftCancelAPI
@@ -97,6 +102,8 @@ cancel ::
   FlowHandler APISuccess
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
+    booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
+    dCancelRes <- DCancel.cancel booking mRide req SBCR.ByUser
     void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
     return Success

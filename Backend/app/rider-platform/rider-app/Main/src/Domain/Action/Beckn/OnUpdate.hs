@@ -322,6 +322,7 @@ onUpdate ::
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
     ClickhouseFlow m r,
     SchedulerFlow r,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api

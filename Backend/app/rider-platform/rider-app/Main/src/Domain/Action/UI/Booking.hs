@@ -26,6 +26,7 @@ import qualified Data.Time as DT
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
 import Domain.Types.Location
@@ -109,7 +110,7 @@ handleConfirmTtlExpiry booking = do
       ttlToNominalDiffTime = intToNominalDiffTime ttlInInt
       ttlUtcTime = addDurationToUTCTime booking.createdAt ttlToNominalDiffTime
   when (booking.status == SRB.NEW && (ttlUtcTime < now)) do
-    dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
+    dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
     void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
     throwError $ RideInvalidStatus "Booking Invalid"
   where

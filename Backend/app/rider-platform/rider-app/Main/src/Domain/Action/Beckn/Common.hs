@@ -285,6 +285,7 @@ rideAssignedReqHandler ::
     EncFlow m r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     SchedulerFlow r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
@@ -323,6 +324,7 @@ rideAssignedReqHandler req = do
         EncFlow m r,
         EsqDBReplicaFlow m r,
         HasLongDurationRetryCfg r c,
+        HasShortDurationRetryCfg r c,
         HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
         SchedulerFlow r,
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
@@ -339,7 +341,6 @@ rideAssignedReqHandler req = do
       let BookingDetails {..} = req'.bookingDetails
       ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
-        -- handle error flow properly
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
                 { amount = booking.estimatedFare.amount,
@@ -350,7 +351,7 @@ rideAssignedReqHandler req = do
                   receiptEmail = email,
                   driverAccountId
                 }
-        void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.riderId ride createPaymentIntentReq
+        handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.riderId ride createPaymentIntentReq)
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
@@ -442,6 +443,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
   mbAdvRide <- QRide.findLatestByDriverPhoneNumber ride.driverMobileNumber
+  mbMerchant <- CQM.findById booking.merchantId
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
   let distanceUnit = ride.distanceUnit
   let updRide =
@@ -452,6 +454,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
              rideEndTime,
+             paymentDone = maybe True (not . (.onlinePayment)) mbMerchant,
              endOdometerReading
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups
@@ -480,8 +483,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRide (fromMaybe now rideEndTime))
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
-  _ <- QRide.updateMultiple updRide.id updRide
-  _ <- QFareBreakup.createMany breakups
+  QRide.updateMultiple updRide.id updRide
+  QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
 
   -- uncomment for update api test; booking.paymentMethodId should be present

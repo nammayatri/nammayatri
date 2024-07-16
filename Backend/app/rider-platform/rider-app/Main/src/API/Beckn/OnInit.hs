@@ -22,6 +22,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified BecknV2.OnDemand.Utils.Common as Common
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..), CancellationStage (..))
 import Environment
 import Kernel.Prelude
@@ -78,7 +79,7 @@ onInit _ reqV2 = withFlowHandlerBecknAPI $ do
       | otherwise = throwM exc
 
     errHandlerAction booking cancelReq = do
-      dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
+      dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
       void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
 
     buildCancelReq cancellationReason reasonStage =

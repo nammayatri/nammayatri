@@ -101,6 +101,7 @@ onConfirm ::
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
     HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasField "storeRidesTimeLimit" r Int,

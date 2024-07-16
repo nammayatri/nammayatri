@@ -560,7 +560,7 @@ localTimeToDayOfWeekAndHour :: LocalTime -> (DayOfWeek, Int)
 localTimeToDayOfWeekAndHour localTime =
   let (year, month, day) = toGregorian $ localDay localTime
       (_, _, dayOfWeekNum) = toWeekDate $ fromGregorian year month day
-      dayWeek = toEnum (dayOfWeekNum - 1) :: DayOfWeek
+      dayWeek = toEnum dayOfWeekNum :: DayOfWeek
       hourOfDay = todHour $ localTimeOfDay localTime
    in (dayWeek, hourOfDay)
 

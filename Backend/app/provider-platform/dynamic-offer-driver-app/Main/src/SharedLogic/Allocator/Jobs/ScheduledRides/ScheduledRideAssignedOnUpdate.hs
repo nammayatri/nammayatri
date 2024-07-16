@@ -101,7 +101,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
             (Just driver, Just vehicle, Just booking) -> do
               void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True Nothing Nothing driverId
               void $ QRide.updateStatus ride.id DRide.NEW
-              void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
+              void $ sendRideAssignedUpdateToBAP booking ride driver vehicle -- TODO: handle error
               return Complete
             (_, _, _) -> do
               let cReason = "Ride is Reallocated driver/vehicle/booking not found"

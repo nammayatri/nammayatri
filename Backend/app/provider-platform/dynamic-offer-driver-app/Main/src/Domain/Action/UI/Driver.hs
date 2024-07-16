@@ -151,7 +151,7 @@ import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
-import Kernel.Prelude (NominalDiffTime, roundToIntegral)
+import Kernel.Prelude (NominalDiffTime, handle, roundToIntegral)
 import Kernel.Serviceability (rideServiceable)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -167,6 +167,7 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
@@ -180,6 +181,7 @@ import Lib.Payment.Storage.Queries.PaymentTransaction
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpdateJobData (..))
+import SharedLogic.Booking
 import SharedLogic.Cac
 import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
@@ -1200,23 +1202,29 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       Nothing -> pure []
-  void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
-  when booking.isScheduled $ do
+  uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+  handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle
+  when uBooking.isScheduled $ do
     now <- getCurrentTime
-    let scheduledPickup = booking.fromLocation
-        scheduledTime = booking.startTime
+    let scheduledPickup = uBooking.fromLocation
+        scheduledTime = uBooking.startTime
         pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
     void $ QDriverInformation.updateLatestScheduledBookingAndPickup (Just scheduledTime) (Just pickupPos) driver.id
     maxShards <- asks (.maxShards)
-    let jobScheduledTime = max 2 ((diffUTCTime booking.startTime now) - transporterConfig.scheduleRideBufferTime)
+    let jobScheduledTime = max 2 ((diffUTCTime uBooking.startTime now) - transporterConfig.scheduleRideBufferTime)
     createJobIn @_ @'ScheduledRideAssignedOnUpdate jobScheduledTime maxShards $
       ScheduledRideAssignedOnUpdateJobData
         { driverId = driver.id,
-          bookingId = booking.id,
+          bookingId = uBooking.id,
           rideId = ride.id
         }
-  CS.markBookingAssignmentCompleted booking.id
+  CS.markBookingAssignmentCompleted uBooking.id
   return driverFCMPulledList
+  where
+    errHandler uBooking exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelBooking uBooking (Just driver) merchant >> throwM exc
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = cancelBooking uBooking (Just driver) merchant >> throwM exc
+      | otherwise = throwM exc
 
 getStats ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>

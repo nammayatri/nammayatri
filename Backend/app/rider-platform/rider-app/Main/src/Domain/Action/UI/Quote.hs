@@ -39,6 +39,7 @@ import qualified Domain.Action.UI.RentalDetails as DRentalDetails
 import qualified Domain.Action.UI.SpecialZoneQuote as USpecialZoneQuote
 import Domain.Types.Booking
 import Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
@@ -223,7 +224,7 @@ processActiveBooking booking cancellationStage = do
                     reallocate = Nothing
                   }
           fork "active booking processing" $ do
-            dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
+            dCancelRes <- DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
             void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
         else throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
 

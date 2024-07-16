@@ -173,6 +173,7 @@ onStatus ::
     SchedulerFlow r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
     EventStreamFlow m r,
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],

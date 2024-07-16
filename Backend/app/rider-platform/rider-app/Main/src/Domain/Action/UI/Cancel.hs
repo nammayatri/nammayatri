@@ -61,7 +61,6 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QR
 import Tools.Error
 import qualified Tools.Maps as Maps
 
@@ -125,20 +124,29 @@ softCancel bookingId _ = do
         ..
       }
 
-cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
-cancel bookingId _ req = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+cancel ::
+  ( EncFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  SRB.Booking ->
+  Maybe Ride.Ride ->
+  CancelReq ->
+  SBCR.CancellationSource ->
+  m CancelRes
+cancel booking mRide req cancellationSource = do
   let distanceUnit = booking.distanceUnit
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
-  canCancelBooking <- isBookingCancellable booking
+  canCancelBooking <- isBookingCancellable booking mRide
   unless canCancelBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
-  mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
   cancellationReason <-
     case mRide of
       Just ride -> do
@@ -168,7 +176,6 @@ cancel bookingId _ req = do
       { bppBookingId = bppBookingId,
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
-        cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
         merchant = merchant,
         cancelStatus = show Enums.CONFIRM_CANCEL,
@@ -181,10 +188,10 @@ cancel bookingId _ req = do
       now <- getCurrentTime
       return $
         SBCR.BookingCancellationReason
-          { bookingId = bookingId,
+          { bookingId = booking.id,
             rideId = Nothing,
             merchantId = merchantId,
-            source = SBCR.ByUser,
+            source = cancellationSource,
             reasonCode = Just reasonCode,
             reasonStage = Just reasonStage,
             additionalInfo = additionalInfo,
@@ -195,12 +202,13 @@ cancel bookingId _ req = do
             ..
           }
 
-isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> m Bool
-isBookingCancellable booking
+isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Maybe Ride.Ride -> m Bool
+isBookingCancellable booking mbRide
   | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
-    ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
-    pure (ride.status `elem` [Ride.NEW, Ride.UPCOMING])
+    case mbRide of
+      Just ride -> pure (ride.status `elem` [Ride.NEW, Ride.UPCOMING])
+      Nothing -> pure True
   | otherwise = pure False
 
 mkDomainCancelSearch ::
