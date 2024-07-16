@@ -33,6 +33,7 @@ import Components.RequestInfoCard as InfoCard
 import Language.Strings
 import Language.Types
 import MerchantConfig.Types (MetroConfig)
+import Data.Int as DI
 
 instance showAction :: Show Action where
   show _ = ""
@@ -56,7 +57,6 @@ data Action = BackPressed
             | InfoCardAC InfoCard.Action 
             | GetSDKPollingAC CreateOrderRes
             | MetroBookingConfigAction MetroBookingConfigRes
-            | DisableShimmer
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -70,10 +70,8 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
 eval (MetroBookingConfigAction resp) state = do
-  let updatedState = state { data {metroBookingConfigResp = resp}}
+  let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
   continue updatedState
-
-eval DisableShimmer state = continue state { props { showShimmer = false } }
 
 eval BackPressed state =  exit $ GoToHome
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
@@ -97,9 +95,7 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
   let (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
   if state.props.currentStage == ST.ConfirmMetroQuote then do
     let ticketTypeUpdatedState = state {data {ticketType = ticketType}}
-        quoteData = getquoteData ticketTypeUpdatedState state.data.quoteResp 
-        updatedState = ticketTypeUpdatedState { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId }}
-    updateAndExit updatedState $ Refresh updatedState
+    updateQuotes state.data.quoteResp state
   else do
     let updatedTicketCount = case ticketType of
           ST.ONE_WAY_TRIP -> if state.data.ticketCount > metroBookingConfigResp.oneWayTicketLimit then metroBookingConfigResp.oneWayTicketLimit else state.data.ticketCount
@@ -113,10 +109,7 @@ eval (GetMetroQuotesAction resp) state = do
   if null resp then do
     void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
     continue state{ props{currentStage = ST.MetroTicketSelection}}
-  else do
-    let quoteData = getquoteData state resp
-        updatedState = state { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = resp }, props { currentStage = ST.ConfirmMetroQuote}}
-    updateAndExit updatedState $ Refresh updatedState
+  else updateQuotes resp state
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
@@ -138,16 +131,16 @@ eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrder
 
 eval _ state = update state
 
-
-getquoteData :: ST.MetroTicketBookingScreenState -> Array MetroQuote -> {"price" :: Int, "quoteId" :: String}--Int
-getquoteData state  metroQuote =
-  let quote = filter (\(MetroQuote item) -> (getTicketType item._type) == (state.data.ticketType)) metroQuote
-      quoteData = quote !! 0
-  in
-    {
-      "price": maybe 0 (\(MetroQuote item) -> item.price) quoteData,
-      "quoteId" : maybe "" (\(MetroQuote item) -> item.quoteId) quoteData
-    }
+updateQuotes :: (Array MetroQuote) -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
+updateQuotes quotes state = do
+  let quoteData = find (\(MetroQuote item) -> (getTicketType item._type) == (state.data.ticketType)) quotes
+  case quoteData of
+    Nothing -> do
+      void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
+      continue state { props {currentStage = ST.MetroTicketSelection}}
+    Just (MetroQuote quoteData) -> do
+      let updatedState = state { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
+      updateAndExit updatedState $ Refresh updatedState
   where
     getTicketType :: String -> ST.TicketType
     getTicketType quoteType = case quoteType of 

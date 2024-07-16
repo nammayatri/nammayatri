@@ -372,3 +372,6 @@ black12 :: Color
 black12 = "#1F000000"
 aliceBlueLight :: Color
 aliceBlueLight = "#F4F7FF"
+
+metroBlue :: Color
+metroBlue = "#2250BF"

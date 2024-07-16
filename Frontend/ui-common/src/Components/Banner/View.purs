@@ -72,7 +72,7 @@ view push config =
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , gravity CENTER_VERTICAL
-          , padding $ PaddingHorizontal 12 12
+          , padding config.actionPadding
           , visibility if config.actionTextVisibility then VISIBLE else GONE
           , background $ fromMaybe config.backgroundColor config.actionText.backgroundColor
           , cornerRadius config.actionText.cornerRadius
