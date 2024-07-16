@@ -1009,6 +1009,8 @@ getFR stringKey =
         CONVERT_YOUR_COINS_TO_DISCOUNT -> "Convertissez vos pièces en réduction"
         CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION -> "Convertissez vos pièces pour obtenir une réduction sur votre plan d'abonnement"
         CONVERT_NOW -> "Convertir maintenant"
+        MORE_RIDES -> "Plus de manèges"
+        SORT_BY -> "Trier par"
         THIRD_PARTY_BOOKING -> "Réservation par un tiers"
         SOME_FEATURE_ARE_NOT_AVAILABLE_WITH_THIS_PROVIDER merchant -> "Certaines fonctionnalités ne sont pas disponibles avec ce fournisseur."
         GUARANTEED_RIDE -> "Trajet garanti"

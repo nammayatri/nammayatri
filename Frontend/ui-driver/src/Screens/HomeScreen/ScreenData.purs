@@ -151,6 +151,7 @@ initData =
       , prevLatLon: Nothing
       , noOfLocations: 0
       , isVehicleSupported: true
+      ,scheduledRideListResponse : 0
     }
   , props:
       { isFreeRide: false
@@ -230,6 +231,7 @@ initData =
       , isOdometerReadingsRequired: false
       , toll : initialTollState
       , showInterOperablePopUp : false
+      , countVisibility : false
       }
   }
 
@@ -298,4 +300,6 @@ dummyRideData = {
       , acRide : Nothing
       , bapName : ""
       , bookingFromOtherPlatform : false
+      
       }
+

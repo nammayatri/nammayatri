@@ -25,6 +25,7 @@ import Locale.Utils
 import Log
 import Mobility.Prelude
 import Screens.SubscriptionScreen.Controller
+
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Domain.Payments (APIPaymentStatus(..)) as PS
@@ -49,7 +50,7 @@ import Data.Ord (compare)
 import Data.Semigroup ((<>))
 import Data.Set (toggle)
 import Data.String (Pattern(..), split, toUpper, drop, indexOf, toLower, take)
-import Data.String as STR
+import Data.String (length, null) as STR
 import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
@@ -100,6 +101,7 @@ import Screens.DriverProfileScreen.Controller (getDowngradeOptionsSelected)
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.DriverProfileScreen.Transformer (transformSelectedVehicles)
 import Screens.DriverSavedLocationScreen.Transformer (getLocationArray)
+import Screens.DriverEarningsScreen.Transformer
 import Screens.Handlers (chooseCityScreen, homeScreen)
 import Screens.Handlers as UI
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
@@ -120,7 +122,6 @@ import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
-import Screens.DriverEarningsScreen.Transformer (checkPopupShowToday, isPopupShownToday)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
@@ -150,6 +151,8 @@ import Effect.Unsafe (unsafePerformEffect)
 import Common.Types.App as CTA
 import AssetsProvider (renewFile)
 import Control.Bind
+import Engineering.Helpers.RippleCircles
+import Screens.RideRequestScreen.ScreenData as RideRequestData
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -1801,6 +1804,22 @@ helpAndSupportFlow = do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
       tripDetailsScreenFlow
 
+ 
+    
+    -- TA.UPDATE_ROUTE_11 ->  do  
+        
+    --     GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq  12.9352 77.6245   12.928795  77.617880) "pickup"
+    --     let shortRoute = (routeApiResponse !! 0)
+    --     let center  = {lat: 12.9352, lng:77.6245} 
+    --     case shortRoute of
+    --       Just (Route route) -> do
+    --         let coor = walkCoordinates route.points
+    --         liftFlowBT $ drawRoute [coor] "LineString" true JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = "" } JB.defaultMarkerConfig{ pointerIcon = "ny_ic_hatchback_nav_on_map", primaryText = "" } 9 "NORMAL" (mapRouteConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "DriverSavedLoc1")
+    --         liftFlowBT $ runEffectFn1 addRippleCircle circleRippleConfig{center = center , fillColor = "#1042B8BA" , radius = 1200.0, toStrokeColor = "#8042B8BA" , fromStrokeColor = "#8042B8BA" , repeatMode = 0, count = 1}
+    --         pure unit
+    --       Nothing -> pure unit
+    --     helpAndSupportFlow
+
 writeToUsFlow :: FlowBT String Unit
 writeToUsFlow = do
   action <- UI.writeToUsScreen
@@ -2231,7 +2250,7 @@ homeScreenFlow = do
     void $ lift $ lift $ toggleLoader false
     liftFlowBT $ handleUpdatedTerms $ getString TERMS_AND_CONDITIONS_UPDATED  
   liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration"
-  action <- UI.homeScreen
+  action <- UI.homeScreen 
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
   case action of
     GO_TO_PROFILE_SCREEN -> do
@@ -2704,6 +2723,7 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow true
+    GO_TO_RIDE_REQ_SCREEN -> rideRequestScreenFlow
     ENABLE_GOTO_API state id currentLocation -> do
       activateResp <- lift $ lift $ Remote.activateDriverGoTo id currentLocation
       pure $ toggleBtnLoader "" false
@@ -4023,3 +4043,19 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
+
+rideRequestScreenFlow :: FlowBT String Unit 
+rideRequestScreenFlow = do
+  modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> rideRequestScreen {data{shimmerLoader = ST.AnimatedIn,loaderButtonVisibility = false}, props {receivedResponse = false}})
+  action <- UI.rideRequestScreen
+  case action  of 
+    TA.GOTO_HOME -> homeScreenFlow
+    TA.RIDE_REQUEST_REFRESH_SCREEN state -> do
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0, filteredArr =[], resp = RideRequestData.dummyResp}})
+      rideRequestScreenFlow
+    TA.LOADER__OUTPUT state -> do
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = state.data.offset + 5}})
+      rideRequestScreenFlow
+
+
+                      

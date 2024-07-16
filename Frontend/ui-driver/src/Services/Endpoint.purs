@@ -351,3 +351,5 @@ getDriverRateCard mbServiceTier mbDist =
         Just serviceTier, Nothing -> "?vehicleServiceTier=" <> serviceTier
         Nothing, Just dist -> "?distance=" <> show (dist*1000)
         _ , _ -> ""
+getScheduledBookingList :: String -> String -> String -> String ->String -> String
+getScheduledBookingList limit offset from to  tripCategory=  (getBaseUrl "") <> "/driver/scheduledBooking/list?limit="<>limit<>"&offset="<>offset<> (if from == "null" then "" else "&from=" <> from) <> (if to == "null" then "" else "&to=" <> to)  -- <> "&tripCategory="<> "

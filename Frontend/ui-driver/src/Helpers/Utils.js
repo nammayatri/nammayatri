@@ -103,6 +103,7 @@ export const clearAllTimer = function(a) {
 export const setRefreshing = function (id){
   return function (bool){
     if (window.__OS == "ANDROID") {
+      console.log("id setRefreshing" , id);
       const cmd = "set_v=ctx->findViewById:i_" + id + ";get_v->setRefreshing:b_" + bool + ";"
       Android.runInUI(cmd,null)
     }

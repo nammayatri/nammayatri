@@ -1474,3 +1474,6 @@ getEN stringKey =
         FIRST_RIDE_FREE count -> "First " <> count <> " ride free"
         FIRST_RIDES_FREE count -> "First " <> count <> " rides free"
 
+
+        MORE_RIDES -> "More rides"
+        SORT_BY -> "Sort By"

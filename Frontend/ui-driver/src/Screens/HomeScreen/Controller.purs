@@ -301,6 +301,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | GoToRideReqScreen ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
 
 data Action = NoAction
@@ -429,10 +430,12 @@ data Action = NoAction
             | RideStartRemainingTime Int String String
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
+            | RideRequestsList
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
+            | GetRideCount Int
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1479,7 +1482,11 @@ eval (SwitchBookingStage stage) state = do
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
 
-eval _ state = continue state
+eval RideRequestsList state = exit $ GoToRideReqScreen state 
+
+eval (GetRideCount resp) state  = continue state {data {scheduledRideListResponse = resp}}
+
+eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do

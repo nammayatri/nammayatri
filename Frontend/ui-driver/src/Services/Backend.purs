@@ -1545,3 +1545,17 @@ getRideStatusPastDays payload = do
     withAPIResult (EP.getRideStatusPastDays "")  unwrapResponse $ callAPI headers (RideStatusPastDaysReq)
     where
         unwrapResponse x = x
+
+rideBooking limit offset from to  tripCategory = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getScheduledBookingList limit offset from to  tripCategory) unwrapResponse $ callAPI headers (ScheduledBookingListRequest limit offset  from to  tripCategory)
+    where
+        unwrapResponse (x) = x
+
+rideBookingBT :: String -> String -> String -> String -> String -> FlowBT String ScheduledBookingListResponse
+rideBookingBT limit offset  from to  tripCategory= do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getScheduledBookingList limit offset from to  tripCategory) identity errorHandler (lift $ lift $ callAPI headers (ScheduledBookingListRequest limit offset from to tripCategory))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack

@@ -212,7 +212,7 @@ ridesView listItemm push state =
             , scrollBarY false
             , background Color.whiteSmoke
             , width MATCH_PARENT
-            , onAnimationEnd push OnFadeComplete
+            , onAnimationEnd push OnFadeComplete  
             , PrestoList.listItem listItemm
             , PrestoList.listDataV2 $ shimmerData <$> (getArray 5)
             , visibility $ case state.shimmerLoader of

@@ -995,15 +995,16 @@ type HomeScreenData =  {
   isVehicleSupported :: Boolean,
   linkedVehicleCategory :: String,
   linkedVehicleVariant :: String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  scheduledRideListResponse ::  Int
 }
-
 type BannerCarousalData = {
   bannerItem :: Maybe ListItem,
   currentBanner :: Int,
   bannerScrollState :: String,
   currentPage :: Int
 }
+
 
 type DriverGoToState = {
   gotoCount :: Int,
@@ -1241,7 +1242,8 @@ type HomeScreenProps =  {
   toll :: TollState,
   bookingStage :: BookingTypes,
   showAdvancedRidePopUp :: Boolean,
-  showInterOperablePopUp :: Boolean
+  showInterOperablePopUp :: Boolean,
+  countVisibility :: Boolean
  }
 
 type TollState = {
@@ -2791,3 +2793,58 @@ type RateCardScreenProps = {
   sliderMaxValue :: Int,
   sliderLoading :: Boolean
 }
+
+
+type RideRequestCardState =
+  {
+    date :: String,
+    time :: String,
+    source :: String,
+    distance :: String,
+    destination :: String,
+    totalAmount :: String,
+    cardVisibility :: String,
+    shimmerVisibility :: String,
+    carImage :: String,
+    rideType :: String,
+    carType :: String,
+    srcLat ::  Number,
+    srcLong :: Number,
+    desLat :: Number,
+    desLong :: Number,
+    id :: String,
+    image ::  String,
+    visible ::  Boolean,
+    pillColor :: String,
+    overlayVisiblity :: String,
+    visiblePill :: String,
+    cornerRadius :: String,
+    imageType :: String
+  }
+type RideCardItemState =
+  {
+    date :: PropValue,
+    time :: PropValue,
+    source :: PropValue,
+    distance ::  PropValue,
+    destination :: PropValue,
+    totalAmount :: PropValue,
+    cardVisibility :: PropValue,
+    shimmerVisibility :: PropValue,
+    carImage :: PropValue,
+    rideType :: PropValue,
+    carType :: PropValue,
+    srcLat ::  PropValue,
+    srcLong :: PropValue,
+    desLat :: PropValue,
+    desLong :: PropValue,
+    id :: PropValue,
+    image :: PropValue,
+    visible :: PropValue,
+    pillColor :: PropValue,
+    overlayVisiblity :: PropValue,
+    visiblePill :: PropValue,
+    cornerRadius :: PropValue,
+    imageType :: PropValue
+
+  }

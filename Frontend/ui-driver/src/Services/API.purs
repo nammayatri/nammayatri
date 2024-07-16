@@ -19,6 +19,7 @@ import Data.Maybe
 import PaymentPage
 
 import Common.Types.App as CTA
+import Common.Types.App as Common
 import Domain.Payments as PP
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, runExcept)
@@ -687,8 +688,8 @@ instance decodeStopLocation :: Decode StopLocation where decode = defaultDecode
 instance encodeStopLocation :: Encode StopLocation where encode = defaultEncode
 
 newtype TripCategory = TripCategory
-    {
-      contents :: String,
+    { 
+      contents :: Maybe String,
       tag :: String
     }
 
@@ -4757,3 +4758,351 @@ instance standardEncodeFarePolicyHour :: StandardEncode FarePolicyHour
     standardEncode Peak = standardEncode "Peak"
     standardEncode NonPeak = standardEncode "NonPeak"
     standardEncode Night = standardEncode "Night"
+data ScheduledBookingListRequest = ScheduledBookingListRequest String String String String String
+
+instance makeScheduledBookingListRequest :: RestEndpoint ScheduledBookingListRequest ScheduledBookingListResponse where
+    makeRequest reqBody@(ScheduledBookingListRequest limit offset from to  tripCategory) headers = defaultMakeRequest GET (EP.getScheduledBookingList limit offset  from to  tripCategory) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericScheduledBookingListRequest :: Generic ScheduledBookingListRequest _
+instance showScheduledBookingListRequest:: Show ScheduledBookingListRequest where show = genericShow
+instance standardEncodeScheduledBookingListRequest:: StandardEncode ScheduledBookingListRequest where standardEncode _ = standardEncode {}
+instance decodeScheduledBookingListRequest :: Decode ScheduledBookingListRequest where decode = defaultDecode
+instance encodeScheduledBookingListRequest:: Encode ScheduledBookingListRequest where encode = defaultEncode
+
+newtype ScheduledBookingListResponse = ScheduledBookingListResponse
+    {
+      bookings :: Array ScheduleBooking
+    }
+
+derive instance genericScheduledBookingListResponse:: Generic ScheduledBookingListResponse _
+instance standardEncodeScheduledBookingListResponse :: StandardEncode ScheduledBookingListResponse where standardEncode (ScheduledBookingListResponse res) = standardEncode res
+instance showScheduledBookingListResponse:: Show ScheduledBookingListResponse where show = genericShow
+instance decodeScheduledBookingListResponse:: Decode ScheduledBookingListResponse where decode = defaultDecode
+instance encodeScheduledBookingListResponse  :: Encode ScheduledBookingListResponse where encode = defaultEncode
+instance eqScheduledBookingListResponse :: Eq ScheduledBookingListResponse where eq = genericEq
+
+newtype ScheduleBooking = ScheduleBooking  
+   {
+    bookingDetails :: BookingAPIEntity,
+    fareDetails ::  Array RateCardItem
+   }
+
+derive instance genericScheduleBooking:: Generic ScheduleBooking _
+instance standardEncodeScheduleBooking :: StandardEncode ScheduleBooking where standardEncode (ScheduleBooking res) = standardEncode res
+instance showScheduleBooking:: Show ScheduleBooking where show = genericShow
+instance decodeScheduleBooking:: Decode ScheduleBooking where decode = defaultDecode
+instance encodeScheduleBooking :: Encode ScheduleBooking where encode = defaultEncode
+instance eqScheduleBooking :: Eq ScheduleBooking where eq = genericEq
+
+newtype BookingAPIEntity = BookingAPIEntity {
+   area :: Area,
+   createdAt :: String,
+   currency :: Currency,
+   disabilityTag :: Maybe String,
+   distanceToPickup :: Maybe Int,
+   estimatedDistance ::Maybe Int,
+   estimatedDuration ::Maybe Int,
+   estimatedFare :: Number ,
+   fareParams :: FareParameters,
+   fromLocation :: Location,
+   id :: String,
+   isAirConditioned ::Maybe Boolean ,
+   isScheduled :: Boolean,
+   maxEstimatedDistance :: Maybe Number,
+   returnTime :: Maybe String,
+   roundTrip :: Maybe Boolean,
+   specialZoneOtpCode :: Maybe String,
+   startTime :: String ,
+   status :: Common.BookingStatus,
+   stopLocationId :: Maybe String,
+   toLocation :: Maybe Location,
+   tollNames :: Maybe (Array String),
+   tripCategory :: CTA.TripCategory,
+   updatedAt :: String,
+  vehicleServiceTier :: ServiceTierType,
+  vehicleServiceTierAirConditioned :: Maybe Number ,
+  vehicleServiceTierName :: String,
+  vehicleServiceTierSeatingCapacity ::  Maybe Int
+}
+derive instance genericBookingAPIEntity:: Generic BookingAPIEntity _
+instance standardBookingAPIEntity:: StandardEncode BookingAPIEntity where standardEncode (BookingAPIEntity res) = standardEncode res
+instance showBookingAPIEntity :: Show BookingAPIEntity where show = genericShow
+instance decodeBookingAPIEntity :: Decode BookingAPIEntity where decode = defaultDecode
+instance encodeBookingAPIEntity :: Encode BookingAPIEntity where encode = defaultEncode
+instance eqBookingAPIEntity :: Eq BookingAPIEntity where eq = genericEq
+
+newtype Location =  Location {
+  address :: LocationAddress,
+  createdAt :: String,
+  id  :: String,
+  lat :: Number,
+  lon :: Number,
+  updatedAt ::String
+
+}
+derive instance genericLocation:: Generic Location _
+instance standardLocation:: StandardEncode Location where standardEncode (Location res) = standardEncode res
+instance showLocation :: Show Location where show = genericShow
+instance decodeLocation:: Decode Location where decode = defaultDecode
+instance encodeLocation :: Encode Location where encode = defaultEncode
+instance eqLocation :: Eq Location where eq = genericEq
+
+newtype LocationAddress  = LocationAddress {
+  area :: Maybe String,
+  areaCode :: Maybe String,
+  building :: Maybe String,
+  city :: Maybe String,
+  country ::Maybe String,
+  state :: Maybe String,
+  street :: Maybe String
+}
+derive instance genericLocationAddress:: Generic LocationAddress _
+instance standardLocationAddress:: StandardEncode LocationAddress where standardEncode (LocationAddress res) = standardEncode res
+instance showLocationAddress :: Show LocationAddress where show = genericShow
+instance decodeLocationAddress:: Decode LocationAddress where decode = defaultDecode
+instance encodeLocationAddress :: Encode LocationAddress where encode = defaultEncode
+instance eqLocationAddress :: Eq LocationAddress where eq = genericEq
+
+
+data Area = Default | Drop String | Pickup String
+
+derive instance genericArea :: Generic Area _
+instance standardEncodeArea :: StandardEncode Area where standardEncode _ = standardEncode {}
+instance showArea :: Show Area where show = genericShow
+instance decodeArea :: Decode Area 
+  where decode body =
+          case (runExcept $ (readProp "tag" body) >>= decode) of
+              Right tag -> case tag of
+                                "Pickup" -> case runExcept $ (readProp "contents" body) >>= decode of 
+                                              Right content -> except $ Right $ Pickup content
+                                              Left _  -> except $ Right $ Default
+                                "Drop" -> case runExcept $ (readProp "contents" body) >>= decode of 
+                                              Right content ->except $ Right $ Drop content
+                                              Left _  -> except $ Right $ Default
+                                _ -> except $ Right $ Default
+              Left err     -> except $ Right $ Default
+instance encodeArea  :: Encode Area where encode = defaultEncode
+instance eqArea :: Eq Area where eq = genericEq
+
+data Currency  = INR | USD | EUR 
+
+derive instance genericCurrency :: Generic Currency  _
+instance showCurrency :: Show Currency where show = genericShow
+instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+instance encodeCurrency :: Encode Currency where encode = defaultEnumEncode
+instance eqCurrency :: Eq Currency where eq = genericEq
+instance standardEncodeCurrency :: StandardEncode Currency where standardEncode _ = standardEncode {}
+
+newtype FareParameters = FareParameters {
+  baseFare :: Number,
+  congestionCharge :: Maybe Number,
+  currency :: Currency,
+  customerCancellationDues :: Maybe Number,
+  customerExtraFee :: Maybe Number,
+  driverSelectedFare :: Maybe Number,
+  fareParametersDetails ::FareParametersDetails,
+  govtCharges :: Maybe Number,
+  id ::String,
+  nightShiftCharge :: Maybe Number,
+  nightShiftRateIfApplies :: Maybe Number,
+  parkingCharge :: Maybe Number,
+  rideExtraTimeFare:: Maybe Number,
+  serviceCharge::Maybe Number,
+  tollCharges:: Maybe Number,
+  updatedAt ::String,
+  waitingCharge :: Maybe Number
+
+}
+derive instance genericFareParameters:: Generic FareParameters _
+instance standardFareParameters :: StandardEncode FareParameters where standardEncode (FareParameters res) = standardEncode res
+instance showFareParameters :: Show FareParameters where show = genericShow
+instance decodeFareParameters :: Decode FareParameters where decode = defaultDecode
+instance encodeFareParameters :: Encode FareParameters where encode = defaultEncode
+instance eqFareParameters :: Eq FareParameters where eq = genericEq
+
+newtype FareParametersDetails = FareParametersDetails {
+  contents :: Content,
+  tag :: Maybe String
+}
+derive instance genericFareParametersDetails:: Generic FareParametersDetails _
+instance standardFareParametersDetails :: StandardEncode FareParametersDetails where standardEncode (FareParametersDetails res) = standardEncode res
+instance showFareParametersDetails:: Show FareParametersDetails where show = genericShow
+instance decodeFareParametersDetails :: Decode FareParametersDetails where decode = defaultDecode
+instance encodeFareParametersDetails:: Encode FareParametersDetails where encode = defaultEncode
+instance eqFareParametersDetails :: Eq FareParametersDetails where eq = genericEq
+
+
+newtype Content  = Content {
+  currency :: Currency,
+  deadKmFare :: Maybe Int,
+  distBasedFare :: Maybe Int,
+  distanceUnit :: Maybe String,
+  extraDistance :: Maybe Int,
+  extraDuration :: Maybe Int,
+  timeBasedFare :: Maybe Int
+}
+
+derive instance genericContent:: Generic Content _
+instance standardContent :: StandardEncode Content where standardEncode (Content res) = standardEncode res
+instance showContent:: Show Content where show = genericShow
+instance decodeContent :: Decode Content where decode = defaultDecode
+instance encodeContent:: Encode Content where encode = defaultEncode
+instance eqContent :: Eq Content where eq = genericEq
+
+newtype RateCardItem  = RateCardItem{
+  price :: Int,
+  priceWithCurrency :: CTA.Price,
+  title :: TitleTag
+}
+derive instance genericRateCardItem:: Generic RateCardItem _
+instance standardRateCardItem :: StandardEncode RateCardItem where standardEncode (RateCardItem res) = standardEncode res
+instance showRateCardItem:: Show RateCardItem where show = genericShow
+instance decodeRateCardItem :: Decode RateCardItem where decode = defaultDecode
+instance encodeRateCardItem:: Encode RateCardItem where encode = defaultEncode
+instance eqRateCardItem:: Eq RateCardItem where eq = genericEq
+
+data TitleTag = SERVICE_CHARGE 
+              | GOVERNMENT_CHARGE 
+              | NIGHT_SHIFT_START_TIME_IN_SECONDS 
+              | NIGHT_SHIFT_END_TIME_IN_SECONDS 
+              | MIN_FARE 
+              | PER_HOUR_CHARGE 
+              | PER_MINUTE_CHARGE 
+              | UNPLANNED_PER_KM_CHARGE 
+              | PER_HOUR_DISTANCE_KM 
+              | PLANNED_PER_KM_CHARGE 
+              | DEAD_KILOMETER_FARE 
+              | WAITING_CHARGE_PER_MIN 
+              | FREE_WAITING_TIME_IN_MINUTES 
+              | NIGHT_SHIFT_CHARGE 
+              | CONSTANT_NIGHT_SHIFT_CHARGE
+
+derive instance genericTitleTag :: Generic TitleTag   _
+instance showTitleTag :: Show TitleTag  where show = genericShow
+instance decodeTitleTag :: Decode TitleTag  
+   where decode body = case unsafeFromForeign body of 
+                    "SERVICE_CHARGE"                     ->  except $ Right SERVICE_CHARGE
+                    "GOVERNMENT_CHARGE"                  ->  except $ Right GOVERNMENT_CHARGE
+                    "NIGHT_SHIFT_START_TIME_IN_SECONDS"  ->  except $ Right NIGHT_SHIFT_START_TIME_IN_SECONDS
+                    "NIGHT_SHIFT_END_TIME_IN_SECONDS "   ->  except $ Right NIGHT_SHIFT_END_TIME_IN_SECONDS
+                    "MIN_FARE"                           ->  except $ Right MIN_FARE
+                    "PER_HOUR_CHARGE"                    ->  except $ Right PER_HOUR_CHARGE
+                    "PER_MINUTE_CHARGE"                  ->  except $ Right PER_MINUTE_CHARGE
+                    "UNPLANNED_PER_KM_CHARGE"            ->  except $ Right UNPLANNED_PER_KM_CHARGE
+                    "PER_HOUR_DISTANCE_KM"               ->  except $ Right PER_HOUR_DISTANCE_KM
+                    "PLANNED_PER_KM_CHARGE"              ->  except $ Right PLANNED_PER_KM_CHARGE
+                    "DEAD_KILOMETER_FARE"                ->  except $ Right DEAD_KILOMETER_FARE
+                    "WAITING_CHARGE_PER_MIN"             ->  except $ Right WAITING_CHARGE_PER_MIN
+                    "FREE_WAITING_TIME_IN_MINUTES"       ->  except $ Right FREE_WAITING_TIME_IN_MINUTES
+                    "NIGHT_SHIFT_CHARGE"                 ->  except $ Right NIGHT_SHIFT_CHARGE
+                    "CONSTANT_NIGHT_SHIFT_CHARGE"        ->  except $ Right CONSTANT_NIGHT_SHIFT_CHARGE
+                    _                                    ->  except $ Right SERVICE_CHARGE
+
+instance encodeTitleTag:: Encode TitleTag  where encode = defaultEnumEncode
+instance eqTitleTag :: Eq TitleTag  where eq = genericEq
+instance standardTitleTag :: StandardEncode TitleTag   where standardEncode _ = standardEncode {}
+
+
+-- data FareParametersDetails  = ProgressiveDetails FParamsProgressiveDetails | SlabDetails FParamsSlabDetails | RentalDetails FParamsRentalDetails | InterCityDetails FParamsInterCityDetails
+
+-- derive instance genericFareParametersDetails :: Generic FareParametersDetails _
+-- instance standardEncodeFareParametersDetails :: StandardEncode FareParametersDetails where standardEncode _ = standardEncode {}
+-- instance showFareParametersDetails :: Show FareParametersDetails where show = genericShow
+-- instance decodeFareParametersDetails :: Decode FareParametersDetails 
+--   where decode body =
+--           case (runExcept $ (readProp "tag" body) >>= decode) of
+--               Right tag -> case tag of
+--                                 "ProgressiveDetails" -> case runExcept $ (readProp "contents" body) >>= decode of 
+--                                               Right content -> except $ Right $ ProgressiveDetails content
+--                                               Left err     -> (fail $ ForeignError "Unknown response")
+--                                 "SlabDetails" -> case runExcept $ (readProp "contents" body) >>= decode of 
+--                                               Right content ->except $ Right $ SlabDetails content
+--                                               Left err     -> (fail $ ForeignError "Unknown response")
+--                                 "RentalDetails" -> case runExcept $ (readProp "contents" body) >>= decode of 
+--                                               Right content ->except $ Right $ RentalDetails content
+--                                               Left err     -> (fail $ ForeignError "Unknown response")
+--                                 "InterCityDetails" -> case runExcept $ (readProp "contents" body) >>= decode of 
+--                                               Right content ->except $ Right $ InterCityDetails content
+--                                               Left err     -> (fail $ ForeignError "Unknown response")
+--                                 _ -> case runExcept $ (readProp "contents" body) >>= decode of 
+--                                               Right content -> except $ Right $ ProgressiveDetails content
+--                                               Left err     -> (fail $ ForeignError "Unknown response")
+--               Left err     -> (fail $ ForeignError "Unknown response")
+-- instance encodeFareParametersDetails  :: Encode FareParametersDetails where encode = defaultEncode
+
+
+-- newtype PriceApiEntity =  PriceApiEntity{
+--   amount :: Number ,
+--   currency :: Currency
+-- }
+-- derive instance genericPriceApiEntity:: Generic PriceApiEntity _
+-- instance standardEncodePriceApiEntity :: StandardEncode PriceApiEntity where standardEncode (PriceApiEntity res) = standardEncode res
+-- instance showPriceApiEntity :: Show PriceApiEntity where show = genericShow
+-- instance decodePriceApiEntity :: Decode PriceApiEntity where decode = defaultDecode
+-- instance encodePriceApiEntity  :: Encode PriceApiEntity where encode = defaultEncode
+
+-- newtype FParamsProgressiveDetails = FParamsProgressiveDetails{
+--   deadKmFare :: Int,
+--   deadKmFareWithCurrency :: PriceApiEntity,
+--   extraKmFare :: Int,
+--   extraKmFareWithCurrency:: PriceApiEntity
+-- }
+
+-- derive instance genericFParamsProgressiveDetails:: Generic FParamsProgressiveDetails _
+-- instance standardFParamsProgressiveDetails :: StandardEncode FParamsProgressiveDetails where standardEncode (FParamsProgressiveDetails res) = standardEncode res
+-- instance showFParamsProgressiveDetails :: Show FParamsProgressiveDetails where show = genericShow
+-- instance decodeFParamsProgressiveDetails :: Decode FParamsProgressiveDetails where decode = defaultDecode
+-- instance encodeFParamsProgressiveDetails :: Encode FParamsProgressiveDetails where encode = defaultEncode
+
+
+-- newtype FParamsSlabDetails = FParamsSlabDetails{
+-- cgst :: Number,
+-- cgstWithCurrency :: PriceApiEntity,
+-- platformFee :: Number,
+-- sgst ::Number,
+-- sgstWithCurrency :: PriceApiEntity
+
+-- }
+
+-- derive instance genericFParamsSlabDetails:: Generic FParamsSlabDetails _
+-- instance standardFParamsSlabDetails :: StandardEncode FParamsSlabDetails where standardEncode (FParamsSlabDetails res) = standardEncode res
+-- instance showFParamsFParamsSlabDetails :: Show FParamsSlabDetails where show = genericShow
+-- instance decodeFParamsSlabDetails :: Decode FParamsSlabDetails where decode = defaultDecode
+-- instance encodeFParamsSlabDetails :: Encode FParamsSlabDetails where encode = defaultEncode
+
+
+-- newtype FParamsRentalDetails = FParamsRentalDetails{
+--  deadKmFare :: PriceApiEntity,
+--  distBasedFare :: Int,
+--  distBasedFareWithCurrency :: PriceApiEntity,
+--  extraDistance ::Int,
+--  extraDuration :: Int,
+--  timeBasedFare :: Int,
+--  timeBasedFareWithCurrency :: PriceApiEntity
+
+-- }
+
+-- derive instance genericFParamsRentalDetails:: Generic FParamsRentalDetails _
+-- instance standardFParamsRentalDetails :: StandardEncode FParamsRentalDetails  where standardEncode (FParamsRentalDetails res) = standardEncode res
+-- instance showFParamsRentalDetails :: Show FParamsRentalDetails where show = genericShow
+-- instance decodeFParamsRentalDetails :: Decode FParamsRentalDetails where decode = defaultDecode
+-- instance encodeFParamsRentalDetails :: Encode FParamsRentalDetails where encode = defaultEncode
+
+-- newtype FParamsInterCityDetails = FParamsInterCityDetails{
+-- distanceFare ::  PriceApiEntity,
+-- extraDistanceFare :: PriceApiEntity,
+-- extraTimeFare :: PriceApiEntity,
+-- pickupCharge ::  PriceApiEntity,
+-- timeFare::  PriceApiEntity
+
+-- }
+
+-- derive instance genericFParamsInterCityDetails:: Generic FParamsInterCityDetails _
+-- instance standardFParamsInterCityDetails :: StandardEncode FParamsInterCityDetails where standardEncode (FParamsInterCityDetails res) = standardEncode res
+-- instance showFParamsInterCityDetails :: Show FParamsInterCityDetails where show = genericShow
+-- instance decodeFParamsInterCityDetails :: Decode FParamsInterCityDetails where decode = defaultDecode
+-- instance encodeFParamsInterCityDetails :: Encode FParamsInterCityDetails where encode = defaultEncode
+
+

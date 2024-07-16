@@ -61,7 +61,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow ,getFutureDate ,convertUTCtoISC)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (toggleLoader)
@@ -89,7 +89,7 @@ import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs)
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..))
+import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..))
 import Services.Accessor (_lat, _lon)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
@@ -269,7 +269,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- checkPermissionAndUpdateDriverMarker initialState true
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
-                                
+                                _ <- launchAff $ EHC.flowRunner defaultGlobalState $ getRideCount  GetRideCount push initialState
                                 pure unit
           runEffectFn1 consumeBP unit
           pure $ pure unit
@@ -519,7 +519,9 @@ driverMapsHeaderView push state =
                       ]
                   ]
                 , offlineNavigationLinks push state
-              ] <> [gotoRecenterAndSupport state push]
+              ] <> [gotoRecenterAndSupport state push,
+                    bannerView state push
+                   ]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             , linearLayout
               [ width MATCH_PARENT
@@ -700,6 +702,7 @@ gotoRecenterAndSupport state push =
         ][ locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
             then gotoButton push state else linearLayout[][]
+          , rideRequestButton  push state
           , helpAndSupportBtnView push showReportText
           , recenterBtnView state push
         ]
@@ -1570,6 +1573,85 @@ gotoListView push state =
       ]
    ]
 
+rideRequestButton :: forall w .(Action -> Effect Unit) -> HomeScreenState ->  PrestoDOM (Effect Unit) w
+rideRequestButton push state =
+  frameLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , orientation VERTICAL
+  , margin $ MarginTop 3
+  ] [ linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , margin $ MarginVertical 5 10
+      , cornerRadius 22.0
+      , gravity CENTER
+      ][linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      , margin $ MarginLeft 12
+      , cornerRadius 22.0
+      , onClick push $ const RideRequestsList
+      , background Color.white900
+      , padding $ Padding 16 12 16 12
+      , gravity CENTER
+      , stroke $ "1,"<> Color.grey900
+      , rippleColor Color.rippleShade
+      ][ imageView
+      [ width $ V 15
+      , height $ V 15
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_location"
+     ]
+     , textView $
+     [ weight 1.0
+     , text  "Riderequest"
+     , gravity CENTER 
+     , margin $ MarginLeft 10
+     , color Color.black800
+     ] <> FontStyle.tags TypoGraphy  
+     ]],
+     linearLayout
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , layoutGravity "right"
+     ][ textView $
+     [ height $ V 20
+     , width $ V 20
+     , cornerRadius 37.0
+     , text $ show (state.data.scheduledRideListResponse)
+     , visibility $ boolToVisibility  (state.data.scheduledRideListResponse /=0)
+     , color Color.black900
+     , gravity CENTER
+     , background Color.yellow900 
+     ] <> FontStyle.body9 TypoGraphy
+     ]
+     ]
+  -- linearLayout
+  -- [ width WRAP_CONTENT
+  -- , height WRAP_CONTENT
+  -- , orientation HORIZONTAL
+  -- , margin $ MarginLeft 12
+  -- , cornerRadius 22.0
+  -- , onClick push $ const RideRequestsList
+  -- , background Color.white900
+  -- , padding $ Padding 16 12 16 12
+  -- , gravity CENTER
+  -- , stroke $ "1,"<> Color.grey900
+  -- , rippleColor Color.rippleShade
+  -- ][ imageView
+  --    [ width $ V 15
+  --    , height $ V 15
+  --    , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_location"
+  --    ]
+  --  , textView $
+  --    [ weight 1.0
+  --    , text  "Riderequest"
+  --    , gravity CENTER 
+  --    , margin $ MarginLeft 10
+  --    , color Color.black800
+  --    ] <> FontStyle.tags TypoGraphy  
+  -- ]
 
 
 noGoToLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1995,12 +2077,13 @@ offlineNavigationLinks push state =
                 , color Color.black900
                 , padding $ PaddingBottom 1
                 ] <> FontStyle.tags TypoGraphy
-            ]
+            ] 
           ) navLinksArray)
     ]
     where
       navLinksArray = [ {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : ClickAddAlternateButton},
+                        {title : "Ride requests", icon : "ny_ic_location", action : RideRequestsList},
                         {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
                         {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
                       ]
@@ -2274,6 +2357,18 @@ paymentStatusPooling orderId count delayDuration state push action = do
       Left err -> pure unit
     else pure unit
 
+getRideCount :: forall action. (Int -> action) -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+getRideCount action push state = do
+  (scheduledBookingListResponse) <- Remote.rideBooking "10" "0"  (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD") (getFutureDate (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD") 1) ""
+  case scheduledBookingListResponse of
+    Right (ScheduledBookingListResponse listResp) -> do
+      
+      let size = DA.length listResp.bookings
+
+      doAff do liftEffect $ push $ action size
+      pure unit
+    Left _ -> pure unit
+
 checkCurrentRide :: forall action.(action -> Effect Unit) -> (String -> action) -> HomeScreenState -> Flow GlobalState Unit
 checkCurrentRide push action initialState = do
   activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
@@ -2336,3 +2431,85 @@ isAcWorkingPopupView push state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     ][ PopUpModal.view (push <<< IsAcWorkingPopUpAction) (isAcWorkingPopupConfig state) ]
+
+
+bannerView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+bannerView state push  = 
+  linearLayout[
+    height WRAP_CONTENT
+    ,width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , margin $ MarginHorizontal 30 30 
+    , cornerRadius 12.0
+    , background Color.blue800
+
+  ][
+    linearLayout [
+      height WRAP_CONTENT 
+     , width MATCH_PARENT
+     , orientation HORIZONTAL
+     , gravity CENTER
+     , color $ Color.blue600
+     , stroke ("1," <> Color.borderColorLight)
+     , cornerRadius 12.0
+    --  , padding $ Padding  2 2 2 0
+     , background Color.blue600
+    ][ infoView state push
+       ,linearLayout[
+        weight 1.0
+       ][]
+
+      ,linearLayout[
+        height  MATCH_PARENT
+       ,width WRAP_CONTENT
+       ][imageView [
+         width $ V 76
+       , height $ V 46
+       , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_banner_image_sedan"
+      ]]
+      
+    ] 
+    , timerView state push 
+
+  ]
+
+infoView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w 
+infoView state push = 
+   linearLayout [
+    height WRAP_CONTENT
+   ,width WRAP_CONTENT 
+   ,orientation VERTICAL
+   ,margin $ Margin 15 3 3 3
+   ][
+    textView $ [
+      height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      ,gravity CENTER_VERTICAL
+      ,text "You have an upcoming rental booking"
+      ,color $ Color.blue800
+    ]<>FontStyle.tags TypoGraphy
+  , textView $ [
+       height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      ,color $ Color.blue800
+      ,gravity CENTER_VERTICAL
+      ,text "13 January 2024 , 16:00"
+      ,textSize  $ FontSize.a_14
+    ]<>FontStyle.h3 TypoGraphy
+   ]
+
+timerView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w 
+timerView state push  = 
+   linearLayout[
+    width $ V 338
+     , PP.cornerRadii $ PTD.Corners 15.0 false false true true 
+    , gravity CENTER
+   ][
+    textView $[
+     gravity CENTER
+     , padding $ Padding 4 4 4 4
+     , color Color.white900
+     , text "Ride starts in 01:30:25"
+    ]<>FontStyle.tags TypoGraphy
+   ]
