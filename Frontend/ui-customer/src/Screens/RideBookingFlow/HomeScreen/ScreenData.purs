@@ -687,7 +687,7 @@ initialRideCompletedData = {
   , showIssueBanners : true
   , hasAccessibilityIssue : false
   , hasTollIssue : false
-  , hasSafetyIssue : false
+  , hasSafetyIssue : false                    
   , customerResponse : [
     {
       issueType : TollCharge

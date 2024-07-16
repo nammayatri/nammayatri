@@ -139,7 +139,7 @@ endOTPView push state =
   [ textView $
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , accessibilityHint $ "O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp) 
+    , accessibilityHint $ " END O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp) 
     , accessibility ENABLE
     , text $ getString END_OTP
     , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
@@ -1622,7 +1622,6 @@ addStopView push state =
       , orientation HORIZONTAL
       , margin $ MarginTop 2
       , gravity CENTER_VERTICAL
-      , accessibility DISABLE_DESCENDANT
       ]
       [ textView $
         [ text $ if isDestinationTextGiven then state.data.destination else getString NOT_ADDED_YET
@@ -1639,6 +1638,8 @@ addStopView push state =
         , onClick push $ const AddStop
         , width WRAP_CONTENT
         , height WRAP_CONTENT
+        , accessibility ENABLE
+        , accessibilityHint  $ if isDestinationTextGiven then "Edit : Button" else "Add now : Button" 
         , padding $ Padding 16 4 16 4
         ] <> FontStyle.body1 TypoGraphy
       ]
