@@ -254,7 +254,9 @@ dummyRideData :: ActiveRide
 dummyRideData = {
       id: ""
       , source: ""
+      , sourceArea: Nothing
       , destination: Nothing
+      , destinationArea: Nothing
       , src_lat: 0.0
       , src_lon: 0.0
       , dest_lat: 0.0

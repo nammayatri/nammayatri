@@ -94,7 +94,7 @@ import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideT
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..))
-import Services.Accessor (_lat, _lon)
+import Services.Accessor (_lat, _lon, _area)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -113,7 +113,6 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner)
 import Types.App (defaultGlobalState)
 import Services.API as API
-import Services.Accessor (_lat, _lon)
 import Services.Backend as Remote
 import Services.Config as SC
 import Services.EndPoints as EP
@@ -1536,7 +1535,9 @@ activeRideDetail state (RidesInfo ride) =
   {
   id : ride.id,
   source : (decodeAddress ride.fromLocation true),
+  sourceArea : ride.fromLocation ^. _area,
   destination : (\toLocation -> decodeAddress toLocation true) <$> ride.toLocation,
+  destinationArea : ride.toLocation >>= (\toLocation -> toLocation ^. _area),
   src_lat :  ((ride.fromLocation) ^. _lat),
   src_lon :  ((ride.fromLocation) ^. _lon),
   dest_lat: maybe ((ride.fromLocation) ^. _lat) (\toLocation -> toLocation ^. _lat) ride.toLocation,

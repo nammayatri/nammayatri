@@ -98,11 +98,11 @@ rideActionModalConfig state =
                       else
                         (fromMaybe "" ((DS.split (DS.Pattern " ") (rideData.riderName)) DA.!! 0)),
     sourceAddress  {
-      titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (rideData.source)) DA.!! 0),
+      titleText = fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") (rideData.source)) DA.!! 0)) rideData.sourceArea,
       detailText = rideData.source
     },
     destinationAddress = (\destination -> {
-      titleText : fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0),
+      titleText : fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0)) rideData.destinationArea,
       detailText : destination
     }) <$> state.data.activeRide.destination,
     stopAddress = (\stop -> {

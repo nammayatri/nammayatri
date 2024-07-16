@@ -1118,7 +1118,9 @@ type Rides = {
 type ActiveRide = {
   id :: String,
   source :: String,
+  sourceArea :: Maybe String,
   destination :: Maybe String,
+  destinationArea :: Maybe String,
   src_lat :: Number,
   src_lon :: Number,
   dest_lat :: Number,
