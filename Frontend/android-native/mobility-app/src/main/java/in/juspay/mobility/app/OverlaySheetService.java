@@ -1063,6 +1063,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                              sharedPref.edit().putString(getResources().getString(R.string.RIDE_STATUS), "null").apply();
                              showAcknowledgement(getString(R.string.DRIVER_ASSIGNMENT));
                              RideRequestUtils.openApplication(this);
+                             NotificationUtils.updateLocationUpdateDisAndFreq(NotificationUtils.DRIVER_ASSIGNMENT, sharedPref);
                          });
                      }
                 }
