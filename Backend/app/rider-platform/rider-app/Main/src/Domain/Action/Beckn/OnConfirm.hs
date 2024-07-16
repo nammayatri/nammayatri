@@ -134,7 +134,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
           Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         else do
           logInfo "Merchant not configured to send dashboard sms"
-  void $ QRB.updateStatus booking.id DRB.CONFIRMED
+  when (booking.status == DRB.NEW) $ void $ QRB.updateStatus booking.id DRB.CONFIRMED
 onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
