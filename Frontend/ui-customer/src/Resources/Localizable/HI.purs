@@ -1312,3 +1312,8 @@ getHI stringKey =
         KOZHIKODE -> "कोझिकोड"
         THRISSUR -> "त्रिशूर"
         TRIVANDRUM -> "तिरुवनंतपुरम"
+        PHONE_NUMBER_PERMISSION -> "फ़ोन नंबर अनुमति"
+        PHONE_NUMBER_PERMISSION_DESC -> "रेडबस आपका नम्मा यात्री फ़ोन नंबर जानना चाहता है"
+        DENY -> "इनकार"
+        ALLOW -> "अनुमति दें"
+        INTERCITY_BUS -> "इंटरसिटी बस"

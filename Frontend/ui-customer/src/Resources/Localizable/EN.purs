@@ -1314,3 +1314,8 @@ getEN stringKey =
         KOZHIKODE -> "Kozhikode"
         THRISSUR -> "Thrissur"
         TRIVANDRUM -> "Trivandrum"
+        PHONE_NUMBER_PERMISSION -> "Phone Number Permission"
+        PHONE_NUMBER_PERMISSION_DESC -> "Redbus wants to know your Namma Yatri phone number"
+        DENY -> "Deny"
+        ALLOW -> "Allow"
+        INTERCITY_BUS -> "Intercity Bus" 

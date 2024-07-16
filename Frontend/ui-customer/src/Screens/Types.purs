@@ -671,7 +671,15 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
+  , intercityBus :: IntercityBusData
   }
+  
+
+type IntercityBusData = {
+  showPermissionPopUp :: Boolean
+, showWebView :: Boolean
+, hasPhoneNumberPermission :: Boolean
+}
 
 type InteroperabilityState = {
   timerId :: String,

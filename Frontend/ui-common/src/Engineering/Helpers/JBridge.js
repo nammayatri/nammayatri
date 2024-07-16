@@ -2717,3 +2717,6 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCDate();
   }
 }
+
+export const rsEncryption = (str) => window.JBridge.rsEncryption ? window.JBridge.rsEncryption(str) : "";
+  

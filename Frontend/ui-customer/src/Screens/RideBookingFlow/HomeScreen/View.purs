@@ -604,6 +604,7 @@ view push state =
             , if state.props.zoneOtpExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
             , if state.data.rideCompletedData.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
+            , if state.data.intercityBus.showPermissionPopUp then PopUpModal.view (push <<< IntercityBusPermissionAction) (PopUpConfigs.intercityBusPhoneNumberPermission state) else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT

@@ -1312,3 +1312,8 @@ getBN stringKey =
         KOZHIKODE -> "কোজিকোড"
         THRISSUR -> "ত্রিশূর"
         TRIVANDRUM -> "তিরুবনন্তপুরম"
+        PHONE_NUMBER_PERMISSION -> "ফোন নম্বর অনুমতি"
+        PHONE_NUMBER_PERMISSION_DESC -> "আপনার ফোন নম্বর দিয়ে আমরা আপনার যাত্রা সম্পর্কে আপডেট দেওয়ার জন্য আপনার সাথে যোগাযোগ করতে পারি।"
+        DENY -> "অস্বীকার করুন"
+        ALLOW -> "অনুমতি দিন"
+        INTERCITY_BUS -> "ইন্টারসিটি বাস"

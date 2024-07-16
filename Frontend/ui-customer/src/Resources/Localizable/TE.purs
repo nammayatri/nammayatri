@@ -1327,3 +1327,8 @@ getTE stringKey =
     KOZHIKODE -> "కోజికోడ్"
     THRISSUR -> "తృశూర్"
     TRIVANDRUM -> "తిరువనంతపురం"
+    PHONE_NUMBER_PERMISSION -> "ఫోన్ నంబర్ అనుమతి"
+    PHONE_NUMBER_PERMISSION_DESC -> "Redbus మీ నమ్మ యాత్రి ఫోన్ నంబర్ తెలుసుకోవాలనుకుంటోంది"
+    DENY -> "తిరస్కరించు"
+    ALLOW -> "అనుమతించు"
+    INTERCITY_BUS -> "ఇంటర్‌సిటీ బస్సు"

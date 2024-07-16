@@ -927,3 +927,6 @@ data RouteKeysType  = DEFAULT | RENTAL | ADVANCED
 derive instance genericRouteKeysType :: Generic RouteKeysType _
 instance showRouteKeysType :: Show RouteKeysType where show = genericShow
 instance eqRouteKeysType :: Eq RouteKeysType where eq = genericEq
+
+
+foreign import rsEncryption :: String -> String

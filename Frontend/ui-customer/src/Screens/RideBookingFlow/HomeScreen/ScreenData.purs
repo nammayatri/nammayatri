@@ -34,7 +34,7 @@ import JBridge (Location)
 import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
-import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types as ST
 
 initData :: HomeScreenState
 initData = let
@@ -54,7 +54,7 @@ initData = let
     , rating : 4.0
     , locationList : []
     , savedLocations : []
-    , fareProductType : FPT.ONE_WAY
+    , fareProductType : ST.ONE_WAY
     , recentSearchs : { predictionArray : []}
     , destinationSuggestions : []
     , tripSuggestions: []
@@ -180,6 +180,7 @@ initData = let
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
     , famousDestinations : []
+    , intercityBus : initialIntercityBusData
     },
     props: {
       rideRequestFlow : false
@@ -481,7 +482,7 @@ dummyDriverInfo =
   , providerName : ""
   , providerType : CT.ONUS
   , rentalData : dummyRentalBookingConfig
-  , fareProductType : FPT.ONE_WAY
+  , fareProductType : ST.ONE_WAY
   , driversPreviousRideDropLocLat : Nothing
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
@@ -675,7 +676,7 @@ dummyInvalidBookingPopUpConfig = {
   bookingId : "",
   rideScheduledTime : "",
   maxEstimatedDuration : 0,
-  fareProductType : FPT.ONE_WAY
+  fareProductType : ST.ONE_WAY
 }
 
 initialRideCompletedData :: RideCompletedData
@@ -714,3 +715,9 @@ initialRideCompletedData = {
   }
 }
 
+initialIntercityBusData :: ST.IntercityBusData
+initialIntercityBusData = {
+  showPermissionPopUp : false
+, showWebView: false
+, hasPhoneNumberPermission : false
+}

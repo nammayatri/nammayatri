@@ -1313,3 +1313,8 @@ getKN stringKey =
         KOZHIKODE -> "ಕೋಝಿಕೋಡ್"
         THRISSUR -> "ತೃಶೂರ್"
         TRIVANDRUM -> "ತಿರುವನಂತಪುರಂ"
+        PHONE_NUMBER_PERMISSION -> "ಫೋನ್ ಸಂಖ್ಯೆ ಅನುಮತಿ"
+        PHONE_NUMBER_PERMISSION_DESC -> "Redbus ನಿಮ್ಮ ನಮ್ಮ ಯಾತ್ರಿ ಫೋನ್ ಸಂಖ್ಯೆಯನ್ನು ತಿಳಿಯಲು ಬಯಸುತ್ತದೆ"
+        DENY -> "ನಿರಾಕರಿಸಿ"
+        ALLOW -> "ಅನುಮತಿಸು"
+        INTERCITY_BUS -> "ಇಂಟರ್‌ಸಿಟಿ ಬಸ್"

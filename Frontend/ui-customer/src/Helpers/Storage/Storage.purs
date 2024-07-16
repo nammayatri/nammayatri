@@ -113,6 +113,7 @@ data KeyStore
   | CONFIRM_QUOTES_POLLING_COUNT
   | CONFIRM_QUOTES_START_TIME
   | BOOKING_TIME_LIST
+  | INTERCITY_BUS_PHONE_NUMBER_PERMISSION
 
 derive instance genericKeyStore :: Generic KeyStore _
 

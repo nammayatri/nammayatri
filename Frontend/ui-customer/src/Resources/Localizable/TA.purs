@@ -1330,3 +1330,8 @@ getTA stringKey =
     KOZHIKODE -> "கோழிக்கோடு"
     THRISSUR -> "திரிசூர்"
     TRIVANDRUM -> "திருவநந்தபுரம்"
+    PHONE_NUMBER_PERMISSION -> "ஃபோன் எண் அனுமதி"
+    PHONE_NUMBER_PERMISSION_DESC -> "உங்கள் நம்ம யாத்ரி ஃபோன் எண்ணை Redbus அறிய விரும்புகிறது"
+    DENY -> "மறுக்கவும்"
+    ALLOW -> "அனுமதி"
+    INTERCITY_BUS -> "இன்டர்சிட்டி பேருந்து"

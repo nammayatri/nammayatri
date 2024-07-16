@@ -578,6 +578,7 @@ defaultCityConfig =
     enableAcViews : false,
     enableRentals : false,
     enableIntercity : false, 
+    enableIntercityBus : true,
     waitingChargeConfig : {
       auto : {
         freeMinutes : 3.0

@@ -512,6 +512,11 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
 userCommonAssetBaseUrl :: String
 userCommonAssetBaseUrl = "https://" <> assetDomain <> "/beckn/common/user/"
 
+getAppAssetUrl :: LazyCheck -> String
+getAppAssetUrl lazy = 
+  let  appName =  fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+  in if appName == "Mana Yatri" then "https://" <> assetDomain <> "/beckn/manayatri/user/" else getAssetsBaseUrl FunctionCall
+
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName = do
   if imageName  == "" then ","
@@ -520,8 +525,9 @@ fetchImage fetchImageFrom imageName = do
     FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
     COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/user/images/" <> imageName <> ".png"
     GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
+    APP_ASSET -> imageName <> "," <> (getAppAssetUrl FunctionCall) <> imageName <> ".png"
 
-data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET
+data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET | APP_ASSET
 
 derive instance genericFetchImageFrom :: Generic FetchImageFrom _
 instance eqFetchImageFrom :: Eq FetchImageFrom where eq = genericEq

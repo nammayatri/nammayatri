@@ -423,6 +423,7 @@ type CityConfig = {
   enableAcViews :: Boolean,
   waitingChargeConfig :: WaitingChargeConfig,
   rentalWaitingChargeConfig :: WaitingChargeConfig
+, enableIntercityBus :: Boolean
 }
 
 type CityBasedFeatures = {

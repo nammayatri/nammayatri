@@ -1314,3 +1314,8 @@ getML stringKey =
         KOZHIKODE -> "കോഴിക്കോട്"
         THRISSUR -> "തൃശ്ശൂർ"
         TRIVANDRUM -> "തിരുവനന്തപുരം"
+        PHONE_NUMBER_PERMISSION -> "ഫോൺ നമ്പർ അനുമതി"
+        PHONE_NUMBER_PERMISSION_DESC -> "Redbus നിങ്ങളുടെ നമ്മ യാത്രി ഫോൺ നമ്പർ അറിയാൻ ആഗ്രഹിക്കുന്നു"
+        DENY -> "നിരസിക്കുക"
+        ALLOW -> "അനുവദിക്കുക"
+        INTERCITY_BUS -> "ഇൻ്റർസിറ്റി ബസ്"

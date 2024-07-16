@@ -324,6 +324,8 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | IntercityBusPermissionAction PopUpModal.Action
+  | IntercityBusAC
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where
