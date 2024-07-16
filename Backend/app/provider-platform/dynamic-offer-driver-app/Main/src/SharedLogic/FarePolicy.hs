@@ -120,15 +120,13 @@ getFullFarePolicy sourceLatLong txnId fareProduct = do
   let localTimeZoneSeconds = 19800 -- fix this
   congestionChargeMultiplierFromModel <-
     case fareProduct.tripCategory of
-      DTC.OneWay _ -> do
-        multiplier <- getCongestionChargeMultiplierFromModel localTimeZoneSeconds now sourceLatLong fareProduct.vehicleServiceTier
-        return $ fromMaybe 1.0 multiplier
-      _ -> pure 1.0 -- For now, we are not supporting congestion charge through model for other trips
+      DTC.OneWay _ -> getCongestionChargeMultiplierFromModel localTimeZoneSeconds now sourceLatLong fareProduct.vehicleServiceTier
+      _ -> return Nothing -- For now, we are not supporting congestion charge through model for other trips
   farePolicy' <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
   let updatedCongestionChargeMultiplier =
-        farePolicy'.congestionChargeMultiplier <&> \case
-          FarePolicyD.BaseFareAndExtraDistanceFare congestionCharge -> FarePolicyD.BaseFareAndExtraDistanceFare (congestionCharge * congestionChargeMultiplierFromModel)
-          FarePolicyD.ExtraDistanceFare congestionCharge -> FarePolicyD.ExtraDistanceFare (congestionCharge * congestionChargeMultiplierFromModel)
+        case congestionChargeMultiplierFromModel of
+          Just congestionChargeMultiplier -> Just $ FarePolicyD.BaseFareAndExtraDistanceFare congestionChargeMultiplier
+          Nothing -> farePolicy'.congestionChargeMultiplier
   let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier
   return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory farePolicy
 
