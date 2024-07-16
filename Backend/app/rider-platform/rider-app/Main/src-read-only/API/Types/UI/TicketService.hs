@@ -176,6 +176,20 @@ data TicketBookingUpdateSeatsReq = TicketBookingUpdateSeatsReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data TicketBookings = TicketBookings
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    bookedSeats :: Kernel.Prelude.Int,
+    cancelledSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    createdAt :: Kernel.Prelude.UTCTime,
+    id :: Data.Text.Text,
+    shortId :: Data.Text.Text,
+    status :: Data.Text.Text,
+    ticketPlaceId :: Kernel.Prelude.Maybe Data.Text.Text,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data TicketServiceCancelReq = TicketServiceCancelReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     date :: Data.Time.Calendar.Day,

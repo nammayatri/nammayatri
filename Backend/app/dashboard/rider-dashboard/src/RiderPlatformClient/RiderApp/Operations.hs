@@ -32,6 +32,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Time
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Action.Dashboard.Ride as DCM
+import qualified "rider-app" Domain.Action.UI.TicketService as DTB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified "rider-app" Domain.Types.TicketBooking as DTB
@@ -137,7 +138,8 @@ data TicketAPIs = TicketAPIs
     getTicketPlaces :: Euler.EulerClient [DTB.TicketPlace],
     cancelTicketBookingService :: DTB.TicketBookingCancelReq -> Euler.EulerClient APISuccess,
     cancelTicketService :: DTB.TicketServiceCancelReq -> Euler.EulerClient APISuccess,
-    getTicketBookingDetails :: Id.ShortId DTB.TicketBooking -> Euler.EulerClient DTB.TicketBookingDetails
+    getTicketBookingDetails :: Id.ShortId DTB.TicketBooking -> Euler.EulerClient DTB.TicketBookingDetails,
+    getTicketBookingList :: Id DTB.TicketPlace -> Maybe Text -> Maybe (Id DTB.TicketBookingService) -> Maybe Text -> Maybe Kernel.Prelude.UTCTime -> Maybe Kernel.Prelude.UTCTime -> Maybe Kernel.Prelude.Int -> Maybe Kernel.Prelude.Int -> Euler.EulerClient DTB.TicketBookingListRes
   }
 
 newtype HotSpotAPIs = HotSpotAPIs
@@ -224,7 +226,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> getTicketPlaces
       :<|> cancelTicketBookingService
       :<|> cancelTicketService
-      :<|> getTicketBookingDetails = ticketsClient
+      :<|> getTicketBookingDetails
+      :<|> getTicketBookingList = ticketsClient
 
     removeExpires = hotSpotClient
 

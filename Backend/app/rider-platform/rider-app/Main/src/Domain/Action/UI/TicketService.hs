@@ -5,12 +5,14 @@ module Domain.Action.UI.TicketService where
 
 import API.Types.UI.TicketService
 import qualified Control.Monad.Extra as ME
+import Dashboard.Common as Common
 import Data.List (findIndex, sortBy)
 import Data.List.Extra ((!?))
 import qualified Data.List.NonEmpty as DLN
 import qualified Data.Map as Map
 import Data.OpenApi (ToSchema)
 import Data.Ord as DO
+import Data.Text (unpack)
 import qualified Data.Text as Data.Text
 import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime), dayOfWeek, midnight, timeOfDayToTime, utctDay)
@@ -119,6 +121,12 @@ data PeopleCategoryCancellationInfo = PeopleCategoryCancellationInfo
   { cancelledPeopleCategory :: DTB.TicketBookingPeopleCategory,
     cancelledQuantity :: Int
   }
+
+data TicketBookingListRes = TicketBookingListRes
+  { list :: [API.Types.UI.TicketService.TicketBookings],
+    summary :: Common.Summary
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 convertBusinessHT :: Domain.Types.BusinessHour.BusinessHourType -> ConvertedTime
 convertBusinessHT (Domain.Types.BusinessHour.Slot time) = ConvertedTime {slot = Just time, startTime = Nothing, endTime = Nothing}
@@ -435,6 +443,44 @@ getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do
             ticketPlaceName = ticketPlace.name,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
+            ..
+          }
+
+getTicketBookingList :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService) -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow TicketBookingListRes
+getTicketBookingList (_, merchantId') mbLimit mbOffset placeId mbTicketBookinShordId mbTicketBookingServiceId mbTicketBookingStatus mbFrom mbTo = do
+  let limit = fromMaybe 10 mbLimit
+  let offset = fromMaybe 0 mbOffset
+  merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId'
+  ticketBookingList <- case mbTicketBookingServiceId of
+    Nothing -> do
+      ticketBookingList <- QTB.findAllTicketBookingList merchantOpCity.id limit offset mbFrom mbTo placeId mbTicketBookinShordId (Kernel.Prelude.read . Data.Text.unpack <$> mbTicketBookingStatus)
+      mapM mTicketBookingList ticketBookingList
+    Just ticketBookingServiceId -> do
+      ticketBookingServiceList <- QTBS.findAllTicketBookingServiceList merchantOpCity.id limit offset mbFrom mbTo ticketBookingServiceId mbTicketBookinShordId (Kernel.Prelude.read . Data.Text.unpack <$> mbTicketBookingStatus)
+      mapM mTicketBookingServiceList ticketBookingServiceList
+  let count = length ticketBookingList
+  let summary = Common.Summary {totalCount = 10000, count}
+  pure $ TicketBookingListRes {list = ticketBookingList, summary = summary}
+  where
+    mTicketBookingList DTTB.TicketBooking {..} = do
+      return $
+        TicketBookings
+          { amount = amount.amount,
+            id = id.getId,
+            shortId = shortId.getShortId,
+            status = show status,
+            ticketPlaceId = Just ticketPlaceId.getId,
+            visitDate = Just visitDate,
+            ..
+          }
+    mTicketBookingServiceList DTB.TicketBookingService {..} = do
+      return $
+        TicketBookings
+          { amount = amount.amount,
+            id = id.getId,
+            shortId = shortId.getShortId,
+            status = show status,
+            ticketPlaceId = Nothing,
             ..
           }
 
