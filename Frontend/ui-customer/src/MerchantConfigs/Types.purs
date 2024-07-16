@@ -422,7 +422,8 @@ type CityConfig = {
   appLogoLight :: String,
   enableAcViews :: Boolean,
   waitingChargeConfig :: WaitingChargeConfig,
-  rentalWaitingChargeConfig :: WaitingChargeConfig
+  rentalWaitingChargeConfig :: WaitingChargeConfig,
+  intercityWaitingChargeConfig :: WaitingChargeConfig
 }
 
 type CityBasedFeatures = {
