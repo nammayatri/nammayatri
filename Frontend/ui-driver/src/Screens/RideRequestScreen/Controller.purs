@@ -50,6 +50,7 @@ data ScreenOutput
   -- | GoToHelp
   | LoaderOutput RideRequestScreenState
   | RefreshScreen RideRequestScreenState
+  | GoToRideSummary RideRequestScreenState
 
 data Action
   = BackPressed
@@ -165,6 +166,15 @@ eval (ScrollStateChanged scrollState) state = case scrollState of
            SCROLL_STATE_FLING -> continue state{data{scrollEnable = true}}
            _ -> continue state
 
+eval (RideRequestCardActionController (RideRequestCardActionController.Select index )) state = do 
+                                                                                                let newArr = (state.data.filteredArr) !! index
+                                                                                                case newArr of 
+                                                                                                  Nothing -> continue state
+                                                                                                  Just (ScheduleBooking cardData) -> do 
+                                                                                                                                        let (BookingAPIEntity booking) = cardData.bookingDetails
+                                                                                                                                            now = EHC.getCurrentUTC ""
+                                                                                                                                            diff = runFn2 differenceBetweenTwoUTC booking.startTime now 
+                                                                                                                                        if diff < 0 then continue state else exit $ GoToRideSummary state{data{currCard = cardData.bookingDetails, fareDetails = cardData.fareDetails}}
 
 eval (OnFadeComplete _ ) state = do      
   if not state.props.receivedResponse 
@@ -215,6 +225,8 @@ myRideListTransformerProp listres =
                         , country: Just ""
                         , state: Just ""
                         , street: Just ""
+                        , fullAddress : Just ""
+                        , door : Just ""
                         }
                   , createdAt: "2016-07-22T00:00:00Z"
                   , id: "string"

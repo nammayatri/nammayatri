@@ -303,6 +303,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToBookingPreferences ST.HomeScreenState
                     | GoToRideReqScreen ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
+                    | GoToRideSummary ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -436,6 +437,7 @@ data Action = NoAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
             | GetRideCount Int
+            | RideSummary
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 

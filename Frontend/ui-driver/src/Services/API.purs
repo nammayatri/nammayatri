@@ -4856,7 +4856,9 @@ newtype LocationAddress  = LocationAddress {
   city :: Maybe String,
   country ::Maybe String,
   state :: Maybe String,
-  street :: Maybe String
+  street :: Maybe String,
+  fullAddress :: Maybe String,
+  door :: Maybe String
 }
 derive instance genericLocationAddress:: Generic LocationAddress _
 instance standardLocationAddress:: StandardEncode LocationAddress where standardEncode (LocationAddress res) = standardEncode res
@@ -4978,6 +4980,7 @@ data TitleTag = SERVICE_CHARGE
               | FREE_WAITING_TIME_IN_MINUTES 
               | NIGHT_SHIFT_CHARGE 
               | CONSTANT_NIGHT_SHIFT_CHARGE
+              | WAITING_CHARGE_RATE_PER_MIN
 
 derive instance genericTitleTag :: Generic TitleTag   _
 instance showTitleTag :: Show TitleTag  where show = genericShow
@@ -4998,6 +5001,7 @@ instance decodeTitleTag :: Decode TitleTag
                     "FREE_WAITING_TIME_IN_MINUTES"       ->  except $ Right FREE_WAITING_TIME_IN_MINUTES
                     "NIGHT_SHIFT_CHARGE"                 ->  except $ Right NIGHT_SHIFT_CHARGE
                     "CONSTANT_NIGHT_SHIFT_CHARGE"        ->  except $ Right CONSTANT_NIGHT_SHIFT_CHARGE
+                    "WAITING_CHARGE_RATE_PER_MIN"        ->  except $ Right WAITING_CHARGE_RATE_PER_MIN
                     _                                    ->  except $ Right SERVICE_CHARGE
 
 instance encodeTitleTag:: Encode TitleTag  where encode = defaultEnumEncode
@@ -5105,4 +5109,24 @@ instance standardTitleTag :: StandardEncode TitleTag   where standardEncode _ = 
 -- instance decodeFParamsInterCityDetails :: Decode FParamsInterCityDetails where decode = defaultDecode
 -- instance encodeFParamsInterCityDetails :: Encode FParamsInterCityDetails where encode = defaultEncode
 
+data ScheduleBookingAcceptReq = ScheduleBookingAcceptReq String 
 
+newtype ScheduleBookingAcceptRes = ScheduleBookingAcceptRes ApiSuccessResult
+
+instance makeScheduleBookingAcceptReq  :: RestEndpoint ScheduleBookingAcceptReq ScheduleBookingAcceptRes where
+    makeRequest reqBody@(ScheduleBookingAcceptReq bookingId) headers = defaultMakeRequest POST (EP.scheduleBookingAccept bookingId) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericScheduleBookingAcceptReq :: Generic ScheduleBookingAcceptReq _
+instance showScheduleBookingAcceptReq :: Show ScheduleBookingAcceptReq where show = genericShow
+instance standardEncodeScheduleBookingAcceptReq :: StandardEncode ScheduleBookingAcceptReq where standardEncode (ScheduleBookingAcceptReq bookingId) = standardEncode{}
+instance decodeScheduleBookingAcceptReq :: Decode ScheduleBookingAcceptReq where decode = defaultDecode
+instance encodeScheduleBookingAcceptReq :: Encode ScheduleBookingAcceptReq where encode = defaultEncode
+
+derive instance genericScheduleBookingAcceptRes :: Generic ScheduleBookingAcceptRes _
+derive instance newtypeScheduleBookingAcceptRes :: Newtype ScheduleBookingAcceptRes _
+instance standardEncodeScheduleBookingAcceptRes :: StandardEncode ScheduleBookingAcceptRes where standardEncode (ScheduleBookingAcceptRes req) = standardEncode req
+instance showScheduleBookingAcceptRes :: Show ScheduleBookingAcceptRes where show = genericShow
+instance decodeScheduleBookingAcceptRes :: Decode ScheduleBookingAcceptRes where decode = defaultDecode
+instance encodeScheduleBookingAcceptRes :: Encode ScheduleBookingAcceptRes where encode = defaultEncode

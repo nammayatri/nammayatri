@@ -32,3 +32,6 @@ rideRequestScreen = do
     RefreshScreen state -> App.BackT $ App.NoBack <$> pure ( RIDE_REQUEST_REFRESH_SCREEN  state)
     LoaderOutput updatedState -> App.BackT $ App.BackPoint <$> (pure $ LOADER__OUTPUT updatedState)
 
+    GoToRideSummary updatedState -> do
+      modifyScreenState $ RideRequestScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GOTO_RIDE_SUMMARY updatedState)

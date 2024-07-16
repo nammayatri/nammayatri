@@ -1411,7 +1411,23 @@ data STR = LETS_GET_STARTED
         | CONVERT_NOW
         | MORE_RIDES
         | SORT_BY 
-        
+        | ACCEPT 
+        | PASS 
+        | TERM_1A
+        | TERM_2A
+        | TERM_3A
+        | TERM_1B
+        | TERM_2B
+        | TERM_3B
+        | EXCLUDED_CHARGES
+        | TOLLS 
+        | STATE_PERMIT 
+        | EXCLUDED_FOOTER 
+        | INCLUDED_CHARGES 
+        | INC_1
+        | INC_2A
+        | INC_2B 
+        | PICKUP_DROP 
         | TOLL_CHARGES_INCLUDED
         | PLEASE_DO_NOT_DEMAND_EXTRA 
         | FINAL_FARE_EXCLUDES_TOLL 

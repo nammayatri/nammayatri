@@ -15,10 +15,10 @@
 
 module Components.SourceToDestination.View where
 
-import Prelude (Unit, ($), (<>), (/), (<), (>), (==),(/=), const)
+import Prelude (Unit, ($), (<>), (/), (<), (>), (==),(/=), const, map)
 import Effect (Effect)
-import Components.SourceToDestination.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), Accessiblity(..), Visibility(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id, accessibilityHint, accessibility, onClick, clickable)
+import Components.SourceToDestination.Controller (Action(..), Config, PillInfo)
+import PrestoDOM 
 import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -32,6 +32,9 @@ import Data.Function.Uncurried (runFn1)
 import Data.String as DS
 import JBridge (getLayoutBounds)
 import Mobility.Prelude (boolToVisibility)
+import Debug
+import PrestoDOM.Animation as PrestoAnim
+import Animation (scaleYAnimWithDelay)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -40,6 +43,7 @@ view push config =
   , width config.width
   , gravity CENTER_VERTICAL
   , margin config.margin
+  , afterRender push $ const NoAction
   ][ relativeLayout
       ([ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -57,14 +61,14 @@ view push config =
       ]
        else []) <>
       [
-      sourceLayout config
+      sourceLayout push config
       ])
     , distanceLayout config
     ]
 
 
-sourceLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
-sourceLayout config =
+sourceLayout :: forall w. (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+sourceLayout push config =
   let dateAndAddress = addressAndDate config.sourceTextConfig.text
       address = dateAndAddress.address
       date = dateAndAddress.date
@@ -120,8 +124,54 @@ sourceLayout config =
               , visibility $ config.horizontalSeperatorConfig.visibility
               , padding $ config.horizontalSeperatorConfig.padding
               ][]
+          , horizontalScrollView
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , margin $ MarginLeft 4
+              , visibility $ config.pillsConfig.visibility
+              , orientation HORIZONTAL
+              ]
+              [ linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , orientation HORIZONTAL
+                  , margin $ MarginVertical 16 16
+                  , scrollBarX false
+                  ]
+                  ( map (\item -> mapPill config push item) config.pillsConfig.pillList)
+              ]
           ]
       ]
+
+
+mapPill :: forall w. Config -> (Action -> Effect Unit) -> PillInfo -> PrestoDOM (Effect Unit) w
+mapPill state push pill = 
+  linearLayout 
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , background Color.grey700
+    , stroke ("1," <> Color.grey900)
+    , padding $ Padding 8 6 8 6
+    , cornerRadius 4.0
+    , margin $ MarginHorizontal 4 4
+    , gravity CENTER_VERTICAL
+    ]
+    [ imageView
+        [ width $ V 16
+        , height $ V 16
+        , imageWithFallback pill.imageUrl
+        , visibility pill.imageVisibility
+        , margin $ MarginRight 2
+        , gravity CENTER_VERTICAL
+        ]
+    , textView $ 
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text pill.text
+        , color Color.black800
+        , gravity CENTER_VERTICAL
+        ] <> FontStyle.tags TypoGraphy
+    ]
     
 addressAndDate :: String -> {address :: String, date :: String}
 addressAndDate text = do

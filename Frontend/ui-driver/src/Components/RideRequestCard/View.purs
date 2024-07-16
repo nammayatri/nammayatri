@@ -42,7 +42,7 @@ view push =
         , padding $ Padding 16 16 16 12
         , margin $ Margin 16 0 16 16
         , cornerRadius 12.0
-        , onClickHolder push $ const Select
+        , onClickHolder push $ Select
         , id $ getNewIDWithTag "cardHeight"
         , background Color.white900
         , rippleColor Color.rippleShade
@@ -336,7 +336,7 @@ shimmerView push =
         , padding $ Padding 16 16 16 12
         , margin $ Margin 16 0 16 16
         , cornerRadius 12.0
-        , onClickHolder push $ const Select
+        , onClickHolder push $ Select
         , id $ getNewIDWithTag "cardHeight"
         ,PrestoList.visibilityHolder "shimmerVisibility"
         , background Color.white900

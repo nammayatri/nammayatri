@@ -25,7 +25,7 @@ import Locale.Utils
 import Log
 import Mobility.Prelude
 import Screens.SubscriptionScreen.Controller
-
+import Engineering.Helpers.RippleCircles
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Domain.Payments (APIPaymentStatus(..)) as PS
@@ -134,7 +134,7 @@ import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Timers (clearTimerWithId)
-import Types.App (LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..))
+import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
@@ -2724,6 +2724,8 @@ homeScreenFlow = do
     GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow true
     GO_TO_RIDE_REQ_SCREEN -> rideRequestScreenFlow
+    GO_TO_RIDE_SUMMARY -> rideSummaryScreenFlow 
+    GO_TO_RIDE_REQ_SCREEN -> rideRequestScreenFlow
     ENABLE_GOTO_API state id currentLocation -> do
       activateResp <- lift $ lift $ Remote.activateDriverGoTo id currentLocation
       pure $ toggleBtnLoader "" false
@@ -4055,7 +4057,79 @@ rideRequestScreenFlow = do
       rideRequestScreenFlow
     TA.LOADER__OUTPUT state -> do
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = state.data.offset + 5}})
-      rideRequestScreenFlow
+    TA.GOTO_RIDE_SUMMARY state -> do
+      modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> rideSummaryScreen {data {
+        rideDetails = state.data.currCard,
+        fareDetails = state.data.fareDetails
+      }})
+      rideSummaryScreenFlow 
+    _ -> do  rideRequestScreenFlow
 
 
-                      
+rideSummaryScreenFlow :: FlowBT String Unit
+rideSummaryScreenFlow = do
+  action <- UI.rideSummaryScreen
+  case action of
+    ACCEPT_SCHEDULED_RIDE bookingId -> do 
+      API.ScheduleBookingAcceptRes acceptScheduledRideResp <- Remote.scheduleBookingAcceptBT bookingId
+      homeScreenFlow
+    GO_TO_RIDE_REQUEST -> rideRequestScreenFlow
+    (UPDATE_ROUTE_INTERCITY slat slon dlat dlon) ->  do
+      GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq slat slon dlat dlon) "pickup"
+      let shortRoute = (routeApiResponse !! 0)
+      case shortRoute of
+        Just (Route route) -> do
+          let srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = "" }
+          let destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = "", anchorU = 0.5, anchorV = 1.0 }
+          let coor = walkCoordinates route.points
+          let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+          liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverSavedLoc1")
+          pure unit
+        Nothing -> pure unit
+      rideSummaryScreenFlow
+    UPDATE_ROUTE_RENTAL slat slon ->  do
+      (LatLon lat lon _) <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
+      let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ lat
+      let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ lon
+      GetRouteResp routeApiResponse <- Remote.getRouteBT (makeGetRouteReq currentDriverLat currentDriverLon slat slon ) "pickup"
+      let shortRoute = (routeApiResponse !! 0)
+      let center  = {lat: slat, lng: slon}
+      case shortRoute of
+        Just (Route route) -> do
+          let srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_hatchback_nav_on_map", primaryText = "" }
+          let destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = "", anchorU = 0.5, anchorV = 1.0 }
+          let coor = walkCoordinates route.points
+          let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+          liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverSavedLoc1")
+          liftFlowBT $ runEffectFn1 addRippleCircle circleRippleConfig{center = center, fillColor="#1042B8BA"  , radius = 1200.0, toStrokeColor = "#8042B8BA" , fromStrokeColor = "#8042B8BA" , repeatMode = 0, count = 1}
+          pure unit
+        Nothing -> pure unit
+      rideSummaryScreenFlow                      
+    UPDATE_ROUTE_REGULAR slat slon dlat dlon ->  do
+      (LatLon lat lon _) <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
+      let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ lat
+      let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ lon
+      GetRouteResp routeApiResponseCurrentToSource <- Remote.getRouteBT (makeGetRouteReq currentDriverLat currentDriverLon slat slon ) "pickup"
+      GetRouteResp routeApiResponseSourceToDestination <- Remote.getRouteBT (makeGetRouteReq slat slon dlat dlon) "pickup"
+      let shortRouteCurrentToSource = (routeApiResponseCurrentToSource !! 0)
+      let shortRouteSourceToDestination = (routeApiResponseSourceToDestination !! 0)
+      let center  = {lat: slat, lng: slon}
+      case shortRouteCurrentToSource of
+        Just (Route route) -> do
+          let srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_hatchback_nav_on_map", primaryText = "" }
+          let destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_src_marker", primaryText = "", anchorU = 0.5, anchorV = 1.0 }
+          let coor = walkCoordinates route.points
+          let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+          liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverSavedLoc1")
+          pure unit
+        Nothing -> pure unit
+      case shortRouteSourceToDestination of
+        Just (Route route) -> do
+          let srcMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "", primaryText = "" }
+          let destMarkerConfig = JB.defaultMarkerConfig{ pointerIcon = "ny_ic_dest_marker", primaryText = "", anchorU = 0.5, anchorV = 1.0 }
+          let coor = walkCoordinates route.points
+          let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
+          liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverSavedLoc1")
+          pure unit
+        Nothing -> pure unit
+      rideSummaryScreenFlow                      

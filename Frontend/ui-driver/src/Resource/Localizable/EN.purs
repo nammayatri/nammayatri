@@ -2,6 +2,7 @@ module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
 import Prelude ((<>))
+import Prim.TypeError (Above)
 
 getEN :: STR -> String
 getEN stringKey =
@@ -1404,6 +1405,26 @@ getEN stringKey =
         PLEASE_DO_NOT_DEMAND_EXTRA -> "Please do not demand extra from the customer"
         FINAL_FARE_EXCLUDES_TOLL -> "Final fare excludes toll charges"
         PLEASE_COLLECT_SEPARATELY -> "Please collect it separately from customer <b>only if a toll was crossed</b>"
+        TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"
+        ACCEPT -> "Accept"
+        PASS -> "Pass"
+        TERM_1A -> "1. Total fare will be calculated depending on the actual final distance of ride."
+        TERM_2A -> "2. Toll will be applicable only if toll road is taken."
+        TERM_3A -> "3. Parking charges if any will have to be settled separately with the driver."
+        TERM_1B -> "1. Cancellation before 1 hr from the scheduled ride start will lead to penalties on the platform. "
+        TERM_2B -> "2. Be online before 45 minutes of Scheduled Ride Start. "
+        TERM_3B -> "3. Reach Customer pickup location before 15 minutes from scheduled ride start time."        
+        EXCLUDED_CHARGES -> "Excluded charges"
+        TOLLS -> "Tolls"
+        STATE_PERMIT -> "State Permits"
+        EXCLUDED_FOOTER -> "These fare components are NOT included in the fare and must be settled separately with the customer"
+        INCLUDED_CHARGES -> "Included charges"
+        INC_1 -> "*Extra Charges are only applicable if you exceed the included distance / time."
+        INC_2A -> "Night time charges: Driving between 10:00 pm and 5:00 am will have a 1.1x multiplier to final fare."
+        INC_2B -> "Night time charges: Driving between 10:00 pm and 5:00 am will have a flat night time charge added to the fare."
+        PICKUP_DROP -> "Pickup & Drop"
+        MORE_RIDES -> "More rides"
+        SORT_BY -> "Sort By"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"        
         YOU_ARE_ALL_SET_TO_TAKE_RIDES -> "You're all set to take rides on Namma Yatri"
         TOP_AC_DRIVER appName -> "See how to be a top AC driver on " <> appName

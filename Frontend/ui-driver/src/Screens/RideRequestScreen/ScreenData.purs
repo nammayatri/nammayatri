@@ -35,6 +35,8 @@ type RideRequestScreenData = {
   ,refreshLoader :: Boolean
   ,scrollEnable :: Boolean
 
+  , currCard :: BookingAPIEntity
+  , fareDetails :: Array RateCardItem
 }
 
 dummyResp = ScheduledBookingListResponse {
@@ -64,8 +66,106 @@ dummy_Resp =   {
     pillColor : "",
     overlayVisiblity : "",
     visiblePill : "",
-    cornerRadius : "",
-    imageType  : ""
+    cornerRadius: "",
+    imageType: ""
+}
+
+dummyAPI :: BookingAPIEntity
+dummyAPI = BookingAPIEntity{
+  area: Default,
+  createdAt : "2016-07-22T00:00:00Z",
+  currency : INR,
+  disabilityTag : Just "",
+  distanceToPickup : Just 0,
+  estimatedDistance : Just 0,
+  estimatedDuration : Just 0,
+  estimatedFare : 0.0,
+  fareParams : FareParameters {
+    baseFare : 0.0,
+    congestionCharge : Just 0.0,
+    currency : INR,
+    customerCancellationDues : Just 0.0,
+    customerExtraFee : Just 0.0,
+    driverSelectedFare : Just 0.0,
+    fareParametersDetails : FareParametersDetails{
+      contents : Content {
+          currency : INR,
+          deadKmFare : Just 0,
+          distBasedFare : Just 0,
+          distanceUnit : Just "",
+          extraDistance : Just 0, 
+          extraDuration : Just 0,
+          timeBasedFare : Just 0
+      },
+      tag : Just ""
+    },
+    govtCharges : Just 0.0,
+    id : "",
+    nightShiftCharge : Just 0.0,
+    nightShiftRateIfApplies : Just 0.0,
+    parkingCharge : Just 0.0,
+    rideExtraTimeFare : Just 0.0,
+    serviceCharge : Just 0.0,
+    tollCharges : Just 0.0,
+    updatedAt : "2016-07-22T00:00:00Z",
+    waitingCharge : Just 0.0
+  },
+  fromLocation : Location{
+    address : LocationAddress{
+          area : Just "",
+          areaCode : Just "",
+          building : Just "",
+          city : Just "",
+          country :Just "",
+          state : Just "",
+          street : Just "",
+          door : Just "",
+          fullAddress : Just ""
+    },
+    createdAt : "",
+    id  : "",
+    lat : 0.0,
+    lon : 0.0,
+    updatedAt :""
+  },
+  id : "",
+  isScheduled : true,
+  maxEstimatedDistance : Just 0.0,
+  returnTime : Just "2016-07-22T00:00:00Z",
+  roundTrip : Just false,
+  isAirConditioned : Just false,
+  specialZoneOtpCode : Just "",
+  startTime : "2016-07-22T00:00:00Z",
+  status : CTA.UPCOMING,
+  stopLocationId : Just "",
+  toLocation : Just (Location{
+    address : LocationAddress{
+      area : Just "",
+      areaCode : Just "",
+      building : Just "",
+      city : Just "",
+      country :Just "",
+      state : Just "",
+      street : Just "",
+      door : Just "444",
+      fullAddress : Just ""
+    },
+    createdAt : "",
+    id  : "",
+    lat : 0.0,
+    lon : 0.0,
+    updatedAt :""
+  }),
+  tollNames : Just [""],
+  tripCategory : CTA.TripCategory {
+    contents : Just "",
+    tag : CTA.OneWay
+  },
+  updatedAt : "2016-07-22T00:00:00Z",
+  vehicleServiceTier : COMFY,
+  vehicleServiceTierAirConditioned : Just 0.0,
+  vehicleServiceTierName : "",
+  vehicleServiceTierSeatingCapacity : Just 0
 }
 
 
@@ -153,7 +253,8 @@ initData = {
             , loadMoreDisabled : true
             , refreshLoader : false
             , filteredArr : []
-           
+            , currCard : dummyAPI
+            , fareDetails : []
             },
     props: {
       cardHeight : 0

@@ -1559,3 +1559,13 @@ rideBookingBT limit offset  from to  tripCategory= do
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
+
+scheduleBookingAcceptBT :: String -> FlowBT String ScheduleBookingAcceptRes
+scheduleBookingAcceptBT bookingId = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.scheduleBookingAccept bookingId) identity errorHandler (lift $ lift $ callAPI headers (ScheduleBookingAcceptReq bookingId))
+  where
+    errorHandler (ErrorPayload errorPayload) =  do
+      void $ lift $ lift $ toggleLoader false
+      void $ pure $ toast $ "Can't Accept The Ride \n Something Went Wrong"
+      BackT $ pure GoBack
