@@ -1836,8 +1836,10 @@ getCity req = do
   case req.merchantId of -- only for backward compatibility, Nothing part to be removed later
     Just mId -> do
       merchant <- CQM.findById mId >>= fromMaybeM (MerchantDoesNotExist mId.getId)
-      nearestAndSourceCity <- getNearestOperatingAndSourceCity merchant latLng
-      return GetCityResp {city = Just $ show nearestAndSourceCity.nearestOperatingCity.city, status = APISuccess.Success}
+      nearestAndSourceCity <- try @_ @SomeException $ getNearestOperatingAndSourceCity merchant latLng
+      case nearestAndSourceCity of
+        Left _ -> return GetCityResp {city = Nothing, status = APISuccess.Success}
+        Right nearestSourceCity -> return GetCityResp {city = Just $ show nearestSourceCity.nearestOperatingCity.city, status = APISuccess.Success}
     Nothing -> do
       geometry <- runInReplica $ QGeometry.findGeometriesContainingGps latLng
       case filter (\geom -> geom.city /= Context.AnyCity) geometry of
