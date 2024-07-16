@@ -83,6 +83,7 @@ library
     , hspec
     , mobility-core
     , openapi3
+    , passetto-client
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
@@ -160,6 +161,7 @@ executable driver-tracking-healthcheck-exe
     , hspec
     , mobility-core
     , openapi3
+    , passetto-client
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield

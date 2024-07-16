@@ -99,6 +99,7 @@ dependencies:
   - geohash == 1.0.1
   - euler-hs
   - unordered-containers
+  - passetto-client
   - vector
   - cereal
   - beam-core

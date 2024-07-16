@@ -1082,6 +1082,7 @@ library
     , location-updates
     , mobility-core
     , openapi3
+    , passetto-client
     , payment
     , persistent
     , postgresql-simple
@@ -1204,6 +1205,7 @@ executable dynamic-offer-driver-app-exe
     , lens-aeson
     , mobility-core
     , openapi3
+    , passetto-client
     , persistent
     , postgresql-simple
     , prometheus-client
