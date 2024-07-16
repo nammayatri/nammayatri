@@ -61,6 +61,7 @@ import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Payment.Interface.Types as Payment
+import Kernel.Prelude hiding (find, length, map, null, readMaybe)
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
@@ -491,7 +492,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
     driverInfo = forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
@@ -518,8 +519,8 @@ tfCustomer riderPhone riderName =
               }
       }
 
-mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> Maybe [Spec.TagGroup]
-mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId =
+mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe [Spec.TagGroup]
+mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -537,6 +538,7 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
                 ++ isDriverBirthDaySingleton
                 ++ isFreeRideSingleton
                 ++ driverAccountIdSingleton
+                ++ driverTrackingUrlSingleton
         }
     ]
   where
@@ -617,6 +619,20 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
               tagDisplay = Just False,
               tagValue = Just $ show isFreeRide
             }
+
+    driverTrackingUrlSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.DRIVER_TRACKING_URL,
+                    descriptorName = Just "Driver Tracking Url",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just $ showBaseUrl driverTrackingUrl
+          }
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkLocationTagGroupV2 location' =
@@ -1407,7 +1423,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
     driverInfo = forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
