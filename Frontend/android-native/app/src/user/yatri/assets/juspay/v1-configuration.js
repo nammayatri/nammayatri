@@ -284,7 +284,7 @@ window.getMerchantConfig = function () {
     , "SUPPORT_EMAIL" : "support@nammayatri.in"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "showDisabilityBanner" : false
-    
+    , "enableContactSupport" : false
     , "estimateAndQuoteConfig" : {
       "enableBookingPreference" : true,
       "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ],

@@ -410,6 +410,12 @@ config =
             , estimateAndQuoteConfig {
               showInfoIcon = true
               }
+            , waitingChargeConfig  {
+                cabs  {
+                  freeMinutes = 5.0
+                , perMinCharges = 1.0
+                }
+              }
           },
         defaultCityConfig 
           { cityName = "Mysore",
@@ -422,7 +428,13 @@ config =
               , strictBounds = true
               },
             enableAcViews = true,
-            enableRentals = true
+            enableRentals = true,
+            waitingChargeConfig  {
+              cabs  {
+                freeMinutes = 5.0
+              , perMinCharges = 1.0
+              }
+            }
           },
         defaultCityConfig 
           { cityName = "Tumakuru",
@@ -435,7 +447,13 @@ config =
               , strictBounds = true
               },
             enableAcViews = true,
-            enableRentals = true
+            enableRentals = true,
+            waitingChargeConfig  {
+              cabs  {
+                freeMinutes = 5.0
+              , perMinCharges = 1.0
+              }
+            }
           },
         defaultCityConfig 
           {   cityName = "Chennai"
@@ -453,12 +471,154 @@ config =
             , featureConfig {
                 enableCabBanner = false
               }
-            , waitingChargeConfig {
-                auto {
-                  perMinCharges = 1.0
-                }
-            }
           },
+
+           defaultCityConfig 
+          {   cityName = "Vellore"
+            , cityCode = "std:0452"
+            , geoCodeConfig
+                { radius = 50000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
+           defaultCityConfig 
+          {   cityName = "Tirunelveli"
+            , cityCode = "std:04362"
+            , geoCodeConfig
+                { radius = 50000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
+           defaultCityConfig 
+          {   cityName = "Thanjavur"
+            , cityCode = "std:0416"
+            , geoCodeConfig
+                { radius = 50000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
+           defaultCityConfig 
+          {   cityName = "Madurai"
+            , cityCode = "std:0427"
+            , geoCodeConfig
+                { radius = 50000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
+           defaultCityConfig 
+          {   cityName = "Salem"
+            , cityCode = "std:04344"
+            , geoCodeConfig
+                { radius = 50000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
+           defaultCityConfig 
+          {   cityName = "Hosur"
+            , cityCode = "std:0431"
+            , geoCodeConfig
+                { radius = 50000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
+           defaultCityConfig 
+          {   cityName = "Trichy"
+            , cityCode = "std:0820"
+            , geoCodeConfig
+                { radius = 50000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
+
+           defaultCityConfig 
+          {   cityName = "TamilNaduCities"
+            , cityCode = "std:0422"
+            , geoCodeConfig
+                { radius = 50000
+                , strictBounds = true
+                }
+            , enableCabs = true
+            , enableRentals = true 
+            , enableIntercity = false
+            , estimateAndQuoteConfig {
+              showInfoIcon = false
+              }
+            , featureConfig {
+                enableCabBanner = false
+              }
+          },
+
+
         defaultCityConfig
           { cityName = "Hyderabad",
             cityCode = "std:040",
@@ -477,12 +637,36 @@ config =
               auto {
                 freeMinutes = 3.0
               , perMinCharges = 2.0
+              },
+              cabs  {
+                freeMinutes = 3.0
+              , perMinCharges = 2.0
               }
-            }
+            },
+            rentalWaitingChargeConfig  {
+              auto{
+                freeMinutes = 5.0
+              , perMinCharges = 1.0
+              },
+              cabs  {
+                freeMinutes = 5.0
+              , perMinCharges = 1.0
+      }
+    }
           },
         defaultCityConfig
           { cityName = "Kolkata",
             cityCode = "std:033",
+             waitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 2.0
+              } ,
+              cabs  {
+                freeMinutes = 5.0
+              , perMinCharges = 2.0
+              }
+            },
             referral
               { domain = "https://www.yatrisathi.in",
                 customerAppId = "in.juspay.jatrisaathi"
@@ -508,19 +692,36 @@ config =
               auto {
                 freeMinutes = 3.0
               , perMinCharges = 0.75
+              } ,
+              cabs  {
+                freeMinutes = 5.0
+              , perMinCharges = 1.5
               }
             }
           },
         defaultCityConfig
           { cityName = "Kochi",
             cityCode = "std:0484",
-            waitingChargeConfig {
-              auto {
-                freeMinutes = 3.0
-              , perMinCharges = 1.0
-              }
-            }
+            waitingChargeConfig = keralaWTC
+          },
+        defaultCityConfig
+          { cityName = "Trivandrum",
+            cityCode = "std:0471",
+            waitingChargeConfig = keralaWTC
+          },
+        defaultCityConfig
+          { cityName = "Thrissur",
+            cityCode = "std:0487",
+            waitingChargeConfig = keralaWTC
+          },
+
+        defaultCityConfig
+          { cityName = "Kozhikode",
+            cityCode = "std:0495",
+            waitingChargeConfig = keralaWTC
           }
+
+      
       ]
   , bannerCarousel : defaultBannerCarousel
   , driverLocationPolling : {
@@ -591,11 +792,33 @@ defaultCityConfig =
     rentalWaitingChargeConfig : {
       auto : {
         freeMinutes : 3.0
-      , perMinCharges : 2.0
+      , perMinCharges : 1.0
       },
       cabs : {
         freeMinutes : 3.0
-      , perMinCharges : 2.0
+      , perMinCharges : 1.0
+      }
+    },
+    intercityWaitingChargeConfig :{
+      auto : {
+         freeMinutes : 3.0
+       , perMinCharges : 1.0
+      } ,
+      cabs : {
+        freeMinutes : 5.0
+      , perMinCharges : 1.0
       }
     }
   }
+
+keralaWTC :: WaitingChargeConfig
+keralaWTC = defaultCityConfig.waitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 1.0
+              },
+              cabs {
+                freeMinutes = 5.0
+              , perMinCharges = 1.0
+              }
+      }
