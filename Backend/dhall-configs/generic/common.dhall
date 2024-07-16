@@ -104,6 +104,8 @@ let healthCheckAppCfgT =
       , driverAllowedDelayForLocationUpdateInSec : Integer
       , driverLocationHealthCheckIntervalInSec : Integer
       , loggerConfig : loggerConfigT
+      , batchSize : Integer
+      , numberOfShards : Integer
       }
 
 in  { smsSessionConfig
