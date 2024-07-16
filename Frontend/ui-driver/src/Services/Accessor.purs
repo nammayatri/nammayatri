@@ -96,3 +96,6 @@ _languagesAvailableForQuiz = lens (unwrap >>> _.languagesAvailableForQuiz) (\old
 
 _languagesAvailableForVideos :: forall a b c. Newtype a { languagesAvailableForVideos :: b | c } => Lens' a b
 _languagesAvailableForVideos = lens (unwrap >>> _.languagesAvailableForVideos) (\oldRec newVal -> wrap ((unwrap oldRec) { languagesAvailableForVideos = newVal }))
+
+_area :: forall a b c. Newtype a { area :: b | c } => Lens' a b
+_area = lens (unwrap >>> _.area) (\oldRec newVal -> wrap ((unwrap oldRec) { area = newVal }))
