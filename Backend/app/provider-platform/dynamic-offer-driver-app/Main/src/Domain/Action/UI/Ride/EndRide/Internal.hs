@@ -158,7 +158,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
 
-  sendReferralFCM ride booking booking.providerId mbRiderDetails booking.merchantOperatingCityId thresholdConfig
+  sendReferralFCM ride booking mbRiderDetails thresholdConfig
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
   let currency = booking.currency
@@ -196,12 +196,10 @@ sendReferralFCM ::
   ) =>
   Ride.Ride ->
   SRB.Booking ->
-  Id Merchant ->
   Maybe RD.RiderDetails ->
-  Id DMOC.MerchantOperatingCity ->
   TransporterConfig ->
   m ()
-sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transporterConfig = do
+sendReferralFCM ride booking mbRiderDetails transporterConfig = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   now <- getCurrentTime
   let shouldUpdateRideComplete =
@@ -223,13 +221,13 @@ sendReferralFCM ride booking merchantId mbRiderDetails merchantOpCityId transpor
             (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
             whenJust mbFlagReason $ \flagReason -> do
               QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) (Just flagReason) riderDetails.id
-            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver
-            sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
+            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
+            sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             logDebug "Driver Referral Coin Event"
-            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id merchantId merchantOpCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
+            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
           Nothing -> pure ()
   where
-    updateReferralStats referredDriverId mbDailyStats localTime driver = do
+    updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId = do
       mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey merchantOpCityId "PAYOUT_REFERRAL_REWARD"
       whenJust mbMerchantPN $ \merchantPN -> do
         let entityData = NotifReq {entityId = referredDriverId.getId, title = merchantPN.title, message = merchantPN.body}
