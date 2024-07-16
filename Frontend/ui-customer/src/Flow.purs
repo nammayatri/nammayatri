@@ -5584,7 +5584,17 @@ rentalScreenFlow = do
             source = maybe ("") (\(PlaceName address) -> address.formattedAddress) srcFullAddress
 
             dest = if isJust updatedState.data.dropLoc then maybe ("") (\(PlaceName address) -> address.formattedAddress) destFullAddress else ""
-          if isNow then do
+          bookingResp <- lift $ lift $ Remote.rideBooking (resp.bookingId)
+          let isRentalSpecialZoneRide = case bookingResp of
+                Right (RideBookingRes resp) -> do
+                  let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                      (RideBookingDetails contents) = bookingDetails.contents
+                      otpCode = contents.otpCode
+                  isJust otpCode
+                Left _err -> false
+          if isRentalSpecialZoneRide then
+            rentalSpecialZoneOtpFlow resp.bookingId
+          else if isNow then do
             void $ liftFlowBT
               $ setFlowStatusData
                   ( FlowStatusData
@@ -5703,6 +5713,11 @@ findRentalEstimates state = do
                 searchLocationFlow
             )
 
+rentalSpecialZoneOtpFlow :: String -> FlowBT String Unit
+rentalSpecialZoneOtpFlow bookingId = do
+  updateLocalStage ConfirmingRide
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp } })
+  homeScreenFlow
 
 enterRideSearchFLow :: FlowBT String Unit
 enterRideSearchFLow = do

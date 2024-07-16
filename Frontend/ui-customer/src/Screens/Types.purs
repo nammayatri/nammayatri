@@ -2569,6 +2569,7 @@ type RentalScreenProps = {
   , showPrimaryButton :: Boolean
   , showPopUpModal :: Boolean
   , showRentalPolicy :: Boolean
+  , isSpecialZone :: Boolean
 }
 
 type DateTimeConfig = {
