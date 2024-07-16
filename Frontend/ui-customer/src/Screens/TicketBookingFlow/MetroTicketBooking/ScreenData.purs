@@ -18,6 +18,7 @@ import Prelude
 import Screens.Types as ST
 import ConfigProvider
 import Services.API (MetroBookingConfigRes(..))
+import Data.Maybe as Mb
 
 initData :: ST.MetroTicketBookingScreenState
 initData = {
@@ -33,7 +34,8 @@ initData = {
   , bookingId : ""
   , quoteId : ""
   , quoteResp : []
-  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0, customEndTime : "", customDates : [] }
+  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing}
+  , eventDiscountAmount : Mb.Nothing
   },
   props: {
     isLimitExceeded : false

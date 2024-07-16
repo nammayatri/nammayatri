@@ -50,7 +50,7 @@ getMetroLogoImage ticketCard =
   let
     (API.MetroTicketBookingStatus resp) = ticketCard.metroTicketStatusApiResp
     city = getCityNameFromCode $ Just resp.city
-    (CityMetroConfig config) = getMetroConfigFromCity city
+    (CityMetroConfig config) = getMetroConfigFromCity city Nothing
   in
     config.logoImage
 

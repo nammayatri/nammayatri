@@ -446,7 +446,7 @@ statusPillView (Config.StatusPillConfig statusPillConfig) =
 metroHeaderView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> (forall properties. (Array (Prop properties))) -> Boolean -> PrestoDOM (Effect Unit) w
 metroHeaderView push state headerFontStyle detailVisibility = 
   let 
-    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city Nothing
   in
     linearLayout [
       width MATCH_PARENT
@@ -810,7 +810,7 @@ linePillView line =
 mapView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 mapView push state = 
   let
-    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city Nothing
   in
     PrestoAnim.animationSet [Anim.fadeIn true] $  linearLayout [
       width MATCH_PARENT

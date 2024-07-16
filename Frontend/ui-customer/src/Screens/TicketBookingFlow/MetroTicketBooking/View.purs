@@ -36,7 +36,7 @@ import Animation.Config
 import JBridge as JB
 import Data.Array
 import Font.Size as FontSize
-import Data.Maybe (maybe)
+import Data.Maybe (maybe, fromMaybe)
 import Effect.Aff (launchAff)
 import Services.API
 import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
@@ -84,7 +84,6 @@ screen initialState =
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
         (MetroBookingConfigRes fcResponse) <- Remote.getMetroBookingConfigBT (show city)
         liftFlowBT $ push $ MetroBookingConfigAction (MetroBookingConfigRes fcResponse)
-        liftFlowBT $ push $ DisableShimmer
           
 
         let config = getAppConfig appConfig
@@ -136,7 +135,8 @@ view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -
 view push state =
   let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-    cityMetroConfig = getMetroConfigFromCity city
+    MetroBookingConfigRes metroBookingConfigResp = state.data.metroBookingConfigResp
+    cityMetroConfig = getMetroConfigFromCity city metroBookingConfigResp.isEventOngoing
     config = getAppConfig appConfig
     metroConfig = getMetroConfigFromAppConfig config (show city)
   in
@@ -446,6 +446,7 @@ incrementDecrementView push state metroConfig =
                       , alpha 1.0
                       ]  <> FontStyle.paragraphText TypoGraphy
                   ]
+        , offerInfoView push state
       ]
 
 updateButtonView :: forall w. ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -570,3 +571,25 @@ sfl height' marginTop numberOfBoxes visibility' =
             (1 DA... numberOfBoxes)
         )
     ]
+
+offerInfoView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+offerInfoView push state = 
+  textView $
+  [ text offerTextConfig.text
+  , color offerTextConfig.color
+  , visibility offerTextConfig.visibility
+  , margin $ Margin 4 8 0 0
+  ]  <> FontStyle.paragraphText TypoGraphy
+  where
+    (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+    ticketsBookedInEvent = fromMaybe 0 metroBookingConfigResp.ticketsBookedInEvent
+    freeTicketInterval = fromMaybe 9999 metroBookingConfigResp.freeTicketInterval
+    freeTicketCount = ((ticketsBookedInEvent + state.data.ticketCount) `div` freeTicketInterval) - (ticketsBookedInEvent `div` freeTicketInterval)
+    ticketsAfterLastFreeTicket = ((ticketsBookedInEvent + state.data.ticketCount) `mod` freeTicketInterval)
+    offerTextConfig = getOfferTextConfig freeTicketCount freeTicketInterval ticketsAfterLastFreeTicket (MetroBookingConfigRes metroBookingConfigResp)
+
+    getOfferTextConfig :: Int -> Int -> Int -> MetroBookingConfigRes -> {color :: String, text :: String, visibility :: Visibility}
+    getOfferTextConfig freeTicketCount freeTicketInterval ticketsAfterLastFreeTicket (MetroBookingConfigRes metroBookingConfigResp) = do
+      if freeTicketCount > 0 then {color : Color.green900, text : (getString $ FREE_TICKET_AVAILABLE (show $ freeTicketCount * (fromMaybe 0 metroBookingConfigResp.maxFreeTicketCashback)) (show freeTicketCount)), visibility : VISIBLE}
+        else if ticketsAfterLastFreeTicket == (freeTicketInterval - 1) then {color : Color.metroBlue, text : (getString NEXT_FREE_TICKET), visibility : VISIBLE} 
+        else {color : Color.transparent, text : "", visibility : GONE}
