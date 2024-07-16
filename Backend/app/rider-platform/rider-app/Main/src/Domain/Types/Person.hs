@@ -121,7 +121,8 @@ data PersonE e = Person
     falseSafetyAlarmCount :: Int,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
     referredByCustomer :: Maybe Text,
-    customerReferralCode :: Maybe Text
+    customerReferralCode :: Maybe Text,
+    deviceId :: Maybe Text
   }
   deriving (Generic)
 
