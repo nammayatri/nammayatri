@@ -14,7 +14,7 @@ import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (-), bind, void, pure, unit, discard, negate, (/=)) 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Gradient(..) ,Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback,textFromHtml, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport, relativeLayout, shimmerFrameLayout, gradient)
-import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
+import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.BookingOptionsScreen.ScreenData (defaultRidePreferenceOption)
 import Screens.Types as ST
 import Styles.Colors as Color

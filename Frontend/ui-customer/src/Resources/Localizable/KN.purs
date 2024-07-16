@@ -1312,3 +1312,7 @@ getKN stringKey =
         SILIGURI -> "ಸಿಲಿಗುರಿ"
         CLEAN_BIKE -> "ಸ್ವಚ್ಛ ಬೈಕ್"
         UNCOMFORTABLE_BIKE -> "ಅಸಂತೋಷಕರ ಬೈಕ್"
+        A_C ->  "ಒಪ್ಪಿಗೆ ಮಾಡು & ಮುಂದುವರಿಸು"
+        NO_OXYGEN -> "ಆಕ್ಸಿಜನ್ ಇಲ್ಲ"
+        OXYGEN -> "ಆಕ್ಸಿಜನ್"
+        VENTILATOR -> "ವೆಂಟಿಲೇಟರ್"

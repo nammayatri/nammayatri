@@ -69,14 +69,15 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Language.Types as LT
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class EuclideanRing, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||), (#), max, ($>))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
-import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
+import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..),VehicleVariant(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage,VehicleVariant(..),AmbulanceType(..))
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
@@ -102,7 +103,7 @@ import Data.String.Regex (match, regex)
 import Data.String.Regex.Flags (noFlags)
 import Data.Array.NonEmpty (toArray)
 import Data.Array as DA
-
+import Screens.Types as ST
 foreign import shuffle :: forall a. Array a -> Array a
 
 foreign import withinTimeRange :: String -> String -> String -> Boolean
@@ -677,6 +678,11 @@ getVehicleVariantImage variant viewType =
                                       Kolkata -> variantConfig.bookAny.leftViewImage
                                       _ -> variantConfig.bookAny.leftViewImage
           "BIKE"          -> fetchImage FF_ASSET "ny_ic_bike_left_side"
+          "AMBULANCE_TAXI" -> fetchImage FF_ASSET "ny_ic_ambulance_noac_nooxy"
+          "AMBULANCE_TAXI_OXY" -> fetchImage FF_ASSET "ny_ic_ambulance_noac_oxy"
+          "AMBULANCE_AC" -> fetchImage FF_ASSET "ny_ic_ambulance_ac_nooxy"
+          "AMBULANCE_AC_OXY" -> fetchImage FF_ASSET "ny_ic_ambulance_ac_oxy"
+          "AMBULANCE_VENTILATOR" -> fetchImage FF_ASSET "ny_ic_ambulance_ventilaor"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -703,6 +709,11 @@ getVehicleVariantImage variant viewType =
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
           "BIKE"          -> fetchImage FF_ASSET "ny_ic_bike_side"
+          "AMBULANCE_TAXI" -> fetchImage FF_ASSET "ny_ic_ambulance_noac_nooxy"
+          "AMBULANCE_TAXI_OXY" -> fetchImage FF_ASSET "ny_ic_ambulance_noac_oxy"
+          "AMBULANCE_AC" -> fetchImage FF_ASSET "ny_ic_ambulance_ac_nooxy"
+          "AMBULANCE_AC_OXY" -> fetchImage FF_ASSET "ny_ic_ambulance_ac_oxy"
+          "AMBULANCE_VENTILATOR" -> fetchImage FF_ASSET "ny_ic_ambulance_ventilaor"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -718,11 +729,11 @@ getVariantRideType variant =
 getTitleConfig :: forall w. String -> {text :: String , color :: String}
 getTitleConfig vehicleVariant =
   case vehicleVariant of
-        "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
-        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
-        "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
+        "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString LT.TAXI)) CommonColor.orange900
+        "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString LT.TAXI)) Color.blue800 
+        "AUTO_RICKSHAW" -> mkReturnObj ((getString LT.AUTO_RICKSHAW)) Color.green600
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
-        _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
+        _ -> mkReturnObj ((getString AC) <> " " <> (getString LT.TAXI)) Color.blue800 
   where mkReturnObj text' color' = 
           {
             text : text',
@@ -1068,15 +1079,41 @@ getRouteMarkers variant city trackingType fareProductType currentStage =
 mkSrcMarker :: City -> String ->Maybe Stage -> String
 mkSrcMarker = getCitySpecificMarker
 
+fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
+fetchVehicleVariant variant = 
+  case variant of 
+    "SUV"           -> Just ST.SUV
+    "SEDAN"         -> Just ST.SEDAN
+    "HATCHBACK"     -> Just ST.HATCHBACK
+    "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
+    "TAXI"          -> Just ST.TAXI 
+    "TAXI_PLUS"     -> Just ST.TAXI_PLUS
+    "BIKE"          -> Just ST.BIKE
+    "AMBULANCE_TAXI" -> Just (ST.AMBULANCE_ ST.AMBULANCE_TAXI)
+    "AMBULANCE_TAXI_OXY" -> Just (ST.AMBULANCE_ ST.AMBULANCE_TAXI_OXY)
+    "AMBULANCE_AC" -> Just (ST.AMBULANCE_ ST.AMBULANCE_AC)
+    "AMBULANCE_AC_OXY" -> Just (ST.AMBULANCE_ ST.AMBULANCE_AC_OXY)
+    "AMBULANCE_VENTILATOR" -> Just (ST.AMBULANCE_ ST.AMBULANCE_VENTILATOR)
+    _               -> Nothing
+
+getVehicleCapacity :: String -> String 
+getVehicleCapacity variant = 
+  case fetchVehicleVariant variant of
+    Just ST.SUV -> "6" 
+    Just ST.AUTO_RICKSHAW -> "3"
+    Just ST.BIKE -> "1"
+    _ -> "4"
 getCitySpecificMarker :: City -> String -> Maybe Stage -> String
-getCitySpecificMarker city variant currentStage = 
-    case variant of
-        "AUTO_RICKSHAW" -> getAutoImage city
-        "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
-        "SUV"           -> "ny_ic_suv_nav_on_map"
-        "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
-        "BIKE"          -> if currentStage == Just(RideStarted) then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
-        _               -> "ny_ic_vehicle_nav_on_map"
+getCitySpecificMarker city variant currentStage =
+    case fetchVehicleVariant variant of
+        Just (AMBULANCE_ _) -> "ny_ic_ambulance_nav_on_map"
+        _ -> case variant of
+              "AUTO_RICKSHAW" -> getAutoImage city
+              "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
+              "SUV"           -> "ny_ic_suv_nav_on_map"
+              "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
+              "BIKE"          -> if currentStage == Just(RideStarted) then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
+              _               -> "ny_ic_vehicle_nav_on_map"
 
 mkDestMarker :: TrackingType -> FareProductType -> String
 mkDestMarker trackingType fareProductType = 
@@ -1130,3 +1167,4 @@ breakPrefixAndId str = do
           Just [_ , prefix] -> Just $ Tuple (fromMaybe "" prefix) Nothing
           _ -> Nothing
     Left _ -> Nothing
+

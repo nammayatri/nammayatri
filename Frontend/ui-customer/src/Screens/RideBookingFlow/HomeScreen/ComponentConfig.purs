@@ -1038,7 +1038,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
-                                  , isRateCardAvailable : (spy "rateCardCache" (isJust state.data.rateCardCache)) &&  (spy "fareProductis" state.data.fareProductType /= FPT.INTER_CITY)
+                                  , isRateCardAvailable :  isJust state.data.rateCardCache && (DA.all (_ /= state.data.fareProductType) [FPT.INTER_CITY, FPT.AMBULANCE])
                                   , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL
                                   , rideDurationTimer : state.props.rideDurationTimer
                                   , rideDurationTimerId : state.props.rideDurationTimerId
@@ -1163,6 +1163,7 @@ driverInfoTransformer state =
     , fareProductType : cardState.fareProductType
     , spLocationName : cardState.spLocationName
     , addressWard : cardState.addressWard
+    , isAirConditioned : cardState.isAirConditioned
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState

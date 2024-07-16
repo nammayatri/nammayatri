@@ -214,4 +214,5 @@ mockDriverInfo =
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
   , addressWard : Nothing
+  , isAirConditioned : Nothing
   }

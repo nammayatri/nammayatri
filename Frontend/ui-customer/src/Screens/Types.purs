@@ -33,13 +33,13 @@ import Data.Map (Map)
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Domain.Payments as PP
-import Foreign (Foreign)
+import Foreign (Foreign,unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
 import JBridge (Location)
 import Language.Types (STR(..))
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show,($))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
@@ -53,6 +53,8 @@ import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
 import Services.API (DeadKmFare)
+import Control.Monad.Except (runExcept, except)
+import Data.Either (Either(..))
 type Contacts = {
   name :: String,
   number :: String
@@ -477,15 +479,31 @@ type IndividualRideCardState =
   , estimatedFare :: Int
   , showDestination :: String
   , rideScheduledTime :: String
+  , isAirConditioned :: Maybe Boolean
   }
 
-
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE
+data AmbulanceType =  AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_ AmbulanceType
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
+instance encodeVehicleVariant :: Encode VehicleVariant where encode = defaultEncode
+instance decodeVehicleVariant :: Decode VehicleVariant 
+  where decode body = 
+          case unsafeFromForeign body of
+            "AMBULANCE_TAXI" -> except $ Right $ AMBULANCE_ AMBULANCE_TAXI
+            "AMBULANCE_TAXI_OXY" -> except $ Right $ AMBULANCE_ AMBULANCE_TAXI_OXY
+            "AMBULANCE_AC" -> except $ Right $ AMBULANCE_ AMBULANCE_AC
+            "AMBULANCE_AC_OXY" -> except $ Right $ AMBULANCE_ AMBULANCE_AC_OXY
+            "AMBULANCE_VENTILATOR" -> except $ Right $ AMBULANCE_ AMBULANCE_VENTILATOR
+            _ -> defaultDecode body
 
+derive instance genericAmbulanceType :: Generic AmbulanceType _
+instance showAmbulanceType :: Show AmbulanceType where show = genericShow
+instance eqAmbulanceType :: Eq AmbulanceType where eq = genericEq
+instance decodeAmbulanceType :: Decode AmbulanceType where decode = defaultDecode
+instance encodeAmbulanceType :: Encode AmbulanceType where encode = defaultEncode
 type ItemState =
   {
     date :: PropValue,
@@ -513,6 +531,7 @@ type ItemState =
     showVariantImage :: PropValue,
     showRepeatRide :: PropValue,
     showDestination :: PropValue
+    -- isAirConditioned :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################
@@ -935,6 +954,8 @@ type HomeScreenStateProps =
   , shimmerViewTimerId :: String
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
+  , bookAmbulanceModal :: Boolean
+  , firstTime :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1306,6 +1327,7 @@ type DriverInfoCard =
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
   , currentSearchResultType :: SearchResultType
+  , isAirConditioned :: Maybe Boolean
   }
 
 type RatingCard =

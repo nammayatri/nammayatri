@@ -1311,3 +1311,7 @@ getBN stringKey =
         SILIGURI -> "শিলিগুড়ি"
         CLEAN_BIKE -> "পরিষ্কার বাইক"
         UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"
+        A_C -> "সম্মত এবং চালিয়ে যান"
+        NO_OXYGEN -> "অক্সিজেন নেই"
+        OXYGEN -> "অক্সিজেন"
+        VENTILATOR -> "ভেন্টিলেটর"

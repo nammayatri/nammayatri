@@ -618,7 +618,8 @@ view push state =
                       , onClick push $ const NoAction
                       , background Color.black9000
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
-                    else [])
+                    else []
+              <> if state.props.bookAmbulanceModal then [PopUpModal.view (push <<< AgreePopUp) (PopUpConfigs.bookAmbulanceModalConfig state)] else [])
         ]
   ]
   where

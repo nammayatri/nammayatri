@@ -1313,3 +1313,7 @@ getEN stringKey =
         SILIGURI -> "Siliguri"
         CLEAN_BIKE -> "Clean Bike"
         UNCOMFORTABLE_BIKE -> "Uncomfortable Bike"
+        A_C -> "Agree & Continue" 
+        NO_OXYGEN -> "No Oxygen"
+        OXYGEN -> "Oxygen"
+        VENTILATOR -> "Ventilator"

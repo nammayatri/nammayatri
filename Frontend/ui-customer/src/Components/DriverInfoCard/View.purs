@@ -1467,6 +1467,7 @@ getDriverDetails state = {
   , providerType : state.data.providerType
   , showAcView : state.data.cityConfig.enableAcViews
   , fareProductType : state.data.fareProductType
+  , isAirConditioned : state.data.isAirConditioned
 }
 
 endOTPAnimConfig :: DriverInfoCardState -> AnimConfig.AnimConfig

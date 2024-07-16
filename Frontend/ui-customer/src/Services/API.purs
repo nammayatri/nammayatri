@@ -1033,7 +1033,7 @@ newtype RideBookingRes = RideBookingRes {
   hasNightIssue :: Maybe Boolean,
   sosStatus :: Maybe CTA.SosStatus,
   serviceTierName :: Maybe String,
-  airConditioned :: Maybe Boolean,
+  isAirConditioned :: Maybe Boolean,
   isValueAddNP :: Maybe Boolean,
   providerName :: Maybe String,
   id :: String,

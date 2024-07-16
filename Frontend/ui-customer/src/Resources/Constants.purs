@@ -294,25 +294,6 @@ getKmMeter distance = if (distance < 1000) then toStringJSON distance <> " m" el
 
 -- Info ::
 -- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)
-fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = 
-  case variant of 
-    "SUV"           -> Just ST.SUV
-    "SEDAN"         -> Just ST.SEDAN
-    "HATCHBACK"     -> Just ST.HATCHBACK
-    "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-    "TAXI"          -> Just ST.TAXI 
-    "TAXI_PLUS"     -> Just ST.TAXI_PLUS
-    "BIKE"          -> Just ST.BIKE
-    _               -> Nothing
-
-getVehicleCapacity :: String -> String 
-getVehicleCapacity variant = 
-  case fetchVehicleVariant variant of
-    Just ST.SUV -> "6" 
-    Just ST.AUTO_RICKSHAW -> "3"
-    Just ST.BIKE -> "1"
-    _ -> "4"
 
 intMax :: Int
 intMax = 2147483647
@@ -416,3 +397,6 @@ locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
 
 mailToLink :: String
 mailToLink = "mailto:" 
+
+whiteListedInputString :: Array String 
+whiteListedInputString = ["Hospital"]

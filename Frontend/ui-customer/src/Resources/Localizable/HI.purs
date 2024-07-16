@@ -1311,3 +1311,7 @@ getHI stringKey =
         SILIGURI -> "सिलीगुड़ी"
         CLEAN_BIKE -> "साफ बाइक"
         UNCOMFORTABLE_BIKE -> "असहज बाइक"
+        A_C -> "सहमत और जारी रखें"
+        NO_OXYGEN -> "कोई ऑक्सीजन नहीं"
+        OXYGEN -> "ऑक्सीजन"
+        VENTILATOR -> "वेंटीलेटर"

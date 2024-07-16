@@ -1326,3 +1326,7 @@ getTE stringKey =
     SILIGURI -> "సిలిగురి"
     CLEAN_BIKE -> "స్వచ్ఛంగా బైక్"
     UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"
+    A_C -> "ఆమోదించండి & కొనసాగించండి"
+    NO_OXYGEN -> "ఆక్సిజన్ లేదు"
+    OXYGEN -> "ఆక్సిజన్"
+    VENTILATOR -> "వెంటిలేటర్"

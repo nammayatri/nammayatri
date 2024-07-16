@@ -1313,3 +1313,7 @@ getFR stringKey =
         SILIGURI -> "Siliguri"
         CLEAN_BIKE -> "Vélo propre"
         UNCOMFORTABLE_BIKE -> "Vélo inconfortable"
+        A_C -> "Accepter et continuer"
+        NO_OXYGEN -> "Pas d'oxygène"
+        OXYGEN -> "Oxygène"
+        VENTILATOR -> "Ventilateur"

@@ -66,7 +66,7 @@ data ScreenOutput = LogoutUser
   | LocationSelected LocationListItemState Boolean HomeScreenState
   | EditDestLocationSelected LocationListItemState Boolean HomeScreenState
   | EditDestinationSoft HomeScreenState
-  | SearchPlace String HomeScreenState
+  | SearchPlace String HomeScreenState Boolean
   | UpdateLocationName HomeScreenState Number Number
   | UpdatePickupName HomeScreenState Number Number
   | GoToHome HomeScreenState
@@ -326,6 +326,8 @@ data Action = NoAction
   | ContactSupportAction PopUpModal.Action
   | LocateOnMapCallBack String String String
   | UpdatePickupLocation String String String
+  | AmbulanceAgreeClick 
+  | AgreePopUp PopUpModal.Action
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

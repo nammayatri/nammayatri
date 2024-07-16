@@ -1313,3 +1313,7 @@ getML stringKey =
         SILIGURI -> "സിലിഗുരി"
         CLEAN_BIKE -> "വൃത്തിയാക്കിയ ബൈക്ക്"
         UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"
+        A_C -> "അംഗീകരിക്കുക & തുടരുക"
+        NO_OXYGEN -> "ആക്സിജൻ ഇല്ല"
+        OXYGEN -> "ആക്സിജൻ"
+        VENTILATOR -> "വെന്റിലേറ്റർ"

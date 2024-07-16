@@ -9,14 +9,15 @@ import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..),fetchVehicleVariant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude as MP
 import Prelude (Unit, const, (<>), bind, ($), pure, unit, show, (==), (||), (&&), (/=), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
-import Screens.Types (StepsHeaderModelState, FareProductType(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), textFromHtml,PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
+import Screens.Types (StepsHeaderModelState, FareProductType(..),VehicleVariant(..),AmbulanceType(..))
 import Styles.Colors as Color
+import Debug(spy)
 
 view :: forall w. Config -> PrestoDOM (Effect Unit) w
 view config = let 
@@ -35,20 +36,24 @@ view config = let
         , width WRAP_CONTENT
         , background Color.blue800
         , padding $ Padding 4 bluePillPadding 5 bluePillPadding
-        , visibility $ MP.boolToVisibility $ showACDetails config.name config.isAc && config.showACPill
+        , visibility $ MP.boolToVisibility $ showACDetails (spy "nameis" config.name) config.isAc && config.showACPill
         , gravity CENTER_VERTICAL
         , cornerRadius if EHC.os == "IOS" then 11.0 else 18.0
         ]
         [ imageView
             [ height $ V 12
             , width $ V 12
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac_white"
+            , imageWithFallback $ fetchImage FF_ASSET case fetchVehicleVariant config.vehicleVariant of
+                                                      Just (AMBULANCE_ AMBULANCE_VENTILATOR) ->  "ny_ic_ventilator_white"
+                                                      _ -> "ny_ic_ac_white"
             , margin $ MarginRight 3
             ]
         , textView
             $ [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text $ getString AC
+              , text $ case fetchVehicleVariant config.vehicleVariant of
+                      Just (AMBULANCE_ AMBULANCE_VENTILATOR) -> ""
+                      _ -> getString AC
               , color Color.white900
               , padding $ PaddingBottom if EHC.os == "IOS" then 0 else 2
               ]
@@ -57,9 +62,9 @@ view config = let
     , textView
         $ [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text $ if config.showACPill 
-                      then parseName config.name
-                      else config.name
+          , textFromHtml $ if config.showACPill 
+                      then parseName $ serviceNameTransform config
+                      else serviceNameTransform config
           , color Color.black700
           , padding $ PaddingBottom if EHC.os == "IOS" then 0 else 2
           , margin $ MarginLeft 4
@@ -118,6 +123,14 @@ view config = let
   where
     bluePillPadding = if EHC.os == "IOS" then 3 else 2
 
+serviceNameTransform :: Config -> String
+serviceNameTransform service = case service.name of
+  "Ambulance with Ventilator" -> getString VENTILATOR
+  "Ambulance with AC and Oxygen" ->  getString AC <> " <b>&#8226;</b> " <> getString OXYGEN
+  "Ambulance with AC" ->  getString AC <> " <b>&#8226;</b> " <> getString NO_OXYGEN
+  "Ambulance Taxi with Oxygen" -> getString NON_AC <> "<b>&#8226;</b> " <> getString OXYGEN
+  "Ambulance Eco" -> getString NON_AC <> "<b>&#8226;</b> " <> getString NO_OXYGEN
+  _ -> service.name
 
 showACDetails :: String -> Maybe Boolean -> Boolean
 showACDetails name isAc =
@@ -130,7 +143,8 @@ type Config
     , capacity :: Maybe Int
     , isAc :: Maybe Boolean
     , showACPill :: Boolean
-    , fareProductType :: FareProductType 
+    , fareProductType :: FareProductType
+    , vehicleVariant :: String
     }
 
 parseName :: String -> String

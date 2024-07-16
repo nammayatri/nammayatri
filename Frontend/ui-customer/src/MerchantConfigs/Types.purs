@@ -81,6 +81,7 @@ type AppConfigCustomer a =
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
+  , ambulanceConfig :: GeoCodeConfig
   | a
   }
 

@@ -374,6 +374,8 @@ initData = let
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
+    , bookAmbulanceModal : false
+    , firstTime : false
   }
 }
 
@@ -487,6 +489,7 @@ dummyDriverInfo =
   , spLocationName : Nothing
   , addressWard : Nothing
   , currentSearchResultType : ST.ESTIMATES
+  , isAirConditioned : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -583,7 +586,7 @@ dummyRideBooking = RideBookingRes
   hasDisability : Nothing,
   sosStatus: Nothing,
   serviceTierName : Nothing, 
-  airConditioned : Nothing,
+  isAirConditioned : Nothing,
   isValueAddNP : Nothing,
   providerName : Nothing,
   estimatedDistance : Nothing,

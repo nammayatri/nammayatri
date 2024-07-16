@@ -1329,3 +1329,7 @@ getTA stringKey =
     SILIGURI -> "சிலிகுரி"
     CLEAN_BIKE -> "சுத்தமான பைக்"
     UNCOMFORTABLE_BIKE -> "அமைதியற்ற பைக்"
+    A_C ->  "ஒப்புக்கொள் & தெரிவி"
+    NO_OXYGEN -> "ஆக்சிஜன் இல்லை"
+    OXYGEN -> "ஆக்சிஜன்"
+    VENTILATOR -> "குளிர்ச்சிக்குரிய"

@@ -289,6 +289,11 @@ getVehicleName config =
     "HATCHBACK" -> "AC Mini"
     "BIKE" -> "Bike Taxi"
     "BOOK_ANY" -> "Book Any"
+    "AMBULANCE_TAXI" -> "Non-AC" <> "\x00B7" <> "O̶₂"
+    "AMBULANCE_TAXI_OXY" -> "Non-AC" <> "\x00B7" <> "O₂"
+    "AMBULANCE_AC" -> "AC" <> "\x00B7" <> "O̶₂"
+    "AMBULANCE_AC_OXY" -> "AC" <> "\x00B7" <> "O₂"
+    "AMBULANCE_VENTILATOR" -> "Ventilator"
     _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

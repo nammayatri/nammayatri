@@ -26,7 +26,7 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool, os)
-import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString, getVehicleVariantImage, getAssetLink, getCityConfig)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString,fetchVehicleVariant, getVehicleVariantImage, getAssetLink, getCityConfig)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
@@ -41,7 +41,7 @@ import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingLis
 import Language.Strings (getString, getVarString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter)
 import Common.Types.App as CTP
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
@@ -228,6 +228,7 @@ myRideListTransformerProp listRes =
         rideStartTime : toPropValue (convertUTCtoISC rideStartTime "h:mm A"),
         rideEndTime : toPropValue (convertUTCtoISC (fromMaybe "" ride.rideEndTime) "h:mm A"),
         vehicleNumber : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
+        -- isAirConditioned : toPropValue ride.isAirConditioned,
         rideId : toPropValue ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
         status :toPropValue (if ride.status == "REALLOCATED" then "CANCELLED" else ride.status),
         rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
@@ -329,6 +330,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
   , vehicleModel : if rideDetails.vehicleModel == "" && rideDetails.vehicleVariant == "BIKE" then "Bike Taxi" else rideDetails.vehicleModel
   , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
+  , isAirConditioned : ride.isAirConditioned
   , providerName : ride.agencyName
   , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP -- get from API
 }) ( reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt ride.rideScheduledTime ) listRes ))

@@ -129,4 +129,5 @@ type DriverInfoCardData =
   , fareProductType :: FareProductType
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
+  , isAirConditioned :: Maybe Boolean
   }
