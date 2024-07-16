@@ -181,7 +181,6 @@ data SearchRes = SearchRes
     distance :: Maybe Meters,
     duration :: Maybe Seconds,
     shortestRouteInfo :: Maybe Maps.RouteInfo,
-    phoneNumber :: Maybe Text,
     isReallocationEnabled :: Maybe Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
     taggings :: Maybe Beckn.Taggings
@@ -266,8 +265,6 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
 
   let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with this, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  phoneNumber <- mapM decrypt person.mobileNumber
-
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing

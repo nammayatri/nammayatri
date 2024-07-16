@@ -21,9 +21,9 @@ import qualified Data.List as List
 import EulerHS.Prelude hiding (id)
 import qualified Tools.Maps as Maps
 
-mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Bool -> Maybe [Spec.TagGroup]
-mkCustomerInfoTags Nothing Nothing _ False = Nothing
-mkCustomerInfoTags customerLanguage disabilityTag _ isDashboard =
+mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Bool -> Maybe [Spec.TagGroup]
+mkCustomerInfoTags Nothing Nothing False = Nothing
+mkCustomerInfoTags customerLanguage disabilityTag isDashboard =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
