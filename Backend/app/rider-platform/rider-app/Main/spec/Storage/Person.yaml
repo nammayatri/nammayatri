@@ -97,6 +97,7 @@ Person:
     registeredViaPartnerOrgId : Maybe (Id PartnerOrganization)
     customerPaymentId : Maybe CustomerId
     defaultPaymentMethodId: Maybe PaymentMethodId
+    deviceId : Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -293,6 +294,10 @@ Person:
       kvFunction: updateOneWithKV
       params: [id, totalRidesCount]
       where: id
+
+    findAllByDeviceId:
+      kvFunction: findAllWithKV
+      where: deviceId
 
   extraOperations:
     - EXTRA_QUERY_FILE
