@@ -66,6 +66,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     notificationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource),
     parallelSearchRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupZone :: B.C f Kernel.Prelude.Bool,
+    previousDropGeoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     requestId :: B.C f Kernel.Prelude.Text,
     response :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse),
     rideFrequencyScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

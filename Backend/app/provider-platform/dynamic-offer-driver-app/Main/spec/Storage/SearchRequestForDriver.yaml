@@ -84,6 +84,7 @@ SearchRequestForDriver:
     currency: Currency
     distanceUnit: DistanceUnit
     totalRides: Int
+    previousDropGeoHash : Maybe Text
 
   beamType:
     clientBundleVersion: Maybe Text
