@@ -136,7 +136,8 @@ data AppCfg = AppCfg
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
-    iosValidateEnpoint :: Text
+    iosValidateEnpoint :: Text,
+    quoteRespondCoolDown :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -224,7 +225,8 @@ data AppEnv = AppEnv
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    quoteRespondCoolDown :: Int
   }
   deriving (Generic)
 

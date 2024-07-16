@@ -408,7 +408,7 @@ otpRideCreate driver otpCode booking clientId = do
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
-  throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo
+  throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo True
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle

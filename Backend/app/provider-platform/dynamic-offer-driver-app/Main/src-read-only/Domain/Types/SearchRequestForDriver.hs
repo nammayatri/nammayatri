@@ -60,6 +60,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     notificationSource :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource,
     parallelSearchRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupZone :: Kernel.Prelude.Bool,
+    previousDropGeoHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     response :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse,
     rideFrequencyScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

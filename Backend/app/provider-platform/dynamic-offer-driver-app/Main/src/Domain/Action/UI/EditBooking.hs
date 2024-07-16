@@ -4,7 +4,9 @@
 module Domain.Action.UI.EditBooking where
 
 import API.Types.UI.EditBooking
+import qualified Data.Geohash as DG
 import Data.OpenApi (ToSchema)
+import Data.Text as T
 import Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant
@@ -29,6 +31,7 @@ import SharedLogic.Ride
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSR
@@ -50,7 +53,8 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
   when (bookingUpdateReq.status /= USER_CONFIRMED) $ throwError $ InvalidRequest "BookingUpdateRequest is not in USER_CONFIRMED state"
   when (bookingUpdateReq.validTill < now) $ throwError $ InvalidRequest "BookingUpdateRequest is expired"
   booking <- QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateReq.bookingId.getId)
-  if action == ACCEPT
+  lockEditDestination <- Redis.tryLockRedis (editDestinationLockKey driverId) 20
+  if action == ACCEPT && lockEditDestination
     then do
       hasAdvancedRide <- QDI.findById driverId <&> maybe False (.hasAdvanceBooking)
       if hasAdvancedRide
@@ -75,8 +79,22 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
           QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
           CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
+          void $ Redis.unlockRedis (editDestinationLockKey driverId)
+          mbUpdatedloc <- QL.findById dropLocMapRide.locationId
+          whenJust mbUpdatedloc $ \updatedloc -> do
+            let (lat, lon) = (updatedloc.lat, updatedloc.lon)
+            let mbGeohash = T.pack <$> DG.encode 9 (lat, lon)
+            whenJust mbGeohash $ \geohash -> do
+              Redis.setExp (editDestinationUpdatedLocGeohashKey driverId) geohash (2 * 60 * 60)
           return Success
     else do
-      CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId "Trip Update Request Declined" "Request was declined by your driver. Kindly check with them offline before requesting again."
+      let (errorType, errorMessage) = errorMessageByBookingType lockEditDestination
+      CallBAP.sendUpdateEditDestErrToBAP booking bookingUpdateReq.bapBookingUpdateRequestId errorType errorMessage
       QBUR.updateStatusById DRIVER_REJECTED bookingUpdateReqId
       return Success
+  where
+    errorMessageByBookingType :: Bool -> (Text, Text)
+    errorMessageByBookingType isLockAquired = do
+      if isLockAquired && action /= ACCEPT
+        then ("Trip Update Request Declined", "Request was declined by your driver. Kindly check with them offline before requesting again.")
+        else ("Trip Update Request Not Available", "Edit Destination is not possible at this moment. Please try again later.")

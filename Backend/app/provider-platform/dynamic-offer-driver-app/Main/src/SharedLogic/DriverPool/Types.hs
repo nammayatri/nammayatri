@@ -146,6 +146,7 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     pickupZone :: Bool,
     specialZoneExtraTip :: Maybe HighPrecMoney,
     isForwardRequest :: Bool,
+    previousDropGeoHash :: Maybe Text,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
   }
   deriving (Generic, Show, FromJSON, ToJSON)
