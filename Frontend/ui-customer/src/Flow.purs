@@ -224,7 +224,6 @@ baseAppFlow gPayload callInitUI = do
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
   liftFlowBT $ resetAllTimers
-  let _ = spy "MediaDRM ID " $ JB.getDeviceID unit
   let
     showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   when callInitUI $ lift $ lift $ initUI -- TODO:: Can we move this to Main
@@ -669,6 +668,8 @@ accountSetUpScreenFlow = do
 
         selectedDisability = state.data.disabilityOptions.selectedDisability
 
+        deviceId = JB.getDeviceID unit
+
         (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
 
         requiredData =
@@ -680,6 +681,7 @@ accountSetUpScreenFlow = do
               case selectedDisability of
                 Just disability -> Just (Remote.mkDisabilityData disability (fromMaybe "" state.data.disabilityOptions.otherDisabilityReason))
                 _ -> Nothing
+            , deviceId = if deviceId /= "NO_DEVICE_ID" then Just deviceId else Nothing
             }
       setValueToLocalStore DISABILITY_UPDATED "true"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showDisabilityPopUp = (isJust selectedDisability) }, data { disability = selectedDisability } })

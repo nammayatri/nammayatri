@@ -19,7 +19,8 @@ applyReferralCode :: String -> FlowBT String ReferralStatus
 applyReferralCode referralCode  = do
   if getValueToLocalStore REFERRAL_STATUS == "NOT_REFERRED_NOT_TAKEN_RIDE" then do
     let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
-        requiredData = initialData{referralCode = (Just referralCode)}
+        deviceId = JB.getDeviceID unit
+        requiredData = initialData{referralCode = (Just referralCode), deviceId = if deviceId /= "NO_DEVICE_ID" then Just deviceId else Nothing}
     res <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
     case res of
       Right _ -> do
