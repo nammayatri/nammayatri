@@ -818,6 +818,47 @@ public class NotificationUtils {
         return isLowRamDevice || modelNotSupported;
     }
 
+    public static void updateLocationUpdateDisAndFreq(String fcmType, SharedPreferences sharedPref) {
+        if (remoteConfigs.hasKey("loc_pings_config")){
+            String locationPingsConfig = remoteConfigs.getString("loc_pings_config");
+            try{
+                JSONObject locationPingsOb = new JSONObject(locationPingsConfig);
+                boolean enabled = false;
+                JSONArray enabledForFcmTypes = locationPingsOb.getJSONArray("enable_for_notification_type");
+                for (int i = 0; i < enabledForFcmTypes.length(); i++) {
+                    if (enabledForFcmTypes.getString(i).equals(fcmType)){
+                        enabled = true;
+                        break;
+                    }
+                }
+                if (sharedPref == null || !enabled) return;
+                String ride_g_freq_off_ride = locationPingsOb.getString("ride_g_freq_off_ride");
+                String ride_g_freq_on_ride_pickup_stage = locationPingsOb.getString("ride_g_freq_on_ride_pickup_stage");
+                String ride_g_freq_on_ride_drop_stage = locationPingsOb.getString("ride_g_freq_on_ride_drop_stage");
+                String min_displacement_off_ride = locationPingsOb.getString("min_displacement_off_ride");
+                String min_displacement_on_ride_pickup_stage = locationPingsOb.getString("min_displacement_on_ride_pickup_stage");
+                String min_displacement_on_ride_drop_stage = locationPingsOb.getString("min_displacement_on_ride_drop_stage");
+                switch (fcmType){
+                    case MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT:
+                        sharedPref.edit().putString("RIDE_G_FREQUENCY", ride_g_freq_on_ride_pickup_stage).apply();
+                        sharedPref.edit().putString("DRIVER_MIN_DISPLACEMENT", min_displacement_on_ride_pickup_stage).apply();
+                        break;
+                    case MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED:
+                        sharedPref.edit().putString("RIDE_G_FREQUENCY", ride_g_freq_on_ride_drop_stage).apply();
+                        sharedPref.edit().putString("DRIVER_MIN_DISPLACEMENT", min_displacement_on_ride_drop_stage).apply();
+                        break;
+                    case MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT:
+                    case MyFirebaseMessagingService.NotificationTypes.TRIP_FINISHED:
+                        sharedPref.edit().putString("RIDE_G_FREQUENCY", ride_g_freq_off_ride).apply();
+                        sharedPref.edit().putString("DRIVER_MIN_DISPLACEMENT", min_displacement_off_ride).apply();
+                        break;
+                }
+            }catch (Exception e){
+                FirebaseCrashlytics.getInstance().recordException(e);
+            }
+        }
+    }
+
     public static void createChatNotification(String sentBy, String message, Context context) {
         createChatNotificationChannel(context);
         Intent notificationIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());

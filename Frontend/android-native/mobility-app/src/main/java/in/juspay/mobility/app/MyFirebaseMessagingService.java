@@ -269,6 +269,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             } else {
                                NotificationUtils.startWidgetService(this, getString(R.string.ride_cancelled), payload, entity_payload, NotificationUtils.RequestSource.FCM);
                             }
+                            if (merchantType.equals("DRIVER")){
+                                NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                            }
                             break;
 
                         case NotificationTypes.DRIVER_QUOTE_INCOMING:
@@ -286,6 +289,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 NotificationUtils.firebaseLogEventWithParams(this, appNamePrefix+vehicleCategoryKey+"ride_completed_", "vehicle_category", vehicleCategory);
                                 sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
                                 sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
+                            }else {
+                                NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                             }
                             break;
 
@@ -302,6 +307,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
                             sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.DRIVER_ASSIGNMENT)).apply();
                             startMainActivity();
+                            if (merchantType.equals("DRIVER")){
+                                NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                            }
                             break;
 
                         case NotificationTypes.TRIP_UPDATED:
@@ -315,6 +323,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         case NotificationTypes.TRIP_STARTED:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
+                            }
+                            if (merchantType.equals("DRIVER")){
+                                NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                             }
                             break;
 
