@@ -94,7 +94,8 @@ data RideAssignedReq = RideAssignedReq
     vehicleAge :: Maybe Months,
     isFreeRide :: Bool,
     driverAccountId :: Maybe Payment.AccountId,
-    previousRideEndPos :: Maybe LatLong
+    previousRideEndPos :: Maybe LatLong,
+    driverTrackingUrl :: Maybe BaseUrl
   }
 
 data OnlinePaymentParameters = OnlinePaymentParameters
@@ -113,7 +114,8 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     onlinePaymentParameters :: Maybe OnlinePaymentParameters,
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
-    fareParams :: Maybe [DFareBreakup]
+    fareParams :: Maybe [DFareBreakup],
+    driverTrackingUrl :: Maybe BaseUrl
   }
 
 data RideStartedReq = RideStartedReq
@@ -240,7 +242,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         merchantId = Just booking.merchantId,
         merchantOperatingCityId = Just booking.merchantOperatingCityId,
         clientId = booking.clientId,
-        trackingUrl = Nothing,
+        trackingUrl = req.driverTrackingUrl,
         fare = Nothing,
         totalFare = Nothing,
         chargeableDistance = Nothing,

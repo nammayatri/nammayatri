@@ -357,6 +357,7 @@ data BecknTag
   | RATING
   | IS_DRIVER_BIRTHDAY
   | IS_FREE_RIDE
+  | DRIVER_TRACKING_URL
   | DRIVER_ACCOUNT_ID
   | -- Driver arrived info tags
     ARRIVAL_TIME
