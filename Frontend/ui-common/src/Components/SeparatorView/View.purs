@@ -13,10 +13,10 @@ view :: Config -> forall w . PrestoDOM (Effect Unit) w
 view config = 
   let viewConfig = getConfigByOrientation config.orientation config
   in linearLayout
-  [ height viewConfig.height
+  [ height $ config.layoutHeight --config.layoutHeight (aise karne se theek hogya tha separator view)
   , width  viewConfig.width
   , gravity CENTER
-  , margin $ MarginVertical 2 2
+  , margin $ config.margin --config.margin (")
   , orientation config.orientation
   ](map (\_ -> linearLayout[height config.height
   , width config.width
@@ -50,6 +50,7 @@ type Config = {
 , layoutWidth :: Length
 , layoutHeight :: Length
 , color :: String
+, margin :: Margin
 }
 
 getCornerRadius :: Length -> Number

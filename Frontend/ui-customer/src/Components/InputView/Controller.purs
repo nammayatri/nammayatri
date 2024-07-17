@@ -73,11 +73,11 @@ type InputView =
   , imageSeparator :: SeparatorView.Config 
   , clearTextIcon :: ImageConfig
   , fontStyle :: forall properties. Array (Prop properties)    
-  , destinationAddress :: Address
-  , destination :: String
-  , destinationPlaceId :: Maybe String  
-  , destinationLat :: Number
-  , destinationLong :: Number
+  , placeAddress :: Address
+  , place :: String
+  , placeId :: Maybe String  
+  , placeLat :: Number
+  , placeLong :: Number
   , inputTextConfig :: InputTextConfig
   , inputTextViewContainerMargin :: Margin 
   , index :: Int
@@ -97,7 +97,7 @@ type InputTextConfig =
   , prefixImageVisibility :: Visibility
   , prefixImageConfig :: ImageConfig
   , postfixImageConfig :: ImageConfig
-  
+  , swapImageConfig :: ImageConfig
   }
 
 type ImageConfig = 

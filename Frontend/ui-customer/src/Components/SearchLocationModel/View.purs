@@ -25,6 +25,7 @@ import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
 import Components.SeparatorView.View as SeparatorView
+import Components.InputView as InputView
 import Data.Array (mapWithIndex, length, take, null, (..))
 import Data.Function (flip)
 import Data.Function.Uncurried (runFn3)
@@ -70,21 +71,24 @@ view push state =
       ][ PrestoAnim.animationSet
           [ fadeIn true ]
           $ 
-          linearLayout
-          [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , background state.appConfig.searchLocationConfig.backgroundColor
-            , padding $ PaddingVertical safeMarginTop 16
-            ][  if state.headerVisibility then backPressView state push  else textView[]
-              , linearLayout
-                [ orientation HORIZONTAL
-                , height $ V 105 
-                , width MATCH_PARENT
-                 ][ if not state.headerVisibility then backPressView state push else textView[]
-                  , if not state.isEditDestination then sourceDestinationImageView state else textView[]
-                  , sourceDestinationEditTextView state push
-                  ]]
+          -- linearLayout
+          -- [ height WRAP_CONTENT
+          --   , width MATCH_PARENT
+          --   , orientation VERTICAL
+          --   , background Color.green900--state.appConfig.searchLocationConfig.backgroundColor
+          --   , padding $ PaddingVertical safeMarginTop 16
+          --   ][  if state.headerVisibility then backPressView state push  else textView[]
+          --     , linearLayout
+          --       [ orientation HORIZONTAL
+          --       , height $ V 105 
+          --       , width MATCH_PARENT
+          --       , background Color.blue600
+          --        ][ if not state.headerVisibility then backPressView state push else textView[]
+          --         , if not state.isEditDestination then sourceDestinationImageView state else textView[]
+          --         , sourceDestinationEditTextView state push
+          --         ]
+          --         ]
+                  InputView.view (push <<< InputViewAction) state.inputViewConfig 
                   , linearLayout
                       [ height $ V 1
                       , width MATCH_PARENT
@@ -96,6 +100,7 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , weight 1.0
+                    -- , background Color.red900
                     ][ searchResultsParentView state push 
                       , linearLayout
                         [ width MATCH_PARENT
@@ -287,6 +292,7 @@ sourceDestinationImageView state =
     , orientation VERTICAL
     , gravity CENTER
     , visibility $ boolToVisibility (not state.isEditDestination)
+    -- , background Color.orange900
     ][ linearLayout
         [ height $ V 15
         , width $  V 15
@@ -321,7 +327,7 @@ sourceDestinationEditTextView state push =
     , orientation VERTICAL
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 16 16 0)
     , height $ V 121
-  
+    -- , background Color.brownishGrey
     ][
       if state.isEditDestination
         then nonEditableTextView state push 

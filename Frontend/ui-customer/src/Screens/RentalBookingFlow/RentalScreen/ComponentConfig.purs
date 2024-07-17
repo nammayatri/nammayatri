@@ -173,11 +173,11 @@ mapInputViewConfig state =
       , fontStyle : if isSelectPackageStage then FontStyle.body6 LanguageStyle else FontStyle.subHeading2 LanguageStyle
       , gravity : if isSelectPackageStage then LEFT else CENTER_HORIZONTAL
       , inputTextConfig : item
-      , destinationAddress : dummyAddress
-      , destination : ""
-      , destinationPlaceId : MB.Nothing
-      , destinationLat : 0.0
-      , destinationLong : 0.0
+      , placeAddress : dummyAddress
+      , place : ""
+      , placeId : MB.Nothing
+      , placeLat : 0.0
+      , placeLong : 0.0
       , inputTextViewContainerMargin : Margin 0 0 0 0 
       , index : 0
       }
@@ -203,6 +203,7 @@ mapInputViewConfig state =
             imageName = "ny_ic_clock_unfilled_white"
           }
         , postfixImageConfig : InputView.dummyImageConfig
+        , swapImageConfig : InputView.dummyImageConfig
         , textColor : if isSelectPackageStage then Color.black600 else Color.white900
         , hint : ""
         } ,
@@ -216,6 +217,7 @@ mapInputViewConfig state =
         , prefixImageVisibility : GONE 
         , prefixImageConfig : InputView.dummyImageConfig
         , postfixImageConfig : InputView.dummyImageConfig
+        , swapImageConfig : InputView.dummyImageConfig
         , textColor : if isSelectPackageStage then Color.black700 else Color.white900
         , hint : ""
         }

@@ -342,6 +342,7 @@ initData = let
           , autoCompleteType : Nothing
           , sourceSelectType : SEARCH
           , cachedPredictions : DHM.empty
+          , placeSelectType : SEARCH
         }
     , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false
@@ -380,7 +381,7 @@ initData = let
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
     , inputView: [
-      { padding : Padding 0 0 0 0
+      { padding : Padding 5 5 0 5
         , height : V 37
         , gravity : CENTER
         , canClearText : true
@@ -391,11 +392,11 @@ initData = let
         , imageSeparator : separatorConfig 
         , clearTextIcon : dummyImageConfig   
         , fontStyle : []
-        , destinationAddress : dummyAddress
-        , destination : ""
-        , destinationPlaceId : Nothing
-        , destinationLat : 0.0
-        , destinationLong : 0.0
+        , placeAddress : dummyAddress
+        , place : ""
+        , placeId : Nothing
+        , placeLat : 0.0
+        , placeLong : 0.0
         , index : 0
         , inputTextViewContainerMargin : Margin 0 0 0 0 
         , inputTextConfig : {
@@ -404,10 +405,10 @@ initData = let
         , imageName : ""
         , margin : Margin 0 12 0 5
         , placeHolder : "Start"
-        , id : "abc"
+        , id : "Source"
         , hint : "Start"
         , cornerRadius : 4.0
-        , textColor : ""
+        , textColor : Color.white900
         , prefixImageVisibility : GONE
         , prefixImageConfig : 
                     dummyImageConfig
@@ -431,9 +432,10 @@ initData = let
                       , layoutMargin = Margin 10 0 0 0
                       , layoutColor = ""
                       }
+        , swapImageConfig : dummyImageConfig
         }
         },{
-          padding : Padding 0 0 0 0
+          padding : Padding 5 5 0 5
         , height : V 37
         , gravity : CENTER
         , canClearText : true
@@ -444,12 +446,12 @@ initData = let
         , imageSeparator : separatorConfig 
         , clearTextIcon : dummyImageConfig    
         , fontStyle : []
-        , inputTextViewContainerMargin : Margin 0 0 0 0 
-        , destinationAddress : dummyAddress
-        , destination : ""
-        , destinationPlaceId : Nothing
-        , destinationLat : 0.0
-        , destinationLong : 0.0
+        , inputTextViewContainerMargin : Margin 0 0 0 0
+        , placeAddress : dummyAddress
+        , place : ""
+        , placeId : Nothing
+        , placeLat : 0.0
+        , placeLong : 0.0
         , index : 1 
         , inputTextConfig : {
             textValue : ""
@@ -460,7 +462,7 @@ initData = let
           , id : "dest"
           , hint : getString WHERE_TO
           , cornerRadius : 4.0
-          , textColor : ""
+          , textColor : Color.white900
           , prefixImageVisibility : GONE
           , prefixImageConfig : 
                     dummyImageConfig
@@ -484,6 +486,7 @@ initData = let
                       , layoutMargin = Margin 10 0 0 0
                       , layoutColor = Color.squidInkBlue
                       }
+          , swapImageConfig : dummyImageConfig
                     }
                 }]  
   , selectedIndex : -1                  

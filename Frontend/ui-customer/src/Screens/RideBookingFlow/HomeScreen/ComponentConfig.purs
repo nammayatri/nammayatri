@@ -1274,7 +1274,7 @@ getInputViewConfig state =
     , padding = PaddingTop 0 
   }
   , headerText : ""
-  , headerVisibility : false
+  , headerVisibility : true
   , imageLayoutMargin : MarginLeft 0
   , imageLayoutWidth : V 20
   , inputLayoutPading : PaddingLeft 0 
@@ -1287,7 +1287,7 @@ getInputViewConfig state =
     padding : Padding 0 0 0 0,
     gravity : CENTER_VERTICAL
   }
-  , imageLayoutVisibility : GONE
+  , imageLayoutVisibility : VISIBLE
   , suffixButtonVisibility : GONE
   }
 
@@ -1296,7 +1296,7 @@ getInputViewItemConfig state = state.props.inputView
 
 defaultAddStopConfig :: InputView
 defaultAddStopConfig = {
-    padding : Padding 0 0 0 0 
+    padding : Padding 5 5 0 5 
   , height : V 37
   , canClearText : true
   , isEditable : true  
@@ -1308,22 +1308,22 @@ defaultAddStopConfig = {
   , clearTextIcon : dummyImageConfig 
   , fontStyle : []
   , inputTextViewContainerMargin : Margin 0 0 0 0   
-  , destinationAddress : dummyAddress
-  , destination : ""
-  , destinationPlaceId : Nothing
-  , destinationLat : 0.0
-  , destinationLong : 0.0
+  , placeAddress : dummyAddress
+  , place : ""
+  , placeId : Nothing
+  , placeLat : 0.0
+  , placeLong : 0.0
   , index : 0
   , inputTextConfig : {
       textValue : "ADD" 
     , isFocussed : true
     , imageName : ""
-    , margin : Margin 0 12 0 5
+    , margin : Margin 0 12 0 5 --Margin 0 10 0 4--Margin 0 12 0 5
     , placeHolder : getString WHERE_TO
     , id : "Stop" 
     , hint : getString WHERE_TO
     , cornerRadius : 4.0
-    , textColor : ""
+    , textColor : Color.white900 --
     , prefixImageVisibility : GONE
     , postfixImageConfig : dummyImageConfig
                 { imageName = "ny_ic_add"
@@ -1344,19 +1344,31 @@ defaultAddStopConfig = {
                 , layoutWidth = V 16
                 , layoutHeight = V 16
                 }
+    , swapImageConfig : dummyImageConfig
+                { imageName = "ny_ic_swap"
+                , height = V 20
+                , width = V 20
+                , padding = PaddingTop 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 0 0 0 0
+                , layoutMargin = Margin 0 0 0 0
+                , layoutColor = Color.squidInkBlue
+                }
         }
 }
 
 separatorConfig :: SeparatorView.Config
 separatorConfig = 
   { orientation : VERTICAL
-  , count : 7
+  , count : 4
   , height : V 4
   , width : V 1
   , layoutWidth : V 12
   , layoutHeight : V 15
   , color : Color.black500
-  , margin : Margin 0 0 0 0
+  , margin : MarginVertical 2 2
   }
   
 editDestSearchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState

@@ -2419,6 +2419,7 @@ type RideSearchProps = {
   , autoCompleteType :: Maybe AutoCompleteReqType
   , sourceSelectType :: LocationSelectType
   , cachedPredictions :: DHM.HashMap String (Array LocationListItemState)
+  , placeSelectType :: LocationSelectType
 }
 
 data AutoCompleteReqType = PICKUP | DROP

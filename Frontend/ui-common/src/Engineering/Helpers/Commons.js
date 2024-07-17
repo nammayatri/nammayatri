@@ -201,6 +201,7 @@ export const getVersionByKey = function(key){
 
 function setTextImpl(id, text, pos) {
   if (window.__OS === "ANDROID") {
+    console.log("setText ->",id, text, pos)
     let cmd = "set_view=ctx->findViewById:i_" + id + ";";
     cmd += "get_view->setText:cs_" + text + ";";
     cmd += "get_view->setSelection:i_" + pos + ";";
