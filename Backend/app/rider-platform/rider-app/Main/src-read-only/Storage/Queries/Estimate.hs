@@ -52,6 +52,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
     [ Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
       Se.Set Beam.bppEstimateId (Kernel.Types.Id.getId bppEstimateId),
+      Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),

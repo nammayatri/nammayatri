@@ -33,6 +33,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
         Domain.Types.Quote.Quote
           { backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
+            bppSubscriberId = bppSubscriberId,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
             clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion,
@@ -72,6 +73,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
     Beam.QuoteT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
+        Beam.bppSubscriberId = bppSubscriberId,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
         Beam.clientOsType = clientDevice <&> (.deviceType),

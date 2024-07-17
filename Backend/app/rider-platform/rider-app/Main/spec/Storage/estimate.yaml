@@ -78,6 +78,7 @@ Estimate:
     estimatedPickupDuration : Maybe Seconds
     device : Maybe Text
     providerId : Text
+    bppSubscriberId : Maybe Text
     providerUrl : BaseUrl
     providerName : Text
     providerMobileNumber : Text

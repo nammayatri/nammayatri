@@ -155,6 +155,7 @@ Booking:
     paymentUrl: Maybe Text
     status: BookingStatus
     providerId: Text
+    bppSubscriberId: Maybe Text
     providerUrl: BaseUrl
     bppEstimateId: Text
     primaryExophone: Text

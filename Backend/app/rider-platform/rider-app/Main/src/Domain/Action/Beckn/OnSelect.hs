@@ -55,6 +55,7 @@ data DOnSelectReq = DOnSelectReq
 
 data ProviderInfo = ProviderInfo
   { providerId :: Text,
+    bppSubscriberId :: Maybe Text,
     name :: Maybe Text,
     url :: BaseUrl,
     mobileNumber :: Maybe Text
@@ -160,6 +161,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
         DQuote.Quote
           { id = uid,
             providerId = providerInfo.providerId,
+            bppSubscriberId = providerInfo.bppSubscriberId,
             providerUrl = providerInfo.url,
             createdAt = now,
             updatedAt = now,
@@ -211,6 +213,7 @@ buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
 validateRequest :: DOnSelectReq -> Flow OnSelectValidatedReq
 validateRequest DOnSelectReq {..} = do
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist $ "bppEstimateId-" <> bppEstimateId.getId)
+  let providerInfo' = providerInfo {providerId = estimate.providerId, bppSubscriberId = estimate.bppSubscriberId}
   searchRequest <-
     QSR.findById estimate.requestId
       >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
@@ -220,7 +223,8 @@ validateRequest DOnSelectReq {..} = do
     throwError $ InvalidRequest "Duplicate OnSelect quote"
   return $
     OnSelectValidatedReq
-      { ..
+      { providerInfo = providerInfo',
+        ..
       }
   where
     duplicateCheckCond :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => [Text] -> Text -> m Bool

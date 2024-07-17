@@ -25,19 +25,20 @@ import qualified Tools.Error
 buildOnSearchReq :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.OnSearchReq -> BecknV2.OnDemand.Types.Provider -> [BecknV2.OnDemand.Types.Item] -> [BecknV2.OnDemand.Types.Fulfillment] -> Kernel.Prelude.UTCTime -> m Domain.Action.Beckn.OnSearch.DOnSearchReq
 buildOnSearchReq req provider items fulfillments validTill = do
   let paymentMethodsInfo_ = []
-  providerInfo_ <- tfProviderInfo req
-  (estimatesInfo_, quotesInfo_) <- partitionEithers <$> traverse (tfQuotesInfo provider fulfillments validTill) items
   requestId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId req.onSearchReqContext
+  providerInfo_ <- tfProviderInfo req requestId_
+  (estimatesInfo_, quotesInfo_) <- partitionEithers <$> traverse (tfQuotesInfo provider fulfillments validTill) items
   pure $ Domain.Action.Beckn.OnSearch.DOnSearchReq {estimatesInfo = estimatesInfo_, paymentMethodsInfo = paymentMethodsInfo_, providerInfo = providerInfo_, quotesInfo = quotesInfo_, requestId = Id requestId_}
 
-tfProviderInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.OnSearchReq -> m Domain.Action.Beckn.OnSearch.ProviderInfo
-tfProviderInfo req = do
+tfProviderInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.OnSearchReq -> Text -> m Domain.Action.Beckn.OnSearch.ProviderInfo
+tfProviderInfo req txnId = do
   let mobileNumber_ = ""
   name_ <- Beckn.OnDemand.Utils.OnSearch.getProviderName req
   let ridesCompleted_ = 0
   providerId_ <- req.onSearchReqMessage >>= (.onSearchReqMessageCatalog.catalogProviders) >>= Kernel.Prelude.listToMaybe >>= (.providerId) & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing provider_id")
+  bppSubscriberId_ <- req.onSearchReqContext.contextBppId & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidBecknSchema $ "Missing context bpp_id, txnId:" +|| txnId ||+ "")
   url_ <- Beckn.OnDemand.Utils.Common.getContextBppUri req.onSearchReqContext >>= Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_uri")
-  pure $ Domain.Action.Beckn.OnSearch.ProviderInfo {mobileNumber = mobileNumber_, name = name_, providerId = providerId_, ridesCompleted = ridesCompleted_, url = url_}
+  pure $ Domain.Action.Beckn.OnSearch.ProviderInfo {mobileNumber = mobileNumber_, name = name_, providerId = providerId_, bppSubscriberId = bppSubscriberId_, ridesCompleted = ridesCompleted_, url = url_}
 
 buildRentalQuoteInfo :: BecknV2.OnDemand.Types.Item -> Text -> Currency -> Maybe Domain.Action.Beckn.OnSearch.RentalQuoteDetails
 buildRentalQuoteInfo item quoteId_ currency = do

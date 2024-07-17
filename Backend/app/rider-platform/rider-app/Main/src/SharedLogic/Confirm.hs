@@ -226,6 +226,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         paymentUrl = Nothing,
         status = DRB.NEW,
         providerId = quote.providerId,
+        bppSubscriberId = quote.bppSubscriberId,
         primaryExophone = exophone.primaryPhone,
         providerUrl = quote.providerUrl,
         bppEstimateId = quote.itemId,

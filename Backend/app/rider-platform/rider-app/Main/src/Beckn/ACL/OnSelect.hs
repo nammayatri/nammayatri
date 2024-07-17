@@ -41,7 +41,7 @@ buildOnSelectReqV2 req = do
   let context = req.onSelectReqContext
   ContextV2.validateContext Context.ON_SELECT context
   handleErrorV2 req $ \message -> do
-    providerId <- context.contextBppId & fromMaybeM (InvalidRequest "Missing bpp_id")
+    bppSubscriberId <- context.contextBppId & fromMaybeM (InvalidRequest "Missing bpp_id")
     mbProviderUrl <- Utils.getContextBppUri context
     providerUrl <- mbProviderUrl & fromMaybeM (InvalidRequest "Missing bpp_uri")
     order <- message.onSelectReqMessageOrder & fromMaybeM (InvalidRequest "Missing order")
@@ -55,7 +55,8 @@ buildOnSelectReqV2 req = do
     let bppEstimateId = Id itemId
         providerInfo =
           DOnSelect.ProviderInfo
-            { providerId = providerId,
+            { providerId = bppSubscriberId, -- TODO: providerId needs to be from estimate table, for now using it as contextBppId
+              bppSubscriberId = Just bppSubscriberId,
               name = Nothing,
               url = providerUrl,
               mobileNumber = Nothing -- TODO: get support mobile number from bpp

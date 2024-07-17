@@ -29,6 +29,7 @@ data BookingT f = BookingT
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     itemId :: B.C f Kernel.Prelude.Text,
+    bppSubscriberId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
