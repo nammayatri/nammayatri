@@ -789,6 +789,7 @@ TransporterConfig:
     fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
     fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
     toNotifyDriverForExtraKmsLimitExceed: Bool
+    createDocumentRequired: Maybe Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit

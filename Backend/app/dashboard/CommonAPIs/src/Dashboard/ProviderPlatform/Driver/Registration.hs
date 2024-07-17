@@ -143,18 +143,20 @@ data VPermitApproveDetails = VPermitApproveDetails
   { documentImageId :: Id Image,
     issueDate :: Maybe UTCTime,
     nameOfPermitHolder :: Maybe Text,
-    permitExpiry :: Maybe UTCTime,
-    permitNumber :: Maybe Text,
+    permitExpiry :: UTCTime,
+    permitNumber :: Text,
     purposeOfJourney :: Maybe Text,
-    rcNumber :: Maybe Text,
-    regionCovered :: Maybe Text
+    rcNumber :: Text,
+    regionCovered :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data VPUCApproveDetails = VPUCApproveDetails
   { documentImageId :: Id Image,
-    pucExpiry :: Maybe UTCTime,
-    rcNumber :: Maybe Text
+    pucNumber :: Text,
+    pucExpiry :: UTCTime,
+    rcNumber :: Text,
+    testDate :: Maybe UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -250,7 +252,10 @@ data DocumentsListResponse = DocumentsListResponse
     ssn :: Maybe Text,
     vehicleFitnessCertificate :: [Text],
     profilePhoto :: [Text],
-    vehicleInspectionForm :: [Text]
+    vehicleInspectionForm :: [Text],
+    vehiclePermit :: [Text],
+    vehiclePUC :: [Text]
+    -- TODO(Rupak): add vehiclePermit and vehiclePUC
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -262,8 +267,9 @@ type GetDocumentAPI =
     :> Capture "imageId" (Id Image)
     :> Get '[JSON] GetDocumentResponse
 
-newtype GetDocumentResponse = GetDocumentResponse
-  { imageBase64 :: Text
+data GetDocumentResponse = GetDocumentResponse
+  { imageBase64 :: Text,
+    status :: Maybe VerificationStatus -- TODO(Rupak): status of the document
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

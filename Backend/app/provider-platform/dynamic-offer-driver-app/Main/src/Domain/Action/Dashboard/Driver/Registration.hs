@@ -44,6 +44,8 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
+import qualified Domain.Types.VehiclePUC as DPUC
+import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
 import EulerHS.Prelude hiding (map, whenJust)
@@ -60,6 +62,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverSSN as QSSN
@@ -68,6 +71,8 @@ import Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
+import qualified Storage.Queries.VehiclePUC as QVPUC
+import qualified Storage.Queries.VehiclePermit as QVPermit
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
@@ -76,6 +81,8 @@ import Tools.Notifications as Notify
 documentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DocumentsListResponse
 documentsList merchantShortId city driverId = do
   merchant <- findMerchantByShortId merchantShortId
+  pucImages <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehiclePUC)
+  permitImages <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehiclePermit)
   dlImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
   vInspectionImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleInspectionForm)
   vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.VehicleRegistrationCertificate)
@@ -104,7 +111,9 @@ documentsList merchantShortId city driverId = do
         profilePhoto = profilePics,
         driverLicenseDetails = allDLDetails,
         vehicleRegistrationCertificateDetails = allRCDetails,
-        vehicleInspectionForm = vInspectionImgs
+        vehicleInspectionForm = vInspectionImgs,
+        vehiclePermit = permitImages,
+        vehiclePUC = pucImages
       }
   where
     convertDLToDLDetails dl = do
@@ -145,7 +154,16 @@ getDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Image -> Flow Co
 getDocument merchantShortId _ imageId = do
   merchant <- findMerchantByShortId merchantShortId
   img <- getImage merchant.id (cast imageId)
-  pure Common.GetDocumentResponse {imageBase64 = img}
+  image <- QImage.findById (cast imageId) >>= fromMaybeM (InternalError "Image not found by image id")
+  pure Common.GetDocumentResponse {imageBase64 = img, status = castVerificationStatus <$> image.verificationStatus}
+  where
+    castVerificationStatus :: VerificationStatus -> Common.VerificationStatus
+    castVerificationStatus = \case
+      PENDING -> Common.PENDING
+      VALID -> Common.VALID
+      INVALID -> Common.INVALID
+      MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
+      UNAUTHORIZED -> Common.UNAUTHORIZED
 
 mapDocumentType :: Common.DocumentType -> Domain.DocumentType
 mapDocumentType Common.DriverLicense = Domain.DriverLicense
@@ -354,7 +372,98 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
                     ..
                   }
           QVI.create insurance
-        _ -> pure ()
+        _ -> do
+          transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+          case transporterConfig.createDocumentRequired of
+            Just True -> throwError (InternalError "Provide all the details for creating insurance document: policyNumber, policyExpiry, policyProvider, rcNumber")
+            _ -> pure ()
+
+approveAndUpdatePUC :: Common.VPUCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdatePUC req@Common.VPUCApproveDetails {..} mId mOpCityId = do
+  let imageId = Id req.documentImageId.getId
+  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.VehiclePUC
+  QImage.updateDocumentExpiry (Just req.pucExpiry) imageId
+  vpuc <- QVPUC.findByImageId imageId
+  now <- getCurrentTime
+  uuid <- generateGUID
+  rcNoEnc <- encrypt rcNumber
+  rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by RC number")
+  pucNoEnc <- encrypt req.pucNumber
+  case vpuc of
+    Just puc -> do
+      let updatedpuc =
+            puc{DPUC.pucNumber = Just pucNoEnc,
+                DPUC.pucExpiry = req.pucExpiry,
+                DPUC.rcId = rc.id,
+                DPUC.testDate = req.testDate <|> puc.testDate,
+                DPUC.verificationStatus = VALID
+               }
+      QVPUC.updateByPrimaryKey updatedpuc
+    Nothing -> do
+      pucImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+      let puc =
+            DPUC.VehiclePUC
+              { documentImageId = imageId,
+                driverId = pucImage.personId,
+                id = uuid,
+                pucExpiry = req.pucExpiry,
+                pucNumber = Just pucNoEnc,
+                rcId = rc.id,
+                testDate = req.testDate,
+                verificationStatus = VALID,
+                merchantId = Just mId,
+                merchantOperatingCityId = Just mOpCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QVPUC.create puc
+
+approveAndUpdatePermit :: Common.VPermitApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
+approveAndUpdatePermit req@Common.VPermitApproveDetails {..} mId mOpCityId = do
+  let imageId = Id req.documentImageId.getId
+  QImage.updateVerificationStatusByIdAndType VALID imageId Domain.VehiclePermit
+  QImage.updateDocumentExpiry (Just req.permitExpiry) imageId
+  vPremit <- QVPermit.findByImageId imageId
+  now <- getCurrentTime
+  uuid <- generateGUID
+  rcNoEnc <- encrypt rcNumber
+  rc <- QRC.findByCertificateNumberHash (rcNoEnc & hash) >>= fromMaybeM (InternalError "RC not found by RC number")
+  permitNumEnc <- encrypt req.permitNumber
+  case vPremit of
+    Just permit -> do
+      let updatedpermit =
+            permit
+              { DVPermit.issueDate = req.issueDate <|> permit.issueDate,
+                DVPermit.nameOfPermitHolder = req.nameOfPermitHolder <|> permit.nameOfPermitHolder,
+                DVPermit.permitExpiry = req.permitExpiry,
+                DVPermit.permitNumber = permitNumEnc,
+                DVPermit.purposeOfJourney = req.purposeOfJourney <|> permit.purposeOfJourney,
+                DVPermit.rcId = rc.id,
+                DVPermit.regionCovered = req.regionCovered,
+                DVPermit.verificationStatus = VALID
+              }
+      QVPermit.updateByPrimaryKey updatedpermit
+    Nothing -> do
+      permitImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+      let permit =
+            DVPermit.VehiclePermit
+              { documentImageId = imageId,
+                driverId = permitImage.personId,
+                id = uuid,
+                issueDate = req.issueDate,
+                nameOfPermitHolder = req.nameOfPermitHolder,
+                permitExpiry = req.permitExpiry,
+                permitNumber = permitNumEnc,
+                purposeOfJourney = req.purposeOfJourney,
+                rcId = rc.id,
+                regionCovered = req.regionCovered,
+                verificationStatus = VALID,
+                merchantId = Just mId,
+                merchantOperatingCityId = Just mOpCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      QVPermit.create permit
 
 approveAndUpdateFitnessCertificate :: Common.FitnessApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateFitnessCertificate req@Common.FitnessApproveDetails {..} mId mOpCityId = do
@@ -419,7 +528,10 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId = do
     Common.DL dlReq -> approveAndUpdateDL dlReq
     Common.RC rcApproveReq -> approveAndUpdateRC rcApproveReq
     Common.VehicleInsurance vInsuranceReq -> approveAndUpdateInsurance vInsuranceReq merchantId merchantOperatingCityId
+    Common.VehiclePUC pucReq -> approveAndUpdatePUC pucReq merchantId merchantOperatingCityId
+    Common.VehiclePermit permitReq -> approveAndUpdatePermit permitReq merchantId merchantOperatingCityId
     Common.VehicleFitnessCertificate fitnessReq -> approveAndUpdateFitnessCertificate fitnessReq merchantId merchantOperatingCityId
+    -- TODO(Rupak): Add for VehiclePermit and VehiclPUC
     Common.UploadProfile imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) Domain.UploadProfile
     Common.ProfilePhoto imageId -> QImage.updateVerificationStatusByIdAndType VALID (Id imageId.getId) Domain.ProfilePhoto
     Common.VehicleInspectionForm req -> do
@@ -428,7 +540,6 @@ handleApproveRequest approveReq merchantId merchantOperatingCityId = do
     Common.SSNApprove ssnNum -> do
       ssnEnc <- encrypt ssnNum
       QSSN.updateVerificationStatusAndReasonBySSN VALID Nothing (ssnEnc & hash)
-    _ -> throwError (InternalError "Unknown Config in approve update document")
 
 handleRejectRequest :: Common.RejectDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 handleRejectRequest rejectReq _ merchantOperatingCityId = do
