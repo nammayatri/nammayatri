@@ -57,5 +57,6 @@ startProducerWithEnv flowRt appCfg appEnv = do
         >> L.setOption KafkaConn appEnv.kafkaProducerTools
         >> L.setOption Tables (KUC.Tables [] [] [] False)
     )
+  let producers = map (\_ -> PF.runProducer) [1 .. appCfg.producersPerPod]
   runFlowR flowRt appEnv $ do
-    loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver
+    loopGracefully $ bool producers ([PF.runReviver] <> producers) appEnv.runReviver
