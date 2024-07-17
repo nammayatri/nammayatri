@@ -61,6 +61,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     considerDriversForSearch :: Kernel.Prelude.Bool,
     considerSpecialZoneRideChargesInFreeTrial :: Kernel.Prelude.Bool,
     considerSpecialZoneRidesForPlanCharges :: Kernel.Prelude.Bool,
+    createDocumentRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     crossTravelCities :: [Kernel.Types.Beckn.City.City],
     currency :: Kernel.Types.Common.Currency,

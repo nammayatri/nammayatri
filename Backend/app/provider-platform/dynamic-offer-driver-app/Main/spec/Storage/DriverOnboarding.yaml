@@ -429,6 +429,9 @@ VehiclePermit:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
 
 VehicleInsurance:
   tableName: vehicle_insurance
@@ -499,11 +502,13 @@ VehiclePUC:
   tableName: vehicle_puc
   fields:
     id: Id VehiclePUC
+    pucNumber: Maybe (EncryptedHashedField e Text)
     rcId: Id VehicleRegistrationCertificate
     driverId: Id Person
     documentImageId: Id Image
     pucExpiry: UTCTime
     verificationStatus: VerificationStatus
+    testDate: Maybe UTCTime
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
@@ -512,6 +517,21 @@ VehiclePUC:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
+
+  beamFields:
+    pucNumber:
+      pucNumberEncrypted: Maybe Text
+      pucNumberHash: Maybe DbHash
+
+  fromTType:
+    pucNumber: EncryptedHashed <$> (Encrypted <$> pucNumberEncrypted) <*> pucNumberHash|E
+
+  toTType:
+    pucNumberEncrypted: (pucNumber <&> unEncrypted . (.encrypted))|E
+    pucNumberHash: (pucNumber <&> (.hash))|E
 
 FleetRCAssociation:
   tableName: fleet_rc_association

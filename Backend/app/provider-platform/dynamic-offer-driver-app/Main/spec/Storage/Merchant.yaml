@@ -805,6 +805,7 @@ TransporterConfig:
     minPickupDistanceThresholdForReferralPayout: Meters
     maxPayoutReferralForADay: Int
     exotelAppIdMapping: Maybe ExotelMapping
+    createDocumentRequired: Maybe Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit

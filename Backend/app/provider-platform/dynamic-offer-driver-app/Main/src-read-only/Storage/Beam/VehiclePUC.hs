@@ -7,6 +7,7 @@ module Storage.Beam.VehiclePUC where
 
 import qualified Database.Beam as B
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Documents
@@ -17,7 +18,10 @@ data VehiclePUCT f = VehiclePUCT
     driverId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     pucExpiry :: B.C f Kernel.Prelude.UTCTime,
+    pucNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    pucNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     rcId :: B.C f Kernel.Prelude.Text,
+    testDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

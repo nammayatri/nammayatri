@@ -209,3 +209,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN minm_rental_and_scheduled_booking_lead_time_hours integer  default 24;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN grace_time_for_scheduled_ride_pickup integer  default 300;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_app_id_mapping json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN create_document_required boolean ;

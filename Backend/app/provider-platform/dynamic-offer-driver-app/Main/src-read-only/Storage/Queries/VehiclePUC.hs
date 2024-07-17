@@ -4,6 +4,7 @@
 
 module Storage.Queries.VehiclePUC where
 
+import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehiclePUC
 import qualified Domain.Types.VehicleRegistrationCertificate
@@ -22,6 +23,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehiclePUC.VehiclePUC] -> m ())
 createMany = traverse_ create
 
+findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.VehiclePUC.VehiclePUC))
+findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
+
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehiclePUC.VehiclePUC])
@@ -37,7 +41,10 @@ updateByPrimaryKey (Domain.Types.VehiclePUC.VehiclePUC {..}) = do
     [ Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.pucExpiry pucExpiry,
+      Se.Set Beam.pucNumberEncrypted (pucNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.pucNumberHash (pucNumber <&> (.hash)),
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
+      Se.Set Beam.testDate testDate,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -55,7 +62,9 @@ instance FromTType' Beam.VehiclePUC Domain.Types.VehiclePUC.VehiclePUC where
             driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
             pucExpiry = pucExpiry,
+            pucNumber = EncryptedHashed <$> (Encrypted <$> pucNumberEncrypted) <*> pucNumberHash,
             rcId = Kernel.Types.Id.Id rcId,
+            testDate = testDate,
             verificationStatus = verificationStatus,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -70,7 +79,10 @@ instance ToTType' Beam.VehiclePUC Domain.Types.VehiclePUC.VehiclePUC where
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.pucExpiry = pucExpiry,
+        Beam.pucNumberEncrypted = pucNumber <&> unEncrypted . (.encrypted),
+        Beam.pucNumberHash = pucNumber <&> (.hash),
         Beam.rcId = Kernel.Types.Id.getId rcId,
+        Beam.testDate = testDate,
         Beam.verificationStatus = verificationStatus,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
