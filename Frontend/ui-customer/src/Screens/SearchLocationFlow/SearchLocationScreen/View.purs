@@ -224,7 +224,7 @@ mapViewLayout push state globalProps =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
-    , onAnimationEnd (\action -> mapRenderAction action)
+    , onAnimationEnd (\action -> if not isForMetroTicketBooking then mapRenderAction action else pure unit)
               $ const AfterRender
     , visibility $ boolToVisibility $ not isForMetroTicketBooking
     ][  linearLayout
