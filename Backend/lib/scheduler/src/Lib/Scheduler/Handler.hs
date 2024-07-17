@@ -38,7 +38,6 @@ import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Time ()
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobHandler
-import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
 
 data SchedulerHandle t = SchedulerHandle
@@ -68,7 +67,7 @@ handler hnd = do
       expirationTime <- asks (.expirationTime)
       withDynamicLogLevel jobType' . Hedis.withCrossAppRedis . Hedis.whenWithLockRedis (mkRunningJobKey id.getId) (fromIntegral expirationTime) $
         withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
-          res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+          res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
           registerExecutionResult hnd anyJob res
           releaseLock parentJobId
 
@@ -126,11 +125,8 @@ runnerIteration SchedulerHandle {..} runTask = do
         then (x :) <$> pickTasks (tasksRemain - 1) xs
         else pickTasks tasksRemain xs
 
-registerDuration :: Milliseconds -> a -> SchedulerM ()
-registerDuration millis _ = do
-  let durSecDouble = millisToSecondsDouble millis
-  observeJobExecDuration durSecDouble
-  logInfo $ "job execution took " <> show (realToFrac @_ @NominalDiffTime durSecDouble)
+registerDuration :: Text -> Milliseconds -> a -> SchedulerM ()
+registerDuration jobType millis _ = addGenericLatency ("Job_execution_" <> jobType) millis
 
 -- TODO: refactor the prometheus metrics to measure data that we really need
 
