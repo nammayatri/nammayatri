@@ -337,6 +337,7 @@ initData = let
           , autoCompleteType : Nothing
           , sourceSelectType : SEARCH
           , cachedPredictions : DHM.empty
+          , placeSelectType : SEARCH
         }
     , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false
@@ -374,6 +375,116 @@ initData = let
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
+    , inputView: [
+      { padding : Padding 5 5 0 5
+        , height : V 37
+        , gravity : CENTER
+        , canClearText : true
+        , isEditable : true 
+        , isClickable : true
+        , prefixImage : dummyImageConfig  -- confused ki konsa rakhna h?
+        , stroke : ""
+        , imageSeparator : separatorConfig 
+        , clearTextIcon : dummyImageConfig   
+        , fontStyle : []
+        , placeAddress : dummyAddress
+        , place : ""
+        , placeId : Nothing
+        , placeLat : 0.0
+        , placeLong : 0.0
+        , index : 0
+        , inputTextViewContainerMargin : Margin 0 0 0 0 
+        , inputTextConfig : {
+          textValue : ""
+        , isFocussed : false
+        , imageName : ""
+        , margin : Margin 0 12 0 5
+        , placeHolder : "Start"
+        , id : "Source"
+        , hint : "Start"
+        , cornerRadius : 4.0
+        , textColor : Color.white900
+        , prefixImageVisibility : GONE
+        , prefixImageConfig : 
+                    dummyImageConfig
+                      { height = V 12
+                      , width = V 12
+                      , padding = Padding 0 0 0 0 
+                      , imageName = "ny_ic_green_circle"
+                      , layoutWidth = V 16
+                      , layoutHeight = V 16
+                      }
+        , postfixImageConfig :
+                    dummyImageConfig
+                      { imageName = ""
+                      , height = V 20
+                      , width = V 20
+                      , padding = PaddingTop 0
+                      , layoutWidth = V 32
+                      , layoutHeight = V 32
+                      , layoutCornerRadius = 26.0
+                      , layoutPadding = Padding 10 10 10 10
+                      , layoutMargin = Margin 10 0 0 0
+                      , layoutColor = ""
+                      }
+        , swapImageConfig : dummyImageConfig
+        }
+        },{
+          padding : Padding 5 5 0 5
+        , height : V 37
+        , gravity : CENTER
+        , canClearText : true
+        , isEditable : true  
+        , isClickable : true
+        , prefixImage : dummyImageConfig 
+        , stroke : ""
+        , imageSeparator : separatorConfig 
+        , clearTextIcon : dummyImageConfig    
+        , fontStyle : []
+        , inputTextViewContainerMargin : Margin 0 0 0 0
+        , placeAddress : dummyAddress
+        , place : ""
+        , placeId : Nothing
+        , placeLat : 0.0
+        , placeLong : 0.0
+        , index : 1 
+        , inputTextConfig : {
+            textValue : ""
+          , isFocussed : true
+          , imageName : ""
+          , margin : Margin 0 12 0 5
+          , placeHolder : getString WHERE_TO 
+          , id : "dest"
+          , hint : getString WHERE_TO
+          , cornerRadius : 4.0
+          , textColor : Color.white900
+          , prefixImageVisibility : GONE
+          , prefixImageConfig : 
+                    dummyImageConfig
+                      { height = V 12
+                      , width = V 12
+                      , padding = PaddingTop 0  
+                      , imageName = "ny_ic_red_circle"
+                      , layoutWidth = V 16
+                      , layoutHeight = V 16
+                      }
+          , postfixImageConfig : 
+                    dummyImageConfig
+                      { imageName = "ny_ic_add"
+                      , height = V 20
+                      , width = V 20
+                      , padding = Padding 0 0 0 0
+                      , layoutWidth = V 32
+                      , layoutHeight = V 32
+                      , layoutCornerRadius = 26.0
+                      , layoutPadding = Padding 10 10 10 10
+                      , layoutMargin = Margin 10 0 0 0
+                      , layoutColor = Color.squidInkBlue
+                      }
+          , swapImageConfig : dummyImageConfig
+                    }
+                }]  
+  , selectedIndex : -1                  
   }
 }
 

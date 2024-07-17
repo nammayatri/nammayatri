@@ -1249,6 +1249,112 @@ searchLocationModelViewState state =
     in
       EHC.convertUTCtoISC startTime formatSTR
 
+getInputViewConfig :: ST.HomeScreenState -> InputViewConfig
+getInputViewConfig state = 
+  { backIcon : dummyImageConfig {
+    imageName = "ny_ic_cross_white"
+    , height = V 24
+    , width = V 24
+    , padding = PaddingTop 0 
+  }
+  , headerText : ""
+  , headerVisibility : true
+  , imageLayoutMargin : MarginLeft 0
+  , imageLayoutWidth : V 20
+  , inputLayoutPading : PaddingLeft 0 
+  , inputView : getInputViewItemConfig state 
+  , suffixButton : {
+    text : "",
+    fontStyle : [],
+    prefixImage : "",
+    suffixImage : "",
+    padding : Padding 0 0 0 0,
+    gravity : CENTER_VERTICAL
+  }
+  , imageLayoutVisibility : VISIBLE
+  , suffixButtonVisibility : GONE
+  }
+
+getInputViewItemConfig :: ST.HomeScreenState -> Array InputView
+getInputViewItemConfig state = state.props.inputView
+
+defaultAddStopConfig :: InputView
+defaultAddStopConfig = {
+    padding : Padding 5 5 0 5 
+  , height : V 37
+  , canClearText : true
+  , isEditable : true  
+  , isClickable : true
+  , prefixImage : dummyImageConfig 
+  , stroke : ""
+  , gravity : CENTER
+  , imageSeparator : separatorConfig
+  , clearTextIcon : dummyImageConfig 
+  , fontStyle : []
+  , inputTextViewContainerMargin : Margin 0 0 0 0   
+  , placeAddress : dummyAddress
+  , place : ""
+  , placeId : Nothing
+  , placeLat : 0.0
+  , placeLong : 0.0
+  , index : 0
+  , inputTextConfig : {
+      textValue : "ADD" 
+    , isFocussed : true
+    , imageName : ""
+    , margin : Margin 0 12 0 5 --Margin 0 10 0 4--Margin 0 12 0 5
+    , placeHolder : getString WHERE_TO
+    , id : "Stop" 
+    , hint : getString WHERE_TO
+    , cornerRadius : 4.0
+    , textColor : Color.white900 --
+    , prefixImageVisibility : GONE
+    , postfixImageConfig : dummyImageConfig
+                { imageName = "ny_ic_add"
+                , height = V 20
+                , width = V 20
+                , padding = PaddingTop 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 10 10 10 10
+                , layoutMargin = Margin 10 0 0 0
+                , layoutColor = Color.squidInkBlue
+                }
+    , prefixImageConfig : dummyImageConfig{ height = V 12
+                , width = V 12
+                , padding = Padding 0 0 0 0   
+                , imageName = "ny_ic_grey_circle"
+                , layoutWidth = V 16
+                , layoutHeight = V 16
+                }
+    , swapImageConfig : dummyImageConfig
+                { imageName = "ny_ic_swap"
+                , height = V 20
+                , width = V 20
+                , padding = PaddingTop 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 0 0 0 0
+                , layoutMargin = Margin 0 0 0 0
+                , layoutColor = Color.squidInkBlue
+                }
+        }
+}
+
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  { orientation : VERTICAL
+  , count : 4
+  , height : V 4
+  , width : V 1
+  , layoutWidth : V 12
+  , layoutHeight : V 15
+  , color : Color.black500
+  , margin : MarginVertical 2 2
+  }
+  
 editDestSearchLocationModelViewState :: ST.HomeScreenState -> SearchLocationModel.SearchLocationModelState
 editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.currentStage == EditingDestinationLoc then state.props.isSearchLocation else ST.RouteMap
                                     , locationList: state.data.locationList

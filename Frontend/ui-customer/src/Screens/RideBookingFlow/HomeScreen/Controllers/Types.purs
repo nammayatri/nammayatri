@@ -64,6 +64,7 @@ data ScreenOutput = LogoutUser
   | RideConfirmed HomeScreenState
   | SelectEstimate HomeScreenState
   | LocationSelected LocationListItemState Boolean HomeScreenState
+  | LocationSelected2 LocationListItemState Boolean HomeScreenState Int
   | EditDestLocationSelected LocationListItemState Boolean HomeScreenState
   | EditDestinationSoft HomeScreenState
   | SearchPlace String HomeScreenState
@@ -324,6 +325,7 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | SetTexts
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

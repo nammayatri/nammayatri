@@ -68,6 +68,9 @@ homeScreen = do
     LocationSelected selectedItem addToRecents updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED selectedItem addToRecents)
+    LocationSelected2 selectedItem addToRecents updatedState index -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED2 selectedItem addToRecents index)
     EditDestLocationSelected selectedItem addToRecents updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ EDIT_LOCATION_SELECTED selectedItem addToRecents)
