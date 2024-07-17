@@ -59,6 +59,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
+import Passetto.Client
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
@@ -221,7 +222,8 @@ data AppEnv = AppEnv
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
-    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    passettoContext :: PassettoContext
   }
   deriving (Generic)
 
@@ -230,6 +232,7 @@ buildAppEnv cfg@AppCfg {..} = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
+  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

@@ -86,10 +86,10 @@ buildSearchMessageV2 origin stops distance duration customerLanguage disabilityT
   let searchReqMessageIntent_ = tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig
   BecknV2.OnDemand.Types.SearchReqMessage {searchReqMessageIntent = searchReqMessageIntent_}
 
-tfCustomer :: Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> Bool -> Maybe BecknV2.OnDemand.Types.Customer
-tfCustomer customerLanguage disabilityTag mbPhoneNumber isDashboardRequest = do
+tfCustomer :: Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Bool -> Maybe BecknV2.OnDemand.Types.Customer
+tfCustomer customerLanguage disabilityTag isDashboardRequest = do
   let customerContact_ = Nothing
-      customerPerson_ = tfPerson customerLanguage disabilityTag mbPhoneNumber isDashboardRequest
+      customerPerson_ = tfPerson customerLanguage disabilityTag isDashboardRequest
       returnData = BecknV2.OnDemand.Types.Customer {customerContact = customerContact_, customerPerson = customerPerson_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -121,7 +121,7 @@ tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPo
       fulfillmentTags_ = Beckn.OnDemand.Utils.Search.mkSearchFulFillmentTags distance duration mbPoints isReallocationEnabled returnTime roundTrip multipleRoutes
       fulfillmentType_ = Nothing
       fulfillmentVehicle_ = Nothing
-      fulfillmentCustomer_ = tfCustomer customerLanguage disabilityTag mbPhoneNumber isDashboardRequest
+      fulfillmentCustomer_ = tfCustomer customerLanguage disabilityTag isDashboardRequest
       returnData = BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -162,12 +162,12 @@ tfPayment merchant bapConfig = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
   Just $ mkPayment (show merchant.defaultCity) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
-tfPerson :: Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> Bool -> Maybe BecknV2.OnDemand.Types.Person
-tfPerson customerLanguage disabilityTag mbPhoneNumber isDashboardRequest = do
+tfPerson :: Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Bool -> Maybe BecknV2.OnDemand.Types.Person
+tfPerson customerLanguage disabilityTag isDashboardRequest = do
   let personId_ = Nothing
       personImage_ = Nothing
       personName_ = Nothing
-      personTags_ = Beckn.OnDemand.Utils.Search.mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber isDashboardRequest
+      personTags_ = Beckn.OnDemand.Utils.Search.mkCustomerInfoTags customerLanguage disabilityTag isDashboardRequest -- TODO: move this also similar to fulfillmentTags using personTags field of taggings
       returnData = BecknV2.OnDemand.Types.Person {personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing

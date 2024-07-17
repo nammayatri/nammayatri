@@ -48,6 +48,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
+import Passetto.Client
 import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
@@ -222,7 +223,8 @@ data AppEnv = AppEnv
     maxStraightLineRectificationThreshold :: HighPrecMeters,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
-    iosValidateEnpoint :: Text
+    iosValidateEnpoint :: Text,
+    passettoContext :: PassettoContext
   }
   deriving (Generic)
 
@@ -234,6 +236,7 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   version <- lookupDeploymentVersion
+  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

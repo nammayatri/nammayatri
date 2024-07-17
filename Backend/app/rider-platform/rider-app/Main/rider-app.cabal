@@ -773,6 +773,7 @@ library
     , memory
     , mobility-core
     , openapi3
+    , passetto-client
     , payment
     , persistent
     , postgresql-simple
@@ -892,6 +893,7 @@ executable rider-app-exe
     , memory
     , mobility-core
     , openapi3
+    , passetto-client
     , persistent
     , postgresql-simple
     , prometheus-client

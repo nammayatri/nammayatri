@@ -83,6 +83,7 @@ library
     , hspec
     , mobility-core
     , openapi3
+    , passetto-client
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
@@ -165,6 +166,7 @@ executable rider-app-scheduler-exe
     , hspec
     , mobility-core
     , openapi3
+    , passetto-client
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield

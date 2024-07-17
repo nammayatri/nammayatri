@@ -28,6 +28,7 @@ import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Shutdown
+import Passetto.Client
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
@@ -94,7 +95,8 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    cacConfig :: CacConfig
+    cacConfig :: CacConfig,
+    passettoContext :: PassettoContext
   }
   deriving (Generic)
 
@@ -106,6 +108,7 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   let modifierFunc = (driverAppName <>)
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"

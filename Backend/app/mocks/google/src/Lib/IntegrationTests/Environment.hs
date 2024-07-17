@@ -20,10 +20,12 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters)
 import Kernel.Utils.Dhall (FromDhall, readDhallConfig)
 import Lib.GoogleConfig (GoogleCfgUnencrypted (..))
+import Passetto.Client
 
 buildGoogleConfig :: MonadIO m => EncTools -> GoogleCfgUnencrypted -> m MapsServiceConfig
 buildGoogleConfig encTools GoogleCfgUnencrypted {..} = do
-  googleKeyEncrypted <- encrypt' encTools googleKey
+  context <- (uncurry mkDefPassettoContext) encTools.service
+  googleKeyEncrypted <- encrypt' context encTools googleKey
   pure $
     GoogleConfig
       GoogleCfg

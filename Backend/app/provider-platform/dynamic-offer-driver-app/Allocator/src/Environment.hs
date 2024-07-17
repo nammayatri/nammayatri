@@ -45,6 +45,7 @@ import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
+import Passetto.Client
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
@@ -100,7 +101,8 @@ data HandlerEnv = HandlerEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
-    cacConfig :: CacConfig
+    cacConfig :: CacConfig,
+    passettoContext :: PassettoContext
   }
   deriving (Generic)
 
@@ -114,6 +116,7 @@ buildHandlerEnv HandlerCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
+  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap

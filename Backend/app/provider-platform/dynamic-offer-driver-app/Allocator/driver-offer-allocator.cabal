@@ -88,6 +88,7 @@ library
     , hspec
     , mobility-core
     , openapi3
+    , passetto-client
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
@@ -176,6 +177,7 @@ executable driver-offer-allocator-exe
     , hspec
     , mobility-core
     , openapi3
+    , passetto-client
     , prometheus-client
     , record-dot-preprocessor
     , record-hasfield

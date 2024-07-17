@@ -141,9 +141,9 @@ mkRouteInfoTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes
               tagValue = (Just . LT.toStrict . TE.decodeUtf8 . A.encode) =<< mbMultipleRoutes
             }
 
-mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Bool -> Maybe [Spec.TagGroup]
-mkCustomerInfoTags Nothing Nothing _ False = Nothing
-mkCustomerInfoTags customerLanguage disabilityTag _ isDashboard =
+mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Bool -> Maybe [Spec.TagGroup]
+mkCustomerInfoTags Nothing Nothing False = Nothing
+mkCustomerInfoTags customerLanguage disabilityTag isDashboard =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =

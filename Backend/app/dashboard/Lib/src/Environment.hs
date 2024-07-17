@@ -32,6 +32,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
+import Passetto.Client
 import System.Environment
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -111,7 +112,8 @@ data AppEnv = AppEnv
     cacAclMap :: [(String, [(String, String)])],
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    passettoContext :: PassettoContext
   }
   deriving (Generic)
 
@@ -120,6 +122,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   podName <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
+  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
