@@ -63,6 +63,7 @@ enterReferralCodeView push state =
   , gravity CENTER
   , orientation VERTICAL
   , background Color.blackLessTrans
+  , padding $ PaddingTop $ EHC.safeMarginTop
   , visibility $ boolToVisibility $ state.stage == ENTER_REFERRAL_CODE && state.stage /= NO_REFERRAL_STAGE
   , clickable true
   ] <> if EHC.os == "IOS" then [] else [adjustViewWithKeyboard "true"]) 
