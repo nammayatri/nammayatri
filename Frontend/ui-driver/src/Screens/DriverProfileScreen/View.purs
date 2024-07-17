@@ -468,11 +468,10 @@ profileView push state =
                   , cornerRadii $ Corners 16.0 false false true true
                   ]
                   [ linearLayout
-                      [ height MATCH_PARENT
+                      [ height WRAP_CONTENT
                       , width MATCH_PARENT
                       , orientation VERTICAL
                       , gradient $ Linear 180.0 state.data.config.profile.backgroundGradient
-                      , background state.data.config.profile.background
                       , padding $ PaddingVertical 16 24
                       ]
                       [ tabView state push
