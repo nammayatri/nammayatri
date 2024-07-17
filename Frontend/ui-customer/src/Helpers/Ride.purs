@@ -177,10 +177,10 @@ checkRideStatus rideAssigned = do
                   (RideBookingDetails contents) = bookingDetails.contents
                   (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
                   (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
-                  isDeviceAccessibilityEnabled = isAccessibilityEnabled ""
-                  hasAccessibilityIssue' =  resp.hasDisability == Just true || isDeviceAccessibilityEnabled
-                  hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isDeviceAccessibilityEnabled
-                  hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isDeviceAccessibilityEnabled
+                  isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
+                  hasAccessibilityIssue' =  resp.hasDisability == Just true 
+                  hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isBlindPerson
+                  hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isBlindPerson
 
 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{

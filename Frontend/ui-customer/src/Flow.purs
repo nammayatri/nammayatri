@@ -5931,10 +5931,10 @@ fcmHandler notification state = do
         setValueToLocalStore PICKUP_DISTANCE "0"
         liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
         let
-          isDeviceAccessibilityEnabled =  JB.isAccessibilityEnabled ""
-          hasAccessibilityIssue' = resp.hasDisability == Just true || isDeviceAccessibilityEnabled
-          hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isDeviceAccessibilityEnabled
-          hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isDeviceAccessibilityEnabled
+          isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
+          hasAccessibilityIssue' = resp.hasDisability == Just true 
+          hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isBlindPerson
+          hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isBlindPerson
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->

@@ -115,7 +115,7 @@ import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
 import Helpers.Utils (decodeBookingTimeList )
 import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..))
-import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC, isAccessibilityEnabled, mkRouteConfig)
+import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -312,9 +312,9 @@ screen initialState =
 
                 let isRepeatRideVariantAvailable =  (isNothing initialState.props.repeatRideServiceTierName) || (checkRecentRideVariant initialState)
                 if (initialState.props.isRepeatRide && isRepeatRideVariantAvailable && initialState.data.iopState.hasTopProviderEstimate )then do
-                  let isVoiceOverRunning = isAccessibilityEnabled ""
                   -- check if already timer is running for repeat ride
-                  when (DS.null initialState.props.repeatRideTimerId && initialState.props.repeateRideTimerStoped == false && not isVoiceOverRunning) $  startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown 
+                  let isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
+                  when (DS.null initialState.props.repeatRideTimerId && initialState.props.repeateRideTimerStoped == false && not isBlindPerson) $  startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown 
                 else if (initialState.props.isRepeatRide && not isRepeatRideVariantAvailable) then do 
                     void $ pure $ toast $ getString LAST_CHOSEN_VARIANT_NOT_AVAILABLE
                 else pure unit
