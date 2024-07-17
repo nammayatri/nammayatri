@@ -15,3 +15,16 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD COLUMN driver_id character varying(36) NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD COLUMN test_date timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD COLUMN puc_number_hash bytea ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ADD COLUMN puc_number_encrypted character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ALTER COLUMN puc_number_hash TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_puc ALTER COLUMN puc_number_encrypted TYPE text;
