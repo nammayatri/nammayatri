@@ -64,6 +64,7 @@ dependencies:
   - cryptonite
   - containers
   - euler-hs
+  - passetto-client
   - exceptions
   - hspec
   - servant

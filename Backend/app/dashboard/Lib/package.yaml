@@ -92,6 +92,7 @@ dependencies:
   - singletons
   - singletons-th
   - euler-hs
+  - passetto-client
   - http-types
   - dashboard-helper-api
   - rider-app

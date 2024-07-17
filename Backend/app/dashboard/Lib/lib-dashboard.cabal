@@ -137,6 +137,7 @@ library
     , lens
     , mobility-core
     , openapi3
+    , passetto-client
     , persistent
     , persistent-postgresql
     , postgresql-simple

@@ -41,6 +41,7 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
+import Passetto.Client
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -85,7 +86,8 @@ data HandlerEnv = HandlerEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    cacConfig :: CacConfig
+    cacConfig :: CacConfig,
+    passettoContext :: PassettoContext
   }
   deriving (Generic)
 
@@ -98,6 +100,7 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
+  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
