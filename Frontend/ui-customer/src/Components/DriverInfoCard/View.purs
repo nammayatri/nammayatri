@@ -950,7 +950,7 @@ airportPickupView push state airportZone =
     , height WRAP_CONTENT
     , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
     , accessibilityHint "Show walking direction : Button"
-    , visibility $ boolToVisibility $ airportZone
+    , visibility $ boolToVisibility $ airportZone && rideNotStarted state
     , background Color.blue600
     , stroke $ "1,"<> Color.blue700
     , padding $ Padding 8 8 8 8
