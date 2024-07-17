@@ -25,7 +25,7 @@ INSERT INTO atlas_driver_offer_bpp.payout_config(
 SELECT
     vehicle_category_type,
     CURRENT_TIMESTAMP,
-    10,
+    86400,
     1000.0,
     100.0,
     0.0,
@@ -33,7 +33,7 @@ SELECT
     0.0,
     city.id,
     city.merchant_id,
-    5,
+    0,
     FALSE,
     CURRENT_TIMESTAMP,
     10,
