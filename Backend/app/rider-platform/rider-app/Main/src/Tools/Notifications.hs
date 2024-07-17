@@ -280,14 +280,11 @@ notifyOnRideCompleted booking ride = do
         unwords
           [ "Hope you enjoyed your trip with",
             driverName,
-            "Total Fare " <> show (trimToTwoDecimals totalFare.amount.getHighPrecMoney) <> " " <> show totalFare.currency
+            "Total Fare " <> showPriceWithRounding totalFare
           ]
   disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
-  where
-    trimToTwoDecimals :: Rational -> Double
-    trimToTwoDecimals r = fromIntegral (round (r * 100) :: Integer) / 100
 
 disableFollowRide ::
   ServiceFlow m r =>
