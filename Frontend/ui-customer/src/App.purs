@@ -216,6 +216,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_MY_TICKETS
                         | GO_TO_MY_PROFILE Boolean
                         | LOCATION_SELECTED LocationListItemState Boolean
+                        | LOCATION_SELECTED2 LocationListItemState Boolean Int
                         | EDIT_LOCATION_SELECTED LocationListItemState Boolean
                         | EDIT_DESTINATION_SOFT HomeScreenState
                         | HOME_SCREEN

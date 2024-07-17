@@ -172,6 +172,13 @@ mapInputViewConfig state =
       , fontStyle : if isSelectPackageStage then FontStyle.body6 LanguageStyle else FontStyle.subHeading2 LanguageStyle
       , gravity : if isSelectPackageStage then LEFT else CENTER_HORIZONTAL
       , inputTextConfig : item
+      , placeAddress : dummyAddress
+      , place : ""
+      , placeId : MB.Nothing
+      , placeLat : 0.0
+      , placeLong : 0.0
+      , inputTextViewContainerMargin : Margin 0 0 0 0 
+      , index : 0
       }
 
     inputTextConfigArray :: Boolean -> Array (InputView.InputTextConfig)
@@ -194,6 +201,8 @@ mapInputViewConfig state =
             padding : Padding 0 0 0 0,
             imageName : "ny_ic_clock_unfilled_white"
           }
+        , postfixImageConfig : InputView.dummyImageConfig
+        , swapImageConfig : InputView.dummyImageConfig
         , textColor : if isSelectPackageStage then Color.black600 else Color.white900
         } ,
         { textValue : if isSelectPackageStage then dropLocText else " " <> show state.data.rentalBookingData.baseDuration <> " hr · " <> show state.data.rentalBookingData.baseDistance <> " km"
@@ -204,12 +213,9 @@ mapInputViewConfig state =
         , id : if isSelectPackageStage then "FirstStop" else "RentalPackage"
         , cornerRadius : 4.0
         , prefixImageVisibility : GONE 
-        , prefixImageConfig : {
-            height : V 0,
-            width : V 0,
-            padding : Padding 0 0 0 0,
-            imageName : ""
-          }
+        , prefixImageConfig : InputView.dummyImageConfig
+        , postfixImageConfig : InputView.dummyImageConfig
+        , swapImageConfig : InputView.dummyImageConfig
         , textColor : if isSelectPackageStage then Color.black700 else Color.white900
         }
       ]

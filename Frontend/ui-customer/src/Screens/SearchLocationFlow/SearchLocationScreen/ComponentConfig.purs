@@ -252,26 +252,26 @@ mapInputViewConfig state isEditable =
   where
     transformInputViewArray item = 
       { padding : Padding 8 7 8 7 
-      , height : WRAP_CONTENT
-      , canClearText : (item.canClearText || state.props.canClearText) && item.isFocussed
-      , isEditable : isEditable && item.isEditable
-      , isClickable : item.isEditable
-      , prefixImage : 
-          { imageName : item.prefixImageName
-          , height : V 15
-          , width : V 15
-          , padding : Padding 0 0 0 0 
+      , height : WRAP_CONTENT 
+      , gravity : LEFT 
+      , canClearText : (item.canClearText || state.props.canClearText) && item.isFocussed 
+      , isEditable : isEditable && item.isEditable 
+      , isClickable : item.isEditable 
+      , prefixImage :  
+          InputView.dummyImageConfig { imageName = item.prefixImageName
+          , height = V 15
+          , width = V 15
+          , padding = Padding 0 0 0 0 
           }
-      , stroke : if item.isFocussed then "1," <> Color.yellow900 else "0," <> Color.yellow900
-      , imageSeparator : separatorConfig 
-      , fontStyle : FontStyle.subHeading2 TypoGraphy
+      , stroke : if item.isFocussed then "1," <> Color.yellow900 else "0," <> Color.yellow900 
+      , imageSeparator : separatorConfig  
+      , fontStyle : FontStyle.subHeading2 TypoGraphy 
       , clearTextIcon : 
-          { imageName : state.appConfig.searchLocationConfig.clearTextImage
-          , height : V 19
-          , width : V 19
-          , padding : PaddingVertical 10 2 
+          InputView.dummyImageConfig { imageName = state.appConfig.searchLocationConfig.clearTextImage
+          , height = V 19
+          , width = V 19
+          , padding = PaddingVertical 10 2 
           }
-      , gravity : LEFT
       , inputTextConfig : 
          { textValue : item.textValue
          , isFocussed : item.isFocussed
@@ -280,10 +280,20 @@ mapInputViewConfig state isEditable =
          , cornerRadius : 4.0
          , margin : item.margin
          , imageName : item.prefixImageName
-         , textColor : if DS.null item.textValue then Color.grey900 else Color.white900
+         , textColor : Color.white900 --if DS.null item.textValue then Color.grey900 else Color.white900
          , prefixImageVisibility : GONE 
          , prefixImageConfig : InputView.dummyImageConfig
+         , hint : ""
+         , postfixImageConfig : InputView.dummyImageConfig
+         , swapImageConfig : InputView.dummyImageConfig
          }
+      , placeAddress : dummyAddress 
+      , place : "" 
+      , placeId : Nothing 
+      , placeLat : 0.0 
+      , placeLong : 0.0 
+      , inputTextViewContainerMargin : Margin 0 0 0 0 
+      , index : 0 
       }
 
     inputViewArray state = 

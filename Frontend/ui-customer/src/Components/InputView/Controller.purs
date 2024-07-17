@@ -54,7 +54,12 @@ type InputView =
   , stroke :: String
   , imageSeparator :: SeparatorView.Config 
   , clearTextIcon :: ImageConfig
-  , fontStyle :: forall properties. Array (Prop properties)
+  , fontStyle :: forall properties. Array (Prop properties)    
+  , placeAddress :: Address
+  , place :: String
+  , placeId :: Maybe String  
+  , placeLat :: Number
+  , placeLong :: Number
   , inputTextConfig :: InputTextConfig
   }
   
@@ -70,6 +75,8 @@ type InputTextConfig =
   , textColor :: String
   , prefixImageVisibility :: Visibility
   , prefixImageConfig :: ImageConfig
+  , postfixImageConfig :: ImageConfig
+  , swapImageConfig :: ImageConfig
   }
 
 type ImageConfig = 

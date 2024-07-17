@@ -107,7 +107,7 @@ import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..), LocationType(..), Station(..), MetroTicketBookingStage(..), MetroStations(..), SearchResultType(..), RentalScreenStage(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
-import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig, getTipViewData)
+import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig, getTipViewData, defaultAddStopConfig)
 import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SearchLocationScreen.Controller as SearchLocationController
@@ -1112,6 +1112,151 @@ homeScreenFlow = do
                     }
               )
       rideSearchFlow "NORMAL_FLOW"
+
+    LOCATION_SELECTED2 item addToRecents selectedIndex -> do
+      void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- Display loader
+      void $ lift $ lift $ toggleLoader true -- Toggle loader on
+
+      -- Fetch the current global state
+      (GlobalState newState) <- getState
+      updateCurrentLocation "" -- Update current location
+
+      -- Extract necessary values from the state
+      let
+        state = newState.homeScreen
+        stateProps = state.props
+
+      -- Safely retrieve the input view item at selectedIndex or use defaultAddStopConfig if out of bounds
+      let
+        inputField = 
+          case stateProps.inputView !! selectedIndex of
+            Just view -> view
+            Nothing -> defaultAddStopConfig
+
+      -- Check if a place name is required
+      let searchWithoutPlaceName = any (_ == stateProps.rideSearchProps.sourceSelectType) [ST.MAP, ST.FAVOURITE, ST.RETRY_SEARCH, ST.SUGGESTION]
+      
+      case searchWithoutPlaceName of
+        true -> pure unit -- If no place name is required, return the new state
+        false -> do
+          -- Fetch place details based on item
+            (GetPlaceNameResp placeDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) inputField.placeId inputField.placeLat inputField.placeLong item
+            let
+              (PlaceName placeDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (placeDetailResp !! 0))
+              (LatLong placeLocation) = placeDetailResponse.location
+              _ = spy "LatLong response placeLocation" placeLocation
+              -- Update input view with new place details
+              updatedInputView = map (\field ->
+                                        if field.index == selectedIndex
+                                        then field { placeLat = placeLocation.lat, placeLong = placeLocation.lon }
+                                        else field
+                                      ) stateProps.inputView
+              _ = spy "UPDATED INPUT VIEW IN FLOW" updatedInputView
+
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = homeScreen.props { inputView = updatedInputView } })
+            pure unit
+      -- updatedState <- if searchWithoutPlaceName
+      --                   then pure newState -- If no place name is required, return the new state
+      --                   else do
+      --                     -- Fetch place details based on item
+      --                     (GetPlaceNameResp placeDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) inputField.placeId inputField.placeLat inputField.placeLong item
+      --                     let
+      --                       (PlaceName placeDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (placeDetailResp !! 0))
+      --                       (LatLong placeLocation) = (placeDetailResponse.location)
+      --                       _ = spy "LatLong response placeLocation" placeLocation
+      --                       -- Update input view with new place details
+      --                       updatedInputView = map (\field ->
+      --                                                 if field.index == selectedIndex
+      --                                                 then field { placeLat = placeLocation.lat, placeLong = placeLocation.lon }
+      --                                                 else field
+      --                                               ) stateProps.inputView
+      --                       _ = spy "UPDATED INPUT VIEW IN FLOW" updatedInputView                        
+      --                    pure $ newState { homeScreen = (newState.homeScreen { props = (newState.homeScreen.props { inputView = updatedInputView }) }) }
+      --   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props = (newState.homeScreen.props { inputView = updatedInputView }) })
+                          
+
+      -- Update location and serviceability
+      updateSourceLocation ""
+      (GlobalState updatedState) <- getState
+      let
+        -- Update both location changed state with new values
+        bothLocationChangedState = updatedState.homeScreen { props = updatedState.homeScreen.props { hotSpot = updatedState.homeScreen.props.hotSpot { selectedSpot = Nothing, centroidPoint = Nothing } } }
+
+        -- Safely access placeLat and placeLong using inputField or defaults
+        inputViewAtIndex = case bothLocationChangedState.props.inputView !! selectedIndex of
+          Just view -> view
+          Nothing -> defaultAddStopConfig
+
+      -- Request serviceability information based on location
+      (ServiceabilityRes placeServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq inputViewAtIndex.placeLat inputViewAtIndex.placeLong) ORIGIN
+      let
+        serviceable = placeServiceabilityResp.serviceable
+        (SpecialLocation specialLocation) = fromMaybe HomeScreenData.specialLocation (placeServiceabilityResp.specialLocation)
+        pickUpPoints = if null specialLocation.gatesInfo
+                        then filterHotSpots bothLocationChangedState placeServiceabilityResp.hotSpotInfo (inputViewAtIndex.placeLat) ( inputViewAtIndex.placeLong)
+                        else mapSpecialZoneGates specialLocation.gatesInfo
+
+      -- Store customer location in local storage
+      setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode placeServiceabilityResp.city)
+      let
+        geoJson = transformGeoJsonFeature specialLocation.geoJson specialLocation.gatesInfo
+        isHotSpot = null specialLocation.gatesInfo && not (null pickUpPoints)
+
+      -- Modify screen state with updated location and serviceability details
+      modifyScreenState $ 
+        HomeScreenStateType 
+          (\homeScreen ->
+              bothLocationChangedState
+            { data = (bothLocationChangedState.data { polygonCoordinates = geoJson, nearByPickUpPoints = pickUpPoints })
+            , props = (bothLocationChangedState.props { defaultPickUpPoint = ""
+                                                      , city = getCityNameFromCode placeServiceabilityResp.city
+                                                      , isSpecialZone = isJust specialLocation.geoJson
+                                                      , confirmLocationCategory = if length pickUpPoints > 0 then getZoneType specialLocation.category else NOZONE
+                                                      , findingQuotesProgress = 0.0
+                                                      , locateOnMapProps = (bothLocationChangedState.props.locateOnMapProps { sourceLocationName = Just specialLocation.locationName, sourceGates = Just pickUpPoints })
+                                                      , hotSpot = (bothLocationChangedState.props.hotSpot { centroidPoint =
+                                                            if isHotSpot
+                                                              then Just { lat: inputViewAtIndex.placeLat, lng: inputViewAtIndex.placeLong }
+                                                              else Nothing
+                                                          })
+                                                      , showShimmer = false
+                                                      })
+            }
+          ) 
+
+      -- Add location to recent searches and update location lists
+      -- when (addToRecents) $ do
+      --   addLocationToRecents item bothLocationChangedState serviceable
+      --   fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
+      --   pure unit
+      -- Fetch global state and update recent search list
+      (GlobalState globalState) <- getState
+      let
+        updateScreenState = globalState.homeScreen
+        recentList = updateLocListWithDistance updateScreenState.data.recentSearchs.predictionArray updateScreenState.props.sourceLat updateScreenState.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
+
+      -- Handle cases based on serviceability and location
+      if not serviceable && (inputViewAtIndex.placeLat /= -0.1 && inputViewAtIndex.placeLong /= -0.1) && (inputViewAtIndex.placeLat /= 0.0 && inputViewAtIndex.placeLong /= 0.0)
+        then do
+          -- Update screen state for unserviceable location and flow to home screen
+          modifyScreenState $ HomeScreenStateType (\homeScreen ->
+            updateScreenState { props = updateScreenState.props { isSrcServiceable = false, isRideServiceable = false, inputView = stateProps.inputView }
+                              , data = updateScreenState.data { recentSearchs = updateScreenState.data.recentSearchs { predictionArray = recentList } }
+                              }
+            )
+          homeScreenFlow
+        else do
+          -- Modify screen state with serviceable and ride details
+          modifyScreenState $ HomeScreenStateType (\homeScreen ->
+            updateScreenState { props = updateScreenState.props { isRideServiceable = true, isSrcServiceable = true, hasEstimateBackpoint = false
+                                                                , customerTip = HomeScreenData.initData.props.customerTip
+                                                                , tipViewProps = HomeScreenData.initData.props.tipViewProps
+                                                                }
+                              , data = updateScreenState.data { recentSearchs = updateScreenState.data.recentSearchs { predictionArray = recentList } }
+                              }
+            )
+          rideSearchFlow "NORMAL_FLOW" -- Perform ride search flow
+
     SEARCH_LOCATION input state -> do
       let
         cityConfig = case state.props.isSource of
@@ -1492,6 +1637,8 @@ homeScreenFlow = do
       homeScreenFlow
     REFRESH_HOME_SCREEN -> homeScreenFlow
     RELOAD saveToCurrLocs -> do
+      let _ = spy "to serv 1" "to serv 1"
+
       (GlobalState state) <- getState
       void $ liftFlowBT $ setMapPadding 0 0 0 0
       if state.homeScreen.props.currentStage == SearchLocationModel || state.homeScreen.props.currentStage == EditingDestinationLoc then do
@@ -1974,6 +2121,7 @@ homeScreenFlow = do
       homeScreenFlow
     TRIGGER_PERMISSION_FLOW flowType -> do
       modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = flowType })
+      let _ = spy "TRIGGER_PERMISSION_FLOW" flowType
       permissionScreenFlow
     RIDE_DETAILS_SCREEN state -> do
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = Home } })
