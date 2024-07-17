@@ -4,6 +4,7 @@
 
 module Storage.Queries.VehiclePermit where
 
+import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehiclePermit
 import qualified Domain.Types.VehicleRegistrationCertificate
@@ -21,6 +22,9 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehiclePermit.VehiclePermit] -> m ())
 createMany = traverse_ create
+
+findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.VehiclePermit.VehiclePermit))
+findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ Se.Eq (Kernel.Types.Id.getId documentImageId)]
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

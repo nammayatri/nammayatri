@@ -57,6 +57,7 @@ data TransporterConfigT f = TransporterConfigT
     considerDriversForSearch :: B.C f Kernel.Prelude.Bool,
     considerSpecialZoneRideChargesInFreeTrial :: B.C f Kernel.Prelude.Bool,
     considerSpecialZoneRidesForPlanCharges :: B.C f Kernel.Prelude.Bool,
+    createDocumentRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     crossTravelCities :: B.C f [Kernel.Types.Beckn.City.City],
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
