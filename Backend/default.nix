@@ -32,6 +32,9 @@
 
       haskellProjects.default = {
         projectRoot = ./.;
+        defaults.settings.defined = {
+          libraryProfiling = lib.mkForce true;
+        };
         imports = [
           inputs.beckn-gateway.haskellFlakeProjectModules.output
           # inputs.namma-dsl.haskellFlakeProjectModules.output
