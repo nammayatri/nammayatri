@@ -46,7 +46,6 @@ buildBecknSearchReqV2 ::
   Kernel.Prelude.BaseUrl ->
   Kernel.Types.Beckn.Context.City ->
   Maybe [Tools.Maps.LatLong] ->
-  Maybe Data.Text.Text ->
   Bool ->
   Maybe Kernel.Prelude.Bool ->
   Data.Time.UTCTime ->
@@ -57,10 +56,10 @@ buildBecknSearchReqV2 ::
   BecknConfig ->
   Kernel.Prelude.Text ->
   m BecknV2.OnDemand.Types.SearchReq
-buildBecknSearchReqV2 action domain origin stops searchId distance duration customerLanguage disabilityTag merchant bapUri city mbPoints mbPhoneNumber isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes bapConfig searchTtl = do
+buildBecknSearchReqV2 action domain origin stops searchId distance duration customerLanguage disabilityTag merchant bapUri city mbPoints isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes bapConfig searchTtl = do
   messageId <- generateGUIDText
   searchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId (Just searchId.getId) merchant.bapId bapUri Nothing Nothing city merchant.country (Just searchTtl)
-  let searchReqMessage_ = buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig
+  let searchReqMessage_ = buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig
   pure $ BecknV2.OnDemand.Types.SearchReq {searchReqContext = searchReqContext_, searchReqMessage = searchReqMessage_}
 
 buildSearchMessageV2 ::
@@ -71,7 +70,6 @@ buildSearchMessageV2 ::
   Maybe Tools.Maps.Language ->
   Maybe Data.Text.Text ->
   Maybe [Tools.Maps.LatLong] ->
-  Maybe Data.Text.Text ->
   Bool ->
   Maybe Kernel.Prelude.Bool ->
   Data.Time.UTCTime ->
@@ -82,8 +80,8 @@ buildSearchMessageV2 ::
   Domain.Types.Merchant.Merchant ->
   BecknConfig ->
   BecknV2.OnDemand.Types.SearchReqMessage
-buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig = do
-  let searchReqMessageIntent_ = tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig
+buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig = do
+  let searchReqMessageIntent_ = tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig
   BecknV2.OnDemand.Types.SearchReqMessage {searchReqMessageIntent = searchReqMessageIntent_}
 
 tfCustomer :: Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Bool -> Maybe BecknV2.OnDemand.Types.Customer
@@ -104,7 +102,6 @@ tfFulfillment ::
   Maybe Kernel.Types.Common.Meters ->
   Maybe Kernel.Types.Common.Seconds ->
   Maybe [Tools.Maps.LatLong] ->
-  Maybe Data.Text.Text ->
   Bool ->
   Maybe Kernel.Prelude.Bool ->
   Data.Time.UTCTime ->
@@ -113,7 +110,7 @@ tfFulfillment ::
   Domain.Types.SearchRequest.RiderPreferredOption ->
   Maybe [Maps.RouteInfo] ->
   Maybe BecknV2.OnDemand.Types.Fulfillment
-tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isDashboardRequest isReallocationEnabled startTime returnTime roundTrip _riderPreferredOption multipleRoutes = do
+tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints isDashboardRequest isReallocationEnabled startTime returnTime roundTrip _riderPreferredOption multipleRoutes = do
   let fulfillmentAgent_ = Nothing
       fulfillmentId_ = Nothing
       fulfillmentState_ = Nothing
@@ -136,7 +133,6 @@ tfIntent ::
   Maybe Kernel.Types.Common.Meters ->
   Maybe Kernel.Types.Common.Seconds ->
   Maybe [Tools.Maps.LatLong] ->
-  Maybe Data.Text.Text ->
   Bool ->
   Maybe Kernel.Prelude.Bool ->
   Data.Time.UTCTime ->
@@ -147,9 +143,9 @@ tfIntent ::
   Domain.Types.Merchant.Merchant ->
   BecknConfig ->
   Maybe BecknV2.OnDemand.Types.Intent
-tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig = do
+tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes merchant bapConfig = do
   let intentTags_ = Nothing
-      intentFulfillment_ = tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes
+      intentFulfillment_ = tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints isDashboardRequest isReallocationEnabled startTime returnTime roundTrip riderPreferredOption multipleRoutes
       intentPayment_ = tfPayment merchant bapConfig
       returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData

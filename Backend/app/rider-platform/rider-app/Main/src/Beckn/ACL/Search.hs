@@ -53,7 +53,6 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     bapUri
     city
     (getPoints shortestRouteInfo)
-    phoneNumber
     isDashboardRequest
     isReallocationEnabled
     startTime
