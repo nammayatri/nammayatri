@@ -219,7 +219,7 @@ mapInputViewConfig state isEditable =
       , suffixButtonVisibility = GONE
       , headerVisibility = headerVisibility
       , imageLayoutMargin = imageLayoutMargin
-      -- , inputView = map (\item -> transformInputViewArray item) (inputViewArray state)
+      , inputView = map (\item -> transformInputViewArray item) (inputViewArray state)
       }
   in inputViewConfig'
 
@@ -278,7 +278,7 @@ mapInputViewConfig state isEditable =
       , inputTextConfig : 
          { textValue : item.textValue
          , isFocussed : item.isFocussed
-         , id : item.id--show item.id
+         , id : show item.id
          , placeHolder : item.placeHolder 
          , cornerRadius : 4.0
          , margin : item.margin
