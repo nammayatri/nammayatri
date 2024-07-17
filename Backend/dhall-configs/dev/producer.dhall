@@ -85,6 +85,7 @@ in  { hedisCfg
     , reviveThreshold = +2
     , schedulerType = common.schedulerType.RedisBased
     , maxShards = +5
+    , producersPerPod = +5
     , metricsPort = +9990
     , kvConfigUpdateFrequency
     , runReviver = True

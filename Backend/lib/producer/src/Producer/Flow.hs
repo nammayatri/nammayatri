@@ -83,15 +83,19 @@ runReviver = do
   when shouldRunReviver $ Hedis.whenWithLockRedis reviverLockKey 300 runReviver'
   threadDelayMilliSec 60000
 
+mkRunningJobKey :: Text -> Text
+mkRunningJobKey jobId = "RunnningJob:" <> jobId
+
 runReviver' :: Flow ()
 runReviver' = do
   logDebug "Reviver is Running "
   pendingJobs :: [AnyJob AllocatorJobType] <- getAllPendingJobs
   let jobsIds = map @_ @(Id AnyJob, Id AnyJob) (\(AnyJob Job {..}) -> (id, parentJobId)) pendingJobs
-  logDebug $ "Total number of pendingJobs in DB : " <> show (length pendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
-  updateStatusOfJobs Revived $ map fst jobsIds
-  newJobsToExecute <-
-    forM pendingJobs $ \(AnyJob x) -> do
+  filteredPendingJobs <- filterM (\(AnyJob Job {..}) -> Hedis.withCrossAppRedis $ Hedis.tryLockRedis (mkRunningJobKey id.getId) 120) pendingJobs
+  logDebug $ "Total number of pendingJobs in DB : " <> show (length filteredPendingJobs) <> " Pending (JobsIDs, ParentJobIds) : " <> show jobsIds
+  newJobsToExecute <- do
+    forM filteredPendingJobs $ \(AnyJob x) -> do
+      updateStatusOfJobs Revived [x.id]
       now <- getCurrentTime
       uuid <- generateGUIDText
       maxShards <- asks (.maxShards)
