@@ -408,7 +408,7 @@ currentFlowStatus = do
     config <- getAppConfigFlowBT appConfig
     updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
     updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
-    updateLanguageAndReferralCode $ response ^. _language
+    updatePersonInfo response
     updateFlowStatusStorage response
     updateCTEventData response
     setValueToLocalStore CUSTOMER_REFERRAL_CODE (fromMaybe "" (response ^. _customerReferralCode))
@@ -458,11 +458,15 @@ currentFlowStatus = do
     in
       void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
 
-  updateLanguageAndReferralCode :: Maybe String -> FlowBT String Unit
-  updateLanguageAndReferralCode language = do
+  updatePersonInfo :: GetProfileRes -> FlowBT String Unit
+  updatePersonInfo response = do
     config <- getAppConfigFlowBT appConfig
     let
       referralStatus = getValueToLocalStore REFERRAL_STATUS
+      language = response ^. _language
+      deviceIdRes = response ^. _deviceId
+      deviceId = JB.getDeviceID unit
+      updateDeviceId = (isNothing deviceIdRes && deviceId /= "NO_DEVICE_ID")
     let
       referralCode =
         if config.feature.enableReferral && config.feature.enableAutoReferral then do
@@ -471,7 +475,7 @@ currentFlowStatus = do
             _ -> Nothing
         else
           Nothing
-    if isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)) || isJust referralCode then do
+    if isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)) || isJust referralCode || updateDeviceId then do
       case referralCode of
         Just code
           | referralStatus == "NOT_REFERRED_NOT_TAKEN_RIDE" -> do
@@ -481,9 +485,9 @@ currentFlowStatus = do
               REFERRAL_INVALID -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { referral { referralStatus = REFERRAL_INVALID } } })
               _ -> pure unit
         _ -> do
-          let
-            UpdateProfileReq updateProfileConfig = Remote.mkUpdateProfileRequest FunctionCall
-          void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
+          let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
+              requiredData = if updateDeviceId then initialData{deviceId = Just deviceId} else initialData
+          void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
     else
       pure unit
 

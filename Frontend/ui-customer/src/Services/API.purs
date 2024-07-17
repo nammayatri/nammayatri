@@ -1367,6 +1367,7 @@ newtype GetProfileRes = GetProfileRes
   , followsRide :: Maybe Boolean
   , isSafetyCenterDisabled :: Maybe Boolean
   , customerReferralCode :: Maybe String
+  , deviceId :: Maybe String
   }
 
 

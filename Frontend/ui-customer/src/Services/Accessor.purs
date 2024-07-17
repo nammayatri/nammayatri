@@ -319,3 +319,6 @@ _isValueAddNP = lens (unwrap >>> _.isValueAddNP) (\oldRec newVal -> wrap ((unwra
 
 _stopLocation :: forall a b c. Newtype a { stopLocation :: b | c } => Lens' a b
 _stopLocation = lens (unwrap >>> _.stopLocation) (\oldRec newVal -> wrap ((unwrap oldRec) { stopLocation = newVal }))
+
+_deviceId :: forall a b c. Newtype a { deviceId :: b | c } => Lens' a b
+_deviceId = lens (unwrap >>> _.deviceId) (\oldRec newVal -> wrap ((unwrap oldRec) { deviceId = newVal }))
