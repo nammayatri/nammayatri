@@ -1875,8 +1875,9 @@ fleetTotalEarning _merchantShortId _ fleetOwnerId mbFrom mbTo = do
       to = fromMaybe now mbTo
   (totalEarning, totalDistanceTravelled, completedRides, cancelledRides) <- CQRide.totalRidesStatsInFleet (Just fleetOwnerId) from to
   totalVehicle <- VRCQuery.countAllActiveRCForFleet fleetOwnerId merchant.id
-  let conversionRate = fromIntegral completedRides / fromIntegral (completedRides + cancelledRides)
-  let cancellationRate = fromIntegral cancelledRides / fromIntegral (completedRides + cancelledRides)
+  let totalRides = completedRides + cancelledRides
+  let conversionRate = if totalRides == 0 then 0 else fromIntegral completedRides / fromIntegral totalRides
+  let cancellationRate = if totalRides == 0 then 0 else fromIntegral cancelledRides / fromIntegral totalRides
   pure $ Common.FleetTotalEarningResponse {totalDistanceTravelled = fromIntegral totalDistanceTravelled / 1000.0, totalRides = completedRides, ..}
 
 fleetVehicleEarning :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.FleetEarningListRes
