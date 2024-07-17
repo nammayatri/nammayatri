@@ -38,4 +38,4 @@ cacheFRFSConfig frfsConfig = do
   Hedis.setExp idKey frfsConfig expTime
 
 makeIdKey :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Text
-makeIdKey merchantOperatingCityId = "CachedQueries:FRFSConfig:MerchantOperatingCity-" <> show merchantOperatingCityId
+makeIdKey merchantOperatingCityId = "CachedQueries:FRFSConfig:MerchantOperatingCity-" <> show merchantOperatingCityId.getId
