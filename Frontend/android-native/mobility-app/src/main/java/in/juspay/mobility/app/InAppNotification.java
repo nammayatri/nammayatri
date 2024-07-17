@@ -23,6 +23,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
+import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 public class InAppNotification extends AppCompatActivity {
@@ -192,18 +193,18 @@ public class InAppNotification extends AppCompatActivity {
         }
 
         private void dismissNotification() {
-            view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.bottom_to_top));
-            mainLayout.removeView(view);
-            notificationChannels.remove(channelId);
-            notificationStack.remove(channelId);
-            Handler timerHandler;
-            timerHandler = handler;
-            timerHandler.removeCallbacksAndMessages(null);
-            try {
-                refreshView();
-            } catch (JSONException e) {
-                Log.e(LOG_TAG, "Error in  dismiss notification" + e);
-            }
+            ExecutorManager.runOnMainThread(() -> {
+                view.startAnimation(AnimationUtils.loadAnimation(context, R.anim.bottom_to_top));
+                mainLayout.removeView(view);
+                notificationChannels.remove(channelId);
+                notificationStack.remove(channelId);
+                handler.removeCallbacksAndMessages(null);
+                try {
+                    refreshView();
+                } catch (JSONException e) {
+                    Log.e(LOG_TAG, "Error in  dismiss notification" + e);
+                }
+            });
         }
 
         private void attachEventListenerToNotification(String onTapAction) {
