@@ -65,11 +65,14 @@ handler hnd = do
     runTask :: AnyJob t -> SchedulerM ()
     runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> do
       let jobType' = show (fromSing $ jobType jobInfo)
-      withDynamicLogLevel jobType' $
+      expirationTime <- asks (.expirationTime)
+      withDynamicLogLevel jobType' . Hedis.whenWithLockRedis (mkRunningJobKey id.getId) (fromIntegral expirationTime) $
         withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
           res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
           registerExecutionResult hnd anyJob res
           releaseLock parentJobId
+
+    mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
 dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 dbBasedHandlerLoop hnd runTask = do
@@ -94,11 +97,10 @@ runnerIterationRedis SchedulerHandle {..} runTask = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask
-  filteredTasks <- filterM (\(AnyJob Job {..}, _) -> attemptTaskLockAtomic parentJobId) readyTasks
-  logTagDebug "Available tasks - Count" . show $ length filteredTasks
-  mapM_ (runTask . fst) filteredTasks
-  let recordIds = map snd filteredTasks
-  unless (null recordIds) do
+  logTagDebug "Available tasks - Count" . show $ length readyTasks
+  mapM_ (runTask . fst) readyTasks
+  let recordIds = map snd readyTasks
+  fork "removingFromStream" . unless (null recordIds) $ do
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
 
@@ -154,7 +156,7 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
   let diff = T.diffUTCTime endTime begTime
       diffInMill = Milliseconds (div (fromEnum diff) 1000000000)
   logDebug $ "diffTime in picking up the job : " <> show diffInMill
-  fork "" $ addGenericLatency "Job_pickup" $ diffInMill
+  fork "" $ addGenericLatency ("Job_pickup_" <> jobType') $ diffInMill
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution jobType' "No handler function found for the job type = "
     Just handlerFunc_ -> do
