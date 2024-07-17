@@ -55,7 +55,8 @@ buildOnSelectReqV2 req = do
     let bppEstimateId = Id itemId
         providerInfo =
           DOnSelect.ProviderInfo
-            { providerId = bppSubscriberId, -- TODO: providerId needs to be from estimate table, for now using it as contextBppId
+            { {- TODO: providerId needs to be from estimate table, for now using it as contextBppId and updating in `validateRequest` -}
+              providerId = bppSubscriberId,
               bppSubscriberId = Just bppSubscriberId,
               name = Nothing,
               url = providerUrl,

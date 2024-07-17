@@ -63,7 +63,7 @@ data DConfirmReq = DConfirmReq
   }
 
 data DConfirmRes = DConfirmRes
-  { providerId :: Text,
+  { bppSubscriberId :: Text,
     providerUrl :: BaseUrl,
     itemId :: Text,
     fromLoc :: DL.Location,
@@ -163,7 +163,7 @@ confirm DConfirmReq {..} = do
   return $
     DConfirmRes
       { booking,
-        providerId = quote.providerId,
+        bppSubscriberId = fromMaybe quote.providerId quote.bppSubscriberId,
         providerUrl = quote.providerUrl,
         itemId = booking.bppEstimateId,
         fromLoc = fromLocation,

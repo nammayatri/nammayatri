@@ -64,7 +64,7 @@ rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag 
   dFeedbackRes <- DFeedback.feedback request personId
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
   fork "call bpp rating api" $ do
-    isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.providerId
+    isValueAddNP <- CQVAN.isValueAddNP dFeedbackRes.bppSubscriberId
     when isValueAddNP . void . withLongRetry $ CallBPP.feedbackV2 dFeedbackRes.providerUrl becknReq merchantId
   pure Success
 

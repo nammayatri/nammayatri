@@ -47,6 +47,6 @@ buildInitReqV2 res = do
         SConfirm.ConfirmAmbulanceDetails quoteId -> (show Enums.AMBULANCE_FLOW, Just quoteId)
   let action = Context.INIT
   let domain = Context.MOBILITY
-  isValueAddNP <- VNP.isValueAddNP res.providerId
+  isValueAddNP <- VNP.isValueAddNP res.bppSubscriberId
   ttl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig ttl

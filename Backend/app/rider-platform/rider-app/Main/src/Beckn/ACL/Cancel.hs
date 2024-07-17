@@ -72,7 +72,7 @@ buildCancelSearchReqV2 res = do
   -- TODO :: Add request city, after multiple city support on gateway.
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- ContextV2.buildContextV2 Context.CANCEL Context.MOBILITY messageId (Just res.searchReqId.getId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.city res.merchant.country (Just ttl)
+  context <- ContextV2.buildContextV2 Context.CANCEL Context.MOBILITY messageId (Just res.searchReqId.getId) res.merchant.bapId bapUrl (Just res.bppSubscriberId) (Just res.providerUrl) res.city res.merchant.country (Just ttl)
   pure
     Spec.CancelReq
       { cancelReqContext = context,

@@ -61,7 +61,7 @@ data FeedbackRes = FeedbackRes
   { bppBookingId :: Id DBooking.BPPBooking,
     ratingValue :: Int,
     feedbackDetails :: Maybe Text,
-    providerId :: Text,
+    bppSubscriberId :: Text,
     providerUrl :: BaseUrl,
     transactionId :: Text,
     merchant :: DM.Merchant,
@@ -108,7 +108,7 @@ feedback request personId = do
   pure
     FeedbackRes
       { wasOfferedAssistance = request.wasOfferedAssistance,
-        providerId = booking.providerId,
+        bppSubscriberId = fromMaybe booking.providerId booking.bppSubscriberId,
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
         issueId = issueId',
