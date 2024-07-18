@@ -3149,6 +3149,35 @@ instance standardEncodeShareRideReq :: StandardEncode ShareRideReq where standar
 instance showShareRideReq :: Show ShareRideReq where show = genericShow
 instance decodeShareRideReq :: Decode ShareRideReq where decode = defaultDecode
 instance encodeShareRideReq :: Encode ShareRideReq where encode = defaultEncode
+
+newtype IncidentReportReq = IncidentReportReq {
+    rideId :: String
+  }
+
+newtype IncidentReportRes = IncidentReportRes 
+  {
+    result :: String
+  }
+
+instance makeIncidentReportRequest :: RestEndpoint IncidentReportReq IncidentReportRes where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.incidentReport "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericIncidentReportRes :: Generic IncidentReportRes _
+derive instance newtypeIncidentReportRes :: Newtype IncidentReportRes _
+instance standardEncodeIncidentReportRes :: StandardEncode IncidentReportRes where standardEncode (IncidentReportRes res) = standardEncode res
+instance showIncidentReportRes :: Show IncidentReportRes where show = genericShow
+instance decodeIncidentReportRes :: Decode IncidentReportRes where decode = defaultDecode
+instance encodeIncidentReportRes :: Encode IncidentReportRes where encode = defaultEncode
+
+derive instance genericIncidentReportReq :: Generic IncidentReportReq _
+derive instance newtypeIncidentReportReq :: Newtype IncidentReportReq _
+instance standardEncodeIncidentReportReq :: StandardEncode IncidentReportReq where standardEncode (IncidentReportReq req) = standardEncode req
+instance showIncidentReportReq :: Show IncidentReportReq where show = genericShow
+instance decodeIncidentReportReq :: Decode IncidentReportReq where decode = defaultDecode
+instance encodeIncidentReportReq :: Encode IncidentReportReq where encode = defaultEncode
+
 --------------------------------------------------- FollowRide ----------------------------------------------------
 
 data FollowRideReq = FollowRideReq

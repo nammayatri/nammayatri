@@ -229,6 +229,9 @@ createMockSos dummy = (getBaseUrl "53") <> "/sos/createMockSos"
 shareRide :: String -> String
 shareRide dummy = (getBaseUrl "54") <> "/share/ride"
 
+incidentReport :: String -> String
+incidentReport dummy = (getBaseUrl "55") <> "/sos/callPolice"
+
 followRide :: String -> String
 followRide _ = (getBaseUrl "47") <> "/follow/ride"
 

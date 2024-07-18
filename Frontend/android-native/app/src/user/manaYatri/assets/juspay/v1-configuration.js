@@ -270,6 +270,7 @@ window.getMerchantConfig = function () {
         "enableSupport" : false
       , "enableSuggestions" : true
       , "enableEditDestination" : true
+      , "enableSafetyPoliceFlow" : false
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

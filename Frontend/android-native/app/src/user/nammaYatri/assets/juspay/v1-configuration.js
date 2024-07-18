@@ -339,6 +339,7 @@ window.getMerchantConfig = function () {
       , "enableSuggestions" : true
       , "enableRepeatTripBackfilling" : true
       , "enableEditDestination" : true
+      , "enableSafetyPoliceFlow" : false
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

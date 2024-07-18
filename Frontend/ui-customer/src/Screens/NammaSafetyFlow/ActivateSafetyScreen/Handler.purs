@@ -50,3 +50,6 @@ activateSafetyScreen = do
     NotifyMockDrill updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ act)
+    ReportIncident updatedState -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ act)

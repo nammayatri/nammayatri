@@ -20,13 +20,14 @@ emptyTextView = textView [ visibility GONE ]
 layoutWithWeight :: forall w. PrestoDOM (Effect Unit) w
 layoutWithWeight = linearLayout [ weight 1.0 ] []
 
-separatorView :: forall w. String -> Margin -> PrestoDOM (Effect Unit) w
-separatorView color' margin' =
+separatorView :: forall w. String -> Boolean -> Margin  -> PrestoDOM (Effect Unit) w
+separatorView color' visibility' margin' =
   linearLayout
     [ height (V 1)
     , width MATCH_PARENT
     , margin margin'
     , background color'
+    , visibility $ boolToVisibility visibility'
     ]
     []
 

@@ -5260,6 +5260,13 @@ activateSafetyScreenFlow = do
     ActivateSafetyScreen.NotifyMockDrill state -> do
       _ <- lift $ lift $ Remote.createMockSos (not $ DS.null state.data.rideId) true
       activateSafetyScreenFlow
+    ActivateSafetyScreen.ReportIncident state -> do
+      let req = IncidentReportReq { rideId : state.data.rideId }
+      resp <- lift $ lift $ Remote.incidentReport req
+      case resp of
+        Right _ -> void $ pure $ toast $ getString STR.INCIDENT_REPORTED_SUCCESSFULLY
+        Left _ -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
+      activateSafetyScreenFlow
 
 safetySettingsFlow :: FlowBT String Unit
 safetySettingsFlow = do
@@ -6058,5 +6065,5 @@ fcmHandler notification state = do
 pickupInstructionsScreenFlow :: FlowBT String Unit
 pickupInstructionsScreenFlow = do
   action <- UI.pickupInstructionsScreen
-  case action of 
+  case action of
     _ -> pickupInstructionsScreenFlow

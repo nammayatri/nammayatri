@@ -346,7 +346,9 @@ nammaSafetyFeaturesView state push visibility' =
         ]
 
 featuresView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-featuresView state push =
+featuresView state push = let 
+  enableSafetyPoliceFlow = state.data.config.feature.enableSafetyPoliceFlow
+  in
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -378,13 +380,16 @@ featuresView state push =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
-            ]
-            [ imageWithTextView (getString AUTOMATIC_CALL_PLACED_TO_EMERGENCY_CONTACTS) true state
-            , imageWithTextView (getString $ EMERGENCY_CONTACTS_CAN_FOLLOW state.props.appName) true state
-            , imageWithTextView (getString GET_OPTIONS_TO_DIRECTLY_CALL_POLICE) true state
-            , imageWithTextView (getString $ ALERT_SAFETY_TEAM state.props.appName) true state
-            , imageWithTextView (getString OPTION_TO_REPORT_A_SAFETY_ISSUE) true state
-            ]
+            ] $
+              [ imageWithTextView (getString AUTOMATIC_CALL_PLACED_TO_EMERGENCY_CONTACTS) true state
+              , imageWithTextView (getString $ EMERGENCY_CONTACTS_CAN_FOLLOW state.props.appName) true state
+              , imageWithTextView (getString $ ALERT_SAFETY_TEAM state.props.appName) true state
+              , imageWithTextView (getString OPTION_TO_REPORT_A_SAFETY_ISSUE) true state
+              ] <>
+              if enableSafetyPoliceFlow 
+                then [imageWithTextView (getString $ OPTION_TO_SEEK_IMMEDIATE_POLICE_HELP) true state, 
+                      imageWithTextView (getString $ LAYERED_SAFETY_CHECKS_IN_CASE_OF_DEVIATIONS_IN_RIDES_AT_NIGHT) true state ] 
+                else [imageWithTextView (getString GET_OPTIONS_TO_DIRECTLY_CALL_POLICE) true state]
         , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
@@ -480,9 +485,9 @@ userSettingsView state push visibility' =
                       ]
                     <> FontStyle.body2 TypoGraphy
                 ]
-            , HV.separatorView Color.lightGreyShade $ Margin 16 16 16 16
+            , HV.separatorView Color.lightGreyShade true $ Margin 16 16 16 16
             , toggleSwitchViewLayout (ToggleSwitch SetNightTimeSafetyAlert) state.data.nightSafetyChecks (getString NIGHT_TIME_SAFETY_CHECKS) push true 16
-            , HV.separatorView Color.lightGreyShade $ Margin 16 16 16 16
+            , HV.separatorView Color.lightGreyShade true $ Margin 16 16 16 16
             , linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT

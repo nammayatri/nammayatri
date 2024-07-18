@@ -248,7 +248,8 @@ config =
     enableAcPopup : false,
     enableRentalReallocation : true,
     enableEditDestination : false,
-    enableHelpAndSupport : true
+    enableHelpAndSupport : true,
+    enableSafetyPoliceFlow : false
   }
 
   , rideCompletedCardConfig : {
