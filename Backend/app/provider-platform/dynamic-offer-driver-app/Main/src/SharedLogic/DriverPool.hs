@@ -761,8 +761,12 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
       scheduledRideFilterExclusionThresholdInSecs = KP.intToNominalDiffTime (transporterConfig.scheduledRideFilterExclusionThresholdHours.getHours * 3600)
       haveScheduled = isJust driverInfo.latestScheduledBooking
   if
-      | haveScheduled && isIntercity -> return False
-      | haveScheduled && isRental -> return $ canTakeRental driverInfo.latestScheduledBooking now minimumScheduledBookingLeadTimeInSecs
+      | haveScheduled && isIntercity -> do
+        logDebug "isIntercity case "
+        return False
+      | haveScheduled && isRental -> do
+        logDebug "isRental case "
+        return $ canTakeRental driverInfo.latestScheduledBooking now minimumScheduledBookingLeadTimeInSecs
       | isScheduledRideUnderFilterExclusionThresholdHours driverInfo.latestScheduledBooking now scheduledRideFilterExclusionThresholdInSecs -> do
         case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, currentSearchInfo.routeDistance, transporterConfig.avgSpeedOfVehicle) of
           (Just dropLoc, Just scheduledPickup, Just routeDistance, Just avgSpeeds) -> do
@@ -781,14 +785,19 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
                 totalTimeinDoubleHr = (totalDistanceinKM / fromIntegral (avgSpeedOfVehicleInKM.getKilometers)) :: Double
                 totalTimeInSeconds = realToFrac (totalTimeinDoubleHr * 3600) :: NominalDiffTime
                 expectedEndTime = addUTCTime totalTimeInSeconds now
+            logDebug $ "avgSpeedOfVehicleInKM" <> show avgSpeedOfVehicleInKM <> "totalDistanceinM" <> show totalDistanceinM <> "totalDistanceinKM" <> show totalDistanceinKM
+            logDebug $ "totalTimeinDoubleHr" <> show totalTimeinDoubleHr <> "totalTimeInSeconds" <> show totalTimeInSeconds <> "expectedEndTime" <> show expectedEndTime
             let isRidePossible = case driverInfo.latestScheduledBooking of
                   Just latestScheduledBooking ->
                     let timeDifference = diffUTCTime latestScheduledBooking (addUTCTime transporterConfig.scheduleRideBufferTime expectedEndTime)
                      in timeDifference > 0
                   Nothing -> False
+            logDebug $ "isRidePossible" <> show isRidePossible
             return isRidePossible
           (_, _, _, _) -> return False
-      | otherwise -> return True
+      | otherwise -> do
+        logDebug "otherwise case "
+        return True
   where
     canTakeRental :: Maybe UTCTime -> UTCTime -> NominalDiffTime -> Bool
     canTakeRental mbLatestScheduledBooking now minimumScheduledBookingLeadTimeInSecs =
