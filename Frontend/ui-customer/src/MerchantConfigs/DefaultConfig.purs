@@ -808,7 +808,8 @@ defaultCityConfig =
         freeMinutes : 5.0
       , perMinCharges : 1.0
       }
-    }
+    },
+    enableWaitingConfig : false
   }
 
 keralaWTC :: WaitingChargeConfig

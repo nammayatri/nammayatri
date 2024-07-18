@@ -1472,4 +1472,5 @@ getKN stringKey =
         BIKE_TAXI -> "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"
         FIRST_RIDE_FREE count -> "ಮೊದಲ " <> count <> " ಪ್ರಯಾಣ ಉಚಿತ"
         FIRST_RIDES_FREE count -> "ಮೊದಲ " <> count <> " ಪ್ರಯಾಣಗಳು ಉಚಿತ"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "ಚಾಲಕರು ಪಿಕಪ್ ಸ್ಥಳದ ಬಳಿ ಇರುವಾಗ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕಗಳು ಅನ್ವಯವಾಗಬಹುದು."
 

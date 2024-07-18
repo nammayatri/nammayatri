@@ -1332,3 +1332,4 @@ getTE stringKey =
     METRO_FREE_TICKET_EVENT_DESC freeTicketInterval maxFreeTicketCashback -> "ప్రతి " <> freeTicketInterval <> " టికెట్ పొందండి (అప్పుడు ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)"
     NEXT_FREE_TICKET -> "తదుపరి టికెట్ ఉచితం"
     FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "అంచనా ధరకు ఉచితం (మధ్య నిలువు " <> maxCashback <> ") లో " <> freeTicketCount <> " టికెట్!"
+    ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "డ్రైవర్ పికప్ స్థానానికి సమీపంలో ఉన్నప్పుడు అదనపు ఛార్జీలు వర్తించవచ్చు."

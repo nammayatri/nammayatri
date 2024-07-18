@@ -1400,7 +1400,7 @@ eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
                 && state.data.currentCityConfig.enableAcViews
       cancellationReasons = cancelReasons isAcCab
       noOfReasons = length cancellationReasons
-      shuffledCancellationReason = shuffle $ (take ( noOfReasons - 1) cancellationReasons ) <> (take 1 (drop (noOfReasons - 1) cancellationReasons) )
+      shuffledCancellationReason = shuffle (take ( noOfReasons - 1) cancellationReasons ) <> (take 1 (drop (noOfReasons - 1) cancellationReasons) )
   continue state { props {  isCancelRide = true
                           , cancellationReasons = if state.data.config.cancelReasonConfig.shuffleCancelReasons then shuffledCancellationReason else cancellationReasons
                           , cancelRideActiveIndex = Nothing

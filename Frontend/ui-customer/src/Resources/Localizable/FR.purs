@@ -1319,3 +1319,4 @@ getFR stringKey =
         METRO_FREE_TICKET_EVENT_DESC freeTicketInterval maxFreeTicketCashback -> "Obtenez un billet GRATUIT (jusqu'à ₹" <> maxFreeTicketCashback <> ") sur chaque billet toutes les " <> freeTicketInterval <> " minutes (ONDC Offer)"
         NEXT_FREE_TICKET -> "Le prochain billet ajouté est éligible pour un billet gratuit"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "Cashback débloqué (jusqu'à " <> maxCashback <> ") sur " <> freeTicketCount <> " billet !"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE ->  "Des frais supplémentaires peuvent être applicables lorsque le conducteur se trouve à proximité du lieu de prise en charge."

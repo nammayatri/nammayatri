@@ -1317,3 +1317,4 @@ getHI stringKey =
         METRO_FREE_TICKET_EVENT_DESC freeTicketInterval maxFreeTicketCashback -> "हर " <> freeTicketInterval <> " टिकट पर मुफ्त टिकट प्राप्त करें (अधिकतम ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)"
         NEXT_FREE_TICKET -> "अगली टिकट मुफ्त है"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "अनलॉक करें कैशबैक (अधिकतम ₹" <> maxCashback <> ") पर " <> freeTicketCount <> " टिकट!"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "अतिरिक्त शुल्क तब लागू हो सकता है जब ड्राइवर पिकअप स्थान के पास हो।"
