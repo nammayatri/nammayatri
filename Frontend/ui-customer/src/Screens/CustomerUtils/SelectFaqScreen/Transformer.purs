@@ -58,23 +58,32 @@ topicsList state =
   ( if state.data.config.feature.enableSelfServe then
       state.data.categories
     else
-      [ { categoryAction: "CONTACT_US"
+      [ { categoryAction: Just "CONTACT_US"
         , categoryName: getString FOR_OTHER_ISSUES_WRITE_TO_US
-        , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
+        , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
         , categoryId: "5"
+        , isRideRequired: false
+        , maxAllowedRideAge: Nothing
+        , categoryType: "Category"
         }
-      , { categoryAction: "CALL_SUPPORT"
+      , { categoryAction: Just "CALL_SUPPORT"
         , categoryName: getString CONTACT_SUPPORT
-        , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_help"
+        , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_help"
         , categoryId: "6"
+        , isRideRequired: false
+        , maxAllowedRideAge: Nothing
+        , categoryType: "Category"
         }
       ]
   )
     <> if state.data.config.showDeleteAccount then
-        [ { categoryAction: "DELETE_ACCOUNT"
+        [ { categoryAction: Just "DELETE_ACCOUNT"
           , categoryName: getString REQUEST_TO_DELETE_ACCOUNT
-          , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
+          , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
           , categoryId: "7"
+          , isRideRequired: false
+          , maxAllowedRideAge: Nothing
+          , categoryType: "Category"
           }
         ]
       else

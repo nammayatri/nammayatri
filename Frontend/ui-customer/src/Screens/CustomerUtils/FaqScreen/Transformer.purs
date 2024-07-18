@@ -57,55 +57,41 @@ import Data.String as DS
 
 topicsList :: FaqScreenState -> Array CategoryListType
 topicsList state =
-  ( if state.data.config.feature.enableSelfServe then
-      state.data.categories
-    else
-      [ { categoryAction: "CONTACT_US"
-        , categoryName: getString FOR_OTHER_ISSUES_WRITE_TO_US
-        , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
-        , categoryId: "5"
-        }
-      , { categoryAction: "CALL_SUPPORT"
-        , categoryName: getString CONTACT_SUPPORT
-        , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_help"
-        , categoryId: "6"
-        }
-      ]
-  )
-    <> if state.data.config.showDeleteAccount then
-        [ { categoryAction: "DELETE_ACCOUNT"
+  state.data.categories
+  <> [ { categoryAction: Just "DELETE_ACCOUNT"
           , categoryName: getString REQUEST_TO_DELETE_ACCOUNT
-          , categoryImageUrl: fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
+          , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
           , categoryId: "7"
+          , isRideRequired: false
+          , maxAllowedRideAge: Nothing
+          , categoryType: "Category"
           }
         ]
-      else
-        []
 
-dropDownCardInfoList :: Array DropDownInfo
-dropDownCardInfoList =
-  [ { title: "How do I create a Namma Yatri account?"
-    , description: "{SUBPART}{HEADING}{!!!}heading 1{SUBPART}{BODY}{!!!}body1"
-    , id: "1"
-    , isExpanded: false
-    }
-  , { title: "Can I change my registered mobile number?"
-    -- , description: "<b> Section 1 Header </b> <br> <span style='color:#6D7280'> Namma Yatri does not support editing the registered mobile number currently. If you wish to use another number, please logout from the current account and register with a new number </span> <br> <br> <b> Section 2 Header </b> <br> <span style='color:#6D7280'> Namma Yatri does not support editing the registered mobile number currently. If you wish to use another number, please logout from the current account and register with a new number </span> "
-    , description: "{SUBPART}{HEADING}{!!!}Section 1 Header {SUBPART}{BODY}{!!!} Namma Yatri does not support editing the registered mobile number currently. If you wish to use another number, please logout from the current account and register with a new number. {SUBPART}{HEADING}{!!!}Section 2 Header {SUBPART}{BODY}{!!!} Namma Yatri does not support editing the registered mobile number currently. If you wish to use another number, please logout from the current account and register with a new number."
-    , id: "2"
-    , isExpanded: false
-    }
-  , { title: "Does Namma Yatri have a referral program?"
-    , description: "{SUBPART}{HEADING}{!!!}heading 3{SUBPART}{BODY}{!!!}body3"
-    , id: "3"
-    , isExpanded: false
-    }
-  , { title: "I am unable to log in to my account"
-    , description: "{SUBPART}{HEADING}{!!!}heading 4{SUBPART}{BODY}{!!!}body4"
-    , id: "4"
-    , isExpanded: false
-    }
-  ]
+-- dropDownCardInfoList :: Array DropDownInfo
+-- dropDownCardInfoList =
+--   [ { title: "How do I create a Namma Yatri account?"
+--     , description: "{SUBPART}{HEADING}{!!!}heading 1{SUBPART}{BODY}{!!!}body1"
+--     , id: "1"
+--     , isExpanded: false
+--     }
+--   , { title: "Can I change my registered mobile number?"
+--     -- , description: "<b> Section 1 Header </b> <br> <span style='color:#6D7280'> Namma Yatri does not support editing the registered mobile number currently. If you wish to use another number, please logout from the current account and register with a new number </span> <br> <br> <b> Section 2 Header </b> <br> <span style='color:#6D7280'> Namma Yatri does not support editing the registered mobile number currently. If you wish to use another number, please logout from the current account and register with a new number </span> "
+--     , description: "{SUBPART}{HEADING}{!!!}Section 1 Header {SUBPART}{BODY}{!!!} Namma Yatri does not support editing the registered mobile number currently. If you wish to use another number, please logout from the current account and register with a new number. {SUBPART}{HEADING}{!!!}Section 2 Header {SUBPART}{BODY}{!!!} Namma Yatri does not support editing the registered mobile number currently. If you wish to use another number, please logout from the current account and register with a new number."
+--     , id: "2"
+--     , isExpanded: false
+--     }
+--   , { title: "Does Namma Yatri have a referral program?"
+--     , description: "{SUBPART}{HEADING}{!!!}heading 3{SUBPART}{BODY}{!!!}body3"
+--     , id: "3"
+--     , isExpanded: false
+--     }
+--   , { title: "I am unable to log in to my account"
+--     , description: "{SUBPART}{HEADING}{!!!}heading 4{SUBPART}{BODY}{!!!}body4"
+--     , id: "4"
+--     , isExpanded: false
+--     }
+--   ]
 
 dropDownStringTransform :: String -> StringType
 dropDownStringTransform str =

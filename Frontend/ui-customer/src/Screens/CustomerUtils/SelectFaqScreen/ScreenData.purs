@@ -28,42 +28,17 @@ import Foreign.Object (Object)
 initData :: SelectFaqScreenState
 initData = {
   data: {
-    source : "",
-    destination : "",
-    date : "",
-    time : "",
-    rating : 0,
-    driverName : "",
-    totalAmount : "",
-    isNull : true,
-    status : "",
-    rideStartTime : "",
-    rideEndTime : "",
-    vehicleNumber : "",
-    rideId : "",
-    tripId : "",
-    bookingId : "",
-    faresList : [],
-    email : "",
-    description : "",
-    accountStatus : ACTIVE,
     config : getAppConfig appConfig,
-    vehicleVariant : Nothing,
     logField : empty,
     issueList : [],
-    resolvedIssueList : [],
-    ongoingIssueList : [],
     issueListType : HELP_AND_SUPPORT_SCREEN_MODAL,
     categories : [],
-    categoryName : "",
-    merchantExoPhone : ""
+    categoryName : ""
   },
   props:{
     apiFailure : false
-  , isCallConfirmation : false
-  , showDeleteAccountView : false
-  , btnActive : false
   , needIssueListApiCall : true
+  -- , isCallConfirmation : false
   }
 
 }
@@ -78,42 +53,18 @@ type SelectFaqScreenState =
 
 type SelectFaqScreenData =
   {
-    date :: String,
-    time :: String,
-    rating :: Int,
-    source :: String,
-    destination :: String,
-    driverName :: String,
-    totalAmount :: String,
-    isNull :: Boolean,
-    faresList :: Array FareComponent,
-    status :: String,
-    rideStartTime :: String,
-    rideEndTime :: String,
-    rideId :: String,
-    vehicleNumber :: String,
-    tripId :: String,
-    bookingId :: String,
-    email :: String,
-    description :: String,
-    accountStatus :: DeleteStatus ,
     config :: AppConfig,
-    vehicleVariant :: Maybe VehicleVariant,
     issueList :: Array IssueInfo,
-    ongoingIssueList :: Array IssueInfo,
-    resolvedIssueList :: Array IssueInfo,
     issueListType :: IssueModalType,
     categories :: Array CategoryListType,
     categoryName :: String,
-    merchantExoPhone :: String,
     logField :: Object Foreign
   }
 
 type SelectFaqScreenProps =
   {
     apiFailure :: Boolean
-  , isCallConfirmation :: Boolean
-  , showDeleteAccountView :: Boolean
-  , btnActive :: Boolean
   , needIssueListApiCall :: Boolean
+  -- , isCallConfirmation :: Boolean
+
   }

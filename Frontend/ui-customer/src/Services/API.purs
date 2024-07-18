@@ -2681,6 +2681,7 @@ newtype Category = Category
   , issueCategoryId :: String
   , isRideRequired :: Boolean
   , maxAllowedRideAge :: Maybe Int
+  , categoryType :: String
   }
 
 instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq GetCategoriesRes where
@@ -2726,6 +2727,8 @@ newtype Message = Message
   , label :: Maybe String 
   , messageTitle :: Maybe String
   , messageAction :: Maybe String 
+  , referenceCategoryId :: Maybe String
+  , referenceOptionId :: Maybe String
   }
 
 instance makeGetOptionsReq :: RestEndpoint GetOptionsReq GetOptionsRes where

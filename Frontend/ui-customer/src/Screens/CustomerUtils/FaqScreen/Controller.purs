@@ -70,21 +70,30 @@ instance loggableAction :: Loggable Action where
     performLog action appId = case action of
       _ -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "on_click_done"
 
-data Action = BackPressed Boolean
+data Action = BackPressed
             | GenericHeaderActionController GenericHeader.Action
             | APIFailureActionController ErrorModal.Action
             | AfterRender 
             | DropDownCardActionController DropDownCard.Action
-            | PrimaryButtonRaiseTicketAC PrimaryButton.Action
+            | PrimaryButtonAC PrimaryButton.Action
+            | OpenFavourites PrimaryButton.Action 
+            | OpenChangeLanguageScreen PrimaryButton.Action
+            | OpenChat String (Maybe String) PrimaryButton.Action
+            | OpenSelectRideScreen String (Maybe String) PrimaryButton.Action
+            | NoAction
             
 data ScreenOutput = GoBack FaqScreenState
                   | GoHome FaqScreenState
+                  | GoToFavourites FaqScreenState
+                  | ChangeLanguage FaqScreenState
+                  | GoToChatScreen String (Maybe String) FaqScreenState
+                  | GoToSelectRideScreen String (Maybe String) FaqScreenState
 
 eval :: Action -> FaqScreenState -> Eval Action ScreenOutput FaqScreenState
 
-eval (BackPressed _ ) state = exit $ GoBack state
+eval BackPressed state = exit $ GoBack state
 
-eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed state.props.isCallConfirmation]
+eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed]
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoBack state
 
@@ -92,11 +101,19 @@ eval (DropDownCardActionController (DropDownCard.OnClick config)) state = do
   let updatedDropDownList = updateDropDownList state.data.dropDownList config.id 
   continue state {data {dropDownList = updatedDropDownList}}
 
-eval (PrimaryButtonRaiseTicketAC (PrimaryButton.OnClick)) state = continue state
+eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = continue state
+
+eval (OpenFavourites (PrimaryButton.OnClick)) state = exit $ GoToFavourites state
+
+eval (OpenChangeLanguageScreen (PrimaryButton.OnClick)) state = exit $ ChangeLanguage state
+
+eval (OpenChat categoryId optionId (PrimaryButton.OnClick)) state = exit $ GoToChatScreen categoryId optionId state
+
+eval (OpenSelectRideScreen categoryId optionId (PrimaryButton.OnClick)) state = exit $ GoToSelectRideScreen categoryId optionId state
 
 eval _ state = update state
 
 updateDropDownList :: Array DropDownInfo -> String -> Array DropDownInfo
 updateDropDownList dropDownList id = 
-  let updatedDropDownList = map (\dropDownInfo -> if dropDownInfo.id == id then dropDownInfo {isExpanded = not dropDownInfo.isExpanded} else dropDownInfo) dropDownList
+  let updatedDropDownList = map (\dropDownInfo -> if dropDownInfo.id == id then dropDownInfo {isExpanded = not dropDownInfo.isExpanded} else dropDownInfo{isExpanded = false}) dropDownList
   in updatedDropDownList

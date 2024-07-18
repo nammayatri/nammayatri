@@ -67,7 +67,7 @@ instance loggableAction :: Loggable Action where
     performLog action appId = case action of
       _ -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "on_click_done"
 
-data Action = BackPressed Boolean
+data Action = BackPressed
             | GenericHeaderActionController GenericHeader.Action
             | APIFailureActionController ErrorModal.Action
             | AfterRender
@@ -81,13 +81,13 @@ data ScreenOutput = GoBack SelectFaqScreenState
 
 eval :: Action -> SelectFaqScreenState -> Eval Action ScreenOutput SelectFaqScreenState
 
-eval (BackPressed _ ) state = exit $ GoBack state
+eval BackPressed state = exit $ GoBack state
 
 eval (OpenChat selectedCategory) state = exit $ GoToChatScreen selectedCategory state
 
 eval (OpenFaqScreen selectedCategory) state = exit $ GoToFaqScreen selectedCategory state
 
-eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed state.props.isCallConfirmation]
+eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed]
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoBack state
 

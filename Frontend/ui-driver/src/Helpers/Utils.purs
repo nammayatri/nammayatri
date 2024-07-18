@@ -991,5 +991,6 @@ categoryTransformer categories language =
     , categoryImageUrl : Just catObj.logoUrl
     , isRideRequired : catObj.isRideRequired
     , maxAllowedRideAge : Nothing
+    , categoryType : ""
     }) categories
     

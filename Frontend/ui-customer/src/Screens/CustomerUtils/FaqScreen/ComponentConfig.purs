@@ -62,7 +62,7 @@ genericHeaderConfig state = let
       , enableRipple = true
       } 
     , textConfig {
-        text = "FAQs"
+        text = state.data.categoryName
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {
@@ -118,12 +118,14 @@ dropDownCardConfig state cardInfo dropDownCardDataa =
     headingCornerRadius : 16.0
   } 
   
-primaryButtonConfig :: FaqScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let
+primaryButtonConfig :: FaqScreenState -> Maybe String -> PrimaryButton.Config
+primaryButtonConfig state messageAction = let
   config = PrimaryButton.config
   primaryButtonConfig' = config
     { textConfig
-      { text = "Raise a Ticket"
+      { text = case messageAction of 
+                  Just action -> action
+                  Nothing -> "Raise a Ticket"
       , color = Color.yellow900
       , accessibilityHint = "Raise a Ticket : Button"
       }

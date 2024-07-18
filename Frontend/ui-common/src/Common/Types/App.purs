@@ -486,6 +486,7 @@ type CategoryListType = {
   , categoryId :: String
   , isRideRequired :: Boolean
   , maxAllowedRideAge :: Maybe Int
+  , categoryType :: String
   }
 
 type DisplayBase64ImageConig = {
@@ -647,7 +648,11 @@ type DropDownInfo = {
   title :: String,
   description :: String,
   isExpanded :: Boolean,
-  id :: String
+  label :: Maybe String,
+  id :: String, 
+  action :: Maybe String, 
+  referenceCategoryId :: Maybe String,
+  referenceOptionId :: Maybe String
 }
 
 type StringType = {

@@ -251,6 +251,7 @@ topicsList state =
         , categoryId: "5"
         , isRideRequired: false
         , maxAllowedRideAge: Nothing
+        , categoryType: "Category"
         }
       , { categoryAction: Just "CALL_SUPPORT"
         , categoryName: getString CONTACT_SUPPORT
@@ -258,6 +259,7 @@ topicsList state =
         , categoryId: "6"
         , isRideRequired: false
         , maxAllowedRideAge: Nothing
+        , categoryType: "Category"
         }
       ]
   )
@@ -268,6 +270,7 @@ topicsList state =
           , categoryId: "7"
           , isRideRequired: false
           , maxAllowedRideAge: Nothing
+          , categoryType: "Category"
           }
         ]
       else
@@ -285,6 +288,7 @@ reportsList state =
             , categoryId: "1"
             , isRideRequired: false
             , maxAllowedRideAge: Nothing
+            , categoryType: "Category"
             }
           ]
       )
@@ -297,6 +301,7 @@ reportsList state =
             , categoryId: "2"
             , isRideRequired: false
             , maxAllowedRideAge: Nothing
+            , categoryType: "Category"
             }
           ]
       )

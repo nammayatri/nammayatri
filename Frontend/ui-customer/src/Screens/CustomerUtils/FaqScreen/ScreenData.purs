@@ -28,40 +28,17 @@ import Foreign.Object (Object)
 initData :: FaqScreenState
 initData = {
   data: {
-    source : "",
-    destination : "",
-    date : "",
-    time : "",
-    rating : 0,
-    driverName : "",
-    totalAmount : "",
-    isNull : true,
-    status : "",
-    rideStartTime : "",
-    rideEndTime : "",
-    vehicleNumber : "",
-    rideId : "",
-    tripId : "",
-    bookingId : "",
-    faresList : [],
-    email : "",
-    description : "",
-    accountStatus : ACTIVE,
     config : getAppConfig appConfig,
-    vehicleVariant : Nothing,
     logField : empty,
     dropDownList : [],
     issueListType : HELP_AND_SUPPORT_SCREEN_MODAL,
     categories : [],
     categoryName : "",
-    merchantExoPhone : ""
+    maxAllowedRideAge : Nothing
   },
   props:{
-    apiFailure : false
-  , isCallConfirmation : false
-  , showDeleteAccountView : false
-  , btnActive : false
-  , needIssueListApiCall : true
+    apiFailure : false,
+    needIssueListApiCall : true
   }
 
 }
@@ -76,41 +53,18 @@ type FaqScreenState =
 
 type FaqScreenData =
   {
-    date :: String,
-    time :: String,
-    rating :: Int,
-    source :: String,
-    destination :: String,
-    driverName :: String,
-    totalAmount :: String,
-    isNull :: Boolean,
-    faresList :: Array FareComponent,
-    status :: String,
-    rideStartTime :: String,
-    rideEndTime :: String,
-    rideId :: String,
-    vehicleNumber :: String,
-    tripId :: String,
-    bookingId :: String,
-    email :: String,
-    description :: String,
-    accountStatus :: DeleteStatus ,
     config :: AppConfig,
-    vehicleVariant :: Maybe VehicleVariant,
     dropDownList :: Array DropDownInfo,
     issueListType :: IssueModalType,
     categories :: Array CategoryListType,
     categoryName :: String,
-    merchantExoPhone :: String,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    maxAllowedRideAge :: Maybe Int
   }
 
 type FaqScreenProps =
   {
     apiFailure :: Boolean
-  , isCallConfirmation :: Boolean
-  , showDeleteAccountView :: Boolean
-  , btnActive :: Boolean
   , needIssueListApiCall :: Boolean
   }
 

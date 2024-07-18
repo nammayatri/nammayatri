@@ -14,8 +14,6 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Mobility.Prelude (boolToVisibility)
 import Debug (spy)
 
--- to see make it configurable
-
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
   linearLayout

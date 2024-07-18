@@ -46,7 +46,7 @@ import Language.Types (STR(..))
 import Prelude (when, Unit, bind, const, discard, map, pure, unit, show, not, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>), (&&))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint, textFromHtml, onAnimationEnd, id)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.FaqScreen.Controller (Action(..), ScreenOutput, eval)
@@ -64,6 +64,10 @@ import Data.Maybe (Maybe(..), isJust, isNothing)
 import Components.DropDownCard as DropDownCard
 import Data.Array as DA
 import Helpers.CommonView (emptyTextView)
+import Animation as Anim
+import JBridge (renderBase64Image)
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 screen :: FaqScreenState -> Screen Action FaqScreenState ScreenOutput
 screen initialState =
@@ -71,18 +75,7 @@ screen initialState =
     initialState
   , view
   , name : "FaqScreen"
-  , globalEvents : [
-      ( \push -> do
-        -- void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-          -- if initialState.data.config.feature.enableSelfServe && initialState.props.needIssueListApiCall then do
-          --   let language = EHU.fetchLanguage $ getLanguageLocale languageKey
-          --   (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
-          --   lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
-          -- else pure unit
-          -- when (initialState.data.source == "") $ lift $ lift $  getPastRides RideBookingListAPIResponseAction push initialState
-        pure $ pure unit
-      )
-  ]
+  , globalEvents : []
   , eval : \state  action -> do
       let _ = spy  "FaqScreen action " state
       let _ = spy  "FaqScreen state " action
@@ -101,10 +94,15 @@ view push state =
     , orientation VERTICAL
     , background Color.white900
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-    , onBackPressed push $ const BackPressed state.props.isCallConfirmation
+    , onBackPressed push $ const BackPressed
     , afterRender push (const AfterRender)
     , visibility $ boolToVisibility $ state.data.issueListType == ST.HELP_AND_SUPPORT_SCREEN_MODAL 
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+      , linearLayout
+        [ width MATCH_PARENT
+        , height $ V 1
+        , background Color.grey900
+        ][]
       , scrollView
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -136,30 +134,38 @@ dropDownCardView state dropDownCardInfo push =
   , width MATCH_PARENT
   , background Color.white900
   , gravity CENTER
-  , margin $ Margin 10 10 10 10
+  , margin $ Margin 10 8 10 2
   ][  DropDownCard.view (push <<< DropDownCardActionController) (dropDownCardConfig state dropDownCardInfo (dropDownCardData state push dropDownCardInfo))]
 
 dropDownCardData :: FaqScreenState  -> (Action -> Effect Unit) -> DropDownInfo -> forall w . PrestoDOM (Effect Unit ) w
 dropDownCardData state push cardInfo =
-  let stringsWithTypes = spy "hello world" $ dropDownStringTypes $ cardInfo.description
+  let stringsWithTypes = dropDownStringTypes $ cardInfo.description
   in 
    linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ Margin 16 8 16 16
+    , margin $ Margin 16 12 16 16
     ][  linearLayout 
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ] (map (\item -> 
-          case item.type of
-            "{HEADING}" -> dropDownCardHeadingView item.value
-            "{BODY}" -> dropDownCardBodyView item.value
-            -- "{IMAGE}" -> dropDownCardImageView item.value
+        ] (DA.mapWithIndex (\index item -> 
+            case item.type of
+              "{HEADING}" -> dropDownCardHeadingView item.value
+              "{BODY}" -> dropDownCardBodyView item.value
+              "{IMAGE}" -> dropDownCardImageView push cardInfo item.value index
+              _ -> emptyTextView
+          ) stringsWithTypes) 
+      , case cardInfo.label of 
+          Just "FAVOURITES" -> PrimaryButton.view (push <<< OpenFavourites) (primaryButtonConfig state cardInfo.action) 
+          Just "CHANGE_LANGUAGE" -> PrimaryButton.view (push <<< OpenChangeLanguageScreen) (primaryButtonConfig state cardInfo.action)
+          Just "SELECT_RIDE" -> case cardInfo.referenceCategoryId of
+            Just categoryId -> PrimaryButton.view (push <<< (OpenSelectRideScreen categoryId cardInfo.referenceOptionId)) (primaryButtonConfig state cardInfo.action)
             _ -> emptyTextView
-        ) stringsWithTypes) 
-      , PrimaryButton.view (push <<< PrimaryButtonRaiseTicketAC) (primaryButtonConfig state) 
+          _ -> case cardInfo.referenceCategoryId of
+                        Just categoryId -> PrimaryButton.view (push <<< (OpenChat categoryId cardInfo.referenceOptionId)) (primaryButtonConfig state cardInfo.action)
+                        _ -> emptyTextView
     ] 
       
 
@@ -171,21 +177,25 @@ dropDownCardHeadingView title =
     , width MATCH_PARENT
     , margin $ MarginVertical 12 4
     ] <> FontStyle.subHeading1 TypoGraphy
-
-dropDownCardBodyView :: String -> forall w . PrestoDOM (Effect Unit ) w
 dropDownCardBodyView description =
   textView $
     [ textFromHtml description
     , color Color.black700
     , width MATCH_PARENT
-    -- , margin $ Margin 16 8 16 16
+    -- , margin $ MarginBottom 4
     ] <> FontStyle.body1 TypoGraphy
 
-dropDownCardImageView :: String -> forall w . PrestoDOM (Effect Unit ) w
-dropDownCardImageView imageUrl =
-  imageView $
-    [ imageWithFallback imageUrl
-    , height $ V 100
-    , width MATCH_PARENT
+
+dropDownCardImageView :: (Action -> Effect Unit) -> DropDownInfo -> String -> Int ->  forall w . PrestoDOM (Effect Unit ) w
+dropDownCardImageView push cardInfo imageUrl' index = 
+  PrestoAnim.animationSet [Anim.fadeIn true]$
+    linearLayout
+    [ height $ V 350
+    , width $ V 160
     , margin $ Margin 16 8 16 16
-    ]
+    , id $ EHC.getNewIDWithTag ("DropDownCardImageView" <> (show index))
+    , onAnimationEnd
+        ( \action -> do 
+            renderBase64Image imageUrl' (EHC.getNewIDWithTag ("DropDownCardImageView" <> (show index))) true "FIT_CENTER"
+        ) (const NoAction)
+    ][]

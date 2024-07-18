@@ -53,7 +53,8 @@ helpAndSupportScreen = do
   if DA.null helpAndSupportScreenState.data.categories then do 
     let language = fetchLanguage $ getLanguageLocale languageKey 
     (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge}) response.categories
+    filteredCategories <- pure $ DA.filter (\(Category catObj) -> catObj.categoryType == "Category") response.categories
+    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType}) filteredCategories
     modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories' } } )
   else pure unit
   modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ReportIssueChatScreenData.HelpAndSupportScreenEntry }})
@@ -195,7 +196,8 @@ goToRideSelectionScreenHandler selectedCategory updatedState = do
     \rideHistoryScreen -> rideHistoryScreen {
       data {
         offsetValue = 0,
-        selectedOptionId = Nothing
+        selectedOptionId = Nothing,
+        entryPoint = Just "HelpAndSupportScreen"
       },
       selectedCategory = selectedCategory
     } 
@@ -237,7 +239,7 @@ goToChatScreenHandler selectedCategory updatedState =  do
 goToSelectFaqScreenHandler :: CategoryListType -> HelpAndSupportScreenState -> FlowBT String FlowState
 goToSelectFaqScreenHandler selectedCategory updatedState = do 
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-  let categoryName' = getTitle selectedCategory.categoryAction
+  let categoryName' = getTitle $ fromMaybe "" selectedCategory.categoryAction
   modifyScreenState $ SelectFaqScreenStateType (
     \updatedState ->  updatedState {
       data {
@@ -274,6 +276,7 @@ goToOldChatScreenHandler selectedIssue updatedState = do
             , categoryId : issueInfoRes.categoryId
             , isRideRequired : false
             , maxAllowedRideAge : Nothing
+            , categoryType: "Category"
         }
         , options = options'
         , issueId = Just selectedIssue.issueReportId

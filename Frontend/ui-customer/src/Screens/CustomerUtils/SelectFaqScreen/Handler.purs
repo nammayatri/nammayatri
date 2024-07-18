@@ -45,6 +45,7 @@ import Engineering.Helpers.Commons (getCurrentUTC)
 import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.SelectFaqScreen.ScreenData
 import Components.IssueView (IssueInfo)
+import Debug (spy)
 
 selectFaqScreen :: FlowBT String FlowState
 selectFaqScreen = do
@@ -53,7 +54,8 @@ selectFaqScreen = do
   if DA.null selectFaqScreenState.data.categories then do 
     let language = fetchLanguage $ getLanguageLocale languageKey 
     (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
+    filteredCategories <- pure $ DA.filter (\(Category catObj) -> catObj.categoryType == "FAQ") response.categories
+    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType}) filteredCategories
     modifyScreenState $ SelectFaqScreenStateType (\selectFaqScreen -> selectFaqScreen { data {categories = categories' } } )
   else pure unit
   (GlobalState updatedGlobalState) <- getState
@@ -77,14 +79,19 @@ goHomeHandler updatedState = do
   modifyScreenState $ SelectFaqScreenStateType (\_ -> updatedState)
   App.BackT $ App.BackPoint <$> (pure HomeScreenFlow)
 
-goToFaqScreenHandler :: CategoryListType -> SelectFaqScreenState -> FlowBT String FlowState -- to see: set all FAQs isExpanded to falsegit 
+goToFaqScreenHandler :: CategoryListType -> SelectFaqScreenState -> FlowBT String FlowState 
 goToFaqScreenHandler selectedCategory updatedState = do
   modifyScreenState $ SelectFaqScreenStateType (\_ -> updatedState)
-  let categoryName' = getTitle selectedCategory.categoryAction
-  modifyScreenState $ SelectFaqScreenStateType (
+  let language = fetchLanguage $ getLanguageLocale languageKey
+  let categoryName' = getTitle $ fromMaybe "" selectedCategory.categoryAction
+  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" "" ""
+  let messages' = DA.mapWithIndex (\index (Message currMessage) -> {title : (fromMaybe "" currMessage.messageTitle), description : currMessage.message, isExpanded : false, id : currMessage.id, action : currMessage.messageAction, referenceCategoryId : currMessage.referenceCategoryId, referenceOptionId : currMessage.referenceOptionId, label : currMessage.label}) getOptionsRes.messages
+  modifyScreenState $ FaqScreenStateType (
     \updatedState ->  updatedState {
       data {
-        categoryName = categoryName'
+        categoryName = categoryName',
+        dropDownList = messages',
+        maxAllowedRideAge = selectedCategory.maxAllowedRideAge
       }
     }
   )
@@ -94,10 +101,10 @@ goToChatScreenHandler :: CategoryListType ->  SelectFaqScreenState -> FlowBT Str
 goToChatScreenHandler selectedCategory updatedState =  do
   modifyScreenState $ SelectFaqScreenStateType (\_ -> updatedState) 
   let language = fetchLanguage $ getLanguageLocale languageKey
-  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
+  (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" "" ""
   let 
     options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (optionObj.option)}) getOptionsRes.options
-    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' (currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
+    messages' = DA.mapWithIndex (\index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1))) getOptionsRes.messages
     chats' = map (
       \(Message currMessage) -> Chat {
         chatId : currMessage.id,
@@ -105,14 +112,13 @@ goToChatScreenHandler selectedCategory updatedState =  do
         timestamp : getCurrentUTC ""
       }
     ) getOptionsRes.messages
-    categoryName = getTitle selectedCategory.categoryAction
+    categoryName = getTitle $ fromMaybe "" selectedCategory.categoryAction
 
   modifyScreenState $ ReportIssueChatScreenStateType (
     \updatedState ->  updatedState {
       data {
         chats = chats'
-      , categoryName = categoryName
-      , categoryId = selectedCategory.categoryId
+      , selectedCategory = selectedCategory
       , options = options'
       , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{
           messages = messages'

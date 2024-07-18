@@ -114,3 +114,5 @@ data FlowState = HelpAndSupportScreenFlow
                | TripDetailsScreenFlow
                | ContactUsScreenFlow
                | MyRidesScreenFlow
+               | GoToFavouritesScreenFlow
+               | ChangeLanguageScreenFlow

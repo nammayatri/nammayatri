@@ -60,7 +60,7 @@ import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Screens.SelectFaqScreen.ScreenData (SelectFaqScreenState)
-import Data.Maybe (Maybe(..), isJust, isNothing)
+import Data.Maybe (Maybe(..), isJust, isNothing, fromMaybe)
 
 screen :: SelectFaqScreenState -> Screen Action SelectFaqScreenState ScreenOutput
 screen initialState =
@@ -68,18 +68,7 @@ screen initialState =
     initialState
   , view
   , name : "SelectFaqScreen"
-  , globalEvents : [
-      ( \push -> do
-        -- void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-          -- if initialState.data.config.feature.enableSelfServe && initialState.props.needIssueListApiCall then do
-          --   let language = EHU.fetchLanguage $ getLanguageLocale languageKey
-          --   (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
-          --   lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
-          -- else pure unit
-          -- when (initialState.data.source == "") $ lift $ lift $  getPastRides RideBookingListAPIResponseAction push initialState
-        pure $ pure unit
-      )
-  ]
+  , globalEvents : []
   , eval : \state  action -> do
       let _ = spy  "SelectFaqScreen action " state
       let _ = spy  "SelectFaqScreen state " action
@@ -98,10 +87,15 @@ view push state =
     , orientation VERTICAL
     , background Color.white900
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-    , onBackPressed push $ const BackPressed state.props.isCallConfirmation
+    , onBackPressed push $ const BackPressed
     , afterRender push (const AfterRender)
     , visibility $ boolToVisibility $ state.data.issueListType == ST.HELP_AND_SUPPORT_SCREEN_MODAL 
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+      , linearLayout
+        [ width MATCH_PARENT
+        , height $ V 1
+        , background Color.grey900
+        ][]
       , scrollView
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -111,7 +105,7 @@ view push state =
             , orientation VERTICAL
             ][
               headingView state $ getString ALL_TOPICS,
-              allTopicsView state push $ topicsList state
+              allTopicsView state push $ state.data.categories
             ]
           ]
       , apiFailureView state push  
@@ -132,13 +126,7 @@ allTopicsView state push topicList =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , padding (Padding 20 0 20 0)
-        , onClick push $ case item.categoryAction of
-                    label | label `DA.elem` ["LOST_AND_FOUND", "RIDE_RELATED", "DRIVER_RELATED", "SOS", "FARE_DISCREPANCY", "PAYMENT_RELATED", "SAFETY"] 
-                                        -> const $ OpenFaqScreen item
-                    label | label `DA.elem` ["APP_RELATED", "ACCOUNT_RELATED", "OTHER"] 
-                                        -> const $ OpenFaqScreen item
-                    _                   -> const $ OpenFaqScreen item
-                  
+        , onClick push $ const $ OpenFaqScreen item
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT
@@ -146,7 +134,7 @@ allTopicsView state push topicList =
             , orientation HORIZONTAL
             , padding $ Padding 0 20 0 20
             ][  imageView
-                [ imageWithFallback item.categoryImageUrl
+                [ imageWithFallback (fromMaybe "" item.categoryImageUrl)
                 , height $ V 17
                 , width $ V 17
                 ]
@@ -173,15 +161,18 @@ allTopicsView state push topicList =
               [ height $ V 1
               , width MATCH_PARENT
               , background Color.greyLight
-              , visibility $ boolToVisibility $ not $ index == (DA.length ([topicList])) - 1
+              , visibility $ boolToVisibility $ not $ index == (DA.length (topicList)) - 1
               ][]
           ]) (topicList))
 
 topicDummyList :: Array CategoryListType -> Array CategoryListType
-topicDummyList topicList = topicList <> [{categoryAction : "FAQ"
+topicDummyList topicList = topicList <> [{categoryAction : Just "FAQ"
                                         , categoryName : "Getting Started and FAQs"
-                                        , categoryImageUrl : fetchImage FF_ASSET "ny_ic_clip_board"
+                                        , categoryImageUrl : Just $ fetchImage FF_ASSET "ny_ic_clip_board"
                                         , categoryId : "9"
+                                        , isRideRequired: false
+                                        , maxAllowedRideAge: Nothing
+                                        , categoryType: "Category"
                                         }]
 
 

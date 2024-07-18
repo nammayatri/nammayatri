@@ -139,13 +139,12 @@ view push state =
                   , recentRideView state push
                 ] 
                   <> [ headingView state $ getString ALL_TOPICS
-                   , allTopicsView state push $ topicsList state] 
+                   , allTopicsView state push $ topicDummyList $ topicsList state] 
                   <> ( if state.data.config.feature.enableSelfServe then [
                           if DA.null state.data.ongoingIssueList && DA.null state.data.resolvedIssueList then textView[height $ V 0, visibility GONE] else headingView state $ getString YOUR_REPORTS
                           , allTopicsView state push $ reportsList state
                       ] else [])
-                <> [ headingView state $ getString ALL_TOPICS
-                   , allTopicsView state push $ topicDummyList $ topicsList state] )
+              )
 
             ]
       , apiFailureView state push  
@@ -308,10 +307,13 @@ driverRatingView state =
 --                  ]
 
 topicDummyList :: Array CategoryListType -> Array CategoryListType
-topicDummyList topicList = topicList <> [{categoryAction : "FAQ"
+topicDummyList topicList = topicList <> [{categoryAction : Just "FAQ"
                                         , categoryName : "Getting Started and FAQs"
-                                        , categoryImageUrl : fetchImage FF_ASSET "ny_ic_clip_board"
+                                        , categoryImageUrl : Just $ fetchImage FF_ASSET "ny_ic_clip_board"
                                         , categoryId : "9"
+                                        , isRideRequired: false
+                                        , maxAllowedRideAge: Nothing
+                                        , categoryType: "Category"
                                         }]
 ------------------------------- allTopics --------------------------
 allTopicsView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> forall w . PrestoDOM (Effect Unit) w

@@ -71,6 +71,8 @@ reportIssueChatScreen = do
 
     GoToHomeScreen updatedState -> goToHomeScreenHandler updatedState
 
+    GoToFaqScreen updatedState -> goToFaqScreenHandler updatedState
+
 selectIssueOptionHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 selectIssueOptionHandler updatedState = do 
 
@@ -191,7 +193,7 @@ uploadIssueHandler updatedState = do
 
   postIssueResp <- Remote.postIssueBT language postIssueReqBody
   case postIssueResp of
-    Left errorPayload -> void $ pure $ toast $ Remote.getCorrespondingErrorMessage $ spy "VaibhavD : Error Payload " errorPayload
+    Left errorPayload -> void $ pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
     Right (PostIssueRes postIssueRes) -> do
       void $ pure $ toast $ getString YOUR_ISSUE_HAS_BEEN_REPORTED
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language postIssueRes.issueReportId
@@ -325,7 +327,8 @@ goToRideSelectionScreenHandler updatedState = do
     \rideHistoryScreen -> rideHistoryScreen {
       data {
         offsetValue = 0,
-        selectedOptionId = (_.issueOptionId) <$> updatedState.data.selectedOption
+        selectedOptionId = (_.issueOptionId) <$> updatedState.data.selectedOption,
+        entryPoint = Just "HelpAndSupportScreen"
       },
       selectedCategory = updatedState.data.selectedCategory
     } 
@@ -351,3 +354,9 @@ goToHomeScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 goToHomeScreenHandler updatedState = do
   modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
   App.BackT $ App.NoBack <$> (pure $ HomeScreenFlow)
+
+goToFaqScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+goToFaqScreenHandler updatedState = do
+  let _ = spy "hello world: " updatedState
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
+  App.BackT $ App.NoBack <$> (pure $ FaqScreenFlow)

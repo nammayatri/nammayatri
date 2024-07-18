@@ -58,7 +58,7 @@ initData = {
     merchantExoPhone : ""
   },
   props:{
-    apiFailure : false
+    apiFailure : true
   , isCallConfirmation : false
   , showDeleteAccountView : false
   , btnActive : false
