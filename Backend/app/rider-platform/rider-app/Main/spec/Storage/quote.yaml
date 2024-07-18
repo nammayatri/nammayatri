@@ -72,6 +72,7 @@ Quote:
     tripTerms : Maybe TripTerms
     quoteDetails : QuoteDetails
     merchantId : Id Merchant
+    vehicleModel : Maybe Text
     vehicleServiceTierType : VehicleServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
