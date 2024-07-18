@@ -390,7 +390,11 @@ initData = let
         , prefixImage : dummyImageConfig  -- confused ki konsa rakhna h?
         , stroke : ""
         , imageSeparator : separatorConfig 
-        , clearTextIcon : dummyImageConfig   
+        , clearTextIcon : dummyImageConfig{ imageName = config.searchLocationConfig.clearTextImage
+          , height = V 19
+          , width = V 19
+          , padding = PaddingVertical 10 2 
+          }     
         , fontStyle : []
         , placeAddress : dummyAddress
         , place : ""
@@ -444,7 +448,11 @@ initData = let
         , prefixImage : dummyImageConfig 
         , stroke : ""
         , imageSeparator : separatorConfig 
-        , clearTextIcon : dummyImageConfig    
+        , clearTextIcon : dummyImageConfig{ imageName = config.searchLocationConfig.clearTextImage
+          , height = V 19
+          , width = V 19
+          , padding = PaddingVertical 10 2 
+          }  
         , fontStyle : []
         , inputTextViewContainerMargin : Margin 0 0 0 0
         , placeAddress : dummyAddress

@@ -21,7 +21,7 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor, layoutGravity, relativeLayout, frameLayout, alignParentBottom)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor, layoutGravity, relativeLayout, frameLayout, alignParentBottom, root)
 import Data.Array (mapWithIndex, length, head)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
@@ -33,6 +33,8 @@ import Resources.Constants (getDelayForAutoComplete)
 import Helpers.CommonView (emptyTextView)
 import Debug (spy)
 import Data.Maybe
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 view :: forall w. (Action -> Effect Unit) -> InputViewConfig -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -132,7 +134,7 @@ inputLayoutViews push config =
             if item.isEditable then 
               inputTextField push item config index
               else 
-                nonEditableTextView push item config index
+                 nonEditableTextView push item config index
             -- relativeLayout
             --   [ height WRAP_CONTENT
             --   , width MATCH_PARENT
@@ -157,17 +159,18 @@ inputImageView2 push config =
     marginVertical = case head config.inputView of 
                   Nothing -> 17
                   Just item -> getVerticalMargins item.inputTextConfig.margin
-    offset = textHeight / 2
-    marginTop = marginVertical + offset
-    maxHeight = spy "maxHeight" $ (((spy "textHeight" textHeight) + (spy "marginVertical" marginVertical)) * (spy "len" len)) 
-    bottomPadding = (offset + marginVertical)
+    offset = (textHeight / 2) + 6
+    marginTop = 15 + offset
+    bottomPadding = offset
+    actualHeight = textHeight + 15
+    maxHeight = spy "maxHeight" $ (actualHeight * len) - ((actualHeight - 48) *(len - 1) )- bottomPadding - marginTop
   in
     linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , margin $ MarginVertical (marginTop) bottomPadding
+      , margin $ MarginVertical (marginTop) 0
       , orientation VERTICAL
-      ][(SeparatorView.view (separatorConfig { count = 10 * len, layoutHeight = V $ maxHeight - bottomPadding - marginTop}))]  -- initially 10 * len
+      ][(SeparatorView.view (separatorConfig { count = 10 * len, layoutHeight = V $ maxHeight }))]  -- initially 10 * len
 
 dateTimePickerButton :: forall w. InputViewConfig -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 dateTimePickerButton config push =
@@ -264,16 +267,21 @@ inputTextField push config config' index =
       height WRAP_CONTENT
     , weight 1.0
     , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
   ]
   [
-    prefixDotImageView push config (length config'.inputView)
-  , 
   frameLayout[
       height WRAP_CONTENT
-    ,
-     width MATCH_PARENT 
+    , width MATCH_PARENT 
     ][
   linearLayout 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ MarginTop 15
+    -- , margin config.inputTextConfig.margin 
+    -- , margin $ MarginTop 12
+    ][ prefixDotImageView push config (length config'.inputView)
+  , linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -284,10 +292,9 @@ inputTextField push config config' index =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , background Color.squidInkBlue
-      , margin $ MarginTop 15
       , cornerRadius $ config.inputTextConfig.cornerRadius 
       -- , orientation VERTICAL
-      ][  editText $ 
+      ][ editText $ 
           [ height $ config.height 
           , weight 1.0
           , background Color.squidInkBlue
@@ -298,14 +305,14 @@ inputTextField push config config' index =
           , color config.inputTextConfig.textColor
           , gravity LEFT
           , cornerRadius $ config.inputTextConfig.cornerRadius 
-          -- , text config.inputTextConfig.textValue
           , selectAllOnFocus true
           , singleLine true
           , hint config.inputTextConfig.hint
           , hintColor $ Color.blueGrey
           , pattern "[^\n]*,255"
+          , text config.place
           -- , margin $ MarginLeft 5  
-          , id $ (spy ("edit text id "<> show index) (getNewIDWithTag $ config.inputTextConfig.id )) 
+          -- , id $ (spy ("edit text id "<> show index) (getNewIDWithTag $ config.inputTextConfig.id )) 
           , onChange (\action -> do 
               case action of 
                 InputChanged _ text -> if text /= "false" && text /= config.inputTextConfig.textValue then do 
@@ -338,7 +345,7 @@ inputTextField push config config' index =
         -- , crossButtonView push config
       ]
     , bottomStrokeView $ boolToVisibility config.inputTextConfig.isFocussed
-      ],
+      ]],
       linearLayout[
         height WRAP_CONTENT
       , width MATCH_PARENT
@@ -458,7 +465,7 @@ prefixDotImageView push config len =
     , orientation VERTICAL
     , gravity CENTER_VERTICAL
     , layoutGravity "center_vertical"
-    , margin  $ MarginTop 10
+    -- , margin  $ MarginTop 10
     ][
       imageView
         [ height $ V 12
