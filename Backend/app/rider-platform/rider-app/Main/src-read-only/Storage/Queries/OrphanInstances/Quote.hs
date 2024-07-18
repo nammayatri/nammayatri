@@ -62,6 +62,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             tripTerms = tripTerms',
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
             validTill = validTill,
+            vehicleModel = vehicleModel,
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
@@ -109,6 +110,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,
         Beam.validTill = validTill,
+        Beam.vehicleModel = vehicleModel,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType

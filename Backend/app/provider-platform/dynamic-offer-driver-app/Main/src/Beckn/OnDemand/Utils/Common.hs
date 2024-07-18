@@ -462,6 +462,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
                                 imageWidth = Nothing
                               },
                         personName = mbDInfo >>= Just . (.name),
+                        personGender = Nothing,
                         personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }
               },
@@ -521,6 +522,7 @@ tfCustomer riderPhone riderName =
               { personId = Nothing,
                 personImage = Nothing,
                 personName = riderName,
+                personGender = Nothing,
                 personTags = Nothing
               }
       }
@@ -1425,6 +1427,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                                 imageWidth = Nothing
                               },
                         personName = mbDInfo >>= Just . (.name),
+                        personGender = Nothing,
                         personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }
               },

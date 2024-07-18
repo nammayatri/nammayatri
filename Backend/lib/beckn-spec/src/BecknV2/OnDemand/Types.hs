@@ -1465,6 +1465,8 @@ data Person = Person
     personImage :: Maybe Image,
     -- | the name of the person
     personName :: Maybe Text,
+    -- | the gender of the person
+    personGender :: Maybe Text,
     -- |
     personTags :: Maybe [TagGroup]
   }

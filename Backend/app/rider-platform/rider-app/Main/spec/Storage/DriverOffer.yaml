@@ -4,6 +4,7 @@ imports:
   Centesimal: Kernel.Types.Common
   Estimate: Domain.Types.Estimate
   Distance: Kernel.Types.Common
+  Gender: Domain.Types.Person
 
 DriverOffer:
   tableName: driver_offer
@@ -26,6 +27,7 @@ DriverOffer:
     bppQuoteId : Text
     rating : Maybe Centesimal
     status : DriverOfferStatus
+    gender: Maybe Gender
     createdAt: UTCTime
     updatedAt : UTCTime
 
