@@ -367,5 +367,5 @@ quickReplyItem push state item idx =
   ][ textView $
       [ text $ message
       , color Color.black900
-      ] <> FontStyle.tags TypoGraphy
+      ] <> FontStyle.captions TypoGraphy
   ]

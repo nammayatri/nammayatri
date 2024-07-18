@@ -450,6 +450,7 @@ referralInfoPop push state =
     , height MATCH_PARENT
     , gravity CENTER
     , background Color.blackLessTrans
+    , onClick push $ const $ ShowReferedInfo NO_REFERRAL_POPUP
     ]
     [ linearLayout
         [ width MATCH_PARENT
