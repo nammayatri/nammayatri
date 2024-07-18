@@ -1482,3 +1482,9 @@ getBN stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "আপনি আপনার অ্যাকাউন্ট মুছে ফেলতে চান আপনি আপনি কি নিশ্চিত? আপনার সমস্ত ব্যক্তিগত ডেটা হারিয়ে যাবে"
         REQUEST_SUBMITTED -> "অনুরোধ জমা দেওয়া হয়েছে"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "আপনি আমাদের প্ল্যাটফর্ম ছেড়ে চলে যেতে দেখে আমরা দুঃখিত। আপনার অ্যাকাউন্ট পরবর্তী 30 দিনের মধ্যে মুছে ফেলা হবে। এদিকে আপনি যদি আপনার অ্যাকাউন্টটি ধরে রাখতে চান তবে অনুগ্রহ করে আমাদের গ্রাহক সহায়তা নম্বরে কল করুন"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge

@@ -1479,3 +1479,10 @@ getEN stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "Are you sure you want to delete your account? All your personal data will be lost"
         REQUEST_SUBMITTED -> "Request Submitted"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "We are sorry to see you leave our platform. Your account will be deleted within the next 30 days. Meanwhile if you wish to retain your account, please call to our customer support number"
+        INVALID_SSN -> "Given SSN is invalid."
+        SSN_ALREADY_TAKEN -> "SSN is already used by some other driver."
+        INVALID_ZIPCODE -> "Invalid Zip Code"
+        INVALID_EMAIL -> "Invalid email address."
+        INVALID_AGE -> "Number fiven for age is invalid."
+        REPORT_LIMIT_REACHED -> "Report Limit Exceeded."
+

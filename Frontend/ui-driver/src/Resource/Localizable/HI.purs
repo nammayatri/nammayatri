@@ -1480,3 +1480,9 @@ getHI stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "क्या आप इस खाते को हटाने के लिए सुनिश्चित हैं? आपके सभी व्यक्तिगत डेटा खो जाएंगे"
         REQUEST_SUBMITTED -> "अनुरोध सबमिट किया गया"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "हमें यह देखकर खेद है कि आपने हमारे मंच को छोड़ दिया। आपका खाता अगले 30 दिनों के भीतर हटा दिया जाएगा। इस बीच यदि आप अपना खाता बनाए रखना चाहते हैं, तो कृपया हमारे ग्राहक सहायता नंबर पर कॉल करें"
+        INVALID_SSN -> "" -- Leaving blank as these are exclusive for Bridge
+        SSN_ALREADY_TAKEN -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_ZIPCODE -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_EMAIL -> "" -- Leaving blank as these are exclusive for Bridge
+        INVALID_AGE -> "" -- Leaving blank as these are exclusive for Bridge
+        REPORT_LIMIT_REACHED -> "" -- Leaving blank as these are exclusive for Bridge
