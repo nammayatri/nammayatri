@@ -40,7 +40,7 @@ buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
   -- TODO :: Add request city, after multiple city support on gateway.
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- bapConfig.ratingTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- ContextV2.buildContextV2 Context.RATING Context.MOBILITY msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.defaultCity merchant.country (Just ttl)
+  context <- ContextV2.buildContextV2 Context.RATING Context.MOBILITY msgId (Just transactionId) merchant.bapId bapUrl (Just bppSubscriberId) (Just providerUrl) merchant.defaultCity merchant.country (Just ttl)
   let message = tfMessage res
   pure $
     Spec.RatingReq

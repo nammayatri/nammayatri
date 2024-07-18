@@ -87,7 +87,7 @@ data CancelRes = CancelRes
 data CancelSearch = CancelSearch
   { estimateId :: Id DEstimate.Estimate,
     providerUrl :: BaseUrl,
-    providerId :: Text,
+    bppSubscriberId :: Text,
     estimateStatus :: DEstimate.EstimateStatus,
     searchReqId :: Id SearchRequest,
     sendToBpp :: Bool,
@@ -236,7 +236,7 @@ mkDomainCancelSearch personId estimateId = do
         CancelSearch
           { estimateId = estId,
             providerUrl = estimate.providerUrl,
-            providerId = estimate.providerId,
+            bppSubscriberId = fromMaybe estimate.providerId estimate.bppSubscriberId,
             searchReqId = searchRequestId,
             estimateStatus = estStatus,
             sendToBpp = isEstimateNotNew && isValueAddNP,

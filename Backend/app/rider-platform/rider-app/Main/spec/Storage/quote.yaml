@@ -67,6 +67,7 @@ Quote:
     estimatedPickupDuration : Maybe Seconds
     distanceUnit : DistanceUnit
     providerId : Text
+    bppSubscriberId : Maybe Text
     providerUrl : BaseUrl
     itemId : Text
     tripTerms : Maybe TripTerms

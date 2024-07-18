@@ -45,7 +45,7 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
     messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
 
     whenJust mbDOnSearchReq $ \request -> do
-      let bppSubId = request.providerInfo.providerId
+      let bppSubId = request.providerInfo.bppSubscriberId
       Redis.whenWithLockRedis (onSearchLockKey messageId bppSubId) 60 $ do
         validatedRequest <- DOnSearch.validateRequest request
         fork "on search received pushing ondc logs" do

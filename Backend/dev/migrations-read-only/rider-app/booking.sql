@@ -105,3 +105,8 @@ ALTER TABLE atlas_app.booking DROP COLUMN estimate_id;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN is_booking_updated boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN bpp_subscriber_id text ;

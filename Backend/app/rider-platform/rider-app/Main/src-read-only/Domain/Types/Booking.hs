@@ -30,6 +30,7 @@ data Booking = Booking
     bookingDetails :: Domain.Types.Booking.BookingDetails,
     bppBookingId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Booking.BPPBooking),
     bppEstimateId :: Kernel.Prelude.Text,
+    bppSubscriberId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,

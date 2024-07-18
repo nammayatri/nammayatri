@@ -88,6 +88,7 @@ data ValidatedOnSearchReq = ValidatedOnSearchReq
 
 data ProviderInfo = ProviderInfo
   { providerId :: Text,
+    bppSubscriberId :: Text,
     name :: Text,
     url :: BaseUrl,
     mobileNumber :: Text,
@@ -317,6 +318,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,
         providerId = providerInfo.providerId,
+        bppSubscriberId = Just providerInfo.bppSubscriberId,
         providerUrl = providerInfo.url,
         estimatedDistance = searchRequest.distance,
         serviceTierName = serviceTierName,
@@ -382,6 +384,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
     DQuote.Quote
       { id = uid,
         providerId = providerInfo.providerId,
+        bppSubscriberId = Just providerInfo.bppSubscriberId,
         providerUrl = providerInfo.url,
         createdAt = now,
         updatedAt = now,
