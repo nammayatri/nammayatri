@@ -166,7 +166,7 @@ getAddressFromBooking (BookingLocationAPIEntity address) =
   , "street": address.street
   , "city": address.city
   , "areaCode": address.areaCode
-  , "ward": getWard address.ward address.area address.street address.building
+  , "ward": address.ward --getWard address.ward address.area address.street address.building
   , "placeId": address.placeId
   }
 
