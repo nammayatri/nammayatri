@@ -47,11 +47,11 @@ linkReferee ::
   Text ->
   Text ->
   Text ->
-  Bool ->
+  Maybe Bool ->
   m APISuccess
 linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode isMultipleDeviceIdExist = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode (Just isMultipleDeviceIdExist))) "LinkReferee" likeRefereeApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode isMultipleDeviceIdExist)) "LinkReferee" likeRefereeApi
 
 type FeedbackFormAPI =
   "internal"

@@ -798,6 +798,8 @@ TransporterConfig:
     minRideDistanceThresholdForReferralPayout: HighPrecMeters
     minPickupDistanceThresholdForReferralPayout: Meters
     maxPayoutReferralForADay: Int
+    schedulePayoutForDay : Maybe Integer
+    isDeviceIdChecksRequired: Maybe Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit

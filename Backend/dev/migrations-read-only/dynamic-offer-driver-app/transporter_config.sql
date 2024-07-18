@@ -206,3 +206,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_ride_dist
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_payout_referral_for_a_day integer NOT NULL default 5;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN schedule_payout_for_day integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_device_id_checks_required boolean ;
