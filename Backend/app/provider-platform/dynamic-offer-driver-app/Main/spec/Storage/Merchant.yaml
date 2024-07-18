@@ -1103,7 +1103,7 @@ TransporterConfig:
     updatePayoutStatusBatchSize: "20"
     lastNdaysToCheckForPayoutOrderStatus: "2"
     minRideDistanceThresholdForReferralPayout: "1500.0"
-    minPickupDistanceThresholdForReferralPayout: "500"
+    minPickupDistanceThresholdForReferralPayout: "10"
     maxPayoutReferralForADay: "5"
 
   excludedDefaultQueries:

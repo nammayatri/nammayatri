@@ -117,6 +117,8 @@ Person:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
     email:
       emailEncrypted: Maybe Text
       emailHash: Maybe DbHash
@@ -134,6 +136,8 @@ Person:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
 
 
   fromTType:
@@ -148,7 +152,7 @@ Person:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
 
 
   toTType:
@@ -166,6 +170,8 @@ Person:
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
     clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
     clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
 
   constraints:
     id: PrimaryKey

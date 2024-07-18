@@ -241,6 +241,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
   mbEncEmail <- encrypt `mapM` req.email
   refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
   deploymentVersion <- asks (.version)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   void $
     QPerson.updatePersonalInfo
       personId
@@ -260,6 +261,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       deploymentVersion.getDeploymentVersion
       req.enableOtpLessRide
       req.deviceId
+      person
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess
