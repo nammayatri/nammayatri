@@ -40,7 +40,6 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
-import Constants (defaultDensity)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -108,6 +107,7 @@ import Data.Function.Uncurried (runFn3)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
+import Common.Resources.Constants(chatService)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -234,7 +234,9 @@ screen initialState (GlobalState globalState) =
                                                         
                                 when (initialState.data.activeRide.tripType /= ST.Rental && isNothing advancedRideId) $ void $ push RemoveChat
                                 let rideId = fromMaybe "" (advancedRideId <|> Just initialState.data.activeRide.id)
-                                when ((initialState.data.activeRide.tripType == ST.Rental || isJust advancedRideId) && not initialState.props.chatcallbackInitiated) $ do
+                                let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
+                                let _ = spy "Inside isChatServiceRunning ---------------------------------->" isChatServiceRunning
+                                when ((initialState.data.activeRide.tripType == ST.Rental || isJust advancedRideId) && not isChatServiceRunning) $ do
                                   _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkAndStartChatService push 2 rideId initialState
                                   pure unit
                                 
@@ -284,7 +286,7 @@ screen initialState (GlobalState globalState) =
 checkAndStartChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> HomeScreenState -> Flow GlobalState Unit
 checkAndStartChatService push retry rideId state = 
   when (retry > 0) $ do 
-    let isChatServiceRunning = runFn1 JB.isServiceRunning "in.juspay.mobility.app.ChatService"
+    let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
     let _ = spy "IschatServcie " isChatServiceRunning
     if isChatServiceRunning then do
       delay $ Milliseconds 2000.0
