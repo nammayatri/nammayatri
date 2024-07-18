@@ -114,7 +114,7 @@ instructionItem push item =
     , gravity CENTER_HORIZONTAL
     , orientation VERTICAL
     , margin $ Margin 16 20 16 0
-    , background Color.blue650
+    , background Color.blue600
     , stroke $ "1," <> Color.grey900
     , cornerRadius 8.0
     ][  
@@ -172,7 +172,7 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = getString VIEW_ON_GOOGLE_MAPS
+      { text = getString DONE
       , color = Color.primaryButtonColor
       }
       , background = Color.black900
