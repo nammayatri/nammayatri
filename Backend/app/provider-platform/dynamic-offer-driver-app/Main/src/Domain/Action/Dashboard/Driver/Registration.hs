@@ -552,7 +552,9 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
         Domain.ProfilePhoto -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         Domain.UploadProfile -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         Domain.VehicleInspectionForm -> QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
-        Domain.VehicleFitnessCertificate -> QFC.updateVerificationStatus INVALID imageId --At this point the vehicle fitness cert doesn not even exist in this table
+        Domain.VehicleFitnessCertificate -> do
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          QFC.updateVerificationStatus INVALID imageId
         Domain.VehicleInsurance -> do
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
           vInsurance <- QVI.findByImageId imageId
@@ -564,6 +566,12 @@ handleRejectRequest rejectReq _ merchantOperatingCityId = do
         Domain.VehicleRegistrationCertificate -> do
           QRC.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+        Domain.VehiclePermit -> do
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          QVPermit.updateVerificationStatusByImageId INVALID imageId
+        Domain.VehiclePUC -> do
+          QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
+          QVPUC.updateVerificationStatusByImageId INVALID imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")
       driver <- QDriver.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
       Notify.notifyDriver merchantOperatingCityId notificationType (notificationTitle (show image.imageType)) (message (show image.imageType)) driver driver.deviceToken
