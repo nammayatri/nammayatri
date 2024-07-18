@@ -577,7 +577,10 @@ eval (RideCompletedAC RideCompletedCard.Support) state = continue state {props {
 
 eval (RideCompletedAC RideCompletedCard.RideDetails) state = exit $ RideDetailsScreen state 
 
-eval (RideCompletedAC RideCompletedCard.HelpAndSupportAC) state = exit $ GoToHelpAndSupport state
+eval (RideCompletedAC RideCompletedCard.HelpAndSupportAC) state = do
+  if state.data.config.feature.enableHelpAndSupport 
+    then exit $ GoToHelpAndSupport state
+    else continue state {props {isContactSupportPopUp = true}}
 
 eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
 

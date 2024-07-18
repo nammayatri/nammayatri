@@ -575,7 +575,6 @@ view push state =
             , if (state.props.currentStage == EditingDestinationLoc || state.props.currentStage == ConfirmEditDestinationLoc || state.props.currentStage == ConfirmingEditDestinationLoc || state.props.currentStage == RevisedEstimate) then searchLocationView push state else emptyTextView state
             , if (state.props.isCancelRide) then (cancelRidePopUpView push state) else emptyTextView state
             , if (state.props.showConfirmEditDestPopUp) then confirmEditDestPopUp push state else emptyTextView state
-            , if (state.props.isContactSupportPopUp) then contactSupportPopUpView push state else emptyTextView state
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
@@ -588,6 +587,7 @@ view push state =
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
             , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then rideCompletedCardView push state else emptyTextView state
+            , if state.props.isContactSupportPopUp then contactSupportPopUpView push state else emptyTextView state
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
