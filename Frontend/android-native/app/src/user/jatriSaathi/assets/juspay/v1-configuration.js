@@ -352,7 +352,8 @@ window.getMerchantConfig = function () {
       "enableAdditionalServices" : true,
       "enableSafetyFlow" : false,
       "enableCustomerSupportForSafety" : true, 
-      "enableHelpAndSupport" : false
+      "enableHelpAndSupport" : false,
+      "enableEditDestination" : true
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,
