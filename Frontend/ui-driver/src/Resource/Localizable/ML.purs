@@ -1473,4 +1473,5 @@ getML stringKey =
         BIKE_TAXI -> "ബൈക്ക് ടാക്സി"
         FIRST_RIDE_FREE count -> "ആദ്യം " <> count <> " റൈഡ് സൗജന്യം"
         FIRST_RIDES_FREE count -> "ആദ്യം " <> count <> " റൈഡുകൾ സൗജന്യം"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "ഡ്രൈവർ പിക്കപ്പ് സ്ഥലത്തിന് സമീപം ആയിരിക്കുമ്പോൾ അധിക നിരക്കുകൾ ബാധകമായേക്കാം."
 

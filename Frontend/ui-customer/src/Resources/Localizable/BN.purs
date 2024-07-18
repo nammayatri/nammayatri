@@ -1317,3 +1317,4 @@ getBN stringKey =
         METRO_FREE_TICKET_EVENT_DESC freeTicketInterval maxFreeTicketCashback -> "প্রতিটি " <> freeTicketInterval <> " টিকেটে একটি বিনামূল্যে টিকেট পান (সর্বোচ্চ ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)"
         NEXT_FREE_TICKET -> "পরবর্তী টিকেট বিনামূল্যে"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "আনলক ক্যাশব্যাক (সর্বোচ্চ ₹" <> maxCashback <> ") এ " <> freeTicketCount <> " টিকেট!"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "চালক যখন পিকআপ অবস্থানের কাছাকাছি থাকে তখন অতিরিক্ত চার্জ প্রযোজ্য হতে পারে।"

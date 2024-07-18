@@ -1473,4 +1473,4 @@ getEN stringKey =
         BIKE_TAXI -> "Bike Taxi"
         FIRST_RIDE_FREE count -> "First " <> count <> " ride free"
         FIRST_RIDES_FREE count -> "First " <> count <> " rides free"
-
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "Additional charges may be applicable when driver is near pickup location."        
