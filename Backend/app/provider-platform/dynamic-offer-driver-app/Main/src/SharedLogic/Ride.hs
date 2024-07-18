@@ -100,7 +100,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
     when (not booking.isScheduled) $ QDI.updateOnRide True (cast driver.id)
     when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
-  void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
