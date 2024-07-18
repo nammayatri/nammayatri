@@ -429,6 +429,10 @@ VehiclePermit:
       kvFunction: findAllWithKV
       where:
         and: [rcId, driverId]
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
+      where: documentImageId
     findByImageId:
       kvFunction: findOneWithKV
       where: documentImageId
@@ -519,6 +523,10 @@ VehiclePUC:
         and: [rcId, driverId]
     findByImageId:
       kvFunction: findOneWithKV
+      where: documentImageId
+    updateVerificationStatusByImageId:
+      kvFunction: updateOneWithKV
+      params: [verificationStatus]
       where: documentImageId
 
   beamFields:
