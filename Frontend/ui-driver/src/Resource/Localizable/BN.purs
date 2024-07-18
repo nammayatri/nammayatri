@@ -1474,4 +1474,5 @@ getBN stringKey =
         BIKE_TAXI -> "বাইক ট্যাক্সি"
         FIRST_RIDE_FREE count -> "প্রথম " <> count <> " রাইড ফ্রি"
         FIRST_RIDES_FREE count -> "প্রথম " <> count <> " রাইড ফ্রি"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "চালক যখন পিকআপ অবস্থানের কাছাকাছি থাকে তখন অতিরিক্ত চার্জ প্রযোজ্য হতে পারে।"
 

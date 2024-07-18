@@ -43,6 +43,8 @@ export const countDownImpl = function (countDownTime, id, interval, cb, action) 
   handler(id);
 }
 
+export const clearTimerWithIdEffect = clearTimerWithId;
+
 export const clearTimerWithId = function (id) {
   if (window.__OS == "IOS") {
     if (JBridge.clearTimerWithId) {

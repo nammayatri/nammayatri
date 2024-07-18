@@ -41,7 +41,5 @@ instance loggableAction :: Loggable Action where
 eval :: Action -> ST.PickupInstructionsScreenState -> Eval Action ScreenOutput ST.PickupInstructionsScreenState
 eval NextClick state = exit $ NextScreen state
 eval BackClick state = exit $ Back state
-eval (PrimaryButtonAC PrimaryButton.OnClick) state = do
-    void $ pure $ JB.openNavigation state.data.pickupLat state.data.pickupLong $ show ST.WALK
-    continue state 
+eval (PrimaryButtonAC PrimaryButton.OnClick) state = exit $ Back state
 eval _ state = update state

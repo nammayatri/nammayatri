@@ -1473,4 +1473,5 @@ getTA stringKey =
         BIKE_TAXI -> "பைக் டாக்ஸி"
         FIRST_RIDE_FREE count -> "முதலாவது " <> count <> " சவாரி இலவசம்"
         FIRST_RIDES_FREE count -> "முதலாவது " <> count <> " சவாரிகள் இலவசம்"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "பிக்கப் இடத்திற்கு அருகில் டிரைவர் இருக்கும்போது கூடுதல் கட்டணங்கள் விதிக்கப்படலாம்."
 

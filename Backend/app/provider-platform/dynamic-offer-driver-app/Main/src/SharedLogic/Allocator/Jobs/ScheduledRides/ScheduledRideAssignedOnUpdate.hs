@@ -32,6 +32,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.CallBAP
 import SharedLogic.DriverPool as SDP
+import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -101,6 +102,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
             (Just driver, Just vehicle, Just booking) -> do
               void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True Nothing Nothing driverId
               void $ QRide.updateStatus ride.id DRide.NEW
+              void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
               void $ sendRideAssignedUpdateToBAP booking ride driver vehicle -- TODO: handle error
               return Complete
             (_, _, _) -> do

@@ -215,7 +215,7 @@ screen initialState =
                     then startTimer initialState.props.shimmerViewTimer "shimmerTimer" "1" push ShimmerTimer
                     else pure unit
             else pure unit
-          pure $ void $ pure $ clearTimerWithId "shimmerTimer")
+          pure $ runEffectFn1 clearTimerWithIdEffect "shimmerTimer")
       , ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "." 
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated

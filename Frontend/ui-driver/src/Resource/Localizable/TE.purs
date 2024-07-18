@@ -1475,4 +1475,5 @@ getTE stringKey =
         BIKE_TAXI -> "బైక్ టాక్సీ"
         FIRST_RIDE_FREE count -> "మొదటి " <> count <> " రైడు ఉచితం"
         FIRST_RIDES_FREE count -> "మొదటి " <> count <> " రైడ్లు ఉచితం"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "డ్రైవర్ పికప్ స్థానానికి సమీపంలో ఉన్నప్పుడు అదనపు ఛార్జీలు వర్తించవచ్చు."
 

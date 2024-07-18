@@ -1319,3 +1319,4 @@ getML stringKey =
         METRO_FREE_TICKET_EVENT_DESC freeTicketInterval maxFreeTicketCashback -> "ഓരോ " <> freeTicketInterval <> " ടിക്കറ്റിനുള്ള ഒരു സൗജന്യ ടിക്കറ്റ് (അതിലുള്ള പരമാവധി ₹" <> maxFreeTicketCashback <> ") (ONDC Offer)"
         NEXT_FREE_TICKET -> "അടുത്ത ടിക്കറ്റ് സൗജന്യമാണ്"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "സൗജന്യ ടിക്കറ്റ് (അതിലുള്ള പരമാവധി " <> maxCashback <> ") ലഭ്യമാണ് " <> freeTicketCount <> " ടിക്കറ്റുകൾ!"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "ഡ്രൈവർ പിക്കപ്പ് സ്ഥലത്തിന് സമീപം ആയിരിക്കുമ്പോൾ അധിക നിരക്കുകൾ ബാധകമായേക്കാം."

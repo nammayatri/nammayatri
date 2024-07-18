@@ -85,8 +85,8 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
     case categoriesWithTranslations of
       [] -> do
         defaultMerchantOpCityId <-
-          issueHandle.findMOCityByMerchantShortIdAndCity (ShortId "NAMMA_YATRI") Context.Bangalore
-            >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> "NAMMA_YATRI" <> "-city-" <> show Context.Bangalore) <&> (.id)
+          issueHandle.findMOCityByMerchantShortIdAndCity shortId Context.Bangalore
+            >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> shortId.getShortId <> "-city-" <> show Context.Bangalore) <&> (.id)
         CQIC.findAllActiveByMerchantOpCityIdAndLanguage defaultMerchantOpCityId language identifier
       _ -> return categoriesWithTranslations
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
@@ -102,6 +102,10 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
           isRideRequired = issueCategory.isRideRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge
         }
+
+    shortId = case identifier of
+      DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
+      CUSTOMER -> ShortId "NAMMA_YATRI"
 
 getIssueOption ::
   ( BeamFlow m r,

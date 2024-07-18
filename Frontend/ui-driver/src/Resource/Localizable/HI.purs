@@ -1473,4 +1473,5 @@ getHI stringKey =
         BIKE_TAXI -> "बाइक टैक्सी"
         FIRST_RIDE_FREE count -> "पहली " <> count <> " राइड फ्री"
         FIRST_RIDES_FREE count -> "पहले " <> count <> " राइड्स फ्री"
+        ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "अतिरिक्त शुल्क तब लागू हो सकता है जब ड्राइवर पिकअप स्थान के पास हो।"
 
