@@ -19,3 +19,6 @@ policeNumber = "112"
 
 assetDomain :: String
 assetDomain = "assets.moving.tech"
+
+chatService :: String 
+chatService = "in.juspay.mobility.app.ChatService"
