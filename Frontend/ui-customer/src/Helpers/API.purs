@@ -63,7 +63,7 @@ callApiBTWithOptions :: forall a b e.
   ApiErrorHandler e GlobalState =>
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b => 
+  RestEndpoint a => 
   a ->
   Array Header ->
   e ->
@@ -76,7 +76,7 @@ callApiBTWithOptions payload headers errorHandler = do
 callApiWithOptions :: forall a b.
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b => 
+  RestEndpoint a => 
   a ->
   Array Header ->
   Flow GlobalState (Either ErrorResponse b)
@@ -88,7 +88,7 @@ callApiWithOptions payload headers = do
 callApi :: forall a b.
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b => 
+  RestEndpoint a => 
   a ->
   Flow GlobalState (Either ErrorResponse b)
 callApi payload =
@@ -97,7 +97,7 @@ callApi payload =
 callGzipApiWithOptions :: forall a b.
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b =>
+  RestEndpoint a =>
   a ->
   Array Header ->
   Flow GlobalState (Either ErrorResponse b)
@@ -109,7 +109,7 @@ callGzipApiWithOptions payload headers = do
 callGzipApi :: forall a b.
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b =>
+  RestEndpoint a =>
   a ->
   Flow GlobalState (Either ErrorResponse b)
 callGzipApi payload =
@@ -118,7 +118,7 @@ callGzipApi payload =
 callApiBT :: forall a b.
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b => 
+  RestEndpoint a => 
   a ->
   FlowBT String b
 callApiBT payload = 
@@ -128,7 +128,7 @@ callGzipApiBTWithOptions :: forall a b e.
   ApiErrorHandler e GlobalState =>
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b =>
+  RestEndpoint a =>
   a ->
   Array Header ->
   e ->
@@ -141,7 +141,7 @@ callGzipApiBTWithOptions payload headers errorHandler = do
 callGzipApiBT :: forall a b.
   StandardEncode a =>
   Decode b =>
-  RestEndpoint a b =>
+  RestEndpoint a =>
   a ->
   FlowBT String b
 callGzipApiBT payload =
