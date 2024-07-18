@@ -49,6 +49,12 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QV
 import qualified Tools.Payout as TP
 
+data DailyStatsWithVpa = DailyStatsWithVpa
+  { dailyStats :: DS.DailyStats,
+    payoutVpa :: Maybe Text
+  }
+  deriving (Generic, Show)
+
 sendDriverReferralPayoutJobData ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -69,9 +75,11 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reschuleTimeDiff = listToMaybe payoutConfigList <&> (.timeDiff)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let lastDay = addDays (-1) (utctDay localTime)
-  dailyStatsForEveryDriverList <- QDSE.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastDay statusForRetry
-  if null dailyStatsForEveryDriverList || null payoutConfigList
+  let lastNthDay = addDays (fromMaybe (-1) transporterConfig.schedulePayoutForDay) (utctDay localTime)
+  dailyStatsForEveryDriverList <- QDSE.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastNthDay statusForRetry
+  let dStatsList = filter (\ds -> ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- filtering the max referral flagged payouts
+  dailyStatsWithVpaList <- mapM getStatsWithVpaList dStatsList
+  if null dailyStatsWithVpaList || null payoutConfigList
     then do
       when toScheduleNextPayout $ do
         case reschuleTimeDiff of
@@ -87,10 +95,15 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
           Nothing -> pure ()
       return Complete
     else do
-      for_ dailyStatsForEveryDriverList $ \executionData -> do
-        fork ("processing Payout for DriverId : " <> executionData.driverId.getId) $ do
-          callPayout merchantId (cast merchantOpCityId) executionData payoutConfigList statusForRetry
+      for_ dailyStatsWithVpaList $ \executionData -> do
+        fork ("processing Payout for DriverId : " <> executionData.dailyStats.driverId.getId) $ do
+          callPayout merchantId (cast merchantOpCityId) executionData.dailyStats executionData.payoutVpa payoutConfigList statusForRetry
+
       ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
+  where
+    getStatsWithVpaList dStats = do
+      dInfo <- QDI.findById dStats.driverId >>= fromMaybeM (PersonNotFound dStats.driverId.getId)
+      pure $ DailyStatsWithVpa {dailyStats = dStats, payoutVpa = dInfo.payoutVpa}
 
 callPayout ::
   ( EncFlow m r,
@@ -103,10 +116,11 @@ callPayout ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   DS.DailyStats ->
+  Maybe Text ->
   [PayoutConfig] ->
   DS.PayoutStatus ->
   m ()
-callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutConfigList statusForRetry = do
+callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutVpa payoutConfigList statusForRetry = do
   mbVehicle <- QV.findById driverId
   let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
   let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
@@ -114,9 +128,8 @@ callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutConfigList statu
     Just payoutConfig -> do
       uid <- generateGUID
       person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      dInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      case dInfo.payoutVpa of
+      case payoutVpa of
         Just vpa -> do
           Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
             QDailyStats.updatePayoutStatusById DS.Processing id
@@ -141,7 +154,7 @@ callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutConfigList statu
               let serviceName = DEMSC.PayoutService PT.Juspay
                   createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId serviceName
               mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-              errorCatchAndHandle id driverId.getId mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
+              errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
             else do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
                 QDailyStats.updatePayoutStatusById DS.ManualReview id
@@ -153,14 +166,16 @@ errorCatchAndHandle ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
   Text ->
   Text ->
+  Text ->
   Either SomeException a ->
   PayoutConfig ->
   DS.PayoutStatus ->
   (a -> m ()) ->
   m ()
-errorCatchAndHandle dailyStatsId driverId resp' payoutConfig statusForRetry function = do
+errorCatchAndHandle dailyStatsId driverId orderId resp' payoutConfig statusForRetry function = do
   case resp' of
     Left _ -> do
+      logDebug $ "Error in calling create payout driverId: " <> driverId <> " | orderId: " <> orderId
       eligibleForRetryInNextBatch <- isEligibleForRetryInNextBatch (mkManualLinkErrorTrackingByDailyStatsIdKey dailyStatsId) payoutConfig.maxRetryCount
       if eligibleForRetryInNextBatch
         then Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId) 3 3 $ do

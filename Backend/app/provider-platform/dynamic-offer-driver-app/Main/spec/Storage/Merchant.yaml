@@ -806,6 +806,8 @@ TransporterConfig:
     maxPayoutReferralForADay: Int
     exotelAppIdMapping: Maybe ExotelMapping
     createDocumentRequired: Maybe Bool
+    schedulePayoutForDay : Maybe Integer
+    isDeviceIdChecksRequired: Maybe Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit

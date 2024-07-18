@@ -73,8 +73,11 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   unless (driverInfo.enabled) $
     throwError $ InvalidRequest "Driver is not enabled"
   let isMultipleDeviceIdExist_ = fromMaybe False isMultipleDeviceIdExist
-  unless isMultipleDeviceIdExist_ $ updateReferralStats driverInfo driverReferralLinkage.driverId
-  let flagReason = if isMultipleDeviceIdExist_ then Just DRD.MultipleDeviceIdExists else Nothing
+  merchOpCityId <- maybe (QP.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound (driverReferralLinkage.driverId.getId)) <&> (.merchantOperatingCityId)) pure driverInfo.merchantOperatingCityId
+  transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId (Just (DriverId (cast driverReferralLinkage.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
+  updateReferralStats driverReferralLinkage.driverId transporterConfig merchOpCityId
+  let isDeviceIdChecksRequired = fromMaybe True transporterConfig.isDeviceIdChecksRequired
+  let flagReason = if isDeviceIdChecksRequired then Nothing else if isMultipleDeviceIdExist_ then Just DRD.MultipleDeviceIdExists else if (isNothing isMultipleDeviceIdExist) then Just DRD.DeviceIdDoesNotExist else Nothing
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   _ <- case mbRiderDetails of
     Just _ -> QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
@@ -110,11 +113,9 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             currency
           }
 
-    updateReferralStats driverInfo driverId = do
+    updateReferralStats driverId transporterConfig merchOpCityId = do
       driverStats <- QDriverStats.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       QDriverStats.updateTotalReferralCount (driverStats.totalReferralCounts + 1) driverId
-      merchOpCityId <- maybe (QP.findById driverId >>= fromMaybeM (PersonNotFound (driverId.getId)) <&> (.merchantOperatingCityId)) pure driverInfo.merchantOperatingCityId
-      transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
       localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       mbDailyStats <- QDailyStats.findByDriverIdAndDate driverId (utctDay localTime)
       merchantOperatingCity <- CQMOC.findById merchOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCityId.getId)
