@@ -36,3 +36,11 @@ checkParseCommon (key, value) = do
         "farePolicyAmbulanceDetails" -> checkParse (Proxy @FPAD.FarePolicyAmbulanceDetailsSlabT) tableColumn value
         _ -> True
     _ -> True
+
+-- insertIntoDb :: (String, A.Value) -> Flow ()
+-- insertIntoDb (key, value) = do
+--   case Text.splitOn ":" (pack key) of
+--     [tableName, tableColumn] -> do
+--     -- insert into db
+--     pure ()
+--   pure ()

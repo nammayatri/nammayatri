@@ -43,23 +43,23 @@ import Utils.Common.Cac.KeyNameConstants as Reexport
 import Utils.Common.Cac.PrefixConstants as Reexport
 import Utils.Common.Cac.UtilsConstants as Reexport
 
-getCacMetricErrorFromCac :: CacPrefix -> Text
-getCacMetricErrorFromCac tableName = do
-  case tableName of
-    DriverPoolConfig -> "driver_pool_config_from_cac_parse_error"
-    DriverIntelligentPoolConfig -> "driver_intelligent_pool_config_from_cac_parse_error"
-    FarePolicy -> "fare_policy_from_cac_parse_error"
-    GoHomeConfig -> "go_home_config_from_cac_parse_error"
-    _ -> "empty_cac_parse_error"
+-- getCacMetricErrorFromCac :: CacPrefix -> Text
+-- getCacMetricErrorFromCac tableName = do
+--   case tableName of
+--     DriverPoolConfig -> "driver_pool_config_from_cac_parse_error"
+--     DriverIntelligentPoolConfig -> "driver_intelligent_pool_config_from_cac_parse_error"
+--     FarePolicy -> "fare_policy_from_cac_parse_error"
+--     GoHomeConfig -> "go_home_config_from_cac_parse_error"
+--     TransporterConfig -> "transporter_config_from_cac_parse_error"
 
-getCacMetricErrorFromDB :: CacPrefix -> Text
-getCacMetricErrorFromDB tableName = do
-  case tableName of
-    DriverPoolConfig -> "driver_pool_config_from_db_parse_error"
-    DriverIntelligentPoolConfig -> "driver_intelligent_pool_config_from_db_parse_error"
-    FarePolicy -> "fare_policy_from_db_parse_error"
-    GoHomeConfig -> "go_home_config_from_db_parse_error"
-    _ -> "empty_db_parse_error"
+-- getCacMetricErrorFromDB :: CacPrefix -> Text
+-- getCacMetricErrorFromDB tableName = do
+--   case tableName of
+--     DriverPoolConfig -> "driver_pool_config_from_db_parse_error"
+--     DriverIntelligentPoolConfig -> "driver_intelligent_pool_config_from_db_parse_error"
+--     FarePolicy -> "fare_policy_from_db_parse_error"
+--     GoHomeConfig -> "go_home_config_from_db_parse_error"
+--     TransporterConfig -> "transporter_config_from_db_parse_error"
 
 getTextValue :: Value -> Text
 getTextValue = \case

@@ -25,6 +25,7 @@ library
       Utils.Common.Cac.KeyNameConstants
       Utils.Common.Cac.PrefixConstants
       Utils.Common.Cac.UtilsConstants
+      Utils.Common.Cac.UtilsTH
       Utils.Common.CacUtils
       Utils.Common.Events
   other-modules:
