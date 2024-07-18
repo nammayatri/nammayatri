@@ -161,6 +161,7 @@ transformVehicleType vehicletype =
      Just "CAR" -> Just ST.CarCategory
      Just "AUTO_CATEGORY" -> Just ST.AutoCategory
      Just "MOTORCYCLE" -> Just ST.BikeCategory
+     Just "AMBULANCE" -> Just ST.AmbulanceCategory
      _ -> Nothing
 
 decodeVehicleType :: String -> Maybe ST.VehicleCategory
@@ -168,6 +169,7 @@ decodeVehicleType value = case value of
   "AutoCategory" -> Just ST.AutoCategory
   "CarCategory" -> Just ST.CarCategory
   "BikeCategory" -> Just ST.BikeCategory
+  "AmbulanceCategory" -> Just ST.AmbulanceCategory
   _ -> Nothing
 rideTypeConstructor :: Maybe TripCategory -> ST.TripType
 rideTypeConstructor ( tripCategory) = 
@@ -237,6 +239,12 @@ getCategoryFromVariant :: String -> Maybe ST.VehicleCategory -- check here if an
 getCategoryFromVariant variant = case variant of
   "AUTO_RICKSHAW" -> Just ST.AutoCategory
   "BIKE" -> Just ST.BikeCategory
+  "AMBULANCE_TAXI" -> Just ST.AmbulanceCategory
+  "AMBULANCE_TAXI_OXY"  -> Just ST.AmbulanceCategory
+  "AMBULANCE_AC" -> Just ST.AmbulanceCategory 
+  "AMBULANCE_AC_OXY" -> Just ST.AmbulanceCategory
+  "AMBULANCE_VENTILATOR" -> Just ST.AmbulanceCategory
+
   _ -> Just ST.CarCategory
 
 rideMoreEarnMorePopupStartTime :: String

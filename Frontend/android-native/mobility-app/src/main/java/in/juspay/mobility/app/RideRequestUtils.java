@@ -610,12 +610,12 @@ public class RideRequestUtils {
     @SuppressLint("SetTextI18n")
     public static void updateRateView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         double baseFare = model.getBaseFare() + model.getOfferedPrice() - model.getTollCharges();
-        float dist = model.getDistanceToBeCovFloat()/1000;
-        String rate = RideRequestUtils.getUptoDecStr((float) (baseFare/dist), 1);
+        float dist = model.getDistanceToBeCovFloat() / 1000;
+        String rate = dist == 0.0f ? "NA" : RideRequestUtils.getUptoDecStr((float) (baseFare / dist), 1);
         String currency = model.getCurrency();
-        String rateVal = dist > 0 ? (currency + rate) + "/km" : "NA";
-        holder.rateText.setText("Rate: " + rateVal);
+        holder.rateText.setText("Rate: " + currency + rate + "/km");
     }
+
 
     public static void updateRentalView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         Handler mainLooper = new Handler(Looper.getMainLooper());
@@ -755,6 +755,21 @@ public class RideRequestUtils {
                 model.setButtonIncreasePriceClickable(true);
                 model.setButtonIncreasePriceAlpha(1.0f);
                 model.setButtonIncreasePriceClickable(true);
+            }
+        });
+    }
+
+    @SuppressLint("SetTextI18n")
+    public static void handleDurationToPickup(SheetAdapter.SheetViewHolder holder, SheetModel model, Handler mainLooper, Context context){
+        mainLooper.post(() -> {
+            String buildType = context.getResources().getString(R.string.service);
+            if( buildType.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
+                holder.durationToPickup.setVisibility(View.GONE);
+                holder.durationToPickupImage.setVisibility(View.GONE); // Disabled it
+                holder.durationToPickup.setText(model.getDurationToPickup() + " min");
+            } else {
+                holder.durationToPickup.setVisibility(View.GONE);
+                holder.durationToPickupImage.setVisibility(View.GONE);
             }
         });
     }

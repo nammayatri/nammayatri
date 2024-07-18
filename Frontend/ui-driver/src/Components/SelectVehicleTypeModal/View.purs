@@ -25,7 +25,7 @@ import Components.SelectVehicleTypeModal.Controller (Action(..), SelectVehicleTy
 import Font.Style as FontStyle
 import Styles.Colors as Color
 import Font.Size as FontSize
-import Screens.Types (VehicalTypes(..))
+import Screens.Types (VehicalTypes(..),AmbulanceVariant(..))
 import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
@@ -111,6 +111,12 @@ imageSection item =
           Hatchback -> "ic_hatchback"
           Auto      -> "ic_auto"
           Bike      -> "ny_ic_bike_side"
+          Ambulance Taxi -> "ic_bike_ambulance"
+          Ambulance AC -> "ic_bike_ambulance"
+          Ambulance AC_Oxy -> "ic_bike_ambulance"
+          Ambulance Taxi_Oxy -> "ic_bike_ambulance"
+          Ambulance Ventilator -> "ic_bike_ambulance"
+
       ]
   ]
 
@@ -137,6 +143,11 @@ textList item =
               Hatchback -> "Hatchback"
               Auto      -> "Auto"
               Bike      -> "Bike"
+              Ambulance Taxi -> "Ambulance_Taxi"
+              Ambulance AC -> "Ambulance_AC"
+              Ambulance AC_Oxy -> "Ambulance_AC_Oxy"
+              Ambulance Taxi_Oxy -> "Ambulance_Taxi_Oxy"
+              Ambulance Ventilator -> "Ambulance_Ventilator"
           ] <> FontStyle.paragraphText TypoGraphy
       ]
     , linearLayout

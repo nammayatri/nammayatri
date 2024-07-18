@@ -8,13 +8,13 @@ import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions)
+import Helpers.Utils (getVehicleType, fetchImage, FetchImageFrom(..), getVariantRideType, getVehicleVariantImage, getDowngradeOptionsText, getUIDowngradeOptions,getVehicleCapacity)
 import Language.Strings (getString)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (<>), (&&), (||), (-), bind, void, pure, unit, discard, negate, (/=)) 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Gradient(..) ,Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, imageUrl, rippleColor, scrollView, scrollBarY, fillViewport, relativeLayout, shimmerFrameLayout, gradient)
-import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval, getVehicleCapacity)
+import Screens.BookingOptionsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.BookingOptionsScreen.ScreenData (defaultRidePreferenceOption)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -48,7 +48,7 @@ screen initialState =
   , view
   , name: "BookingDetailsScreen"
   , globalEvents: 
-        [( \push -> do
+        [( \push -> if not $ initialState.data.config.rateCardScreen.showRateCard then pure $ pure unit else do
             _ <-
               void $ launchAff $ EHC.flowRunner defaultGlobalState
                 $ do
@@ -160,6 +160,7 @@ acCheckForDriversView push state =
                 , height $ V 32
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
                 , rippleColor Color.rippleShade
+                , visibility $ MP.boolToVisibility $ state.data.config.rateCardScreen.showYoutubeVideo
                 , padding $ Padding 0 5 5 5
                 ]
             ]
@@ -343,7 +344,7 @@ serviceTierItem state push service enabled opacity index =
               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey"
               , width $ V 12
               , height $ V 12
-              , visibility $ MP.boolToVisibility $ state.props.rateCardLoaded && index /= -1
+              , visibility $ MP.boolToVisibility $ state.props.rateCardLoaded && index /= -1 && state.data.config.rateCardScreen.showRateCard
               ]
            ]
           , textView $
@@ -381,11 +382,11 @@ intercityPreferenceView push state = do
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , visibility $ MP.boolToVisibility $ (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory && isJust state.props.canSwitchToIntercity
-    ][serviceTierItem state push item (fromMaybe false state.props.canSwitchToIntercity) false (-1)]
+    , visibility $ MP.boolToVisibility $ (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory && isJust state.props.canSwitchToInterCity
+    ][serviceTierItem state push item (fromMaybe false state.props.canSwitchToInterCity) false (-1)]
   where 
     item :: ST.RidePreference
-    item = defaultRidePreferenceOption {name = "Intercity", isSelected = fromMaybe false state.props.canSwitchToIntercity, serviceTierType = API.INTERCITY}
+    item = defaultRidePreferenceOption {name = "Intercity", isSelected = fromMaybe false state.props.canSwitchToInterCity, serviceTierType = API.INTERCITY}
 
 toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> PrestoDOM (Effect Unit) w
 toggleView push enabled default service =
@@ -579,7 +580,7 @@ rateCardView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RateCard.view (push <<< RateCardAction) (rateCardConfig state.data.rateCard) ]
+        [ RateCard.view (push <<< RateCardAction) (rateCardConfig state.data.rateCard state.data.config.rateCardScreen.showTollCharges) ]
 
 rateCardBannerView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 rateCardBannerView push state = 

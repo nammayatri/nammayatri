@@ -15,7 +15,7 @@
 
 module Common.Types.App where
 
-import Prelude (class Eq, class Show, ($))
+import Prelude (class Eq, class Show, ($),(<>),show)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 import Data.Generic.Rep (class Generic)
@@ -36,7 +36,8 @@ import DecodeUtil (parseJSON)
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike
+data AmbulanceVariant = Taxi | Taxi_Oxy | AC | AC_Oxy | Ventilator
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance AmbulanceVariant 
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 
 newtype Place = Place {
@@ -54,20 +55,14 @@ instance decodePlace :: Decode Place where decode = defaultDecode
 
 
 derive instance genericVehicalTypes :: Generic VehicalTypes _
-instance decodeVehicalTypes :: Decode VehicalTypes where decode = defaultEnumDecode
-instance encodeVehicalTypes :: Encode VehicalTypes where encode = defaultEnumEncode
+instance decodeVehicalTypes :: Decode VehicalTypes where decode = defaultDecode
+instance encodeVehicalTypes :: Encode VehicalTypes where encode = defaultEncode
 instance eqVehicalTypes :: Eq VehicalTypes where eq = genericEq
 
-
--- derive instance genericVehicalTypes :: Generic VehicalTypes
-instance showVehicalTypes :: Show VehicalTypes where
-    show (Sedan ) = "Sedan"
-    show (Hatchback ) = "Hatchback"
-    show (SUV ) = "SUV"
-    show (Auto ) = "Auto"
-    show (Bike ) = "Bike"
-
-
+derive instance genericAmbulanceVariant :: Generic AmbulanceVariant _
+instance decodeAmbulanceVariant :: Decode AmbulanceVariant where decode = defaultEnumDecode
+instance encodeAmbulanceVariant :: Encode AmbulanceVariant where encode = defaultEnumEncode
+instance eqAmbulanceVariant :: Eq AmbulanceVariant where eq = genericEq
 
 data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK
   | TRACKING_CALLBACK | SEARCH_REQUEST | CONFIRM_REQUEST | UPCOMING_CASE

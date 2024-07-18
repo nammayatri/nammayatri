@@ -25,7 +25,7 @@ initData =
       , downgraded: false
       , canSwitchToRental: false
       , acExplanationPopup: false
-      , canSwitchToIntercity : Nothing
+      , canSwitchToInterCity : Nothing
       , fromDeepLink : false
       , showRateCard : false
       , rateCardLoaded : false

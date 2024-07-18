@@ -141,6 +141,13 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "acExplanation" : true
+    , "rcLimit" : 3
+    , "rateCardScreen" :{
+        "showYoutubeVideo" : false,
+        "showRateCard" : true,
+        "showTollCharges" : false
+      }
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
@@ -869,6 +876,10 @@ window.getMerchantConfig = function () {
           "auto": {
             "freeSeconds": 180,
             "perMinCharges": 0.75
+          },
+          "bike" : {
+            "freeSeconds" : 300,
+            "perMinCharges" : 1.0
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -921,6 +932,10 @@ window.getMerchantConfig = function () {
           "auto": {
             "freeSeconds": 180,
             "perMinCharges": 0.75
+          },
+          "bike" : {
+            "freeSeconds" : 300,
+            "perMinCharges" : 1.0
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
