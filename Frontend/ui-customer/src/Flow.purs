@@ -1421,7 +1421,7 @@ homeScreenFlow = do
           homeScreenFlow
     FCM_NOTIFICATION notification state -> fcmHandler notification state
     LOGOUT -> do
-      (LogOutRes resp) <- Remote.logOutBT LogOutReq
+      (APISuccessResp resp) <- Remote.logOutBT LogOutReq
       removeChatService ""
       void $ pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
       void $ pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
@@ -1439,8 +1439,12 @@ homeScreenFlow = do
       enterMobileNumberScreenFlow -- Removed choose langauge screen
     SUBMIT_RATING state -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_ride_give_feedback" $ [ { key: "Rating", value: unsafeToForeign state.data.ratingViewState.selectedRating } ]
-      void $ lift $ lift $ fork $ HelpersAPI.callApi $ Remote.makeRideFeedBackReq state.data.rideRatingState.rideId state.data.rideRatingState.feedbackList
-      void $ lift $ lift $ fork $ HelpersAPI.callApi $ getfeedbackReq state
+      void $ lift $ lift $ fork do
+        (_ :: (Either ErrorResponse RideFeedbackRes)) <- HelpersAPI.callApi $ Remote.makeRideFeedBackReq state.data.rideRatingState.rideId state.data.rideRatingState.feedbackList
+        pure unit
+      void $ lift $ lift $ fork do
+        (_ :: (Either ErrorResponse APISuccessResp)) <- HelpersAPI.callApi $ getfeedbackReq state
+        pure unit
       void $ updateLocalStage HomeScreen
       let
         finalAmount = if state.data.finalAmount == 0 then state.data.rideRatingState.finalAmount else state.data.finalAmount
@@ -1956,7 +1960,7 @@ homeScreenFlow = do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode })
       referralScreenFlow
     ON_CALL state callType exophoneNumber -> do
-      (OnCallRes res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
+      (APISuccessResp res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
       homeScreenFlow
     TRIGGER_PERMISSION_FLOW flowType -> do
       modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = flowType })
@@ -3616,7 +3620,7 @@ cancelEstimate bookingId = do
       Right res -> do
         -- TODO : to be removed after new bundle is 100% available (replace with pure unit)
         let
-          (CancelEstimateRes resp) = res
+          (APISuccessResp resp) = res
         case resp.result of
           "Success" -> do
             if (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
@@ -4403,11 +4407,11 @@ metroTicketDetailsFlow = do
     GO_BACK_TO_HOME_SCREEN -> homeScreenFlow
     GO_TO_MY_METRO_TICKETS_FLOW -> metroMyTicketsFlow
     SOFT_CANCEL_BOOKING state -> do
-      (MetroBookingSoftCancelResp result) <- Remote.metroBookingSoftCancelBT state.data.bookingId
+      (APISuccessResp result) <- Remote.metroBookingSoftCancelBT state.data.bookingId
       modifyScreenState $ MetroTicketDetailsScreenStateType (\state -> state { props { stage = MetroSoftCancelStatusStage, showLoader = true } })
       metroTicketDetailsFlow
     HARD_CANCEL_BOOKING state -> do
-      (MetroBookingHardCancelResp result) <- Remote.metroBookingHardCancelBT state.data.bookingId
+      (APISuccessResp result) <- Remote.metroBookingHardCancelBT state.data.bookingId
       modifyScreenState $ MetroTicketDetailsScreenStateType (\state -> state { props { stage = MetroHardCancelStatusStage, showLoader = true, isBookingCancellable = Nothing } })
       metroTicketDetailsFlow
     _ -> metroTicketDetailsFlow
