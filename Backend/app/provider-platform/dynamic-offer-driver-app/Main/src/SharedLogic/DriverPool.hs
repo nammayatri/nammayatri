@@ -785,18 +785,20 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
                 totalTimeinDoubleHr = (totalDistanceinKM / fromIntegral (avgSpeedOfVehicleInKM.getKilometers)) :: Double
                 totalTimeInSeconds = realToFrac (totalTimeinDoubleHr * 3600) :: NominalDiffTime
                 expectedEndTime = addUTCTime totalTimeInSeconds now
-            logDebug $ "avgSpeedOfVehicleInKM" <> show avgSpeedOfVehicleInKM <> "totalDistanceinM" <> show totalDistanceinM <> "totalDistanceinKM" <> show totalDistanceinKM
-            logDebug $ "totalTimeinDoubleHr" <> show totalTimeinDoubleHr <> "totalTimeInSeconds" <> show totalTimeInSeconds <> "expectedEndTime" <> show expectedEndTime
+            logDebug $ "avgSpeedOfVehicleInKM : " <> show avgSpeedOfVehicleInKM <> "destToPickupDistance : " <> show destToPickupDistance <> "totalDistanceinM : " <> show totalDistanceinM <> "totalDistanceinKM : " <> show totalDistanceinKM
+            logDebug $ "totalTimeinDoubleHr : " <> show totalTimeinDoubleHr <> "totalTimeInSeconds : " <> show totalTimeInSeconds <> "expectedEndTime : " <> show expectedEndTime
             let isRidePossible = case driverInfo.latestScheduledBooking of
                   Just latestScheduledBooking ->
                     let timeDifference = diffUTCTime latestScheduledBooking (addUTCTime transporterConfig.scheduleRideBufferTime expectedEndTime)
                      in timeDifference > 0
                   Nothing -> False
-            logDebug $ "isRidePossible" <> show isRidePossible
+            logDebug $ "isRidePossible :" <> show isRidePossible
             return isRidePossible
-          (_, _, _, _) -> return False
+          (_, _, _, _) -> do
+            logDebug $ "dropLocation : " <> show currentSearchInfo.dropLocation <> "latestScheduledPickup : " <> show driverInfo.latestScheduledPickup <> "routeDistance : " <> show currentSearchInfo.routeDistance <> "avgSpeedOfVehicle : " <> show transporterConfig.avgSpeedOfVehicle
+            return False
       | otherwise -> do
-        logDebug "otherwise case "
+        logDebug "No scheduled rides for the driver"
         return True
   where
     canTakeRental :: Maybe UTCTime -> UTCTime -> NominalDiffTime -> Bool
