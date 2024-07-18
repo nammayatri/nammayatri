@@ -320,8 +320,14 @@ validateRefferalCode personId refCode = do
             else return Nothing -- idempotent behaviour
         Nothing -> do
           merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-          personsWithSameDeviceId <- maybe (return []) (QPerson.findAllByDeviceId . Just) person.deviceId
-          let isMultipleDeviceIdExist = (length personsWithSameDeviceId) > 1
+          isMultipleDeviceIdExist <-
+            maybe
+              (return Nothing)
+              ( \deviceId -> do
+                  personsWithSameDeviceId <- QPerson.findAllByDeviceId (Just deviceId)
+                  return $ Just (length personsWithSameDeviceId > 1)
+              )
+              person.deviceId
           case (person.mobileNumber, person.mobileCountryCode) of
             (Just mobileNumber, Just countryCode) -> do
               void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode isMultipleDeviceIdExist

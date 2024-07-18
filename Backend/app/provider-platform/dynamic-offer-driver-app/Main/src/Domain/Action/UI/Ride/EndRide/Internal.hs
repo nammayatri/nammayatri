@@ -270,16 +270,16 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
       availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
       let isValidForMinPickupThreshold = maybe True (>= transporterConfig.minPickupDistanceThresholdForReferralPayout) booking.distanceToPickup
           isValidForMinRideDistance = ride.traveledDistance >= transporterConfig.minRideDistanceThresholdForReferralPayout
-          isMaxReferralExceeded = maybe False ((< transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
-          isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
+          isMaxReferralExceeded = maybe False ((<= transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
+          isMultipleOrNoDeviceIdExists = isJust riderDetails.payoutFlagReason
       let mbFlagReason =
             case (listToMaybe availablePersonWithNumber, isValidForMinRideDistance, isValidForMinPickupThreshold, isMaxReferralExceeded) of
               (Just _, _, _, _) -> Just RD.CustomerExistAsDriver
               (_, False, _, _) -> Just RD.MinRideDistanceInvalid
               (_, _, False, _) -> Just RD.MinPickupDistanceInvalid
               (_, _, _, False) -> Just RD.ExceededMaxReferral
-              _ -> Nothing
-      let isValid = null availablePersonWithNumber && isValidForMinPickupThreshold && isValidForMinRideDistance && isMaxReferralExceeded && (not isMultipleDeviceIdExists)
+              _ -> riderDetails.payoutFlagReason
+      let isValid = null availablePersonWithNumber && isValidForMinPickupThreshold && isValidForMinRideDistance && not isMultipleOrNoDeviceIdExists
       return (isValid, mbFlagReason)
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId

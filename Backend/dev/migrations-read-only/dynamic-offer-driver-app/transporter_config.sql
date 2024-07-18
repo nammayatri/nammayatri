@@ -215,3 +215,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_app_id_m
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN create_document_required boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN schedule_payout_for_day integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_device_id_checks_required boolean ;

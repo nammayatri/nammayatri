@@ -102,6 +102,7 @@ data PayoutFlagReason
   | MinPickupDistanceInvalid
   | CustomerExistAsDriver
   | MultipleDeviceIdExists
+  | DeviceIdDoesNotExist
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFlagReason)
