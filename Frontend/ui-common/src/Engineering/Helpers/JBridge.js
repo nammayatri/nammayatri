@@ -656,11 +656,7 @@ const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfi
 }
 
 export const getDeviceID = function () {
-  if(window.JBridge.getDeviceID){
-    return window.JBridge.getDeviceID();
-  }else {
-    return "NO_DEVICE_ID";
-  }
+  return "NO_DEVICE_ID";
 }
                    
 
