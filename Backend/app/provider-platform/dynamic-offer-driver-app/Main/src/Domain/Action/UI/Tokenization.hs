@@ -83,7 +83,7 @@ getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec sv
 
     makeGullakOnboardingTokenizeReq personId = do
       person <- SQP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      dl <- QDL.findByDriverId personId >>= fromMaybeM (DriverDLNotFound personId.getId)
+      dl <- QDL.findByDriverId personId
       merchantOperatingCity <- CQMSOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
       let cityLatLon = merchantOperatingCity.location
       return $
@@ -91,9 +91,9 @@ getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec sv
           { merchantUserId = personId.getId,
             mobile = fromMaybe "" person.unencryptedMobileNumber,
             email = person.email,
-            dob = T.pack . formatTime defaultTimeLocale "%d/%m/%Y" <$> (dl.driverDob),
+            dob = T.pack . formatTime defaultTimeLocale "%d/%m/%Y" <$> (dl >>= (.driverDob)),
             pan = Nothing,
-            name = Just $ T.intercalate "" (catMaybes [Just person.firstName, person.middleName, person.lastName]),
+            name = Just $ T.intercalate "" (catMaybes [Just person.firstName, addSpace person.middleName, addSpace person.lastName]),
             isKycVerified = Nothing,
             address = Nothing,
             languageDetails =
@@ -116,6 +116,9 @@ getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec sv
         { expiry = parseTimestamp resp.loginToken.expiryDate,
           token = resp.loginToken.accessToken
         }
+
+    addSpace :: Maybe Text -> Maybe Text
+    addSpace nameSection = (" " <>) <$> nameSection
 
 parseTimestamp :: Text -> Maybe UTCTime
 parseTimestamp timeStamp = LT.zonedTimeToUTC <$> (parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%Q%z" (T.unpack timeStamp) :: Maybe LT.ZonedTime)
