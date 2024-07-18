@@ -2705,7 +2705,7 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
 eval (ShimmerTimer seconds status timerID) state = do
   if status == "EXPIRED" then do
     void $ pure $ clearTimerWithId timerID
-    update state{props{shimmerViewTimerId = "", showShimmer = false}}
+    continue state{props{shimmerViewTimerId = "", showShimmer = false}}
   else update state{props{shimmerViewTimer = seconds, shimmerViewTimerId = timerID}}
 
 eval _ state = update state
