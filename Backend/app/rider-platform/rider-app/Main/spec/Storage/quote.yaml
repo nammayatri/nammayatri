@@ -208,7 +208,7 @@ Quote:
       where: id
 
     findAllBySRId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithKVAndConditionalDB
       where: requestId
 
   extraOperations:

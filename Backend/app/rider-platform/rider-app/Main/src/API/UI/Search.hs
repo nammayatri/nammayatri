@@ -48,7 +48,6 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
@@ -73,17 +72,13 @@ handler = search
 search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> FlowHandler DSearch.SearchResp
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice mbIsDashboardRequest = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
-  updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
+  fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  -- fork "search metro" . withShortRetry $ do
-  --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
-  --   CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
-  fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   return $ DSearch.SearchResp dSearchRes.searchId dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
 
 checkSearchRateLimit ::
