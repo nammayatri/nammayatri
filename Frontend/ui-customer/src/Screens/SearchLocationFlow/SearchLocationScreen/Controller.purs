@@ -109,6 +109,7 @@ data Action = NoAction
             | CurrentLocation 
             | ChooseYourRideAC ChooseYourRideController.Action
             | NotificationListener String
+            | LottieLoaderAction 
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -139,7 +140,7 @@ eval (MapReady _ _ _) state = do
     continueWithCmd state [do 
       pure (LocationListItemAC [] (LocationListItemController.OnClick state.data.predictionSelectedFromHome))
     ]
-    else if state.props.searchLocStage == ChooseYourRide then do
+    else if DA.any ( _ == state.props.searchLocStage ) [FindingEstimates, ChooseYourRide] then do
       pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
       drawRouteOnMap state
     else continue state
@@ -421,7 +422,7 @@ eval BackPressed state = do
  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
   else continue state
 
-eval (GetQuotes (GetQuotesRes res )) state = quotesFlow res state 
+eval (GetQuotes (GetQuotesRes res )) state = quotesFlow res state{props{searchLocStage = ChooseYourRide}} 
   -- handle for other cases too ( other fare product types )
 
 eval (RateCardAC action) state =

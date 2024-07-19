@@ -28,6 +28,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
+import Animation.Config as AnimConfig
 import Data.Array as DA
 import Data.Maybe (isJust, maybe, Maybe(..)) as MB
 import Data.String as DS
@@ -470,6 +471,20 @@ rentalRateCardConfig state =
         }
   in rentalRateCardConfig'
 
+
+autoAnimConfig :: AnimConfig.AnimConfig
+autoAnimConfig =
+  let
+    config = AnimConfig.animConfig
+
+    autoAnimConfig' =
+      config
+        { duration = 400
+        , toScaleX = 1.0
+        , toScaleY = 1.0
+        }
+  in
+    autoAnimConfig'
 
 chooseYourRideConfig state = 
   let 

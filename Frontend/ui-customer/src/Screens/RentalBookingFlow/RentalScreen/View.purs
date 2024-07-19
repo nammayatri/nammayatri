@@ -180,10 +180,14 @@ rentalPackageSelectionView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , stroke $ "1," <> Color.grey900
-        , padding $ Padding 16 16 16 16
+        , padding $ PaddingBottom 16
         ] 
-        [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
+        [ separatorView state
+        ,linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , margin $ Margin 16 16 16 0
+          ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
         ]
       ]
     ]
