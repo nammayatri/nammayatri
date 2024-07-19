@@ -15,7 +15,7 @@ import java.util.Locale;
 public class SheetModel {
     private final String pickUpDistance, durationToPickup, sourceArea, currency, sourceAddress, destinationArea, destinationAddress, searchRequestId, specialLocationTag, sourcePinCode, destinationPinCode, requestedVehicleVariant, vehicleServiceTier,rideProductType, rideDuration, rideDistance, rideStartTime, rideStartDate, notificationSource, renderedAt;
     private String requestId;
-    private int startTime, specialZoneExtraTip;
+    private int startTime, driverDefaultStepFee;
     private double updatedAmount, parkingCharge;
     private double offeredPrice;
     private int customerExtraFee;
@@ -65,7 +65,7 @@ public class SheetModel {
                       double destLat,
                       double destLng,
                       boolean specialZonePickup,
-                      int specialZoneExtraTip,
+                      int driverDefaultStepFee,
                       boolean downgradeEnabled,
                       int airConditioned,
                       String vehicleServiceTier,
@@ -76,7 +76,6 @@ public class SheetModel {
                       String rideStartDate,
                       String notificationSource,
                       Boolean isThirdPartyBooking,
-                      int offeredPrice,
                       double parkingCharge,
                       String renderedAt
                       ){
@@ -92,20 +91,20 @@ public class SheetModel {
         this.sourceAddress = sourceAddress;
         this.destinationArea = destinationArea;
         this.destinationAddress = destinationAddress;
-        this.updatedAmount = offeredPrice;
+        this.updatedAmount = driverDefaultStepFee;
         this.reqExpiryTime = reqExpiryTime;
         this.searchRequestId = searchRequestId;
-        this.offeredPrice = offeredPrice;
+        this.offeredPrice = driverDefaultStepFee;
         this.baseFare = baseFare;
         this.startTime = startTime;
         this.driverMinExtraFee = driverMinExtraFee;
         this.driverMaxExtraFee = driverMaxExtraFee;
         this.rideRequestPopupDelayDuration = rideRequestPopupDelayDuration;
         this.negotiationUnit = negotiationUnit;
-        this.buttonIncreasePriceAlpha = specialZoneExtraTip <= 0 ? 1.0f : 0.5f;
-        this.buttonIncreasePriceClickable = specialZoneExtraTip <= 0;
-        this.buttonDecreasePriceAlpha = specialZoneExtraTip > 0 ? 1.0f : 0.5f;
-        this.buttonDecreasePriceClickable = specialZoneExtraTip > 0;
+        this.buttonIncreasePriceAlpha = initialIncButtonToggle() ? 1.0f : 0.5f;
+        this.buttonIncreasePriceClickable = initialIncButtonToggle();
+        this.buttonDecreasePriceAlpha = initialDecButtonToggle() ? 1.0f : 0.5f;
+        this.buttonDecreasePriceClickable = initialDecButtonToggle();
         this.currency = currency;
         this.specialLocationTag = specialLocationTag;
         this.customerExtraFee = customerExtraFee;
@@ -118,7 +117,7 @@ public class SheetModel {
         this.isTranslated = isTranslated;
         this.driverPickUpCharges = driverPickUpCharges;
         this.specialZonePickup = specialZonePickup;
-        this.specialZoneExtraTip = specialZoneExtraTip;
+        this.driverDefaultStepFee = driverDefaultStepFee;
         this.downgradeEnabled = downgradeEnabled;
         this.airConditioned = airConditioned;
         this.vehicleServiceTier = vehicleServiceTier;
@@ -169,12 +168,8 @@ public class SheetModel {
         return specialZonePickup;
     }
 
-    public int getSpecialZoneExtraTip (){
-        return specialZoneExtraTip;
-    }
-
-    public void setSpecialZoneExtraTip(int updatedAmount) {
-        this.specialZoneExtraTip = updatedAmount;
+    public int getDriverDefaultStepFee(){
+        return driverDefaultStepFee;
     }
 
     public boolean isDowngradeEnabled(){
@@ -370,5 +365,25 @@ public class SheetModel {
 
     public double getParkingCharges() {
         return parkingCharge;
+    }
+
+    private boolean initialIncButtonToggle(){
+        if (offeredPrice <= 0){
+            return true;
+        }else if (offeredPrice >= driverMaxExtraFee){
+            return false;
+        }else {
+            return true;
+        }
+    }
+
+    private boolean initialDecButtonToggle(){
+        if (offeredPrice <= 0){
+            return false;
+        }else if (offeredPrice >= driverMaxExtraFee){
+            return true;
+        }else {
+            return true;
+        }
     }
 }

@@ -100,7 +100,7 @@
                                     android:paddingHorizontal="2dp"
                                     android:paddingVertical="6dp"
                                     android:visibility="gone"
-                                    android:text="₹10"
+                                    android:text=""
                                     android:lineHeight="20dp"
                                     android:textColor="@color/white"
                                     android:textSize="12dp" />

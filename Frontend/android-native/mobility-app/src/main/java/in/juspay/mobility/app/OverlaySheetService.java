@@ -20,10 +20,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
 import android.graphics.PixelFormat;
-import android.location.Address;
-import android.location.Geocoder;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
@@ -79,8 +76,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -152,10 +147,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
 
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
-                if (showSpecialLocationTag && model.getSpecialZoneExtraTip() > 0) {
-                    model.setOfferedPrice(model.getSpecialZoneExtraTip());
-                    model.setUpdatedAmount(model.getSpecialZoneExtraTip());
+                if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
+                    holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);
+                } else {
+                    holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
@@ -225,7 +221,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance() + " km ");
-            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
+            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.currency.setText(String.valueOf(model.getCurrency()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.tollTag.setVisibility(model.getTollCharges() > 0? View.VISIBLE : View.GONE);
@@ -292,20 +288,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     private void decreaseButtonClickListener(SheetAdapter.SheetViewHolder holder, SheetModel model, int position) {
         holder.buttonDecreasePrice.setOnClickListener(view -> {
-            int specialZoneExtraTip = model.getSpecialZoneExtraTip();
             if (model.getOfferedPrice() > 0) {
-                if(specialZoneExtraTip > 0) {
-                    model.setUpdatedAmount(model.getUpdatedAmount() - specialZoneExtraTip);
-                    firebaseLogEvent("price_is_decreased");
-                    model.setOfferedPrice(model.getOfferedPrice() - specialZoneExtraTip);
-                    model.setSpecialZoneExtraTip(0);
+                if (model.getSpecialZonePickup() && model.getOfferedPrice() >= model.getDriverDefaultStepFee()){
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
-                else {
-                    model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
-                    firebaseLogEvent("price_is_decreased");
-                    model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
-                }
+                model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
+                firebaseLogEvent("price_is_decreased");
+                model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
                 sheetAdapter.notifyItemChanged(position, "inc");
                 Handler handler = new Handler(Looper.getMainLooper());
                 if (model.getOfferedPrice() == 0) {
@@ -642,7 +631,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     Boolean disabilityTag = rideRequestBundle.getBoolean("disabilityTag");
                     Boolean isTranslated = rideRequestBundle.getBoolean("isTranslated");
                     int driverPickUpCharges = rideRequestBundle.getInt("driverPickUpCharges");
-                    int specialZoneExtraTip = rideRequestBundle.getInt("specialZoneExtraTip") ;
+                    int driverDefaultStepFee = rideRequestBundle.getInt("driverDefaultStepFee") ;
                     boolean specialZonePickup = rideRequestBundle.getBoolean("specialZonePickup");
                     df.setMaximumFractionDigits(2);
                     String getCurrTime = RideRequestUtils.getCurrentUTC();
@@ -667,7 +656,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String rideStartDate= rideRequestBundle.getString("rideStartDate");
                     String notificationSource= rideRequestBundle.getString("notificationSource");
                     boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");
-                    int offeredPrice = rideRequestBundle.getInt("driverDefaultStepFeeWithCurrency", 0);
                     double parkingCharge = rideRequestBundle.getDouble("parkingCharge", 0);
                    
                     if (calculatedTime > rideRequestedBuffer) {
@@ -704,7 +692,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             destLat,
                             destLng,
                             specialZonePickup,
-                            specialZoneExtraTip,
+                            driverDefaultStepFee,
                             downgradeEnabled,
                             airConditioned,
                             vehicleServiceTier,
@@ -715,7 +703,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             rideStartDate,
                             notificationSource,
                             isThirdPartyBooking,
-                            offeredPrice,
                             parkingCharge,
                             getCurrTime
                     );
