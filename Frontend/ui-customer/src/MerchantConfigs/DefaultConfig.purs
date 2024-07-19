@@ -405,6 +405,7 @@ config =
               showExploreCity = true
             }
             , enableAcViews = true
+            , enableIntercity= true
             , enableCabs = false
             , enableRentals = true
             , estimateAndQuoteConfig {

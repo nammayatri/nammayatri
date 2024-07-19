@@ -536,37 +536,80 @@ chooseYourRideView push config =
 
 estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 estimatedTimeAndDistanceView push config =
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , gravity CENTER
-    , margin $ MarginTop 4
-    ]
-    [ textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text config.rideDistance
-        , color Color.black650
-        , accessibilityHint $  "Estimated distance is : " <> config.rideDistance
-        ]
-        <> FontStyle.paragraphText TypoGraphy
-    , linearLayout
-        [ height $ V 4
-        , width $ V 4
-        , cornerRadius 2.5
-        , background Color.black600
-        , margin (Margin 6 2 6 0)
-        ]
-        []
-    , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text config.rideDuration
-        , color Color.black650
-        , accessibilityHint $ "Estimated time is : " <> config.rideDuration
-        ]
-        <> FontStyle.paragraphText TypoGraphy
-    ]
+  let 
+    startTime = fromMaybe (EHC.getCurrentUTC "") config.startTimeUTC
+    returnTime = fromMaybe "" config.returnTimeUTC
+    _ = spy "startTime" startTime
+    _ = spy "returnTime" returnTime
+    _ = spy "roundTrip" config.roundTrip
+  in
+    linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      , margin $ MarginTop 4
+      ]
+      [ textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text config.rideDistance
+          , color Color.black650
+          , accessibilityHint $  "Estimated distance is : " <> config.rideDistance
+          ]
+          <> FontStyle.paragraphText TypoGraphy
+      , linearLayout
+          [ height $ V 4
+          , width $ V 4
+          , cornerRadius 2.5
+          , background Color.black600
+          , margin (Margin 6 2 6 0)
+          ]
+          []
+      , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text config.rideDuration
+          , color Color.black650
+          , accessibilityHint $ "Estimated time is : " <> config.rideDuration
+          ]
+          <> FontStyle.paragraphText TypoGraphy
+      , linearLayout
+          [ height $ V 4
+          , width $ V 4
+          , cornerRadius 2.5
+          , visibility $ boolToVisibility config.intercity
+          , background Color.black600
+          , margin (Margin 6 2 6 0)
+          ]
+          []
+      , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ EHC.convertUTCtoISC startTime "DD MMM,YYYY"
+          , color Color.black650
+          , visibility $ boolToVisibility config.intercity
+          , accessibilityHint $ "Start time is : " <> EHC.convertUTCtoISC startTime "DD MMM YYYY"
+          ]
+          <> FontStyle.paragraphText TypoGraphy
+      , linearLayout
+          [ height $ V 4
+          , width $ V 4
+          , cornerRadius 2.5
+          , visibility $ boolToVisibility $ config.intercity && config.roundTrip
+          , background Color.black600
+          , margin (Margin 6 2 6 0)
+          ]
+          []
+      , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ EHC.convertUTCtoISC returnTime "DD MMM,YYYY"
+          , color Color.black650
+          , visibility $ boolToVisibility $ config.intercity && config.roundTrip
+          , accessibilityHint $ "Return time is : " <> EHC.convertUTCtoISC returnTime "DD MMM YYYY"
+          ]
+          <> FontStyle.paragraphText TypoGraphy
+      ]
 
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 quoteListView push config =

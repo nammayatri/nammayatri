@@ -245,7 +245,11 @@ shimmerData i = {
   variantImage : toPropValue "",
   showVariantImage : toPropValue "visible",
   showRepeatRide : toPropValue "visible",
-  showDestination : toPropValue "visible"
+  showDestination : toPropValue "visible",
+  itemRideType : toPropValue "ONE_WAY",
+  rideTypeVisibility : toPropValue "gone",
+  rideTypeBackground : toPropValue "#FFFFFF",
+  cornerRadius : toPropValue "0"
 }
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> RideSelectionScreenState ->  Flow GlobalState Unit

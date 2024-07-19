@@ -16,73 +16,72 @@
 module Screens.HomeScreen.Transformer where
 
 import ConfigProvider
+import ConfigProvider
 import Data.Eq
 import Data.Ord
 import Debug
 import Engineering.Helpers.LogEvent
+import Engineering.Helpers.LogEvent
+import Helpers.TipConfig
+import Locale.Utils
 import Locale.Utils
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _stopLocation)
-import Common.Types.App (LazyCheck(..), Paths)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _stopLocation,_amount,_nightShiftCharge)
+import Common.Types.App (LazyCheck(..), Paths, FareList,TicketType(..))
+import Common.Types.App as CT
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
--- import Components.RideActionModal (estimatedFareView)
+import Components.RateCard.Utils (getFareBreakupList)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Data.Array (mapWithIndex, filter, head, find, foldl)
 import Control.Monad.Except.Trans (lift)
+import Control.Monad.Except.Trans (lift)
+import Data.Array (mapWithIndex, filter, head, find, foldl)
 import Data.Array as DA
+import Data.Either (Either(..))
+import Data.Foldable (maximum)
+import Data.Function.Uncurried (runFn1)
+import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber, round, fromString)
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null, toLower)
-import Data.Function.Uncurried (runFn1)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices)
+import Data.Tuple as DT
+import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage,fetchImage, FetchImageFrom(..))
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, intersection)
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices)
 import JBridge (fromMetersToKm, getLatLonFromAddress)
+import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Types (EstimateAndQuoteConfig)
+import MerchantConfig.Types (EstimateAndQuoteConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Mobility.Prelude as MP
+import Presto.Core.Types.Language.Flow (Flow(..), getLogFields)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
-import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
-import Services.Backend as Remote
-import Types.App (FlowBT, GlobalState(..), ScreenType(..))
-import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, intersection)
-import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Common.Types.App (LazyCheck(..), Paths, FareList)
-import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Resources.Localizable.EN (getEN)
-import MerchantConfig.Types (EstimateAndQuoteConfig)
-import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.LogEvent
-import Control.Monad.Except.Trans (lift)
-import Presto.Core.Types.Language.Flow (Flow(..), getLogFields)
-import ConfigProvider
-import Locale.Utils
-import Data.Either (Either(..))
-import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
-import Mobility.Prelude as MP
-import Data.Function.Uncurried (runFn2)
-import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-import Common.Types.App as CT
-import Components.RateCard.Utils (getFareBreakupList)
-import Data.Tuple as DT
-import Data.Foldable (maximum)
+import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType, dummyRentalBookingConfig)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails, dummyIndividualCard)
+import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, Stage(..))
-import Storage (isLocalStageOn)
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
 import Screens.Types (FareProductType(..)) as FPT
-import Helpers.TipConfig
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..))
+import Services.API (QuoteAPIDetails(..),QuoteAPIContents(..),IntercityQuoteAPIDetails(..))
+import Services.Backend as Remote
+import Storage (isLocalStageOn)
+import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import RemoteConfig as RC
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -150,7 +149,7 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , city : city
         }
     (RENTAL contents) -> QLI.config
-    (INTER_CITY contents) -> QLI.config
+    (INTER_CITY contents) -> spy "Config is -> " QLI.config
     
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
@@ -372,13 +371,14 @@ getContact contact = {
   , phoneNo : contact.number
 }
 
-getQuotesTransformer :: Array OfferRes -> EstimateAndQuoteConfig -> Array ChooseVehicle.Config
-getQuotesTransformer quotes estimateAndQuoteConfig = mapWithIndex (\index item -> transformQuote item index) (getFilteredQuotes quotes estimateAndQuoteConfig)
+getQuotesTransformer :: Array OfferRes -> EstimateAndQuoteConfig -> Maybe TicketType -> Array ChooseVehicle.Config
+getQuotesTransformer quotes estimateAndQuoteConfig tripType = do 
+  mapWithIndex (\index item -> transformQuote item index tripType) (getFilteredQuotes quotes estimateAndQuoteConfig)
 
-transformQuote :: OfferRes -> Int -> ChooseVehicle.Config
-transformQuote quote index =
+transformQuote :: OfferRes -> Int -> Maybe TicketType -> ChooseVehicle.Config
+transformQuote quote index tripType = do 
   case quote of
-    Quotes body -> createConfig body.onDemandCab
+    Quotes body -> (spy "quotes transform" $ createConfig body.onDemandCab)
     RentalQuotes body -> createConfig body.onRentalCab
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -399,8 +399,52 @@ transformQuote quote index =
     , serviceTierName = quoteEntity.serviceTierName
     , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
     , airConditioned = Nothing
-    }
+    , extraFare = getQuotesFareList quoteEntity.quoteDetails tripType
+    , nightChargeTill = fromMaybe "10:00 PM" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeTill")
+    , nightChargeFrom = fromMaybe "06:00 AM" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeFrom")
+  }
 
+getFareFromQuotes :: QuoteAPIDetails -> String -> Maybe String
+getFareFromQuotes quoteDetails fareType = 
+  let 
+    currency = getCurrency appConfig
+    (QuoteAPIDetails quoteDetails) = quoteDetails
+    allowance' = 
+      case quoteDetails.contents of 
+        INTER_CITY (IntercityQuoteAPIDetails interCityObj) ->
+          case fareType of 
+            "perHourCharge" ->  (maybe Nothing  (\perHourCharge -> (Just $ show $ perHourCharge ^. _amount)) interCityObj.perHourCharge)
+            "nightShiftCharge" ->  (maybe Nothing  (\nightShiftInfo -> (Just $ show $ nightShiftInfo ^. _nightShiftCharge)) interCityObj.nightShiftInfo)
+            "nightChargeTill" -> (maybe Nothing  (\nightShiftInfo -> (Just $ nightShiftInfo ^. _nightShiftEnd)) interCityObj.nightShiftInfo)
+            "nightChargeFrom" -> (maybe Nothing  (\nightShiftInfo -> (Just $ nightShiftInfo ^. _nightShiftStart)) interCityObj.nightShiftInfo)
+            _ -> Nothing
+        _ -> Nothing
+  in allowance' 
+
+getQuotesFareList :: QuoteAPIDetails -> Maybe TicketType -> Array FareList
+getQuotesFareList quoteDetails tripType = 
+  let 
+    currency = getCurrency appConfig
+    (QuoteAPIDetails quoteDetails) = quoteDetails
+    isRoundTrip = case tripType of   
+                Just ROUND_TRIP -> true
+                _ -> false
+    fareList' = 
+      case quoteDetails.contents of 
+        INTER_CITY (IntercityQuoteAPIDetails interCityObj) ->
+          (if(not isRoundTrip) then 
+            (maybe []  (\plannedPerKmRateOneWay -> [{key : "Distance Fare ", val : (currency <> (show $  plannedPerKmRateOneWay ^. _amount ) <> ( " / km"))}]) interCityObj.plannedPerKmRateOneWay)
+          else
+            (maybe []  (\plannedPerKmRateRoundTrip -> [{key : "Distance Fare ", val : (currency <> (show $  plannedPerKmRateRoundTrip ^. _amount ) <> ( " / km"))}]) interCityObj.plannedPerKmRateRoundTrip) )<> 
+          (maybe []  (\perHourCharge -> [ { key: "Driver Allowance*", val: (currency <> (show  $  perHourCharge ^. _amount) <> " / hr") } ]) interCityObj.perHourCharge) <>
+          (maybe []  (\deadKmFare -> [{key : "Pickup Charges ", val : (currency <> (show $  (deadKmFare ^. _amount )))}]) interCityObj.deadKmFare) <> 
+          (maybe []  (\perExtraKmRate -> [{key : "Extra Distance Fare ", val : (currency <> (show $  perExtraKmRate ^. _amount )<> ( " / km"))}]) interCityObj.perExtraKmRate) <> 
+          (maybe []  (\perExtraMinRate -> [{key : "Extra Time Fare ", val : (currency <> (show $ perExtraMinRate ^. _amount )<> ( " / min"))}]) interCityObj.perExtraMinRate) <>
+          (maybe [] (\perHourCharge -> [{ key : "DRIVER_ALLOWANCE" , val : (show $ perHourCharge ^. _amount)} ]) interCityObj.perHourCharge)<>
+          (maybe [] (\perDayMaxHourAllowance -> [{key : "PER_DAY_MAX_ALLOWANCE", val : (show $ perDayMaxHourAllowance)}]) interCityObj.perDayMaxHourAllowance)<>
+          (maybe [] (\nightShiftInfo -> [{key : "NIGHT_SHIFT_CHARGES", val : (show $ nightShiftInfo ^. _nightShiftCharge)}]) interCityObj.nightShiftInfo)
+        _ -> []
+  in fareList'
 
 getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Maybe Int -> Int -> Array ChooseVehicle.Config
 getEstimateList quotes estimateAndQuoteConfig count activeIndex = 

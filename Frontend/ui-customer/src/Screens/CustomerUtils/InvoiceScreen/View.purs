@@ -30,7 +30,7 @@ import Resources.Constants as Constants
 import Font.Style as FontStyle
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=), (-), (<$>), (>>=), (=<<), (*), (>))
+import Prelude (Unit, const, map, not, show,($), (<<<), (<>), (==), (&&), (/=), (-), (<$>), (>>=), (=<<), (*), (>), (/))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility, onClick)
 import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
@@ -42,7 +42,8 @@ import Mobility.Prelude
 import Storage
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types (VehicleVariant(..)) as VV
-
+import Data.Number(fromString, floor)
+import Debug
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -165,7 +166,7 @@ amountBreakupView state =
                   , orientation HORIZONTAL
                   ]
                   [ textView $
-                      [ text item.price
+                      [ text $ formatPrice item.price
                       , alignParentRight "true,-1"
                       , color Color.black800
                       , accessibility DISABLE
@@ -178,7 +179,15 @@ amountBreakupView state =
         )
         state.data.selectedItem.faresList
     )
-
+    where 
+    formatPrice :: String -> String 
+    formatPrice a =
+      let ans =  case (fromString (cleanInput a)) of 
+                        Just num ->  "₹ " <> show(floor (num *10.0)/10.0)
+                        Nothing -> a
+      in spy "formatDuration " ans
+    cleanInput :: String -> String 
+    cleanInput str = DS.drop 2 str
 --------------------------- TotalAmountView --------------------
 totalAmountView :: forall w. ST.InvoiceScreenState -> PrestoDOM (Effect Unit) w
 totalAmountView state =

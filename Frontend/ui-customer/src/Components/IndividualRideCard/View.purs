@@ -31,6 +31,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==), const, not, show)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..),alpha, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility, rippleColor)
 import PrestoDOM.List as PrestoList
+import PrestoDOM.List (backgroundHolder)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (IndividualRideCardState, Stage(..), ZoneType(..))
@@ -77,7 +78,8 @@ cardView push state =
   , stroke $ "1,"<>Color.grey900
   , background Color.white900
   ] <> ( if not state.optionsVisibility then [PrestoList.onClickHolder push OnClick ] else []))
-  [  zoneView state
+  [ rideTypeView state
+    , zoneView state
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -91,6 +93,25 @@ cardView push state =
       ] <> (if state.optionsVisibility then [separator, viewDetailsAndRepeatRide push state] else []))
    ]
 
+rideTypeView :: forall w. IndividualRideCardState -> PrestoDOM (Effect Unit) w 
+rideTypeView state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding (PaddingVertical 5 5)
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , PrestoList.backgroundHolder "rideTypeBackground"
+  , PrestoList.visibilityHolder "rideTypeVisibility"
+  , PrestoList.cornerRadiusHolder "cornerRadius"
+  ][ textView $
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , textSize FontSize.a_14
+     , PrestoList.textHolder "itemRideType"
+     , color Color.white900
+     ] <> FontStyle.body6 LanguageStyle
+   ]
 zoneView :: forall w. IndividualRideCardState ->  PrestoDOM (Effect Unit) w
 zoneView state =
   linearLayout

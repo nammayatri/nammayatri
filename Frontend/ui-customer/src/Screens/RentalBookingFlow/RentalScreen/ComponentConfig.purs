@@ -137,7 +137,7 @@ mapInputViewConfig state =
           , padding = Padding 8 0 8 1
           , gravity = CENTER_VERTICAL
           }
-        , suffixButtonVisibility = GONE --boolToVisibility isSelectPackageStage -- TODO :: enable this once scheduled ride is handled properly. -- MERCY 
+        , suffixButtonVisibility = VISIBLE --boolToVisibility isSelectPackageStage -- TODO :: enable this once scheduled ride is handled properly. -- MERCY 
         , imageLayoutVisibility = boolToVisibility isSelectPackageStage
         , inputLayoutPading = if isSelectPackageStage then PaddingLeft 8 else PaddingLeft 0
         , inputView = map 

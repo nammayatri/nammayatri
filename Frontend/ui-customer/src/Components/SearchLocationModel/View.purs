@@ -13,46 +13,53 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.SearchLocationModel.View where
+module Components.SearchLocationModel.View where 
 
 import Common.Types.App
 
 import Animation (translateYAnimFromTop, fadeIn)
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, Direction(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), TicketType(..))
+import Components.DateTimeSelector as DateSelector
+import Components.DateTimeSelector.Controller as DateSelectorController
 import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
+import Components.Selector as Selector
+import Components.Selector.Controller as SelectorController
 import Components.SeparatorView.View as SeparatorView
+import Data.Array (any)
 import Data.Array (mapWithIndex, length, take, null)
 import Data.Function (flip)
 import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn3)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
-import Debug (spy)
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getSearchType, getAssetsBaseUrl, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getLocationName, getSearchType, getAssetsBaseUrl, fetchImage, FetchImageFrom(..),parseFloat)
 import Helpers.Utils as HU
 import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig, debounceFunction, hideKeyboardOnNavigation)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
-import Prelude ((<>))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
-import PrestoDOM (Accessiblity(..), InputType(..),  Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, inputType, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
+import Prelude ((<>), show, (<))
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), mod, (+), (-), (*), (/), (/=), (<<<), (<>), (>), (==), (||), not, discard, (>=), void)
+import PrestoDOM (Accessiblity(..), InputType(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, inputType, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
+import Resources.Localizable.EN (getEN)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Data.Array (any)
+import Data.Int as INT
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -67,7 +74,8 @@ view push state =
                     _           -> Color.transparent --"#FFFFFF"
       , margin $ MarginBottom (if isMapSearchLocation then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
-      ][ PrestoAnim.animationSet
+      ][
+        PrestoAnim.animationSet
           [ fadeIn true ]
           $ 
           linearLayout
@@ -132,16 +140,17 @@ view push state =
           ]
         , textView  $
           [ text $ state.headerText
-          , visibility $ state.suffixButtonVisibility
+          , visibility $  if state.isIntercityFlow then VISIBLE else state.suffixButtonVisibility
           , color Color.white900  
           , margin $ MarginLeft 8
           ] <> (FontStyle.subHeading2 LanguageStyle)
         , linearLayout 
           [ weight 1.0
           , height WRAP_CONTENT
-          , visibility $ state.suffixButtonVisibility
+          , visibility $ if state.isIntercityFlow then VISIBLE else state.suffixButtonVisibility
           ] []
-        , dateTimePickerButton state push
+        -- , dateTimePickerButton state push
+           , if not state.isIntercityFlow then dateTimePickerButton state push else textView[]
       ]
     
       dateTimePickerButton :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -310,9 +319,9 @@ sourceDestinationEditTextView state push =
     , linearLayout
         [ height $ V 1
         , width MATCH_PARENT
-        , background Color.grey900
-        , background if state.isSrcServiceable then Color.grey900 else Color.textDanger
-        , visibility if state.isSource == Just true && not isMapSearchLocation then VISIBLE else GONE
+        , margin (MarginBottom 5)
+        , background if state.isDestServiceable then Color.grey900 else Color.textDanger
+        , visibility if state.isSource == Just false && not isMapSearchLocation then VISIBLE else GONE
         ]
         []
     , linearLayout
@@ -612,6 +621,228 @@ recenterButtonView push state =
         ]
   ]
 
+
+
+selectTripView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM ( Effect Unit) w
+selectTripView push state = 
+  linearLayout [
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  ][
+    selectTripViewHeader push state
+  , linearLayout[
+        margin (Margin 8 12 8 12)
+      , width MATCH_PARENT
+    ]
+  [Selector.view (push <<< SelectorControllerAction) (selectorConfig' state)]
+  , (oneWayTripView push state)
+  , (roundTripView  push state) 
+  ]
+oneWayTripView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM ( Effect Unit) w
+oneWayTripView push state = 
+  linearLayout[
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  , visibility if state.tripType == ONE_WAY_TRIP then VISIBLE else GONE
+  ][
+    DateSelector.view (push <<< DateSelectButtonClicked) (state.pickupConfig)
+    , linearLayout[
+      width MATCH_PARENT,
+      weight 1.0
+    ][]
+  , viewFareButton state push
+   ]
+
+roundTripView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM ( Effect Unit) w
+roundTripView push state = 
+  linearLayout[
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  , visibility if state.tripType == ONE_WAY_TRIP then GONE else VISIBLE
+  ][
+    DateSelector.view (push <<< DateSelectButtonClicked) (state.pickupConfig)
+  , DateSelector.view (push <<< DateSelectButtonClicked) (state.returnConfig)
+  , textView $ [
+       width MATCH_PARENT
+    ,  height WRAP_CONTENT
+    ,  color Color.black700
+    ,  margin (Margin 16 0 16 0)
+    ,  text (getString BOOK_A_ROUND_TRIP)
+    ] <> FontStyle.body3 TypoGraphy
+    , linearLayout[
+      width MATCH_PARENT,
+      weight 1.0
+    ][]
+  , viewFareButton state push
+   ]
+
+selectorConfig' :: SearchLocationModelState -> SelectorController.BaseConfig
+selectorConfig' state = let
+  selectorConfig' = {
+      baseHeight : WRAP_CONTENT
+    , baseWidth : MATCH_PARENT
+    , baseCornerRadius : 16.0
+    , baseBackground  : Color.grey700 
+    , basePadding : (Padding 0 0 0 0)
+    , baseGravity : CENTER
+    , id : "base"
+    , items : itemsArrayConfig' state
+  }
+  in selectorConfig'
+
+itemsArrayConfig' :: SearchLocationModelState -> Array Selector.ItemConfig 
+itemsArrayConfig' state = let 
+  itemsArrayConfig = [
+      {
+      itemHeight: WRAP_CONTENT
+    , itemGravity: CENTER
+    , itemFontColor: if state.tripType == ONE_WAY_TRIP then Color.white900 else Color.black900
+    , itemBackground: if state.tripType == ONE_WAY_TRIP then Color.black900 else Color.grey700
+    , itemText: (getString ONE_WAY_STR)
+    , itemCornerRadius: 16.0
+    , id: "One Way"
+    , itemPadding: ( PaddingVertical 6 6 ) 
+    , itemTripType : ONE_WAY_TRIP
+    }
+    ,
+    { itemHeight: WRAP_CONTENT
+    , itemGravity: CENTER
+    , itemFontColor: if state.tripType == ROUND_TRIP then Color.white900 else Color.black900
+    , itemBackground: if state.tripType == ROUND_TRIP then Color.black900 else Color.grey700
+    , itemText: (getString ROUND_TRIP_STR)
+    , itemCornerRadius: 16.0
+    , id: "Return Trip"
+    , itemPadding: ( PaddingVertical 6 6 )
+    , itemTripType : ROUND_TRIP
+    }
+    ]
+    in itemsArrayConfig
+
+viewFareButton :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+viewFareButton state push = linearLayout
+  [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , background Color.white900
+  ]
+  [
+  linearLayout [
+    width MATCH_PARENT,
+    height $ V 1,
+    background Color.grey900,
+    margin $ MarginVertical 4 4
+    ][]
+  , tripDetailView push state -- we can make this configurable here 
+  , PrimaryButton.view (push <<< PrimaryButtonActionController)(viewFareButtonConfig state)
+  ]
+
+tripDetailView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
+tripDetailView push state = linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , background Color.white900
+  ][
+    linearLayout[
+      width MATCH_PARENT,
+      height WRAP_CONTENT,
+      orientation HORIZONTAL,
+      padding $ Padding 4 4 4 4,
+      margin $ Margin 16 8 16 8
+    ] [
+      textView $ [
+        text (getString TOTAL_RIDE_DURATION),
+        weight 1.0,
+        gravity LEFT,
+        color Color.black700
+      ] <> FontStyle.tags TypoGraphy,
+      textView $ [
+        text $ formatDuration (state.totalRideDuration),
+        width WRAP_CONTENT,
+        gravity RIGHT,
+        color Color.black700
+      ] <> FontStyle.tags TypoGraphy
+    ],
+    linearLayout[
+      width MATCH_PARENT,
+      height WRAP_CONTENT,
+      orientation HORIZONTAL,
+      padding $ Padding 4 4 4 4,
+      margin $ Margin 16 8 16 8
+    ] [
+      textView $ [
+        text (getString TOTAL_RIDE_DISTANCE),
+        gravity LEFT,
+        color Color.black700
+      ]<>FontStyle.tags TypoGraphy
+      , linearLayout [
+          weight 1.0,
+          height WRAP_CONTENT
+        ][
+        imageView
+          [ height $ V 14
+          , width  $ V 14
+          , gravity CENTER
+          , padding $ Padding 4 4 4 4
+          , visibility if state.tripType == ROUND_TRIP then VISIBLE else GONE
+          , onClick push $ const $ RideInfoButtonPressed
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+          ]
+        ]
+      , textView $ [
+        text $ if state.tripType == ROUND_TRIP then getDistanceString 2.0 else getDistanceString 1.0,
+        width WRAP_CONTENT,
+        gravity RIGHT,
+        color Color.black700,
+        margin $ (MarginRight 4)
+      ] <> FontStyle.tags TypoGraphy
+    ]
+  ]
+  where 
+  getDistanceString :: Number -> String
+  getDistanceString a= if (a*(INT.toNumber $ state.totalRideDistance)) < 1000.0 then (parseFloat (a*(INT.toNumber state.totalRideDistance)) 1)<> " m" else (parseFloat (a*(INT.toNumber state.totalRideDistance)/1000.0) 1) <> " km" 
+
+formatDuration :: Int -> String
+formatDuration duration =
+  let days = duration / (60 * 60 * 24)
+      remainingAfterDays = duration `mod` (60 * 60 * 24)
+      hours = remainingAfterDays / (60 * 60)
+      remainingAfterHours = remainingAfterDays `mod` (60 * 60)
+      minutes = remainingAfterHours / 60
+      daysStr = if days > 0 then show days <> (if days > 1 then " days " else " day ") else ""
+      hoursStr = if hours > 0 then show hours <> " hrs " else ""
+      minutesStr = if minutes > 0 then show minutes <> " mins " else ""
+  in daysStr <> hoursStr <> minutesStr
+
+viewFareButtonConfig :: SearchLocationModelState -> PrimaryButton.Config
+viewFareButtonConfig state =
+  let 
+    config = PrimaryButton.config
+    viewFareButtonConfig' = config
+      { textConfig
+        { text = (getString VIEW_FARES)
+        , color = Color.yellow900 -- state.appConfig.primaryTextColor
+        , textStyle =  FontStyle.Body7
+        }
+      , height = V state.appConfig.searchLocationConfig.primaryButtonHeight
+      , gravity = CENTER
+      , cornerRadius = state.appConfig.primaryButtonCornerRadius
+      , background = state.appConfig.primaryBackground
+      , margin = (Margin 16 14 16 14)
+      , isClickable = true
+      , id = "ViewFareButton"
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
+      }
+  in viewFareButtonConfig'
+
 findPlacesIllustration :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 findPlacesIllustration push state =
   let appName = fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
@@ -758,3 +989,100 @@ separatorConfig =
   , layoutHeight : V 15
   , color : Color.black500
   }
+
+selectTripViewHeader :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
+selectTripViewHeader push state = linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background Color.black900
+      , accessibility DISABLE
+      , padding $ PaddingTop safeMarginTop
+      , orientation VERTICAL
+      ]
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , margin (Margin 16 16 16 16)
+          ]
+          [ linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation HORIZONTAL
+              ]
+              [ linearLayout
+                  [ height $ V 36
+                  , width $ V 36
+                  , onClick push $ const GoBackSearchModel
+                  , accessibilityHint "Cancel Search : Button"
+                  , accessibility ENABLE
+                  , rippleColor Color.rippleShade
+                  , cornerRadius 18.0
+                  ]
+                  [ imageView
+                      [ height $ V 24
+                      , width $ V 24
+                      , accessibility DISABLE
+                      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_close_white.png"
+                      ]
+                  ]
+              ]
+            , sourceDestinationView state push
+          ]
+      ]
+
+sourceDestinationView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+sourceDestinationView state push = linearLayout
+    [ width MATCH_PARENT
+    , orientation VERTICAL
+    , height WRAP_CONTENT
+    , margin $ MarginTop 7
+    ][ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      ][ 
+      imageView
+        [ height $ V 15
+        , width $ V 15
+        , accessibility DISABLE
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
+        ] 
+      , textView $
+        [ height WRAP_CONTENT
+        , margin $ MarginLeft 12
+        , weight 1.0
+        , text state.source 
+        , accessibility ENABLE
+        , color Color.black500 
+        , accessibilityHint $ "Pickup Location is " <> (DS.replaceAll (DS.Pattern ",") (DS.Replacement " : ") state.source)
+        , ellipsize true
+        , singleLine true
+        , padding $ (PaddingBottom 4)
+        ] <> FontStyle.paragraphText LanguageStyle
+      ]
+      , if DS.null state.destination then textView[] else SeparatorView.view separatorConfig
+      , linearLayout[ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      , visibility $ boolToVisibility $ not $ DS.null state.destination
+      ][ 
+        imageView
+        [ height $ V 15
+        , width $ V 15
+        , accessibility DISABLE
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
+        ]
+        , textView $
+        [ height WRAP_CONTENT
+        , weight 1.0
+        , text state.destination 
+        , margin $ MarginLeft 12
+        , color Color.black500 
+        , accessibilityHint $ "Destination Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " : ") state.destination)
+        , accessibility ENABLE
+        , ellipsize true
+        , singleLine true
+        , padding $ (PaddingBottom 4)
+        ] <> FontStyle.paragraphText LanguageStyle
+      ]
+    ]

@@ -52,6 +52,8 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Data.Lens ((^.))
 import Accessor (_amount)
+import Data.Lens ((^.))
+import Accessor (_amount)
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -463,7 +465,7 @@ rentalRateCardConfig state =
               MB.Nothing -> [])
             <> 
             ( case selectedQuote.fareDetails.deadKmFare of
-                MB.Just deadKmFare -> [ { key: getString PICKUP_CHARGES, val: (currency <> (show  $ deadKmFare ^. _amount) ) } ]
+                MB.Just deadKmFare -> [ { key: getString PICKUP_CHARGES, val: (currency <> (show  $  deadKmFare ^. _amount)) } ]
                 MB.Nothing -> []
             )
                   

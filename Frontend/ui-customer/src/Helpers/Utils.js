@@ -120,8 +120,96 @@ export const secondsToHms = function (d) {
   return hDisplay + mDisplay;
 }
 
+export const toIST = function (date) {
+  const today = new Date(date);
+  // IST is 5 hours and 30 minutes ahead of UTC
+  const istOffset = 5.5 * 60 * 60 * 1000; // Convert 5.5 hours to milliseconds
+  const istTime = new Date(today.getTime() + istOffset);
+  return istTime;
+}
+
+// Function to get the IST day of the week (0-6) from a date
+export const getISTDay = function (date) {
+  const today = toIST(date);
+  return today.getDay();
+}
+
+// Function to get the IST month (0-11) from a date
+export const getISTMonth = function (date) {
+  const today = toIST(date);
+  return today.getMonth();
+}
+
+// Function to get the IST year from a date
+export const getISTFullYear = function (date) {
+  const today = toIST(date);
+  return today.getFullYear();
+}
+
+// Function to get the IST day of the month (1-31) from a date
+export const getISTDate = function (date) {
+  const today = toIST(date);
+  return today.getDate();
+}
+
+// Function to get the IST hours (0-23) from a date
+export const getISTHours = function (date) {
+  const today = toIST(date);
+  return today.getHours();
+}
+
+// Function to get the IST minutes (0-59) from a date
+export const getISTMinutes = function (date) {
+  const today = toIST(date);
+  return today.getMinutes();
+}
+
+// Function to get the IST seconds (0-59) from a date
+export const getISTSeconds = function (date) {
+  const today = toIST(date);
+  return today.getSeconds();
+}
+
+
 export const getUTCDay = function (date) {
-  return date.getUTCDay();
+  const today = new Date(date)
+  return today.getUTCDay();
+}
+
+// Function to get the UTC month (0-11) from a date
+export const getUTCMonth = function (date) {
+  const today = new Date(date)
+  return today.getUTCMonth();
+}
+
+// Function to get the UTC year from a date
+export const getUTCFullYear = function (date) {
+  const today = new Date(date)
+  return today.getUTCFullYear();
+}
+
+// Function to get the UTC day of the month (1-31) from a date
+export const getUTCDate = function (date) {
+  const today = new Date(date)
+  return today.getUTCDate();
+}
+
+// Function to get the UTC hours (0-23) from a date
+export const getUTCHours = function (date) {
+  const today = new Date(date)
+  return today.getUTCHours();
+}
+
+// Function to get the UTC minutes (0-59) from a date
+export const getUTCMinutes = function (date) {
+  const today = new Date(date)
+  return today.getUTCMinutes();
+}
+
+// Function to get the UTC seconds (0-59) from a date
+export const getUTCSeconds = function (date) {
+  const today = new Date(date)
+  return today.getUTCSeconds();
 }
 
 export const getTime = function (unit) {
