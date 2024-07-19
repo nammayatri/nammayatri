@@ -64,9 +64,11 @@ processSpecFolders' isGenAll insideOfSpecDir specFolderPath = do
         then do
           let apiFolderPath = entryPath </> "API"
               storageFolderPath = entryPath </> "Storage"
+              techDesignFolderPath = entryPath </> "TechDesign"
               configPath = entryPath </> "dsl-config.dhall"
           apiContents <- doesDirectoryExist apiFolderPath >>= bool (pure []) (listDirectory apiFolderPath)
           storageContents <- doesDirectoryExist storageFolderPath >>= bool (pure []) (listDirectory storageFolderPath)
+          techDesignContents <- doesDirectoryExist techDesignFolderPath >>= bool (pure []) (listDirectory techDesignFolderPath)
           isConfigExists <- doesFileExist configPath
           if not isConfigExists
             then do
@@ -90,6 +92,15 @@ processSpecFolders' isGenAll insideOfSpecDir specFolderPath = do
                     putStrLn $ show fileState ++ " " ++ inputFilePath
                     when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
                       NammaDSL.runStorageGenerator configPath inputFilePath
+
+              forM_ techDesignContents $
+                \inputFile -> do
+                  when (".yaml" `isSuffixOf` inputFile) $ do
+                    let inputFilePath = techDesignFolderPath </> inputFile
+                    fileState <- NammaDSL.getFileState inputFilePath
+                    putStrLn $ show fileState ++ " " ++ inputFilePath
+                    when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
+                      NammaDSL.runTechDesign configPath inputFilePath
         else processSpecFolders isGenAll isSpecDir entryPath
 
 putStrLn' :: String -> String -> IO ()

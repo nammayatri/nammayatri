@@ -11,7 +11,7 @@
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl";
+      url = "github:nammayatri/namma-dsl/7454171c8dbc3774f1be14a6408d87b6e3418844";
     };
 
     haskell-cac = {
@@ -69,7 +69,6 @@
         ./Backend/default.nix
         ./Frontend/default.nix
       ];
-
       flake = {
         # Configuration for https://github.com/juspay/nix-browser/tree/main/crates/nix_health#nix-health
         nix-health.default = {

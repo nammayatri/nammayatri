@@ -1,0 +1,17 @@
+
+
+
+BookAnyProps:
+  abc: Prim.Int
+
+Components.ChooseYourRide.Controller.Blast:
+  declType: type
+  abcd: Prim.Int
+  someOther: Int
+
+Components.ChooseYourRide.Controller.bookAnyProps:
+  abc: maxInt
+  tdComments:
+   - "This is a comment111"
+   - "This is another comment"
+   - "This is yet another comment"

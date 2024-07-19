@@ -96,6 +96,7 @@
           };
           base32.jailbreak = true;
           amazonka-core.check = false;
+          cheapskate.broken = false;
         };
       };
 
