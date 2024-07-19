@@ -63,7 +63,7 @@ track transporterId req = do
   let transporterId' = booking.providerId
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   unless (transporterId' == transporterId) $ throwError AccessDenied
-  let isRideCompleted = ride.status == DRide.COMPLETED
+  let isRideCompleted = (\status -> status `elem` [DRide.COMPLETED, DRide.CANCELLED]) ride.status
   (driverLocation :: Maybe DriverLocation) <-
     if not isValueAddNP
       then do
