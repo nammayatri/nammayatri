@@ -56,13 +56,10 @@ newtype WalletClassNameConfig = WalletClassNameConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data TicketSMSConfig = TicketSMSConfig
-  { -- | Template for the SMS have variables:
-    -- | 1. `{#URL#}` as a placeholder for the URL
-    -- | 2. `{#TICKET_PLURAL#}` as a placeholder for the word "tickets are" or "ticket is"
-    template :: Maybe Text,
-    -- | Template for public url have variable:
+  { -- | Template for public url have variable:
     -- | 1. `{#FRFS_BOOKING_ID#}` as a placeholder for the booking id
-    publicUrl :: Text
+    publicUrl :: Maybe Text,
+    shortUrlExpiryInHours :: Maybe Int
   }
   deriving (Generic, Show, ToSchema)
 
