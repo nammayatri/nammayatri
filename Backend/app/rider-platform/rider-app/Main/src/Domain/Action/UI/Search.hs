@@ -342,7 +342,8 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
         ..
       }
   where
-    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes isReallocationEnabled =
+    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes mbIsReallocationEnabled = do
+      let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       Just $
         def{Beckn.fulfillmentTags =
               [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
