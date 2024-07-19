@@ -49,6 +49,7 @@ data MessageKey
   | SEND_SCHEDULED_RIDE_DETAILS
   | SCHEDULED_RIDE_OTP
   | METRO_TICKET_BOOKING_CANCELLED
+  | METRO_TICKET_BOOKED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

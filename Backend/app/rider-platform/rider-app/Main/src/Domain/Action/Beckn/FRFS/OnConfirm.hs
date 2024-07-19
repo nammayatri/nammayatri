@@ -132,24 +132,23 @@ onConfirm merchant booking' dOrder = do
         fork "send ticket booked sms" $
           withLogTag ("SMS:FRFSBookingId:" <> booking'.id.getId) $ do
             mobileNumber <- mRiderNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
-            smsCfg <- asks (.smsCfg)
             let mocId = booking'.merchantOperatingCityId
                 countryCode = fromMaybe "+91" mRiderMobileCountryCode
                 phoneNumber = countryCode <> mobileNumber
-                sender = smsCfg.sender
-            mbMsg <-
-              MessageBuilder.buildFRFSTicketBookedMessage pOrgId $
+            mbBuildSmsReq <-
+              MessageBuilder.buildFRFSTicketBookedMessage mocId pOrgId $
                 MessageBuilder.BuildFRFSTicketBookedMessageReq
                   { countOfTickets = booking'.quantity,
                     bookingId = booking'.id
                   }
-            if isJust mbMsg
-              then do
-                let message = fromJust mbMsg
-                logDebug $ "SMS Message:" +|| message ||+ ""
-                Sms.sendSMS booking'.merchantId mocId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
-              else do
-                logError $ "SMS not sent, SMS template not found for partnerOrgId:" <> pOrgId.getId
+            maybe
+              (logError $ "SMS not sent, SMS template not found for partnerOrgId:" <> pOrgId.getId)
+              ( \buildSmsReq -> do
+                  let smsReq = buildSmsReq phoneNumber
+                  logDebug $ "SMS Message:" +|| smsReq.smsBody ||+ ""
+                  Sms.sendSMS booking'.merchantId mocId smsReq >>= Sms.checkSmsResult
+              )
+              mbBuildSmsReq
 
 buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> [Ticket.FRFSTicket] -> Maybe Text -> Flow ()
 buildReconTable merchant booking _dOrder tickets mRiderNumber = do

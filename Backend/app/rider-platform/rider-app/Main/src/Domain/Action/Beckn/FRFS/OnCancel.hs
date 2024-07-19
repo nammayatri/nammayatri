@@ -143,14 +143,19 @@ onCancel _ booking' dOnCancel = do
                 countryCode = fromMaybe "+91" mRiderMobileCountryCode
                 phoneNumber = countryCode <> mobileNumber
 
-            buildSmsReq <-
+            mbBuildSmsReq <-
               MessageBuilder.buildFRFSTicketCancelMessage mocId pOrgId $
                 MessageBuilder.BuildFRFSTicketCancelMessageReq
                   { countOfTickets = booking'.quantity,
                     bookingId = booking'.id
                   }
-
-            Sms.sendSMS booking'.merchantId mocId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
+            maybe
+              (logError $ "SMS not sent, SMS template not found for partnerOrgId:" <> pOrgId.getId)
+              ( \buildSmsReq -> do
+                  let smsReq = buildSmsReq phoneNumber
+                  Sms.sendSMS booking'.merchantId mocId smsReq >>= Sms.checkSmsResult
+              )
+              mbBuildSmsReq
 
 makecancelledTtlKey :: Id FTBooking.FRFSTicketBooking -> Text
 makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId

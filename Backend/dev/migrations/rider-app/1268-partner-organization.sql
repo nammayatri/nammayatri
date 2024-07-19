@@ -52,3 +52,11 @@ SELECT org_id as partner_org_id, BPPStCallCfg.config_type as config_type, BPPStC
 WITH WalletClassNameCfg AS (SELECT 'WALLET_CLASS_NAME' as config_type, '{ "className": {"namma-yatri-0-0000-0000-00000000city":"namma_yatri_metro_kmrl"} }'::json as config_json)
 INSERT INTO atlas_app.partner_org_config (partner_org_id, config_type, config_json)
 SELECT org_id as partner_org_id, WalletClassNameCfg.config_type as config_type, WalletClassNameCfg.config_json as config_json FROM atlas_app.partner_organization CROSS JOIN WalletClassNameCfg;
+-- DROP QUERY, can be run before release as well, as table is not used anywhere in old / new version.
+DROP TABLE atlas_app.frfs_trip;
+
+-- UPDATE `shortUrlExpiryInHours` for all `TICKET_SMS` partner_org_config
+UPDATE atlas_app.partner_org_config
+SET config_json = config_json :: jsonb || jsonb_build_object('shortUrlExpiryInHours', 240)
+WHERE config_type = 'TICKET_SMS';
+
