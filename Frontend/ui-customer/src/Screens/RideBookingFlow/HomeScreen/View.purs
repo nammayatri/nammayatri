@@ -4817,7 +4817,7 @@ exploreCitySection push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding $ Padding 16 8 16 16
-    , visibility $ boolToVisibility $ state.data.currentCityConfig.featureConfig.showExploreCity && (not $ null state.data.famousDestinations)
+    , visibility $ boolToVisibility  $ not $ null state.data.famousDestinations
     ][  textView $
           [ text $ getString $ EXPLORE_CITY_WITH_US $ getLanguageBasedCityName city
           , color Color.black900
