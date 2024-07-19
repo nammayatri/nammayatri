@@ -78,7 +78,8 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   let lastNthDay = addDays (fromMaybe (-1) transporterConfig.schedulePayoutForDay) (utctDay localTime)
   dailyStatsForEveryDriverList <- QDSE.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastNthDay statusForRetry
   let dStatsList = filter (\ds -> ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- filtering the max referral flagged payouts
-  dailyStatsWithVpaList <- mapM getStatsWithVpaList dStatsList
+  statsWithVpaList <- mapM getStatsWithVpaList dStatsList
+  let dailyStatsWithVpaList = filter (\dsv -> isJust dsv.payoutVpa) statsWithVpaList
   if null dailyStatsWithVpaList || null payoutConfigList
     then do
       when toScheduleNextPayout $ do
