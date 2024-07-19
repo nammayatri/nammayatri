@@ -482,7 +482,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Boolean
     , checkIfACWorking      :: Maybe Boolean
-    , canSwitchToIntercity  :: Maybe Boolean
+    , canSwitchToInterCity  :: Maybe Boolean
     }
 
 
@@ -758,7 +758,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -771,6 +771,12 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode HATCHBACK = standardEncode {}
  standardEncode AUTO_VARIANT = standardEncode {}
  standardEncode BIKE = standardEncode {}
+ standardEncode AMBULANCE_TAXI = standardEncode {}
+ standardEncode AMBULANCE_TAXI_OXY = standardEncode {}
+ standardEncode AMBULANCE_AC = standardEncode {}
+ standardEncode AMBULANCE_AC_OXY = standardEncode {}
+ standardEncode AMBULANCE_VENTILATOR = standardEncode {}
+
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
 
@@ -882,7 +888,7 @@ newtype UpdateDriverInfoReq
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
-  , canSwitchToIntercity :: Maybe Boolean
+  , canSwitchToInterCity :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
@@ -1033,7 +1039,9 @@ newtype DriverRCReq = DriverRCReq {
   imageId :: String,
   dateOfRegistration :: Maybe String,
   vehicleCategory :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  ventilator :: Maybe Boolean,
+  oxygen :: Maybe Boolean
 }
 
 newtype DriverRCResp = DriverRCResp ApiSuccessResult
@@ -3728,7 +3736,8 @@ instance standardReferredDriversReq :: StandardEncode ReferredDriversReq where s
 
 newtype DetectCityReq = DetectCityReq {
   lat :: Number,
-  lon :: Number
+  lon :: Number,
+  merchantId :: String
 }
 
 newtype DetectCityResp = DetectCityResp {
@@ -4461,7 +4470,8 @@ data OnboardingDocsReq = OnboardingDocsReq String
 newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
   cabs :: Maybe (Array OnboardingDoc),
-  bikes :: Maybe (Array OnboardingDoc)
+  bikes :: Maybe (Array OnboardingDoc),
+  ambulances :: Maybe (Array OnboardingDoc)
 }
 
 newtype OnboardingDoc = OnboardingDoc {

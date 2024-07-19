@@ -1320,3 +1320,5 @@ getFR stringKey =
         NEXT_FREE_TICKET -> "Le prochain billet ajouté est éligible pour un billet gratuit"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "Cashback débloqué (jusqu'à " <> maxCashback <> ") sur " <> freeTicketCount <> " billet !"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE ->  "Des frais supplémentaires peuvent être applicables lorsque le conducteur se trouve à proximité du lieu de prise en charge."
+        CLEAN_BIKE -> "Vélo propre"
+        UNCOMFORTABLE_BIKE -> "Vélo inconfortable"

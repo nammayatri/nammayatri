@@ -1320,3 +1320,5 @@ getML stringKey =
         NEXT_FREE_TICKET -> "അടുത്ത ടിക്കറ്റ് സൗജന്യമാണ്"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "സൗജന്യ ടിക്കറ്റ് (അതിലുള്ള പരമാവധി " <> maxCashback <> ") ലഭ്യമാണ് " <> freeTicketCount <> " ടിക്കറ്റുകൾ!"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "ഡ്രൈവർ പിക്കപ്പ് സ്ഥലത്തിന് സമീപം ആയിരിക്കുമ്പോൾ അധിക നിരക്കുകൾ ബാധകമായേക്കാം."
+        CLEAN_BIKE -> "വൃത്തിയാക്കിയ ബൈക്ക്"
+        UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"

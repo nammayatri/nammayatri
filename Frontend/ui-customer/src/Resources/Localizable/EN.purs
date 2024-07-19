@@ -1320,3 +1320,5 @@ getEN stringKey =
         NEXT_FREE_TICKET -> "Next ticket added is eligible for cashback"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "Unlocked cashback (upto ₹" <> maxCashback <> ") on " <> freeTicketCount <> " Ticket!"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "Additional charges may be applicable when driver is near pickup location."        
+        CLEAN_BIKE -> "Clean Bike"
+        UNCOMFORTABLE_BIKE -> "Uncomfortable Bike"

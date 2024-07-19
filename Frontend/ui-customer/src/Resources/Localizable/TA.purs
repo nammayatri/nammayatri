@@ -1336,3 +1336,5 @@ getTA stringKey =
     NEXT_FREE_TICKET -> "அடுத்த டிக்கெட் இலவசமாகும்"
     FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "இலவசமாக உள்ள டிக்கெட் (அதிகம் ₹" <> maxCashback <> ") உள்ள " <> freeTicketCount <> " டிக்கெட்!"
     ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "பிக்கப் இடத்திற்கு அருகில் டிரைவர் இருக்கும்போது கூடுதல் கட்டணங்கள் விதிக்கப்படலாம்."
+    CLEAN_BIKE -> "சுத்தமான பைக்"
+    UNCOMFORTABLE_BIKE -> "அமைதியற்ற பைக்"

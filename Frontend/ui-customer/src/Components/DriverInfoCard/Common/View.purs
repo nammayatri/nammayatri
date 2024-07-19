@@ -31,7 +31,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (rippleColor, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -47,7 +47,7 @@ import Mobility.Prelude (boolToVisibility, spaceSeparatedPascalCase)
 import Data.Function.Uncurried(runFn1)
 import Components.ServiceTierCard.View as ServiceTierCard
 import Resources.Constants (getVehicleCapacity)
- 
+import Screens.Types as ST
 import Screens.Types (FareProductType(..)) as FPT
 
 ---------------------------------- driverDetailsView ---------------------------------------
@@ -152,7 +152,7 @@ driverDetailsView config uid nid =
                 ][ linearLayout
                   [ height $ V 38
                   , width WRAP_CONTENT
-                  , background config.config.driverInfoConfig.numberPlateBackground
+                  , background if config.vehicleVariant == "BIKE" then "#FFFFFF" else config.config.driverInfoConfig.numberPlateBackground
                   , cornerRadius 4.0
                   , orientation HORIZONTAL
                   , margin $ MarginRight 2
@@ -264,6 +264,7 @@ getVehicleImage variant vehicleDetail city = do
                           "SUV" -> "ny_ic_suv_concept"
                           "TAXI" -> "ic_white_taxi"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
+                          "BIKE" -> "ny_ic_bike_concept"
                           _     -> "ny_ic_sedan_concept"
           _          -> case variant of
                           "TAXI"      -> "ny_ic_hatchback_concept"
@@ -273,6 +274,7 @@ getVehicleImage variant vehicleDetail city = do
                           "HATCHBACK" -> "ny_ic_hatchback_concept"
                           "ECO"       -> "ny_ic_hatchback_concept"
                           "COMFY"     -> "ny_ic_sedan_concept"
+                          "BIKE"      -> "ny_ic_bike_concept"
                           _           -> "ny_ic_sedan_concept"              
     where 
       mkAutoImage :: City -> String

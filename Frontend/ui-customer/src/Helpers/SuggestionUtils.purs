@@ -51,6 +51,8 @@ import Accessor (_vehicleVariant)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import RemoteConfig (FamousDestination(..), getFamousDestinations)
 import Screens.HomeScreen.ScreenData (dummyAddress)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Debug
 
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
@@ -355,12 +357,14 @@ transformTrip :: Trip -> Trip
 transformTrip trip = fixVariantForTrip $ trip { serviceTierNameV2 = correctServiceTierName trip.serviceTierNameV2 }
 
 correctServiceTierName :: Maybe String -> Maybe String
-correctServiceTierName serviceTierName = 
+correctServiceTierName serviceTierName =
   case serviceTierName of
     Just "SUV" -> Just "SUV"
     Just "SEDAN" -> Just "Sedan"
     Just "AUTO_RICKSHAW" -> Just "Auto"
     Just "HATCHBACK" -> Just "Hatchback"
+    Just "BIKE" -> Just "Bike Taxi"
+    Just "BIKE_TIER" -> Just "Bike Taxi"
     _ -> serviceTierName
 
 removeDuplicateTrips :: Array Trip -> Int -> Array Trip
@@ -443,7 +447,7 @@ getHelperLists savedLocationResp recentPredictionsObject state lat lon =
                 (\item -> isPointWithinXDist item lat lon state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
             $ DA.reverse 
                 (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
-        
+      _ = spy "sortedTripList" sortedTripList
       trips = map (\item -> transformTrip item) sortedTripList
   in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations}
 
@@ -465,6 +469,8 @@ getVariant serviceTier variant =
     Just "AC Mini" -> Just "HATCHBACK"
     Just "XL Cab" -> Just "SUV"
     Just "Non-AC Mini" -> Just "TAXI"
+    Just "Bike Taxi" -> Just "BIKE"
+    Just "XL Plus" -> Just "SUV_PLUS"
     _ -> variant
 
 fetchFamousDestinations :: LazyCheck -> Array LocationListItemState

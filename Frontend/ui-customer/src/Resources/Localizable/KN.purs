@@ -1319,3 +1319,5 @@ getKN stringKey =
         NEXT_FREE_TICKET -> "ಮುಂದಿನ ಟಿಕೆಟ್ ಉಚಿತವಾಗಿದೆ"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "ಉಚಿತ ಟಿಕೆಟ್ ಲಭ್ಯವಿದೆ (ಅತ್ಯಧಿಕ " <> maxCashback <> ") ಮತ್ತು " <> freeTicketCount <> " ಟಿಕೆಟ್‌ಗಳು!"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "ಚಾಲಕರು ಪಿಕಪ್ ಸ್ಥಳದ ಬಳಿ ಇರುವಾಗ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕಗಳು ಅನ್ವಯವಾಗಬಹುದು."
+        CLEAN_BIKE -> "ಸ್ವಚ್ಛ ಬೈಕ್"
+        UNCOMFORTABLE_BIKE -> "ಅಸಂತೋಷಕರ ಬೈಕ್"

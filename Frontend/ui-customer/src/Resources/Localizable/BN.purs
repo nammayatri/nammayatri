@@ -1318,3 +1318,5 @@ getBN stringKey =
         NEXT_FREE_TICKET -> "পরবর্তী টিকেট বিনামূল্যে"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "আনলক ক্যাশব্যাক (সর্বোচ্চ ₹" <> maxCashback <> ") এ " <> freeTicketCount <> " টিকেট!"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "চালক যখন পিকআপ অবস্থানের কাছাকাছি থাকে তখন অতিরিক্ত চার্জ প্রযোজ্য হতে পারে।"
+        CLEAN_BIKE -> "পরিষ্কার বাইক"
+        UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"

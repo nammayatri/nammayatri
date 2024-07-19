@@ -1333,3 +1333,5 @@ getTE stringKey =
     NEXT_FREE_TICKET -> "తదుపరి టికెట్ ఉచితం"
     FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "అంచనా ధరకు ఉచితం (మధ్య నిలువు " <> maxCashback <> ") లో " <> freeTicketCount <> " టికెట్!"
     ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "డ్రైవర్ పికప్ స్థానానికి సమీపంలో ఉన్నప్పుడు అదనపు ఛార్జీలు వర్తించవచ్చు."
+    CLEAN_BIKE -> "స్వచ్ఛంగా బైక్"
+    UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"

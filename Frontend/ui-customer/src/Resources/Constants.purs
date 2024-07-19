@@ -203,8 +203,8 @@ getGender gender placeHolderText =
       _ -> (getString PREFER_NOT_TO_SAY)
     Nothing -> placeHolderText
 
-getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
-getFaresList fares chargeableRideDistance =
+getFaresList :: Array FareBreakupAPIEntity -> String -> Boolean -> Array ST.FareComponent
+getFaresList fares chargeableRideDistance isSpecialZone =
   let currency = (getAppConfig appConfig).currency
   in
   map
@@ -226,9 +226,9 @@ getFaresList fares chargeableRideDistance =
                       "DEAD_KILOMETER_FARE" -> getEN PICKUP_CHARGE
                       "PICKUP_CHARGES" -> getEN PICKUP_CHARGE
                       "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
-                      "WAITING_CHARGES" -> getEN WAITING_CHARGE
+                      "WAITING_CHARGES" -> if isSpecialZone then getEN PICKUP_CHARGE else getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN WAITING_CHARGE 
+                      "WAITING_OR_PICKUP_CHARGES" -> if isSpecialZone then getEN PICKUP_CHARGE else getEN WAITING_CHARGE 
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
@@ -277,7 +277,7 @@ dummyPrice = {amount: 0.0, currency: ""}
 getMerchantSpecificFilteredFares :: Merchant -> Array String
 getMerchantSpecificFilteredFares merchant = 
   case merchant of
-    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE", "SERVICE_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "PLATFORM_FEE"]
+    YATRISATHI -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "CGST", "PLATFORM_FEE", "FIXED_GOVERNMENT_RATE", "SERVICE_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "PLATFORM_FEE", "SGST"]
     _ -> ["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]
 
 getPlatformFeeIfIncluded :: Array FareBreakupAPIEntity -> Number
@@ -303,6 +303,7 @@ fetchVehicleVariant variant =
     "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
     "TAXI"          -> Just ST.TAXI 
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
+    "BIKE"          -> Just ST.BIKE
     _               -> Nothing
 
 getVehicleCapacity :: String -> String 
@@ -310,6 +311,7 @@ getVehicleCapacity variant =
   case fetchVehicleVariant variant of
     Just ST.SUV -> "6" 
     Just ST.AUTO_RICKSHAW -> "3"
+    Just ST.BIKE -> "1"
     _ -> "4"
 
 intMax :: Int

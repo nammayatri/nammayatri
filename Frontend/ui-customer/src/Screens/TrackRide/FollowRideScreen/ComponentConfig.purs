@@ -23,6 +23,7 @@ import Data.Array as DA
 import LocalStorage.Cache (getValueFromCache)
 import Storage
 import Engineering.Helpers.Suggestions
+import Screens.Types as ST
 
 primaryButtonConfig :: FollowRideScreenState -> PrimaryButton.Config
 primaryButtonConfig state =

@@ -86,7 +86,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..))
+import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -95,7 +95,6 @@ import Locale.Utils
 import Components.MessagingView.Common.Types
 import Components.MessagingView.View
 import Screens.Types (FareProductType(..)) as FPT
-
 
 
 messageNotificationView :: forall w action. (action -> Effect Unit) -> (MessageNotificationView action) -> PrestoDOM ( Effect Unit) w
@@ -202,7 +201,7 @@ messageView push state message=
   ][ imageView
      [ height $ V 32
      , width $ V 32
-     , imageWithFallback $ if message.sentBy == "Driver" then fetchImage FF_ASSET "ny_ic_driver_message" else fetchImage FF_ASSET "ny_ic_customer_message"
+     , imageWithFallback $ if message.sentBy == "Driver" then fetchImage FF_ASSET if ((getMerchant FunctionCall) == YATRISATHI) then "ys_ic_driver_message" else "ny_ic_driver_message" else fetchImage FF_ASSET "ny_ic_customer_message"
      , margin $ Margin 0 8 8 0
      , accessibility DISABLE
      ]

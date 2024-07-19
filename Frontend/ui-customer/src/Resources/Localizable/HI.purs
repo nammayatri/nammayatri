@@ -1318,3 +1318,5 @@ getHI stringKey =
         NEXT_FREE_TICKET -> "अगली टिकट मुफ्त है"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "अनलॉक करें कैशबैक (अधिकतम ₹" <> maxCashback <> ") पर " <> freeTicketCount <> " टिकट!"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "अतिरिक्त शुल्क तब लागू हो सकता है जब ड्राइवर पिकअप स्थान के पास हो।"
+        CLEAN_BIKE -> "साफ बाइक"
+        UNCOMFORTABLE_BIKE -> "असहज बाइक"
