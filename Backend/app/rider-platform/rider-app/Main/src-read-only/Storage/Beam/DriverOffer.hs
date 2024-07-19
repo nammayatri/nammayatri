@@ -26,6 +26,7 @@ data DriverOfferT f = DriverOfferT
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
+    searchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Domain.Types.DriverOffer.DriverOfferStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     validTill :: B.C f Kernel.Prelude.UTCTime

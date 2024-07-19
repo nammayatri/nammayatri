@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.SearchRequest
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -25,6 +26,7 @@ data DriverOffer = DriverOffer
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+    searchRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest),
     status :: Domain.Types.DriverOffer.DriverOfferStatus,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime

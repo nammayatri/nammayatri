@@ -6,6 +6,7 @@ module Storage.Queries.DriverOffer where
 
 import qualified Domain.Types.DriverOffer
 import qualified Domain.Types.Estimate
+import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -22,6 +23,11 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverOffer.DriverOffer] -> m ())
 createMany = traverse_ create
+
+findAllBySearchRequestIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest) -> Domain.Types.DriverOffer.DriverOfferStatus -> m [Domain.Types.DriverOffer.DriverOffer])
+findAllBySearchRequestIdAndStatus searchRequestId status = do findAllWithKV [Se.And [Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId <$> searchRequestId), Se.Is Beam.status $ Se.Eq status]]
 
 findByBPPQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.DriverOffer.DriverOffer])
 findByBPPQuoteId bppQuoteId = do findAllWithKV [Se.Is Beam.bppQuoteId $ Se.Eq bppQuoteId]
@@ -50,6 +56,7 @@ updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.rating rating,
+      Se.Set Beam.searchRequestId (Kernel.Types.Id.getId <$> searchRequestId),
       Se.Set Beam.status status,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill
@@ -72,6 +79,7 @@ instance FromTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             rating = rating,
+            searchRequestId = Kernel.Types.Id.Id <$> searchRequestId,
             status = status,
             updatedAt = updatedAt,
             validTill = validTill
@@ -92,6 +100,7 @@ instance ToTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.rating = rating,
+        Beam.searchRequestId = Kernel.Types.Id.getId <$> searchRequestId,
         Beam.status = status,
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill

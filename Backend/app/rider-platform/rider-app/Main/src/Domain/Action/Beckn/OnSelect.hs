@@ -205,6 +205,7 @@ buildDriverOffer estimateId DriverOfferQuoteDetails {..} searchRequest = do
         updatedAt = now,
         distanceUnit = searchRequest.distanceUnit,
         distanceToPickup = convertHighPrecMetersToDistance searchRequest.distanceUnit <$> distanceToPickup,
+        searchRequestId = Just searchRequest.id,
         ..
       }
 

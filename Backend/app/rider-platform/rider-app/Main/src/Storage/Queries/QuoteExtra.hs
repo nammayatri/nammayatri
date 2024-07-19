@@ -3,6 +3,7 @@ module Storage.Queries.QuoteExtra where
 import Domain.Types.DriverOffer as DDO
 import Domain.Types.Estimate
 import Domain.Types.Quote as DQ
+import Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -67,3 +68,10 @@ findAllByEstimateId estimateId status = do
 
 findDOfferByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
 findDOfferByEstimateId (Id estimateId) status = findAllWithKV [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]]
+
+findAllQuotesBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> Id Estimate -> DriverOfferStatus -> m [Quote]
+findAllQuotesBySRId searchReqId estimateId status = do
+  driverOffersBySrId <- QueryDO.findAllBySearchRequestIdAndStatus (Just searchReqId) status
+  driverOffers <- bool (pure driverOffersBySrId) (findDOfferByEstimateId estimateId status) (null driverOffersBySrId)
+  let offerIds = map (Just . getId . DDO.id) driverOffers
+  findAllWithKV [Se.Is BeamQ.driverOfferId (Se.In offerIds)]

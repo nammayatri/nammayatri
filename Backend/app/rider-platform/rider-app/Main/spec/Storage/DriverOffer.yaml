@@ -4,6 +4,7 @@ imports:
   Centesimal: Kernel.Types.Common
   Estimate: Domain.Types.Estimate
   Distance: Kernel.Types.Common
+  SearchRequest: Domain.Types.SearchRequest
 
 DriverOffer:
   tableName: driver_offer
@@ -22,6 +23,7 @@ DriverOffer:
     durationToPickup : Maybe Int
     distanceToPickup : Maybe Distance
     distanceUnit : DistanceUnit
+    searchRequestId : "Maybe (Id SearchRequest)"
     validTill : UTCTime
     bppQuoteId : Text
     rating : Maybe Centesimal
@@ -80,4 +82,7 @@ DriverOffer:
       params: [updatedAt, status]
       where: estimateId
 
-
+    findAllBySearchRequestIdAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [searchRequestId, status]
