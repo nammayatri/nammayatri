@@ -99,6 +99,7 @@ getKN stringKey =
         SELECT_AN_OFFER -> "ಪ್ರಸ್ತಾಪವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
         CHOOSE_A_RIDE_AS_PER_YOUR_COMFORT -> "ನಿಮ್ಮ ಸೌಕರ್ಯದ ಪ್ರಕಾರ ಸವಾರಿಯನ್ನು ಆರಿಸಿ"
         IT_SEEMS_TO_BE_A_VERY_BUSY_DAY -> "ಇದು ತುಂಬಾ ಕಾರ್ಯನಿರತ ದಿನವೆಂದು ತೋರುತ್ತದೆ. ನೀವು ಮತ್ತೆ ಸವಾರಿಗಳನ್ನು ಹುಡುಕಲು ಪ್ರಯತ್ನಿಸಬಹುದು"
+        IT_SEEMS_BUSY_DAY_TRY_OTHER_PROVIDER -> "ಇದು ಕಾರ್ಯನಿರತ ದಿನವೆಂದು ತೋರುತ್ತದೆ. ಇತರ ಪ್ರೊವೈಡರ್‌ಗಳನ್ನು ಪ್ರಯತ್ನಿಸಿ"
         SORT_BY -> "ವಿಂಗಡಿಸು"
         SORRY_WE_COULDNT_FIND_ANY_RIDES -> "ಕ್ಷಮಿಸಿ, ನಮಗೆ ಯಾವುದೇ ಸವಾರಿಗಳು ಸಿಗಲಿಲ್ಲ"
         LOAD_MORE -> "ಇನ್ನಷ್ಟು ಲೋಡ್ ಮಾಡಿ"

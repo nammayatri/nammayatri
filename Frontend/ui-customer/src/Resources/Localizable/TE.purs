@@ -113,6 +113,7 @@ getTE stringKey =
     SELECT_AN_OFFER -> "ఆఫర్‌ను ఎంచుకోండి"
     CHOOSE_A_RIDE_AS_PER_YOUR_COMFORT -> "మీ సౌకర్యాన్ని బట్టి రైడ్‌ని ఎంచుకోండి "
     IT_SEEMS_TO_BE_A_VERY_BUSY_DAY -> "ఇది చాలా బిజీగా ఉన్న రోజు అనిపిస్తుంది. మీరు మళ్లీ రైడ్‌ల కోసం వెతకడానికి ప్రయత్నించవచ్చు"
+    IT_SEEMS_BUSY_DAY_TRY_OTHER_PROVIDER -> "ఇది బిజీగా ఉన్న రోజు అనిపిస్తుంది. మరొక ప్రొవైడర్‌ను ప్రయత్నించండి"
     SORT_BY -> "ఆమరిక"
     SORRY_WE_COULDNT_FIND_ANY_RIDES -> "క్షమించండి, మేము ఎలాంటి రైడ్‌లను కనుగొనలేకపోయాము"
     LOAD_MORE -> "మరింత లోడ్ చేయండి"

@@ -311,7 +311,7 @@ findingRidesView state push =
         , visibility $ boolToVisibility $ (state.vehicleVariant /= "AUTO_RICKSHAW") && (getValueToLocalStore HAS_TOLL_CHARGES == "true")
         ] <> FontStyle.subHeading2 TypoGraphy
       ]
-    , addTipView state push
+    , if state.selectedEstimatesObject.providerType == ONUS then addTipView state push else linearLayout [][]
     ]
 
 addTipView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

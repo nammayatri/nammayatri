@@ -620,7 +620,7 @@ quoteListView push config =
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
-                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = false, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
                         ) variantBasedList
                   else 
                     Tuple "TopProvider" $ linearLayout

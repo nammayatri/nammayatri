@@ -98,6 +98,7 @@ getBN stringKey =
         SELECT_AN_OFFER -> "একটি অফার নির্বাচন করুন"
         CHOOSE_A_RIDE_AS_PER_YOUR_COMFORT -> "আপনার আরাম অনুযায়ী একটি যাত্রা যাত্রা চয়ন করুন"
         IT_SEEMS_TO_BE_A_VERY_BUSY_DAY -> "খুব ব্যস্ত দিন মনে হচ্ছে। আপনি আবার রাইড খোঁজার চেষ্টা করতে পারেন"
+        IT_SEEMS_BUSY_DAY_TRY_OTHER_PROVIDER -> "ব্যস্ত দিন মনে হচ্ছে। অন্য প্রদাতার চেষ্টা করুন"
         SORT_BY -> "ক্রমানুসার"
         SORRY_WE_COULDNT_FIND_ANY_RIDES -> "দুঃখিত, আমরা কোনও কোনও রাইড খুঁজে পাইনি"
         LOAD_MORE -> "আরো লোড করুন"

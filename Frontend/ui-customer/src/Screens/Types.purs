@@ -572,7 +572,7 @@ instance showStage :: Show Stage where show = genericShow
 
 data SearchLocationModelType = SearchLocation | LocateOnMap | NoView | RouteMap
 
-data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp | CancelConfirmingQuotes
+data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp | CancelConfirmingQuotes | RetryOtherProvider
 
 derive instance genericPopupType :: Generic PopupType _
 instance eqPopupType :: Eq PopupType where eq = genericEq

@@ -98,6 +98,7 @@ getEN stringKey =
         SELECT_AN_OFFER -> "Select an Offer"
         CHOOSE_A_RIDE_AS_PER_YOUR_COMFORT -> "Choose a ride as per your comfort "
         IT_SEEMS_TO_BE_A_VERY_BUSY_DAY -> "It seems to be a very busy day. You may try looking for rides again"
+        IT_SEEMS_BUSY_DAY_TRY_OTHER_PROVIDER -> "It seems to be a very busy day. You may try booking with other providers."
         SORT_BY -> "Sort By"
         SORRY_WE_COULDNT_FIND_ANY_RIDES -> "Sorry, we couldn’t find any rides"
         LOAD_MORE -> "Load More"

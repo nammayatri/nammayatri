@@ -694,6 +694,39 @@ logOutPopUpModelConfig state = case state.props.isPopUp of
           }
     in
       popUpConfig'
+  ST.RetryOtherProvider ->
+    let 
+      config' = PopUpModal.config
+      popUpConfig' =
+        config'
+          { primaryText { text = (getString TRY_AGAIN) <> "?"}
+          , buttonLayoutMargin = (MarginHorizontal 16 16)
+          , showRetry = true
+          , dismissPopup = true
+          , optionButtonOrientation = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes || state.data.iopState.providerSelectionStage) then "VERTICAL" else "HORIZONTAL"
+          , secondaryText { text = getString IT_SEEMS_BUSY_DAY_TRY_OTHER_PROVIDER }
+          , option1
+            { text = getString SEARCH_AGAIN
+            , width = MATCH_PARENT
+            , color = state.data.config.primaryTextColor
+            , strokeColor = state.data.config.primaryBackground
+            , background = state.data.config.primaryBackground
+            , padding = (Padding 0 10 0 10)
+            , enableRipple = true
+            , visibility = true
+            }
+          , option2
+            { text = getString GO_HOME_
+            , width = MATCH_PARENT
+            , background = Color.white900
+            , strokeColor = Color.white900
+            , margin = MarginTop $ if ((isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes)) then 14 else 3
+            , color = Color.black650
+            , padding = if (isLocalStageOn ST.QuoteList || isLocalStageOn ST.FindingQuotes) then (PaddingBottom getBottomMargin) else (Padding 0 0 0 0)
+            }
+          }
+    in
+      popUpConfig'
   _ ->
     let
       isNormalRide = not (DA.any (_ == state.data.fareProductType) [ FPT.INTER_CITY, FPT.RENTAL ])

@@ -100,6 +100,7 @@ getHI stringKey =
         SELECT_AN_OFFER -> "एक प्रस्ताव का चयन करें"
         CHOOSE_A_RIDE_AS_PER_YOUR_COMFORT -> "अपने आराम के अनुसार एक सवारी चुनें"
         IT_SEEMS_TO_BE_A_VERY_BUSY_DAY -> "यह बहुत व्यस्त दिन लगता है। आप फिर से सवारी की तलाश कर सकते हैं"
+        IT_SEEMS_BUSY_DAY_TRY_OTHER_PROVIDER -> "यह व्यस्त दिन लगता है। कृपया दूसरे प्रदाता का प्रयास करें"
         SORT_BY -> "इसके अनुसार क्रमबद्ध करें"
         SORRY_WE_COULDNT_FIND_ANY_RIDES -> "क्षमा करें, हमें कोई सवारी नहीं मिली"
         LOAD_MORE -> "और लोड करें"

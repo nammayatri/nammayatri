@@ -98,6 +98,7 @@ getFR stringKey =
         SELECT_AN_OFFER -> "Sélectionnez une offre"
         CHOOSE_A_RIDE_AS_PER_YOUR_COMFORT -> "Choisissez une balade selon votre confort"
         IT_SEEMS_TO_BE_A_VERY_BUSY_DAY -> "Cela semble être une journée très chargée. Vous pouvez essayer de chercher à nouveau des trajets"
+        IT_SEEMS_BUSY_DAY_TRY_OTHER_PROVIDER -> "Il semble que la journée soit très chargée. Vous pouvez essayer de chercher à nouveau des trajets"
         SORT_BY -> "Trier par"
         SORRY_WE_COULDNT_FIND_ANY_RIDES -> "Désolé, nous ne pouvions pas trouver de manèges"
         LOAD_MORE -> "Charger plus"

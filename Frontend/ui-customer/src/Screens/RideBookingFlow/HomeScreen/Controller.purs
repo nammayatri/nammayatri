@@ -1768,6 +1768,10 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     exit $ RetryFindingQuotes true newState
   Logout -> continue state{props{isPopUp = NoPopUp}}
   CancelConfirmingQuotes -> continue state{props{isPopUp = NoPopUp}}
+  RetryOtherProvider -> do
+    _ <- pure $ clearTimerWithId state.props.timerId
+    let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime true), currentStage = RetryFindingQuote, isPopUp = NoPopUp,customerTip{tipActiveIndex = 0,tipForDriver = 0, isTipSelected = false, enableTips= false}, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
+    updateAndExit newState $ UpdatedSource newState
   _ -> do
     void $ pure $ performHapticFeedback unit
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable" 
@@ -1782,7 +1786,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
       continue state{data{rideHistoryTrip = Nothing, iopState{ providerSelectionStage = false}},props{ isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
       else do
       _ <- pure $ clearTimerWithId state.props.timerId
-      let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime true), currentStage = RetryFindingQuote, isPopUp = NoPopUp, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
+      let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime true), currentStage = RetryFindingQuote, isPopUp = NoPopUp,customerTip{tipActiveIndex = 0,tipForDriver = 0, isTipSelected = false, enableTips= false}, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
       updateAndExit newState $ RetryFindingQuotes true newState
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
@@ -1811,6 +1815,9 @@ eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isP
     NoPopUp -> continue state
     CancelConfirmingQuotes -> exit $ CancelRide state RENTAL_SEARCH_CANCEL
     ActiveQuotePopUp -> do
+      void $ pure $ performHapticFeedback unit
+      exit $ CheckCurrentStatus
+    RetryOtherProvider -> do
       void $ pure $ performHapticFeedback unit
       exit $ CheckCurrentStatus
 
@@ -1978,7 +1985,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
     Nothing -> do
       if isLocalStageOn QuoteList then do
         let onUs = state.data.selectedEstimatesObject.providerType == CTP.ONUS
-            updatedState = if (isTipEnabled state && onUs) then tipEnabledState state{props{isPopUp = TipsPopUp, customerTip{enableTips = true}}} else state{props{isPopUp = ConfirmBack}} 
+            updatedState = if (isTipEnabled state && onUs) then tipEnabledState state{props{isPopUp = TipsPopUp, customerTip{enableTips = true}, tipViewProps{isVisible = true}}} else state{props{isPopUp = RetryOtherProvider}} 
         continue updatedState 
         else continue state
 
@@ -3260,7 +3267,7 @@ cacheRateCard state = do
                   , driverAdditions = state.data.selectedEstimatesObject.driverAdditions
                   , waitingTimeInfo = state.data.selectedEstimatesObject.waitingTimeInfo
                   }
-  if state.data.selectedEstimatesObject.vehicleVariant == "BOOK_ANY" then do
+  if state.data.selectedEstimatesObject.vehicleVariant == "BOOK_ANY" || state.data.selectedEstimatesObject.providerType /= ONUS then do
     let _ = JB.removeKeysInSharedPrefs $ show RATE_CARD_INFO
     void $ pure $ removeValueFromCache (show RATE_CARD_INFO)
   else void $ pure $ setValueToCache (show RATE_CARD_INFO) rateCard (\a -> stringifyJSON $ encode a)
