@@ -156,7 +156,7 @@ processPreviousPayoutAmount personId mbVpa merchantOperatingCityId = do
     mbVehicle <- QV.findById personId
     let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
     payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
-    case (mbVpa, pendingAmount >= payoutConfig.thresholdPayoutAmountPerPerson) of
+    case (mbVpa, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
       (Just vpa, True) -> do
         uid <- generateGUID
         phoneNo <- mapM decrypt person.mobileNumber
