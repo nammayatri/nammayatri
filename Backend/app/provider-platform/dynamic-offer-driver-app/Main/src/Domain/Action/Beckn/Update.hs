@@ -35,6 +35,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.OnUpdate
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRoute as RR
+import qualified Domain.Types.ServiceTierType as DVST
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
 import Kernel.Beam.Functions as B
@@ -208,6 +209,10 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.tripCategory
             farePolicy <- getFarePolicy (Just srcPt) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just (TransactionId (Id booking.transactionId)))
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
+            let isTollAllowed = maybe True (\(_, _, isAutoRickshawAllowed) -> booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed) mbTollInfo
+            when (not isTollAllowed) $ do
+              sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Auto rickshaw not allowed for toll route."
+              throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
             fareParameters <-
               calculateFareParameters
                 CalculateFareParametersParams
