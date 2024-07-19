@@ -178,7 +178,7 @@ window.getMerchantConfig = function () {
     "showGenderBanner": false,
     "autoSelectBackground": "#53BB6F",
     "enableMockLocation": false,
-    "isAdvancedBookingEnabled" : false,
+    "isAdvancedBookingEnabled" : true,
     "defaultLanguage": "EN_US",
     "fontKannada": "Roboto",
     "tipEnabledCities" : ["Bangalore", "Hyderabad"],

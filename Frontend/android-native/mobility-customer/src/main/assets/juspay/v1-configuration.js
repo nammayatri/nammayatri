@@ -211,7 +211,7 @@ window.getMerchantConfig = function () {
     "defaultLanguage": "EN_US",
     "dashboardUrl" : "",
     "showGenderBanner": false,
-    "isAdvancedBookingEnabled" : false,
+    "isAdvancedBookingEnabled" : true,
     "autoSelectBackground": "#53BB6F",
     "OTP_MESSAGE_REGEX": "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+",
     "SUPPORT_EMAIL": "support@nammayatri.in",
