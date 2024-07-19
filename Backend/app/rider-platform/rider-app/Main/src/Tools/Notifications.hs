@@ -446,9 +446,8 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
         case mbRide of
           Nothing ->
             unwords
-              [ "Sorry your ride for",
-                showTimeIst (booking.startTime),
-                "was cancelled.",
+              [ "Sorry, we could not find any driver for your ride at",
+                showTimeIst (booking.startTime) <> ".",
                 "Please try to book again"
               ]
           Just _ ->
