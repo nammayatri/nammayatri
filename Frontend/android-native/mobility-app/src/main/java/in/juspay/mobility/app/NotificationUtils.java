@@ -227,7 +227,9 @@ public class NotificationUtils {
                 try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
                     JSONObject addressDrop = new JSONObject(entity_payload.has("toLocation") && !entity_payload.isNull("toLocation") ? entity_payload.get("toLocation").toString() : "{}");
-                    JSONObject driverDefaultStepFeeWithCurrency = new JSONObject(entity_payload.has("driverDefaultStepFeeWithCurrency") && !entity_payload.isNull("driverDefaultStepFeeWithCurrency") ? entity_payload.get("driverDefaultStepFeeWithCurrency").toString() : "{}");
+                    JSONObject driverDefaultStepFeeWithCurrency = new JSONObject(
+                            entity_payload.has("driverDefaultStepFeeWithCurrencyV2") && !entity_payload.isNull("driverDefaultStepFeeWithCurrencyV2") ?
+                            entity_payload.get("driverDefaultStepFeeWithCurrencyV2").toString() : (entity_payload.has("driverDefaultStepFeeWithCurrency") && !entity_payload.isNull("driverDefaultStepFeeWithCurrency") ? entity_payload.get("driverDefaultStepFeeWithCurrency").toString() : "{}"));
                     JSONObject driverStepFeeWithCurrency = new JSONObject(entity_payload.has("driverStepFeeWithCurrency") && !entity_payload.isNull("driverStepFeeWithCurrency") ? entity_payload.get("driverStepFeeWithCurrency").toString() : "{}");
                     int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
                     String[] specialZoneSplit = entity_payload.optString("specialLocationTag", "None").split("_");
@@ -265,8 +267,7 @@ public class NotificationUtils {
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
                     sheetData.putInt("driverPickUpCharges", entity_payload.has("driverPickUpCharges") ? entity_payload.optInt("driverPickUpCharges", 0): 0);
-                    sheetData.putInt("specialZoneExtraTip", entity_payload.optInt("specialZoneExtraTip", 0)); 
-                    sheetData.putBoolean("specialZonePickup", isSpecialPickupZone); 
+                    sheetData.putBoolean("specialZonePickup", isSpecialPickupZone);
                     sheetData.putBoolean("downgradeEnabled", entity_payload.optBoolean("downgradeEnabled", true));
                     sheetData.putInt("airConditioned", entity_payload.has("airConditioned") && !entity_payload.isNull("airConditioned") ? (entity_payload.getBoolean("airConditioned") ? 1 : 0) : -1);
                     sheetData.putString("vehicleServiceTier", entity_payload.optString("vehicleServiceTier", null));
@@ -277,7 +278,7 @@ public class NotificationUtils {
                     sheetData.putString("rideStartDate", rideStartDate);
                     sheetData.putString("notificationSource", source);
                     sheetData.putBoolean("isThirdPartyBooking", entity_payload.has("isValueAddNP") && !entity_payload.optBoolean("isValueAddNP", true));
-                    sheetData.putInt("driverDefaultStepFeeWithCurrency", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
+                    sheetData.putInt("driverDefaultStepFee", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
                     sheetData.putInt("driverStepFeeWithCurrency", driverStepFeeWithCurrency.optInt("amount", negotiationUnit));
                     sheetData.putDouble("parkingCharge", entity_payload.optDouble("parkingCharge", 0.0));
                     expiryTime = entity_payload.getString("searchRequestValidTill");

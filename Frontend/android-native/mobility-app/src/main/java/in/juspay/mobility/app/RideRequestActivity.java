@@ -119,7 +119,6 @@ public class RideRequestActivity extends AppCompatActivity {
             String rideDuration = String.format("%02d:%02d Hr", rideRequestBundle.getInt("rideDuration") / 3600 ,( rideRequestBundle.getInt("rideDuration") % 3600 ) / 60);
             String rideDistance = String.format("%d km", rideRequestBundle.getInt("rideDistance") / 1000);
             String notificationSource= rideRequestBundle.getString("notificationSource");
-            int offeredPrice = rideRequestBundle.getInt("driverDefaultStepFeeWithCurrency", 0);
                     
             SheetModel sheetModel = new SheetModel((df.format(distanceToPickup / 1000)),
                     distanceTobeCovered,
@@ -152,7 +151,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     destLat,
                     destLng,
                     rideRequestBundle.getBoolean("specialZonePickup"),
-                    rideRequestBundle.getInt("specialZoneExtraTip"),
+                    rideRequestBundle.getInt("driverDefaultStepFee"),
                     downgradeEnabled,
                     airConditioned,
                     vehicleServiceTier,
@@ -163,7 +162,6 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideStartDate,
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
-                    offeredPrice,
                     rideRequestBundle.getDouble("parkingCharge"),
                     getCurrTime
                     );
@@ -185,10 +183,11 @@ public class RideRequestActivity extends AppCompatActivity {
             if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
-                if (showSpecialLocationTag && model.getSpecialZoneExtraTip() > 0) {
-                    model.setOfferedPrice(model.getSpecialZoneExtraTip());
-                    model.setUpdatedAmount(model.getSpecialZoneExtraTip());
+                if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
+                    holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);
+                }else {
+                    holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
@@ -255,7 +254,7 @@ public class RideRequestActivity extends AppCompatActivity {
             }
 
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
-            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount() + model.getSpecialZoneExtraTip()));
+            holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.tollTag.setVisibility(model.getTollCharges() > 0? View.VISIBLE : View.GONE);
 
@@ -366,18 +365,12 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
             });
             holder.buttonDecreasePrice.setOnClickListener(view -> {
-                int specialZoneExtraTip = model.getSpecialZoneExtraTip();
                 if (model.getOfferedPrice() > 0) {
-                    if(specialZoneExtraTip > 0) {
-                        model.setUpdatedAmount(model.getUpdatedAmount() - specialZoneExtraTip);
-                        model.setOfferedPrice(model.getOfferedPrice() - specialZoneExtraTip);
-                        model.setSpecialZoneExtraTip(0);
+                    if (model.getSpecialZonePickup() && model.getOfferedPrice() >= model.getDriverDefaultStepFee()){
                         holder.specialLocExtraTip.setVisibility(View.GONE);
                     }
-                    else {
-                        model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
-                        model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
-                    }
+                    model.setUpdatedAmount(model.getUpdatedAmount() - model.getNegotiationUnit());
+                    model.setOfferedPrice(model.getOfferedPrice() - model.getNegotiationUnit());
                     sheetAdapter.notifyItemChanged(position, "inc");
                     if (model.getOfferedPrice() == 0) {
                         mainLooper.post(() -> {
