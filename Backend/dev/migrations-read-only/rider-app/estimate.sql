@@ -77,3 +77,9 @@ ALTER TABLE atlas_app.estimate ADD COLUMN special_location_name text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN is_air_conditioned boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN client_model_name text ;
+ALTER TABLE atlas_app.estimate ADD COLUMN client_manufacturer text ;

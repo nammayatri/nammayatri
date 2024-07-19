@@ -24,6 +24,8 @@ data SearchRequestT f = SearchRequestT
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientModelName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

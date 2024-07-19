@@ -20,6 +20,8 @@ data QuoteT f = QuoteT
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientModelName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientOsType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.DeviceType),
     clientOsVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

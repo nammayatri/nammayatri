@@ -225,6 +225,8 @@ Booking:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
     bppEstimateId:
       itemId: Text
   beamInstance: MakeTableInstancesWithTModifier [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")]
@@ -242,6 +244,8 @@ Booking:
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
 
   sqlType:
     id: character(36)
@@ -321,6 +325,8 @@ Booking:
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     clientOsType: clientDevice <&> (.deviceType)|E
     clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
@@ -351,7 +357,7 @@ Booking:
     clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
     clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
-    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     itemId: bppEstimateId|E
 

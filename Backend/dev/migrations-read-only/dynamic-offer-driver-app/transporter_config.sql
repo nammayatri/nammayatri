@@ -215,3 +215,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_app_id_m
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN create_document_required boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_pickup_distance_threshold_for_referral_payout SET DEFAULT 10;

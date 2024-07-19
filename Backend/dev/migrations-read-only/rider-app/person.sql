@@ -91,3 +91,9 @@ ALTER TABLE atlas_app.person ADD COLUMN enable_otp_less_ride boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN device_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN client_model_name text ;
+ALTER TABLE atlas_app.person ADD COLUMN client_manufacturer text ;

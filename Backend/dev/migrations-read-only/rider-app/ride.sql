@@ -99,3 +99,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN allowed_edit_pickup_location_attempts int 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN vehicle_age int;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN client_model_name text ;
+ALTER TABLE atlas_app.ride ADD COLUMN client_manufacturer text ;

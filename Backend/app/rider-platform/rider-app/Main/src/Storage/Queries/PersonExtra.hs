@@ -53,6 +53,8 @@ updatePersonVersions person mbClientVersion mbBundleVersion mbClientConfigVersio
           Se.Set BeamP.clientConfigVersion (versionToText <$> mbClientConfigVersion),
           Se.Set BeamP.clientOsType ((.deviceType) <$> mbDevice),
           Se.Set BeamP.clientOsVersion ((.deviceVersion) <$> mbDevice),
+          Se.Set BeamP.clientModelName ((.deviceModel) <$> mbDevice),
+          Se.Set BeamP.clientManufacturer ((.deviceManufacturer) =<< mbDevice),
           Se.Set BeamP.backendAppVersion (Just deploymentVersion)
         ]
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
@@ -76,8 +78,9 @@ updatePersonalInfo ::
   Text ->
   Maybe Bool ->
   Maybe Text ->
+  Person ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId person = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -99,6 +102,8 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.clientConfigVersion (versionToText <$> mbClientConfigVersion) | isJust mbClientConfigVersion]
         <> [Se.Set BeamP.clientOsType ((.deviceType) <$> mbDevice) | isJust mbDevice]
         <> [Se.Set BeamP.clientOsVersion ((.deviceVersion) <$> mbDevice) | isJust mbDevice]
+        <> [Se.Set BeamP.clientModelName ((.deviceModel) <$> mbDevice) | isNothing person.clientDevice && isJust mbDevice]
+        <> [Se.Set BeamP.clientManufacturer ((.deviceManufacturer) =<< mbDevice) | (isNothing $ (.deviceManufacturer) =<< person.clientDevice) && isJust mbDevice]
         <> [Se.Set BeamP.backendAppVersion (Just deploymentVersion)]
         <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
         <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]

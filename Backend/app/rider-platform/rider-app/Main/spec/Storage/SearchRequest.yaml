@@ -73,6 +73,8 @@ SearchRequest:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     riderPreferredOption: Maybe RiderPreferredOption
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
 
   sqlType:
     toLocationId : character varying(36)
@@ -103,6 +105,8 @@ SearchRequest:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -119,6 +123,8 @@ SearchRequest:
     riderPreferredOption: (Just riderPreferredOption)|E
     clientOsType: clientDevice <&> (.deviceType)|E
     clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
@@ -136,7 +142,7 @@ SearchRequest:
     clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
     clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
-    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
 
