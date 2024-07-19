@@ -69,13 +69,7 @@ initData = let
     , destinationAddress : dummyAddress
     , route : Nothing
     , startedAtUTC : ""
-    , selectedDateTimeConfig : {
-        year : 0
-      , month : 0
-      , day : 0
-      , hour : 0
-      , minute : 0
-    }
+    , selectedDateTimeConfig : Nothing
     , rateCard : {
        additionalFare : 0,
        currentRateCardType : DefaultRateCard,

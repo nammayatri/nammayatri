@@ -153,7 +153,7 @@ import Styles.Colors as Color
 import Types.App (FlowBT, GlobalState(..), defaultGlobalState)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.String as DS
-import Data.Function.Uncurried (runFn1, runFn2)
+import Data.Function.Uncurried (runFn1, runFn2, runFn4)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Constants.Configs 
 import Common.Resources.Constants (zoomLevel)
@@ -219,6 +219,12 @@ screen initialState =
       , ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "." 
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
+            let rangeStart = "10:00"
+            let rangeEnd = "12:00"
+            let specificStart = "09:00"
+            let specificEnd = "13:00"
+            let abc = runFn4 isTimeRangeWithin rangeStart rangeEnd specificStart specificEnd
+            let _ = spy "Inside homeScreenFLow isTimeRangeWithin" abc
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
@@ -285,6 +291,7 @@ screen initialState =
                   void $ pure $ setValueToLocalStore CONFIRM_QUOTES_POLLING "true"
                   let pollingCount = ceil ((toNumber $ findingQuotesSearchExpired false false)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT))) / 1000.0))
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                  let _ = spy "Inside polling Count" pollingCount
                   void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen pollingCount 3000.0 push initialState
               HomeScreen -> do
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation

@@ -658,7 +658,7 @@ type HomeScreenStateData =
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
   , startTimeUTC :: String
-  , selectedDateTimeConfig :: DateTimeConfig
+  , selectedDateTimeConfig :: Maybe DateTimeConfig
   , fareProductType :: FareProductType
   , invalidBookingId :: Maybe String
   , iopState :: InteroperabilityState
@@ -2520,7 +2520,7 @@ type RentalScreenData = {
   , selectedQuote :: Maybe QuotesList
   , endOTP :: Maybe String
   , nextStop :: Maybe String
-  , selectedDateTimeConfig :: DateTimeConfig
+  , selectedDateTimeConfig :: Maybe DateTimeConfig
   , pickUpLoc :: LocationInfo 
   , dropLoc :: Maybe LocationInfo
   , searchId :: String
