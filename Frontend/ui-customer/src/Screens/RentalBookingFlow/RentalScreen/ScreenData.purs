@@ -49,13 +49,7 @@ initData =
     , rentalsQuoteList : []
     , endOTP : Nothing
     , nextStop : Nothing
-    , selectedDateTimeConfig : {
-        year : 0
-      , month : 0
-      , day : 0
-      , hour : 0
-      , minute : 0
-    }
+    , selectedDateTimeConfig : Nothing
     , pickUpLoc : dummyLocationInfo
     , dropLoc : Nothing
     }

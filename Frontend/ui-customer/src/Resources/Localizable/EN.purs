@@ -1177,7 +1177,7 @@ getEN stringKey =
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "Excess distance will be charged at " <> charges
         ADDITIONAL_CHARGES_DESCRIPTION -> "Final fare will be based on the actual trip duration and distance"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Parking fees , <b> toll charges </b> and other surcharges are <b> not included </b>. Please pay those separately to the driver."
-        NIGHT_TIME_FEE_DESCRIPTION -> "A flat night time fee of {} will be charged if your ride starts/ends anytime between 10:00 PM and 5:00 AM"
+        NIGHT_TIME_FEE_DESCRIPTION charges -> "A flat night time fee of" <> charges <> " will be charged if your ride starts/ends anytime between {} and {}."
         CHOOSE_YOUR_RENTAL_RIDE -> "Choose Your Rental Ride"
         FIRST_STOP_OPTIONAL -> "First Stop (Optional)"
         JANUARY -> "January"
@@ -1320,3 +1320,5 @@ getEN stringKey =
         NEXT_FREE_TICKET -> "Next ticket added is eligible for cashback"
         FREE_TICKET_AVAILABLE maxCashback freeTicketCount -> "Unlocked cashback (upto ₹" <> maxCashback <> ") on " <> freeTicketCount <> " Ticket!"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "Additional charges may be applicable when driver is near pickup location."        
+        NIGHT_CHARGES -> "Night Charges"
+        SINCE_A_PART_OF_YOUR_TRIP -> "Since a part / whole of your trip falls within {} and {} , night charges have been added in the estimate"

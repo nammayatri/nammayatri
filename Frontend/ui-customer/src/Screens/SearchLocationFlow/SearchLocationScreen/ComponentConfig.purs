@@ -29,7 +29,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
 import Data.Array as DA
-import Data.Maybe (isJust, maybe, Maybe(..)) as MB
+import Data.Maybe (isJust, maybe, fromMaybe, Maybe(..)) as MB
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -37,7 +37,6 @@ import Font.Style as FontStyle
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Strings (getVarString)
 import Language.Types (STR(..))
 import MerchantConfig.Types as MT
 import Mobility.Prelude (boolToVisibility)
@@ -51,7 +50,8 @@ import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Data.Lens ((^.))
-import Accessor (_amount)
+import MerchantConfig.Utils (getStringWithVar)
+import Accessor (_amount, _nightShiftStart, _nightShiftEnd, _nightShiftCharge)
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -428,6 +428,12 @@ rentalRateCardConfig state =
       currency = getCurrency appConfig
       extraDistance = state.data.rideDetails.rideDistance - (state.data.rideDetails.rideDuration * 10)
       selectedQuote = MB.maybe dummyQuote identity (state.data.selectedQuote)
+      nightShiftInfo = selectedQuote.fareDetails.nightShiftInfo 
+      {defNightShiftStart, defNightShiftEnd, defNightShiftCharge} = { defNightShiftStart : "22:00:00", defNightShiftEnd : "05:00:00" , defNightShiftCharge :250}
+      {nightShiftStart , nightShiftEnd, nightShiftCharge } = case nightShiftInfo of 
+        MB.Just info -> {nightShiftStart : MB.fromMaybe defNightShiftStart (info^. _nightShiftStart), nightShiftEnd : MB.fromMaybe defNightShiftEnd (info ^. _nightShiftEnd) ,nightShiftCharge : info ^. _nightShiftCharge}
+        MB.Nothing -> {nightShiftStart : defNightShiftStart, nightShiftEnd : defNightShiftEnd, nightShiftCharge : MB.Nothing}
+
       rentalRateCardConfig' = config
         { currentRateCardType = RentalRateCard
         , title = getString RATE_CARD
@@ -442,11 +448,14 @@ rentalRateCardConfig state =
             background = Color.white900,
             visibility = VISIBLE
           }
-        , additionalStrings = [
-            {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge))}
-          , {key : "APPLICABLE_WAITING_CHARGES" , val : "Applicable waiting charges will be added to your final fare."}
+        , additionalStrings = 
+          ((case nightShiftCharge of 
+            MB.Just charge ->  [{key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getStringWithVar (getString $ NIGHT_TIME_FEE_DESCRIPTION (currency <> (show charge)))  [MB.fromMaybe "" (HU.convertTo12HourFormat nightShiftStart), MB.fromMaybe "" (HU.convertTo12HourFormat nightShiftEnd) ])}]
+            _ -> [])
+            <>
+          [ {key : "APPLICABLE_WAITING_CHARGES" , val : "Applicable waiting charges will be added to your final fare."}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
-          ]
+          ])
         , fareList = [
             {key : ("Base Rental Fare (incl. " <> show (state.data.rideDetails.rideDistance - extraDistance)  <> " km & " <> show state.data.rideDetails.rideDuration <> " hrs)"), val : (currency <> show (state.data.rideDetails.rideDuration * selectedQuote.fareDetails.perHourCharge))}
             ] <> 

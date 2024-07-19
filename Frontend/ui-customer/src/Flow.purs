@@ -36,7 +36,7 @@ import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, so
 import Data.Array as Arr
 import Helpers.Utils as HU
 import Data.Either (Either(..), either)
-import Data.Function.Uncurried (runFn3, runFn2, runFn1)
+import Data.Function.Uncurried (runFn4, runFn3, runFn2, runFn1)
 import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
@@ -722,6 +722,12 @@ updateDisabilityList screenType = do
 
 homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
+  let rangeStart = "10:00"
+  let rangeEnd = "12:00"
+  let specificStart = "09:00"
+  let specificEnd = "13:00"
+  let abc = runFn4 isTimeRangeWithin rangeStart rangeEnd specificStart specificEnd
+  let _ = spy "Inside homeScreenFLow isTimeRangeWithin" abc
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
   (GlobalState currentState) <- getState
@@ -5540,7 +5546,7 @@ rentalScreenFlow = do
                 { quoteDetails: ChooseVehicle.config
                 , index: 0
                 , activeIndex: 0
-                , fareDetails: { plannedPerKmRate: 0, baseFare: 0, includedKmPerHr: 0, perExtraKmRate: 0, perExtraMinRate: 0, perHourCharge: 0, nightShiftCharge: 0, tollCharges: Nothing, deadKmFare: Nothing }
+                , fareDetails: { plannedPerKmRate: 0, baseFare: 0, includedKmPerHr: 0, perExtraKmRate: 0, perExtraMinRate: 0, perHourCharge: 0, nightShiftInfo: Nothing, tollCharges: Nothing, deadKmFare: Nothing }
                 }
                 quoteConfig
             )

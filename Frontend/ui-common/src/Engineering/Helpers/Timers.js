@@ -207,3 +207,17 @@ export const rideDurationTimerImpl = (startingTime, interval, timerId, cb, actio
     cb(action(remainingTimeID)(timeInHHMMFormat)(startTimeInMinutes))();
   }
 }
+
+export const toMinutes = (time) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+  };
+
+export const isTimeRangeWithin = (rangeStart, rangeEnd, specificStart, specificEnd) => { // takes input time in 24hr format
+  const rangeStartInMin = toMinutes(rangeStart);
+  const rangeEndInMin = toMinutes(rangeEnd);
+  const specificStartInMin = toMinutes(specificStart);
+  const specificEndInMin = toMinutes(specificEnd);
+  return (specificStartInMin <= rangeStartInMin && rangeStartInMin <= specificEndInMin) || (specificStartInMin <= rangeEndInMin && rangeEndInMin <= specificEndInMin) || (rangeStartInMin <= specificStartInMin && specificStartInMin <= rangeEndInMin) || (rangeStartInMin <= specificEndInMin && specificEndInMin <= rangeEndInMin);
+
+}

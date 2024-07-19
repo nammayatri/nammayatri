@@ -639,7 +639,9 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
 newtype NightShiftRate = NightShiftRate {
   nightShiftEnd :: Maybe String,
   nightShiftMultiplier :: Maybe Number,
-  nightShiftStart :: Maybe String
+  nightShiftStart :: Maybe String,
+  nightShiftChargeWithCurrency ::  Maybe AmountWithCurrency, 
+  nightShiftCharge :: Maybe Int
 }
 
 newtype FareRange = FareRange {
@@ -701,13 +703,14 @@ newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
   perExtraKmRate :: Maybe Int ,
   perExtraMinRate :: Maybe Int ,
   perHourCharge :: Maybe Int ,
+  nightShiftInfo :: Maybe NightShiftRate,
   plannedPerKmRate :: Maybe Int ,
-  nightShiftCharge :: Maybe Int ,
   tollCharges :: Maybe Number ,
-  deadKmFare :: Maybe DeadKmFare
+  deadKmFare :: Maybe AmountWithCurrency
 }
 
-newtype DeadKmFare = DeadKmFare {
+
+newtype AmountWithCurrency = AmountWithCurrency {
   amount :: Int,
   currency :: String
 }
@@ -970,12 +973,12 @@ instance decodeConfirmRequest :: Decode ConfirmRequest where decode = defaultDec
 instance encodeConfirmRequest  :: Encode ConfirmRequest where encode = defaultEncode
 
 
-derive instance genericDeadKmFare :: Generic DeadKmFare _
-derive instance newtypeDeadKmFare :: Newtype DeadKmFare _
-instance standardEncodeDeadKmFare :: StandardEncode DeadKmFare where standardEncode (DeadKmFare body) = standardEncode body
-instance showDeadKmFare :: Show DeadKmFare where show = genericShow
-instance decodeDeadKmFare :: Decode DeadKmFare where decode = defaultDecode
-instance encodeDeadKmFare  :: Encode DeadKmFare where encode = defaultEncode
+derive instance genericAmountWithCurrency :: Generic AmountWithCurrency _
+derive instance newtypeAmountWithCurrency :: Newtype AmountWithCurrency _
+instance standardEncodeAmountWithCurrency :: StandardEncode AmountWithCurrency where standardEncode (AmountWithCurrency body) = standardEncode body
+instance showAmountWithCurrency :: Show AmountWithCurrency where show = genericShow
+instance decodeAmountWithCurrency :: Decode AmountWithCurrency where decode = defaultDecode
+instance encodeAmountWithCurrency  :: Encode AmountWithCurrency where encode = defaultEncode
 
 
 ------- rideBooking/{bookingId}

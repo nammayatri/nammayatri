@@ -238,7 +238,8 @@ convertTo12HourFormat time = do
       hours <- fromString h
       minutes <- fromString m
       let {adjustedHours, period} = if hours < 12 then {adjustedHours: hours, period: "AM"} else {adjustedHours: hours - 12, period: "PM"}
-      let adjustedTime = show hours <> ":" <> show minutes <> " " <> period
+          adjustedMinutes = (if minutes < 10 then "0" else "") <> show minutes
+          adjustedTime = show adjustedHours <> ":" <> adjustedMinutes <> " " <> period
       pure adjustedTime
     _ -> Nothing
 

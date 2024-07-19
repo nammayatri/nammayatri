@@ -19,15 +19,15 @@ import Prelude
 import Effect (Effect)
 import Effect.Uncurried
 import Engineering.Helpers.Commons
+import Data.Function.Uncurried (Fn4)
 
 foreign import waitingCountdownTimerV2Impl :: forall action. EffectFn5 Int String String (action -> Effect Unit) (String -> String -> Int -> action) Unit
 foreign import countDownImpl :: forall action. EffectFn5 Int String String (action -> Effect Unit) (Int -> String -> String-> action) Unit
 foreign import clearTimerWithId :: String -> Unit
 foreign import startTimerWithTimeV2Impl :: forall action. EffectFn5 String String String (action -> Effect Unit) (Int -> String -> String -> action) Unit
 foreign import rideDurationTimerImpl :: forall action. EffectFn5 Int String String (action -> Effect Unit) (String -> String -> Int -> action) Unit
-
 foreign import clearTimerWithIdEffect :: EffectFn1 String Unit
-
+foreign import isTimeRangeWithin :: Fn4 String String String String Boolean
 foreign import resetAllTimers :: Effect Unit
 
 waitingCountdownTimerV2 :: forall action. Int -> String -> String -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
