@@ -25,10 +25,10 @@ let S3Config = < S3AwsConf : S3AwsConfig | S3MockConf : S3MockConfig >
 let smsSessionConfig = { attempts = +3, authExpiry = +3, tokenExpiry = +365 }
 
 let loggerConfig =
-      { level = LogLevel.DEBUG
+      { level = LogLevel.ERROR
       , logToFile = False
-      , logToConsole = True
-      , logRawSql = True
+      , logToConsole = False
+      , logRawSql = False
       , prettyPrinting = False
       }
 
