@@ -428,8 +428,7 @@ type CityConfig = {
 }
 
 type CityBasedFeatures = {
-  enableCabBanner :: Boolean,
-  showExploreCity :: Boolean
+  enableCabBanner :: Boolean
 }
 
 type EstimateConfig = {
