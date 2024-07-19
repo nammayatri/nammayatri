@@ -320,7 +320,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
-  triggerSearchEvent SearchEventData {searchRequest = searchRequest}
+  -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
   QSearchRequest.createDSReq searchRequest
   QPFS.clearCache person.id
 
@@ -404,10 +404,10 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
 
     updateRideSearchHotSpot :: DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> Flow ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
-      mbFavourite <- CSavedLocation.findByLatLonAndRiderId person.id origin.gps
       HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
       when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
         fork "ride search geohash frequencyUpdater" $ do
+          mbFavourite <- CSavedLocation.findByLatLonAndRiderId person.id origin.gps
           hotSpotUpdate person.merchantId mbFavourite origin isSourceManuallyMoved
           updateForSpecialLocation person.merchantId origin isSpecialLocation
 
@@ -523,9 +523,9 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
           }
   routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) request
 
-  fork "calling mmi directions api" $ do
-    let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
-    when collectMMIData $ do
+  let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
+  when collectMMIData $ do
+    fork "calling mmi directions api" $ do
       mmiConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
       case mmiConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
@@ -535,9 +535,9 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
           triggerRouteDataEvent routeData
         _ -> logInfo "MapsServiceConfig config not found for MMI"
 
-  fork "calling next billion directions api" $ do
-    shouldCollectRouteData <- asks (.collectRouteData)
-    when shouldCollectRouteData $ do
+  shouldCollectRouteData <- asks (.collectRouteData)
+  when shouldCollectRouteData $ do
+    fork "calling next billion directions api" $ do
       nextBillionConfigs <- QMSC.findByMerchantOpCityIdAndService person.merchantId merchantOperatingCity.id (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
       case nextBillionConfigs.serviceConfig of
         DMSC.MapsServiceConfig mapsCfg -> do
@@ -572,10 +572,10 @@ autoCompleteEvent ::
   UTCTime ->
   Flow ()
 autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved now = do
-  fork "Updating autocomplete data in search" $ do
-    whenJust sessionToken $ \token -> do
-      let toCollectData = fromMaybe False riderConfig.collectAutoCompleteData
-      when toCollectData $ do
+  whenJust sessionToken $ \token -> do
+    let toCollectData = fromMaybe False riderConfig.collectAutoCompleteData
+    when toCollectData $ do
+      fork "Updating autocomplete data in search" $ do
         let pickUpKey = makeAutoCompleteKey token (show DMaps.PICKUP)
         let dropKey = makeAutoCompleteKey token (show DMaps.DROP)
         pickupRecord :: Maybe AutoCompleteEventData <- Redis.safeGet pickUpKey

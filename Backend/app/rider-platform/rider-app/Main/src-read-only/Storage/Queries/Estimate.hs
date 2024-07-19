@@ -21,7 +21,7 @@ import Storage.Queries.EstimateExtra as ReExport
 import Storage.Queries.Transformers.Estimate
 
 findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
-findAllBySRId requestId = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]
+findAllBySRId requestId = do findAllWithKVAndConditionalDB [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)] Nothing
 
 findByBPPEstimateId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findByBPPEstimateId bppEstimateId = do findOneWithKV [Se.Is Beam.bppEstimateId $ Se.Eq (Kernel.Types.Id.getId bppEstimateId)]

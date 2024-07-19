@@ -66,7 +66,6 @@ import qualified Kernel.Utils.Schema as S
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
-import qualified SharedLogic.PublicTransport as PublicTransport
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QBooking
@@ -251,9 +250,7 @@ getOffers searchRequest = do
       let quotes = case searchRequest.riderPreferredOption of
             SSR.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
             _ -> OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
-      metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
-      publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
-      return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
+      return . sortBy (compare `on` creationTime) $ quotes
     Nothing -> do
       quoteList <- sortByEstimatedFare <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
       logDebug $ "quotes are :-" <> show quoteList

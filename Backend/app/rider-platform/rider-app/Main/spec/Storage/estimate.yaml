@@ -239,7 +239,7 @@ Estimate:
       where: id
 
     findAllBySRId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithKVAndConditionalDB
       where: requestId
 
     findByBPPEstimateId:

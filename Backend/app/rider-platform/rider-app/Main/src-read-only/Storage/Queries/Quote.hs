@@ -22,7 +22,7 @@ import Storage.Queries.Transformers.Quote
 import qualified Storage.Queries.Transformers.Quote
 
 findAllBySRId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Quote.Quote])
-findAllBySRId requestId = do findAllWithKV [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]
+findAllBySRId requestId = do findAllWithKVAndConditionalDB [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)] Nothing
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Quote.Quote -> m (Maybe Domain.Types.Quote.Quote))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
