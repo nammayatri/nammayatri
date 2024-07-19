@@ -12,46 +12,61 @@ import Prelude
 import PrestoDOM hiding (tabLayout)
 import Screens.EarningsScreen.Common.Types
 import Screens.EarningsScreen.Common.View
-import Screens.EarningsScreen.Controller
+import Screens.EarningsScreen.Daily.Controller
+import Screens.EarningsScreen.Daily.ComponentConfig
 import Screens.EarningsScreen.ScreenData
+import Components.Calendar.View as Calendar
 import Services.API
-
+import Components.BottomNavBar.View as BottomNavBar
+import Components.BottomNavBar.Controller (navData)
 import Animation as Anim
-import Effect.Aff (launchAff)
+import Effect.Aff (launchAff, killFiber, launchAff_, error)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.API as API
-import JBridge (getHeightFromPercent, getWidthFromPercent)
+import JBridge (getHeightFromPercent, getWidthFromPercent, getCurrentDate)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes (__IS_ANDROID)
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Services.Backend as Remote
 import Styles.Colors as Color
+import Screens as ScreenNames
 import Types.App (defaultGlobalState)
+import Data.Either
+import Presto.Core.Types.Language.Flow (fork, await, doAff, Flow)
+import Data.String as DS
 
 screen :: State -> Screen Action State ScreenOutput
 screen initialState =
   { initialState
   , view: view
-  , name: "EarningsScreenV2"
+  , name: "EarningsScreenV2Daily"
   , globalEvents: [ (\push -> fetchRideSummary push initialState) ]
   , eval
   }
 
 fetchRideSummary :: (Action -> Effect Unit) -> State -> Effect (Effect Unit)
 fetchRideSummary push state = do
-  void $ launchAff $ flowRunner defaultGlobalState $ do
-    let currentDate = getcurrentdate ""
-    resp <-  API.callApi (GetRidesSummaryListReq ["2024-06-25"])
-    let _ = spy "GetRidesSummaryListResp" resp
+  fiber <- launchAff $ flowRunner defaultGlobalState $ do
+    let currentDate = state.data.currentDate
+    void $ fork $ runExceptT $ runBackT $ do 
+      (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "100" "0" "false" "null" currentDate -- (convertUTCtoISC initialState.props.date "YYYY-MM-DD")
+      liftFlowBT $ push $ UpdateRideHistory rideHistoryResponse.list currentDate
+    resp <-  API.callApi (GetRidesSummaryListReq [currentDate])
+    case resp of
+      Right (GetRidesSummaryListResp rideSummaryResp) -> do
+        void $ fork $ pure unit -- update Local storage
+        EHC.liftFlow $ push $ UpdateRideData rideSummaryResp.list
+      Left err -> void $ pure $ spy "Error GetRidesSummaryListResp" err
     pure unit
-  pure $ pure unit
-    -- liftFlowBT $ push $ RideSummaryAPIResponseAction rideSummaryResp.list (spy "printing currentDate" currentDate) datesList
+  pure $ (launchAff_ $ killFiber (error "Failed to Cancel") fiber)
 
 view :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -59,10 +74,13 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
+    , afterRender push $ const AfterRender
     ] $
     [ defaultLayout push state
     , rideDistanceInfoPopUp push state
-    ]
+    ] <> if state.data.calendarState.calendarPopup then [  PrestoAnim.animationSet
+    [ Anim.fadeIn (state.data.calendarState.calendarPopup)
+    ] $ Calendar.view (push <<< CalendarAC) (calendarConfig state)] else []
 
 headerLayout :: forall w. (Action -> Effect Unit) -> State -> Layout w
 headerLayout state push =
@@ -100,23 +118,57 @@ defaultLayout push state =
     , width MATCH_PARENT
     , background Color.white900
     , orientation VERTICAL
+    , padding $ PaddingBottom EHC.safeMarginBottom
     ]
     [ headerLayout push state
-    , earnignsTopView push state
-    , earningsInfoView push state
-    , rideHistoryView push state
+    , relativeLayout
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      ][ linearLayout
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          ][scrollView
+          [ width MATCH_PARENT
+          , height MATCH_PARENT
+          , scrollBarY false
+          ][linearLayout
+          [ orientation VERTICAL
+          , width MATCH_PARENT
+          , height MATCH_PARENT
+          ][ case state.data.selectedDate of
+              Nothing -> earnignsTopView push state true (dummyRideSummaryType state.data.currentDate)
+              Just val -> earnignsTopView push state false val
+          , earningsInfoView push state
+          , case state.data.selectedDateRides of 
+              Nothing -> rideHistoryView push state true []
+              Just item -> rideHistoryView push state false item
+          ]]
+          ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , margin $ Margin 16 16 16 0]
+          [ tabLayout push ChangeTab TAB_DAILY 
+          ]
+      ]
+    ,  BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN state.data.config.bottomNavConfig)
     ]
 
-earnignsTopView :: forall w. (Action -> Effect Unit) -> State -> Layout w
-earnignsTopView push state =
+earnignsTopView :: forall w. (Action -> Effect Unit) -> State -> Boolean -> RidesSummaryType -> Layout w
+earnignsTopView push state showShimmer item =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 16 16 16 24
-    , gradient $ Linear (if EHC.os == "IOS" then 270.0 else 90.0) [ "#E0D1FF", "#E0D1FF", "#F9F6FF" ]
+    , gradient $ Linear 180.0 [ "#E0D1FF", "#E0D1FF", "#F9F6FF" ]
     , orientation VERTICAL
     ]
-    [ tabLayout push ChangeTab TAB_DAILY
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , visibility INVISIBLE]
+        [ tabLayout push ChangeTab TAB_DAILY
+        ]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -127,6 +179,8 @@ earnignsTopView push state =
             [ weight 1.0
             , height MATCH_PARENT
             , gravity CENTER
+            , padding $ PaddingVertical 16 16
+            , onClick push $ const (ChangeDate DECREMENT)
             ]
             [ imageView
                 [ height $ V 16
@@ -140,24 +194,27 @@ earnignsTopView push state =
             , orientation VERTICAL
             , gravity CENTER
             ]
-            [ dateSelectionView push state
+            [ dateSelectionView push state showShimmer item
             , textView
-                $ [ text "$384"
+                $ [ text item.earningsWithCurrency
                   , margin $ MarginTop 14
                   , color Color.black800
                   ]
                 <> FontStyle.priceFont TypoGraphy
-            , textView
-                $ [ text "$72 in Tips Included"
-                  , margin $ MarginTop 14
-                  , color Color.black800
-                  ]
-                <> FontStyle.subHeading2 TypoGraphy
+            -- , textView -- TODO enable after getting tips
+            --     $ [ text "$72 in Tips Included"
+            --       , margin $ MarginTop 14
+            --       , color Color.black800
+            --       ]
+            --     <> FontStyle.subHeading2 TypoGraphy
             ]
         , linearLayout
             [ height MATCH_PARENT
             , weight 1.0
             , gravity CENTER
+            , padding $ PaddingVertical 16 16
+            , onClick (\action -> if state.props.forwardBtnAlpha == 1.0 then push action else pure unit) $ const (ChangeDate INCREMENT)
+            , alpha state.props.forwardBtnAlpha
             ]
             [ imageView
                 [ height $ V 16
@@ -166,11 +223,11 @@ earnignsTopView push state =
                 ]
             ]
         ]
-    , ridesStatsView push state
+    , ridesStatsView push state showShimmer item 
     ]
 
-dateSelectionView :: forall w. (Action -> Effect Unit) -> State -> Layout w
-dateSelectionView push state =
+dateSelectionView :: forall w. (Action -> Effect Unit) -> State -> Boolean -> RidesSummaryType -> Layout w
+dateSelectionView push state showShimmer item =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -178,6 +235,7 @@ dateSelectionView push state =
     , gravity CENTER_VERTICAL
     , background "#66FFFFFF"
     , cornerRadius 12.0
+    , onClick push $ const ShowCalendarPopup
     ]
     [ imageView
         [ height $ V 16
@@ -186,7 +244,7 @@ dateSelectionView push state =
         , margin $ MarginRight 6
         ]
     , textView
-        $ [ text "Today"
+        $ [ text item.rideDate
           , color Color.black800
           , margin $ Margin 0 0 6 (if __IS_ANDROID then 2 else 0)
           ]
@@ -199,8 +257,8 @@ dateSelectionView push state =
         ]
     ]
 
-ridesStatsView :: forall w. (Action -> Effect Unit) -> State -> Layout w
-ridesStatsView push state =
+ridesStatsView :: forall w. (Action -> Effect Unit) -> State -> Boolean -> RidesSummaryType -> Layout w
+ridesStatsView push state showShimmer item =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -261,7 +319,7 @@ ridesStatsView push state =
                   )
         )
         []
-        [ { title: "Rides", value: "12" }, { title: "Total Ride Dist", value: "12" }, { title: "Total Ride Time", value: "12" } ]
+        [ { title: "Rides", value: item.noOfRides }, { title: "Total Ride Dist", value: item.rideDistanceWithUnit }, { title: "Total Ride Time", value: "--" } ]
     )
 
 earningsInfoView :: forall w. (Action -> Effect Unit) -> State -> Layout w
@@ -306,11 +364,11 @@ earningsInfoView push state =
             ]
         ]
 
-rideHistoryView :: forall w. (Action -> Effect Unit) -> State -> Layout w
-rideHistoryView push state =
-  linearLayout
+rideHistoryView :: forall w. (Action -> Effect Unit) -> State -> Boolean -> Array RideComponent -> Layout w
+rideHistoryView push state showShimmer datas =
+    linearLayout
     [ width MATCH_PARENT
-    , weight 1.0
+    , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ Margin 16 16 16 16
     ]
@@ -319,122 +377,58 @@ rideHistoryView push state =
           , color Color.black800
           ]
         <> FontStyle.subHeading1 TypoGraphy
-    , linearLayout
-        [ weight 1.0
-        , width MATCH_PARENT
-        , margin $ MarginTop 12
-        ]
-        [ scrollView
-            [ width MATCH_PARENT
-            , height MATCH_PARENT
-            , scrollBarY false
-            ]
-            [ linearLayout
+    , relativeLayout
+      [width MATCH_PARENT
+    , height WRAP_CONTENT][  
+            PrestoAnim.animationSet
+            [ Anim.fadeOut $ not showShimmer
+            ] $ linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , orientation VERTICAL
+                , margin $ MarginTop 12
+                , visibility $ boolToVisibility showShimmer
+                , enableAnimateOnGone true
                 ]
-                ( map
-                    ( \item -> rideComponent item)
+                ( mapWithIndex
+                    ( \idx item -> shimmerRideComponent (idx + 1) item)
                     listDatas
                 )
-            ]
+          , if showShimmer then linearLayout[][] 
+                else if datas == [] then
+                  linearLayout[
+                    width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , orientation VERTICAL
+                  , stroke $ "1," <> Color.grey900
+                  , gravity CENTER
+                  , cornerRadius 10.0
+                  , margin $ MarginTop 12
+                  , padding $ Padding 16 32 16 32
+                  ][  textView $
+                      [ height WRAP_CONTENT
+                      , width WRAP_CONTENT
+                      , text $ getString NO_RIDES
+                      ] <> FontStyle.subHeading1 TypoGraphy
+                    , textView $
+                      [ height WRAP_CONTENT
+                      , width WRAP_CONTENT
+                      , text $ getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_PREFIX <> " " <> (if (state.data.currentDate == getCurrentDate) then "Today" else DS.replaceAll (DS.Pattern "-") (DS.Replacement "/") state.data.currentDate)  <> " " <> getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_SUFFIX
+                      ] <> FontStyle.paragraphText TypoGraphy
+                  ] 
+                  else
+                    linearLayout
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , orientation VERTICAL
+                      , margin $ MarginTop 12
+                      ]
+                      ( mapWithIndex
+                          ( \idx item -> rideComponent (idx + 1) item)
+                          datas
+                      )
         ]
     ]
-
-listDatas :: Array RideComponent
-listDatas =
-  [ { serviceTierType: "Bridge XL"
-    , date: "Today"
-    , time: "7:45pm"
-    , price: "$0"
-    , tags:
-        [ { background: Color.backDanger
-          , color: Color.red900
-          , text: "Passenger Cancelled"
-          }
-        , { background: "#F6F1FF"
-          , color: Color.purple700
-          , text: "Earned Penality"
-          }
-        ]
-    }
-  , { serviceTierType: "Bridge XL"
-    , date: "Today"
-    , time: "7:45pm"
-    , price: "$0"
-    , tags:
-        [ { background: Color.backDanger
-          , color: Color.red900
-          , text: "Passenger Cancelled"
-          }
-        , { background: "#F6F1FF"
-          , color: Color.purple700
-          , text: "Earned Penality"
-          }
-        ]
-    }
-  , { serviceTierType: "Bridge XL"
-    , date: "Today"
-    , time: "7:45pm"
-    , price: "$0"
-    , tags:
-        [ { background: Color.backDanger
-          , color: Color.red900
-          , text: "Passenger Cancelled"
-          }
-        , { background: "#F6F1FF"
-          , color: Color.purple700
-          , text: "Earned Penality"
-          }
-        ]
-    }
-  , { serviceTierType: "Bridge XL"
-    , date: "Today"
-    , time: "7:45pm"
-    , price: "$0"
-    , tags:
-        [ { background: Color.backDanger
-          , color: Color.red900
-          , text: "Passenger Cancelled"
-          }
-        , { background: "#F6F1FF"
-          , color: Color.purple700
-          , text: "Earned Penality"
-          }
-        ]
-    }
-  , { serviceTierType: "Bridge XL"
-    , date: "Today"
-    , time: "7:45pm"
-    , price: "$0"
-    , tags:
-        [ { background: Color.backDanger
-          , color: Color.red900
-          , text: "Passenger Cancelled"
-          }
-        , { background: "#F6F1FF"
-          , color: Color.purple700
-          , text: "Earned Penality"
-          }
-        ]
-    }
-  , { serviceTierType: "Bridge XL"
-    , date: "Today"
-    , time: "7:45pm"
-    , price: "$0"
-    , tags:
-        [ { background: Color.backDanger
-          , color: Color.red900
-          , text: "Passenger Cancelled"
-          }
-        , { background: "#F6F1FF"
-          , color: Color.purple700
-          , text: "Earned Penality"
-          }
-        ]
-    }
-  ]
 
 rideDistanceInfoPopUp :: forall w. (Action -> Effect Unit) -> State -> Layout w
 rideDistanceInfoPopUp push state =

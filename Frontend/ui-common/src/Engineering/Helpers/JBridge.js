@@ -2794,3 +2794,24 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCDate();
   }
 }
+
+export const getCurrentDate = function() {
+  let today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = today.getFullYear();
+
+  today = yyyy + "-" + mm + "-" + dd;
+  return today;
+}()
+
+export const getDateFromDate = function(date, count) {
+  let givenDate = new Date(date);
+  givenDate.setDate(givenDate.getDate() + count)
+  const dd = String(givenDate.getDate()).padStart(2, "0");
+  const mm = String(givenDate.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = givenDate.getFullYear();
+
+  givenDate = yyyy + "-" + mm + "-" + dd;
+  return givenDate;
+}

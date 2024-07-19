@@ -560,3 +560,8 @@ data FlowState = EarningsV2Daily
   | EarningsV2Weekly
   | EarningsV2RideHistory
   | EarningsV2PayoutHistory
+  | HomeScreen
+  | Benefits
+  | Notifications
+  | Subscription
+  | Profile

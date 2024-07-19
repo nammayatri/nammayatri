@@ -73,7 +73,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, 
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
-import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, sortListBasedOnCreatedAt)
+import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, sortListBasedOnCreatedAt, sortListBasedOnDOUpload)
 import Helpers.Utils as HU
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
 import JBridge as JB
@@ -700,7 +700,13 @@ onBoardingFlow = do
       filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else documentStatusList
       manageVehicle = registrationState.props.manageVehicle
       rcVerified = getStatusValue driverRegistrationResp.rcVerificationStatus
+      completedSteps = (DA.foldr (\item acc -> if item.status == ST.COMPLETED then acc + 1 else acc) 0 filterCabs)
       isAllCompleted = ((length filterCabs) == (DA.foldr (\item acc -> if item.status == ST.COMPLETED then acc + 1 else acc) 0 filterCabs)) && rcVerified == ST.COMPLETED
+      isProfileDetailsCompleted = getDriverInfoResp.firstName /= "Driver" && isJust getDriverInfoResp.mobileNumber
+      _ = setCleverTapUserProp [{key : "CompletedOnboardingSteps", value : unsafeToForeign $ (completedSteps + if isProfileDetailsCompleted then 1 else 0) }]
+      _ = setCleverTapUserProp [{key : "PendingOnboardingSteps", value : unsafeToForeign $ ((length filterCabs) - completedSteps + (if isProfileDetailsCompleted then 1 else 0))}]
+      _ = setCleverTapUserProp [{key : "TotalOnboardingSteps", value : unsafeToForeign $ length filterCabs}]
+      _ = setCleverTapUserProp [{key : "DriverOnboarded", value : unsafeToForeign $ isAllCompleted}]
   
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
@@ -718,7 +724,7 @@ onBoardingFlow = do
                       permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
                       vehicleCategory = uiCurrentCategory
-                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted, isProfileDetailsCompleted = getDriverInfoResp.firstName /= "Driver" && isJust getDriverInfoResp.mobileNumber}})
+                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted, isProfileDetailsCompleted = isProfileDetailsCompleted}})
   liftFlowBT hideSplash
   void $ lift $ lift $ toggleLoader false
   flow <- UI.registration
@@ -793,7 +799,7 @@ onBoardingFlow = do
     mkStatusList :: DriverRegistrationStatusResp -> GetDriverInfoResp -> Array ST.DocumentStatus
     mkStatusList (DriverRegistrationStatusResp driverRegistrationStatusResp) getDriverInfoResp = 
       let driversDocument = driverRegistrationStatusResp.driverDocuments
-          vehicleDoc = driverRegistrationStatusResp.vehicleDocuments
+          vehicleDoc = DA.take 1 $ sortListBasedOnDOUpload driverRegistrationStatusResp.vehicleDocuments
           vehicleDoc' = DA.foldl (\acc (API.VehicleDocumentItem vDoc) -> acc <> transfromDocumentStatusItem vDoc.documents vDoc.userSelectedVehicleCategory vDoc.verifiedVehicleCategory (Just vDoc.registrationNo) getDriverInfoResp) [] vehicleDoc
           driversDocument' = transfromDocumentStatusItem driversDocument "" Nothing Nothing getDriverInfoResp
       in driversDocument' <> vehicleDoc'
@@ -3996,6 +4002,11 @@ flowRouter flowState =
     TA.EarningsV2Daily -> lift $ lift $ UI.earningScreenDailyV2
     TA.EarningsV2Weekly -> lift $ lift $ UI.earningScreenWeeklyV2
     TA.EarningsV2RideHistory -> lift $ lift $ UI.earningsHistoryFlow ESD.Ride
+    TA.HomeScreen -> homeScreenFlow >>= (\_ -> pure TA.HomeScreen)
+    TA.Benefits -> benefitsScreenFlow >>= (\_ -> pure TA.Benefits)
+    TA.Notifications -> notificationFlow >>= (\_ -> pure TA.Notifications)
+    TA.Subscription -> updateAvailableAppsAndGoToSubs >>= (\_ -> pure TA.Subscription)
+    TA.Profile -> driverProfileFlow >>= (\_ -> pure TA.Profile)
     TA.EarningsV2PayoutHistory -> lift $ lift $ UI.earningsHistoryFlow ESD.Payout) >>= flowRouter
 
 driverEarningsFlow :: FlowBT String Unit
@@ -4005,7 +4016,7 @@ driverEarningsFlow = do
   logField_ <- lift $ lift $ getLogFields
   let earningScreenState = globalState.driverEarningsScreen
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
-  if false -- getMerchant FunctionCall == BRIDGE TODO: Enable after earnigns is completed.
+  if false-- getMerchant FunctionCall == BRIDGE -- TODO: Enable after earnigns is completed.
     then flowRouter TA.EarningsV2Daily
     else do
       uiAction <- UI.driverEarningsScreen

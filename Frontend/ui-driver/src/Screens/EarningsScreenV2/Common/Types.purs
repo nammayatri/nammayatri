@@ -37,6 +37,7 @@ type RideComponent
     , time :: String
     , price :: String
     , tags :: Array RideTag
+    , isCancelledRide :: Boolean
     }
 
 type RideTag

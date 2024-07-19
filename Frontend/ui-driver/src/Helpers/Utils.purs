@@ -920,6 +920,9 @@ getVehicleMapping serviceTierType = case serviceTierType of
 sortListBasedOnCreatedAt :: forall a t. Newtype t (Record (createdAt:: String | a)) => Array t -> Array t
 sortListBasedOnCreatedAt = DA.sortBy (\a b -> compare ((unwrap b).createdAt) ((unwrap a).createdAt))
 
+sortListBasedOnDOUpload :: forall a t. Newtype t (Record (dateOfUpload:: String | a)) => Array t -> Array t
+sortListBasedOnDOUpload = DA.sortBy (\a b -> compare ((unwrap b).dateOfUpload) ((unwrap a).dateOfUpload))
+
 dummyPriceForCity :: String -> Price
 dummyPriceForCity cityName = do
   let currencySymobol = getCurrencyForCity cityName

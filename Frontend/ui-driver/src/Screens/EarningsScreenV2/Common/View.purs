@@ -7,7 +7,7 @@ import Data.Maybe
 import Effect
 import Prelude
 import PrestoDOM
-import Screens.EarningsScreen.Controller
+import Screens.EarningsScreen.Daily.Controller
 import Screens.EarningsScreen.ScreenData
 import Screens.EarningsScreen.Common.Types
 import Prelude
@@ -16,7 +16,7 @@ import Data.Maybe
 import Effect
 import Prelude
 import PrestoDOM
-import Screens.EarningsScreen.Controller
+import Screens.EarningsScreen.Daily.Controller
 import Screens.EarningsScreen.ScreenData
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
@@ -25,6 +25,9 @@ import Language.Types (STR(..))
 import Styles.Colors as Color
 import Screens.EarningsScreen.Common.Types
 import Helpers.Utils
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
+import JBridge (getWidthFromPercent, getHeightFromPercent)
 
 tabLayout :: forall action a. (action -> Effect Unit) -> action -> EarningsTab -> Layout a
 tabLayout push action tabType =
@@ -47,7 +50,7 @@ tabLayout push action tabType =
                   , cornerRadius 14.0
                   , gravity CENTER
                   ]
-                    <> if isSelected then [ onClick push $ const action ] else []
+                    <> if not isSelected then [ onClick push $ const action ] else []
                 )
                 [ textView
                     $ [ text $ getString item.string
@@ -60,9 +63,14 @@ tabLayout push action tabType =
         tabList
     )
 
-rideComponent :: forall a. RideComponent -> Layout a
-rideComponent item =
-  linearLayout
+rideComponent :: forall a. Int -> RideComponent -> Layout a
+rideComponent idx item =
+  let duration = idx * 20
+  in
+  PrestoAnim.animationSet 
+  ([Anim.translateInXWithPosition (getWidthFromPercent $ min (idx * 5) 40) 250 true])
+  $ 
+    linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , stroke $ "1," <> Color.grey900
@@ -91,6 +99,7 @@ rideComponent item =
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , gravity CENTER_VERTICAL
+            , margin $ MarginTop 5
             ]
             [ textView
                 $ [ text item.date
@@ -146,6 +155,56 @@ rideComponent item =
           )
     ]
 
+shimmerRideComponent :: forall a. Int -> RideComponent -> Layout a
+shimmerRideComponent idx item =
+  let duration = idx * 20
+  in
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , stroke $ "1," <> Color.grey900
+    , padding $ Padding 12 12 12 12
+    , gravity CENTER
+    , margin $ MarginBottom 12
+    , cornerRadius 8.0
+    ]
+    [  linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , margin $ MarginLeft 8
+        ]
+        [ sfl (getHeightFromPercent 2) (getWidthFromPercent 50)
+        , linearLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity CENTER_VERTICAL
+            , margin $ MarginTop 5
+            ]
+            [ sfl (getHeightFromPercent 2) (getWidthFromPercent 30)
+            ]
+        ]
+    , linearLayout
+        [ weight 1.0
+        , height WRAP_CONTENT
+        , gravity RIGHT
+        , orientation VERTICAL
+        ]
+        $ [ sfl (getHeightFromPercent 2) (getWidthFromPercent 20) 
+          ]
+    ]
+
+sfl :: forall a. Int -> Int -> Layout a
+sfl height' width' =
+  shimmerFrameLayout
+  [ cornerRadius 50.0
+  , stroke $ "1," <> Color.grey900
+  , background Color.grey900
+  , height $ V height'
+  , width $ V width'
+  ][
+  ]
+
 tabList :: Array TabList
 tabList =
   [ { string: DAILY
@@ -155,3 +214,4 @@ tabList =
     , "type": TAB_WEEKLY
     }
   ]
+

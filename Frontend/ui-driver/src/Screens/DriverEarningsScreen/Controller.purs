@@ -791,6 +791,8 @@ dummyRideHistoryItem = RidesInfo {
       vehicleCapacity : Nothing,
       tollConfidence : Nothing,
       bookingType : Nothing,
+      customerCancellationDues : Nothing,
+      customerCancellationDuesWithCurrency : Nothing,
       bapName : Nothing,
       isValueAddNP : false,
       enableOtpLessRide : Nothing

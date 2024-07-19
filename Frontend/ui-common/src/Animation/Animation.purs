@@ -432,3 +432,13 @@ rotateToDegWithDuration duration fromRotation toRotation =
     , PrestoAnim.toRotation toRotation
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ] true
+
+translateInXWithPosition :: Int -> Int -> Boolean -> PrestoAnim.Animation
+translateInXWithPosition fromX duration =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromX fromX
+    , PrestoAnim.toX 0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseInOut
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ]

@@ -1,6 +1,7 @@
 module Screens.EarningsScreen.ScreenData where
 
 import Common.Types.App (Price(..), Currency(..), Distance(..), DistanceUnit(..))
+import Common.Types.App as Common
 import Prelude
 import Screens.EarningsScreen.Common.Types
 import Halogen.VDom.DOM.Prop (PropValue)
@@ -8,6 +9,9 @@ import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe
 import PrestoDOM.List as List
 import Styles.Colors as Color
+import MerchantConfig.Types
+import ConfigProvider
+import JBridge
 
 data HistoryScreen = Payout | Ride
 
@@ -23,6 +27,11 @@ type Data
     , prevAdjustmentRotation :: Number
     , rideListItem :: Maybe List.ListItem
     , payoutListItem :: Maybe List.ListItem
+    , config :: AppConfig
+    , selectedDate :: Maybe RidesSummaryType
+    , currentDate :: String
+    , calendarState :: CalendarState
+    , selectedDateRides :: Maybe (Array RideComponent)
     }
 
 type Props
@@ -32,10 +41,19 @@ type Props
     , selectedBarIndex :: Int
     , currentWeekMaxEarning :: Int
     , currWeekData :: Array WeeklyEarning
+    , forwardBtnAlpha :: Number
     }
 
+type CalendarState = { 
+  calendarPopup :: Boolean,
+  endDate :: Maybe Common.CalendarModalDateObject,
+  selectedTimeSpan :: Common.CalendarModalDateObject,
+  startDate :: Maybe Common.CalendarModalDateObject,
+  weeks  :: Array Common.CalendarModalWeekObject
+}
+
 initialState :: State
-initialState =
+initialState = 
   { data:
       { action: false
       , tipsRotation: 270.0
@@ -43,15 +61,36 @@ initialState =
       , prevAdjustmentRotation: 0.0
       , rideListItem : Nothing
       , payoutListItem : Nothing
+      , config : getAppConfig appConfig
+      , selectedDate : Nothing
+      , currentDate : getCurrentDate
+      , selectedDateRides: Nothing
+      , calendarState:
+        { calendarPopup: false
+        , endDate: Nothing
+        , selectedTimeSpan: dummyDateItem
+        , startDate: Just dummyDateItem
+        , weeks: []
+        }
       }
   , props:
       { actionProp: ""
-      , showInfoView: true
+      , showInfoView: false
       , rideDistanceInfoPopUp: false
       , selectedBarIndex: 0
       , currentWeekMaxEarning: 1500
       , currWeekData: dummyEarnings
+      , forwardBtnAlpha: 1.0
       }
+  }
+
+dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
+
+type RidesSummaryType = {
+    earningsWithCurrency :: String,
+    rideDate :: String,
+    noOfRides :: String,
+    rideDistanceWithUnit :: String
   }
 
 type WeeklyEarning
@@ -416,3 +455,104 @@ dummyPayoutProps = [{
 , tagTextTips : toPropValue $ "+ $5 tip earned"
 , rideFareColor : toPropValue $ Color.green700
 }]
+
+
+listDatas :: Array RideComponent
+listDatas =
+  [ { serviceTierType: "Bridge XL"
+    , date: "Today"
+    , time: "7:45pm"
+    , price: "$0"
+    , isCancelledRide : false
+    , tags:
+        [ { background: Color.backDanger
+          , color: Color.red900
+          , text: "Passenger Cancelled"
+          }
+        , { background: "#F6F1FF"
+          , color: Color.purple700
+          , text: "Earned Penality"
+          }
+        ]
+    }
+  , { serviceTierType: "Bridge XL"
+    , date: "Today"
+    , time: "7:45pm"
+    , price: "$0"
+    , isCancelledRide : false
+    , tags:
+        [ { background: Color.backDanger
+          , color: Color.red900
+          , text: "Passenger Cancelled"
+          }
+        , { background: "#F6F1FF"
+          , color: Color.purple700
+          , text: "Earned Penality"
+          }
+        ]
+    }
+  , { serviceTierType: "Bridge XL"
+    , date: "Today"
+    , time: "7:45pm"
+    , price: "$0"
+    , isCancelledRide : false
+    , tags:
+        [ { background: Color.backDanger
+          , color: Color.red900
+          , text: "Passenger Cancelled"
+          }
+        , { background: "#F6F1FF"
+          , color: Color.purple700
+          , text: "Earned Penality"
+          }
+        ]
+    }
+  , { serviceTierType: "Bridge XL"
+    , date: "Today"
+    , time: "7:45pm"
+    , price: "$0"
+    , isCancelledRide : false
+    , tags:
+        [ { background: Color.backDanger
+          , color: Color.red900
+          , text: "Passenger Cancelled"
+          }
+        , { background: "#F6F1FF"
+          , color: Color.purple700
+          , text: "Earned Penality"
+          }
+        ]
+    }
+  , { serviceTierType: "Bridge XL"
+    , date: "Today"
+    , time: "7:45pm"
+    , price: "$0"
+    , isCancelledRide : false
+    , tags:
+        [ { background: Color.backDanger
+          , color: Color.red900
+          , text: "Passenger Cancelled"
+          }
+        , { background: "#F6F1FF"
+          , color: Color.purple700
+          , text: "Earned Penality"
+          }
+        ]
+    }
+  , { serviceTierType: "Bridge XL"
+    , date: "Today"
+    , time: "7:45pm"
+    , price: "$0"
+    , isCancelledRide : false
+    , tags:
+        [ { background: Color.backDanger
+          , color: Color.red900
+          , text: "Passenger Cancelled"
+          }
+        , { background: "#F6F1FF"
+          , color: Color.purple700
+          , text: "Earned Penality"
+          }
+        ]
+    }
+  ]

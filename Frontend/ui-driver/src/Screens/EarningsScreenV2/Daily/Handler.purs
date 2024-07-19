@@ -11,7 +11,7 @@ import Prelude
 import Screens.EarningsScreen.ScreenData
 import Types.App
 import Presto.Core.Types.Language.Flow
-import Screens.EarningsScreen.Controller
+import Screens.EarningsScreen.Daily.Controller
 import Types.ModifyScreenState
 
 earningScreenDailyV2 :: Flow GlobalState FlowState
@@ -19,7 +19,25 @@ earningScreenDailyV2 = do
   (GlobalState state) <- getState
   out <- runScreen $ screen state.earningsScreenV2
   case out of
+    GoToHomeScreen updatedState -> do
+      void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
+      pure $ HomeScreen
+    GoToProfileScreen updatedState -> do
+      void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
+      pure $ Profile
+    GoToNotifications updatedState -> do
+      void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
+      pure $ Notifications
+    GoToReferralScreen updatedState -> do
+      void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
+      pure $ Benefits
+    SubscriptionScreen updatedState -> do
+      void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
+      pure $ Subscription
     GoToWeekly updatedState -> do
-        void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
-        pure $ EarningsV2Weekly
+      void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
+      pure $ EarningsV2Weekly
+    DateUpdated updatedState -> do 
+      void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
+      earningScreenDailyV2
     _ -> pure $ EarningsV2Daily

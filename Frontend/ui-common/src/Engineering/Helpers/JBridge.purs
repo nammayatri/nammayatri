@@ -121,6 +121,9 @@ foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import requestLocation  :: Unit -> Effect Unit
 foreign import requestBackgroundLocation  :: Unit -> Effect Unit
 
+foreign import getCurrentDate :: String
+foreign import getDateFromDate :: Fn2 String Int String
+
 foreign import initiateLocationServiceClient :: Effect Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
 foreign import requestAutoStartPermission  :: Unit -> Effect Unit

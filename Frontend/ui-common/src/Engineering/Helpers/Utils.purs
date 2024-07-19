@@ -169,9 +169,12 @@ saveObject objName obj =
 foreign import getWeeksInMonth :: Int -> Int -> Array CalendarModalWeekObject
 
 initializeCalendar :: Boolean -> ModifiedCalendarObject
-initializeCalendar selectTodaysDate =
-  let currentDay = getCurrentDay true
-      weeks = getWeeksInMonth currentDay.year currentDay.intMonth
+initializeCalendar selectTodaysDate = initializeCalendarWithDay (getCurrentDay true) selectTodaysDate
+
+
+initializeCalendarWithDay ::  CalendarModalDateObject -> Boolean -> ModifiedCalendarObject
+initializeCalendarWithDay currentDay selectTodaysDate = 
+  let weeks = getWeeksInMonth currentDay.year currentDay.intMonth
   in if selectTodaysDate 
        then selectSingleCalendarDate currentDay Nothing Nothing weeks
        else 
@@ -182,6 +185,7 @@ initializeCalendar selectTodaysDate =
          }
 
 foreign import getCurrentDay :: Boolean -> CalendarModalDateObject
+foreign import getCurrentDayFromDate :: String -> Boolean -> CalendarModalDateObject
 
 foreign import decrementMonth :: Int -> Int -> CalendarModalDateObject
 

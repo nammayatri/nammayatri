@@ -654,7 +654,9 @@ newtype RidesInfo = RidesInfo
       bookingType :: Maybe BookingTypes,
       bapName :: Maybe String,
       isValueAddNP :: Boolean,
-      enableOtpLessRide :: Maybe Boolean
+      enableOtpLessRide :: Maybe Boolean,
+      customerCancellationDues :: Maybe Number,
+      customerCancellationDuesWithCurrency :: Maybe CTA.Price
   }
 
 newtype OdometerReading = OdometerReading
@@ -1205,7 +1207,8 @@ newtype VehicleDocumentItem = VehicleDocumentItem
     documents :: Array DocumentStatusItem,
     isVerified :: Boolean,
     vehicleModel :: Maybe String,
-    isActive :: Boolean
+    isActive :: Boolean,
+    dateOfUpload :: String
   }
 
 newtype DocumentStatusItem = DocumentStatusItem
@@ -1220,6 +1223,7 @@ instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatu
     encodeRequest req = defaultEncode req
 
 derive instance genericVehicleDocumentItem :: Generic VehicleDocumentItem _
+derive instance newtypeVehicleDocumentItem :: Newtype VehicleDocumentItem _
 instance standardEncodeVehicleDocumentItem :: StandardEncode VehicleDocumentItem where standardEncode (VehicleDocumentItem res) = standardEncode res
 instance showVehicleDocumentItem :: Show VehicleDocumentItem where show = genericShow
 instance decodeVehicleDocumentItem :: Decode VehicleDocumentItem where decode = defaultDecode

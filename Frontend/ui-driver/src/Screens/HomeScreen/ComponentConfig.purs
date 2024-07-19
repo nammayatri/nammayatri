@@ -2134,8 +2134,8 @@ bgLocPopup state =
       , margin = Margin 16 0 16 15 },
       option1 {
         text = getString $ if EHC.os == "IOS" then CONTINUE else ENABLE_PERMISSION_STR
-      , color = Color.yellow900
-      , background = Color.black900
+      , color = state.data.config.primaryTextColor
+      , background = state.data.config.primaryBackground
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT

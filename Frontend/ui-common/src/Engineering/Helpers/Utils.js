@@ -107,3 +107,12 @@ export const getCurrentDay = function (useMidnightTime) {
   return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
     isInRange : false, isStart: false , isEnd: false }
 }
+export const getCurrentDayFromDate = function (date) {
+  return function (useMidnightTime){
+    date = new Date(date);
+    if(useMidnightTime)
+      date.setHours(0,0,0,0);
+    return { utcDate: date.toISOString(), date: date.getDate(), shortMonth: date.toLocaleString("default", { month: "short" }), year: date.getFullYear(), intMonth : date.getMonth(),
+      isInRange : false, isStart: false , isEnd: false }
+  }
+}
