@@ -978,6 +978,13 @@ data City
   | Thrissur
   | Trivandrum
   | Kozhikode
+  | Vellore
+  | Hosur
+  | Madurai
+  | Thanjavur
+  | Tirunelveli
+  | Salem
+  | Trichy
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow

@@ -42,6 +42,13 @@ type RemoteConfig a
     , default :: a
     , noida :: Maybe a
     , gurugram :: Maybe a
+    , vellore :: Maybe a
+    , hosur :: Maybe a
+    , madurai :: Maybe a
+    , thanjavur :: Maybe a
+    , tirunelveli :: Maybe a
+    , salem :: Maybe a
+    , trichy :: Maybe a 
     , config :: Maybe Config
     }
 

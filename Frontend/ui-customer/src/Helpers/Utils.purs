@@ -663,7 +663,7 @@ getVehicleVariantImage variant viewType =
           "PREMIUM"       -> variantConfig.sedan.leftViewImage
           "AUTO_RICKSHAW" -> case city of 
                               _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
-                              Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+                              _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.leftViewImage
@@ -671,7 +671,7 @@ getVehicleVariantImage variant viewType =
                               YATRISATHI -> variantConfig.bookAny.leftViewImage
                               _ -> case city of 
                                       Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
-                                      Chennai -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
+                                      _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       _ -> variantConfig.bookAny.leftViewImage
@@ -688,7 +688,7 @@ getVehicleVariantImage variant viewType =
           "PREMIUM"       -> variantConfig.sedan.image
           "AUTO_RICKSHAW" -> case city of 
                               _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black" 
-                              Chennai -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
+                              _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow" 
                               Hyderabad -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black_yellow"
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.image
@@ -696,7 +696,7 @@ getVehicleVariantImage variant viewType =
                               YATRISATHI -> variantConfig.bookAny.image
                               _ -> case city of 
                                       Hyderabad -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
-                                      Chennai -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
+                                      _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage COMMON_ASSET "ny_ic_cab_auto_yellow"
                                       _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
@@ -747,6 +747,13 @@ cityCodeMap =
   , Tuple (Just "std:0471") Trivandrum
   , Tuple (Just "std:0487") Thrissur
   , Tuple (Just "std:0495") Kozhikode
+  , Tuple (Just "std:0416") Vellore
+  , Tuple (Just "std:04344") Hosur
+  , Tuple (Just "std:0452") Madurai
+  , Tuple (Just "std:04362") Thanjavur
+  , Tuple (Just "std:0462") Tirunelveli
+  , Tuple (Just "std:0427") Salem
+  , Tuple (Just "std:0431") Trichy
   , Tuple Nothing AnyCity
   ]
 
@@ -761,7 +768,7 @@ quoteModalVariantImage variant =
         _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_no_quotes_auto_koc"
         Delhi ->"ny_ic_no_quotes_auto_bang_del"
         Hyderabad -> "ny_ic_no_quotes_auto_che_hyd"
-        Chennai -> "ny_ic_no_quotes_auto_che_hyd"
+        _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_no_quotes_auto_che_hyd"
         _ -> "ny_ic_no_quotes_auto"
       else  "ny_ic_no_quotes_color"
 
@@ -778,7 +785,7 @@ getAutoRickshawNearImage  =
     case city of 
     _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_driver_near_auto_yellow"
     Hyderabad -> "ny_ic_driver_near_auto_black"
-    Chennai -> "ny_ic_driver_near_auto_black"
+    _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_driver_near_auto_black"
     _ -> "ny_ic_driver_near_auto_green"
 
 getAutoRickshawStartedImage :: String
@@ -789,7 +796,7 @@ getAutoRickshawStartedImage  =
       case city of 
        _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_driver_started_auto_yellow"
        Hyderabad -> "ny_ic_driver_started_auto_black"
-       Chennai -> "ny_ic_driver_started_auto_black"
+       _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_driver_started_auto_black"
        _ -> "ny_ic_driver_started_auto_green"
  
 getCityFromString :: String -> City
@@ -815,6 +822,13 @@ getCityFromString cityString =
     "Trivandrum" -> Trivandrum
     "Thrissur" -> Thrissur
     "Kozhikode" -> Kozhikode
+    "Vellore" -> Vellore
+    "Hosur" -> Hosur
+    "Madurai" -> Madurai
+    "Thanjavur" -> Thanjavur
+    "Tirunelveli" -> Tirunelveli
+    "Salem" -> Salem
+    "Trichy" -> Trichy
     _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
@@ -1109,7 +1123,7 @@ getAutoImage :: City -> String
 getAutoImage city = case city of
     Hyderabad -> "ny_ic_black_yellow_auto"
     _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> "ny_ic_koc_auto_on_map"
-    Chennai -> "ny_ic_black_yellow_auto"
+    _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_black_yellow_auto"
     _         -> "ic_auto_nav_on_map"
 
 normalRoute ::String -> Markers
@@ -1141,6 +1155,13 @@ getLanguageBasedCityName cityName =
     Kozhikode -> getString KOZHIKODE
     Thrissur -> getString THRISSUR
     Trivandrum -> getString TRIVANDRUM
+    Vellore -> getString VELLORE
+    Hosur -> getString HOSUR 
+    Madurai -> getString MADURAI 
+    Thanjavur -> getString THANJAVUR 
+    Tirunelveli -> getString TIRUNELVELI 
+    Salem -> getString SALEM 
+    Trichy -> getString TRICHY
     AnyCity -> ""
 
 breakPrefixAndId :: String -> Maybe (Tuple String (Maybe String))
