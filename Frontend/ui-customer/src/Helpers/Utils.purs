@@ -711,19 +711,13 @@ getVariantRideType variant =
                     _      -> getString AC_CAB
     _          -> getString AC_CAB
 
-getTitleConfig :: forall w. String -> {text :: String , color :: String} -- TODO:: Immediate hotpush to enable OTP flow in chennai, temp fix please ignore
+getTitleConfig :: forall w. String -> {text :: String , color :: String}
 getTitleConfig vehicleVariant =
   case vehicleVariant of
-        "TAXI_PLUS"     -> mkReturnObj ((getString TAXI)) CommonColor.orange900
-        "SEDAN"         -> mkReturnObj ("SEDAN") CommonColor.orange900
-        "HATCHBACK"     -> mkReturnObj ("HATCHBACK") CommonColor.orange900
-        "ECO"           -> mkReturnObj ("ECO") CommonColor.orange900
-        "COMFY"         -> mkReturnObj ("COMFY") CommonColor.orange900
-        "PREMIUM"       -> mkReturnObj ("PREMIUM") CommonColor.orange900
         "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
         "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
         "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
-        _ -> mkReturnObj ("vehicle") Color.blue800 
+        _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
   where mkReturnObj text' color' = 
           {
             text : text',
