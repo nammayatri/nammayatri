@@ -33,7 +33,6 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.VehicleServiceTier as DVST
-import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Maps as Maps

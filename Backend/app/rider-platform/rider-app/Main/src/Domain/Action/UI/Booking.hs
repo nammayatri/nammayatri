@@ -116,7 +116,7 @@ checkBookingsForStatus (currBooking : bookings) = do
       now <- getCurrentTime
       let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.createdAt
       let diff = DT.diffUTCTime now estimatedEndTime
-      let callStatusConditionNew = currBooking.status == SRB.NEW && diff > fromIntegral timeDiffThreshold
+      let callStatusConditionNew = (currBooking.status == SRB.NEW && diff > fromIntegral timeDiffThreshold) || (currBooking.status == SRB.CONFIRMED && diff > fromIntegral timeDiffThreshold)
           callStatusConditionTripAssigned = currBooking.status == SRB.TRIP_ASSIGNED && diff > fromIntegral timeDiffThreshold
       when callStatusConditionNew $ do
         callOnStatus currBooking
