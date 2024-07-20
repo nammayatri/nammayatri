@@ -83,6 +83,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   osr <- case orderStatusResp of
     Nothing -> throwError $ InternalError "Order Contents not found."
     Just osr' -> pure osr'
+  logDebug $ "Webhook Payout Resp: " <> show osr
   case osr of
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (InternalError "PayoutOrder Not Found")
@@ -159,6 +160,9 @@ processPreviousPayoutAmount personId mbVpa merchantOperatingCityId = do
     case (mbVpa, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
       (Just vpa, True) -> do
         uid <- generateGUID
+        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+          mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
+          mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
         phoneNo <- mapM decrypt person.mobileNumber
         let createPayoutOrderReq =
               Juspay.CreatePayoutOrderReq
@@ -177,9 +181,9 @@ processPreviousPayoutAmount personId mbVpa merchantOperatingCityId = do
             createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity serviceName
         merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)
         void $ DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+      (_, False) -> do
         Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
-          mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
-      (_, False) -> mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount
+          mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount
       _ -> pure ()
   where
     lockKey = "ProcessBacklogPayout:DriverId-" <> personId.getId
