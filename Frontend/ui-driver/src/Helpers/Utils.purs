@@ -593,22 +593,7 @@ getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
   let url = getAssetLink FunctionCall
       commonUrl = getCommonAssetLink FunctionCall
-  in case getMerchant FunctionCall of
-        YATRISATHI -> case variant of
-                        "TAXI"      -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
-                        "SUV"       -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
-                        "SUV_TIER"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
-                        "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
-                        "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
-                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-                        _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
-        _ -> case variant of
+  in case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
                         "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
                         "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"

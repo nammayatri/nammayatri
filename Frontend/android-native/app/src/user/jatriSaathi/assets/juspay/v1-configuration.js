@@ -320,22 +320,22 @@ window.getMerchantConfig = function () {
       , "variantInfo" : {
           "hatchback" : {
             "name" : "Hatchback",
-            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png",
-            "leftViewImage" : "ny_ic_sedan_left_view,"
+            "image" : "ny_ic_hatchback_ac_side,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_hatchback_ac.png",
+            "leftViewImage" : "ny_ic_hatchback_left_view,"
           },
           "taxiPlus" : {
             "name" : "AC Taxi",
-            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png",
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
             "leftViewImage" : "ny_ic_sedan_left_view,"
           },
           "sedan" : {
             "name" : "Sedan",
-            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png",
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
             "leftViewImage" : "ny_ic_sedan_left_view,"
           },
           "taxi" : {
             "name" : "Non AC Taxi",
-            "image" : "ny_ic_taxi_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_taxi_side.png",
+            "image" : "ny_ic_taxi_side,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_taxi.png",
             "leftViewImage" : "ny_ic_hatchback_left_view,"
           },
           "suv" : {

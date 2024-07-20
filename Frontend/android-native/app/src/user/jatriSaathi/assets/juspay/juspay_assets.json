@@ -527,6 +527,7 @@
       "ny_ic_safety_shield" : true,
       "ny_ic_sd" : true,
       "ny_ic_sedan_ac_side" : true,
+      "ny_ic_hatchback_ac_side" : true,
       "ny_ic_sedan_concept" : true,
       "ny_ic_sedan_concept_quote_list" : true,
       "ny_ic_sedan_left_view" : true,
