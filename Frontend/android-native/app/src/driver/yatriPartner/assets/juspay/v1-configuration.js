@@ -869,7 +869,11 @@ window.getMerchantConfig = function () {
           "auto": {
             "freeSeconds": 180,
             "perMinCharges": 0.75
-          }
+          },
+           "bike" : {
+             "freeSeconds" : 300,
+             "perMinCharges" : 1.0
+           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
@@ -921,7 +925,11 @@ window.getMerchantConfig = function () {
           "auto": {
             "freeSeconds": 180,
             "perMinCharges": 0.75
-          }
+          },
+           "bike" : {
+             "freeSeconds" : 300,
+             "perMinCharges" : 1.0
+           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
