@@ -740,24 +740,22 @@ rateCardView push state =
 
 addAadhaarOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addAadhaarOrOTPView state push =
-  let driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
-      showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
-  in 
-    linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation HORIZONTAL
-    , background Color.transparent
-    , padding $ Padding 10 0 10 8
-    , gravity BOTTOM
-    ][  linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity if showAddAadhaar then CENTER else RIGHT
-        ][  addAadhaarNumber push state showAddAadhaar
-          , if state.data.config.feature.enableOtpRide || driverLocation == "chennai" then otpButtonView state push else dummyTextView
-          ]
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , background Color.transparent
+  , padding $ Padding 10 0 10 8
+  , gravity BOTTOM
+  ][  linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity if showAddAadhaar then CENTER else RIGHT
+      ][  addAadhaarNumber push state showAddAadhaar
+        , if state.data.config.feature.enableOtpRide then otpButtonView state push else dummyTextView
         ]
+      ]
+  where showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
