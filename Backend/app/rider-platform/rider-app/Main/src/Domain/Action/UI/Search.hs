@@ -272,6 +272,8 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
     _ -> return Nothing
 
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  let txnCity = show merchant.defaultCity
+
   let sourceLatLong = origin.gps
   let stopsLatLong = map (.gps) stops
   originCity <- Serviceability.validateServiceability sourceLatLong stopsLatLong person
@@ -338,11 +340,11 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
         disabilityTag = tag,
-        taggings = getTags shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes isReallocationEnabled,
+        taggings = getTags shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled,
         ..
       }
   where
-    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes mbIsReallocationEnabled = do
+    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       Just $
         def{Beckn.fulfillmentTags =
@@ -353,6 +355,13 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
                 (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
                 (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
                 (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled)
+              ],
+            Beckn.paymentTags =
+              [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
+                (Beckn.DELAY_INTEREST, Just "0"),
+                (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"),
+                (Beckn.MANDATORY_ARBITRATION, Just "TRUE"),
+                (Beckn.COURT_JURISDICTION, Just txnCity)
               ]
            }
 
