@@ -75,24 +75,29 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
   let dummyFromLocation = transporterConfig.dummyFromLocation
       dummyToLocation = transporterConfig.dummyToLocation
+      dummyShowDriverAdditions = fromMaybe True transporterConfig.dummyShowDriverAdditions
   let isValueAddNP = True
 
   now <- getCurrentTime
-  let entityData = mkDummyNotificationEntityData now vehicle.variant dummyFromLocation dummyToLocation isValueAddNP
+  let entityData = mkDummyNotificationEntityData now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP
   notificationData <- TN.buildSendSearchRequestNotificationData driver.id driver.deviceToken entityData TN.EmptyDynamicParam
   logDebug $ "Sending dummy notification to driver:-" <> show driver.id <> ",entityData:-" <> show entityData <> ",triggeredByDashboard:-" <> show isDashboardTrigger
   let fallBackCity = TN.getNewMerchantOpCityId driver.clientSdkVersion merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   void $ TN.sendSearchRequestToDriverNotification driver.merchantId fallBackCity driver.id notificationData
   pure Success
 
-mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> USRD.SearchRequestForDriverAPIEntity
-mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAddNP =
+mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> Bool -> USRD.SearchRequestForDriverAPIEntity
+mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP =
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation now fromLocData
       toLocation = Just $ mkDummySearchReqToLocation now toLocData
       -- newFromLocation = mkDummyFromLocation now fromLocData
       -- newToLocation = Just $ mkDummyToLocation now toLocData
       mkDummyPrice (amountInt :: Int) = PriceAPIEntity (toHighPrecMoney amountInt) INR
+      (driverMinExtraFee, driverMaxExtraFee, driverMinExtraFeeWithCurrency, driverMaxExtraFeeWithCurrency, driverDefaultStepFeeWithCurrency, driverStepFeeWithCurrency) =
+        if dummyShowDriverAdditions
+          then (Just (Money 0), Just (Money 20), Just $ mkDummyPrice 0, Just $ mkDummyPrice 20, Just $ mkDummyPrice 10, Just $ mkDummyPrice 10)
+          else (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
    in USRD.SearchRequestForDriverAPIEntity
         { searchRequestId = Id fromLocData.dummyId,
           searchTryId = Id fromLocData.dummyId,
@@ -105,12 +110,6 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData isValueAdd
           baseFare = Money fromLocData.baseFare,
           baseFareWithCurrency = mkDummyPrice fromLocData.baseFare,
           driverLatLong = LatLong {lat = fromLocData.lat, lon = fromLocData.lon},
-          driverMinExtraFee = Just (Money 0),
-          driverMinExtraFeeWithCurrency = Just $ mkDummyPrice 0,
-          driverMaxExtraFee = Just (Money 20),
-          driverMaxExtraFeeWithCurrency = Just $ mkDummyPrice 20,
-          driverDefaultStepFeeWithCurrency = Just $ mkDummyPrice 10,
-          driverStepFeeWithCurrency = Just $ mkDummyPrice 10,
           rideRequestPopupDelayDuration = Seconds 0,
           keepHiddenForSeconds = Seconds 0,
           requestedVehicleVariant = driverVehicle,

@@ -22,6 +22,8 @@ data VehicleServiceTierT f = VehicleServiceTierT
     driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     id :: B.C f Kernel.Prelude.Text,
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isIntercityEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isRentalsEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     longDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,

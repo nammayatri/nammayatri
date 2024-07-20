@@ -89,6 +89,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     driverTimeSpentOnPickupThresholdOnCancel :: Kernel.Types.Common.Seconds,
     dropLocThreshold :: Kernel.Types.Common.Meters,
     dummyFromLocation :: Domain.Types.Location.DummyLocationInfo,
+    dummyShowDriverAdditions :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dummyToLocation :: Domain.Types.Location.DummyLocationInfo,
     editLocDriverPermissionNeeded :: Kernel.Prelude.Bool,
     editLocTimeThreshold :: Kernel.Types.Common.Seconds,

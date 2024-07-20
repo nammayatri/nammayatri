@@ -780,6 +780,7 @@ TransporterConfig:
     kaptureQueue: Text
     dummyFromLocation: DummyLocationInfo
     dummyToLocation: DummyLocationInfo
+    dummyShowDriverAdditions: Maybe Bool
     scheduleRideBufferTime: NominalDiffTime
     scheduledRideJobRescheduleTime: NominalDiffTime
     graceTimeForScheduledRidePickup: NominalDiffTime

@@ -162,7 +162,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
   (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateRouteDeviation driverId (toList modifiedWaypoints)
-  when (enableTollCrossedNotifications && isTollPresentOnCurrentRoute) $
+  when (isTollApplicable && enableTollCrossedNotifications && isTollPresentOnCurrentRoute) $
     fork "Toll Crossed OnUpdate" $ do
       sendTollCrossedNotificationToDriver driverId
       sendTollCrossedUpdateToBAP driverId
