@@ -49,6 +49,7 @@ import Components.ServiceTierCard.View as ServiceTierCard
 import Resources.Constants (getVehicleCapacity)
 import Screens.Types as ST
 import Screens.Types (FareProductType(..)) as FPT
+import Helpers.Utils as HU
 
 ---------------------------------- driverDetailsView ---------------------------------------
 driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
@@ -101,7 +102,7 @@ driverDetailsView config uid nid =
           , gravity LEFT
           ] <> FontStyle.body27 TypoGraphy
         , textView (
-          [ text $ spaceSeparatedPascalCase $ config.vehicleColor <> " " <> config.vehicleModel
+          [ text $ spaceSeparatedPascalCase $ config.vehicleColor <> " " <> if config.vehicleModel == "Unkown" then HU.getVariantRideType config.vehicleVariant else config.vehicleModel
           , color Color.black700
           , accessibilityHint $ "Driver : " <> config.driverName <> " : Vehicle : " <>  config.vehicleModel
           , accessibility ENABLE

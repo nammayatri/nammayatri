@@ -709,10 +709,12 @@ getVariantRideType :: String -> String
 getVariantRideType variant =
   case getMerchant FunctionCall of
     YATRISATHI -> case variant of
-                    "TAXI" -> getString NON_AC_TAXI
-                    "SUV"  -> getString AC_SUV
+                    "TAXI" -> "Non-AC Mini"
+                    "SUV"  -> "XL Cab"
                     "BIKE" -> "Bike Taxi"
-                    _      -> getString AC_CAB
+                    "SEDAN" -> "Sedan"
+                    "HATCHBACK" -> "AC Mini"
+                    _      -> "AC Cab"
     _          -> getString AC_CAB
 
 getTitleConfig :: forall w. String -> {text :: String , color :: String}
