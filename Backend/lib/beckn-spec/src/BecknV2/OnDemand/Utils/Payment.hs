@@ -14,6 +14,7 @@
 
 module BecknV2.OnDemand.Utils.Payment
   ( mkPayment,
+    mkPayment',
   )
 where
 
@@ -61,6 +62,31 @@ mkPayment txnCity collectedBy paymentStatus mPrice mTxnId mPaymentParams mSettle
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
       paymentTags = Just $ mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff,
+      paymentType = encodeToText' Spec.ON_FULFILLMENT
+    }
+  where
+    anyTrue = or
+
+mkPayment' ::
+  Tag.TagList ->
+  CollectedBy ->
+  Spec.PaymentStatus ->
+  Maybe Price ->
+  Maybe TxnId ->
+  Maybe BknPaymentParams ->
+  Spec.Payment
+mkPayment' allPaymentTags collectedBy paymentStatus mPrice mTxnId mPaymentParams = do
+  let mAmount = show . (.amount) <$> mPrice
+  let mCurrency = show . (.currency) <$> mPrice
+  Spec.Payment
+    { paymentCollectedBy = Just collectedBy,
+      paymentId = mTxnId,
+      paymentParams =
+        if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
+          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
+          else Nothing,
+      paymentStatus = encodeToText' paymentStatus,
+      paymentTags = Tag.convertToTagGroup allPaymentTags,
       paymentType = encodeToText' Spec.ON_FULFILLMENT
     }
   where

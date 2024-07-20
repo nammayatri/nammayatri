@@ -69,20 +69,32 @@ tfFulfillment Domain.Action.UI.Search.SearchRes {..} = do
     else Just returnData
 
 tfIntent :: Domain.Action.UI.Search.SearchRes -> BecknConfig -> Maybe BecknV2.OnDemand.Types.Intent
-tfIntent res@Domain.Action.UI.Search.SearchRes {..} bapConfig = do
+tfIntent res bapConfig = do
   let intentTags_ = Nothing
       intentFulfillment_ = tfFulfillment res
-      intentPayment_ = tfPayment merchant bapConfig
+      intentPayment_ = tfPayment res bapConfig
       returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
     else Just returnData
 
-tfPayment :: Domain.Types.Merchant.Merchant -> BecknConfig -> Maybe Spec.Payment
-tfPayment merchant bapConfig = do
+tfPayment :: Domain.Action.UI.Search.SearchRes -> BecknConfig -> Maybe Spec.Payment
+tfPayment res bapConfig = do
+  let updatedPaymentTags =
+        maybe
+          []
+          ( \tag ->
+              [ (Tags.SETTLEMENT_WINDOW, Just $ fromMaybe "PT1D" bapConfig.settlementWindow),
+                (Tags.BUYER_FINDER_FEES_PERCENTAGE, Just $ fromMaybe "0" bapConfig.buyerFinderFee),
+                (Tags.STATIC_TERMS, Just $ maybe "https://api.example-bap.com/booking/terms" Kernel.Prelude.showBaseUrl bapConfig.staticTermsUrl),
+                (Tags.SETTLEMENT_TYPE, bapConfig.settlementType)
+              ]
+                <> (tag.paymentTags)
+          )
+          (res.taggings)
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
-  Just $ mkPayment (show merchant.defaultCity) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
+  Just $ mkPayment' updatedPaymentTags (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams
 
 tfPerson :: Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Bool -> Maybe BecknV2.OnDemand.Types.Person
 tfPerson customerLanguage disabilityTag isDashboardRequest = do
