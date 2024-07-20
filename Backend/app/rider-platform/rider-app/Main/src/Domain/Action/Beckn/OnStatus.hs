@@ -163,6 +163,7 @@ isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
         RenewedRide {} -> True
   bookingStatusChanged || rideStatusChanged
 
+-- TODO: When making a onStatus request, make sure status only goes in forward direction.
 onStatus ::
   ( MonadFlow m,
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
