@@ -560,7 +560,7 @@ titleAndETA push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  ][ if rideNotStarted state then specialZoneHeader $ STO.getValueToLocalStore STO.SELECTED_VARIANT
+  ][ if rideNotStarted state then specialZoneHeader $ state.data.vehicleVariant
      else distanceView push state
   ]
 
