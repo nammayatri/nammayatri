@@ -545,6 +545,7 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         createdAt = now,
         updatedAt = now,
         verificationStatus = verificationStatus,
+        driverNameOnGovtDB = nameOnGovtDB,
         ..
       }
 

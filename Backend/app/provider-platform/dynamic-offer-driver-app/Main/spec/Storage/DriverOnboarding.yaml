@@ -599,6 +599,7 @@ DriverPanCard:
     consentTimestamp: UTCTime
     verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    driverNameOnGovtDB: Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
