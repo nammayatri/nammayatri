@@ -52,3 +52,23 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN oxygen double
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_air_conditioned boolean ;
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN air_conditioned_threshold double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_rentals_enabled boolean ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_intercity_enabled boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -22,6 +22,8 @@ data VehicleServiceTier = VehicleServiceTier
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isIntercityEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isRentalsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     longDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
