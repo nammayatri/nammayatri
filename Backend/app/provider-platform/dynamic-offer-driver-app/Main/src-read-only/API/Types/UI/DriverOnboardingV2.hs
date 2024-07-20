@@ -74,6 +74,7 @@ data DriverPanReq = DriverPanReq
     imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    nameOnGovtDB :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validationStatus :: Kernel.Prelude.Maybe API.Types.UI.DriverOnboardingV2.ValidationStatus,

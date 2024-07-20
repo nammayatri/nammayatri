@@ -94,6 +94,7 @@ types:
     validationStatus: Maybe ValidationStatus
     verifiedBy: Maybe VerifiedBy
     transactionId: Maybe Text
+    nameOnGovtDB: Maybe Text
   GetLiveSelfieResp:
     recordType: NewType
     image: Text

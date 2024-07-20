@@ -49,7 +49,8 @@ upsertPanRecord a@DriverPanCard {..} =
           Se.Set Beam.documentImageId1 documentImageId1.getId,
           Se.Set Beam.panCardNumberHash (panCardNumber & hash),
           Se.Set Beam.updatedAt updatedAt,
-          Se.Set Beam.verificationStatus verificationStatus
+          Se.Set Beam.verificationStatus verificationStatus,
+          Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB
         ]
         [Se.Is Beam.driverId $ Se.Eq driverId.getId]
     Nothing -> createWithKV a

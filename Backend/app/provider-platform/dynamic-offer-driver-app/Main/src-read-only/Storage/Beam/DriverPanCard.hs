@@ -22,6 +22,7 @@ data DriverPanCardT f = DriverPanCardT
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverId :: B.C f Kernel.Prelude.Text,
     driverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverNameOnGovtDB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     failedRules :: B.C f [Kernel.Prelude.Text],
     id :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

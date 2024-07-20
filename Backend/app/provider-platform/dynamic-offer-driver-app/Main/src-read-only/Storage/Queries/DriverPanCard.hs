@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.DriverPanCard.DriverPanCard {..}) = do
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverName driverName,
+      Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB,
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.panCardNumberEncrypted (panCardNumber & unEncrypted . encrypted),
