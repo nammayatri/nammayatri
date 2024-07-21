@@ -2952,7 +2952,7 @@ updateMessagesWithCmd state =
     if(state.props.currentStage == ChatWithDriver) then do
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       pure unit
-    else
+    else 
       pure unit
     if state.props.showChatNotification then pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) else pure NoAction
     ]
