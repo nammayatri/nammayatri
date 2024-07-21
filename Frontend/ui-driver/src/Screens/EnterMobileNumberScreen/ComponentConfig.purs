@@ -27,7 +27,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (not, (==), (||))
+import Prelude (not, (==), (||), (/=), (&&))
 import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -123,7 +123,7 @@ mobileNumberEditTextConfig state = let
       , type = "number"
       , height = V 54
       , margin = MarginTop 30
-      , showErrorLabel = (not state.props.isValid)
+      , showErrorLabel = not state.props.isValid
       , errorLabel
         { text = (getString INVALID_MOBILE_NUMBER)
         }
@@ -161,7 +161,7 @@ mobileNumberConfig state = let
         { text = (getString INVALID_MOBILE_NUMBER)
         , margin = MarginBottom 1
         }
-    , showErrorLabel = state.props.isValid
+    , showErrorLabel = state.data.mobileNumber /= "" && not state.props.isValid
     , countryCodeOptionConfig {
         padding = Padding 16 ((if EHC.os == "IOS" then 16 else 12)) 8 (if EHC.os == "IOS" then 16 else 12)
     }
@@ -184,6 +184,7 @@ emailIdPrimaryEditTextConfig state =
         { visibility = GONE
         }  
       , margin = MarginTop 24
+      , id = (EHC.getNewIDWithTag "EmailIdPrimaryEditText")
       , errorLabel{
           text = "Enter a Valid Email"
         , color = Color.textDanger
@@ -195,9 +196,45 @@ primaryButtonEmailConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = "Login with Email" }
-      , id = "PrimaryButtonMobileNumber"
+      , id = "PrimaryButtonLoginWithEmail"
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.6
+      , margin = MarginTop 8
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
+      }
+  in primaryButtonConfig'
+
+primaryButtonLoginWithMobileConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
+primaryButtonLoginWithMobileConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig {
+          text = "Phone Number"
+        , color = Color.black800 
+      }
+      , id = "PrimaryButtonLoginWithMobile"
+      , margin = MarginTop 16
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
+      , isPrefixImage = true
+      , prefixImageConfig {
+          height = V 25
+        , width = V 25
+        , margin = MarginRight 10
+        , imageUrl = fetchImage FF_ASSET "ic_phone_grey"
+      }
+      , background = Color.bridgeGreen
+      }
+  in primaryButtonConfig'
+
+
+primaryButtonBackToEmailLoginConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
+primaryButtonBackToEmailLoginConfig state = let
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      { textConfig{ text = "Back to Email login" }
+      , id = "primaryButtonBackToEmailLoginConfig"
       , margin = MarginTop 8
       , enableRipple = true
       , rippleColor = Color.rippleShade

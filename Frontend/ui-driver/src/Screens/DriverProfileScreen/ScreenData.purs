@@ -159,6 +159,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , lastName              :  Nothing 
     , firstName             :  ""
     , mobileNumber          :  Nothing 
+    , email                 :  Nothing
     , active                :  false
     , mode                  :  Nothing
     , onRide                :  false

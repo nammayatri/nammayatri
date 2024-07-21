@@ -33,8 +33,9 @@ initData =
           oauthProvider : Nothing
         },
   props: {
-    btnActive : config.enterMobileNumberScreen.emailAuth,
+    btnActive : false,
     isValid : config.enterMobileNumberScreen.emailAuth,
-    mobileNumberEditFocused : true
+    mobileNumberEditFocused : true,
+    loginWithMobileBtnClicked : false
     }
 }

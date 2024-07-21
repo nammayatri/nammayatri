@@ -16,7 +16,7 @@
 module Screens.EnterMobileNumberScreen.View where
 
 import Data.Maybe (Maybe(..))
-import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, void, (==), (-), (+), discard)
+import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, void, (==), (-), (+), discard, not, (||), (&&))
 import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback, singleLine, textFromHtml, adjustViewWithKeyboard, scrollView, disableKeyboardAvoidance, scrollBarY, id)
 import Components.PrimaryButton as PrimaryButton
 import Components.MobileNumberEditor as MobileNumberEditor
@@ -44,6 +44,8 @@ import ConfigProvider
 import Services.API (OAuthProvider(..))
 import Effect.Uncurried (runEffectFn2)
 import Mobility.Prelude
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -75,11 +77,12 @@ view push state =
     , background Color.white900
     , onBackPressed push (const BackPressed)
     ][  headerView state push
-      , frameLayout
+      , Keyed.linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , padding (Padding 16 0 16 0)
-        ][if state.data.config.enterMobileNumberScreen.emailAuth then oAuthProvidersView state push else enterMobileNumberView  state push]
+        ][ if state.props.loginWithMobileBtnClicked then (Tuple "enterMobileNumberView" $ enterMobileNumberView state push) else Tuple "oAuthProvidersView" $ oAuthProvidersView state push
+         ]
       ]
     ]
     where 
@@ -185,14 +188,12 @@ enterMobileNumberView  state push =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , visibility VISIBLE
     , alpha 1.0
     , orientation VERTICAL
     , margin $ MarginTop 37
     ][   PrestoAnim.animationSet
       [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
       ] $ MobileNumberEditor.view (push <<< PrimaryEditTextAction) (mobileNumberConfig state)  
-
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -236,6 +237,7 @@ oAuthProvidersView state push =
       ] <> FontStyle.subHeading2 TypoGraphy
     , PrimaryButton.view (push <<< (OAuthPB Google)) (googleProvider state isFunctionExists)
     , if EHC.os == "IOS" then PrimaryButton.view (push <<< (OAuthPB IOS)) (appleProvider state isFunctionExists) else linearLayout[][]
+    , PrimaryButton.view (push <<< PrimaryButtonLoginWithMobileAC) (primaryButtonLoginWithMobileConfig state)
     , textView $
         [ text "Or"
         , gravity CENTER

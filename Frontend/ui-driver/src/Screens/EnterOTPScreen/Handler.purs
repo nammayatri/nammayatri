@@ -34,4 +34,5 @@ enterOTP = do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → updatedState)
       App.BackT $ pure App.GoBack
     Retry updatedState -> App.BackT $ App.NoBack <$> pure (RETRY updatedState)
+    LoginMethodChange updatedState -> App.BackT $ App.NoBack <$> pure (CHANGE_LOGIN_METHOD updatedState)
     GoToHome updatedState -> App.BackT $ App.BackPoint <$> pure (DRIVER_INFO_API_CALL updatedState)

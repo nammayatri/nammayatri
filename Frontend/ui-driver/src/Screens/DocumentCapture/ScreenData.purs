@@ -44,12 +44,13 @@ initData =
         contactSupportModal : ST.HIDE, 
         isSSNView : false,
         isProfileView: false,
-        isValidEmail : true,
+        isValidEmail : false,
         isValidFirstName : true,
-        isValidMobileNumber: true,
+        isValidMobileNumber: false,
         setDefault : false,
         shouldGoBack : true,
         previewSampleImage : false,
-        previewImgUrl : ""
+        previewImgUrl : "",
+        isloggedInViaMobileNumber : false
       }
   }

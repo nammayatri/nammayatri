@@ -33,7 +33,7 @@ import Effect.Uncurried (runEffectFn4)
 import Engineering.Helpers.Commons as EHC
 import Components.PopUpModal.Controller as PopUpModal
 import Data.String as DS
-import Data.Maybe (Maybe(..), isNothing)
+import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Components.OptionsMenu as OptionsMenu
 import Services.Config as SC
 import Components.BottomDrawerList as BottomDrawerList
@@ -75,6 +75,7 @@ data Action = PrimaryButtonAC PrimaryButtonController.Action
             | CallBackOpenCamera
             | UpdateShouldGoBack
             | PreviewSampleImage String
+            | EmailEditText PrimaryEditText.Action
 
 data ScreenOutput = GoBack 
                   | UploadAPI DocumentCaptureScreenState
@@ -94,14 +95,21 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =
     then updateAndExit state $ UpdateSSN state
     else if state.props.isProfileView
       then
-        case state.data.firstName, state.data.mobileNumber of
-          Nothing, _ -> do
+        case state.data.firstName, state.data.mobileNumber, state.data.email of
+          Nothing, _, _ -> do
             _ <- pure $ JB.toggleBtnLoader "" false
             continue state{props{isValidFirstName = false}}
-          _, Nothing -> do
-            _ <- pure $ JB.toggleBtnLoader "" false
-            continue state{props{isValidEmail = false}}
-          Just name, Just mobileNumber -> do 
+          Just name, Nothing, Just email -> do
+            let isValidFirstName = (DS.length name) > 2 
+                isValidEmail = JB.validateEmail email
+                isValid = isValidFirstName && isValidEmail
+                newState = state{props{isValidEmail = isValidEmail, isValidFirstName = isValidFirstName}}
+            if isValid
+              then updateAndExit state $ UpdateProfile newState 
+              else do
+                _ <- pure $ JB.toggleBtnLoader "" false
+                continue newState
+          Just name, Just mobileNumber, Nothing -> do 
             let config = getAppConfig appConfig
                 validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode mobileNumber
                 isValidFirstName = (DS.length name) > 2 
@@ -112,6 +120,7 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =
               else do
                 _ <- pure $ JB.toggleBtnLoader "" false
                 continue newState
+          _, _, _ -> continue state
       else
         continueWithCmd state [do
           JB.uploadFile (state.data.docType == ST.PROFILE_PHOTO)
@@ -222,6 +231,12 @@ eval (MobileEditText (PrimaryEditText.TextChanged id newVal)) state = do
   let validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode newVal
   continue  state { props = state.props { isValidMobileNumber = isValidMobileNumber validatorResp }
                                         , data = state.data { mobileNumber = if validatorResp == MVR.MaxLengthExceeded then state.data.mobileNumber else strToMaybe newVal}}
+
+eval (EmailEditText (PrimaryEditText.TextChanged id newVal)) state = do
+  let config = getAppConfig appConfig
+      validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode newVal
+      email = strToMaybe (DS.trim newVal)
+  continue  state { data { email = email}, props {isValidEmail = JB.validateEmail $ fromMaybe "" email}}
 
 eval (KeyboardCallback event) state
   | event == "onKeyboardOpen" && (EHC.os == "IOS") =

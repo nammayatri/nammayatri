@@ -202,14 +202,14 @@ makeTriggerOTPReq state (LatLon lat lng _) = TriggerOTPReq
         config = getAppConfig appConfig
     in
     {
-      mobileNumber      : if config.enterMobileNumberScreen.emailAuth then Nothing else Just state.data.mobileNumber,
+      mobileNumber      : if state.data.mobileNumber /= "" then Just state.data.mobileNumber else Nothing,
       mobileCountryCode : config.defaultCountryCodeConfig.countryCode,
       merchantId : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
       merchantOperatingCity : mkOperatingCity operatingCity config,
       registrationLat : Nothing,
       registrationLon : Nothing,
       email : state.data.email,
-      identifierType : if state.data.email == Nothing then Nothing else Just "EMAIL"
+      identifierType : if state.data.email == Nothing then Just "MOBILENUMBER" else Just "EMAIL"
     }
     where 
         mkOperatingCity :: String -> AppConfig -> Maybe String
@@ -1605,9 +1605,9 @@ mkSocialProfileUpdate state =
     let config = getAppConfig appConfig
     in
     SocialProfileUpdate
-    { email : (getValueToLocalStore MOBILE_NUMBER_KEY)
+    { email : fromMaybe (getValueToLocalStore MOBILE_NUMBER_KEY) state.data.email
     , firstName : state.data.firstName
     , lastName : state.data.lastName
     , mobileCountryCode : Just config.defaultCountryCodeConfig.countryCode
-    , mobileNumber : state.data.mobileNumber
+    , mobileNumber : if isJust state.data.mobileNumber then state.data.mobileNumber else Just $ getValueToLocalStore MOBILE_NUMBER_KEY
     }

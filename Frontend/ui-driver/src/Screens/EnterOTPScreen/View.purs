@@ -39,6 +39,7 @@ import Screens.EnterOTPScreen.ComponentConfig
 import Data.Ring ((-))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Locale.Utils
+import Debug
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -49,7 +50,10 @@ screen initialState =
                       _ <- pure $ HU.clearTimer ""
                       _ <- HU.startTimer 10 true push TIMERACTION
                       pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [] --[ HU.startOtpReciever AutoFill ]
-  , eval
+  , eval : (\action state -> do
+      let _ = spy "EnterOTPScreen state -----" state
+      let _ = spy "EnterOTPScreen action -----" action
+      eval action state)
   }
 
 view
@@ -80,6 +84,16 @@ view push state =
       , orientation VERTICAL
       ][  primaryEditTextView state push
       ]
+    , PrestoAnim.animationSet
+      [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
+      ] $ textView $
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin $ MarginBottom 30
+        , gravity CENTER
+        , textFromHtml $ if DS.null state.data.mobileNo then "<u>Login with phone number instead?</u>" else "<u>Login with email id instead?</u>"
+        , onClick push $ const $ ChangeLoginMethod $ DS.null state.data.mobileNo
+        ] <> FontStyle.body6 LanguageStyle
     , PrestoAnim.animationSet
       [ Anim.fadeIn true
       ] $ linearLayout
