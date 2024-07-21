@@ -398,6 +398,9 @@ enterOTPFlow = do
   action <- UI.enterOTP
   logField_ <- lift $ lift $ getLogFields
   case action of
+    CHANGE_LOGIN_METHOD updatedState -> do
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {  data {mobileNumber = "", email = Nothing}, props { loginWithMobileBtnClicked = updatedState.props.isMobileNumberOtp, isValid = true}})
+      loginFlow
     DRIVER_INFO_API_CALL updatedState -> do
       void $ lift $ lift $ loaderText (getString SENDING_OTP) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
@@ -422,8 +425,7 @@ enterOTPFlow = do
       getDriverInfoFlow Nothing Nothing Nothing true Nothing true
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
-      config <- getAppConfigFlowBT appConfig
-      if config.enterMobileNumberScreen.emailAuth then do
+      if not $ STR.null updatedState.data.email then do
         (GlobalState global) <- getState
         latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
         TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq global.mobileNumberScreen latLong)
@@ -791,7 +793,8 @@ onBoardingFlow = do
           isDefault = getDriverInfoResp.firstName == "Driver"
           firstName = if isDefault then Nothing else Just getDriverInfoResp.firstName
           setDefault = not isDefault || isJust getDriverInfoResp.lastName
-      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc, variantList = state.data.variantList, firstName = firstName, lastName = getDriverInfoResp.lastName}, props{isProfileView = true, setDefault = setDefault}})
+          isloggedInViaMobileNumber = isNothing getDriverInfoResp.email
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc, variantList = state.data.variantList, firstName = firstName, lastName = getDriverInfoResp.lastName}, props{isProfileView = true, setDefault = setDefault, isloggedInViaMobileNumber = isloggedInViaMobileNumber}})
       documentcaptureScreenFlow
     SELECT_LANG_FROM_REGISTRATION -> do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})

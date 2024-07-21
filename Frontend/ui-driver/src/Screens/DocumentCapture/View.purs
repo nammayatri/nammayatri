@@ -119,10 +119,9 @@ view push state =
                         , orientation VERTICAL
                         , adjustViewWithKeyboard "true"
                         ]
-                        [ PrimaryEditText.view (push <<< FirstNameEditText) $ firstNamePrimaryEditTextConfig state
+                        ([ PrimaryEditText.view (push <<< FirstNameEditText) $ firstNamePrimaryEditTextConfig state
                         , PrimaryEditText.view (push <<< LastNameEditText) $ lastNamePrimaryEditTextConfig state
-                        , PrimaryEditText.view (push <<< MobileEditText) $ mobileNumberPrimaryEditTextConfig state
-                        ]
+                        ] <> if state.props.isloggedInViaMobileNumber then [PrimaryEditText.view (push <<< EmailEditText) $ emailIdPrimaryEditTextConfig state] else [PrimaryEditText.view (push <<< MobileEditText) $ mobileNumberPrimaryEditTextConfig state]) 
                     else
                       howToUpload push state
                     ]

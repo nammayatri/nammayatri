@@ -540,7 +540,8 @@ type EnterMobileNumberScreenStateData = {
 type EnterMobileNumberScreenStateProps = {
   btnActive :: Boolean,
   isValid :: Boolean,
-  mobileNumberEditFocused :: Boolean
+  mobileNumberEditFocused :: Boolean,
+  loginWithMobileBtnClicked :: Boolean
 }
 
 --------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------
@@ -571,6 +572,7 @@ type EnterOTPScreenStateData = {
   tokenId :: String,
   attemptCount :: Int,
   mobileNo :: String,
+  email :: String,
   timer :: String,
   capturedOtp :: String,
   focusedIndex :: Int,
@@ -582,7 +584,8 @@ type EnterOTPScreenStateProps = {
   btnActive :: Boolean,
   isValid :: Boolean,
   resendEnabled :: Boolean,
-  otpTmp :: Boolean
+  otpTmp :: Boolean,
+  isMobileNumberOtp :: Boolean
 }
 
 ---------------------PrimaryButtonState----------------------------------------
@@ -2719,7 +2722,8 @@ type DocumentCaptureScreenProps = {
   setDefault :: Boolean,
   shouldGoBack :: Boolean,
   previewSampleImage :: Boolean,
-  previewImgUrl :: String
+  previewImgUrl :: String,
+  isloggedInViaMobileNumber :: Boolean
 } 
 
 

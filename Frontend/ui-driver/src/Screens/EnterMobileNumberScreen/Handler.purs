@@ -16,7 +16,7 @@
 module Screens.EnterMobileNumberScreen.Handler where
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (markPerformance)
-import Prelude (bind, pure, ($), (<$>),discard)
+import Prelude (bind, pure, ($), (<$>),discard, (/=))
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Storage (KeyStore(..), setValueToLocalStore)
 import Control.Monad.Except.Trans (lift)
@@ -38,8 +38,8 @@ enterMobileNumber = do
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber → EnterMobileNumberScreenData.initData)
       App.BackT $ pure App.GoBack
     GoToNextScreen updatedState -> do
-      _ <- setValueToLocalStore MOBILE_NUMBER_KEY (if updatedState.data.config.enterMobileNumberScreen.emailAuth then fromMaybe "" updatedState.data.email else updatedState.data.mobileNumber)
-      modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data {mobileNo = if updatedState.data.config.enterMobileNumberScreen.emailAuth then fromMaybe "" updatedState.data.email else updatedState.data.mobileNumber}})
+      _ <- setValueToLocalStore MOBILE_NUMBER_KEY (if updatedState.data.mobileNumber /= "" then updatedState.data.mobileNumber else fromMaybe "" updatedState.data.email)
+      modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data {mobileNo = updatedState.data.mobileNumber, email = fromMaybe "" updatedState.data.email}})
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreenScreen → updatedState)
       App.BackT $ App.BackPoint <$> pure (GO_TO_ENTER_OTP updatedState)
     OAuthReq updatedState -> do

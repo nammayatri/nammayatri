@@ -52,7 +52,7 @@ instance loggableAction :: Loggable Action where
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
     _ -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
     
-data ScreenOutput = GoBack  EnterOTPScreenState | GoToHome EnterOTPScreenState | Retry EnterOTPScreenState
+data ScreenOutput = GoBack  EnterOTPScreenState | GoToHome EnterOTPScreenState | Retry EnterOTPScreenState | LoginMethodChange EnterOTPScreenState
 data Action = BackPressed 
             | ResendOTP
             | PrimaryEditTextAction PrimaryEditText.Action
@@ -62,6 +62,7 @@ data Action = BackPressed
             | SetToken String
             | TIMERACTION String
             | AfterRender
+            | ChangeLoginMethod Boolean
 
 eval :: Action -> EnterOTPScreenState -> Eval Action ScreenOutput EnterOTPScreenState
 eval AfterRender state = continue state
@@ -94,5 +95,9 @@ eval (SetToken id )state = do
   _ <-  pure $ setValueToLocalNativeStore FCM_TOKEN  id
   _ <-  pure $ setValueToLocalStore FCM_TOKEN  id
   continue state
+
+eval (ChangeLoginMethod isPhoneNumber) state = do
+  pure $ hideKeyboardOnNavigation true
+  exit $ LoginMethodChange state { props {isMobileNumberOtp = isPhoneNumber}}
 
 eval _ state = update state

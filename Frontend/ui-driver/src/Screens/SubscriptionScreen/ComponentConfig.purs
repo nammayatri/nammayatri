@@ -437,7 +437,7 @@ clearManualDuesBtn state = let
 
 getHeaderConfig :: ST.SubscriptionSubview -> Boolean -> Boolean -> HeaderData
 getHeaderConfig subView isManualPayDue isMultiDueType = 
-  case (spy "printing subView -> " subView) of
+  case subView of
     ST.JoinPlan    -> {title : (HU.appName true <> (getString PLANS)), actionText : getString SUPPORT, backbutton : false}
     ST.ManagePlan  -> {title : (getString MANAGE_PLAN), actionText : "", backbutton : true}
     ST.MyPlan      -> {title : (getString PLAN), actionText : "", backbutton : false}

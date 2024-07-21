@@ -457,6 +457,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , lastName              :: Maybe String
     , firstName             :: String
     , mobileNumber          :: Maybe String
+    , email                 :: Maybe String
     , active                :: Boolean
     , mode                  :: Maybe String
     , onRide                :: Boolean

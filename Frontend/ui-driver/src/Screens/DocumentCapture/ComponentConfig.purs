@@ -68,7 +68,7 @@ primaryButtonConfig state = let
 profileViewPrimaryButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
 profileViewPrimaryButtonConfig state = let 
     config = PrimaryButton.config
-    isValid = state.props.isValidFirstName && state.props.isValidMobileNumber && isJust state.data.firstName && isJust state.data.mobileNumber
+    isValid = state.props.isValidFirstName && (state.props.isValidMobileNumber || state.props.isValidEmail) && isJust state.data.firstName && (isJust state.data.mobileNumber || isJust state.data.email)
     primaryButtonConfig' = config 
       {   textConfig
         { text = "Submit" } 
@@ -256,6 +256,8 @@ lastNamePrimaryEditTextConfig state =
 
 mobileNumberPrimaryEditTextConfig :: ST.DocumentCaptureScreenState -> PrimaryEditText.Config
 mobileNumberPrimaryEditTextConfig state = 
+  let mobileNumber = fromMaybe "" state.data.mobileNumber 
+  in
   PrimaryEditText.config
       { editText
         { color = Color.black800
@@ -267,7 +269,7 @@ mobileNumberPrimaryEditTextConfig state =
         , gravity = LEFT
         }
       , background = Color.white900
-      , showErrorLabel = not state.props.isValidMobileNumber
+      , showErrorLabel = mobileNumber /= "" && not state.props.isValidMobileNumber
       , id = (EHC.getNewIDWithTag "MobileNumberEditText")
       , topLabel
         { text = "Mobile Number"
@@ -281,6 +283,35 @@ mobileNumberPrimaryEditTextConfig state =
         , color = Color.textDanger
         }
       }
+
+emailIdPrimaryEditTextConfig :: ST.DocumentCaptureScreenState -> PrimaryEditText.Config
+emailIdPrimaryEditTextConfig state = 
+  let email = fromMaybe "" state.data.email
+  in
+  PrimaryEditText.config
+      { editText
+        { color = Color.black800
+        , placeholder = "Enter your Email id"
+        , singleLine = true
+        , margin = MarginHorizontal 10 10
+        , textStyle = FontStyle.Body7
+        , gravity = LEFT
+        }
+      , background = Color.white900
+      , showErrorLabel = email /= "" && not state.props.isValidEmail
+      , id = (EHC.getNewIDWithTag "EmailIdPrimaryEditTextBox")
+      , topLabel
+        { text = "Email ID"
+        , color = Color.black800
+        , alpha = 0.8
+        }  
+      , margin = MarginVertical 16 16
+      , errorLabel{
+          text = "Enter a Valid Email Id"
+        , color = Color.textDanger
+        }
+      }
+
 
 mobileNumberConfig :: ST.DocumentCaptureScreenState -> MobileNumberEditor.Config
 mobileNumberConfig state = let
