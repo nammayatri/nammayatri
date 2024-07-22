@@ -112,6 +112,10 @@ sourceToDestinationConfig state =
 genericHeaderConfig :: RideScheduledScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
   config = GenericHeader.config
+  header = case state.data.fareProductType of 
+            FPT.RENTAL-> getString RENTAL_BOOKING
+            FPT.INTER_CITY-> getString INTERCITY_BOOKING
+            _ -> getString SCHEDULED <> " " <> getString BOOKING
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
@@ -124,7 +128,7 @@ genericHeaderConfig state = let
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
-        text = if state.data.fareProductType == FPT.RENTAL then "Rental Ride" else "Intercity Booking"
+        text = header
       , color = Color.black800
       }
     , suffixImageConfig {

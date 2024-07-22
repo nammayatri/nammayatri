@@ -338,9 +338,14 @@ sourceDestinationView push state =
 
 cancelBookingView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 cancelBookingView push state =
+  let cancelBookingText = case state.data.fareProductType of 
+        FPT.RENTAL -> getString CANCEL_RENTAL_BOOKING
+        FPT.INTER_CITY -> getString CANCEL_INTERCITY_BOOKING
+        _ -> getString CANCEL_BOOKING
+  in 
   textView $
   [ width MATCH_PARENT
-  , textFromHtml $ "<u>" <> if state.data.fareProductType == FPT.RENTAL then getString CANCEL_RENTAL_BOOKING else "Cancel Intercity Booking" <> "</u>"
+  , textFromHtml $ "<u>" <> cancelBookingText <> "</u>"
   , color Color.black700
   , onClick push $ const CancelRide
   , gravity CENTER_HORIZONTAL

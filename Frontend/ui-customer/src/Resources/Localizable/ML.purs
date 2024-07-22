@@ -1327,3 +1327,8 @@ getML stringKey =
         TIRUNELVELI -> "തിരുനെൽവേലി"
         SALEM -> "സേലം"
         TRICHY -> "ത്രിച്ചി"
+        CANCEL_BOOKING_ -> "ബുക്കിംഗ് റദ്ദാക്കുക"
+        CANCEL_INTERCITY_BOOKING -> "ഇന്റർസിറ്റി ബുക്കിംഗ് റദ്ദാക്കുക"
+        RENTAL_BOOKING -> "വാടക ബുക്കിംഗ്"
+        INTERCITY_BOOKING -> "ഇന്റർസിറ്റി ബുക്കിംഗ്"
+        BOOKING -> "ബുക്കിംഗ്"

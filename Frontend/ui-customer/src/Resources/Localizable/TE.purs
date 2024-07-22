@@ -1340,3 +1340,8 @@ getTE stringKey =
     TIRUNELVELI -> "తిరునెల్వేలి"
     SALEM -> "సేలం"
     TRICHY -> "త్రిచ్చి"
+    CANCEL_BOOKING_ -> "బుకింగ్ రద్దు చేయండి"
+    CANCEL_INTERCITY_BOOKING -> "ఇంటర్‌సిటీ బుకింగ్ రద్దు చేయండి"
+    RENTAL_BOOKING -> "అద్దె బుకింగ్"
+    INTERCITY_BOOKING -> "ఇంటర్‌సిటీ బుకింగ్"
+    BOOKING -> "బుకింగ్"
