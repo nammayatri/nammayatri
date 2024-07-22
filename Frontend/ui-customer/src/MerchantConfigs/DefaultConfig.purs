@@ -670,7 +670,7 @@ config =
               { radius = 700000
               , strictBounds = true
               }
-            , enableRentals = true 
+            , enableRentals = true
             , enableIntercity = true
             , enableCabs = true
             , enableAcViews = true
@@ -679,6 +679,7 @@ config =
               }
             , featureConfig {
                 enableCabBanner = true
+              , showExploreCity = true
               }
             , waitingChargeConfig {
                 cabs {

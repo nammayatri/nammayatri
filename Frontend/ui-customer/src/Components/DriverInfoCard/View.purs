@@ -633,7 +633,7 @@ navigateView push state =
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
   , visibility $ boolToVisibility $ state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE && rideNotStarted state
-  , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
+  , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
   ][ imageView
      [ width $ V 20
      , height $ V 20

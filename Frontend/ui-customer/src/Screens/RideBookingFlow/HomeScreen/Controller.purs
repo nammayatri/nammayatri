@@ -1311,7 +1311,10 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
         _ <- pure $ updateLocalStage FindingEstimate
         let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.ConfirmLocation" "true"
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
-        let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}, data { iopState { showMultiProvider = false}}}
+        let sourceAddressWard = if state.props.isSpecialZone && not (state.props.defaultPickUpPoint == "")
+                                  then state.props.defaultPickUpPoint
+                                  else state.data.source
+        let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}, data { iopState { showMultiProvider = false}, sourceAddress { ward = Just sourceAddressWard}}}
         updateAndExit updatedState $  (UpdatedSource updatedState)
       SettingPrice -> do
                         void $ pure $ performHapticFeedback unit
