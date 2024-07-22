@@ -56,6 +56,9 @@ homeScreen = do
     GoToProfileScreen updatedState-> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure (GO_TO_PROFILE_SCREEN updatedState)
+    CustomerReferralTrackerScreen updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure (GO_TO_CUSTOMER_REFERRAL_TRACKER updatedState)
     GoToHelpAndSupportScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure GO_TO_HELP_AND_SUPPORT_SCREEN
