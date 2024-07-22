@@ -40,6 +40,7 @@ RiderConfig:
     policeTriggerDelay: NominalDiffTime
     exotelAppIdMapping: Maybe ExotelMapping
     hardLimitForSafetyJobs: Int
+    exotelStatusCheckSchedulerDelay : Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
 
@@ -47,6 +48,7 @@ RiderConfig:
     ivrTriggerDelay: Maybe Seconds
     policeTriggerDelay: Maybe Seconds
     hardLimitForSafetyJobs: Maybe Seconds
+    exotelStatusCheckSchedulerDelay : Maybe Seconds
     incidentReportSupport: Maybe Bool
 
   constraints:
@@ -56,12 +58,14 @@ RiderConfig:
     ivrTriggerDelay: fromMaybe 3000 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerDelay)|E
     policeTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay)|E
     hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
+    exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: fromMaybe False incidentReportSupport|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     policeTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
+    exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: Just incidentReportSupport|E
 
   default:
@@ -80,6 +84,7 @@ RiderConfig:
     autoUnblockSafetyCenterAfterDays: "14"
     kaptureQueue: "''"
     kaptureConfig: "'{\"kaptureQueue\":\"\", \"disposition\":\"\"}'"
+    exotelStatusCheckSchedulerDelay: "120"
 
   queries:
     findByMerchantOperatingCityId:

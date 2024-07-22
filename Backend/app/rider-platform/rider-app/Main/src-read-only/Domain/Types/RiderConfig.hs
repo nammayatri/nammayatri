@@ -29,6 +29,7 @@ data RiderConfig = RiderConfig
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping,
+    exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
     hardLimitForSafetyJobs :: Kernel.Prelude.Int,
     incidentReportSupport :: Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,

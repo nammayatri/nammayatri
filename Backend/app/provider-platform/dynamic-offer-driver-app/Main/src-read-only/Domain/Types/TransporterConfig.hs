@@ -99,6 +99,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,
+    exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
     fakeOtpEmails :: [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
     fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,

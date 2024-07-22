@@ -2,6 +2,7 @@
 WITH MerchantCallServiceConfigs AS (
   SELECT T1.merchant_id, T1.id, 'Call_Exotel', CAST ('{
    "exotelUrl":"https://api.exotel.com/",
+   "url":"https://api.exotel.com/",
    "callbackUrl":"http://localhost:8016/ui/driver/ride/call/statusCallback",
    "apiKey":"xxxxxxx",
    "apiToken":"xxxxxxx",

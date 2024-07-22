@@ -39,6 +39,7 @@ data OnUpdateBuildReq
   | QuoteRepetitionBuildReq DQuoteRepetitionReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
+  | PhoneCallRequestBuildReq DPhoneCallRequestReq
   | StopArrivedBuildReq DStopArrivedBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
@@ -67,6 +68,10 @@ data DQuoteRepetitionReq = DQuoteRepetitionReq
 data DNewMessageReq = DNewMessageReq
   { bookingDetails :: BookingDetails,
     message :: Text
+  }
+
+newtype DPhoneCallRequestReq = DPhoneCallRequestReq
+  { bookingDetails :: BookingDetails
   }
 
 data DSafetyAlertReq = DSafetyAlertReq

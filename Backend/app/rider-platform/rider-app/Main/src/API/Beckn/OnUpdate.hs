@@ -64,6 +64,7 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
             DOnUpdate.OUValidatedQuoteRepetitionReq req -> return req.booking
             DOnUpdate.OUValidatedNewMessageReq req -> return req.booking
             DOnUpdate.OUValidatedSafetyAlertReq req -> return req.booking
+            DOnUpdate.OUValidatedPhoneCallRequestEventReq req -> return req.booking
             DOnUpdate.OUValidatedStopArrivedReq req -> return req.booking
             DOnUpdate.OUValidatedFarePaidReq req -> return req.booking
             DOnUpdate.OUValidatedEditDestSoftUpdateReq req -> return req.booking

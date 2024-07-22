@@ -3,10 +3,16 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Ride: Domain.Types.Ride
   CallService: Kernel.External.Call.Types
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
 
 
 CallStatus:
   tableName: call_status
+
+  types:
+    CallAttemptStatus:
+      enum: "Attempted, Resolved, Failed, Pending"
 
   fields:
     id : Id CallStatus
@@ -19,6 +25,7 @@ CallStatus:
     merchantId : Maybe Text
     callService : Maybe CallService
     callError : Maybe Text
+    callAttempt : Maybe CallAttemptStatus
     createdAt : UTCTime
     customerIvrResponse : Maybe Text
 
@@ -45,14 +52,23 @@ CallStatus:
       kvFunction: findOneWithKV
       where: callId
 
+    findByRideId:
+      kvFunction: findOneWithKV
+      where: rideId
+
     updateCallStatus:
       kvFunction: updateWithKV
-      params: [conversationDuration, recordingUrl, status]
+      params: [conversationDuration, recordingUrl, status, callAttempt]
       where: id
 
     updateCallStatusInformation:
       kvFunction: updateWithKV
-      params: [merchantId, rideId, callService, dtmfNumberUsed]
+      params: [merchantId, callService, dtmfNumberUsed]
+      where: id
+
+    updateCallStatusCallId:
+      kvFunction: updateWithKV
+      params: [callId]
       where: id
 
     updateCallError:
@@ -72,3 +88,4 @@ CallStatus:
 
   excludedDefaultQueries:
     - create
+

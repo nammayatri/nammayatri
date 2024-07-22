@@ -196,6 +196,7 @@ let AllocatorJobType =
       < SendSearchRequestToDriver
       | UnblockDriver
       | SendPDNNotificationToDriver
+      | CheckExotelCallStatusAndNotifyBAP
       | MandateExecution
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
@@ -212,6 +213,9 @@ let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.CheckExotelCallStatusAndNotifyBAP
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.MandateExecution, mapValue = True }

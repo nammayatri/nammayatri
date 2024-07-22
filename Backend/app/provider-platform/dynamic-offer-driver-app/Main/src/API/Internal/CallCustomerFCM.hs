@@ -6,28 +6,31 @@
  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
 
  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType where
+module API.Internal.CallCustomerFCM (API, handler) where
 
-import Kernel.Prelude
+import qualified Domain.Action.Internal.CallCustomerFCM as Domain
+import Domain.Types.Ride
+import Environment
+import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Servant
+import Storage.Beam.SystemConfigs ()
 
-data OnUpdateEventType
-  = RIDE_ENDED
-  | RIDE_STARTED
-  | RIDE_ASSIGNED
-  | RIDE_CANCELLED
-  | RIDE_ARRIVED_PICKUP
-  | RIDE_BOOKING_REALLOCATION
-  | ESTIMATE_REPETITION
-  | QUOTE_REPETITION
-  | NEW_MESSAGE
-  | SAFETY_ALERT
-  | PHONE_CALL_REQUEST
-  | STOP_ARRIVED
-  | TOLL_CROSSED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+type API =
+  Capture "rideId" (Id Ride)
+    :> "callCustomerFCM"
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+handler :: FlowServer API
+handler = callCustomerFCM
+
+callCustomerFCM :: Id Ride -> Maybe Text -> FlowHandler APISuccess
+callCustomerFCM rideId = withFlowHandlerAPI . Domain.callCustomerFCM rideId

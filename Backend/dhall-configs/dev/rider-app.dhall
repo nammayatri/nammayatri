@@ -182,6 +182,7 @@ let RiderJobType =
       | ScheduledRideNotificationsToRider
       | SafetyIVR
       | CallPoliceApi
+      | CheckExotelCallStatusAndNotifyBPP
       | OtherJobTypes
       >
 
@@ -192,6 +193,9 @@ let jobInfoMapx =
         }
       , { mapKey = RiderJobType.SafetyIVR, mapValue = False }
       , { mapKey = RiderJobType.CallPoliceApi, mapValue = False }
+      , { mapKey = RiderJobType.CheckExotelCallStatusAndNotifyBPP
+        , mapValue = False
+        }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
       ]
 

@@ -31,6 +31,7 @@ import qualified Domain.Types.Ride as SRide
 import Environment
 import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -89,6 +90,11 @@ type FrontendBasedCallAPI =
            :> QueryParam "Legs[0][OnCallDuration]" Int
            :> QueryParam "CallDuration" Int
            :> Get '[JSON] DCall.CallCallbackRes
+           :<|> "ride"
+           :> Capture "rideId" (Id SRide.Ride)
+           :> "call"
+           :> "onClick"
+           :> Post '[JSON] APISuccess
        )
 
 type BackendBasedDriverCallApi =
@@ -104,6 +110,7 @@ frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
 frontendBasedCallHandler =
   getCustomerMobileNumber
     :<|> directCallStatusCallback
+    :<|> callOnClickTracker
 
 backendBasedDriverCallHandler :: FlowServer BackendBasedDriverCallApi
 backendBasedDriverCallHandler =
@@ -121,6 +128,9 @@ getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStat
 
 directCallStatusCallback :: Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler DCall.CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration
+
+callOnClickTracker :: Id SRide.Ride -> FlowHandler APISuccess
+callOnClickTracker rideId = withFlowHandlerAPI $ DCall.callOnClickTracker rideId
 
 getCustomerMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> Text -> FlowHandler DCall.GetCustomerMobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus = withFlowHandlerAPI . DCall.getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus

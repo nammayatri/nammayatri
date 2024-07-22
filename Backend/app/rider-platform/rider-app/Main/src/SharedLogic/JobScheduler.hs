@@ -24,6 +24,7 @@ import qualified Domain.Types.Extra.Booking as DEB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Kernel.Prelude
@@ -36,6 +37,7 @@ data RiderJobType
   | ScheduledRideNotificationsToRider
   | SafetyIVR
   | CallPoliceApi
+  | CheckExotelCallStatusAndNotifyBPP
   | OtherJobTypes
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -48,6 +50,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SScheduledRideNotificationsToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToRider jobData
   restoreAnyJobInfo SSafetyIVR jobData = AnyJobInfo <$> restoreJobInfo SSafetyIVR jobData
   restoreAnyJobInfo SCallPoliceApi jobData = AnyJobInfo <$> restoreJobInfo SCallPoliceApi jobData
+  restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBPP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBPP jobData
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
 
 data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
@@ -81,6 +84,17 @@ data ScheduledRideNotificationsToRiderJobData = ScheduledRideNotificationsToRide
 instance JobInfoProcessor 'ScheduledRideNotificationsToRider
 
 type instance JobContent 'ScheduledRideNotificationsToRider = ScheduledRideNotificationsToRiderJobData
+
+data CheckExotelCallStatusAndNotifyBPPJobData = CheckExotelCallStatusAndNotifyBPPJobData
+  { rideId :: Id DR.Ride,
+    bppRideId :: Id DR.BPPRide,
+    merchantId :: Id DM.Merchant
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckExotelCallStatusAndNotifyBPP
+
+type instance JobContent 'CheckExotelCallStatusAndNotifyBPP = CheckExotelCallStatusAndNotifyBPPJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,

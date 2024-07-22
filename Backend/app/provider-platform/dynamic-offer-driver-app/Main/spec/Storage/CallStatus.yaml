@@ -1,10 +1,16 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
   CallService: Kernel.External.Call.Types
 
 CallStatus:
   tableName: call_status
+
+  types:
+    CallAttemptStatus:
+      enum: "Attempted, Resolved, Failed, Pending"
 
   fields:
     id : Id CallStatus
@@ -17,6 +23,7 @@ CallStatus:
     merchantId : Maybe Text
     callService : Maybe CallService
     callError : Maybe Text
+    callAttempt : Maybe CallAttemptStatus
     createdAt: UTCTime
 
   constraints:
@@ -28,9 +35,18 @@ CallStatus:
       kvFunction: findOneWithKV
       where: id
 
+    findByEntityId:
+      kvFunction: findOneWithKV
+      where: entityId
+
     updateCallStatus:
       kvFunction: updateWithKV
-      params: [conversationDuration, recordingUrl, status]
+      params: [conversationDuration, recordingUrl, status, callAttempt]
+      where: id
+
+    updateCallStatusCallId:
+      kvFunction: updateWithKV
+      params: [callId]
       where: id
 
     updateCallError:
@@ -38,9 +54,9 @@ CallStatus:
       params: [callError, callService, merchantId]
       where: id
 
-    updateCallStatusWithRideId:
+    updateCallStatusInformation:
       kvFunction: updateWithKV
-      params: [entityId, dtmfNumberUsed, merchantId, callService]
+      params: [dtmfNumberUsed, merchantId, callService]
       where: id
 
   extraOperations:
