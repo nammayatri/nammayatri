@@ -1343,3 +1343,8 @@ getTA stringKey =
     TIRUNELVELI -> "திருநெல்வேலி"
     SALEM -> "சேலம்"
     TRICHY -> "திருச்சி"
+    CANCEL_BOOKING_ -> "பதிவு ரத்து"
+    CANCEL_INTERCITY_BOOKING -> "இன்டர்சிட்டி பதிவை ரத்து செய்" 
+    RENTAL_BOOKING -> "வாடகை பதிவு"
+    INTERCITY_BOOKING -> "இன்டர்சிட்டி பதிவு"
+    BOOKING -> "பதிவு"

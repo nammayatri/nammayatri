@@ -1325,3 +1325,8 @@ getHI stringKey =
         TIRUNELVELI -> "तिरुनेलवेली"
         SALEM -> "सलेम"
         TRICHY -> "त्रिची"
+        CANCEL_BOOKING_ -> "बुकिंग रद्द करें"
+        CANCEL_INTERCITY_BOOKING -> "इंटरसिटी बुकिंग रद्द करें"
+        RENTAL_BOOKING -> "रेंटल बुकिंग"
+        INTERCITY_BOOKING -> "इंटरसिटी बुकिंग"
+        BOOKING -> "बुकिंग"

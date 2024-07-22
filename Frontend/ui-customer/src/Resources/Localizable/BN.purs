@@ -1325,3 +1325,8 @@ getBN stringKey =
         TIRUNELVELI -> "তিরুনেলভেলি"
         SALEM -> "সেলেম"
         TRICHY -> "ত্রিচি"
+        CANCEL_BOOKING_ -> "বুকিং বাতিল করুন"
+        CANCEL_INTERCITY_BOOKING -> "আন্তঃনগর বুকিং বাতিল করুন"
+        RENTAL_BOOKING -> "রেন্টাল বুকিং"
+        INTERCITY_BOOKING -> "আন্তঃনগর বুকিং"
+        BOOKING -> "বুকিং"
