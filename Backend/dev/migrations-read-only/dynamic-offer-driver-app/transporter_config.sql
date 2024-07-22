@@ -225,3 +225,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN schedule_payout
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_device_id_checks_required boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_pickup_distance_threshold_for_referral_payout SET DEFAULT 10;

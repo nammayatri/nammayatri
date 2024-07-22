@@ -45,3 +45,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN merchant_operating_ci
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN client_model_name text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_quote ADD COLUMN client_manufacturer text ;

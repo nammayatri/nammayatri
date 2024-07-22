@@ -368,6 +368,8 @@ updatePersonRec (Id personId) person = do
       Se.Set BeamP.clientConfigVersion (versionToText <$> person.clientConfigVersion),
       Se.Set BeamP.clientOsVersion (deviceVersion <$> person.clientDevice),
       Se.Set BeamP.clientOsType (deviceType <$> person.clientDevice),
+      Se.Set BeamP.clientModelName (deviceModel <$> person.clientDevice),
+      Se.Set BeamP.clientManufacturer (deviceManufacturer =<< person.clientDevice),
       Se.Set BeamP.backendConfigVersion (versionToText <$> person.backendConfigVersion),
       Se.Set BeamP.backendAppVersion (person.backendAppVersion)
     ]
@@ -385,12 +387,16 @@ updatePersonVersions person mbBundleVersion mbClientVersion mbConfigVersion mbDe
           mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
           mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
           mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
+          mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)
+          mbManufacturer = deviceManufacturer =<< (mbDevice <|> person.clientDevice)
       updateOneWithKV
         [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
           Se.Set BeamP.clientBundleVersion mbBundleVersionText,
           Se.Set BeamP.clientConfigVersion mbConfigVersionText,
           Se.Set BeamP.clientOsVersion mbOsVersion,
           Se.Set BeamP.clientOsType mbOsType,
+          Se.Set BeamP.clientModelName mbModelName,
+          Se.Set BeamP.clientManufacturer mbManufacturer,
           Se.Set BeamP.backendAppVersion mbBackendApp,
           Se.Set BeamP.updatedAt now
         ]
