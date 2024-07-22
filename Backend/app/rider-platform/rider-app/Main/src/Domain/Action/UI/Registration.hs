@@ -435,7 +435,6 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         safetyCenterDisabledOnDate = Nothing,
         referredByCustomer = Nothing,
         customerReferralCode = Nothing,
-        deviceId = Nothing,
         blockedCount = Just 0,
         deviceId = Nothing,
         registeredViaPartnerOrgId = mbPartnerOrgId,
