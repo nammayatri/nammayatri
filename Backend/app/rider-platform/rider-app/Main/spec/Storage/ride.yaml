@@ -28,7 +28,7 @@ Ride:
   derives: "Generic"
   types:
     RideStatus:
-      enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
+      enum: "UPCOMING,NEW,INPROGRESS,COMPLETED,CANCELLED"
       derive: "HttpInstance"
     BPPRide: {}
   fields:
