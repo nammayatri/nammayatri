@@ -687,6 +687,12 @@ config =
                 , perMinCharges = 2.0
                 } 
             }
+            , rentalWaitingChargeConfig {
+                cabs {
+                  freeMinutes = 3.0
+                , perMinCharges = 2.0
+                }
+              }
             , intercityWaitingChargeConfig {
               cabs {
                 freeMinutes = 3.0
@@ -721,9 +727,15 @@ config =
                 , perMinCharges = 2.0
               } 
             }
+            , rentalWaitingChargeConfig {
+                cabs {
+                  freeMinutes = 5.0
+                , perMinCharges = 2.0
+                }
+              }
             , intercityWaitingChargeConfig {
               cabs {
-                freeMinutes = 3.0
+                freeMinutes = 5.0
               , perMinCharges = 2.0
               }
             }

@@ -485,7 +485,7 @@ public class NotificationUtils {
             channelId = GENERAL_NOTIFICATION;
         }
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, channelId);
-        if (imageUrl != null) {
+        if (imageUrl != null && bitmap != null) {
             mBuilder.setLargeIcon(bitmap)
                     .setSmallIcon(smallIcon)
                     .setContentTitle(title)

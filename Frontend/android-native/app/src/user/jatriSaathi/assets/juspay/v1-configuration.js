@@ -126,7 +126,7 @@ window.getMerchantConfig = function () {
     "black900": "#2C2F3A",
     "black800": "#454545",
     "red" : "#E55454",
-    "isAdvancedBookingEnabled" : false,
+    "isAdvancedBookingEnabled" : true,
     "showCorporateAddress" : false,
     "popupBackground" : "#FFFFFF",
     "profileEditGravity" : "center",
@@ -371,7 +371,7 @@ window.getMerchantConfig = function () {
       "enableAdditionalServices" : true,
       "enableSafetyFlow" : true,
       "enableCustomerSupportForSafety" : true, 
-      "enableSupport" : true,
+      "enableSupport" : false,
       "enableHelpAndSupport" : false,
       "enableEditDestination" : true
     } 

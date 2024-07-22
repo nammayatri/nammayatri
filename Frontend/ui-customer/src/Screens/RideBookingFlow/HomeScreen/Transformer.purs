@@ -857,6 +857,7 @@ getSpecialZoneQuote quote index isIntercity =
       , searchResultType = if isIntercity then ChooseVehicle.QUOTES ChooseVehicle.INTER_CITY else ChooseVehicle.QUOTES ChooseVehicle.OneWaySpecialZoneAPIDetails
       , pickUpCharges = 0.0
       , serviceTierName = quoteEntity.serviceTierName
+      , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
       , specialLocationTag = quoteEntity.specialLocationTag
       }
     RentalQuotes body -> let (QuoteAPIEntity quoteEntity) = body.onRentalCab
@@ -873,6 +874,7 @@ getSpecialZoneQuote quote index isIntercity =
       , searchResultType = ChooseVehicle.QUOTES ChooseVehicle.RENTAL
       , pickUpCharges = 0.0
       , serviceTierName = quoteEntity.serviceTierName
+      , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
       , specialLocationTag = quoteEntity.specialLocationTag
       }
     Metro body -> ChooseVehicle.config
