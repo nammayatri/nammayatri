@@ -1152,6 +1152,7 @@ data DriverOnboardingError
   | DriverSSNNotFound Text
   | DriverDLNotFound Text
   | DriverBankAccountNotFound Text
+  | DriverChargesDisabled Text
   | DocumentAlreadyLinkedToAnotherDriver Text
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
@@ -1196,6 +1197,7 @@ instance IsBaseError DriverOnboardingError where
     DriverSSNNotFound id_ -> Just $ "Driver SSN not found for driverId \"" <> id_ <> "\"."
     DriverDLNotFound id_ -> Just $ "Driver DL not found for driverId \"" <> id_ <> "\"."
     DriverBankAccountNotFound id_ -> Just $ "Driver Bank Account not found for driverId \"" <> id_ <> "\"."
+    DriverChargesDisabled id_ -> Just $ "Bank account is not verified for driverId \"" <> id_ <> "\"."
     DocumentAlreadyLinkedToAnotherDriver docName -> Just $ "Document Already linked to another driver " <> docName
 
 instance IsHTTPError DriverOnboardingError where
@@ -1239,6 +1241,7 @@ instance IsHTTPError DriverOnboardingError where
     DriverSSNNotFound _ -> "DRIVER_SSN_NOT_FOUND"
     DriverDLNotFound _ -> "DRIVER_DL_NOT_FOUND"
     DriverBankAccountNotFound _ -> "DRIVER_BANK_ACCOUNT_NOT_FOUND"
+    DriverChargesDisabled _ -> "DRIVER_CHARGES_DISABLED"
     DocumentAlreadyLinkedToAnotherDriver _ -> "DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
@@ -1280,6 +1283,7 @@ instance IsHTTPError DriverOnboardingError where
     DriverSSNNotFound _ -> E400
     DriverDLNotFound _ -> E400
     DriverBankAccountNotFound _ -> E400
+    DriverChargesDisabled _ -> E400
     DocumentAlreadyLinkedToAnotherDriver _ -> E400
 
 instance IsAPIError DriverOnboardingError

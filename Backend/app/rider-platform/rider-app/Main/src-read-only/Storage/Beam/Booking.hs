@@ -40,7 +40,6 @@ data BookingT f = BookingT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     discount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
-    estimatedApplicationFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     estimatedDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),

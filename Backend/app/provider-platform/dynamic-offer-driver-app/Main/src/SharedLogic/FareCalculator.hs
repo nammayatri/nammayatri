@@ -93,8 +93,11 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       insuranceChargeCaption = show Enums.INSURANCE_CHARGES
       mbInsuranceChargeItem = mkBreakupItem insuranceChargeCaption . mkPrice <$> fareParams.insuranceCharge
 
-      cardChargesFareCaption = show Enums.CARD_CHARGES
-      mbCardChargesFareItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFareCaption . mkPrice <$> cardCharge.onFare `maybeAdd` cardCharge.fixed
+      cardChargesFareCaption = show Enums.CARD_CHARGES_ON_FARE
+      mbCardChargesFareItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFareCaption . mkPrice <$> cardCharge.onFare
+
+      cardChargesFixedCaption = show Enums.CARD_CHARGES_FIXED
+      mbCardChargesFixedItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFixedCaption . mkPrice <$> cardCharge.fixed
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
@@ -111,7 +114,8 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbTollChargesItem,
       mbCustomerCancellationDues,
       mbInsuranceChargeItem,
-      mbCardChargesFareItem
+      mbCardChargesFareItem,
+      mbCardChargesFixedItem
     ]
     <> detailsBreakups
   where
@@ -182,10 +186,6 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           extraTimeFareItem = mkBreakupItem extraTimeCaption (mkPrice det.extraTimeFare)
 
       catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem]
-
-maybeAdd :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney
-maybeAdd (Just a) (Just b) = Just . HighPrecMoney $ a.getHighPrecMoney + b.getHighPrecMoney
-maybeAdd a b = a <|> b
 
 -- TODO: make some tests for it
 

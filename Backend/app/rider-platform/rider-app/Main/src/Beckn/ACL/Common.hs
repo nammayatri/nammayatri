@@ -164,6 +164,8 @@ parseRideAssignedEvent order msgId txnId = do
       (driverAccountId :: Maybe EPayment.AccountId) = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
       driverTrackingUrlText :: Maybe Text = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_TRACKING_URL tagGroups
       previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
+  let mbFareBreakupsQuotationBreakup = order.orderQuote >>= (.quotationBreakup)
+  fareBreakups <- (traverse mkDFareBreakup) `mapM` mbFareBreakupsQuotationBreakup
   driverTrackingUrl <- mapM parseBaseUrl driverTrackingUrlText
   bookingDetails <- parseBookingDetails order msgId
   return
@@ -175,6 +177,7 @@ parseRideAssignedEvent order msgId txnId = do
         vehicleAge,
         driverAccountId,
         previousRideEndPos,
+        fareBreakups,
         driverTrackingUrl
       }
 

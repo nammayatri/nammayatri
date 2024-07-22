@@ -95,6 +95,7 @@ data RideAssignedReq = RideAssignedReq
     isFreeRide :: Bool,
     driverAccountId :: Maybe Payment.AccountId,
     previousRideEndPos :: Maybe LatLong,
+    fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl
   }
 
@@ -114,7 +115,7 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     onlinePaymentParameters :: Maybe OnlinePaymentParameters,
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
-    fareParams :: Maybe [DFareBreakup],
+    fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl
   }
 
@@ -340,12 +341,15 @@ rideAssignedReqHandler req = do
       m ()
     assignRideUpdate req' mbMerchant booking rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
+      let fareParams = fromMaybe [] req'.fareBreakups
       ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide
+      let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
+      let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
                 { amount = booking.estimatedFare.amount,
-                  applicationFeeAmount = maybe 0.0 (.amount) booking.estimatedApplicationFee,
+                  applicationFeeAmount,
                   currency = booking.estimatedFare.currency,
                   customer = customerPaymentId,
                   paymentMethod = paymentMethodId,
@@ -358,7 +362,6 @@ rideAssignedReqHandler req = do
             Just _ -> "specialLocation"
             Nothing -> "normal"
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-      let fareParams = fromMaybe [] req'.fareParams
       fareBreakups <- traverse (buildFareBreakupV2 req'.booking.id.getId DFareBreakup.BOOKING) fareParams
       QFareBreakup.createMany fareBreakups
       QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
@@ -660,7 +663,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
         email <- mapM decrypt person.email
         return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  return $ ValidatedRideAssignedReq {fareParams = Nothing, ..}
+  return $ ValidatedRideAssignedReq {..}
   where
     isAssignable booking = booking.status `elem` (if booking.isScheduled then [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW, DRB.TRIP_ASSIGNED] else [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW])
 

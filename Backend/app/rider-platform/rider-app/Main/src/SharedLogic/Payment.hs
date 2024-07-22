@@ -25,7 +25,12 @@ import qualified Tools.Payment as TPayment
 import TransactionLogs.Types
 
 makePaymentIntent ::
-  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Person.Person ->
@@ -38,7 +43,25 @@ makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentR
       commonRideId = cast @Ride.Ride @DPayment.Ride ride.id
       createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId
       updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId
-  DPayment.createPaymentIntentService commonMerchantId commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall
+      capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
+  DPayment.createPaymentIntentService commonMerchantId commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
+
+chargePaymentIntent ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.PaymentIntentId ->
+  m ()
+chargePaymentIntent merchantId merchantOpCityId paymentIntentId = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
+  DPayment.chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall
 
 paymentErrorHandler ::
   ( EncFlow m r,

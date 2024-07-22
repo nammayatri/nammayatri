@@ -105,7 +105,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
           rideByDriverIdHashMap = HashMap.fromList $ (\ride -> (ride.driverId, ride)) <$> rideCurrentlyInProgress
           rideToLocsHashMap = HashMap.fromList $ (\loc -> (loc.id, loc)) <$> rideEndLocations
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
-          driverBankAccountHashMap = HashMap.fromList $ (\dba -> (dba.driverId, dba.accountId)) <$> driverBankAccounts
+          driverBankAccountHashMap = HashMap.fromList $ catMaybes $ (\dba -> if dba.chargesEnabled then Just (dba.driverId, dba.accountId) else Nothing) <$> driverBankAccounts
        in concat $ mapMaybe (buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius) vehicles
 
     buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius vehicle = do

@@ -167,28 +167,18 @@ postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
     unless (ride.status == Domain.Types.Ride.COMPLETED) $
       throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
-    if any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups
-      then throwError $ InvalidRequest "Tip already added"
-      else do
-        id <- generateGUID
-        let tipFareBreakup =
-              Domain.Types.FareBreakup.FareBreakup
-                { id,
-                  entityId = rideId.getId,
-                  entityType = Domain.Types.FareBreakup.RIDE,
-                  description = tipFareBreakupTitle,
-                  amount = mkPriceFromAPIEntity tipRequest.amount
-                }
-        QFareBreakup.create tipFareBreakup
+    when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
     customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
     paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    -- handle error flow properly
+    let cardFixedCharges = HighPrecMoney 0.3
+    let cardPercentageCharges = 0.029 -- 2.9%
+    let applicationFeeAmount = HighPrecMoney (tipRequest.amount.amount.getHighPrecMoney * cardPercentageCharges) + cardFixedCharges
     let createPaymentIntentReq =
           Payment.CreatePaymentIntentReq
             { amount = tipRequest.amount.amount,
-              applicationFeeAmount = 0.0,
+              applicationFeeAmount,
               currency = tipRequest.amount.currency,
               customer = customerPaymentId,
               paymentMethod = paymentMethodId,
@@ -196,12 +186,25 @@ postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
               driverAccountId
             }
     paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
-    transaction <- runInReplica $ QPaymentTransaction.findByTxnId paymentIntentResp.paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found: " <> paymentIntentResp.paymentIntentId)
-    Payment.capturePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId transaction.amount (HighPrecMoney 0.0)
+    Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
+    -- QRide.markPaymentDone True rideId
+    createFareBreakup
   return Success
   where
     tipFareBreakupTitle :: Text
-    tipFareBreakupTitle = "Post Ride Tip"
+    tipFareBreakupTitle = "RIDE_TIP"
 
     addTipLockKey :: Text
     addTipLockKey = "Driver:AddTip:RideId-" <> rideId.getId
+
+    createFareBreakup = do
+      id <- generateGUID
+      let tipFareBreakup =
+            Domain.Types.FareBreakup.FareBreakup
+              { id,
+                entityId = rideId.getId,
+                entityType = Domain.Types.FareBreakup.RIDE,
+                description = tipFareBreakupTitle,
+                amount = mkPriceFromAPIEntity tipRequest.amount
+              }
+      QFareBreakup.create tipFareBreakup

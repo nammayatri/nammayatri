@@ -105,6 +105,7 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverHomeLocation as DDHL
@@ -283,9 +284,10 @@ data DriverInformationRes = DriverInformationRes
     blockStateModifier :: Maybe Text,
     isVehicleSupported :: Bool,
     checkIfACWorking :: Bool,
-    frontendConfigHash :: Maybe Text
+    frontendConfigHash :: Maybe Text,
+    bankDetails :: Maybe DOVT.BankAccountResp
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DriverEntityRes = DriverEntityRes
   { id :: Id Person,
@@ -608,7 +610,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
     when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
     when (planBasedChecks) $ throwError (NoPlanSelected personId.getId)
     when merchant.onlinePayment $ do
-      void $ QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
+      driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
+      unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
@@ -945,12 +948,18 @@ updateMetaData (personId, _, _) req = do
   return Success
 
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
-makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
+makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
+  bankDetails <-
+    if merchant.onlinePayment
+      then do
+        mbDriverBankAccount <- QDBA.findByPrimaryKey id
+        return $ mbDriverBankAccount <&> (\DOBA.DriverBankAccount {..} -> DOVT.BankAccountResp {..})
+      else return Nothing
   CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast id))) >>= \cfg ->
     return $
       DriverInformationRes
-        { organization = DM.makeMerchantAPIEntity org,
+        { organization = DM.makeMerchantAPIEntity merchant,
           referralCode = referralCode <&> (.getId),
           numberOfRides = driverStats.totalRides,
           driverGoHomeInfo = dghInfo,

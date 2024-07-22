@@ -20,7 +20,9 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
 import Domain.Types.Booking
+import Domain.Types.BookingCancellationReason
 import qualified Domain.Types.BppDetails as DBppDetails
+import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
@@ -42,6 +44,7 @@ import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -93,7 +96,16 @@ data BookingAPIEntity = BookingAPIEntity
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     serviceTierName :: Maybe Text,
-    serviceTierShortDesc :: Maybe Text
+    serviceTierShortDesc :: Maybe Text,
+    cancellationReason :: Maybe BookingCancellationReasonAPIEntity
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data BookingCancellationReasonAPIEntity = BookingCancellationReasonAPIEntity
+  { additionalInfo :: Maybe Text,
+    reasonCode :: Maybe CancellationReasonCode,
+    reasonStage :: Maybe CancellationStage,
+    source :: CancellationSource
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -174,8 +186,9 @@ makeBookingAPIEntity ::
   DBppDetails.BppDetails ->
   Bool ->
   Bool ->
+  Maybe BookingCancellationReasonAPIEntity ->
   BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon = do
+makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
       providerNum = fromMaybe "+91" bppDetails.supportNumber
   BookingAPIEntity
@@ -222,7 +235,8 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       serviceTierName = booking.serviceTierName,
       serviceTierShortDesc = booking.serviceTierShortDesc,
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
-      driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing
+      driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
+      cancellationReason = mbCancellationReason
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -310,7 +324,14 @@ buildBookingAPIEntity booking personId = do
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbRide
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon
+  mbCancellationReason <-
+    if booking.status == CANCELLED
+      then QBCR.findByRideBookingId booking.id
+      else return Nothing
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
+  where
+    makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
+    makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
 
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
 buildBookingStatusAPIEntity booking = do

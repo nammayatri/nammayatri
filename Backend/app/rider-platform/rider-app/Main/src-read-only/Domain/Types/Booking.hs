@@ -38,7 +38,6 @@ data Booking = Booking
     createdAt :: Kernel.Prelude.UTCTime,
     discount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
-    estimatedApplicationFee :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
