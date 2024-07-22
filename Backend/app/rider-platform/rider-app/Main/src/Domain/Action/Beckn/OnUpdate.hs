@@ -65,6 +65,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
+import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -377,9 +378,14 @@ onUpdate = \case
     now <- getCurrentTime
     bookingId <- generateGUID
     quoteId_ <- generateGUID
+    newIsScheduled <-
+      if booking.isScheduled
+        then do
+          merchant <- QCM.findById searchReq.merchantId >>= fromMaybeM (MerchantNotFound searchReq.merchantId.getId)
+          return $ merchant.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
+        else return False
     let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
-        newIsScheduled = booking.isScheduled && ride.status == DRide.UPCOMING
-        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = booking.startTime, createdAt = now, updatedAt = now}
+        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
     void $ SQQ.createQuote newQuote
     void $ QRB.createBooking newBooking
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
