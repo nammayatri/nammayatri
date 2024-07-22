@@ -3024,7 +3024,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
             --   let srcMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.srcMarker }
             --       destMarkerConfig = defaultMarkerConfig{ pointerIcon = markers.destMarker, primaryText = getMarkerPrimaryText 0 }
             --   _ <- pure $ removeAllPolylines ""
-            --   _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
+            --   _ <- liftFlow $ runEffectFn9 drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) ( if os == "IOS" then "LineString" else "DOT") "#323643" false srcMarkerConfig destMarkerConfig 8 "DRIVER_LOCATION_UPDATE" specialLocationTag
             --   void $ delay $ Milliseconds duration
             --   driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
@@ -3035,7 +3035,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 
                 if (srcLat /= 0.0 && srcLon /= 0.0 && dstLat /= 0.0 && dstLon /= 0.0) then do 
                   _ <- pure $ removeAllPolylines ""
-                  let routeConfig = mkRouteConfig (walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "DOT" false JB.DEFAULT mapRouteConfig
+                  let routeConfig = mkRouteConfig (walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" ( if os == "IOS" then "LineString" else "DOT") false JB.DEFAULT mapRouteConfig
                   void $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                   else pure unit
                 void $ delay $ Milliseconds duration
@@ -3080,7 +3080,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             normalRoutePoints = fromMaybe {points : []} newPoints
                             normalAdvRoutePoints = fromMaybe {points : []} newPointsAdv
                             normalRoute = mkRouteConfig normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig{isAnimation = true}
-                            normalAdvRouteConfig = mkRouteConfig normalAdvRoutePoints srcMarkerConfig' destMarkerConfig' Nothing "ADVANCED_ROUTE" "DOT" true JB.ADVANCED mapRouteConfig{isAnimation = false}
+                            normalAdvRouteConfig = mkRouteConfig normalAdvRoutePoints srcMarkerConfig' destMarkerConfig' Nothing "ADVANCED_ROUTE" ( if os == "IOS" then "LineString" else "DOT") true JB.ADVANCED mapRouteConfig{isAnimation = false}
                         liftFlow $ drawRoute [normalRoute,normalAdvRouteConfig] (getNewIDWithTag "CustomerHomeScreen")
                         _ <- doAff do liftEffect $ push $ updateState (routes.duration + routesAdvanced.duration) (routes.distance + routesAdvanced.distance)
                         void $ delay $ Milliseconds duration
@@ -3103,7 +3103,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                               normalRoutePoints = fromMaybe {points : []} points
                               rentalRoutePoints = fromMaybe {points : []} rentalPoints
                               normalRoute = mkRouteConfig  normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig
-                              rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "DOT" true JB.RENTAL mapRouteConfig{isAnimation = false}
+                              rentalRouteConfig = mkRouteConfig rentalRoutePoints srcRentalMarkerConfig destRentalMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" ( if os == "IOS" then "LineString" else "DOT") true JB.RENTAL mapRouteConfig{isAnimation = false}
                               routeArray = ([normalRoute] <> if isNothing rentalPoints then [] else [rentalRouteConfig] )
                           liftFlow $ drawRoute routeArray (getNewIDWithTag "CustomerHomeScreen")
                         else pure unit
