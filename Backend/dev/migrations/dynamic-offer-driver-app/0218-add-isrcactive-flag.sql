@@ -15,6 +15,4 @@ update atlas_driver_offer_bpp.driver_rc_association as T1 set associated_till = 
 ------------------------------------------------------------------------------------------
 
 ALTER TABLE atlas_driver_offer_bpp.call_status ALTER COLUMN entity_id SET DEFAULT 'UNKOWN';
-ALTER TABLE atlas_driver_offer_bpp.call_status ALTER COLUMN entity_id SET NOT NULL;
-
 ---- DROPS ----

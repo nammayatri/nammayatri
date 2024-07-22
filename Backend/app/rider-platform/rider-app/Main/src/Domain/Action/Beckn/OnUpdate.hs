@@ -33,6 +33,7 @@ module Domain.Action.Beckn.OnUpdate
     EditDestConfirmUpdateReq (..),
     EditDestErrorReq (..),
     TollCrossedEventReq (..),
+    PhoneCallRequestEventReq (..),
   )
 where
 
@@ -103,6 +104,7 @@ data OnUpdateReq
   | OUEditDestSoftUpdateReq EditDestSoftUpdateReq
   | OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq
   | OUTollCrossedEventReq TollCrossedEventReq
+  | OUPhoneCallRequestEventReq PhoneCallRequestEventReq
   | OUEditDestError EditDestErrorReq
 
 data ValidatedOnUpdateReq
@@ -122,6 +124,7 @@ data ValidatedOnUpdateReq
   | OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq
   | OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq
   | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
+  | OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
 
 data BookingReallocationReq = BookingReallocationReq
@@ -314,6 +317,15 @@ data ValidatedTollCrossedEventReq = ValidatedTollCrossedEventReq
     person :: DPerson.Person
   }
 
+data PhoneCallRequestEventReq = PhoneCallRequestEventReq
+  { transactionId :: Text
+  }
+
+data ValidatedPhoneCallRequestEventReq = ValidatedPhoneCallRequestEventReq
+  { booking :: DRB.Booking,
+    person :: DPerson.Person
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -438,6 +450,11 @@ onUpdate = \case
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+  OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
+    mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey booking.merchantOperatingCityId "FCM_CHAT_MESSAGE"
+    whenJust mbMerchantPN $ \merchantPN -> do
+      let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
+      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedEditDestError ValidatedEditDestErrorReq {..} -> do
     if bookingUpdateReqDetails.status == DBUR.SOFT
       then QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
@@ -534,6 +551,10 @@ validateRequest = \case
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
     person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
     return $ OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..}
+  OUPhoneCallRequestEventReq PhoneCallRequestEventReq {..} -> do
+    booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    return $ OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..}
   OUEditDestError EditDestErrorReq {..} -> do
     bookingUpdateReqDetails <- runInReplica $ QBUR.findById (Id messageId) >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> messageId)
     booking <- runInReplica $ QRB.findById bookingUpdateReqDetails.bookingId >>= fromMaybeM (BookingDoesNotExist $ "bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)

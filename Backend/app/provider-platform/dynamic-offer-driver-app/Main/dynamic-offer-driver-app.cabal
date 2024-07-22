@@ -65,6 +65,7 @@ library
       API.Internal.Auth
       API.Internal.BulkLocUpdate
       API.Internal.Cac
+      API.Internal.CallCustomerFCM
       API.Internal.CustomerCancellationDues
       API.Internal.DriverCoordinates
       API.Internal.DriverInactiveFCM
@@ -161,6 +162,7 @@ library
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.Cac
+      Domain.Action.Internal.CallCustomerFCM
       Domain.Action.Internal.CustomerCancellationDues
       Domain.Action.Internal.DriverCoordinates
       Domain.Action.Internal.DriverInactiveFCM
@@ -297,6 +299,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
+      SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers

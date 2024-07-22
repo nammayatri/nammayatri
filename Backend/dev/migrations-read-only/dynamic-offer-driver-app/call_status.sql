@@ -12,3 +12,8 @@ ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN merchant_id character 
 ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN recording_url character varying (255) ;
 ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN status character varying (255) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.call_status ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.call_status ADD COLUMN call_attempt text ;

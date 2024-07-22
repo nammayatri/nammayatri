@@ -231,3 +231,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_pickup_di
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dummy_show_driver_additions boolean ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_status_check_scheduler_delay integer  default 120;

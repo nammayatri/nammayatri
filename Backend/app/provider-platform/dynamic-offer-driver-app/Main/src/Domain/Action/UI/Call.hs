@@ -26,6 +26,7 @@ module Domain.Action.UI.Call
     directCallStatusCallback,
     getCustomerMobileNumber,
     getDriverMobileNumber,
+    callOnClickTracker,
   )
 where
 
@@ -33,6 +34,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.CallEvent as DCE
 import qualified Domain.Types.Booking as DB
 import Domain.Types.CallStatus as CallStatus
+import Domain.Types.CallStatus as DCallStatus
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -42,17 +44,22 @@ import EulerHS.Prelude (Alternative ((<|>)))
 import Kernel.Beam.Functions
 import Kernel.External.Call.Exotel.Types
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
-import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption as KE
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
+import Lib.Scheduler.Environment (JobCreatorEnv)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Allocator
+import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -125,11 +132,12 @@ initiateCallToCustomer rideId merchantOpCityId = do
           }
   exotelResponse <- initiateCall booking.providerId merchantOpCityId callReq
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from driver to customer."
-  callStatus <- buildCallStatus callStatusId exotelResponse booking
+  let dCallStatus = Just $ handleCallStatus exotelResponse.callStatus
+  callStatus <- buildCallStatus callStatusId exotelResponse dCallStatus booking
   _ <- QCallStatus.create callStatus
   return $ CallRes callStatusId
   where
-    buildCallStatus callStatusId exotelResponse booking = do
+    buildCallStatus callStatusId exotelResponse dCallStatus booking = do
       now <- getCurrentTime
       return $
         SCS.CallStatus
@@ -142,6 +150,7 @@ initiateCallToCustomer rideId merchantOpCityId = do
             recordingUrl = Nothing,
             merchantId = Just booking.providerId.getId,
             callService = Just Exotel,
+            callAttempt = dCallStatus,
             callError = Nothing,
             createdAt = now
           }
@@ -161,11 +170,12 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
             appletId = Nothing
           }
   exotelResponse <- initiateCall merchantId merchantOpCityId callReq
-  callStatus <- buildCallStatus callStatusId exotelResponse (Just vehicleRC.id.getId)
+  let dCallStatus = Just $ handleCallStatus exotelResponse.callStatus
+  callStatus <- buildCallStatus callStatusId exotelResponse dCallStatus (Just vehicleRC.id.getId)
   QCallStatus.create callStatus
   return $ CallRes callStatusId
   where
-    buildCallStatus callStatusId exotelResponse rcId' = do
+    buildCallStatus callStatusId exotelResponse dCallStatus rcId' = do
       now <- getCurrentTime
       return $
         SCS.CallStatus
@@ -179,6 +189,7 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
             merchantId = Just merchantId.getId,
             callError = Nothing,
             callService = Just Exotel,
+            callAttempt = dCallStatus,
             createdAt = now
           }
 
@@ -194,7 +205,9 @@ callStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => CallCallbackReq -> m Cal
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
-  _ <- QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) (exotelStatusToInterfaceStatus req.status) callStatusId
+  let interfaceStatus = exotelStatusToInterfaceStatus req.status
+  let dCallStatus = Just $ handleCallStatus interfaceStatus
+  QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) interfaceStatus dCallStatus callStatusId
   return Ack
 
 directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
@@ -202,74 +215,127 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   let callDuration = callDuratioExotel <|> callDurationFallback
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
+  let dCallStatus = Just $ handleCallStatus newCallStatus
   _ <- case recordingUrl_ of
     Just recordUrl -> do
       if recordUrl == ""
         then do
-          _ <- updateCallStatus callStatus.id newCallStatus Nothing callDuration
+          updateCallStatus callStatus.id newCallStatus Nothing callDuration dCallStatus
           throwError CallStatusDoesNotExist
         else do
-          updateCallStatus callStatus.id newCallStatus (Just recordUrl) callDuration
+          updateCallStatus callStatus.id newCallStatus (Just recordUrl) callDuration dCallStatus
     Nothing -> do
       if newCallStatus == CallTypes.COMPLETED
         then do
-          _ <- updateCallStatus callStatus.id newCallStatus Nothing callDuration
+          updateCallStatus callStatus.id newCallStatus Nothing callDuration dCallStatus
           throwError CallStatusDoesNotExist
-        else updateCallStatus callStatus.id newCallStatus Nothing callDuration
+        else updateCallStatus callStatus.id newCallStatus Nothing callDuration dCallStatus
   DCE.sendCallDataToKafka (Just "EXOTEL") (Id <$> callStatus.entityId) (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing
   return Ack
   where
-    updateCallStatus id callStatus url callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration) url callStatus id
+    updateCallStatus id callStatus url callDuration callAttemptStatus = QCallStatus.updateCallStatus (fromMaybe 0 callDuration) url callStatus callAttemptStatus id
 
 getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> Text -> m GetCustomerMobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = do
-  callId <- generateGUID
-  callStatusObj <- buildCallStatus callId callSid (exotelStatusToInterfaceStatus callStatus) Nothing
-  _ <- QCallStatus.create callStatusObj
+  callStatusId <- generateGUID
   let callFrom = dropFirstZero callFrom_
-  let callTo = dropFirstZero callTo_
-  let to = dropFirstZero to_
+      callTo = dropFirstZero callTo_
+      to = dropFirstZero to_
+
   mobileNumberHash <- getDbHash callFrom
   exophone <-
     CQExophone.findByPhone to >>= \case
-      Nothing -> CQExophone.findByPhone callTo >>= maybe (throwCallError callId (ExophoneDoesNotExist callTo) Nothing Nothing) pure
+      Nothing -> CQExophone.findByPhone callTo >>= fromMaybeM (ExophoneDoesNotExist callTo)
       Just phone -> return phone
+
   (driver, dtmfNumberUsed) <-
     runInReplica (QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash exophone.merchantId Person.DRIVER) >>= \case
+      Just entity -> return (entity, Nothing)
       Nothing -> do
-        number <- maybe (throwCallError callId (PersonWithPhoneNotFound $ show dtmfNumber_) (Just exophone.merchantId.getId) (Just exophone.callService)) pure dtmfNumber_
+        number <- maybe (throwError (PersonWithPhoneNotFound $ show dtmfNumber_)) pure dtmfNumber_
         let dtmfNumber = dropFirstZero $ removeQuotes number
         dtmfMobileHash <- getDbHash dtmfNumber
-        person <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole "+91" dtmfMobileHash exophone.merchantId Person.DRIVER >>= maybe (throwCallError callId (PersonWithPhoneNotFound dtmfNumber) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+        person <-
+          runInReplica (QPerson.findByMobileNumberAndMerchantAndRole "+91" dtmfMobileHash exophone.merchantId Person.DRIVER)
+            >>= maybe (throwError (PersonWithPhoneNotFound dtmfNumber)) pure
         return (person, Just dtmfNumber)
-      Just entity -> return (entity, Nothing)
-  activeRide <- runInReplica (QRide.getActiveByDriverId driver.id) >>= maybe (throwCallError callId (RideForDriverNotFound $ getId driver.id) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
-  activeBooking <- runInReplica (QRB.findById activeRide.bookingId) >>= maybe (throwCallError callId (BookingNotFound $ getId activeRide.bookingId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
-  riderId <-
-    activeBooking.riderId
-      & fromMaybeM (BookingFieldNotPresent "riderId")
-  riderDetails <- runInReplica $ QRD.findById riderId >>= maybe (throwCallError callId (RiderDetailsNotFound riderId.getId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+
+  activeRide <- runInReplica (QRide.getActiveByDriverId driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  ensureCallStatusExists callStatusId callSid activeRide.id callStatus dtmfNumberUsed
+
+  activeBooking <-
+    runInReplica (QRB.findById activeRide.bookingId)
+      >>= maybe (throwCallError callStatusId (BookingNotFound $ getId activeRide.bookingId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+
+  riderId <- activeBooking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
+  riderDetails <-
+    runInReplica (QRD.findById riderId)
+      >>= maybe (throwCallError callStatusId (RiderDetailsNotFound riderId.getId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
+
   requestorPhone <- decrypt riderDetails.mobileNumber
-  _ <- QCallStatus.updateCallStatusWithRideId (Just activeRide.id.getId) dtmfNumberUsed (Just exophone.merchantId.getId) (Just exophone.callService) callId
+  QCallStatus.updateCallStatusInformation dtmfNumberUsed (Just exophone.merchantId.getId) (Just exophone.callService) callStatusId
   DCE.sendCallDataToKafka (Just "EXOTEL") (Just activeRide.id) (Just "ANONYMOUS_CALLER") (Just callSid) Nothing System (Just to)
+
   return requestorPhone
   where
+    ensureCallStatusExists callStatusId callId rideId callStatus' dtmfNumberUsed =
+      QCallStatus.findByEntityId (Just $ getId rideId) >>= \case
+        Just _ -> QCallStatus.updateCallStatusCallId callId callStatusId
+        Nothing -> do
+          now <- getCurrentTime
+          let callStatusObj =
+                SCS.CallStatus
+                  { id = callStatusId,
+                    callId = callId,
+                    entityId = Just $ getId rideId,
+                    dtmfNumberUsed = dtmfNumberUsed,
+                    status = exotelStatusToInterfaceStatus callStatus',
+                    conversationDuration = 0,
+                    recordingUrl = Nothing,
+                    merchantId = Nothing,
+                    callService = Nothing,
+                    callError = Nothing,
+                    callAttempt = Just DCallStatus.Pending,
+                    createdAt = now
+                  }
+          void $ QCallStatus.create callStatusObj
+
     dropFirstZero = T.dropWhile (== '0')
     removeQuotes = T.replace "\"" ""
-    buildCallStatus callId exotelCallId exoStatus dtmfNumberUsed = do
+
+callOnClickTracker :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "maxShards" r Int) => Id SRide.Ride -> m APISuccess
+callOnClickTracker rideId = do
+  maxShards <- asks (.maxShards)
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  transporterConfig <-
+    CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+      >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  callStatusObj <- buildCallStatus
+  QCallStatus.create callStatusObj
+  createJobIn @_ @'CheckExotelCallStatusAndNotifyBAP (fromIntegral transporterConfig.exotelStatusCheckSchedulerDelay) maxShards $
+    CheckExotelCallStatusAndNotifyBAPJobData
+      { rideId = ride.id
+      }
+  return Success
+  where
+    buildCallStatus = do
+      callStatusId <- generateGUID
+      callId <- generateGUID -- added random placeholder for backward compatibility
       now <- getCurrentTime
       return $
         SCS.CallStatus
-          { id = callId,
-            callId = exotelCallId,
-            entityId = Nothing,
-            dtmfNumberUsed = dtmfNumberUsed,
-            status = exoStatus,
+          { id = callStatusId,
+            callId = callId,
+            entityId = Just $ getId rideId,
+            dtmfNumberUsed = Nothing,
+            status = CallTypes.ATTEMPTED,
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Nothing,
             callService = Nothing,
             callError = Nothing,
+            callAttempt = Just DCallStatus.Attempted,
             createdAt = now
           }
 
@@ -280,13 +346,13 @@ throwCallError ::
     EsqDBFlow m r,
     IsBaseException e
   ) =>
-  Id SCS.CallStatus ->
+  Id DCallStatus.CallStatus ->
   e ->
   Maybe Text ->
   Maybe CallService ->
   m a
-throwCallError callId err merchantId callService = do
-  QCallStatus.updateCallError (Just (show err)) callService merchantId callId
+throwCallError callStatusId err merchantId callService = do
+  QCallStatus.updateCallError (Just (show err)) callService merchantId callStatusId
   throwError err
 
 getCallStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
@@ -317,3 +383,13 @@ getCustomerAndDriverPhones ride booking = do
   customerPhone <- getCustomerPhone booking
   driverPhone <- getDriverPhone ride
   return (customerPhone, driverPhone)
+
+handleCallStatus :: CallTypes.CallStatus -> DCallStatus.CallAttemptStatus
+handleCallStatus status
+  | status `elem` failedCallStatuses = DCallStatus.Failed
+  | status `elem` ignoredCallStatuses = DCallStatus.Resolved
+  | status == CallTypes.COMPLETED = DCallStatus.Resolved
+  | otherwise = DCallStatus.Pending
+  where
+    failedCallStatuses = [CallTypes.INVALID_STATUS, CallTypes.NOT_CONNECTED, CallTypes.FAILED]
+    ignoredCallStatuses = [CallTypes.BUSY, CallTypes.NO_ANSWER, CallTypes.MISSED]

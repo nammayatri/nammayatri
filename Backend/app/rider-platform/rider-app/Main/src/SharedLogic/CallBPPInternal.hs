@@ -54,6 +54,32 @@ linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode i
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode isMultipleDeviceIdExist)) "LinkReferee" likeRefereeApi
 
+type CallCustomerFCMAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "callCustomerFCM"
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+callCustomerFCMClient :: Text -> Maybe Text -> EulerClient APISuccess
+callCustomerFCMClient = client callCustomerFCMApi
+
+callCustomerFCMApi :: Proxy CallCustomerFCMAPI
+callCustomerFCMApi = Proxy
+
+callCustomerFCM ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m APISuccess
+callCustomerFCM apiKey internalUrl bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callCustomerFCMClient bppRideId (Just apiKey)) "CallCustomerFCM" callCustomerFCMApi
+
 type FeedbackFormAPI =
   "internal"
     :> "beckn"
