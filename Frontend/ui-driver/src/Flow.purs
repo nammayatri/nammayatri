@@ -2354,31 +2354,36 @@ homeScreenFlow = do
       let fileId = if state.data.activeRide.tripType == ST.Rental then
           state.props.odometerFileId
         else Nothing 
-        
-      (endRideResp) <- lift $ lift $ Remote.endRide id (Remote.makeEndRideReq endRideOtp endOdometerReading fileId (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation tripDistance tripDistanceWithAcc ts)
-      case (endRideResp) of
-        Right (API.EndRideResponse response) -> do
-          when state.data.driverGotoState.isGotoEnabled do
-            getDriverInfoResp <- Remote.getDriverInfoBT ""
-            modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
-              { driverInformation = Just getDriverInfoResp,
-                gotoPopupType = case response.homeLocationReached of 
-                  Nothing -> ST.NO_POPUP_VIEW
-                  Just true -> ST.REACHED_HOME
-                  Just false -> ST.MORE_GOTO_RIDES
-              })
-          onSuccessEndRide
-        Left errorPayload -> do
-          (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-          let getCurrentRideInfo = head rideHistoryResponse.list
-          case Tuple (DA.length $ rideHistoryResponse.list) (isJust state.data.advancedRideData)  of
-            Tuple 1 true -> do 
-              case getCurrentRideInfo , state.data.advancedRideData of
-                Just (RidesInfo rideDataResp), Just advRide -> if (rideDataResp.id == advRide.id) then onSuccessEndRide else errorHandlerEndRide errorPayload endRideOtpModalOnError
-                _ , _ -> onSuccessEndRide
-            Tuple 2 true -> errorHandlerEndRide errorPayload endRideOtpModalOnError
-            Tuple 1 false -> errorHandlerEndRide errorPayload endRideOtpModalOnError
-            Tuple _ _ ->  onSuccessEndRide
+      case Number.fromString lat, Number.fromString lon of 
+        Just lt, Just ln | lt /= 0.0 && ln /= 0.0-> do
+          (endRideResp) <- lift $ lift $ Remote.endRide id (Remote.makeEndRideReq endRideOtp endOdometerReading fileId lt ln numDeviation tripDistance tripDistanceWithAcc ts)
+          case (endRideResp) of
+            Right (API.EndRideResponse response) -> do
+              when state.data.driverGotoState.isGotoEnabled do
+                getDriverInfoResp <- Remote.getDriverInfoBT ""
+                modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
+                  { driverInformation = Just getDriverInfoResp,
+                    gotoPopupType = case response.homeLocationReached of 
+                      Nothing -> ST.NO_POPUP_VIEW
+                      Just true -> ST.REACHED_HOME
+                      Just false -> ST.MORE_GOTO_RIDES
+                  })
+              onSuccessEndRide
+            Left errorPayload -> do
+              (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
+              let getCurrentRideInfo = head rideHistoryResponse.list
+              case Tuple (DA.length $ rideHistoryResponse.list) (isJust state.data.advancedRideData)  of
+                Tuple 1 true -> do 
+                  case getCurrentRideInfo , state.data.advancedRideData of
+                    Just (RidesInfo rideDataResp), Just advRide -> if (rideDataResp.id == advRide.id) then onSuccessEndRide else errorHandlerEndRide errorPayload endRideOtpModalOnError
+                    _ , _ -> onSuccessEndRide
+                Tuple 2 true -> errorHandlerEndRide errorPayload endRideOtpModalOnError
+                Tuple 1 false -> errorHandlerEndRide errorPayload endRideOtpModalOnError
+                Tuple _ _ ->  onSuccessEndRide
+        _, _ -> do
+          void $ lift $ lift $ toggleLoader false
+          pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+          pure unit
       where
         errorHandlerEndRide errorPayload endRideOtpModalOnError = do
           void $ lift $ lift $ toggleLoader false

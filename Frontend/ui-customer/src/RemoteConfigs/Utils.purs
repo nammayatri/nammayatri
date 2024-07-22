@@ -82,3 +82,9 @@ getBookAnySelectedServices city = do
     let config = fetchRemoteConfigString "book_any_selected_services"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ["Auto", "Non-AC Mini", "AC Mini"]
     getCityBasedConfig value city
+
+getLocationSuggestionsToExclude :: String -> Array String
+getLocationSuggestionsToExclude city = do
+    let config = fetchRemoteConfigString "location_suggestions_to_exclude"
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+    getCityBasedConfig value city

@@ -151,7 +151,7 @@ config =
         autoScrollTime : 5,
         tripWithinXDist : 0.05,
         locationWithinXDist : 100.0,
-        destinationGeohashPrecision : 9 
+        destinationGeohashPrecision : 9
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
@@ -165,7 +165,7 @@ config =
   , showCheckoutRentalBanner : false
   , geoCoder: {
       enableLLtoAddress : true
-    , enableAddressToLL : true 
+    , enableAddressToLL : false 
     }
   , isAdvancedBookingEnabled : false
   , enableWhatsappOTP : ["BD", "US"]
