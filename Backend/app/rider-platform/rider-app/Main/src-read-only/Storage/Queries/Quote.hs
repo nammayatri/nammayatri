@@ -49,7 +49,7 @@ updateByPrimaryKey (Domain.Types.Quote.Quote {..}) = do
       Se.Set Beam.distanceToNearestDriver (Kernel.Types.Common.distanceToHighPrecMeters <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
       Se.Set Beam.distanceToNearestDriverValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
       Se.Set Beam.driverOfferId (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
-      Se.Set Beam.fareProductType (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
+      Se.Set Beam.fareProductType (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails) vehicleServiceTierType),
       Se.Set Beam.rentalDetailsId (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
       Se.Set Beam.specialZoneQuoteId (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),

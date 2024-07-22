@@ -81,8 +81,12 @@ backfillMOCId mocId merchantId =
     Just mocId' -> pure $ Id mocId'
     Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (Id merchantId)
 
-getfareProduct :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Domain.Types.FarePolicy.FareProductType.FareProductType
-getfareProduct (a, _, _, _, _) = a
+getfareProduct :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Domain.Types.VehicleServiceTier.VehicleServiceTierType -> Domain.Types.FarePolicy.FareProductType.FareProductType
+getfareProduct (a, _, _, _, _) vst = case a of
+  DRIVER_OFFER -> if vst `elem` ambulanceVariants then AMBULANCE else DRIVER_OFFER
+  x -> x
+  where
+    ambulanceVariants = [Domain.Types.VehicleServiceTier.AMBULANCE_TAXI, Domain.Types.VehicleServiceTier.AMBULANCE_TAXI_OXY, Domain.Types.VehicleServiceTier.AMBULANCE_AC, Domain.Types.VehicleServiceTier.AMBULANCE_AC_OXY, Domain.Types.VehicleServiceTier.AMBULANCE_VENTILATOR]
 
 getDistanceToNearestDriver :: (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Types.Common.Distance
 getDistanceToNearestDriver (_, a, _, _, _) = a

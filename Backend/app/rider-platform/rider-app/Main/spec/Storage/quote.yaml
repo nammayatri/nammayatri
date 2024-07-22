@@ -155,7 +155,7 @@ Quote:
 
   # distanceUnit should be the same for all fields
   toTType:
-    fareProductType: (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))|E
+    fareProductType: (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails) vehicleServiceTierType)|E
     discount: (discount <&> (.amount))|E
     currency: (Just ((.currency) estimatedFare))|E
     estimatedFare: ((.amount) estimatedFare)|E
