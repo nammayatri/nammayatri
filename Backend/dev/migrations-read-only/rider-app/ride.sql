@@ -105,3 +105,5 @@ ALTER TABLE atlas_app.ride ADD COLUMN vehicle_age int;
 
 ALTER TABLE atlas_app.ride ADD COLUMN driver_number_hash bytea ;
 ALTER TABLE atlas_app.ride ADD COLUMN driver_number_encrypted text ;
+ALTER TABLE atlas_app.ride ADD COLUMN client_model_name text ;
+ALTER TABLE atlas_app.ride ADD COLUMN client_manufacturer text ;

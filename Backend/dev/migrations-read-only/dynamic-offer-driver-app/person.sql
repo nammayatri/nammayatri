@@ -71,3 +71,9 @@ ALTER TABLE atlas_driver_offer_bpp.person ALTER COLUMN is_valid_rating DROP NOT 
 ALTER TABLE atlas_driver_offer_bpp.person DROP COLUMN total_ratings;
 ALTER TABLE atlas_driver_offer_bpp.person DROP COLUMN total_rating_score;
 ALTER TABLE atlas_driver_offer_bpp.person DROP COLUMN is_valid_rating;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN client_model_name text ;
+ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN client_manufacturer text ;
