@@ -40,10 +40,6 @@ DriverStats:
       totalEarnings: Money
       totalEarningsAmount: Maybe HighPrecMoney
 
-    totalPayoutEarnings:
-      totalPayoutEarnings: Money
-      totalPayoutEarningsAmount: Maybe HighPrecMoney
-
     bonusEarned:
       bonusEarned: Money
       bonusEarnedAmount: Maybe HighPrecMoney
@@ -64,6 +60,7 @@ DriverStats:
     distanceUnit: Maybe DistanceUnit
     totalValidActivatedRides: Maybe Int
     totalReferralCounts: Maybe Int
+    totalPayoutEarnings: Maybe HighPrecMoney
 
   fromTType:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
@@ -75,7 +72,7 @@ DriverStats:
     totalDistance: Kernel.Types.Common.Meters $ GHC.Float.double2Int totalDistance|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit|E
     rating: Storage.Queries.Transformers.DriverStats.getRating totalRatings totalRatingScore|EM
-    totalPayoutEarnings: Kernel.Types.Common.mkAmountWithDefault totalPayoutEarningsAmount totalPayoutEarnings|E
+    totalPayoutEarnings: Storage.Queries.Transformers.DailyStats.getHighPrecMoney|I
     totalValidActivatedRides: Kernel.Prelude.fromMaybe 0|I
     totalReferralCounts: Kernel.Prelude.fromMaybe 0|I
 
@@ -91,7 +88,7 @@ DriverStats:
     coinCovertedToCashLeft: Kernel.Prelude.Just|I
     totalCoinsConvertedCash: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
-    totalPayoutEarnings: Kernel.Prelude.roundToIntegral|I
+    totalPayoutEarnings: Kernel.Prelude.Just|I
     totalPayoutEarningsAmount:  Kernel.Prelude.Just|I
     totalValidActivatedRides: Kernel.Prelude.Just|I
     totalReferralCounts: Kernel.Prelude.Just|I
@@ -145,7 +142,6 @@ DriverStats:
     totalPayoutEarnings: "0.0"
     totalValidActivatedRides: "0"
     totalReferralCounts: "0"
-
 
   extraOperations:
     - EXTRA_QUERY_FILE
