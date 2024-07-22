@@ -21,7 +21,7 @@ import Data.Maybe
 import Prelude
 import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null, head)
 import Data.Ord (comparing)
-import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..), Address, LocationType(..))
+import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..), Address, LocationType(..), RecentlySearchedObject(..))
 import Helpers.Utils(getDistanceBwCordinates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..), differenceOfLocationLists, checkPrediction, updateLocListWithDistance)
 import Data.Int(toNumber)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..), getValueToLocalNativeStore)
@@ -51,6 +51,7 @@ import Accessor (_vehicleVariant)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import RemoteConfig (FamousDestination(..), getFamousDestinations)
 import Screens.HomeScreen.ScreenData (dummyAddress)
+import RemoteConfig as RC
 
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
@@ -93,8 +94,9 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestionsMap config 
       updateDestination :: Array LocationListItemState -> Array LocationListItemState
       updateDestination destinations =
         let
+          locationsToExclude = RC.getLocationSuggestionsToExclude $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
           updateExisting :: LocationListItemState -> LocationListItemState
-          updateExisting existingDestination =
+          updateExisting existingDestination = do
             if destination.placeId == existingDestination.placeId
             then existingDestination
                   { frequencyCount = Just $ (fromMaybe 0 existingDestination.frequencyCount) +  1
@@ -104,7 +106,7 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestionsMap config 
             else existingDestination
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingDestination.frequencyCount)) (fromMaybe (getCurrentUTC "") existingDestination.recencyDate) config.frequencyWeight }
 
-          updatedDestinations = map updateExisting destinations
+          updatedDestinations = DA.mapMaybe (\item -> transformSuggestion locationsToExclude $ updateExisting item) destinations
           destinationExists = any (\destinationItem -> destinationItem.placeId == destination.placeId) destinations
           sortedDestinations = sortDestinationsByScore updatedDestinations
         in
@@ -148,6 +150,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config is
       updateTrip :: Array Trip -> Boolean -> Array Trip
       updateTrip trips isBackFilling =
         let
+          locationsToExclude = RC.getLocationSuggestionsToExclude $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
           updateExisting :: Trip -> Trip
           updateExisting existingTrip = do
             if (getDistanceBwCordinates trip.sourceLat trip.sourceLong existingTrip.sourceLat existingTrip.sourceLong) < config.tripDistanceThreshold
@@ -163,7 +166,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config is
             else existingTrip
                   { locationScore = Just $ calculateScore (toNumber (fromMaybe 0 existingTrip.frequencyCount)) (fromMaybe (getCurrentUTC "") existingTrip.recencyDate) config.frequencyWeight
                   }
-          updatedTrips = map updateExisting trips
+          updatedTrips = DA.mapMaybe (\item -> transformTrip locationsToExclude $ updateExisting item) trips
           tripExists = any (\tripItem -> (getDistanceBwCordinates tripItem.sourceLat tripItem.sourceLong trip.sourceLat trip.sourceLong) < config.tripDistanceThreshold
             && (getDistanceBwCordinates tripItem.destLat tripItem.destLong trip.destLat trip.destLong) < config.tripDistanceThreshold && tripItem.serviceTierNameV2 == trip.serviceTierNameV2) updatedTrips
           sortedTrips = sortTripsByScore $ updateVariantInfo updatedTrips
@@ -351,8 +354,15 @@ getLocationFromTrip locationType trip sourceLat sourceLong =
     , locationScore : trip.locationScore
     }
 
-transformTrip :: Trip -> Trip 
-transformTrip trip = fixVariantForTrip $ trip { serviceTierNameV2 = correctServiceTierName trip.serviceTierNameV2 }
+transformTrip :: Array String -> Trip -> Maybe Trip 
+transformTrip locationsToExclude trip = let 
+  shouldInclude = not $ any (\item -> DS.contains (DS.Pattern $ DS.toLower item) $ DS.toLower $ trip.destination) locationsToExclude
+  in if shouldInclude then Just $ fixVariantForTrip $ trip { serviceTierNameV2 = correctServiceTierName trip.serviceTierNameV2 } else Nothing
+
+transformSuggestion :: Array String -> LocationListItemState -> Maybe LocationListItemState
+transformSuggestion locationsToExclude destination = let 
+    shouldInclude = not $ any (\item -> DS.contains (DS.Pattern $ DS.toLower item) $ DS.toLower destination.title) locationsToExclude
+    in if shouldInclude then Just destination else Nothing
 
 correctServiceTierName :: Maybe String -> Maybe String
 correctServiceTierName serviceTierName = 
@@ -400,8 +410,18 @@ locationEquality a b = a.lat == b.lat && a.lon == b.lon
 getMapValuesArray :: forall k v. Map k v -> Array v
 getMapValuesArray = foldMap singleton
 
+type GetSuggestionsObject = {
+  savedLocationsWithOtherTag :: Array LocationListItemState,
+  recentlySearchedLocations :: Array LocationListItemState,
+  suggestionsMap :: SuggestionsMap, 
+  trips :: Array Trip, 
+  suggestedDestinations :: Array LocationListItemState
+}
+
+getHelperLists :: Array LocationListItemState -> RecentlySearchedObject -> HomeScreenState -> Number -> Number -> GetSuggestionsObject
 getHelperLists savedLocationResp recentPredictionsObject state lat lon = 
   let suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
+      locationsToExclude = RC.getLocationSuggestionsToExclude $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
       homeWorkImages = [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"]
       isHomeOrWorkImage = \listItem -> any (_ == listItem.prefixImageUrl) homeWorkImages
       savedLocationWithHomeOrWorkTag = filter isHomeOrWorkImage savedLocationResp
@@ -444,8 +464,9 @@ getHelperLists savedLocationResp recentPredictionsObject state lat lon =
             $ DA.reverse 
                 (DA.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
         
-      trips = map (\item -> transformTrip item) sortedTripList
-  in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations}
+      trips = DA.mapMaybe (\item -> transformTrip locationsToExclude item) sortedTripList
+      filteredDestinations = DA.mapMaybe (\item -> transformSuggestion locationsToExclude item) suggestedDestinations
+  in {savedLocationsWithOtherTag, recentlySearchedLocations, suggestionsMap, trips, suggestedDestinations : filteredDestinations}
 
 updateVariantInfo :: Array Trip -> Array Trip
 updateVariantInfo trips = 
