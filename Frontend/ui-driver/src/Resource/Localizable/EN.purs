@@ -1479,3 +1479,9 @@ getEN stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "Are you sure you want to delete your account? All your personal data will be lost"
         REQUEST_SUBMITTED -> "Request Submitted"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "We are sorry to see you leave our platform. Your account will be deleted within the next 30 days. Meanwhile if you wish to retain your account, please call to our customer support number"
+        RIDE_COMPLETE -> "Ride Complete"
+        HOW_WAS_YOUR_RIDE_WITH_NAME name -> "How was your ride with " <> name <> " ?"
+        HAS_PAID_YOU name -> name <> " has paid you"
+        VIEW_FARE_BREAKDOWN -> "View fare breakdown"
+        TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "Total amount (incl. charges : " <> amount
+        FARE_BREAKDOWN -> "Fare Breakdown"

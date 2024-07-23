@@ -64,6 +64,7 @@ data ScreenName = SPLASH_SCREEN
                 | LMS_QUIZ_SCREEN
                 | RATE_CARD_SCREEN
                 | CAMERA_SCREEN
+                | RIDE_COMPLETED_SCREEN
 
 derive instance genericScreenName :: Generic ScreenName _
 instance eqScreenName :: Eq ScreenName where eq = genericEq
@@ -100,17 +101,18 @@ getScreen str = case str of
     REFERRAL_SCREEN                 -> "referral_screen"
     APP_UPDATE_POPUP_SCREEN         -> "app_update_popup_screen"
     NO_INTERNET_SCREEN              -> "no_internet_screen"
-    POPUP_SCREEEN                  -> "popup_screen"
-    ALERTS_SCREEN                  -> "alerts_screen"
-    ACKNOWLEDGEMENT_SCREEN         -> "acknowledgement_screen"
-    AADHAAR_VERIFICATION_SCREEN    -> "aadhaar_verification_screen"
-    SUBSCRIPTION_SCREEN            -> "subscription_screen"
-    ONBOARDING_SUBSCRIPTION_SCREEN -> "onboarding_subscription_screen"
-    DRIVER_SAVED_LOCATION_SCREEN   -> "driver_saved_location_screen"
-    WELCOME_SCREEN                 -> "welcome_screen"
-    CHOOSE_CITY_SCREEN             -> "choose_city_screen"
-    DRIVER_EARNINGS_SCREEN         -> "driver_earnings_screen"
-    LMS_VIDEO_SCREEN               -> "lms_video_screen"
-    LMS_QUIZ_SCREEN                -> "lms_quiz_screen"
-    RATE_CARD_SCREEN               -> "rate_card_screen"
-    CAMERA_SCREEN                  -> "camera_screen"
+    POPUP_SCREEEN                   -> "popup_screen"
+    ALERTS_SCREEN                   -> "alerts_screen"
+    ACKNOWLEDGEMENT_SCREEN          -> "acknowledgement_screen"
+    AADHAAR_VERIFICATION_SCREEN     -> "aadhaar_verification_screen"
+    SUBSCRIPTION_SCREEN             -> "subscription_screen"
+    ONBOARDING_SUBSCRIPTION_SCREEN  -> "onboarding_subscription_screen"
+    DRIVER_SAVED_LOCATION_SCREEN    -> "driver_saved_location_screen"
+    WELCOME_SCREEN                  -> "welcome_screen"
+    CHOOSE_CITY_SCREEN              -> "choose_city_screen"
+    DRIVER_EARNINGS_SCREEN          -> "driver_earnings_screen"
+    LMS_VIDEO_SCREEN                -> "lms_video_screen"
+    LMS_QUIZ_SCREEN                 -> "lms_quiz_screen"
+    RATE_CARD_SCREEN                -> "rate_card_screen"
+    CAMERA_SCREEN                   -> "camera_screen"
+    RIDE_COMPLETED_SCREEN           -> "ride_completed_screen"

@@ -1480,3 +1480,10 @@ getHI stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "क्या आप इस खाते को हटाने के लिए सुनिश्चित हैं? आपके सभी व्यक्तिगत डेटा खो जाएंगे"
         REQUEST_SUBMITTED -> "अनुरोध सबमिट किया गया"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "हमें यह देखकर खेद है कि आपने हमारे मंच को छोड़ दिया। आपका खाता अगले 30 दिनों के भीतर हटा दिया जाएगा। इस बीच यदि आप अपना खाता बनाए रखना चाहते हैं, तो कृपया हमारे ग्राहक सहायता नंबर पर कॉल करें"
+        RIDE_COMPLETE -> "सवारी पूरी"
+        HOW_WAS_YOUR_RIDE_WITH_NAME name -> name <> " के साथ आपकी यात्रा कैसी रही?"
+        HAS_PAID_YOU name -> name <> " ने तुम्हें भुगतान कर दिया है"
+        VIEW_FARE_BREAKDOWN -> "किराया विवरण देखें"
+        TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "शुल्क सहित कुल राशि : " <> amount
+        FARE_BREAKDOWN -> "किराया टूटना"
+

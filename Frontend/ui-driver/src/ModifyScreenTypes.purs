@@ -79,6 +79,7 @@ modifyScreenStateFlow =
     RateCardScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rateCardScreen = a state.rateCardScreen})
     CameraScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { cameraScreen = a state.cameraScreen})
     EarningsScreenV2 a ->  modifyState (\(GlobalState state) -> GlobalState $ state { earningsScreenV2 = a state.earningsScreenV2})
+    RideCompletedScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideCompletedScreen = a state.rideCompletedScreen})
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st = void $ lift $ lift $ modifyScreenStateFlow st

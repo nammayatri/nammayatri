@@ -1482,3 +1482,9 @@ getTE stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "రు ఖచ్చితంగా మీ ఖాతాను తొలగించాలనుకుంటున్నారా? మీ వ్యక్తిగత డేటా మొత్తం పోతుంది"
         REQUEST_SUBMITTED -> "అభ్యర్థన సమర్పించబడింది"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "మీరు మా ప్లాట్‌ఫారమ్ నుండి నిష్క్రమించినందుకు మేము చింతిస్తున్నాము. మీ ఖాతా తదుపరి 30 రోజుల్లో తొలగించబడుతుంది. ఇంతలో మీరు మీ ఖాతాను నిలుపుకోవాలనుకుంటే, దయచేసి మా కస్టమర్ సపోర్ట్ నంబర్‌కు కాల్ చేయండి"
+        RIDE_COMPLETE -> "రైడ్ పూర్తయింది"
+        HOW_WAS_YOUR_RIDE_WITH_NAME name -> name <> "తో మీ ప్రయాణం ఎలా ఉంది"
+        HAS_PAID_YOU name -> name <> " మీకు చెల్లించింది"
+        VIEW_FARE_BREAKDOWN -> "ఛార్జీల విభజనను వీక్షించండి"
+        TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "ఛార్జీలతో సహా మొత్తం : " <> amount
+        FARE_BREAKDOWN -> "ఛార్జీల విచ్ఛిన్నం"

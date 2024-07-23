@@ -1482,3 +1482,9 @@ getBN stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "আপনি আপনার অ্যাকাউন্ট মুছে ফেলতে চান আপনি আপনি কি নিশ্চিত? আপনার সমস্ত ব্যক্তিগত ডেটা হারিয়ে যাবে"
         REQUEST_SUBMITTED -> "অনুরোধ জমা দেওয়া হয়েছে"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "আপনি আমাদের প্ল্যাটফর্ম ছেড়ে চলে যেতে দেখে আমরা দুঃখিত। আপনার অ্যাকাউন্ট পরবর্তী 30 দিনের মধ্যে মুছে ফেলা হবে। এদিকে আপনি যদি আপনার অ্যাকাউন্টটি ধরে রাখতে চান তবে অনুগ্রহ করে আমাদের গ্রাহক সহায়তা নম্বরে কল করুন"
+        RIDE_COMPLETE -> "রাইড সম্পূর্ণ"
+        HOW_WAS_YOUR_RIDE_WITH_NAME name -> name <> "এর সাথে আপনার যাত্রা কেমন ছিল?"
+        HAS_PAID_YOU name -> name <> "మీకు చెల్లించాడు"
+        VIEW_FARE_BREAKDOWN -> "ভাড়া ব্রেকডাউন দেখুন"
+        TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "মোট পরিমাণ (চার্জ সহ): " <> amount
+        FARE_BREAKDOWN -> "ভাড়া ভাঙ্গন"

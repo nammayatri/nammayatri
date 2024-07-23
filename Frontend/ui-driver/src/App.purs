@@ -77,6 +77,7 @@ import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.DeleteAccountScreen.ScreenData as DeleteAccountScreenData
 import Screens.CameraScreen.ScreenData as CameraScreenData
 import Screens.EarningsScreen.ScreenData as EarningsScreenData
+import Screens.RideCompletedScreen.ScreenData as RideCompletedScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -133,6 +134,7 @@ newtype GlobalState = GlobalState {
   , deleteAccountScreen :: DeleteAccountScreenData.State
   , cameraScreen :: CameraScreenState
   , earningsScreenV2 :: EarningsScreenData.State
+  , rideCompletedScreen :: RideCompletedScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -189,6 +191,7 @@ defaultGlobalState = GlobalState {
 , deleteAccountScreen : DeleteAccountScreenData.initData
 , cameraScreen : CameraScreenData.initData
 , earningsScreenV2 : EarningsScreenData.initialState
+, rideCompletedScreen : RideCompletedScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -254,6 +257,7 @@ data ScreenType =
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CameraScreenStateType (CameraScreenState -> CameraScreenState)
   | EarningsScreenV2 (EarningsScreenData.State -> EarningsScreenData.State)
+  | RideCompletedScreenStateType (RideCompletedScreenState -> RideCompletedScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -388,7 +392,7 @@ data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreen
                                         | CHANGE_VEHICLE_FROM_RC_SCREEN
                                         | CHANGE_LANG_FROM_RC_SCREEN
 
-data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN | GO_TO_RIDE_HISTORY_SCREEN
+data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN | GO_TO_RIDE_HISTORY_SCREEN 
 
 data PERMISSIONS_SCREEN_OUTPUT = DRIVER_HOME_SCREEN | LOGOUT_FROM_PERMISSIONS_SCREEN | GO_TO_REGISTERATION_SCREEN PermissionsScreenState
 
@@ -433,6 +437,10 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | UPDATE_AIR_CONDITIONED Boolean
                           | GO_TO_BOOKING_PREFERENCES
                           | UPDATE_ROUTE_ON_STAGE_SWITCH HomeScreenState
+
+data RIDE_COMPLETED_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_RIDE_COMPLETED_SCREEN RideCompletedScreenState
+                                  -- | GO_TO_HELP_AND_SUPPORT_FROM_RIDE_COMPLETED_SCREEN
+                                  | GO_TO_RIDE_DETAILS_SCREEN_FROM_RIDE_COMPLETED_SCREEN
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

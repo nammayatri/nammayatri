@@ -107,5 +107,8 @@ titleSize = fromMaybe 28 $ fromNumber $ 28.0 * multiplier
 stepNumberSize :: FontSize
 stepNumberSize = fromMaybe 52 $ fromNumber $ 52.0 * multiplier
 
+a_64 :: FontSize
+a_64 = fromMaybe 64 $ fromNumber $ 64.0 * multiplier
+
 a_72 :: FontSize
 a_72 = fromMaybe 72 $ fromNumber $ 72.0 * multiplier 
