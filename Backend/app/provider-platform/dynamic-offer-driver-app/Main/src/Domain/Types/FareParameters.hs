@@ -22,25 +22,25 @@ import Kernel.Utils.GenericPretty (PrettyShow (..))
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data FareParameters = FareParameters
-  { id :: Id FareParameters, -- not required
-    driverSelectedFare :: Maybe HighPrecMoney, -- do total
-    customerExtraFee :: Maybe HighPrecMoney, -- do total
-    serviceCharge :: Maybe HighPrecMoney, -- do total
-    parkingCharge :: Maybe HighPrecMoney, -- do total
-    govtCharges :: Maybe HighPrecMoney, -- do total
-    baseFare :: HighPrecMoney, -- do total
-    waitingCharge :: Maybe HighPrecMoney, -- do total
-    rideExtraTimeFare :: Maybe HighPrecMoney, -- do total
-    nightShiftCharge :: Maybe HighPrecMoney, -- do total
-    nightShiftRateIfApplies :: Maybe Double, -- do total
-    fareParametersDetails :: FareParametersDetails, -- group on the basis of 5 details
-    customerCancellationDues :: Maybe HighPrecMoney, -- do total
-    tollCharges :: Maybe HighPrecMoney, -- do total
-    congestionCharge :: Maybe HighPrecMoney, -- do total
-    insuranceCharge :: Maybe HighPrecMoney, -- do total
-    cardCharge :: Maybe CardCharge, -- do total
-    currency :: Currency, -- currently currency will be same right ? -- abhi ke liye mankar chalte hai ki currency is same for the entire day
-    updatedAt :: UTCTime -- not required
+  { id :: Id FareParameters,
+    driverSelectedFare :: Maybe HighPrecMoney,
+    customerExtraFee :: Maybe HighPrecMoney,
+    serviceCharge :: Maybe HighPrecMoney,
+    parkingCharge :: Maybe HighPrecMoney,
+    govtCharges :: Maybe HighPrecMoney,
+    baseFare :: HighPrecMoney,
+    waitingCharge :: Maybe HighPrecMoney,
+    rideExtraTimeFare :: Maybe HighPrecMoney,
+    nightShiftCharge :: Maybe HighPrecMoney,
+    nightShiftRateIfApplies :: Maybe Double,
+    fareParametersDetails :: FareParametersDetails,
+    customerCancellationDues :: Maybe HighPrecMoney,
+    tollCharges :: Maybe HighPrecMoney,
+    congestionCharge :: Maybe HighPrecMoney,
+    insuranceCharge :: Maybe HighPrecMoney,
+    cardCharge :: Maybe CardCharge,
+    currency :: Currency,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 
