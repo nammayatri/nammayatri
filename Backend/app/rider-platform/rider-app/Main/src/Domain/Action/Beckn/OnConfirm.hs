@@ -134,9 +134,14 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
           Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         else do
           logInfo "Merchant not configured to send dashboard sms"
-  when (booking.status == DRB.NEW) $ void $ QRB.updateStatus booking.id DRB.CONFIRMED
+  case booking.bookingDetails of
+    DRB.DriverOfferDetails _ -> return ()
+    _ -> void $ QRB.updateStatus booking.id DRB.CONFIRMED
+-- TODO: Find a Better way to remove this from on_confirm.
+-- void $ QRB.updateStatus booking.id DRB.CONFIRMED
 onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
+-- TODO: Make sure booking status is new here.
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
 validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
