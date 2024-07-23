@@ -1285,7 +1285,7 @@ getEN stringKey =
         LOWEST_FEES_FROM -> "Lowest Fees from {}"
         ZERO_FEE_TILL -> "ZERO Fee till Oct 1st 2024"
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
-        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "We are currently live with only Autorickshaws in your city"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "We are currently not live in your city"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "Stay tuned for more updates"
         EXIT_THE_QUIZ -> "Exit the Quiz ?"
         EXIT_AND_START_AGAIN_LATER -> "Exit & start again later"

@@ -282,6 +282,7 @@ getVehicleName config =
     YATRISATHI -> case config.vehicleVariant of
                     "TAXI" -> "Non AC Taxi"
                     "SUV"  -> "AC SUV"
+                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
                     _      -> "AC Cab"
     _          -> case config.vehicleVariant of
                     "AUTO_RICKSHAW" -> "Auto Rickshaw"

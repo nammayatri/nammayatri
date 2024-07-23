@@ -619,6 +619,7 @@ getVehicleVariantImage variant =
                         "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
                         "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
                         "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+                        "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _ -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
@@ -639,6 +640,7 @@ getVehicleVariantImage variant =
                             "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                            "Asansol"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
                             _           -> fetchImage FF_ASSET "ic_vehicle_front"
                         "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
                         "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
@@ -652,6 +654,7 @@ getVariantRideType :: String -> String
 getVariantRideType variant =
   case getMerchant FunctionCall of
     YATRISATHI -> case variant of
+                    "AUTO_RICKSHAW" -> getString AUTO_RICKSHAW
                     "TAXI" -> getString TAXI
                     "SUV"  -> getString AC_SUV
                     "BIKE" -> getString BIKE_TAXI
