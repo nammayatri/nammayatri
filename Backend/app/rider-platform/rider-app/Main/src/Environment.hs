@@ -62,9 +62,7 @@ import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
-import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.Merchant as CM
-import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment as SE
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -291,15 +289,7 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup req = do
-    mbSubscriber <- Registry.withSubscriberCache performLookup req
-
-    totalSubIds <- QWhiteList.countTotalSubscribers
-    if totalSubIds == 0
-      then do
-        Registry.checkBlacklisted isBlackListed mbSubscriber
-      else do
-        Registry.checkWhitelisted isNotWhiteListed req.merchant_id mbSubscriber
+  registryLookup req = Registry.withSubscriberCache performLookup req
     where
       performLookup sub = do
         fetchFromDB sub.merchant_id >>= \registryUrl -> do
@@ -307,8 +297,6 @@ instance Registry Flow where
       fetchFromDB merchantId = do
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
-      isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
-      isNotWhiteListed subscriberId domain merchantId = QWhiteList.findBySubscriberIdAndDomainAndMerchantId (ShortId subscriberId) domain (Id merchantId) <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

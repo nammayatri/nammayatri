@@ -21,7 +21,7 @@ BecknConfig:
     vehicleCategory: VehicleCategory
     collectedBy: PaymentCollectedBy
     staticTermsUrl: Maybe BaseUrl
-    buyerFinderFee: Maybe Text
+    buyerFinderFee: Maybe Text # becomes redundant
     settlementWindow: Maybe Text
     searchTTLSec: Maybe Int
     selectTTLSec: Maybe Int
@@ -33,10 +33,11 @@ BecknConfig:
     trackTTLSec: Maybe Int
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
+    # blackListedVehicleCategories: -- shrey00 : type complete karo
 
   types:
     VehicleCategory:
-      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE"
+      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE, TWO_WHEELER"
 
     PaymentCollectedBy:
       enum: "BAP, BPP"
@@ -57,6 +58,10 @@ BecknConfig:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByMerchantIdDomainandMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, domain, merchantOperatingCityId]
 
   beamType:
     subscriberUrl: Text
