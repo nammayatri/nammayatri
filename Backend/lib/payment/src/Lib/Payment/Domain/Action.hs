@@ -30,6 +30,7 @@ module Lib.Payment.Domain.Action
   )
 where
 
+import Control.Applicative ((<|>))
 import Data.List (sortBy)
 import Data.Ord (comparing)
 import qualified Data.Text as T
@@ -451,7 +452,7 @@ orderStatusService personId orderId orderStatusCall = do
         )
         transactionUUID
       mapM_ updateRefundStatus refunds
-      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds, payerVpa = payerVpa}
+      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds, payerVpa = (payerVpa <|> ((.payerVpa) =<< upi))}
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
