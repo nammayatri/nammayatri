@@ -158,9 +158,11 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
                   amount = show (booking.estimatedTotalFare.amountInt)
                 }
           Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
-          void $ QRB.updateStatus booking.id DRB.CONFIRMED
         else do
           logInfo "Merchant not configured to send dashboard sms"
+  case booking.bookingDetails of
+    DRB.DriverOfferDetails _ -> return ()
+    _ -> void $ QRB.updateStatus booking.id DRB.CONFIRMED
 -- TODO: Find a Better way to remove this from on_confirm.
 -- void $ QRB.updateStatus booking.id DRB.CONFIRMED
 onConfirm (ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {..}) = do
