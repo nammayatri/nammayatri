@@ -378,7 +378,8 @@ view push state =
         state.data.driverGotoState.confirmGotoCancel,
         state.props.accountBlockedPopup,
         state.props.vehicleNSPopup && not state.props.rcDeactivePopup,
-        state.props.acExplanationPopup && not onRide && isCar
+        state.props.acExplanationPopup && not onRide && isCar,
+        state.props.referralEarned
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
@@ -2157,6 +2158,7 @@ popupModals push state =
           ST.VehicleNotSupported -> vehicleNotSupportedPopup state
           ST.BgLocationPopup -> bgLocPopup state
           ST.TopAcDriver -> topAcDriverPopUpConfig state
+          ST.ReferralEarned -> referralEarnedConfig state
       ]
   where 
   
@@ -2167,6 +2169,7 @@ popupModals push state =
       else if state.props.vehicleNSPopup then ST.VehicleNotSupported
       else if state.props.bgLocationPopup then ST.BgLocationPopup
       else if state.props.acExplanationPopup then ST.TopAcDriver
+      else if state.props.referralEarned then ST.ReferralEarned
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -2177,6 +2180,7 @@ popupModals push state =
           ST.VehicleNotSupported -> VehicleNotSupportedAC
           ST.BgLocationPopup -> BgLocationPopupAC
           ST.TopAcDriver -> ACExpController
+          ST.ReferralEarned -> ReferralEarnedAC
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

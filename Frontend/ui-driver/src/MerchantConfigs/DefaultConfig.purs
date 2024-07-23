@@ -114,7 +114,7 @@ config =
         },
       referral : 
         { isVisible : true,
-          showNew : false
+          showNew : true
         },
       notifications :
         { isVisible : true,

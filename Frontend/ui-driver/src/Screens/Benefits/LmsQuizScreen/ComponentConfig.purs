@@ -45,7 +45,7 @@ quizDoneButtonConfig label state isRetryButtonVisible =
              "CLOSE_QUIZ" -> getStringFromLocal state.props.selectedLanguage CLOSE
              "NEXT_QUESTION" -> getStringFromLocal state.props.selectedLanguage NEXT
              "CONFIRM_QUESTION" -> getStringFromLocal state.props.selectedLanguage CONFIRM
-             "RETRY_QUESTION" -> getStringFromLocal state.props.selectedLanguage RETRY_STR
+             "RETRY_QUESTION" -> (getStringFromLocal state.props.selectedLanguage RETRY_STR) <> " "
              _ -> ""
     , color = case label of
                "RETRY_QUESTION" -> Color.black700
