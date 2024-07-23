@@ -813,6 +813,7 @@ TransporterConfig:
     createDocumentRequired: Maybe Bool
     schedulePayoutForDay : Maybe Integer
     isDeviceIdChecksRequired: Maybe Bool
+    cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -850,6 +851,7 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: Maybe Int
     scheduledRideFilterExclusionThresholdHours: Maybe Int
     exotelStatusCheckSchedulerDelay: Maybe Seconds
+    cachedDevicesOSForSearchRequest: "Maybe [Text]"
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -896,6 +898,7 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
+    cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -944,6 +947,7 @@ TransporterConfig:
     minmRentalAndScheduledBookingLeadTimeHours: fromMaybe 24 (Kernel.Types.Common.Hours <$> minmRentalAndScheduledBookingLeadTimeHours)|E
     scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E|E
+    cachedDevicesOSForSearchRequest: maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1116,6 +1120,7 @@ TransporterConfig:
     minPickupDistanceThresholdForReferralPayout: "10"
     maxPayoutReferralForADay: "5"
     exotelStatusCheckSchedulerDelay: "120"
+    cachedDevicesOSForSearchRequest: "'{}'"
 
   excludedDefaultQueries:
     - findByPrimaryKey

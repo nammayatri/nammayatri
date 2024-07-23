@@ -234,3 +234,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dummy_show_driv
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_status_check_scheduler_delay integer  default 120;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cached_devices_os_for_search_request text[]  default '{}';
