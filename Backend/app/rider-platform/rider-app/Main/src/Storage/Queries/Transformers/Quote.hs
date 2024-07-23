@@ -22,6 +22,7 @@ import qualified Storage.Queries.TripTerms as QTT
 getQuoteDetails' :: Domain.Types.Quote.QuoteDetails -> (Domain.Types.FarePolicy.FareProductType.FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text)
 getQuoteDetails' quoteDetails =
   let (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId) = case quoteDetails of
+        DQ.AmbulanceDetails details -> (DFFP.AMBULANCE, Nothing, Nothing, Just $ getId details.id, Nothing)
         DQ.OneWayDetails details -> (DFFP.ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing)
         DQ.RentalDetails rentalDetails -> (DFFP.RENTAL, Nothing, Just $ getId rentalDetails.id, Nothing, Nothing)
         DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
@@ -50,7 +51,7 @@ getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOf
     qd <- getInterCityQuote specialZoneQuoteId
     maybe (throwError (InternalError "No inter city details")) return qd
   DFFP.AMBULANCE -> do
-    qd <- getDriverOfferDetails driverOfferId
+    qd <- getAmbulanceDetails driverOfferId
     maybe (throwError (InternalError "No driver offer details")) return qd
   where
     getRentalDetails rentalDetailsId' = do
@@ -60,6 +61,10 @@ getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOf
     getDriverOfferDetails driverOfferId' = do
       res <- maybe (pure Nothing) (QueryDO.findById . Id) driverOfferId'
       maybe (pure Nothing) (pure . Just . DQ.DriverOfferDetails) res
+
+    getAmbulanceDetails driverOfferId' = do
+      res <- maybe (pure Nothing) (QueryDO.findById . Id) driverOfferId'
+      maybe (pure Nothing) (pure . Just . DQ.AmbulanceDetails) res
 
     getSpecialZoneQuote specialZoneQuoteId' = do
       res <- maybe (pure Nothing) (QuerySZQ.findById . Id) specialZoneQuoteId'

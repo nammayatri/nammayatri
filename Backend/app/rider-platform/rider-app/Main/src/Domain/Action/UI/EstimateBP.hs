@@ -49,6 +49,7 @@ getEstimateBreakupFromQuote :: (EsqDBFlow m r, MonadFlow m, CH.HasClickhouseEnv 
 getEstimateBreakupFromQuote quote =
   case quote.quoteDetails of
     DQuote.OneWayDetails _ -> pure []
+    DQuote.AmbulanceDetails _ -> pure []
     DQuote.InterCityDetails interCityDetails -> pure $ transformInterCityDetails interCityDetails
     DQuote.RentalDetails rentalDetails -> pure $ transformRentalDetails rentalDetails
     DQuote.DriverOfferDetails driverOfferDetails -> do

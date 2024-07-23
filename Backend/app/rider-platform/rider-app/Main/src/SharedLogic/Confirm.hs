@@ -115,13 +115,9 @@ confirm DConfirmReq {..} = do
   fulfillmentId <-
     case quote.quoteDetails of
       DQuote.OneWayDetails _ -> pure Nothing
+      DQuote.AmbulanceDetails driverOffer -> getBPPQuoteId driverOffer now
       DQuote.RentalDetails rentalDetails -> return $ Just rentalDetails.id.getId
-      DQuote.DriverOfferDetails driverOffer -> do
-        estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
-        when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
-        when (driverOffer.validTill < now) $
-          throwError $ QuoteExpired quote.id.getId
-        pure (Just driverOffer.bppQuoteId)
+      DQuote.DriverOfferDetails driverOffer -> getBPPQuoteId driverOffer now
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
       DQuote.InterCityDetails details -> pure (Just details.id.getId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
@@ -182,6 +178,9 @@ confirm DConfirmReq {..} = do
     mkConfirmQuoteDetails quoteDetails fulfillmentId = do
       case quoteDetails of
         DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
+        DQuote.AmbulanceDetails _ -> do
+          bppQuoteId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
+          pure $ ConfirmAmbulanceDetails bppQuoteId
         DQuote.RentalDetails DRental.RentalDetails {id} -> pure $ ConfirmRentalDetails id.getId
         DQuote.InterCityDetails details -> pure $ ConfirmInterCityDetails details.id.getId
         DQuote.DriverOfferDetails _ -> do
@@ -194,6 +193,11 @@ confirm DConfirmReq {..} = do
           estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration) curBookingStartTime
           estRideEndTimeByDist = addUTCTime (intToNominalDiffTime $ (estimatedDistanceInKm * 3 * 60) + (30 * 60)) curBookingStartTime -- TODO: Make config later
       max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
+    getBPPQuoteId driverOffer now = do
+      estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
+      when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
+      when (driverOffer.validTill < now) $ throwError $ QuoteExpired quote.id.getId
+      pure (Just driverOffer.bppQuoteId)
 
 buildBooking ::
   ( MonadFlow m,
@@ -268,6 +272,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
   where
     buildBookingDetails = case quote.quoteDetails of
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
+      DQuote.AmbulanceDetails _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails
       DQuote.RentalDetails _ -> pure $ DRB.RentalDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, ..})
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
@@ -283,6 +288,11 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWayBookingDetails {..}
+    buildAmbulanceDetails = do
+      -- we need to throw errors here because of some redundancy of our domain model
+      toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
+      distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      pure DRB.AmbulanceBookingDetails {..}
     buildOneWaySpecialZoneDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")

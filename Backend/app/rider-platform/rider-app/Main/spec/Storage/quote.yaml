@@ -32,7 +32,7 @@ Quote:
 
   types:
     QuoteDetails:
-      enum: OneWayDetails OneWayQuoteDetails, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote
+      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote
       derive': Generic,Show
 
     OneWayQuoteDetails:
@@ -40,7 +40,7 @@ Quote:
       derive': Generic,Show
 
     QuoteAPIDetails:
-      enum: OneWayAPIDetails OneWayQuoteAPIDetails, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity
+      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity
       derive': Generic,Show
 
     OneWayQuoteAPIDetails:
