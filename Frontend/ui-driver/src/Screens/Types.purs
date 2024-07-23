@@ -48,7 +48,7 @@ import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
 import Foreign (Foreign)
 import Screens (ScreenName)
-import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..))
+import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..),CoinEntity(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
 import RemoteConfig.Types as RC
@@ -2117,7 +2117,8 @@ type MyPlanData = {
   manualDueAmount :: Number,
   mandateStatus :: String,
   selectedDue :: String,
-  dueBoothCharges :: Maybe Number
+  dueBoothCharges :: Maybe Number,
+  coinEntity :: Maybe CoinEntity
 }
 
 type MyPlanProps = {
@@ -2239,6 +2240,7 @@ type TransactionInfo = {
   isAutoPayFailed :: Boolean,
   feeType :: FeeType,
   numOfDriverFee :: Int,
+  isCoinDiscountApplied :: Boolean,
   isCoinCleared :: Boolean
 }
 type PaymentListItem = {
@@ -2516,8 +2518,16 @@ type CalendarState = {
 type FaqQuestions = {
   question :: String,
   videoLink :: Maybe String,
-  answer :: Array String,
+  answer :: Array AnswerConfig,
   showTable :: Boolean
+}
+
+
+type AnswerConfig = {
+  answer :: String,
+  hyperLinkText :: Maybe String,
+  hyperLinkUrl :: Maybe String,
+  hyperLinkColor :: Maybe String
 }
 
 type WeeklyEarning = {

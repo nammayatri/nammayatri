@@ -413,7 +413,7 @@ interOperableInfoLayout config =
     , interOperableInfo (getString WAITING_CHARGES) "ny_ic_green_check" "-"
     , interOperableInfo (getString CUSTOMER_TIPS) "ny_ic_green_check" "-"
     , interOperableInfo (getString CANCELLATION_CHARGES) "ny_ic_green_check" "-"
-    , interOperableInfo (getString $ MERCHANT_COINS (getString $ MERCHANT_NAME "")) "ny_ic_green_check" "-"
+    , interOperableInfo (getString $ MERCHANT_POINTS (getString $ MERCHANT_NAME "")) "ny_ic_green_check" "-"
    ]
 
 interOperableInfo :: forall w. String -> String -> String -> PrestoDOM (Effect Unit) w

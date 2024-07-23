@@ -226,7 +226,7 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory  config =
 constructDues :: Array DriverDuesEntity -> Boolean -> Array DueItem
 constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
   let offerAndPlanDetails = fromMaybe "" item.offerAndPlanDetails
-      feeBreakup = if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge (max 0.0 (item.planAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges))) item.totalRides else ""
+      feeBreakup = if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge item.coinDiscountAmount (max 0.0 (item.driverFeeAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges))) item.totalRides else ""
       noOfRides = item.totalRides + fromMaybe 0 item.specialZoneRideCount
   in
   {    
@@ -249,16 +249,16 @@ constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity it
                                 false -> item.coinDiscountAmount
   }) duesArr)
 
-getFeeBreakup :: Maybe Int -> Number -> Int -> String
-getFeeBreakup maxRidesEligibleForCharge planAmount totalRides =
+getFeeBreakup :: Maybe Int -> Maybe Number -> Number -> Int -> String
+getFeeBreakup maxRidesEligibleForCharge pointsApplied driverFeeAmount totalRides =
     case maxRidesEligibleForCharge of
-        Nothing ->  "₹" <> getFixedTwoDecimals planAmount
+        Nothing ->  (if driverFeeAmount > 0.0 then "₹" <> getFixedTwoDecimals driverFeeAmount else "") <> maybe "" ( \x -> if x == 0.0 then "" else " + " <> getFixedTwoDecimals x ) pointsApplied
         Just maxRides -> do
             let ridesToConsider = min totalRides maxRides
             if ridesToConsider /= 0 then 
-                show ridesToConsider <> " "<> getString (if ridesToConsider >1 then RIDES else RIDE) <>" x ₹" <> getFixedTwoDecimals (planAmount/ (toNumber ridesToConsider)) <> " " <> getString GST_INCLUDE
+                (if driverFeeAmount > 0.0 then "₹" <> getFixedTwoDecimals driverFeeAmount else "") <> maybe "" ( \x ->if x == 0.0 then "" else  " + " <> getFixedTwoDecimals x ) pointsApplied
             else getString $ NO_OPEN_MARKET_RIDES "NO_OPEN_MARKET_RIDES"
-    
+
 
 getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
 getPlanAmountConfig plan = case plan of
