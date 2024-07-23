@@ -236,6 +236,7 @@ type CoinsConfig = {
   oneOrTwoStarRatingCoins :: String,
   rideCancellationCoins :: String,
   whatAreYatriCoinFAQ :: String,
+  coinTermsAndConditions :: String,
   howToEarnYatriCoinFAQ :: String,
   howToRedeemYatriCoinFAQ :: String,
   rideCompletedCoinEvent :: Boolean,

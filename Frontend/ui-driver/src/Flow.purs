@@ -2955,10 +2955,11 @@ paymentHistoryFlow = do
       else nyPaymentFlow state.data.planData "MYPLAN"
     EntityDetailsAPI state id -> do
       paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
+      let cityConfig = HU.getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       case paymentEntityDetails of
         Right (HistoryEntryDetailsEntityV2Resp resp) ->
             modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
-              data{ transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp) state.data.gradientConfig appConfig.subscriptionConfig.showFeeBreakup)}
+              data{ transactionDetails = (buildTransactionDetails (HistoryEntryDetailsEntityV2Resp resp) state.data.gradientConfig appConfig.subscriptionConfig.showFeeBreakup cityConfig.gstPercentage)}
             })
         Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       paymentHistoryFlow

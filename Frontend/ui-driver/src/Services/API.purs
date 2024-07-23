@@ -2518,8 +2518,14 @@ newtype PlanEntity = PlanEntity {
   autopayDues :: Number,
   dues :: Array DriverDuesEntity,
   bankErrors :: Array BankError,
-  dueBoothCharges :: Maybe Number
+  dueBoothCharges :: Maybe Number,
+  coinEntity :: Maybe CoinEntity
 }
+
+
+newtype CoinEntity = CoinEntity { 
+  coinDiscountUpto :: Number
+  }
 
 newtype DriverDuesEntity = DriverDuesEntity {
     autoPayStage :: Maybe AutopayPaymentStage, -- AutopayPaymentStage NOTIFICATION_SCHEDULED | NOTIFICATION_ATTEMPTING | EXECUTION_SCHEDULED | EXECUTION_ATTEMPTING | EXECUTION_SUCCESS
@@ -2603,6 +2609,12 @@ instance showOfferEntity :: Show OfferEntity where show = genericShow
 instance decodeOfferEntity :: Decode OfferEntity where decode = defaultDecode
 instance encodeOfferEntity :: Encode OfferEntity where encode = defaultEncode 
 
+derive instance genericCoinEntity :: Generic CoinEntity _
+derive instance newtypeCoinEntity :: Newtype CoinEntity _
+instance standardEncodeCoinEntity :: StandardEncode CoinEntity where standardEncode (CoinEntity res) = standardEncode res
+instance showCoinEntity :: Show CoinEntity where show = genericShow
+instance decodeCoinEntity :: Decode CoinEntity where decode = defaultDecode
+instance encodeCoinEntity :: Encode CoinEntity where encode = defaultEncode 
 
 
 -------------------------------------------------- SubscribePlan ------------------------------
@@ -2982,6 +2994,8 @@ newtype DriverFeeInfoEntity = DriverFeeInfoEntity {
     offerAndPlanDetails :: Maybe String,
     rideTakenOn :: String,
     driverFeeAmount :: Number,
+    gst :: Maybe Number,
+    gstPercentage :: Maybe Number,
     specialZoneRideCount :: Maybe Int,
     totalSpecialZoneCharges :: Maybe Number,
     maxRidesEligibleForCharge :: Maybe Int,

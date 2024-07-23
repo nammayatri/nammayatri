@@ -159,6 +159,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -198,6 +199,7 @@ config =
               waitingCharges : 2.00,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -237,6 +239,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : { showLearnMore : true, learnMoreVideoLink : "https://www.youtube.com/shorts/NUTNKPzslpw" },
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -276,6 +279,7 @@ config =
               waitingCharges : 0.75,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -315,6 +319,7 @@ config =
               waitingCharges : 1.00,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -354,6 +359,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -393,6 +399,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -432,6 +439,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -471,6 +479,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image : "ny_ic_auto_side_view",
@@ -510,6 +519,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -553,6 +563,7 @@ config =
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
               rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -596,6 +607,7 @@ config =
             waitingCharges : 1.00,
             waitingChargesConfig : defWaitingChargesConfig,
             rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+            gstPercentage : "18",
             rateCardConfig : defRateCardConfig,
             assets :{
               auto_image : "ic_auto_rickshaw",
@@ -699,6 +711,7 @@ config =
       oneOrTwoStarRatingCoins : "-1",
       rideCancellationCoins : "-5",
       whatAreYatriCoinFAQ : "",
+      coinTermsAndConditions : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
       howToEarnYatriCoinFAQ : "",
       howToRedeemYatriCoinFAQ : "",
       rideCompletedCoinEvent : false,

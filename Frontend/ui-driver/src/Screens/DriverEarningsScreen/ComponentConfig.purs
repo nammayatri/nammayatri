@@ -14,6 +14,8 @@
 -}
 module Screens.DriverEarningsScreen.ComponentConfig where
 
+import Mobility.Prelude
+
 import Common.Types.App (LazyCheck(..))
 import Components.Calendar.Controller as CalendarConfig
 import Components.ErrorModal as ErrorModal
@@ -23,23 +25,22 @@ import Components.PopUpModal as PopUpModalConfig
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import Components.PrimaryButton.View as PrimaryButton
 import Components.RequestInfoCard as RequestInfoCard
+import Data.Int (toNumber)
 import Data.Maybe (isJust)
 import Engineering.Helpers.Utils (getCurrentDay)
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
 import Font.Style (Style(..))
 import Helpers.Utils as HU
+import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
+import LocalStorage.Cache (getValueFromCache)
 import Prelude ((<>), (==), (*), show, not, (&&), ($))
-import Data.Int (toNumber)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), background)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
-import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
-import Mobility.Prelude
-import LocalStorage.Cache (getValueFromCache)
-import JBridge as JB
-import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Styles.Colors as Color
 
 primaryButtonConfig :: Boolean -> PrimaryButtonConfig.Config
 primaryButtonConfig isActive =
@@ -64,13 +65,13 @@ genericHeaderConfig state =
 
     headerText =
       if state.props.subView == ST.FAQ_VIEW then
-        getString YATRI_COINS_FAQS
+        getString YATRI_POINTS_FAQS
       else if state.props.subView == ST.FAQ_QUESTON_VIEW then
         ""
       else if not enableYatriCoins then
         getString EARNINGS
       else
-        getString USE_COINS
+        getString USE_POINTS
   in
     GenericHeaderConfig.config
       { height = WRAP_CONTENT
@@ -162,7 +163,7 @@ getPopupConfig state = case state.props.popupType of
     }
   ST.COIN_TO_CASH_FAIL_POPUP ->
     { optionButtonOrientation: "VERTICAL"
-    , primaryText: getString FAILED_TO_USE_COINS_PLEASE_TRY_AGAIN_LATER
+    , primaryText: getString FAILED_TO_USE_POINTS_PLEASE_TRY_AGAIN_LATER
     , secondaryText: ""
     , option1: getString TRY_AGAIN
     , option2: getString GO_BACK
@@ -172,19 +173,19 @@ getPopupConfig state = case state.props.popupType of
     }
   ST.NO_COINS_POPUP ->
     { optionButtonOrientation: "HORIZONTAL"
-    , primaryText: getString NO_COINS_AVAILABLE
-    , secondaryText: getString $ EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"
+    , primaryText: getString NO_POINTS_AVAILABLE
+    , secondaryText: getString $ EARN_POINTS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_POINTS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"
     , option1: getString OKAY
     , option2: getString GO_BACK
     , secondaryTextVisibility: false
     , option2Visibility: false
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_no_coins"
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_no_POINTS"
     }
   ST.COINS_EXPIRING_POPUP ->
     { optionButtonOrientation: "VERTICAL"
-    , primaryText: getString COINS_EXPIRING
-    , secondaryText: show state.data.expiringCoins <> getString COINS_EXPIRING_IN_THE_NEXT <> show state.data.expiringDays <> getString DAYS_USE_THEM_BEFORE_THEY_EXPIRE
-    , option1: getString USE_COINS_NOW
+    , primaryText: getString POINTS_EXPIRING
+    , secondaryText: show state.data.expiringCoins <> getString POINTS_EXPIRING_IN_THE_NEXT <> show state.data.expiringDays <> getString DAYS_USE_THEM_BEFORE_THEY_EXPIRE
+    , option1: getString USE_POINTS_NOW
     , option2: getString MAYBE_LATER
     , secondaryTextVisibility: false
     , option2Visibility: true
@@ -240,11 +241,11 @@ coinsInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
 coinsInfoCardConfig _ =
   RequestInfoCard.config
     { title
-      { text = getString WHAT_WILL_MY_COINS_BE_CONVERTED_TO
+      { text = getString WHAT_WILL_MY_POINTS_BE_CONVERTED_TO
       , color = Color.black800
       }
     , primaryText
-      { text = getString $ YATRI_COINS_USAGE_POPUP "YATRI_COINS_USAGE_POPUP"
+      { text = getString $ YATRI_POINTS_USAGE_POPUP "YATRI_POINTS_USAGE_POPUP"
       , padding = Padding 16 16 0 0
       , color = Color.black700
       }
@@ -281,12 +282,12 @@ errorModalConfig state =
       , margin = MarginBottom 61
       }
     , errorConfig
-      { text = getString if state.props.subView == ST.EARNINGS_VIEW then NO_RIDE_HISTORY_AVAILABLE else COMPLETE_FIRST_RIDE_TO_UNLOCK_COINS
+      { text = getString if state.props.subView == ST.EARNINGS_VIEW then NO_RIDE_HISTORY_AVAILABLE else COMPLETE_FIRST_RIDE_TO_UNLOCK_POINTS
       , margin = MarginBottom 7
       , color = Color.black900
       }
     , errorDescriptionConfig
-      { text = if state.props.subView == ST.EARNINGS_VIEW then getString YOU_HAVE_NOT_COMPLETED_A_RIDE_YET else getString $ EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_COINS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"
+      { text = if state.props.subView == ST.EARNINGS_VIEW then getString YOU_HAVE_NOT_COMPLETED_A_RIDE_YET else getString $ EARN_POINTS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS "EARN_POINTS_BY_TAKING_RIDES_AND_REFERRING_THE_APP_TO_OTHERS"
       , color = Color.black700
       }
     , buttonConfig

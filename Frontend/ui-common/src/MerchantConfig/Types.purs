@@ -114,6 +114,7 @@ type CityConfig = {
   waitingChargesConfig :: WaitingChargesConfig,
   rentalWaitingChargesConfig :: WaitingChargesConfig,
   rateCardConfig :: RateCardConfig,
+  gstPercentage :: String,
   assets :: Assets
 }
 

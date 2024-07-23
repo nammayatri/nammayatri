@@ -721,7 +721,8 @@ getCityConfig cityConfig cityName = do
                           assets :{
                             auto_image :  "ny_ic_black_yellow_auto_side_view",
                             onboarding_auto_image : "ny_ic_auto_right_side_yellow"
-                          }
+                          },
+                          gstPercentage : "18"
                         }
   maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
   where 

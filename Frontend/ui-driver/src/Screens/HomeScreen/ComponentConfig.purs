@@ -2163,7 +2163,7 @@ introducingCoinsPopup state = PopUpModal.config {
     , backgroundClickable = false
     , optionButtonOrientation = "HORIZONTAL"
   ,primaryText {
-      text = getString INTRODUCING_YATRI_COINS <> " 🎉"
+      text = getString INTRODUCING_YATRI_POINTS <> " 🎉"
     , margin = MarginHorizontal 16 16
     , color = Color.black800
     , textStyle = Heading2
@@ -2184,7 +2184,7 @@ introducingCoinsPopup state = PopUpModal.config {
     , height = V 250
     },
   secondaryText {
-    text = getString $ NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS "NOW_EARN_COINS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS"
+    text = getString $ NOW_EARN_POINTS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS "NOW_EARN_POINTS_FOR_EVERY_RIDE_AND_REFERRAL_AND_USE_THEM_TO_GET_REWARDS"
     , margin = Margin 16 4 16 0
     , color = Color.black700
     , textStyle = SubHeading2
@@ -2335,14 +2335,14 @@ createCoinPopupConfig primary secondary secondaryVis opt1 optHtml optHtmlVis cov
 
 getCoinEarnedPopupConfig :: ST.HomeScreenState -> CoinEarnedPopupConfig
 getCoinEarnedPopupConfig state = case state.props.coinPopupType of
-  ST.RIDE_MORE_EARN_COIN -> createCoinPopupConfig (getString RIDE_MORE_AND_EARN_COINS) (getString TAKE_MORE_RIDES_TO_EARN_MORE_COINS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS) true (getString OKAY) (getString CHECK_YATRI_COINS) true (HU.fetchImage HU.FF_ASSET "ny_ic_ride_more_earn_more") "" "" "" false false
-  ST.TWO_MORE_RIDES -> createCoinPopupConfig (getString TWO_MORE_RIDES_TO_GO) (getString $ TAKE_TWO_MORE_RIDES_TO_EARN_COINS $ state.data.config.coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_two_more_rides") "" "" "" false false
-  ST.ONE_MORE_RIDE -> createCoinPopupConfig (getString ONE_MORE_RIDE_TO_GO) (getString $ TAKE_ONE_MORE_RIDE_TO_EARN_COINS $ state.data.config.coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_one_more_ride") "" "" "" false false
-  ST.EIGHT_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_COINS) (getString CHECK_YATRI_COINS) false (HU.fetchImage HU.FF_ASSET "ny_ic_eight_rides_completed") "" (getString CONGRATULATIONS <> "🎉") "" true false
-  ST.FIVE_RIDE_COMPLETED -> createCoinPopupConfig (getString ONLY_3_MORE_RIDES_FOR_100_COINS) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_COINS) (getString CHECK_YATRI_COINS) false (HU.fetchImage HU.FF_ASSET "ny_ic_five_rides_completed") "" (getString CONGRATULATIONS <> "🎉") (getString YOU_GOT_50_COINS) true true
-  ST.TWO_RIDE_COMPLETED -> createCoinPopupConfig (getString ONLY_3_MORE_RIDES_FOR_50_COINS) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_COINS) (getString CHECK_YATRI_COINS) false (HU.fetchImage HU.FF_ASSET "ny_ic_two_rides_completed") "" (getString CONGRATULATIONS <> "🎉") (getString YOU_GOT_10_COINS) true true
-  ST.REFER_AND_EARN_COIN -> createCoinPopupConfig (getString $ REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_COINS") "" false (getString REFER_NOW) (getString LATER) true (HU.fetchImage HU.FF_ASSET "ny_ic_refer_and_earn_coin") "" "" "" false false
-  ST.CONVERT_COINS_TO_CASH -> createCoinPopupConfig (getString CONVERT_YOUR_COINS_TO_DISCOUNT) (getString CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION) true (getString CONVERT_NOW) (getString LATER) true "" (state.data.config.coinsConfig.coinConversionPopupLottie) "" "" false false
+  ST.RIDE_MORE_EARN_COIN -> createCoinPopupConfig (getString RIDE_MORE_AND_EARN_POINTS) (getString TAKE_MORE_RIDES_TO_EARN_MORE_POINTS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS) true (getString OKAY) (getString CHECK_YATRI_POINTS) true (HU.fetchImage HU.FF_ASSET "ny_ic_ride_more_earn_more") "" "" "" false false
+  ST.TWO_MORE_RIDES -> createCoinPopupConfig (getString TWO_MORE_RIDES_TO_GO) (getString $ TAKE_TWO_MORE_RIDES_TO_EARN_POINTS $ state.data.config.coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_two_more_rides") "" "" "" false false
+  ST.ONE_MORE_RIDE -> createCoinPopupConfig (getString ONE_MORE_RIDE_TO_GO) (getString $ TAKE_ONE_MORE_RIDE_TO_EARN_POINTS $ state.data.config.coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_one_more_ride") "" "" "" false false
+  ST.EIGHT_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.FF_ASSET "ny_ic_eight_rides_completed") "" (getString CONGRATULATIONS <> "🎉") "" true false
+  ST.FIVE_RIDE_COMPLETED -> createCoinPopupConfig (getString ONLY_3_MORE_RIDES_FOR_100_POINTS) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.FF_ASSET "ny_ic_five_rides_completed") "" (getString CONGRATULATIONS <> "🎉") (getString YOU_GOT_50_POINTS) true true
+  ST.TWO_RIDE_COMPLETED -> createCoinPopupConfig (getString ONLY_3_MORE_RIDES_FOR_50_POINTS) (getString LIMITED_TIME_OFFER_UNTIL_JUNE_30) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.FF_ASSET "ny_ic_two_rides_completed") "" (getString CONGRATULATIONS <> "🎉") (getString YOU_GOT_10_POINTS) true true
+  ST.REFER_AND_EARN_COIN -> createCoinPopupConfig (getString $ REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_POINTS "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_POINTS") "" false (getString REFER_NOW) (getString LATER) true (HU.fetchImage HU.FF_ASSET "ny_ic_refer_and_earn_coin") "" "" "" false false
+  ST.CONVERT_COINS_TO_CASH -> createCoinPopupConfig (getString CONVERT_YOUR_POINTS_TO_DISCOUNT) (getString CONVERT_YOUR_POINTS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION) true (getString CONVERT_NOW) (getString LATER) true "" (state.data.config.coinsConfig.coinConversionPopupLottie) "" "" false false
   _ -> defaultCoinPopupConfig
 
 isAcWorkingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
