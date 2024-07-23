@@ -93,7 +93,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
         Beam.distance = Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
-        Beam.fareProductType = getFareProductType bookingDetails,
+        Beam.fareProductType = getFareProductType bookingDetails vehicleServiceTierType,
         Beam.otpCode = getOtpCode bookingDetails,
         Beam.stopLocationId = getStopLocationId bookingDetails,
         Beam.toLocationId = getToLocationId bookingDetails,

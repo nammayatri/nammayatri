@@ -12,6 +12,7 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -33,14 +34,16 @@ getDistance = \case
   DRB.InterCityDetails details -> Just details.distance
   DRB.AmbulanceDetails details -> Just details.distance
 
-getFareProductType :: Domain.Types.Booking.BookingDetails -> Domain.Types.FarePolicy.FareProductType.FareProductType
-getFareProductType = \case
+getFareProductType :: Domain.Types.Booking.BookingDetails -> Domain.Types.VehicleServiceTier.VehicleServiceTierType -> Domain.Types.FarePolicy.FareProductType.FareProductType
+getFareProductType bookingDetails vehicleServiceTierType = case bookingDetails of
   DRB.OneWayDetails _ -> DQuote.ONE_WAY
   DRB.RentalDetails _ -> DQuote.RENTAL
-  DRB.DriverOfferDetails _ -> DQuote.DRIVER_OFFER
+  DRB.DriverOfferDetails _ -> if vehicleServiceTierType `elem` ambulanceVariants then DQuote.AMBULANCE else DQuote.DRIVER_OFFER
   DRB.OneWaySpecialZoneDetails _ -> DQuote.ONE_WAY_SPECIAL_ZONE
   DRB.InterCityDetails _ -> DQuote.INTER_CITY
   DRB.AmbulanceDetails _ -> DQuote.AMBULANCE
+  where
+    ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
 
 getOtpCode :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getOtpCode = \case
