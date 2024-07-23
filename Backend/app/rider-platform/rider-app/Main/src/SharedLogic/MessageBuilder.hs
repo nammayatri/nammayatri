@@ -31,6 +31,8 @@ module SharedLogic.MessageBuilder
     buildTicketBookingCancelled,
     BuildFRFSTicketBookedMessageReq (..),
     buildFRFSTicketBookedMessage,
+    BuildSendRideEndOTPMessageReq (..),
+    buildSendRideEndOTPMessage,
   )
 where
 
@@ -82,6 +84,20 @@ buildSendBookingOTPMessage merchantOperatingCityId req = do
     merchantMessage.message
       & T.replace (templateText "otp") req.otp
       & T.replace (templateText "amount") req.amount
+
+newtype BuildSendRideEndOTPMessageReq = BuildSendRideEndOTPMessageReq
+  { otp :: Text
+  }
+  deriving (Generic)
+
+buildSendRideEndOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendRideEndOTPMessageReq -> m Text
+buildSendRideEndOTPMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_RIDE_END_OTP
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_RIDE_END_OTP))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "otp") req.otp
 
 data BuildGenericMessageReq = BuildGenericMessageReq {}
   deriving (Generic)

@@ -51,11 +51,13 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -72,6 +74,7 @@ import Tools.Event
 import Tools.Maps (LatLong)
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
+import qualified Tools.SMS as Sms
 import TransactionLogs.Types
 
 data BookingDetails = BookingDetails
@@ -420,6 +423,31 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   unless isInitiatedByCronJob $ do
     fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
     Notify.notifyOnRideStarted booking ride
+  case booking.bookingDetails of
+    DRB.RentalDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
+    DRB.InterCityDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
+    _ -> pure ()
+  where
+    sendRideEndOTPMessage = fork "sending ride end otp sms" $ do
+      let merchantOperatingCityId = booking.merchantOperatingCityId
+      merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      if merchantConfig.enableDashboardSms
+        then do
+          customer <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+          mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+          smsCfg <- asks (.smsCfg)
+          let countryCode = fromMaybe "+91" customer.mobileCountryCode
+          let phoneNumber = countryCode <> mobileNumber
+              sender = smsCfg.sender
+          message <-
+            MessageBuilder.buildSendRideEndOTPMessage merchantOperatingCityId $
+              MessageBuilder.BuildSendRideEndOTPMessageReq
+                { otp = show endOtp_
+                }
+          Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+        else do
+          logInfo "Merchant not configured to send dashboard sms"
+          pure ()
 
 rideCompletedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
