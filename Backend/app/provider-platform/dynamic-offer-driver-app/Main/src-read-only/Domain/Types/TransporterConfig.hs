@@ -20,6 +20,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import qualified Tools.Beam.UtilsTH
 
 data TransporterConfigD (s :: UsageSafety) = TransporterConfig
@@ -42,6 +43,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     bankErrorExpiry :: Kernel.Prelude.NominalDiffTime,
     bookAnyVehicleDowngradeLevel :: Kernel.Prelude.Int,
     cacheOfferListByDriverId :: Kernel.Prelude.Bool,
+    cachedDevicesOSForSearchRequest :: [Kernel.Types.Version.DeviceType],
     canAddCancellationFee :: Kernel.Prelude.Bool,
     canDowngradeToHatchback :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,

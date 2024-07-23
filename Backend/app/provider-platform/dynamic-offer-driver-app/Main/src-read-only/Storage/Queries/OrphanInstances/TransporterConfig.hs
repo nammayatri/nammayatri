@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.TransporterConfig where
 
 import qualified Data.Aeson
+import qualified Data.Text
 import qualified Domain.Types.Location
 import qualified Domain.Types.TransporterConfig
 import Kernel.Beam.Functions
@@ -43,6 +44,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             bankErrorExpiry = Kernel.Utils.Common.secondsToNominalDiffTime bankErrorExpiry,
             bookAnyVehicleDowngradeLevel = bookAnyVehicleDowngradeLevel,
             cacheOfferListByDriverId = cacheOfferListByDriverId,
+            cachedDevicesOSForSearchRequest = maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest,
             canAddCancellationFee = canAddCancellationFee,
             canDowngradeToHatchback = canDowngradeToHatchback,
             canDowngradeToSedan = canDowngradeToSedan,
@@ -206,6 +208,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.bankErrorExpiry = Kernel.Utils.Common.nominalDiffTimeToSeconds bankErrorExpiry,
         Beam.bookAnyVehicleDowngradeLevel = bookAnyVehicleDowngradeLevel,
         Beam.cacheOfferListByDriverId = cacheOfferListByDriverId,
+        Beam.cachedDevicesOSForSearchRequest = Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest),
         Beam.canAddCancellationFee = canAddCancellationFee,
         Beam.canDowngradeToHatchback = canDowngradeToHatchback,
         Beam.canDowngradeToSedan = canDowngradeToSedan,

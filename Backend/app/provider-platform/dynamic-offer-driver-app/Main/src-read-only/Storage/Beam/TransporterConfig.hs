@@ -39,6 +39,7 @@ data TransporterConfigT f = TransporterConfigT
     bankErrorExpiry :: B.C f Kernel.Types.Common.Seconds,
     bookAnyVehicleDowngradeLevel :: B.C f Kernel.Prelude.Int,
     cacheOfferListByDriverId :: B.C f Kernel.Prelude.Bool,
+    cachedDevicesOSForSearchRequest :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     canAddCancellationFee :: B.C f Kernel.Prelude.Bool,
     canDowngradeToHatchback :: B.C f Kernel.Prelude.Bool,
     canDowngradeToSedan :: B.C f Kernel.Prelude.Bool,
