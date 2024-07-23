@@ -99,3 +99,7 @@ ALTER TABLE atlas_app.booking ADD COLUMN estimated_application_fee numeric(30,2)
 --- Drop columns section begins. Please be careful while running ---
 ALTER TABLE atlas_app.booking DROP COLUMN estimate_id;
 --- Drop columns section ends ---
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN is_dashboard_request boolean ;

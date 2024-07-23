@@ -58,6 +58,7 @@ SearchRequest:
     totalRidesCount: Maybe Int
     isAdvanceBookingEnabled: Maybe Bool
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
+    isDashboardRequest: Maybe Bool
 
   types:
     SearchRequestStatus:
