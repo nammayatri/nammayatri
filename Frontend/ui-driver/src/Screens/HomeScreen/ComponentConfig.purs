@@ -2425,3 +2425,57 @@ topAcDriverPopUpConfig state = let
       }
     }
   in config'
+
+referralEarnedConfig :: ST.HomeScreenState -> PopUpModal.Config
+referralEarnedConfig state =
+  let
+    config = PopUpModal.config
+    requestInfoCardConfig' =
+      config
+        { primaryText 
+          { visibility = GONE
+          }
+        , secondaryText 
+          { text = "Referred customer completed their 1st ride. Refer more to earn more"
+          , margin = MarginTop 8
+          , textStyle = SubHeading2
+          }
+        , topTitle 
+          { text = "₹100 referral bonus earned!"
+          , textStyle = Heading2
+          , margin = MarginBottom 8
+          , visibility = VISIBLE
+          }
+        , coverImageConfig
+          { imageUrl = fetchImage COMMON_ASSET "ny_ic_referral_earned"
+          , height = V $ JB.getHeightFromPercent 30
+          , width = V $ (EHC.screenWidth unit) - 64
+          , visibility = VISIBLE
+          , margin = MarginLeft 0
+          }
+        , option1 
+          { text = getString CHECK_NOW
+          , width = MATCH_PARENT
+          , margin = MarginTop 24
+          , background = Color.black900
+          , color = Color.yellow900
+          }
+        , option2
+          { text = getString OKAY
+          , width = MATCH_PARENT
+          , margin = MarginTop 8
+          , background = Color.transparent
+          , color = Color.black650
+          , strokeColor = Color.transparent
+          }
+        , backgroundColor = Color.black9000
+        , gravity = CENTER
+        , padding = Padding 16 20 16 16
+        , cornerRadius = Corners 16.0 true true true true
+        , margin = MarginHorizontal 16 16
+        , buttonLayoutMargin = MarginLeft 0
+        , optionButtonOrientation = "VERTICAL"
+        , dismissPopup = true
+        }
+  in
+    requestInfoCardConfig'

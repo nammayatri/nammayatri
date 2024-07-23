@@ -6,7 +6,7 @@ import Prelude
 import PrestoDOM
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Benefits.BenefitsScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Benefits.BenefitsScreen.Controller (Action(..), ScreenOutput, eval, getRemoteBannerConfigs)
 import Screens.Types
 import Screens.Benefits.BenefitsScreen.ComponentConfig
 import Styles.Colors as Color
@@ -23,7 +23,7 @@ import Language.Types (STR(..))
 import Components.PrimaryButton as PrimaryButton
 import Engineering.Helpers.Commons
 import Effect.Aff (launchAff)
-import Types.App (defaultGlobalState)
+import Types.App (defaultGlobalState, GlobalState)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Services.Backend as Remote
@@ -35,7 +35,7 @@ import Debug (spy)
 import Mobility.Prelude
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Storage (KeyStore(..), getValueToLocalStore)
-import Data.Maybe (isJust, fromMaybe, Maybe(..))
+import Data.Maybe (isJust, fromMaybe, Maybe(..), maybe)
 import Effect.Uncurried (runEffectFn4)
 import ConfigProvider
 import Data.Int(fromNumber, toNumber, ceil)
@@ -45,6 +45,11 @@ import Data.Array (length)
 import Data.Either (Either(..))
 import Locale.Utils
 import PrestoDOM.Animation as PrestoAnim
+import CarouselHolder as CarouselHolder
+import Components.BannerCarousel as BannerCarousel
+import PrestoDOM.List (ListItem, preComputeListItem)
+import Engineering.Helpers.Commons as EHC
+import Presto.Core.Flow (Flow)
 
 screen :: BenefitsScreenState -> Screen Action BenefitsScreenState ScreenOutput
 screen initialState =
@@ -65,6 +70,7 @@ screen initialState =
                 case moduleResp of
                   Right modules -> liftFlow $ push $ UpdateModuleList modules
                   Left err -> liftFlow $ push $ UpdateModuleListErrorOccurred
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
             pure $ pure unit
         )
       ]
@@ -128,18 +134,20 @@ referralScreenInnerBody push state =
   [ width $ MATCH_PARENT
   , height $ WRAP_CONTENT
   , orientation VERTICAL
-  ]([  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-  ,   linearLayout
+  ]([ if fromMaybe false state.props.isPayoutEnabled then getCarouselView else dummyView
+    , GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+    , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ Margin 16 0 16 12
       , orientation VERTICAL
-      ]
-      [ if shouldShowReferral state then driverReferralCode push state else dummyView
+      ][ if shouldShowReferral state then driverReferralCode push state else dummyView
       , rideLeaderBoardView push state
       ]
-  ,   learnAndEarnShimmerView push state
+    , learnAndEarnShimmerView push state
   ] <> if not (null state.data.moduleList.completed) || not (null state.data.moduleList.remaining) then [learnAndEarnView push state] else [])
+  where
+    getCarouselView = maybe (linearLayout[][]) (\item -> bannersCarousal item state push) state.data.bannerData.bannerItem
 
 tabView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 tabView push state =
@@ -308,19 +316,65 @@ driverReferralCode push state =
             ]
         ]
     , linearLayout
-        [ width MATCH_PARENT
-        , height $ V 1
-        , background config.separatorColor
-        , margin $ MarginTop 10
-        ]
-        []
+      [ width MATCH_PARENT
+      , height $ V 1
+      , background config.separatorColor
+      , margin $ MarginTop 10
+      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false
+      ][]
     , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , margin $ MarginTop 10
-        ]
-        [ referralCountView false (getString REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
-        , referralCountView true config.infoText (show activatedCount) true push config.popupType
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , margin $ MarginTop 10
+      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false
+      ][ referralCountView false (getString REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
+       , referralCountView true config.infoText (show activatedCount) true push config.popupType
+       ] 
+     , linearLayout
+       [ height WRAP_CONTENT
+       , width MATCH_PARENT
+       , margin $ MarginTop 16
+       , cornerRadius 8.0
+       , background Color.lightBlue80
+       , gravity CENTER_VERTICAL
+       , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just true
+       , onClick push $ const $ GoToCustomerReferralTracker
+       ][ relativeLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          ][ linearLayout
+             [ height MATCH_PARENT
+             , width MATCH_PARENT
+             , padding $ PaddingHorizontal 8 8
+             , gravity CENTER_VERTICAL
+             ][imageView
+               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_star_black"
+               , height $ V 15
+               , width $ V 12
+               , margin $ MarginRight 4
+               ]
+             , textView $ 
+               [ height WRAP_CONTENT 
+               , text $ getString REFERRAL_BONUS_TRACKER 
+               , color Color.black900
+               , gravity CENTER_VERTICAL
+               , padding $ PaddingVertical 12 12
+               , lineHeight "18"
+               ] <> FontStyle.body6 TypoGraphy
+             , linearLayout [weight 1.0, height MATCH_PARENT][]
+             , linearLayout
+               [ height MATCH_PARENT
+               , width WRAP_CONTENT
+               , gravity CENTER_VERTICAL
+               ][ imageView
+                   [ height $ V 16
+                   , width $ V 16
+                   , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_black_900"
+                   ]
+                ]
+              ]
+            , shineAnimation state
+          ]
         ]
     ]
   where
@@ -349,6 +403,38 @@ driverReferralCode push state =
         , referralText: CUSTOMER_REFERRAL_CODE
         , referralDomain : appConfigs.appData.website
         }
+
+shineAnimation :: forall w . BenefitsScreenState -> PrestoDOM (Effect Unit) w
+shineAnimation state =
+  linearLayout
+  [ height $ MATCH_PARENT
+  , width $ WRAP_CONTENT
+  , gravity CENTER_VERTICAL
+  , clipChildren true
+  , clipToPadding true
+  ][ PrestoAnim.animationSet [ Anim.shimmerAnimation (-100) ((screenWidth unit) + 100) 2500] $ 
+     linearLayout
+     [ width $ V (screenWidth unit)
+     , height $ MATCH_PARENT
+     , gravity CENTER_VERTICAL
+     ][linearLayout
+       [ width $ V 10
+       , height MATCH_PARENT
+       , background Color.transparentWhite
+       , rotation 20.0
+       , cornerRadius 2.0
+       , margin $ MarginHorizontal 10 6
+       ][]
+     , linearLayout
+       [ width $ V 5
+       , height MATCH_PARENT
+       , background Color.transparentWhite
+       , rotation 20.0
+       , cornerRadius 2.0
+       , margin $ MarginRight 20
+       ][]
+     ]
+  ]
 
 referralCountView :: forall w. Boolean -> String -> String -> Boolean -> (Action -> Effect Unit) -> ReferralInfoPopType -> PrestoDOM (Effect Unit) w
 referralCountView showStar text' count visibility' push popupType =
@@ -745,3 +831,36 @@ statusPillView push state status pillMargin =
       "PENDING" -> {text : getString PENDING_STR_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle,  cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.orange900, pillImage : ""}
       "NEW" -> {text : getString NEW_C, textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, cornerRadius : 16.0, shouldImageBeVisible : false, pillBackgroundColor : Color.blue800, pillImage : ""}
       _ -> {text : "", textColor : Color.white900, fontStyle : FontStyle.body19 LanguageStyle, shouldImageBeVisible : false,  cornerRadius : 16.0, pillBackgroundColor : Color.white900, pillImage : ""}
+
+computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
+computeListItem push = do
+  bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
+  void $ EHC.liftFlow $ push (SetBannerItem bannerItem)
+
+bannersCarousal :: forall w. ListItem -> BenefitsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bannersCarousal view state push =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ MarginTop 24
+  , visibility $ boolToVisibility $ state.props.bannerLength > 0
+  ][CarouselHolder.carouselView push $ getCarouselConfig view state]
+
+getCarouselConfig ∷ forall a. ListItem → BenefitsScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
+getCarouselConfig view state = {
+    view
+  , items : BannerCarousel.bannerTransformer $ getRemoteBannerConfigs BannerCarousal
+  , orientation : VERTICAL
+  , currentPage : state.data.bannerData.currentPage
+  , autoScroll : true
+  , autoScrollDelay : 5000.0
+  , id : "referralBannerCarousel"
+  , autoScrollAction : Just UpdateBanner
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerStateChanged
+  , onPageScrolled : Nothing
+  , currentIndex : state.data.bannerData.currentBanner
+  , showScrollIndicator : true
+  , layoutHeight : V 100
+  , overlayScrollIndicator : true
+}

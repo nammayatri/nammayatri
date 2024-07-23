@@ -31,7 +31,6 @@ data Action = OnNavigate String
 navData :: ScreenNames.ScreenName -> BottomNavConfig -> BottomNavBarState
 navData screenName bottomNavConfig = do
   let showNewBannerOnSubscription = (Maybe.fromMaybe 0 $ fromString $ getValueToLocalNativeStore TIMES_OPENED_NEW_SUBSCRIPTION) < 3
-      showNewBannerOnBenefits = (Maybe.fromMaybe 0 $ fromString $ getValueToLocalNativeStore TIMES_OPENED_NEW_BENEFITS) < 3
       showSubscriptions = getValueToLocalNativeStore SHOW_SUBSCRIPTIONS
       navdata = [
         {
@@ -70,7 +69,7 @@ navData screenName bottomNavConfig = do
           activeIcon: fetchImage FF_ASSET "ny_ic_benefits_active",
           defaultIcon: fetchImage FF_ASSET "ny_ic_benefits_inactive",
           isVisible : bottomNavConfig.referral.isVisible,
-          showNewBanner : bottomNavConfig.referral.showNew && showNewBannerOnBenefits,
+          showNewBanner : bottomNavConfig.referral.showNew,
           text: "Rankings",
           screenName : ScreenNames.REFERRAL_SCREEN
         },

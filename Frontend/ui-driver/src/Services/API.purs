@@ -40,6 +40,7 @@ import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=), (==))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
+import Screens.CustomerReferralTrackerScreen.Types as CRST
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
@@ -1551,7 +1552,8 @@ newtype GetPerformanceRes = GetPerformanceRes {
   referrals :: {
     totalActivatedCustomers :: Int,
     totalReferredCustomers :: Int,
-    totalReferredDrivers :: Maybe Int
+    totalReferredDrivers :: Maybe Int,
+    isPayoutEnabled :: Boolean
   }
 }
 
@@ -4757,3 +4759,103 @@ instance standardEncodeFarePolicyHour :: StandardEncode FarePolicyHour
     standardEncode Peak = standardEncode "Peak"
     standardEncode NonPeak = standardEncode "NonPeak"
     standardEncode Night = standardEncode "Night"
+
+--------------------------------- GET REFERRAL EARNINGS ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+data ReferralEarningsReq = ReferralEarningsReq String String
+
+newtype ReferralEarningsResp = ReferralEarningsResp
+    {
+      dailyEarnings :: Array DailyEarnings,
+      orderId :: Maybe String,
+      orderStatus :: Maybe PP.APIPaymentStatus,
+      referralRewardAmountPerRide :: Int,
+      totalReferralCount :: Int,
+      vpaId :: Maybe String
+    }
+
+newtype DailyEarnings = DailyEarnings
+  {
+    activatedItems :: Int,
+    earningDate :: String,
+    earnings :: Int,
+    payoutOrderId :: Maybe String,
+    payoutOrderStatus :: Maybe String,
+    referrals :: Int,
+    status :: CRST.PayoutStatus
+  }
+
+instance makeReferralEarningsReq :: RestEndpoint ReferralEarningsReq ReferralEarningsResp where
+    makeRequest reqBody@(ReferralEarningsReq fromDate toDate) headers = defaultMakeRequest GET (EP.getReferralEarnings fromDate toDate) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericReferralEarningsReq :: Generic ReferralEarningsReq _
+instance showReferralEarningsReq :: Show ReferralEarningsReq where show = genericShow
+instance standardEncodeReferralEarningsReq :: StandardEncode ReferralEarningsReq where standardEncode _ = standardEncode {}
+instance decodeReferralEarningsReq :: Decode ReferralEarningsReq where decode = defaultDecode
+instance encodeReferralEarningsReq :: Encode ReferralEarningsReq where encode = defaultEncode
+
+derive instance genericReferralEarningsResp :: Generic ReferralEarningsResp _
+derive instance newtypeReferralEarningsResp :: Newtype ReferralEarningsResp _
+instance standardEncodeReferralEarningsResp :: StandardEncode ReferralEarningsResp where standardEncode (ReferralEarningsResp req) = standardEncode req
+instance showReferralEarningsResp :: Show ReferralEarningsResp where show = genericShow
+instance decodeReferralEarningsResp :: Decode ReferralEarningsResp where decode = defaultDecode
+instance encodeReferralEarningsResp :: Encode ReferralEarningsResp where encode = defaultEncode
+
+derive instance genericDailyEarnings :: Generic DailyEarnings _
+derive instance newtypeDailyEarnings :: Newtype DailyEarnings _
+instance standardEncodeDailyEarnings :: StandardEncode DailyEarnings where standardEncode (DailyEarnings req) = standardEncode req
+instance showDailyEarnings :: Show DailyEarnings where show = genericShow
+instance decodeDailyEarnings :: Decode DailyEarnings where decode = defaultDecode
+instance encodeDailyEarnings :: Encode DailyEarnings where encode = defaultEncode
+
+--------------------------------- DELETE VPA REQUEST ---------------------------------------------------------------------------------------------------------------------------
+
+data DeleteVPAReq = DeleteVPAReq String
+
+newtype DeleteVPARes = DeleteVPARes ApiSuccessResult
+
+instance makeDeleteVPAReq :: RestEndpoint DeleteVPAReq DeleteVPARes where
+    makeRequest reqBody@(DeleteVPAReq vpaId) headers = defaultMakeRequest POST (EP.deleteVPA vpaId) headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericDeleteVPAReq :: Generic DeleteVPAReq _
+instance showDeleteVPAReq :: Show DeleteVPAReq where show = genericShow
+instance standardEncodeDeleteVPAReq :: StandardEncode DeleteVPAReq where standardEncode _ = standardEncode {}
+instance decodeDeleteVPAReq :: Decode DeleteVPAReq where decode = defaultDecode
+instance encodeDeleteVPAReq :: Encode DeleteVPAReq where encode = defaultEncode
+
+derive instance genericDeleteVPARes :: Generic DeleteVPARes _
+instance showDeleteVPARes :: Show DeleteVPARes where show = genericShow
+instance standardEncodeDeleteVPARes :: StandardEncode DeleteVPARes where standardEncode _ = standardEncode {}
+instance decodeDeleteVPARes :: Decode DeleteVPARes where decode = defaultDecode
+instance encodeDeleteVPARes :: Encode DeleteVPARes where encode = defaultEncode
+
+--------------------------------- GET PAYOUT REGISTER ---------------------------------------------------------------------------------------------------------------------------
+
+data PayoutRegisterReq = PayoutRegisterReq String
+
+newtype PayoutRegisterRes = PayoutRegisterRes 
+    {
+      orderResp :: CreateOrderRes,
+      orderId :: String
+    }
+
+instance makePayoutRegisterReq :: RestEndpoint PayoutRegisterReq PayoutRegisterRes where
+ makeRequest reqBody@(PayoutRegisterReq val) headers = defaultMakeRequest GET (EP.registerPayout val) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericPayoutRegisterReq :: Generic PayoutRegisterReq _
+instance standardEncodePayoutRegisterReq :: StandardEncode PayoutRegisterReq where standardEncode (PayoutRegisterReq dummy) = standardEncode dummy
+instance showPayoutRegisterReq :: Show PayoutRegisterReq where show = genericShow
+instance decodePayoutRegisterReq :: Decode PayoutRegisterReq where decode = defaultDecode
+instance encodePayoutRegisterReq :: Encode PayoutRegisterReq where encode = defaultEncode
+
+derive instance genericPayoutRegisterRes :: Generic PayoutRegisterRes _
+instance standardEncodePayoutRegisterRes :: StandardEncode PayoutRegisterRes where standardEncode (PayoutRegisterRes dummy) = standardEncode dummy
+instance showPayoutRegisterRes :: Show PayoutRegisterRes where show = genericShow
+instance decodePayoutRegisterRes :: Decode PayoutRegisterRes where decode = defaultDecode
+instance encodePayoutRegisterRes :: Encode PayoutRegisterRes where encode = defaultEncode
