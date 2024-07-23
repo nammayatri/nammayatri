@@ -39,6 +39,7 @@ data SearchRequest = SearchRequest
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     isAdvanceBookingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

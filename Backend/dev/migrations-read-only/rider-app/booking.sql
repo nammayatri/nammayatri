@@ -111,3 +111,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN is_booking_updated boolean  default fal
 
 ALTER TABLE atlas_app.booking ADD COLUMN client_model_name text ;
 ALTER TABLE atlas_app.booking ADD COLUMN client_manufacturer text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN is_dashboard_request boolean ;

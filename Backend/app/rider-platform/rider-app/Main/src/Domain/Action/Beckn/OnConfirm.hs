@@ -141,26 +141,27 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
   createFareBreakup booking.id fareParams
   whenJust specialZoneOtp $ \otp -> do
     void $ QRB.updateOtpCodeBookingId booking.id otp
-    fork "sending Booking confirmed dasboard sms" $ do
-      let merchantOperatingCityId = booking.merchantOperatingCityId
-      merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-      if merchantConfig.enableDashboardSms
-        then do
-          customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-          mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-          smsCfg <- asks (.smsCfg)
-          let countryCode = fromMaybe "+91" customer.mobileCountryCode
-          let phoneNumber = countryCode <> mobileNumber
-              sender = smsCfg.sender
-          message <-
-            MessageBuilder.buildSendBookingOTPMessage merchantOperatingCityId $
-              MessageBuilder.BuildSendBookingOTPMessageReq
-                { otp = show otp,
-                  amount = show (booking.estimatedTotalFare.amountInt)
-                }
-          Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
-        else do
-          logInfo "Merchant not configured to send dashboard sms"
+    when (booking.isDashboardRequest == Just True) $
+      fork "sending Booking confirmed dasboard sms" $ do
+        let merchantOperatingCityId = booking.merchantOperatingCityId
+        merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+        if merchantConfig.enableDashboardSms
+          then do
+            customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+            mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            smsCfg <- asks (.smsCfg)
+            let countryCode = fromMaybe "+91" customer.mobileCountryCode
+            let phoneNumber = countryCode <> mobileNumber
+                sender = smsCfg.sender
+            message <-
+              MessageBuilder.buildSendBookingOTPMessage merchantOperatingCityId $
+                MessageBuilder.BuildSendBookingOTPMessageReq
+                  { otp = show otp,
+                    amount = show (booking.estimatedTotalFare.amountInt)
+                  }
+            Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          else do
+            logInfo "Merchant not configured to send dashboard sms"
   case booking.bookingDetails of
     DRB.DriverOfferDetails _ -> return ()
     _ -> void $ QRB.updateStatus booking.id DRB.CONFIRMED

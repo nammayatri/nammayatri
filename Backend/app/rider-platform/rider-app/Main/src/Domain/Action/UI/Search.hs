@@ -319,6 +319,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       riderPreferredOption
       merchantOperatingCity.distanceUnit
       person.totalRidesCount
+      isDashboardRequest_
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
@@ -469,8 +470,9 @@ buildSearchRequest ::
   SearchRequest.RiderPreferredOption ->
   DistanceUnit ->
   Maybe Int ->
+  Bool ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption distanceUnit totalRidesCount = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -507,7 +509,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         isAdvanceBookingEnabled = Nothing,
         riderPreferredOption, -- this is just to store the rider preference for the ride type to handle backward compatibility
         distanceUnit,
-        totalRidesCount
+        totalRidesCount,
+        isDashboardRequest = Just isDashboardRequest
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
