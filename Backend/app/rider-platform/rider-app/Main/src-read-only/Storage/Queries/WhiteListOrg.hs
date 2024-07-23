@@ -48,7 +48,9 @@ updateByPrimaryKey (Domain.Types.WhiteListOrg.WhiteListOrg {..}) = do
     [ Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
       Se.Set Beam.domain domain,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.subscriberId (Kernel.Types.Id.getShortId subscriberId),
-      Se.Set Beam.updatedAt (Just _now)
+      Se.Set Beam.updatedAt (Just _now),
+      Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

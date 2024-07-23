@@ -93,6 +93,7 @@ tfQuotesInfo provider fulfillments validTill item = do
   isAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getIsAirConditioned provider item
   let mbServiceTierType = Beckn.OnDemand.Utils.OnSearch.getServiceTierType item
       mbServiceTierName = Beckn.OnDemand.Utils.OnSearch.getServiceTierName item
+      vehicleCategory = Beckn.OnDemand.Utils.Common.mapVariantToVehicle vehicleVariant_
       mbServiceTierShortDesc = Beckn.OnDemand.Utils.OnSearch.getServiceTierShortDesc item
       isCustomerPrefferedSearchRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsCustomerPrefferedSearchRoute item
       isBlockedRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsBlockedRoute item

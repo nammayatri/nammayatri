@@ -301,6 +301,7 @@ library
       Storage.CachedQueries.Sos
       Storage.CachedQueries.Station
       Storage.CachedQueries.ValueAddNP
+      Storage.CachedQueries.VehicleConfig
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.Booking
       Storage.Clickhouse.EstimateBreakup
@@ -499,6 +500,7 @@ library
       Domain.Types.TicketService
       Domain.Types.TripTerms
       Domain.Types.ValueAddNP
+      Domain.Types.VehicleConfig
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
@@ -585,6 +587,7 @@ library
       Storage.Beam.TicketService
       Storage.Beam.TripTerms
       Storage.Beam.ValueAddNP
+      Storage.Beam.VehicleConfig
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.SavedReqLocation
@@ -706,6 +709,7 @@ library
       Storage.Queries.TicketService
       Storage.Queries.TripTerms
       Storage.Queries.ValueAddNP
+      Storage.Queries.VehicleConfig
       Storage.Queries.WhiteListOrg
   other-modules:
       Paths_rider_app

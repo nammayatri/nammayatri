@@ -211,7 +211,7 @@ tfCustomer res =
 
 tfVehicle :: DOnInit.OnInitRes -> Maybe Spec.Vehicle
 tfVehicle res = do
-  let (category, variant) = Utils.castVehicleVariant res.vehicleVariant
+  let (category, variant) = Utils.castVehicleVariant res.isValueAddNP res.vehicleVariant
   Just $
     Spec.Vehicle
       { vehicleCategory = Just category,
