@@ -56,7 +56,7 @@ data Action
   | AddContacts
   | UpdateEmergencySettings GetEmergencySettingsRes
   | DisableShimmer
-  | ContactListAction ContactList.Action
+  | ContactListAction ContactList.Action 
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 

@@ -287,7 +287,7 @@ window.getMerchantConfig = function () {
   , "features" : {
     "enableAutoReadOtp" : true ,
     "enableZooTicketBookingFlow" : true ,
-    "enableAdditionalServices" : true
+    "enableAdditionalServices" : true ,
       }
   , "showDisabilityBanner" : false
   , "showCheckoutRentalBanner" : true
@@ -353,7 +353,8 @@ window.getMerchantConfig = function () {
       "enableSafetyFlow" : false,
       "enableCustomerSupportForSafety" : true, 
       "enableHelpAndSupport" : false,
-      "enableEditDestination" : true
+      "enableEditDestination" : true,
+      "enableSafetyPoliceFlow" : true
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,

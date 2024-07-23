@@ -49,6 +49,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Data.Either (Either(..))
+import Components.PrimaryEditText as PrimaryEditText
 
 screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =

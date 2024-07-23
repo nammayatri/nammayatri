@@ -1208,6 +1208,13 @@ getFollowRide _ = do
   headers <- getHeaders "" false
   withAPIResult (EP.followRide "") identity $ callAPI headers FollowRideReq
 
+incidentReport :: IncidentReportReq -> Flow GlobalState (Either ErrorResponse IncidentReportRes)
+incidentReport (IncidentReportReq req) = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.incidentReport "") unwrapResponse $ callAPI headers (IncidentReportReq req)
+    where
+        unwrapResponse (x) = x
+
 -------------------------------------------------------- Metro Booking --------------------------------------------------------
 
 -- getMetroBookingStatus :: String -> FlowBT String GetMetroBookingStatusResp

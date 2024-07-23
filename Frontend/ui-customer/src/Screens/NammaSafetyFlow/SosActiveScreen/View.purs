@@ -107,7 +107,7 @@ sosActiveView state push =
     ]
     [ sosDescriptionView state push
     , sosActionsView state push
-    , separatorView Color.black800 $ MarginTop 0
+    , separatorView Color.black800 true $ MarginTop 0
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -377,7 +377,7 @@ dialPoliceView state push =
                     <> FontStyle.paragraphText TypoGraphy
                 ]
             ]
-        , separatorView Color.black500 $ Margin 16 16 16 16
+        , separatorView Color.black500 true $ Margin 16 16 16 16
         , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT

@@ -149,7 +149,9 @@ view push state =
 
 ------------------------------------- dashboardView -----------------------------------
 activateSafetyView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-activateSafetyView state push =
+activateSafetyView state push = let 
+  enableSafetyPoliceFlow = state.data.config.feature.enableSafetyPoliceFlow
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -168,7 +170,8 @@ activateSafetyView state push =
             ]
             [ sosButtonView state push true
             , emergencyContactsView state push
-            , otherActionsView state push
+            , policeActionView state push enableSafetyPoliceFlow
+            , otherActionsView state push enableSafetyPoliceFlow
             ]
         ]
     ]
@@ -427,8 +430,8 @@ emergencyContactsView state push =
     , textStyle: FontStyle.Tags
     }
 
-otherActionsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-otherActionsView state push =
+otherActionsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
+otherActionsView state push enableSafetyPoliceFlow =
   linearLayout
     ( [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -445,13 +448,14 @@ otherActionsView state push =
     )
     [ textView
         $ [ text $ getString OTHER_SAFETY_ACTIONS
+          , margin $ MarginBottom 15
           , color Color.white900
           ]
         <> FontStyle.subHeading1 TypoGraphy
     , textView
         $ [ text $ getString AVAILABLE_IN_REAL_EMERGENCY
           , color Color.white900
-          , margin $ MarginTop 4
+          , margin $ MarginBottom 10
           , visibility $ boolToVisibility state.props.showTestDrill
           ]
         <> FontStyle.captions TypoGraphy
@@ -459,7 +463,7 @@ otherActionsView state push =
         ( [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity CENTER_VERTICAL
-          , margin $ MarginTop 20
+          , visibility $ boolToVisibility $ not enableSafetyPoliceFlow
           ]
             <> if state.props.showTestDrill then [] else [ onClick push $ const ShowPoliceView ]
         )
@@ -471,7 +475,7 @@ otherActionsView state push =
             , width $ V 20
             ]
         ]
-    , separatorView Color.black700 $ MarginVertical 16 16
+    , separatorView Color.black700 (not enableSafetyPoliceFlow) $ MarginVertical 16 16
     , linearLayout
         ( [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -500,7 +504,7 @@ otherActionsView state push =
         , orientation VERTICAL
         , visibility $ boolToVisibility $ not state.props.showTestDrill
         ]
-        [ separatorView Color.black700 $ MarginVertical 16 16
+        [ separatorView Color.black700 true $ MarginVertical 16 16
         , linearLayout
             ( [ height WRAP_CONTENT
               , width MATCH_PARENT
@@ -527,7 +531,7 @@ otherActionsView state push =
     , usePadding: false
     , useFullWidth: false
     , image: Just "ny_ic_police"
-    , visibility: true
+    , visibility: not enableSafetyPoliceFlow
     , textStyle: FontStyle.Tags
     }
 
@@ -624,7 +628,7 @@ dismissSoSButtonView state push =
     ]
     [ case state.props.showTestDrill of
         true -> emptyTextView
-        false -> separatorView Color.black700 $ MarginVertical 10 16
+        false -> separatorView Color.black700 true $ MarginVertical 10 16
     , textView
         $ [ text $ getString $ INDICATION_TO_EMERGENCY_CONTACTS state.props.appName
           , color Color.black500
@@ -852,7 +856,7 @@ actionsListViewItem push mbAction textConfig showDivider =
           , height $ V 20
           , width $ V 20
           ]
-      ]] <> if showDivider then [separatorView Color.black700 $ MarginTop 16 ] else []
+      ]] <> if showDivider then [separatorView Color.black700 true $ MarginTop 16 ] else []
   
 getPostRieSafetyAction :: NammaSafetyScreenState -> Array {action :: Maybe Action, textConfig :: ImageTextViewConfig}
 getPostRieSafetyAction state = [
@@ -1061,7 +1065,7 @@ dialPoliceView state push =
                         <> FontStyle.paragraphText TypoGraphy
                     ]
                 ]
-            , separatorView Color.black500 $ Margin 16 16 16 16
+            , separatorView Color.black500 true $ Margin 16 16 16 16
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
@@ -1090,12 +1094,12 @@ dialPoliceView state push =
         , margin $ MarginBottom 16
         ]
         [ safetyPartnerView Language
-        , callPoliceView state push
+        , callPoliceView state push CallPolice DIAL_NOW
         ]
     ]
 
-callPoliceView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-callPoliceView state push =
+callPoliceView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Action -> STR -> forall w. PrestoDOM (Effect Unit) w
+callPoliceView state push action text' =
   linearLayout
     ( [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -1105,7 +1109,7 @@ callPoliceView state push =
       , background Color.redOpacity20
       , accessibilityHint "Call Police Button"
       ]
-        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const $ CallPolice ]
+        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const action ]
     )
     [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_police"
@@ -1113,10 +1117,72 @@ callPoliceView state push =
         , width $ V 26
         ]
     , textView
-        $ [ text $ getString DIAL_NOW
+        $ [ text $ getString text'
           , gravity CENTER
           , color Color.white900
           , margin $ MarginLeft 6
           ]
         <> FontStyle.subHeading2 TypoGraphy
     ]
+
+policeActionView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
+policeActionView state push enableSafetyPoliceFlow =
+  linearLayout
+    ( [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , margin $ Margin 16 16 16 16
+      , cornerRadius 12.0
+      , visibility $ boolToVisibility enableSafetyPoliceFlow
+      ]
+    )
+    [ textView
+        $ [ text $ getString SEEK_POLICE_HELP
+          , color Color.white900
+          ]
+        <> FontStyle.subHeading1 TypoGraphy
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , stroke $ "1," <> Color.black700
+        , background Color.blackOpacity12
+        , orientation VERTICAL
+        , margin $ MarginTop 16
+        , padding $ Padding 16 16 16 16
+        , cornerRadius 12.0
+        ]
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , margin $ MarginBottom 16
+            ]
+            [ imageWithTextView configDescOne
+            , imageWithTextView configDescTwo
+            ]
+          , callPoliceView state push IncidentReportAPI REQUEST_POLICE_HELP
+        ]
+    ]
+    where
+        configDescOne =
+          { text': getString $ SEEK_POLICE_HELP_SUBTEXT_ONE
+          , isActive: true
+          , textColor: Color.white900
+          , useMargin: false
+          , useFullWidth: true
+          , usePadding: false
+          , image: Nothing
+          , visibility: true
+          , textStyle: FontStyle.Tags
+          }
+        configDescTwo =
+          { text': getString $ SEEK_POLICE_HELP_SUBTEXT_TWO
+          , isActive: true
+          , textColor: Color.white900
+          , useMargin: true
+          , useFullWidth: true
+          , usePadding: false
+          , image: Nothing
+          , visibility: true
+          , textStyle: FontStyle.Tags
+          }

@@ -51,6 +51,7 @@ data ScreenOutput
   | GoToEducationScreen NammaSafetyScreenState
   | GoToIssueScreen NammaSafetyScreenState
   | NotifyMockDrill NammaSafetyScreenState
+  | ReportIncident NammaSafetyScreenState
 
 data Action
   = BackPressed
@@ -76,6 +77,7 @@ data Action
   | CallSupport
   | SourceToDestinationAC SourceToDestination.Action
   | AlertSafetyTeam
+  | IncidentReportAPI
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -215,6 +217,9 @@ eval ShowPoliceView state = continue state { props { showCallPolice = true } }
 eval CallPolice state = do
   void $ pure $ JB.showDialer Constants.policeNumber false
   exit $ CreateSos state true
+
+eval IncidentReportAPI state =  
+  exit $ ReportIncident state
 
 eval ShowSafetyIssueView state = exit $ GoToIssueScreen state
 
