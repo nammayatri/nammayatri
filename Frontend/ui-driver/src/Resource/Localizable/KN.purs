@@ -1479,3 +1479,9 @@ getKN stringKey =
         ACCOUNT_DELETION_CONFIRMATION -> "ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಅಳಿಸಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ? ನಿಮ್ಮ ಎಲ್ಲ ವೈಯಕ್ತಿಕ ಡೇಟಾ ಕಳೆದು ಹೋಗುತ್ತದೆ"
         REQUEST_SUBMITTED -> "ಕೋರಿಕೆ ಸಲ್ಲಿಸಲಾಗಿದೆ"
         WE_WILL_DELETE_YOUR_ACCOUNT -> "ನೀವು ನಮ್ಮ ವೇದಿಕೆಯನ್ನು ತೊರೆಯುವುದನ್ನು ನೋಡಿ ನಮಗೆ ವಿಷಾದವಿದೆ. ಮುಂದಿನ 30 ದಿನಗಳಲ್ಲಿ ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಅಳಿಸಲಾಗುತ್ತದೆ. ಏತನ್ಮಧ್ಯೆ, ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಉಳಿಸಿಕೊಳ್ಳಲು ನೀವು ಬಯಸಿದರೆ, ದಯವಿಟ್ಟು ನಮ್ಮ ಗ್ರಾಹಕ ಬೆಂಬಲ ಸಂಖ್ಯೆಗೆ ಕರೆ ಮಾಡಿ"
+        RIDE_COMPLETE -> "ಸವಾರಿ ಪೂರ್ಣಗೊಂಡಿದೆ"
+        HOW_WAS_YOUR_RIDE_WITH_NAME name -> name <> " ನೊಂದಿಗೆ ನಿಮ್ಮ ಸವಾರಿ ಹೇಗಿತ್ತು"
+        HAS_PAID_YOU name -> name <> " ನಿಮಗೆ ಪಾವತಿಸಿದೆ"
+        VIEW_FARE_BREAKDOWN -> "ದರ ಕುಸಿತವನ್ನು ವೀಕ್ಷಿಸಿ"
+        TOTAL_AMOUNT_INCLUDING_CHARGES amount -> "ಶುಲ್ಕಗಳು ಸೇರಿದಂತೆ ಒಟ್ಟು ಮೊತ್ತ : " <> amount
+        FARE_BREAKDOWN -> "ಶುಲ್ಕ ಸ್ಥಗಿತ"

@@ -81,8 +81,8 @@ screen initialState =
       )
   ]
   , eval : \state  action -> do
-      let _ = spy  "HelpAndSupportScreen action " state
-      let _ = spy  "HelpAndSupportScreen state " action
+      let _ = spy  "HelpAndSupportScreen action " action
+      let _ = spy  "HelpAndSupportScreen state " state
       eval state action
   }
 

@@ -2577,7 +2577,7 @@ derive instance genericReferralInfoPopType :: Generic ReferralInfoPopType _
 instance showReferralInfoPopType :: Show ReferralInfoPopType where show = genericShow
 instance eqReferralInfoPopType :: Eq ReferralInfoPopType where eq = genericEq
 
-data GoBackToScreen = Earning | Home | RideHistory
+data GoBackToScreen = Earning | Home | RideHistory | RideCompletion
 
 derive instance genericGoBackToScreen :: Generic GoBackToScreen _
 instance showGoBackToScreen :: Show GoBackToScreen where show = genericShow
@@ -2782,4 +2782,27 @@ type CameraScreenData = {
 
 type CameraScreenProps = {
   imageClicked :: Boolean
+}
+
+-------------------------------------- RideCompletedScreenState ----------------------------
+type RideCompletedScreenState = {
+  data :: RideCompletedScreenData,
+  props :: RideCompletedScreenProps
+}
+
+type RideCompletedScreenData = {
+  appConfig :: AppConfig
+}
+
+data RatingTypeSelected = SEL_P | SEL_N | SEL_NONE
+derive instance genericRatingTypeSelected :: Generic RatingTypeSelected _
+instance showRatingTypeSelected :: Show RatingTypeSelected where show = genericShow
+instance eqRatingTypeSelected :: Eq RatingTypeSelected where eq = genericEq
+
+
+type RideCompletedScreenProps = {
+  isFareBreakDownVisible :: Boolean,
+  selectedRating :: RatingTypeSelected,
+  showCallSupportPopup :: Boolean,
+  endRideData :: EndRideData
 }

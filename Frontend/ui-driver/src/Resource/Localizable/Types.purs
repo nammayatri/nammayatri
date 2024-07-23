@@ -1486,4 +1486,9 @@ data STR = LETS_GET_STARTED
         | ONLY_3_MORE_RIDES_FOR_50_COINS
         | YOU_GOT_50_COINS
         | YOU_GOT_10_COINS
-        
+        | RIDE_COMPLETE
+        | HOW_WAS_YOUR_RIDE_WITH_NAME String
+        | HAS_PAID_YOU String
+        | VIEW_FARE_BREAKDOWN
+        | TOTAL_AMOUNT_INCLUDING_CHARGES String
+        | FARE_BREAKDOWN

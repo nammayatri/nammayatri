@@ -34,4 +34,4 @@ tripDetailsScreen = do
         GoToMyRides  -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_HISTORY_SCREEN)
         GoToHome -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN)
         GoToHelpAndSupport -> App.BackT $ App.BackPoint <$> (pure $ OPEN_HELP_AND_SUPPORT)
-        
+        GoToRideCompletedScreen -> App.BackT $ pure App.GoBack
