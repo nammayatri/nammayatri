@@ -58,7 +58,7 @@ genericHeaderConfig state = let
     , textConfig {
         text = case bothReferralNotEnabled of
           true -> getString RIDE_LEADERBOARD
-          false -> getString REFERRAL 
+          false -> getString REFERRAL_BONUS
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {

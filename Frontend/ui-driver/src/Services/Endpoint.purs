@@ -351,3 +351,12 @@ getDriverRateCard mbServiceTier mbDist =
         Just serviceTier, Nothing -> "?vehicleServiceTier=" <> serviceTier
         Nothing, Just dist -> "?distance=" <> show (dist*1000)
         _ , _ -> ""
+
+getReferralEarnings :: String -> String -> String
+getReferralEarnings fromDate toDate = (getBaseUrl "") <> "/payout/referral/earnings?fromDate=" <> fromDate <> "&toDate=" <> toDate
+
+deleteVPA :: String -> String
+deleteVPA dummy = (getBaseUrl "") <> "/payout/delete/vpa"
+
+registerPayout :: String -> String
+registerPayout dummy = (getBaseUrl "") <> "/payout/registration"

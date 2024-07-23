@@ -3430,7 +3430,6 @@ public class MobilityCommonBridge extends HyperBridge {
     public String getDeviceID() {
         DeviceIdentifier androidIdentifier = new DeviceIdentifier();
         String deviceId = androidIdentifier.getDeviceId(bridgeComponents.getContext());
-        Log.e("DeviceIdentifier","MediaDRM ID : " + deviceId);
         return deviceId;
     }
 
