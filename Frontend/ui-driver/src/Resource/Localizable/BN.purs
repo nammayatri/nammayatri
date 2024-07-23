@@ -1583,3 +1583,5 @@ getBN stringKey =
         REMOVE_EYEWERE -> "অনুগ্রহ করে চশমা বা সানগ্লাস সরিয়ে ফেলুন যদি থেকে থাকে।"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "চিত্রের বৈধতা সীমা ছাড়িয়ে গেছে।"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "প্যান যাচাই ব্যর্থ হয়েছে।"
+        CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> "এই বুকিং বাতিল করলে রোগীর জরুরি চিকিৎসা সেবাগুলিতে প্রভাব পড়তে পারে"
+        DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> "ড্রাইভারদের শুধুমাত্র তাদের চিকিৎসা সংক্রান্ত কারণ বা যানবাহন সমস্যার জন্যই বাতিল করার অনুমতি রয়েছে"

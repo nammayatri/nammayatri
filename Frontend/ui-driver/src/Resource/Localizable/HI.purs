@@ -1582,3 +1582,5 @@ getHI stringKey =
         REMOVE_EYEWERE -> "कृपया यदि कोई आईवियर या धूप का चश्मा हो तो उसे हटा दें"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "छवि को सत्यापित करने के प्रयासों की संख्या पार हो गई"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "पैन सत्यापन विफल हो गया है"
+        CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> "इस बुकिंग को रद्द करने से मरीज के आपातकालीन चिकित्सा सेवाओं पर प्रभाव पड़ सकता है"
+        DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> "ड्राइवरों को केवल उनके चिकित्सा कारणों या वाहन के खराब होने की स्थिति में ही रद्द करने की अनुमति है"

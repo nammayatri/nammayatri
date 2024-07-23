@@ -22,14 +22,14 @@ import Debug
 import Engineering.Helpers.LogEvent
 import Locale.Utils
 import Prelude
-
+import Mobility.Prelude as MP
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _stopLocation)
 import Common.Types.App (LazyCheck(..), Paths)
 import Components.ChooseVehicle (Config, config, SearchResultType(..), FareProductType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
 -- import Components.RideActionModal (estimatedFareView)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Data.Array (mapWithIndex, filter, head, find, foldl)
+import Data.Array (mapWithIndex, filter, head, find, foldl,any)
 import Control.Monad.Except.Trans (lift)
 import Data.Array as DA
 import Data.Int (toNumber, round, fromString)
@@ -40,7 +40,7 @@ import Data.Function.Uncurried (runFn1)
 import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage,fetchImage, FetchImageFrom(..))
+import Helpers.Utils (parseFloat, withinTimeRange,getVehicleCapacity, isHaveFare, getVehicleVariantImage,fetchImage, FetchImageFrom(..),fetchVehicleVariant)
 import JBridge (fromMetersToKm, getLatLonFromAddress)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -48,7 +48,7 @@ import MerchantConfig.Types (EstimateAndQuoteConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import PrestoDOM (Visibility(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getFaresList, getKmMeter, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), FareBreakupAPIEntity(..))
@@ -85,6 +85,7 @@ import Screens.Types (FareProductType(..)) as FPT
 import Helpers.TipConfig
 import RemoteConfig as RC
 import Screens.Types as ST
+import Data.String as DS
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -152,6 +153,7 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
         }
     (RENTAL contents) -> QLI.config
     (INTER_CITY contents) -> QLI.config
+    (AMBULANCE contents) -> QLI.config
     
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
@@ -210,6 +212,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
         , endOdometer = show $ fromMaybe 0.0 rideList.endOdometerReading
         }
       , serviceTierName : resp.serviceTierName
+      , isAirConditioned : resp.isAirConditioned
       , vehicleModel : rideList.vehicleModel
       , vehicleColor : rideList.vehicleColor
       , fareProductType : fareProductType
@@ -375,8 +378,8 @@ getContact contact = {
   , phoneNo : contact.number
 }
 
-getQuotesTransformer :: Array OfferRes -> EstimateAndQuoteConfig -> Array ChooseVehicle.Config
-getQuotesTransformer quotes estimateAndQuoteConfig = mapWithIndex (\index item -> transformQuote item index) (getFilteredQuotes quotes estimateAndQuoteConfig)
+getQuotesTransformer :: Array OfferRes -> EstimateAndQuoteConfig ->FPT.FareProductType-> Array ChooseVehicle.Config
+getQuotesTransformer quotes estimateAndQuoteConfig fareProductType= mapWithIndex (\index item -> transformQuote item index) (getFilteredQuotes quotes estimateAndQuoteConfig fareProductType)
 
 transformQuote :: OfferRes -> Int -> ChooseVehicle.Config
 transformQuote quote index =
@@ -405,23 +408,30 @@ transformQuote quote index =
     }
 
 
-getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Int -> Array ChooseVehicle.Config
-getEstimateList estimates estimateAndQuoteConfig activeIndex = 
-  let estimatesWithOrWithoutBookAny = (createEstimateForBookAny estimates) <> estimates
-      filteredWithVariantAndFare = filterWithFareAndVariant estimatesWithOrWithoutBookAny estimateAndQuoteConfig
+getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Int ->FPT.FareProductType-> Array ChooseVehicle.Config
+getEstimateList estimates estimateAndQuoteConfig activeIndex fareProductType= 
+  let estimatesWithOrWithoutBookAny = spy "estimatesWithOrWithoutBookAny" $ (createEstimateForBookAny estimates) <> estimates
+      filteredWithVariantAndFare = spy "filteredWithVariantAndFare" $ filterWithFareAndVariant estimatesWithOrWithoutBookAny estimateAndQuoteConfig fareProductType
       estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredWithVariantAndFare index activeIndex) filteredWithVariantAndFare
   in
     updateBookAnyEstimate estimatesConfig 
 
-filterWithFareAndVariant :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
-filterWithFareAndVariant estimates estimateAndQuoteConfig =
+filterWithFareAndVariant :: Array EstimateAPIEntity -> EstimateAndQuoteConfig ->FPT.FareProductType->  Array EstimateAPIEntity
+filterWithFareAndVariant estimates estimateAndQuoteConfig fareProductType =
   let
     estimatesOrder = RC.getEstimatesOrder $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
     filteredEstimate = 
       case (getMerchant FunctionCall) of
-        YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
+        YATRISATHI -> 
+          let
+            isAmbulanceVariant variant = any (\v -> MP.startsWith "AMBULANCE" (DS.toLower v)) variant
+            filteredVariants = case fareProductType of
+              FPT.AMBULANCE -> filter isAmbulanceVariant estimateAndQuoteConfig.variantTypes
+              _ -> filter (not <<< isAmbulanceVariant) estimateAndQuoteConfig.variantTypes
+          in
+            spy "filterWithFareAndVariant" $ DA.concat (map (\variant -> filterEstimateByVariants variant estimates) filteredVariants)
         _ -> estimates
-    sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
+    sortWithFare = spy "sortWith" $ DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
   in
     sortEstimateWithVariantOrder sortWithFare estimatesOrder
   where
@@ -454,14 +464,16 @@ getFareFromEstimate (EstimateAPIEntity estimate) = do
                                                       else fareRange.minFare
 
 
-getFilteredQuotes :: Array OfferRes -> EstimateAndQuoteConfig -> Array OfferRes
-getFilteredQuotes quotes estimateAndQuoteConfig =
+getFilteredQuotes :: Array OfferRes -> EstimateAndQuoteConfig -> FPT.FareProductType -> Array OfferRes
+getFilteredQuotes quotes estimateAndQuoteConfig fareProductType =
   let
     filteredArray =
-      ( case (getMerchant FunctionCall) of
-          YATRISATHI -> DA.concat (map (\variant -> filterQuoteByVariants variant quotes) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
-          _ -> quotes
-      )
+      case getMerchant FunctionCall of
+        YATRISATHI ->
+          case fareProductType of
+            FPT.AMBULANCE -> []
+            _ -> DA.concat (map (\variant -> filterQuoteByVariants variant quotes) estimateAndQuoteConfig.variantTypes)
+        _ -> quotes
   in
     sortQuoteWithVariantOrder filteredArray estimateAndQuoteConfig.variantOrder
   where
@@ -492,7 +504,7 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
 
       filterMappedQuotes = filter (\quote -> isJust quote.item) mappedQuotes
 
-      sortedQuotes = DA.sortWith (\mappedQuote -> mappedQuote.order) filterMappedQuotes
+      sortedQuotes = spy "sortWith" $ DA.sortWith (\mappedQuote -> mappedQuote.order) filterMappedQuotes
     in
       DA.catMaybes $ map (\sortedEstimate -> sortedEstimate.item) sortedQuotes
 
@@ -854,8 +866,8 @@ type StepFare =
     price :: Number
   }
 
-getSpecialZoneQuotes :: Array OfferRes -> EstimateAndQuoteConfig -> Boolean -> Array ChooseVehicle.Config
-getSpecialZoneQuotes quotes estimateAndQuoteConfig isIntercity = mapWithIndex (\index item -> getSpecialZoneQuote item index isIntercity) (getFilteredQuotes quotes estimateAndQuoteConfig)
+getSpecialZoneQuotes :: Array OfferRes -> EstimateAndQuoteConfig -> Boolean ->FPT.FareProductType-> Array ChooseVehicle.Config
+getSpecialZoneQuotes quotes estimateAndQuoteConfig isIntercity fareProductType = mapWithIndex (\index item -> getSpecialZoneQuote item index isIntercity) (getFilteredQuotes quotes estimateAndQuoteConfig fareProductType)
 
 getSpecialZoneQuote :: OfferRes -> Int -> Boolean -> ChooseVehicle.Config
 getSpecialZoneQuote quote index isIntercity =
@@ -928,4 +940,5 @@ getFareProductType fareProductType =
     "RENTAL" -> FPT.RENTAL 
     "ONE_WAY" -> FPT.ONE_WAY
     "DRIVER_OFFER" -> FPT.DRIVER_OFFER
+    "AMBULANCE" -> FPT.AMBULANCE
     _ -> FPT.ONE_WAY

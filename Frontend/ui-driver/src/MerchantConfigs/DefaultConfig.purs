@@ -773,7 +773,7 @@ config =
   }
   , clientName : ""
   , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
-  , showProfileAadhaarPan : true -- Only for backward compatibility and testing in PROD environment
+  , showProfileAadhaarPan : true
 }
 
 registrationConfig :: CTC.RegistrationConfig
@@ -803,7 +803,11 @@ defWaitingChargesConfig = {
   bike : {
     freeSeconds : 180,
     perMinCharges : 1.50
-  }
+  },
+  ambulance : {
+    freeSeconds : 480,
+    perMinCharges : 2.0
+}
 }
 
 defRentalWaitingChargesConfig :: CTC.WaitingChargesConfig
@@ -818,6 +822,10 @@ defRentalWaitingChargesConfig = {
   },
   bike: {
     freeSeconds : 180,
+    perMinCharges : 1.5
+  },
+  ambulance: {
+    freeSeconds : 480,
     perMinCharges : 1.5
   }
 }

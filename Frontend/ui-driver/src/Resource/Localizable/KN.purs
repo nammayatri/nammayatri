@@ -1581,3 +1581,5 @@ getKN stringKey =
         REMOVE_EYEWERE -> "ದಯವಿಟ್ಟು ಕನ್ನಡಕ ಅಥವಾ ಸನ್ಗ್ಲಾಸ್ ಯಾವುದಾದರೂ ಇದ್ದರೆ ತೆಗೆದುಹಾಕಿ"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "ಚಿತ್ರದ ಮೌಲ್ಯೀಕರಣವು ಮಿತಿಯನ್ನು ಮೀರಿದೆ"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "ಪ್ಯಾನ್ ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ"
+        CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> " ಈ ಬುಕ್ಕಿಂಗ್ ಅನ್ನು ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ರೋಗಿಗೆ ತುರ್ತು ವೈದ್ಯಕೀಯ ಸೇವೆಗಳ ಮೇಲೆ ಪರಿಣಾಮ ಬೀರುವ ಸಾಧ್ಯತೆಯಿದೆ"
+        DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> "ಡ್ರೈವರರು ತಮ್ಮ ವೈದ್ಯಕೀಯ ಕಾರಣಗಳು ಅಥವಾ ವಾಹನದ ಬೃಹತ್‌ ಕಡಿವಾಣಗಳಿಂದ ಮಾತ್ರ ರದ್ದು ಮಾಡುವುದು ಅನುಮತಿಸಲಾಗಿದೆ"

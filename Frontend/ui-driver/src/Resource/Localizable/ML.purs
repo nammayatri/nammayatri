@@ -1582,3 +1582,5 @@ getML stringKey =
         REMOVE_EYEWERE -> "കണ്ണടകളോ സൺഗ്ലാസുകളോ ഉണ്ടെങ്കിൽ അത് നീക്കം ചെയ്യുക"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "ചിത്രം സാധൂകരിക്കാനുള്ള ശ്രമങ്ങളുടെ എണ്ണം കവിഞ്ഞു"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "പാൻ സ്ഥിതീകരണം പരാജയപ്പെട്ടു"
+        CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> "ഈ ബുക്കിംഗ്キャンസൽ ചെയ്യുന്നത് രോഗിക്ക് അടിയന്തര മെഡിക്കൽ സേവനങ്ങൾക്ക് പ്രഭാവം വരുത്താം"
+        DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> "ഡ്രൈവർമാർ അവരുടെ വൈദ്യശാസ്ത്ര കാരണം അല്ലെങ്കിൽ വാഹന തകരാറുകൾ മൂലം മാത്രമേ റദ്ദുചെയ്യേണ്ടു"

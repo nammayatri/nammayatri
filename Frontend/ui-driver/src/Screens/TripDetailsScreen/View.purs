@@ -47,6 +47,7 @@ import Data.Number as NUM
 import Data.Int as INT
 import Helpers.Utils as HU
 import Resource.Constants as RC
+import Data.Array(elem)
 import Data.Int
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
@@ -354,8 +355,8 @@ tripDataView push state =
                 Just startTime, Just endTime -> (show $ runFn2 JB.differenceBetweenTwoUTCInMinutes endTime startTime) <> " Min"
                 _, _ -> "NA"
     currency = getCurrency appConfig
-    acText = if state.data.acRide == Just true then "AC ∙ " else ""
-    rideType = acText <> RC.serviceTierMapping state.data.rideType state.data.acRide
+    acText = if state.data.vehicleServiceTier `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] then "" else if state.data.acRide == Just true then "AC ∙ " else ""
+    rideType = acText <> (RC.serviceTierMapping true state.data.rideType state.data.acRide)
     earningPerKm =
       let mbDist = NUM.fromString state.data.distance
       in case mbDist of

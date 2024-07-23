@@ -1579,3 +1579,5 @@ getEN stringKey =
         REMOVE_EYEWERE -> "Please remove eyewear or sunglasses if any"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "Image validation limit exceeded."
         DB_CHECK_AND_NAME_MATCH_FAILED -> "Pan verification failed"
+        CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> "Canceling this booking may affect the emergency medical services for the patient"
+        DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> "Drivers are permitted to cancel only for their medical reasons or vehicle breakdowns"

@@ -1582,3 +1582,5 @@ getTA stringKey =
         REMOVE_EYEWERE -> "கண்ணாடிகள் அல்லது சன்கிளாஸ்கள் ஏதேனும் இருந்தால் தயவுசெய்து அகற்றவும்"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "படத்தைச் சரிபார்க்கும் முயற்சிகள் எண்ணிக்கையை மீறியது"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "PAN சரிபார்ப்பு தோல்வியடைந்தது"
+        CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> "இந்த முன்பதிவு ரத்து செய்யப்படுவது நோயாளிக்கு அவசர மருத்துவ சேவைகளை"
+        DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> "ஓட்டுனர்கள் தங்களின் மருத்துவ காரணங்கள் அல்லது வாகனம் முறிவுக்கான காரணங்களுக்கே ரத்து செய்ய அனுமதிக்கப்படுகிறார்கள்"

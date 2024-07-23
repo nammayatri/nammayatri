@@ -24,6 +24,7 @@ type DriverDetailsType
     , providerType :: CTP.ProviderType
     , showAcView :: Boolean
     , isSpecialZone :: Boolean
+    , isAirConditioned :: Maybe Boolean
     }
 
 type TripDetails a
