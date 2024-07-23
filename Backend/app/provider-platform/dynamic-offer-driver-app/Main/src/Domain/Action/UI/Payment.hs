@@ -23,6 +23,7 @@ module Domain.Action.UI.Payment
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Action.UI.Payout as PayoutA
 import qualified Domain.Action.UI.Plan as ADPlan
 import Domain.Action.UI.Ride.EndRide.Internal
@@ -210,7 +211,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
       (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
       when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && transactionStatus == Payment.CHARGED) do
-        whenJust payerVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
+        let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
+        whenJust mbVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
         fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchanOperatingCityId
       when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
         unless (transactionStatus /= Payment.CHARGED) $ do
