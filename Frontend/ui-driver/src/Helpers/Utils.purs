@@ -110,6 +110,7 @@ import Common.RemoteConfig.Utils (forwardBatchConfigData)
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldl)
+import Debug (spy)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -599,36 +600,68 @@ getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
   let url = getAssetLink FunctionCall
       commonUrl = getCommonAssetLink FunctionCall
-  in case variant of
-      "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-      "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-      "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
-      "SUV_TIER"  -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
-      "HATCHBACK" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
-      "HATCHBACK_TIER" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
-      "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
-      "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
-      "TAXI"      -> "ic_taxi," <> commonUrl <> "ic_taxi.png"
-      "PREMIUM"   -> "ic_cab_premium" <> commonUrl <> "ic_cab_premium.png"
-      "TAXI_PLUS" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-      "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
-      "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-      "AUTO_RICKSHAW" -> 
-        case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
-          "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-          "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-          "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-          _           -> fetchImage FF_ASSET "ic_vehicle_front"
-      "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-      "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-      "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
-      "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
-      _ -> fetchImage FF_ASSET "ic_vehicle_front"
+  in case getMerchant FunctionCall of
+        YATRISATHI -> case spy "varient is" variant of
+                        "TAXI"      -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
+                        "SUV"       -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
+                        "SUV_TIER"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
+                        "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
+                        "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
+                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_noac_nooxy," <> commonUrl <> "ny_ic_ambulance_noac_nooxy.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_noac_oxy," <> commonUrl <> "ny_ic_ambulance_noac_oxy.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_ac_nooxy," <> commonUrl <> "ny_ic_ambulance_ac_nooxy.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_ac_oxy," <> commonUrl <> "ny_ic_ambulance_ac_oxy.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_ventilator," <> commonUrl <> "ny_ic_ambulance_ventilator.png"
+                        "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
+        _ -> case variant of
+                        "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+                        "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+                        "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
+                        "SUV_TIER"  -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
+                        "HATCHBACK" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+                        "HATCHBACK_TIER" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+                        "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
+                        "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
+                        "TAXI"      -> "ic_taxi," <> commonUrl <> "ic_taxi.png"
+                        "PREMIUM"   -> "ic_cab_premium" <> commonUrl <> "ic_cab_premium.png"
+                        "TAXI_PLUS" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+                        "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+                        "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+                        "AUTO_RICKSHAW" -> 
+                          case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
+                            "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                            "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                            "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+                            _           -> fetchImage FF_ASSET "ic_vehicle_front"
+                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_noac_nooxy," <> commonUrl <> "ny_ic_ambulance_noac_nooxy.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_noac_oxy," <> commonUrl <> "ny_ic_ambulance_noac_oxy.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_ac_nooxy," <> commonUrl <> "ny_ic_ambulance_ac_nooxy.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_ac_oxy," <> commonUrl <> "ny_ic_ambulance_ac_oxy.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_ventilator," <> commonUrl <> "ny_ic_ambulance_ventilator.png"
+                        _           -> fetchImage FF_ASSET "ic_vehicle_front"
+        _          -> case variant of
+                        "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
+                        "SEDAN_TIER" -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
+                        "SUV"       -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"
+                        "SUV_TIER"  -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"
+                        "HATCHBACK" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
+                        "HATCHBACK_TIER" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
+                        "TAXI"      -> "ic_sedan_non_ac," <> url <> "ic_sedan_non_ac.png"
+                        "TAXI_PLUS" -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
+                        "RENTALS"   -> "ic_rentals," <> url <> "ic_rentals.png"
+                        "INTERCITY" -> "ic_intercity," <> url <> "ic_intercity.png"
+                        "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
+                        "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
+                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_noac_nooxy," <> commonUrl <> "ny_ic_ambulance_noac_nooxy.png"
+                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_noac_oxy," <> commonUrl <> "ny_ic_ambulance_noac_oxy.png"
+                        "AMBULANCE_AC" -> "ny_ic_ambulance_ac_nooxy," <> commonUrl <> "ny_ic_ambulance_ac_nooxy.png"
+                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_ac_oxy," <> commonUrl <> "ny_ic_ambulance_ac_oxy.png"
+                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_ventilator," <> commonUrl <> "ny_ic_ambulance_ventilator.png"
+                        _           -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
 
 getVariantRideType :: String -> String
 getVariantRideType variant =
@@ -730,6 +763,10 @@ dummyCityConfig = {
     bike: {
       freeSeconds : 3,
       perMinCharges : 1.50
+    },
+    ambulance : {
+      freeSeconds : 480,
+      perMinCharges : 2.0
     }
   },
   rentalWaitingChargesConfig : {
@@ -744,6 +781,10 @@ dummyCityConfig = {
     bike: {
       freeSeconds : 180,
       perMinCharges : 1.5
+    },
+    ambulance : {
+      freeSeconds : 480,
+      perMinCharges : 2.0
     }
   },
   rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
@@ -968,12 +1009,22 @@ getChargesOb tripType cityConfig driverVehicle =
   else
     case driverVehicle of
       "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
+      "AMBULANCE_VENTILATOR" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_AC" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
       _ -> cityConfig.waitingChargesConfig.cab
 
 getRentalChargesOb :: CTC.CityConfig -> String -> CTC.ChargesEntity
 getRentalChargesOb cityConfig driverVehicle = 
   case driverVehicle of
     "AUTO_RICKSHAW" -> cityConfig.rentalWaitingChargesConfig.auto
+    "AMBULANCE_VENTILATOR" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_AC" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
     _ -> cityConfig.rentalWaitingChargesConfig.cab
 
 
@@ -1021,7 +1072,18 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+  SA.AMBULANCE_TAXI_TIER -> "AMBULANCE_TAXI"
+  SA.AMBULANCE_TAXI_OXY_TIER -> "AMBULANCE_TAXI_OXY"
+  SA.AMBULANCE_AC_TIER -> "AMBULANCE_AC"
+  SA.AMBULANCE_AC_OXY_TIER -> "AMBULANCE_AC_OXY"
+  SA.AMBULANCE_VENTILATOR_TIER -> "AMBULANCE_VENTILATOR"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
+
+filterVariantForPlanListCall :: String -> String
+filterVariantForPlanListCall variant = 
+  case variant of
+    "BIKE" -> "BIKE"
+    _ -> "null"
 
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =

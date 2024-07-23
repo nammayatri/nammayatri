@@ -376,6 +376,9 @@ initData = let
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
     , isSharedLocationFlow : false
+    , bookAmbulanceModal : false
+    , firstTimeAmbulanceSearch : false
+    , types_ : Nothing
   }
 }
 
@@ -490,6 +493,7 @@ dummyDriverInfo =
   , addressWard : Nothing
   , hasToll : false
   , currentSearchResultType : ST.ESTIMATES
+  , isAirConditioned : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -586,7 +590,7 @@ dummyRideBooking = RideBookingRes
   hasDisability : Nothing,
   sosStatus: Nothing,
   serviceTierName : Nothing, 
-  airConditioned : Nothing,
+  isAirConditioned : Nothing,
   isValueAddNP : Nothing,
   providerName : Nothing,
   estimatedDistance : Nothing,

@@ -2,22 +2,26 @@ module Components.ServiceTierCard.View where
 
 import Common.Types.App (LazyCheck(..))
 import Components.StepsHeaderModel.Controller (Action(..))
-import Data.Array (mapWithIndex)
+import Data.Array (mapWithIndex,elem)
 import Data.Array as Array
 import Data.Maybe (Maybe(..), isNothing)
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..),fetchVehicleVariant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude as MP
 import Prelude (Unit, const, (<>), bind, ($), pure, unit, show, (==), (||), (&&), (/=), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
-import Screens.Types (StepsHeaderModelState, FareProductType(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), Visibility(..), Accessiblity(..), textFromHtml,PrestoDOM, alignParentBottom, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, stroke, text, textSize, textView, weight, width, imageWithFallback, id, afterRender, visibility, background, padding, accessibilityHint, accessibility, rippleColor, cornerRadius)
+import Screens.Types (StepsHeaderModelState, FareProductType(..),VehicleVariant(..))
 import Styles.Colors as Color
-
+import Debug(spy)
+import Data.String.Regex (regex, replace)
+import Data.String.Regex.Flags (noFlags)
+import Data.Either (either)
+import Data.Maybe (maybe)
 view :: forall w. Config -> PrestoDOM (Effect Unit) w
 view config = let 
     showFPT = false --config.fareProductType == RENTAL
@@ -42,13 +46,17 @@ view config = let
         [ imageView
             [ height $ V 12
             , width $ V 12
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac_white"
+            , imageWithFallback $ fetchImage FF_ASSET case config.vehicleVariant of
+                                                      "AMBULANCE_VENTILATOR" ->  "ny_ic_ventilator_white"
+                                                      _ -> "ny_ic_ac_white"
             , margin $ MarginRight 3
             ]
         , textView
             $ [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text $ getString AC
+              , text $ case config.vehicleVariant of
+                      "AMBULANCE_VENTILATOR"-> ""
+                      _ -> getString AC
               , color Color.white900
               , padding $ PaddingBottom if EHC.os == "IOS" then 0 else 2
               ]
@@ -57,8 +65,8 @@ view config = let
     , textView
         $ [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text $ if config.showACPill 
-                      then parseName config.name
+          , textFromHtml $ if config.showACPill 
+                      then parseName $  config.name
                       else config.name
           , color Color.black700
           , padding $ PaddingBottom if EHC.os == "IOS" then 0 else 2
@@ -73,6 +81,7 @@ view config = let
             , gravity CENTER_VERTICAL
             , margin $ MarginLeft 4
             , accessibility ENABLE
+            , visibility $ MP.boolToVisibility $ not ( config.vehicleVariant `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"])
             , accessibilityHint $ "Vehicle capacity : " <> show capacity
             ]
             [ textView $
@@ -123,22 +132,23 @@ showACDetails :: String -> Maybe Boolean -> Boolean
 showACDetails name isAc =
     case isAc of
         Just val -> val
-        Nothing -> (not DS.contains (DS.Pattern "Non-AC") name) && Array.notElem name ["Auto", "Taxi", "AUTO_RICKSHAW", "Eco", "Bike Taxi"]
+        Nothing -> (not DS.contains (DS.Pattern "Non-AC") name) && Array.notElem name ["Auto", "Taxi", "AUTO_RICKSHAW", "Eco", "Bike Taxi","Non-AC ∙ O̶₂̶","Non-AC ∙ O₂"]
 
 type Config
   = { name :: String
     , capacity :: Maybe Int
     , isAc :: Maybe Boolean
     , showACPill :: Boolean
-    , fareProductType :: FareProductType 
+    , fareProductType :: FareProductType
+    , vehicleVariant :: String
     }
 
 parseName :: String -> String
 parseName name =
-  if DS.contains (DS.Pattern "AC") name && not DS.contains (DS.Pattern "Non-AC") name then
-    DS.replace (DS.Pattern "AC") (DS.Replacement "") name
-  else
-    name
+  let pattern = regex "\\bAC ∙ ?\\b" noFlags
+  in if DS.contains (DS.Pattern "AC") name && not (DS.contains (DS.Pattern "Non-AC") name)
+     then either (const name) (\r -> replace r "" name) pattern
+     else name
 
 parseFpt :: FareProductType -> String
 parseFpt fpt = 
@@ -148,3 +158,4 @@ parseFpt fpt =
     ONE_WAY -> "Normal"
     ONE_WAY_SPECIAL_ZONE -> "Special Zone"
     DRIVER_OFFER -> "Normal"
+    AMBULANCE -> "Ambulance"

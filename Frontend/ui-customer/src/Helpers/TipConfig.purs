@@ -109,6 +109,11 @@ yatriSathiConfig variant =
   case variant of
     "BIKE" -> mkTipConfig [0, 10, 20, 30]
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "AMBULANCE_TAXI" -> mkTipConfig []
+    "AMBULANCE_TAXI_OXY" -> mkTipConfig []
+    "AMBULANCE_AC_OXY" -> mkTipConfig []
+    "AMBULANCE_AC" -> mkTipConfig []
+    "AMBULANCE_VENTILATOR" -> mkTipConfig []
     _ -> mkTipConfig [0, 20, 30, 50]
 
 getTipViewProps :: TipViewProps -> String -> TipViewProps

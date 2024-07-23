@@ -127,7 +127,7 @@ type TipsConfig
 
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | AmbulanceBooking
 
 derive instance genericRemoteAC :: Generic RemoteAC _
 instance decodeRemoteAC :: Decode RemoteAC where 

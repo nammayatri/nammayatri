@@ -215,4 +215,5 @@ mockDriverInfo =
   , spLocationName : Nothing
   , addressWard : Nothing
   , hasToll : false
+  , isAirConditioned : Nothing
   }

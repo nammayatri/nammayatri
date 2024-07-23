@@ -389,6 +389,9 @@ linearGradient = [
 lightMintGreen :: Color
 lightMintGreen = "#F0FAF0"
 
+surfaceRed :: Color
+surfaceRed = "#FDEAEA"
+
 elfGreen :: Color
 elfGreen = "#269574"
 

@@ -95,6 +95,8 @@ import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLo
 import Styles.Colors as Color
 import Data.Int
 import Components.CommonComponentConfig as CommonComponentConfig
+import Debug(spy)
+import Data.Array (catMaybes)
 
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -922,7 +924,7 @@ waitTimeInfoCardConfig state = let
   where 
     textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR, waitingChargeApplicable :: Boolean}
     textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_, waitingChargeApplicable : true}
-                          else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute, waitingChargeApplicable : waitingChargeInfo.chargePerMinute /= "₹0/min"}
+                          else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE waitingChargeInfo.freeMinutes waitingChargeInfo.chargePerMinute, waitingChargeApplicable : (spy "waitingChargeInfo" waitingChargeInfo.chargePerMinute) /= "₹0/min"}
 
     waitingChargeInfo = case state.data.rateCardCache of
                           Just rateCard -> 
@@ -932,9 +934,12 @@ waitTimeInfoCardConfig state = let
                                 cityConfig = state.data.currentCityConfig
                                 autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
                                 cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+                                ambulanceWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.ambulance else cityConfig.waitingChargeConfig.ambulance
                                 waitingCharges = 
                                   if state.data.vehicleVariant == "AUTO_RICKSHAW" then
                                       autoWaitingCharges
+                                  else if state.data.vehicleVariant `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+                                      then ambulanceWaitingCharges
                                   else 
                                       cabsWaitingCharges
                             {freeMinutes : (show waitingCharges.freeMinutes) , chargePerMinute : "₹"<> show waitingCharges.perMinCharges <>"/min"}
@@ -1038,7 +1043,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
-                                  , isRateCardAvailable : (spy "rateCardCache" (isJust state.data.rateCardCache)) &&  (state.data.fareProductType /= FPT.INTER_CITY) && (state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE)
+                                  , isRateCardAvailable :  (isJust state.data.rateCardCache) && (DA.all (_ /= state.data.fareProductType) [FPT.INTER_CITY, FPT.AMBULANCE])
                                   , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL
                                   , rideDurationTimer : state.props.rideDurationTimer
                                   , rideDurationTimerId : state.props.rideDurationTimerId
@@ -1163,6 +1168,7 @@ driverInfoTransformer state =
     , fareProductType : cardState.fareProductType
     , spLocationName : cardState.spLocationName
     , addressWard : cardState.addressWard
+    , isAirConditioned : cardState.isAirConditioned
     , hasToll : cardState.hasToll
     }
 
@@ -1510,6 +1516,7 @@ chooseYourRideConfig state =
     _ = spy "chooseYourRideConfig TipConfig" tipConfig
     city = getValueToLocalStore CUSTOMER_LOCATION
     isIntercity = state.data.fareProductType == FPT.INTER_CITY
+    isAmbulance = state.data.fareProductType == FPT.AMBULANCE
   in
     ChooseYourRide.config
       { rideDistance = state.data.rideDistance
@@ -1527,7 +1534,7 @@ chooseYourRideConfig state =
       , tipForDriver = state.props.customerTip.tipForDriver
       , customerTipArray = tipConfig.customerTipArray
       , customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
-      , enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider
+      , enableTips = state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider && not isAmbulance
       , currentEstimateHeight = state.props.currentEstimateHeight
       , fareProductType = state.data.fareProductType
       , showMultiProvider = state.data.iopState.showMultiProvider
@@ -1902,7 +1909,16 @@ feedbackPillDataWithRating3 state =
     , { id: "8", text: getString RASH_DRIVING }
     ]
   , [ { id: "8", text: getString DRIVER_CHARGED_MORE }
-    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
+    , {id : "11", text : case state.data.vehicleVariant of
+        "AUTO_RICKSHAW" -> getString UNCOMFORTABLE_AUTO
+        "BIKE" -> getString UNCOMFORTABLE_BIKE
+        "AMBULANCE_TAXI" -> getString UNCOMFORTABLE_AMBULANCE
+        "AMBULANCE_TAXI_OXY" -> getString UNCOMFORTABLE_AMBULANCE
+        "AMBULANCE_AC" -> getString UNCOMFORTABLE_AMBULANCE
+        "AMBULANCE_AC_OXY" -> getString UNCOMFORTABLE_AMBULANCE
+        "AMBULANCE_VENTILATOR" -> getString UNCOMFORTABLE_AMBULANCE
+        _ -> getString UNCOMFORTABLE_CAB
+      }
     ]
   , [ { id: "3", text: getString TRIP_GOT_DELAYED }
     , { id: "3", text: getString FELT_UNSAFE }
@@ -1915,7 +1931,15 @@ feedbackPillDataWithRating4 state =
     , { id: "9", text: getString EXPERT_DRIVING }
     ]
   , [ { id: "9", text: getString ASKED_FOR_EXTRA_FARE }
-    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
+    , {id : "11", text : case state.data.vehicleVariant of
+        "AUTO_RICKSHAW" -> getString UNCOMFORTABLE_AUTO
+        "BIKE" -> getString UNCOMFORTABLE_BIKE
+        "AMBULANCE_TAXI" -> getString UNCOMFORTABLE_AMBULANCE
+        "AMBULANCE_TAXI_OXY" -> getString UNCOMFORTABLE_AMBULANCE
+        "AMBULANCE_AC" -> getString UNCOMFORTABLE_AMBULANCE
+        "AMBULANCE_AC_OXY" -> getString UNCOMFORTABLE_AMBULANCE
+        "AMBULANCE_VENTILATOR" -> getString UNCOMFORTABLE_AMBULANCE
+        _ -> getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "4", text: getString TRIP_GOT_DELAYED }
     , { id: "4", text: getString SAFE_RIDE }
@@ -1927,7 +1951,15 @@ feedbackPillDataWithRating5 state =
   [ [ { id: "10", text: getString POLITE_DRIVER }
     , { id: "5", text: getString EXPERT_DRIVING }
     ]
-  , [ {id : "12", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if state.data.vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB}
+  , [ {id : "12", text : case state.data.vehicleVariant of
+        "AUTO_RICKSHAW" -> getString CLEAN_AUTO
+        "BIKE" -> getString CLEAN_BIKE
+        "AMBULANCE_TAXI" -> getString CLEAN_AMBULANCE
+        "AMBULANCE_TAXI_OXY" -> getString CLEAN_AMBULANCE
+        "AMBULANCE_AC" -> getString CLEAN_AMBULANCE
+        "AMBULANCE_AC_OXY" -> getString CLEAN_AMBULANCE
+        "AMBULANCE_VENTILATOR" -> getString CLEAN_AMBULANCE
+        _ -> getString CLEAN_CAB}
     , { id: "10", text: getString ON_TIME }
     ]
   , [ { id: "10", text: getString SKILLED_NAVIGATOR }
@@ -2033,47 +2065,61 @@ getChatSuggestions state = do
 locationTagBarConfig :: ST.HomeScreenState -> LocationTagBar.LocationTagBarConfig
 locationTagBarConfig state =
   let
-    locTagList =
-      map
-        ( \item ->
-            { imageConfig:
-                { height: V 32
-                , width: V 32
-                , imageWithFallback: fetchImage FF_ASSET item.image
-                , margin: MarginRight 8
-                }
-            , textConfig:
-                { text: item.text
-                , fontStyle: FontStyle.SubHeading1
-                , fontSize: FontSize.a_14
-                , color: Color.black800
-                }
-            , stroke: "0," <> Color.grey700
-            , cornerRadius: Corners 19.0 true true true true
-            , background: item.background
-            , height: WRAP_CONTENT
-            , width: WRAP_CONTENT
-            , padding: PaddingVertical 16 16
-            , orientation: HORIZONTAL
-            , enableRipple: true
-            , rippleColor: Color.rippleShade
-            , bannerConfig:
-                { text: getString COMING_SOON
-                , color: Color.white900
-                , fontStyle: FontStyle.Body12
-                , textSize: FontSize.a_12
-                , cornerRadii: Corners 6.0 false false true true
-                , background: Color.blue800
-                }
-            , showBanner: item.showBanner
-            , id: item.id
-            }
-        )
-        ( [ -- { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
-            { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
-          ]
-            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
-        )
+    cityName = state.data.currentCityConfig.cityName
+    enableIntercity = state.data.currentCityConfig.enableIntercity
+
+    instantTag = 
+      if cityName /= "Kolkata" 
+      then Just { image: "ny_ic_instant", text: getString INSTANT, id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
+      else Nothing
+
+    rentalTag = Just { image: "ny_ic_rental", text: getString RENTALS_, id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
+
+    interCityTag = 
+      if enableIntercity 
+      then Just { image: "ny_ic_intercity", text: getString INTER_CITY_, id: "INTER_CITY", background: Color.blue600', showBanner: GONE }
+      else Nothing
+
+    ambulanceTag = 
+      if cityName == "Kolkata" 
+      then Just { image: "ny_ic_ambulance", text: getString AMBULANCE_ , id: "AMBULANCE", background: Color.surfaceRed, showBanner: GONE }
+      else Nothing
+
+    tags = catMaybes [instantTag, rentalTag, interCityTag, ambulanceTag]
+
+    locTagList = map (\item ->
+      { imageConfig:
+          { height: V 32
+          , width: V 32
+          , imageWithFallback: fetchImage FF_ASSET item.image
+          , margin: MarginRight 8
+          }
+      , textConfig:
+          { text: item.text
+          , fontStyle: FontStyle.SubHeading1
+          , fontSize: FontSize.a_14
+          , color: Color.black800
+          }
+      , stroke: "0," <> Color.grey700
+      , cornerRadius: Corners 19.0 true true true true
+      , background: item.background
+      , height: WRAP_CONTENT
+      , width: WRAP_CONTENT
+      , padding: PaddingVertical 16 16
+      , orientation: HORIZONTAL
+      , enableRipple: true
+      , rippleColor: Color.rippleShade
+      , bannerConfig:
+          { text: getString COMING_SOON
+          , color: Color.white900
+          , fontStyle: FontStyle.Body12
+          , textSize: FontSize.a_12
+          , cornerRadii: Corners 6.0 false false true true
+          , background: Color.blue800
+          }
+      , showBanner: item.showBanner
+      , id: item.id
+      }) tags
   in
     { tagList: locTagList }
 
