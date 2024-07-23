@@ -1094,7 +1094,9 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
       pricingMinFare = minFare,
-      fulfillmentType = show Enums.DELIVERY,
+      fulfillmentType = case tripCategory of
+        DTC.Ambulance _ -> show Enums.AMBULANCE
+        _ -> show Enums.DELIVERY,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
@@ -1140,7 +1142,9 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       tripCategory = tripCategory,
       fareParams = Just fareParams,
       farePolicy = Nothing,
-      fulfillmentType = show Enums.DELIVERY,
+      fulfillmentType = case tripCategory of
+        DTC.Ambulance _ -> show Enums.AMBULANCE
+        _ -> show Enums.DELIVERY,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty

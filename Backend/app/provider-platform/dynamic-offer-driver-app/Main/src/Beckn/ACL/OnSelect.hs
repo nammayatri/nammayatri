@@ -28,6 +28,7 @@ import BecknV2.Utils
 import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
@@ -89,7 +90,9 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
     { fulfillmentId = Just quote.id.getId,
       fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation Nothing,
       fulfillmentVehicle = Just $ mkVehicleV2 quote,
-      fulfillmentType = Just $ show Enums.DELIVERY,
+      fulfillmentType = case quote.tripCategory of
+        DTC.Ambulance _ -> Just $ show Enums.AMBULANCE
+        _ -> Just $ show Enums.DELIVERY,
       fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,
       fulfillmentCustomer = Nothing,
       fulfillmentState = Nothing,
