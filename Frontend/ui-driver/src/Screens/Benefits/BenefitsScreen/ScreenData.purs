@@ -37,6 +37,11 @@ initData = {
             completed : [],
             remaining : []
          }
+         , bannerData : { bannerItem: Nothing
+                        , currentBanner: 0
+                        , bannerScrollState: "0"
+                        , currentPage: 0
+                        }
         },
     props : {
       showDriverReferralQRCode : false,
@@ -44,6 +49,8 @@ initData = {
       driverReferralType : CUSTOMER,
       referralInfoPopType : NO_REFERRAL_POPUP,
       selectedModule : Nothing,
-      showShimmer : true
+      showShimmer : true,
+      isPayoutEnabled: Nothing,
+      bannerLength : 0
     }
 }

@@ -301,6 +301,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
+                    | CustomerReferralTrackerScreen ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -432,6 +433,7 @@ data Action = NoAction
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
+            | ReferralEarnedAC PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -454,6 +456,12 @@ eval (BgLocationPopupAC PopUpModal.OnButton1Click) state =
     void $ JB.requestBackgroundLocation unit
     pure NoAction
   ]
+
+eval (ReferralEarnedAC PopUpModal.OnButton1Click) state = exit $ CustomerReferralTrackerScreen state{props{referralEarned = false}}
+
+eval (ReferralEarnedAC PopUpModal.OnButton2Click) state = continue state{props{referralEarned = false}}
+
+eval (ReferralEarnedAC PopUpModal.DismissPopup) state = continue state{props{referralEarned = false}}
 
 eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
 
