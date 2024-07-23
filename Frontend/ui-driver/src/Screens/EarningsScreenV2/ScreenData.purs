@@ -4,6 +4,7 @@ import Common.Types.App (Price(..), Currency(..), Distance(..), DistanceUnit(..)
 import Common.Types.App as Common
 import Prelude
 import Screens.EarningsScreen.Common.Types
+import Screens.EarningsScreen.Common.Utils
 import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe
@@ -63,7 +64,7 @@ initialState =
       , payoutListItem : Nothing
       , config : getAppConfig appConfig
       , selectedDate : Nothing
-      , currentDate : getCurrentDate
+      , currentDate : formateDate getCurrentDate
       , selectedDateRides: Nothing
       , calendarState:
         { calendarPopup: false

@@ -174,14 +174,14 @@ shimmerRideComponent idx item =
         , orientation VERTICAL
         , margin $ MarginLeft 8
         ]
-        [ sfl (getHeightFromPercent 2) (getWidthFromPercent 50)
+        [ sfl (getHeightFromPercent 2) (getWidthFromPercent 50) Color.grey900
         , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , gravity CENTER_VERTICAL
             , margin $ MarginTop 5
             ]
-            [ sfl (getHeightFromPercent 2) (getWidthFromPercent 30)
+            [ sfl (getHeightFromPercent 2) (getWidthFromPercent 30) Color.grey900
             ]
         ]
     , linearLayout
@@ -190,19 +190,24 @@ shimmerRideComponent idx item =
         , gravity RIGHT
         , orientation VERTICAL
         ]
-        $ [ sfl (getHeightFromPercent 2) (getWidthFromPercent 20) 
+        $ [ sfl (getHeightFromPercent 2) (getWidthFromPercent 20) Color.grey900
           ]
     ]
 
-sfl :: forall a. Int -> Int -> Layout a
-sfl height' width' =
+sfl :: forall a. Int -> Int -> String -> Layout a
+sfl height' width' color' =
   shimmerFrameLayout
   [ cornerRadius 50.0
   , stroke $ "1," <> Color.grey900
-  , background Color.grey900
+  , background color'
   , height $ V height'
   , width $ V width'
-  ][
+  ][ linearLayout
+      [ cornerRadius 50.0
+      , stroke $ "1," <> Color.grey900
+      , height $ V height'
+      , width $ V width'
+      ][]
   ]
 
 tabList :: Array TabList

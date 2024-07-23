@@ -13,6 +13,7 @@ import Styles.Colors as Color
 import Prelude (class Eq)
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
+import Services.API
 
 type Layout e
   = PrestoDOM (Effect Unit) e
@@ -45,3 +46,16 @@ type RideTag
     , color :: String
     , text :: String
     }
+
+
+type RideData = {
+  earnings :: Int,
+  earningsWithCurrency :: Price,
+  rideDistance :: Int,
+  rideDate :: String,
+  noOfRides :: Int,
+  rideDistanceWithUnit :: Distance,
+  list :: Array RidesInfo,
+  noSummaryFound :: Boolean,
+  noRidesTaken :: Boolean
+}

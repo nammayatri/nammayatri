@@ -15,7 +15,7 @@
 
 module Common.Types.App where
 
-import Prelude (class Eq, class Show, ($))
+import Prelude (class Eq, class Show, ($), class Semiring, (+), (*))
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 import Data.Generic.Rep (class Generic)
@@ -694,7 +694,8 @@ instance standardEncodeDistanceUnit :: StandardEncode DistanceUnit where standar
 instance eqDistanceUnit :: Eq DistanceUnit where eq = genericEq
 instance decodeDistanceUnit :: Decode DistanceUnit where decode = defaultEnumDecode
 instance showDistanceUnit :: Show DistanceUnit where show = genericShow
-instance encodeDistanceUnit :: Encode DistanceUnit where encode = defaultEncode
+instance encodeDistanceUnit :: Encode DistanceUnit where encode = defaultEnumEncode
+
 
 derive instance genericDistance :: Generic Distance _
 derive instance newtypeDistance :: Newtype Distance _
@@ -702,4 +703,15 @@ instance standardEncodeDistance :: StandardEncode Distance where standardEncode 
 instance decodeDistance :: Decode Distance where decode = defaultDecode
 instance showDistance :: Show Distance where show = genericShow
 instance encodeDistance :: Encode Distance where encode = defaultEncode
+instance semiringDistance :: Semiring Distance where 
+    add (Distance a) (Distance b) = Distance {
+      unit : a.unit,
+      value : a.value + b.value
+    }
+    zero = Distance {value: 0.0, unit: Meter}
+    mul (Distance a) (Distance b) = Distance {
+      unit : a.unit,
+      value : a.value * b.value
+    }
+    one = Distance {value: 1.0, unit: Meter}
 instance eqDistance :: Eq Distance where eq = genericEq

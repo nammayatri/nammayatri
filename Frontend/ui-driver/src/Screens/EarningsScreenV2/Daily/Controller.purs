@@ -5,6 +5,7 @@ import Effect
 import Prelude
 import PrestoDOM
 import Screens.EarningsScreen.ScreenData
+import Screens.EarningsScreen.Common.Utils
 import Components.PrimaryButton as PrimaryButtonController
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Services.API (RidesSummary(..), RidesInfo(..))
@@ -47,8 +48,10 @@ data Action
   | CalendarAC CalendarController.Action
   | ShowCalendarPopup
   | BottomNavBarAction BottomNavBar.Action
-  | ChangeDate INCREMENT_TYPE
+  | ChangeDate String
   | AfterRender
+  | UpdateDate String
+  | NoAction
 
 instance showAction :: Show Action where
   show _ = ""
@@ -73,7 +76,7 @@ eval (UpdateRideData items) state = do
       Nothing -> dummyRideSummaryType state.data.currentDate
       Just (RidesSummary val) ->
         { earningsWithCurrency: priceToBeDisplayed val.earningsWithCurrency false
-        , rideDate: if val.rideDate == (getcurrentdate "") then "Today" else DS.replaceAll (DS.Pattern "-") (DS.Replacement "/") val.rideDate
+        , rideDate: formateDate val.rideDate
         , noOfRides: show val.noOfRides
         , rideDistanceWithUnit: distanceTobeDisplayed val.rideDistanceWithUnit false true
         }
@@ -86,11 +89,11 @@ eval (UpdateRideHistory item date) state =
       continue $ state{data{selectedDateRides = Just datas}}
     else update state
 
-eval AfterRender state = continue state{props{forwardBtnAlpha = if state.data.currentDate == getCurrentDate then 0.4 else 1.0}}
+eval AfterRender state = continue state{props{forwardBtnAlpha = if state.data.currentDate == formateDate getCurrentDate then 0.4 else 1.0}}
 
 eval ShowCalendarPopup state = do
   let
-    res = initializeCalendarWithDay (getCurrentDayFromDate state.data.currentDate true) true
+    res = initializeCalendarWithDay (getCurrentDayFromDate (getDateFromCurrentDate state.data.currentDate) true) true
   continue state { data { calendarState { weeks = res.weeks, calendarPopup = true, selectedTimeSpan = res.selectedTimeSpan, startDate = res.startDate, endDate = Nothing } } }
 
 eval (CalendarAC CalendarController.HideCalendarPopup) state = continue state { data { calendarState { calendarPopup = false, startDate = Nothing, endDate = Nothing } } }
@@ -109,21 +112,17 @@ eval (CalendarAC (CalendarController.PrimaryButtonActionController (PrimaryButto
           { calendarState { calendarPopup = false }
           , currentDate =
             case state.data.calendarState.startDate of
-              Nothing -> getcurrentdate "" 
+              Nothing -> getCurrentDate
               Just val -> convertUTCtoISC val.utcDate "YYYY-MM-DD"
           }
         }
-  exit $ DateUpdated newState{props{forwardBtnAlpha = if newState.data.currentDate == getCurrentDate then 0.4 else 1.0}}
+  exit $ DateUpdated newState{props{forwardBtnAlpha = if newState.data.currentDate == formateDate getCurrentDate then 0.4 else 1.0}}
 
 eval (CalendarAC (CalendarController.PrimaryButtonCancelActionController (PrimaryButtonController.OnClick))) state = do
   continue state { data { calendarState { calendarPopup = false } } }
 
-eval (ChangeDate incrementType) state = 
-  let updatedDate = 
-        case incrementType of
-          INCREMENT -> runFn2 getDateFromDate state.data.currentDate 1
-          DECREMENT -> runFn2 getDateFromDate state.data.currentDate (-1)
-  in updateAndExit state{data{selectedDateRides = Nothing, selectedDate = Nothing}} $ DateUpdated state{data{currentDate = updatedDate, selectedDateRides = Nothing, selectedDate = Nothing}, props {forwardBtnAlpha = if updatedDate == getCurrentDate then 0.4 else 1.0}}
+eval (ChangeDate updatedDate) state = exit $ DateUpdated state{data{selectedDateRides = Nothing, selectedDate = Nothing}, props {forwardBtnAlpha = if updatedDate == getCurrentDate then 0.4 else 1.0}}
+eval (UpdateDate updatedDate) state = continue state{data{currentDate = formateDate updatedDate, selectedDateRides = Nothing, selectedDate = Nothing}, props {forwardBtnAlpha = if updatedDate == getCurrentDate then 0.4 else 1.0}}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   pure $ hideKeyboardOnNavigation true
@@ -154,7 +153,7 @@ eval _ state = continue state
 dummyRideSummaryType :: String -> RidesSummaryType
 dummyRideSummaryType date =
   { earningsWithCurrency: priceToBeDisplayed (dummyPriceForCity $ getValueToLocalStore DRIVER_LOCATION) false
-  , rideDate: if date == (getcurrentdate "") then "Today" else DS.replaceAll (DS.Pattern "-") (DS.Replacement "/") date
+  , rideDate: formateDate date
   , noOfRides: "0"
   , rideDistanceWithUnit: "0"
   }

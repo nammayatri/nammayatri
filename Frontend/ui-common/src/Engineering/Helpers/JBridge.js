@@ -2801,7 +2801,7 @@ export const getCurrentDate = function() {
   const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = today.getFullYear();
 
-  today = yyyy + "-" + mm + "-" + dd;
+  today = yyyy + "/" + mm + "/" + dd;
   return today;
 }()
 
@@ -2812,6 +2812,6 @@ export const getDateFromDate = function(date, count) {
   const mm = String(givenDate.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = givenDate.getFullYear();
 
-  givenDate = yyyy + "-" + mm + "-" + dd;
+  givenDate = yyyy + "/" + mm + "/" + dd;
   return givenDate;
 }
