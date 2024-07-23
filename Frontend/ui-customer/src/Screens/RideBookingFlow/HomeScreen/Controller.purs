@@ -149,6 +149,7 @@ import ConfigProvider
 import Screens.HomeScreen.Controllers.Types
 import Data.Show.Generic 
 import Components.CommonComponentConfig as CommonComponentConfig
+import Data.String as DS
 
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -2010,7 +2011,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
       let filteredEstimates = foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) quote.selectedServices then acc <> [item.id] else acc) [] quotes
       in (Tuple (fromMaybe "" $ head filteredEstimates) (fromMaybe [] $ tail filteredEstimates))
 
-    filterNonAcAsPerGates quote = not $ quote.serviceTierName == Just "Non-AC" && (STR.contains (STR.Pattern "(AC only)") state.props.defaultPickUpPoint)
+    filterNonAcAsPerGates quote = not $ quote.vehicleVariant == "TAXI" && (STR.contains (STR.Pattern "(ac only)") $ spy "filterNonAcAsPerGates" DS.toLower state.props.defaultPickUpPoint)
 
 eval (GetEditLocResult (GetEditLocResultResp resp)) state = do
   logStatus "bookingUpdateRequestDetails" resp
