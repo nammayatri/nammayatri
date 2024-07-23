@@ -81,3 +81,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN total_rides_count integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN available_payment_methods text[] NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN is_dashboard_request boolean ;

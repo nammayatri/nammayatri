@@ -48,6 +48,7 @@ data Booking = Booking
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     initialPickupLocation :: Domain.Types.Location.Location,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
