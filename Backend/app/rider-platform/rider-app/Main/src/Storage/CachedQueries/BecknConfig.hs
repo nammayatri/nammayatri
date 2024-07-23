@@ -16,12 +16,14 @@
 module Storage.CachedQueries.BecknConfig
   ( findAll,
     findByMerchantIdDomainAndVehicle,
+    findByMerchantIdDomainandMerchantOperatingCityId,
   )
 where
 
 import BecknV2.OnDemand.Enums
 import Domain.Types.BecknConfig
 import Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -49,3 +51,19 @@ cacheMerchantIdDomainAndVehicle config = do
 
 makeMerchantIdDomainKey :: Id Merchant -> Text -> VehicleCategory -> Text
 makeMerchantIdDomainKey merchantId domain vehicle = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":Vehicle:" <> show vehicle
+
+findByMerchantIdDomainandMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> Id MerchantOperatingCity -> m (Maybe BecknConfig)
+findByMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperatingCityId = do
+  Hedis.safeGet (makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId domain merchantOperatingCityId) >>= \case
+    Just a -> return a
+    Nothing -> findAndCache
+  where
+    findAndCache = flip whenJust cacheMerchantIdDomainandMerchantOperatingCityId /=<< Queries.findByMerchantIdDomainandMerchantOperatingCityId (Just merchantId) domain (Just merchantOperatingCityId)
+
+cacheMerchantIdDomainandMerchantOperatingCityId :: (CacheFlow m r) => BecknConfig -> m ()
+cacheMerchantIdDomainandMerchantOperatingCityId config = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp (makeMerchantIdDomainandMerchantOperatingCityIdKey (fromJust config.merchantId) config.domain (fromJust config.merchantOperatingCityId)) config expTime
+
+makeMerchantIdDomainandMerchantOperatingCityIdKey :: Id Merchant -> Text -> Id MerchantOperatingCity -> Text
+makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId domain merchantOperatingCityId = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":MerchantOperatingCityId:" <> merchantOperatingCityId.getId

@@ -23,6 +23,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.UI.Search as DSearch
+-- import Domain.Types.BecknConfig
 import EulerHS.Prelude hiding (state, (%~))
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -35,7 +36,7 @@ buildSearchReqV2 ::
   m Spec.SearchReq
 buildSearchReqV2 res@DSearch.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW) -- get Vehicle Variatnt here
+  bapConfig <- QBC.findByMerchantIdDomainandMerchantOperatingCityId merchant.id "MOBILITY" res.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> "merchantOperatingCityId:-" <> show merchantOperatingCityId.getId)
   messageId <- generateGUIDText
   let eBecknSearchReq = Search.buildBecknSearchReqV2 res bapConfig bapUri messageId
   case eBecknSearchReq of

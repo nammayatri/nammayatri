@@ -14,6 +14,8 @@ WhiteListOrg:
     subscriberId : ShortId Subscriber
     merchantId : Id Merchant
     domain : Domain
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
+    vehicleVariant: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
   derives: "Generic,Show,'UsageSafety"
@@ -49,4 +51,3 @@ WhiteListOrg:
   extraOperations:
     - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantOperatingCityId]

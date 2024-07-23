@@ -583,6 +583,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
             ..
           }
 
+-- getListOfServiceTireTypes :: BecknConfig.VehicleCategory -> [DVST.VehicleServiceTierType]
+-- getListOfServiceTireTypes BecknConfig.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS]
+-- getListOfServiceTireTypes BecknConfig.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW]
+-- getListOfServiceTireTypes BecknConfig.MOTORCYCLE = [DVST.BIKE]
+-- getListOfServiceTireTypes BecknConfig.AMBULANCE = [DVST.AMBULANCE_TAXI, DVST.AMBULANCE_TAXI_OXY, DVST.AMBULANCE_AC, DVST.AMBULANCE_AC_OXY, DVST.AMBULANCE_VENTILATOR]
+-- getListOfServiceTireTypes BecknConfig.TWO_WHEELER = [DVST.BIKE]
+-- getListOfServiceTireTypes BecknConfig.METRO = []
+
 buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakup.FareBreakupEntityType -> DFareBreakup -> m DFareBreakup.FareBreakup
 buildFareBreakupV2 entityId entityType DFareBreakup {..} = do
   guid <- generateGUID

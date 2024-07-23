@@ -34,7 +34,9 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
+import Domain.Types.BecknConfig
 import qualified Domain.Types as DT
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
@@ -62,6 +64,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -125,7 +128,8 @@ data EstimateInfo = EstimateInfo
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
-    tripCategory :: DT.TripCategory
+    tripCategory :: DT.TripCategory,
+    vehicleCategory :: VehicleCategory
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -180,7 +184,8 @@ data QuoteInfo = QuoteInfo
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
     quoteBreakupList :: [QuoteBreakupInfo],
-    tripCategory :: DT.TripCategory
+    tripCategory :: DT.TripCategory,
+    vehicleCategory :: VehicleCategory
   }
 
 data QuoteDetails
@@ -228,6 +233,7 @@ validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
 validateRequest DOnSearchReq {..} = do
   searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+  _ <- Utils.validateSubscriber providerInfo.providerId merchant.id searchRequest.merchantOperatingCityId
   return $ ValidatedOnSearchReq {..}
 
 onSearch ::
@@ -241,7 +247,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   mkBppDetails >>= CQBppDetails.createIfNotPresent
 
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
-
+  becknConfig <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId (show Domain.MOBILITY) searchRequest.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
+  blackListedVehicles <- Utils.getBlackListedVehicles becknConfig.id providerInfo.providerId
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
       logTagError "onSearch" "disability tag enabled search estimates discarded, not supported for OFF-US transactions"
@@ -261,8 +268,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
               check if allroutes estimates came if yes then mark estimate as done else mark with ongoing
         Nothing -> pure ()
       -}
-      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo)
-      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo)
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles)
+      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
@@ -277,16 +284,17 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       Ideally, rental options should also be available for one-way preferences, but frontend limitations prevent this.
       Once the frontend is updated for compatibility, we can extend this feature.
     -}
-    filterQuotesByPrefference :: [QuoteInfo] -> [QuoteInfo]
-    filterQuotesByPrefference _quotesInfo =
+    filterQuotesByPrefference :: [QuoteInfo] -> [VehicleCategory] -> [QuoteInfo]
+    filterQuotesByPrefference _quotesInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
-        Rental -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> True; _ -> False) _quotesInfo
-        _ -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> False; _ -> True) _quotesInfo
+        Rental -> filter (not . isNotRental) _quotesInfo
+        OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory) _quotesInfo
+        _ -> filter isNotRental _quotesInfo
 
-    filterEstimtesByPrefference :: [EstimateInfo] -> [EstimateInfo]
-    filterEstimtesByPrefference _estimateInfo =
+    filterEstimtesByPrefference :: [EstimateInfo] -> [VehicleCategory] -> [EstimateInfo]
+    filterEstimtesByPrefference _estimateInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
-        OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants)) _estimateInfo
+        OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
         Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
         _ -> []
 
@@ -308,6 +316,12 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
             createdAt = now,
             updatedAt = now
           }
+
+    isNotRental :: QuoteInfo -> Bool
+    isNotRental quote = case quote.quoteDetails of RentalDetails _ -> False; _ -> True
+
+    isNotBlackListed :: [VehicleCategory] -> VehicleCategory -> Bool
+    isNotBlackListed blackListedVehicles vehicleCategory = not (vehicleCategory `elem` blackListedVehicles)
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
