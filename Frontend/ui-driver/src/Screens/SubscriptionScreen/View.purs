@@ -1195,7 +1195,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
         , width MATCH_PARENT
         , background Color.white900
         , cornerRadius 8.0
-        , cornerRadii $  if isActivePlan && (DS.null coinDiscountUpto) then (Corners 8.0 true true false false) else (Corners 8.0 true true true true)
+        , cornerRadii $  if isActivePlan && (not $ DS.null coinDiscountUpto) then (Corners 8.0 true true false false) else (Corners 8.0 true true true true)
         ][
         linearLayout
         ([ height WRAP_CONTENT
