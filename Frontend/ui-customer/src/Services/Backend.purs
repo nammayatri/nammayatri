@@ -67,7 +67,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Mobility.Prelude as MP
 import SessionCache
 import LocalStorage.Cache (removeValueFromCache)
-import Helpers.API (callApiBT)
+import Helpers.API (callApiBT, getDeviceDetails)
 import Screens.Types (FareProductType(..)) as FPT
 import Services.API (ServiceabilityType(..)) as ServiceabilityType
 
@@ -79,7 +79,7 @@ getHeaders val isGzipCompressionEnabled = do
                         Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS),
+                        Header "x-device" getDeviceDetails,
                         Header "client-id" (getValueToLocalStore CUSTOMER_CLIENT_ID)
                     ] <> case regToken of
                         Nothing -> []
@@ -95,7 +95,7 @@ getHeaders' val isGzipCompressionEnabled = do
                         Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS),
+                        Header "x-device" getDeviceDetails,
                         Header "client-id" (getValueToLocalStore CUSTOMER_CLIENT_ID)
                     ] <> case regToken of
                         Nothing -> []
