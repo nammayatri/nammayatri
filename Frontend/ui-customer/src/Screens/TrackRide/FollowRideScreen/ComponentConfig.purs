@@ -110,6 +110,7 @@ getDriverDetails state =
     , serviceTierName : ride.serviceTierName
     , providerType : Common.ONUS
     , showAcView : false
+    , isSpecialZone : false
     }
 
 

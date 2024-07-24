@@ -60,10 +60,10 @@ driverDetailsView config uid nid =
   , padding $ Padding 16 16 16 8
   , width MATCH_PARENT
   , id $ getNewIDWithTag uid
-  , margin $ Margin 16 (if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
+  , margin $ Margin 16 (if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || config.isSpecialZone then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
   , background Color.white900
   , cornerRadius 8.0
-  , visibility $  boolToVisibility $ if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then config.rideStarted else true
+  , visibility $  boolToVisibility $ if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || config.isSpecialZone then config.rideStarted else true
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
