@@ -55,7 +55,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment ()
 import Kernel.Beam.Functions
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types as DLanguage
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -446,12 +446,12 @@ onUpdate = \case
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
     Notify.notifyOnTripUpdate booking ride "Destination and Fare Updated" "Your edit request was accepted by your driver!"
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
-    mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey booking.merchantOperatingCityId "TOLL_CROSSED"
+    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "TOLL_CROSSED" person.language
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
-    mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey booking.merchantOperatingCityId "FCM_CHAT_MESSAGE"
+    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" person.language
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType

@@ -228,7 +228,7 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
         Nothing -> pure ()
   where
     updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId = do
-      mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey merchantOpCityId "PAYOUT_REFERRAL_REWARD"
+      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" driver.language
       whenJust mbMerchantPN $ \merchantPN -> do
         let entityData = NotifReq {entityId = referredDriverId.getId, title = merchantPN.title, message = merchantPN.body}
         notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward
