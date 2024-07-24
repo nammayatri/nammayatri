@@ -219,12 +219,13 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
-          let mobileNumberHash = (.hash) riderDetails.mobileNumber
-          localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-          mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
-          (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
-          QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
-          when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
+          when (isNothing riderDetails.firstRideId) $ do
+            let mobileNumberHash = (.hash) riderDetails.mobileNumber
+            localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+            mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
+            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
+            QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
+            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
         Nothing -> pure ()
   where
     updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId = do
