@@ -17,7 +17,7 @@ module Helpers.API where
 
 import Prelude
 import Engineering.Error.Utils
-import JBridge (factoryResetApp, stopChatListenerService)
+import JBridge (factoryResetApp, stopChatListenerService, getManufacturerName)
 import Engineering.Helpers.API as API
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, Header(..), ErrorResponse)
 import Foreign.Generic (class Decode)
@@ -29,7 +29,7 @@ import Engineering.Helpers.Commons (liftFlow)
 import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
 import Data.Either (Either(..))
-
+import Data.String as DS
 
 data CustomerDefaultErrorHandler = CustomerDefaultErrorHandler
 instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler GlobalState where
@@ -53,8 +53,13 @@ baseHeaders =
   , Header "x-client-version" (getValueToLocalStore VERSION_NAME)
   , Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION)
   , Header "session_id" (getValueToLocalStore SESSION_ID)
-  , Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+  , Header "x-device" getDeviceDetails
   ]
+
+getDeviceDetails :: String
+getDeviceDetails = do
+  let manufacturer = getManufacturerName unit
+  (getValueToLocalNativeStore DEVICE_DETAILS) <> if not $ DS.null manufacturer then "/mf:" <> (getManufacturerName unit) else ""
 
 tokenHeader :: Maybe String -> Array Header
 tokenHeader regToken = maybe [] singleton $ (Header "token") <$> regToken
