@@ -694,6 +694,7 @@ validateRideAssignedReq ::
   RideAssignedReq ->
   m ValidatedRideAssignedReq
 validateRideAssignedReq RideAssignedReq {..} = do
+  let isInitiatedByCronJob = maybe False (.isInitiatedByCronJob) bookingDetails
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
