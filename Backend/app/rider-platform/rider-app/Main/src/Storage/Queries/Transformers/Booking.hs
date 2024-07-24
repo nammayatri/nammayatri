@@ -108,7 +108,7 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
         DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
         DFF.DRIVER_OFFER -> do
           upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-          DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+          DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId
         DFF.ONE_WAY_SPECIAL_ZONE -> do
           upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
           DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
