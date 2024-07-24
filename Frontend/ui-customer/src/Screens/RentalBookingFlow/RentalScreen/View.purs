@@ -44,7 +44,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
-import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (decodeError, fetchImage, getCityConfig, FetchImageFrom(..))
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
 import JBridge (renderSlider, sliderConfig, toast)
 import Language.Strings (getString, getVarString)
@@ -61,6 +61,7 @@ import Services.API (GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBooki
 import Services.Backend (getQuotes, rideBooking)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
+import Storage (KeyStore(..), getValueToLocalStore)
 
 rentalScreen :: RentalScreenState -> Screen Action RentalScreenState ScreenOutput
 rentalScreen initialState =
@@ -122,6 +123,7 @@ rentalPackageSelectionView push state =
       , width MATCH_PARENT 
       , background Color.black900 
       , padding $ PaddingTop EHC.safeMarginTop
+      , visibility $ boolToVisibility $ not $ state.props.isSpecialZone
       ][InputView.view (push <<< InputViewAC) $ mapInputViewConfig state]
     , linearLayout
       [ height WRAP_CONTENT

@@ -23,6 +23,7 @@ type DriverDetailsType
     , serviceTierName :: Maybe String
     , providerType :: CTP.ProviderType
     , showAcView :: Boolean
+    , isSpecialZone :: Boolean
     }
 
 type TripDetails a

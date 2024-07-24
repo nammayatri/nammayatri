@@ -5843,6 +5843,7 @@ updateRideScheduledTime _ = do
 enterRentalRideSearchFlow :: String -> FlowBT String Unit
 enterRentalRideSearchFlow bookingId = do
   (GlobalState globalState) <- getState
+  setValueToLocalStore CONFIRM_QUOTES_POLLING "false"
   updateLocalStage ConfirmingQuotes
   setValueToLocalNativeStore CONFIRM_QUOTES_START_TIME $ getCurrentUTC ""
   void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
