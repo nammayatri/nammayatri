@@ -108,7 +108,7 @@ tfCustomer mbPhoneNumber = do
 
 tfVehicle :: DSelect.DSelectRes -> Spec.Vehicle
 tfVehicle res =
-  let (category, variant) = UCommon.castVehicleVariant res.isValueAddNP res.variant
+  let (category, variant) = UCommon.castVehicleVariant res.variant
       vehicleColor = Nothing
       vehicleMake = Nothing
       vehicleModel = Nothing

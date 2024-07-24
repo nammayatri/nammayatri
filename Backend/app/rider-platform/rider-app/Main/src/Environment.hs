@@ -289,7 +289,7 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup req = Registry.withSubscriberCache performLookup req
+  registryLookup = Registry.withSubscriberCache performLookup
     where
       performLookup sub = do
         fetchFromDB sub.merchant_id >>= \registryUrl -> do

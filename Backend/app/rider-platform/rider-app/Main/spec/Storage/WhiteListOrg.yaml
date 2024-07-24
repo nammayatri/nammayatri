@@ -14,8 +14,7 @@ WhiteListOrg:
     subscriberId : ShortId Subscriber
     merchantId : Id Merchant
     domain : Domain
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
-    vehicleVariant: Maybe Text
+    merchantOperatingCityId : Id MerchantOperatingCity
     createdAt: UTCTime
     updatedAt: UTCTime
   derives: "Generic,Show,'UsageSafety"
@@ -41,12 +40,17 @@ WhiteListOrg:
       kvFunction: findOneWithKV
       where:
         and: [subscriberId, domain, merchantId]
+    findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [subscriberId, domain, merchantId, merchantOperatingCityId]
   sqlType:
     subscriberId: character varying(255)
     domain: character varying(255)
 
   default:
     merchantId: "''"
+    merchantOperatingCityId: "''"
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -93,7 +93,7 @@ tfQuotesInfo provider fulfillments validTill item = do
   isAirConditioned_ <- Beckn.OnDemand.Utils.OnSearch.getIsAirConditioned provider item
   let mbServiceTierType = Beckn.OnDemand.Utils.OnSearch.getServiceTierType item
       mbServiceTierName = Beckn.OnDemand.Utils.OnSearch.getServiceTierName item
-      vehicleCategory = Beckn.OnDemand.Utils.Common.mapVariantToVehicle vehicleVariant_
+      vehicleCategory = BecknV2.OnDemand.Utils.Common.mapVariantToVehicle vehicleVariant_
       mbServiceTierShortDesc = Beckn.OnDemand.Utils.OnSearch.getServiceTierShortDesc item
       isCustomerPrefferedSearchRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsCustomerPrefferedSearchRoute item
       isBlockedRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsBlockedRoute item
@@ -138,7 +138,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               estimatedPickupDuration = estimatedPickupDuration,
               vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_,
               vehicleServiceTierSeatingCapacity = vehicleCapacity_,
-              tripCategory = tripCategory
+              tripCategory = tripCategory,
+              vehicleCategory
             }
     QuoteBased _ -> do
       quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
@@ -177,7 +178,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_,
               vehicleServiceTierSeatingCapacity = vehicleCapacity_,
               quoteBreakupList = quoteBreakupList_,
-              tripCategory = tripCategory
+              tripCategory = tripCategory,
+              vehicleCategory
             }
 
 getCurrency :: Kernel.Types.App.MonadFlow m => BecknV2.OnDemand.Types.Item -> m Currency

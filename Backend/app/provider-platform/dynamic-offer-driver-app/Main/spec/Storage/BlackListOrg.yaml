@@ -13,6 +13,8 @@ BlackListOrg:
     id : Id BlackListOrg
     subscriberId : ShortId Subscriber
     domain : Domain
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
   derives: "Generic,'UsageSafety"
 
   constraints:
@@ -28,5 +30,14 @@ BlackListOrg:
       kvFunction: findOneWithKV
       where:
         and: [subscriberId, domain]
+    findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where:
+        and: [subscriberId, domain, merchantId, merchantOperatingCityId]
 
-  excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+  default:
+    merchantId: "''"
+    merchantOperatingCityId: "''"
+
+  excludedFields: [createdAt, updatedAt]
