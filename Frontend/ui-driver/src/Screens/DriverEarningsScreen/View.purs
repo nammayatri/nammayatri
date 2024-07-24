@@ -1100,7 +1100,7 @@ ansWithHyperLinkView push answer state =
           , color Color.blue900
           , gravity CENTER
           , margin $ Margin 0 0 0 40
-          , visibility $ boolToVisibility $ ( DS.null hyperLinkUrl || DS.null hyperLinkText)
+          , visibility $ boolToVisibility $ not ( DS.null hyperLinkUrl || DS.null hyperLinkText)
           , onClick (\_ -> openUrlInApp $ hyperLinkUrl) (const unit)
           ] <> FontStyle.subHeading2 TypoGraphy
         )
