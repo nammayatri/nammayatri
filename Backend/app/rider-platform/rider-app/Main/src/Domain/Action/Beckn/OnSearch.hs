@@ -242,7 +242,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   mkBppDetails >>= CQBppDetails.createIfNotPresent
 
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
-  becknConfig <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId (show Domain.MOBILITY) searchRequest.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
+  becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId (show Domain.MOBILITY) searchRequest.merchantOperatingCityId
+  becknConfig <- listToMaybe becknConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   blackListedVehicles <- Utils.getBlackListedVehicles becknConfig.id providerInfo.providerId
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
@@ -315,7 +316,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     isNotRental quote = case quote.quoteDetails of RentalDetails _ -> False; _ -> True
 
     isNotBlackListed :: [VehicleCategory] -> VehicleCategory -> Bool
-    isNotBlackListed blackListedVehicles vehicleCategory = not (vehicleCategory `elem` blackListedVehicles)
+    isNotBlackListed blackListedVehicles vehicleCategory = notElem vehicleCategory blackListedVehicles
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::

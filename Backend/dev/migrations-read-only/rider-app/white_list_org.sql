@@ -13,3 +13,18 @@ ALTER TABLE atlas_app.white_list_org ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.white_list_org ADD COLUMN vehicle_variant text ;
 ALTER TABLE atlas_app.white_list_org ADD COLUMN merchant_operating_city_id character varying(36);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.white_list_org ALTER COLUMN merchant_operating_city_id SET DEFAULT '';
+ALTER TABLE atlas_app.white_list_org ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

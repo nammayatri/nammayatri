@@ -4,7 +4,7 @@ imports:
   BecknConfig: Domain.Types.BecknConfig
 
 VehicleConfig:
-  tableName: vehicle_config
+  tableName: beckn_vehicle_config
 
   fields:
     id: Id VehicleConfig

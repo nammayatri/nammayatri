@@ -12,15 +12,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleConfigT f = VehicleConfigT
-  { becknConfigId :: (B.C f Kernel.Prelude.Text),
-    blackListedSubscribers :: (B.C f [Kernel.Prelude.Text]),
-    buyerFinderFee :: (B.C f Kernel.Prelude.Text),
-    category :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { becknConfigId :: B.C f Kernel.Prelude.Text,
+    blackListedSubscribers :: B.C f [Kernel.Prelude.Text],
+    buyerFinderFee :: B.C f Kernel.Prelude.Text,
+    category :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table VehicleConfigT where
 
 type VehicleConfig = VehicleConfigT Identity
 
-$(enableKVPG (''VehicleConfigT) [('id)] [])
+$(enableKVPG ''VehicleConfigT ['id] [])
 
-$(mkTableInstances (''VehicleConfigT) "vehicle_config")
+$(mkTableInstances ''VehicleConfigT "beckn_vehicle_config")
