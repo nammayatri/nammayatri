@@ -374,6 +374,7 @@ screen initialState =
               ConfirmingLocation -> do
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               GoToConfirmLocation -> do
+                void $ pure $ spy "Inside GoToConfirmLocation" true
                 void $ pure $ enableMyLocation true
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 void $ storeCallBackLocateOnMap push UpdatePickupLocation

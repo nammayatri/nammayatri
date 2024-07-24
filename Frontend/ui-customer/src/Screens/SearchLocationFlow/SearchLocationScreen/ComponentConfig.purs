@@ -297,6 +297,7 @@ mapInputViewConfig state isEditable =
       , placeLong : 0.0 
       , inputTextViewContainerMargin : Margin 0 0 0 0 
       , index : 0 
+      , crossBtnEnabled : true
       }
 
     inputViewArray state = 

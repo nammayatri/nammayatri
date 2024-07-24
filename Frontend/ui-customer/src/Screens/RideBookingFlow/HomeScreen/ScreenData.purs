@@ -28,7 +28,7 @@ import Prelude(negate)
 import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
-import PrestoDOM 
+import PrestoDOM
 import Data.Map as Map 
 import JBridge (Location)
 import Data.HashMap as DHM
@@ -39,6 +39,7 @@ import Language.Strings
 import Language.Types
 import Components.InputView.Controller
 import Styles.Colors as Color
+import Components.InputView.Controller (dummyImageConfig)
 
 initData :: HomeScreenState
 initData = let
@@ -388,10 +389,14 @@ initData = let
         , canClearText : true
         , isEditable : true 
         , isClickable : true
-        , prefixImage : dummyImageConfig  -- confused ki konsa rakhna h?
+        , prefixImage : dummyImageConfig  
         , stroke : ""
         , imageSeparator : separatorConfig 
-        , clearTextIcon : dummyImageConfig   
+        , clearTextIcon : dummyImageConfig{ imageName = config.searchLocationConfig.clearTextImage
+          , height = V 19
+          , width = V 19
+          , padding = PaddingVertical 10 2 
+          }     
         , fontStyle : []
         , placeAddress : dummyAddress
         , place : ""
@@ -409,7 +414,7 @@ initData = let
         , id : "Source"
         , hint : "Start"
         , cornerRadius : 4.0
-        , textColor : Color.white900
+        , textColor : Color.blueGrey
         , prefixImageVisibility : GONE
         , prefixImageConfig : 
                     dummyImageConfig
@@ -434,7 +439,19 @@ initData = let
                       , layoutColor = ""
                       }
         , swapImageConfig : dummyImageConfig
+                { imageName = "ny_ic_swap"
+                , height = V 20
+                , width = V 20
+                , padding = PaddingTop 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 0 0 0 0
+                , layoutMargin = Margin 0 0 0 0
+                , layoutColor = Color.squidInkBlue
+                }
         }
+        , crossBtnEnabled : false
         },{
           padding : Padding 5 5 0 5
         , height : V 37
@@ -445,7 +462,11 @@ initData = let
         , prefixImage : dummyImageConfig 
         , stroke : ""
         , imageSeparator : separatorConfig 
-        , clearTextIcon : dummyImageConfig    
+        , clearTextIcon : dummyImageConfig{ imageName = config.searchLocationConfig.clearTextImage
+          , height = V 19
+          , width = V 19
+          , padding = PaddingVertical 10 2 
+          }  
         , fontStyle : []
         , inputTextViewContainerMargin : Margin 0 0 0 0
         , placeAddress : dummyAddress
@@ -463,7 +484,7 @@ initData = let
           , id : "dest"
           , hint : getString WHERE_TO
           , cornerRadius : 4.0
-          , textColor : Color.white900
+          , textColor : Color.blueGrey
           , prefixImageVisibility : GONE
           , prefixImageConfig : 
                     dummyImageConfig
@@ -488,7 +509,19 @@ initData = let
                       , layoutColor = Color.squidInkBlue
                       }
           , swapImageConfig : dummyImageConfig
+                { imageName = "ny_ic_swap"
+                , height = V 20
+                , width = V 20
+                , padding = PaddingTop 0
+                , layoutWidth = V 32
+                , layoutHeight = V 32
+                , layoutCornerRadius = 26.0
+                , layoutPadding = Padding 0 0 0 0
+                , layoutMargin = Margin 0 0 0 0
+                , layoutColor = Color.squidInkBlue
+                }
                     }
+            , crossBtnEnabled : false
                 }]  
   , selectedIndex : -1                  
   }

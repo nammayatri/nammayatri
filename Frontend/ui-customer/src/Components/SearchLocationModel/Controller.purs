@@ -44,6 +44,7 @@ data Action = GoBack
             | EditTextFocusChanged String 
             | LocationListItemActionController LocationListItem.Action
             | PrimaryButtonActionController PrimaryButton.Action
+            | ConfirmPickUp
             | DebounceCallBack String Boolean
             | SavedAddressClicked LocationTagBarController.Action
             | UpdateCurrentLocation String String
@@ -56,6 +57,7 @@ type SearchLocationModelState = {
   , locationList :: Array LocationListItemState
   , savedlocationList :: Array LocationListItemState
   , isSource :: Maybe Boolean
+  , keyboardOpen :: Boolean
   , source :: String
   , destination :: String
   , isSrcServiceable :: Boolean
@@ -77,7 +79,7 @@ type SearchLocationModelState = {
   , headerVisibility :: Boolean
   , headerText :: String
   , selectedBoxId :: Maybe Int
-  , inputViewConfig :: InputViewConfig
+  , inputViewConfig :: InputViewController.InputViewConfig
 }
 
 type ButtonLayoutConfig = 

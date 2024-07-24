@@ -223,6 +223,7 @@ baseAppFlow gPayload callInitUI = do
   baseAppStorage -- TODO:: Restructure the files and names
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
+  void $ liftFlowBT initiateLocationServiceClient
   liftFlowBT $ resetAllTimers
   let
     showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
@@ -990,6 +991,7 @@ homeScreenFlow = do
       updateCurrentLocation ""
       let
         state = newState.homeScreen
+        _ = spy "Inside LOCATION_SELECTED" item
 
         searchWithoutPlaceName = any (_ == state.props.rideSearchProps.sourceSelectType) [ ST.MAP, ST.FAVOURITE, ST.RETRY_SEARCH, ST.SUGGESTION ] && state.props.isSource == Just true
       case searchWithoutPlaceName of
@@ -1148,7 +1150,7 @@ homeScreenFlow = do
               -- Update input view with new place details
               updatedInputView = map (\field ->
                                         if field.index == selectedIndex
-                                        then field { placeLat = placeLocation.lat, placeLong = placeLocation.lon }
+                                        then field { placeLat = placeLocation.lat, placeLong = placeLocation.lon }      -- , isEdited = true
                                         else field
                                       ) stateProps.inputView
               _ = spy "UPDATED INPUT VIEW IN FLOW" updatedInputView
@@ -2684,9 +2686,11 @@ rideSearchFlow flowType = do
   (GlobalState homeScreenModifiedState) <- getState
   void $ liftFlowBT $ setMapPadding 0 0 0 0
   let
+    _ = spy "Inside rideSearchFlow" flowType
     finalState = homeScreenModifiedState.homeScreen -- bothLocationChangedState{props{isSrcServiceable =homeScreenModifiedState.homeScreen.props.isSrcServiceable, isDestServiceable = homeScreenModifiedState.homeScreen.props.isDestServiceable, isRideServiceable = homeScreenModifiedState.homeScreen.props.isRideServiceable }}
   if (finalState.props.sourceLat /= 0.0 && finalState.props.sourceLong /= 0.0) && (finalState.props.destinationLat /= 0.0 && finalState.props.destinationLong /= 0.0) && (finalState.data.source /= "") && (finalState.data.destination /= "") then do
     let
+      _ = spy "rideSearchFlow true case" flowType
       searchWithoutConfirmPickup = any (_ == finalState.props.rideSearchProps.sourceSelectType) [ ST.MAP, ST.RETRY_SEARCH, ST.REPEAT_RIDE ] || (finalState.props.rideSearchProps.sourceSelectType == ST.FAVOURITE && not finalState.props.isSpecialZone)
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { flowWithoutOffers = flowWithoutOffers WithoutOffers } })
     case searchWithoutConfirmPickup of
@@ -2796,6 +2800,7 @@ rideSearchFlow flowType = do
     homeScreenFlow
   else do
     let
+      _ = spy "rideSearchFlow false case" flowType
       updatedLocationList = updateLocListWithDistance finalState.data.destinationSuggestions finalState.props.sourceLat finalState.props.sourceLong true finalState.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
       focusOnSource = finalState.props.sourceLat == 0.0 || finalState.props.sourceLong == 0.0 
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { locationList = updatedLocationList }, props { isSource = Just focusOnSource, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel } })

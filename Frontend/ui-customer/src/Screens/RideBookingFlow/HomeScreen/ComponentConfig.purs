@@ -1228,6 +1228,7 @@ searchLocationModelViewState state =
     , source: state.data.source
     , destination: state.data.destination
     , isSource: state.props.isSource
+    , keyboardOpen : state.props.isKeyBoardOpen
     , isSrcServiceable: state.props.isSrcServiceable
     , isDestServiceable: state.props.isDestServiceable
     , isRideServiceable: state.props.isRideServiceable
@@ -1255,7 +1256,7 @@ searchLocationModelViewState state =
     , isEditDestination : false
     , isDestViewEditable : true
     , selectedBoxId : state.data.selectedBoxId
-    , inputViewConfig :  getInputViewConfig state
+    , inputViewConfig : getInputViewConfig state 
     }
   where
   formatDate :: String -> String
@@ -1278,7 +1279,7 @@ getInputViewConfig state =
   , imageLayoutMargin : MarginLeft 0
   , imageLayoutWidth : V 20
   , inputLayoutPading : PaddingLeft 0 
-  , inputView : getInputViewItemConfig state 
+  , inputView : state.props.inputView
   , suffixButton : {
     text : "",
     fontStyle : [],
@@ -1290,9 +1291,6 @@ getInputViewConfig state =
   , imageLayoutVisibility : VISIBLE
   , suffixButtonVisibility : GONE
   }
-
-getInputViewItemConfig :: ST.HomeScreenState -> Array InputView
-getInputViewItemConfig state = state.props.inputView
 
 defaultAddStopConfig :: InputView
 defaultAddStopConfig = {
@@ -1318,12 +1316,12 @@ defaultAddStopConfig = {
       textValue : "ADD" 
     , isFocussed : true
     , imageName : ""
-    , margin : Margin 0 12 0 5 --Margin 0 10 0 4--Margin 0 12 0 5
+    , margin : Margin 0 12 0 5 
     , placeHolder : getString WHERE_TO
     , id : "Stop" 
     , hint : getString WHERE_TO
     , cornerRadius : 4.0
-    , textColor : Color.white900 --
+    , textColor : Color.blueGrey
     , prefixImageVisibility : GONE
     , postfixImageConfig : dummyImageConfig
                 { imageName = "ny_ic_add"
@@ -1357,6 +1355,7 @@ defaultAddStopConfig = {
                 , layoutColor = Color.squidInkBlue
                 }
         }
+    , crossBtnEnabled : false
 }
 
 separatorConfig :: SeparatorView.Config
@@ -1377,6 +1376,7 @@ editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.
                                     , source: state.data.source
                                     , destination: state.data.destination
                                     , isSource: Just false
+                                    , keyboardOpen: state.props.isKeyBoardOpen
                                     , isSrcServiceable: state.props.isSrcServiceable
                                     , isDestServiceable: state.props.isDestServiceable
                                     , isRideServiceable: state.props.isRideServiceable

@@ -34,6 +34,7 @@ data Action = TextFieldFocusChanged String Boolean Int Boolean
             | AddStopAction
             | SetSelectedBoxId String
             | AddRemoveStopAction String Int
+            | SwapLocation Int Int 
 
 type Address =
   { area :: Maybe String
@@ -81,6 +82,7 @@ type InputView =
   , inputTextConfig :: InputTextConfig
   , inputTextViewContainerMargin :: Margin 
   , index :: Int
+  , crossBtnEnabled :: Boolean
   }
   
 
@@ -161,20 +163,6 @@ dummyImageConfig = {
   , layoutMargin : Margin 0 0 0 0
   , layoutColor : ""
 }
-
--- defaultImageConfig :: ImageConfig
--- defaultImageConfig = { 
---       imageName : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/mobilitypaytm/user/ny_ic_chevron_left_white.png"
---     , height : V 24
---     , width : V 24
---     , padding : PaddingTop 16 
---     , layoutWidth : V 0
---     , layoutHeight : V 0
---     , layoutCornerRadius : 0.0
---     , layoutPadding : Padding 0 0 0 0
---     , layoutMargin : Margin 0 0 0 0
---     , layoutColor : ""
--- }
 
 separatorConfig :: SeparatorView.Config
 separatorConfig = 

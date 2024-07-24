@@ -47,7 +47,7 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, dela
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Data.Array (elem, slice, cons, uncons)
+import Data.Array (elem, slice, cons, uncons, index, updateAt)
 import Data.Array as DA
 import Data.Tuple (Tuple(..), fst, snd)
 import ConfigProvider
@@ -461,3 +461,17 @@ formatMinIntoHoursMins mins =
     hours = mins / 60
     minutes = mins `mod` 60
   in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> " hr"
+
+swap :: forall a. Array a -> Int -> Int -> Array a
+swap input aIdx bIdx = 
+  case (index input aIdx) of 
+    Nothing -> input
+    Just a -> case (index input bIdx) of
+                Nothing -> input
+                Just b -> case updateAt aIdx b input of 
+                            Nothing -> input
+                            Just modifiedA -> updateB modifiedA a
+  where 
+    updateB modifiedA b = case updateAt bIdx b modifiedA of
+                            Nothing -> input
+                            Just final -> final

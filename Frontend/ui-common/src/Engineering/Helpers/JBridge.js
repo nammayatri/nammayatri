@@ -765,7 +765,10 @@ export const drawRouteV2 = function (drawRouteConfig){
 
 
 export const storeKeyBoardCallback = function (cb, action) {
+  console.log("storeKeyboardCallback")
   const keyBoardCallback = function (state) {
+    console.log("keyboardcall", state)
+    window.keyboardState = state
     cb(action(state))();
   }
   window.keyBoardCallback = keyBoardCallback;

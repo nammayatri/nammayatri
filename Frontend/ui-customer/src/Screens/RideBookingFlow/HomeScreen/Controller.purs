@@ -78,6 +78,7 @@ import Engineering.Helpers.Commons
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
+import Engineering.Helpers.Utils as Utils
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
@@ -1260,6 +1261,12 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
   let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
   updateAndExit newState $ LocationSelected (fromMaybe dummyListItem (if state.props.isSource == Just false then state.data.selectedLocationListItem else Nothing)) (state.props.isSource == Just false) newState
 
+eval (SearchLocationModelActionController (SearchLocationModelController.ConfirmPickUp)) state = do
+  void $ pure $ performHapticFeedback unit
+  _ <- pure $ exitLocateOnMap ""
+  let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
+  updateAndExit newState $ LocationSelected (fromMaybe dummyListItem (if state.props.isSource == Just false then state.data.selectedLocationListItem else Nothing)) (state.props.isSource == Just false) newState
+
 eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked)) state = openDateTimePicker state 
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState = do
@@ -1547,26 +1554,22 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SavedAd
 
 eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType arrItem state false
 
--- eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
---   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_location_list_item"
---   let condition = state.props.isSource == Just true && any (_ == item.locationItemType) [Just RECENTS, Just SUGGESTED_DESTINATIONS] 
---   locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { rideSearchProps{ sourceSelectType = if condition then ST.SUGGESTION else state.props.rideSearchProps.sourceSelectType } }, data { nearByDrivers = Nothing } } false
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && any (_ == item.locationItemType) [Just RECENTS, Just SUGGESTED_DESTINATIONS]
   let updatedItem = item { tag = if condition then "" else item.tag, showDistance = Just false }
   let updatedState = state { props { rideSearchProps { sourceSelectType = if condition then ST.SUGGESTION else state.props.rideSearchProps.sourceSelectType } }, data { nearByDrivers = Nothing } }
-  if length (state.props.inputView) == 2 then
-    locationSelected updatedItem true updatedState false
-  else
-    locationSelected2 updatedItem true updatedState false
+  -- if length (state.props.inputView) >= 2 then
+  locationSelected2 updatedItem true updatedState false
+  -- else 
+  --   locationSelected updatedItem true updatedState false
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do
   if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then 
     validateSearchInput state searchString
-  else continue state
+  else update state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
   let srcValue = (state.data.source == "" || state.data.source == "Current Location")
@@ -1695,7 +1698,7 @@ eval ( SearchLocationModelActionController (SearchLocationModelController.InputV
       let newIndex = (length state.props.inputView) 
           newStop = defaultAddStopConfig{ index = newIndex , inputTextConfig{ id = "STOP" <> (show newIndex), textValue = "D"}}
           _ = spy "Inside newStop" newStop
-          updatedInputView = map (\stop -> if stop.index == index then stop{inputTextConfig {textValue = "ADD" }} else stop) state.props.inputView <> [newStop]
+          updatedInputView = state.props.inputView <> [newStop]
           finalInputView = map (\stop -> if stop.index == index + 1 then stop { inputTextConfig {isFocussed = true }} else stop {inputTextConfig {isFocussed = false }}) updatedInputView
           _ = spy "This is the updated input view after adding" updatedInputView
       continue state { props { selectedIndex = index + 1, inputView = finalInputView} }
@@ -1705,20 +1708,29 @@ eval ( SearchLocationModelActionController (SearchLocationModelController.InputV
         filteredInputView = filter (\stop -> stop.index /= index) state.props.inputView
         _ = spy "Inside filtered array" filteredInputView
 
-        updatedInputView = map (\stop -> if stop.index > index then stop { index = stop.index - 1 } else stop) filteredInputView
-        finalInputView = map (\stop ->  let _ = setText (getNewIDWithTag stop.inputTextConfig.id) stop.place
-                                        in if stop.index == index then stop { inputTextConfig {isFocussed = true }} else stop {inputTextConfig {isFocussed = false }}) updatedInputView
+        updatedInputView = map (\stop -> if stop.index > index then stop { index = stop.index - 1 } else stop) filteredInputView  --, updateText = true
+        finalInputView = map (\stop -> stop { inputTextConfig {isFocussed = stop.index == index }}) updatedInputView
         
         _ = spy "Removing stop with ID and updating indices" index
         _ = spy "This is the updated input view after deleting" 
         _ = spy "Final Input View array" finalInputView
       -- c
         _ = spy "TF ind" index
-        -- focusCmd = pure $ SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.TextFieldFocusChanged "" true index true))
       continueWithCmd state { props { selectedIndex = index, inputView = finalInputView } }[pure SetTexts]
-      -- continueWithCmd state{ props { inputView = finalInputView } } [ do focusCmd]
 
     _ -> continue state
+
+eval (SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.SwapLocation index1 index2))) state = do
+  let
+    inputViewArray = state.props.inputView
+    _ = spy "Original inputView array" inputViewArray
+
+    swappedInputView = Utils.swap inputViewArray index1 index2
+    _ = spy "Swapped inputView array" swappedInputView
+    updatedInputView = mapWithIndex (\index stop -> stop{index = index}) swappedInputView 
+    _ = spy "Updated indexs after swapping " updatedInputView   
+
+  continue state { props { inputView = updatedInputView } }
 
 eval SetTexts state = 
   let _ = map (\stop -> setText (getNewIDWithTag stop.inputTextConfig.id) stop.place) state.props.inputView
@@ -1727,7 +1739,7 @@ eval SetTexts state =
 eval (SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.AutoCompleteCallBack searchString isSource))) state = do 
   if (STR.length searchString > 2) then do 
     validateSearchInput state searchString
-  else continue state
+  else update state
 
 -- eval (SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.EditTextFocusChanged textType))) state = do.   (alternative is TextFieldFocusChanged)
 --   _ <- pure $ spy "searchLocationModal" textType
@@ -1738,8 +1750,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.InputVi
 
 eval (SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.InputChanged index value))) state = do 
   let canClearText = STR.length value > 2
-  -- let updatedInputView = map (\stop -> if stop.index == index then stop {inputTextConfig{textValue = value}} else stop) state.props.inputView
-  let updatedInputView = map (\stop -> if stop.index == index then stop else stop) state.props.inputView
+  let updatedInputView = map (\stop -> if stop.index == index then stop {inputTextConfig{textValue = value}} else stop) state.props.inputView
   void $ pure $ updateInputString value 
   continue state { props { inputView = updatedInputView, searchLocationModelProps{isAutoComplete = canClearText}, selectedIndex = index}}
 
@@ -2674,7 +2685,7 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
 eval (EditDestSearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString isSource)) state = do
   if (STR.length searchString > 2) && (isSource == fromMaybe true state.props.isSource) then 
     validateSearchInput state searchString
-  else continue state
+  else update state
 
 eval (EditDestSearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
   let srcValue = state.data.source == "" || state.data.source == "Current Location"
@@ -2991,45 +3002,6 @@ recenterCurrentLocation state = continueWithCmd state [ do
 updateCurrentLocation :: HomeScreenState -> String -> String -> Eval Action  ScreenOutput HomeScreenState
 updateCurrentLocation state lat lng = exit $ (CheckLocServiceability state (fromMaybe 0.0 (NUM.fromString lat )) (fromMaybe 0.0 (NUM.fromString lng)))
 
--- locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState
--- locationSelected item addToRecents state isEditDestination = do
---   let stage' = if os == "IOS" && state.props.currentStage == HomeScreen then ConfirmingLocation else LoadMap
---   _ <- pure $ hideKeyboardOnNavigation true
---   let favClick = if item.postfixImageUrl == "ny_ic_fav_red,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_fav_red.png" then "true" else "false"
---   if state.props.isSource == Just true then do
---     let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_pickup_select" $ [ {key : "Source", value : unsafeToForeign item.title},
---                                                                                                               {key : "Favourite", value : unsafeToForeign favClick}]
---         sourceSelectType = if item.tag /= "" then ST.FAVOURITE else ST.SEARCH
---         newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, rideSearchProps{ sourceSelectType = sourceSelectType } }}
---     pure $ setText (getNewIDWithTag "SourceEditText") item.title
---     updateAndExit state $ LocationSelected item addToRecents newState
---     -- else do
---     --   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : unsafeToForeign item.title},
---     --                                                                                                                 {key : "Favourite", value : unsafeToForeign favClick}]
---     --   let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
---     --   pure $ setText (getNewIDWithTag "DestinationEditText") item.title
---     --   if isEditDestination then 
---     --     updateAndExit state{props{currentStage = stage'}} $ EditDestLocationSelected item addToRecents newState
---     --   else
---     --     updateAndExit state{props{currentStage = stage'}} $ LocationSelected item addToRecents newState
---     else do
---     let index = state.props.selectedIndex
---     let updatedInputView = mapWithIndex (\idx inputField -> 
---           if idx == index
---           then inputField{ destination = item.title,
---               destinationAddress = encodeAddress (item.title <> ", " <> item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon),
---               destinationPlaceId = item.placeId,
---               destinationLat = fromMaybe 0.0 item.lat,
---               destinationLong = fromMaybe 0.0 item.lon}
---           else inputField) state.props.inputView
---     let _ = spy "UPDATED INPUT VIEW AFTER LOCATION SELECTED" updatedInputView
---     let newState = state 
---           { props {
---               inputView = updatedInputView
---             }
---           }
---     continue newState
-
 locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState
 locationSelected item addToRecents state isEditDestination = do
   let stage' = if os == "IOS" && state.props.currentStage == HomeScreen then ConfirmingLocation else LoadMap
@@ -3041,7 +3013,7 @@ locationSelected item addToRecents state isEditDestination = do
         sourceSelectType = if item.tag /= "" then ST.FAVOURITE else ST.SEARCH
         newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, rideSearchProps{ sourceSelectType = sourceSelectType } }}
     pure $ setText (getNewIDWithTag "SourceEditText") item.title
-    updateAndExit state $ LocationSelected item addToRecents newState
+    exit $ LocationSelected item addToRecents newState
     else do
       let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : unsafeToForeign item.title},
                                                                                                                     {key : "Favourite", value : unsafeToForeign favClick}]
@@ -3074,6 +3046,7 @@ locationSelected2 item addToRecents state isEditDestination = do
                                                               , placeId = item.placeId
                                                               , placeLat = fromMaybe 0.0 item.lat
                                                               , placeLong = fromMaybe 0.0 item.lon
+                                                              -- , updateText = true
                                                               -- , rideSearchProps{placeSelectType = placeSelectType }
                                                               }
                                 in updatedField
@@ -3083,7 +3056,7 @@ locationSelected2 item addToRecents state isEditDestination = do
   let newState = state { props = state.props { inputView = updatedInputView } }
   let _ = spy "UPDATED INPUT VIEW AFTER LOCATION SELECTED" updatedInputView
   let _ = spy "SelectedId in locationSelected2" selectedId
-  _ <- pure $ setText (spy "edit loc id"(getNewIDWithTag selectedId)) item.title 
+  -- _ <- pure $ setText (spy "edit loc id"(getNewIDWithTag selectedId)) item.title 
   updateAndExit state $ LocationSelected2 item addToRecents newState index
  
   -- if isEditDestination then

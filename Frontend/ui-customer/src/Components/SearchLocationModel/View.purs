@@ -17,7 +17,7 @@ module Components.SearchLocationModel.View where
 
 import Common.Types.App
 
-import Animation (translateYAnimFromTop, fadeIn)
+import Animation (translateYAnimFromTop, fadeIn, fadeOut)
 import Animation.Config (translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, Direction(..))
 import Common.Types.App (LazyCheck(..))
 import Components.LocationListItem as LocationListItem
@@ -26,8 +26,10 @@ import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
 import Components.SeparatorView.View as SeparatorView
 import Components.InputView as InputView
+import Components.InputView.Controller as InputViewController
 import Data.Array (mapWithIndex, length, take, null, (..))
 import Data.Function (flip)
+import Data.Foldable(all)
 import Data.Function.Uncurried (runFn3)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
@@ -46,7 +48,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
 import Prelude ((<>))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void, show)
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void, show, (>), (<), (<=))
 import PrestoDOM (Accessiblity(..), InputType(..),  Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, inputType, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
@@ -100,7 +102,6 @@ view push state =
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
                     , weight 1.0
-                    -- , background Color.red900
                     ][ searchResultsParentView state push 
                       , linearLayout
                         [ width MATCH_PARENT
@@ -288,11 +289,9 @@ sourceDestinationImageView state =
     [ height WRAP_CONTENT
     , width $ V 20
     , margin $ Margin (if state.headerVisibility then 24 else 4) 9 8 0
-    -- , padding $ PaddingLeft 16
     , orientation VERTICAL
     , gravity CENTER
     , visibility $ boolToVisibility (not state.isEditDestination)
-    -- , background Color.orange900
     ][ linearLayout
         [ height $ V 15
         , width $  V 15
@@ -327,7 +326,6 @@ sourceDestinationEditTextView state push =
     , orientation VERTICAL
     , margin if os == "IOS" then (Margin 0 18 15 0) else (Margin 0 16 16 0)
     , height $ V 121
-    -- , background Color.brownishGrey
     ][
       if state.isEditDestination
         then nonEditableTextView state push 
@@ -673,7 +671,7 @@ findPlacesIllustration push state =
           , gravity CENTER
           ]
           [ textView $
-              [ text $ getString START_TYPING_TO_SEARCH_PLACES
+              [ text $ getString START_TYPING_TO_SEARCH_PLACES_OR_ADD_STOPS
               , gravity CENTER
               , color Color.black700
               ] <> FontStyle.body3 LanguageStyle
@@ -682,7 +680,8 @@ findPlacesIllustration push state =
 
 bottomBtnsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomBtnsView state push =
-  let isMapSearchLocation = any (_ == state.isSearchLocation) [LocateOnMap, RouteMap]
+  let 
+    isMapSearchLocation = any (_ == state.isSearchLocation) [LocateOnMap, RouteMap]
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -708,17 +707,21 @@ bottomBtnsView state push =
         ]
         ( mapWithIndex
             ( \idx item ->
-                linearLayout
-                  [ height MATCH_PARENT
+                PrestoAnim.animationSet [ fadeIn item.visibility]
+                $ linearLayout
+                  [ height WRAP_CONTENT
                   , width if (state.isSource == Just true && not isMapSearchLocation) then (V 190) else MATCH_PARENT
                   , orientation HORIZONTAL
                   , gravity CENTER
+                  , visibility $ boolToVisibility item.visibility
                   ]
                   [ linearLayout
                       [ height WRAP_CONTENT
-                      , width $ V 0
                       , weight 1.0
+                      , background item.backgroundColor
                       , gravity CENTER
+                      , cornerRadius item.borderRadius
+                      , margin item.margin
                       ][
                        imageView
                           [ height $ V 20
@@ -731,7 +734,7 @@ bottomBtnsView state push =
                             , width WRAP_CONTENT
                             , text item.text
                             , layoutGravity "center"
-                            , color Color.black800
+                            , color item.textColor
                             , padding if (state.isSource == Just true && not isMapSearchLocation) then (Padding 5 16 0 16) else (Padding 5 16 0 16)
                             , onClick
                                 ( \action ->
@@ -743,8 +746,7 @@ bottomBtnsView state push =
                                       pure unit
                                 )
                                 (const item.action)
-                            ]
-                          <> FontStyle.body1 TypoGraphy
+                            ] <> if (state.isSource == Just true && not isMapSearchLocation) then FontStyle.body1 TypoGraphy else if state.keyboardOpen then FontStyle.body1 TypoGraphy else FontStyle.subHeading1 TypoGraphy 
                       ]
                   , linearLayout
                       [ width $ V 2
@@ -758,20 +760,26 @@ bottomBtnsView state push =
                       []
                   ]
             )
-            $ if (state.isSource == Just true && not isMapSearchLocation) then srcBtnData state else destBtnData state
+            $ spy "array vals" $ if (state.isSource == Just true && not isMapSearchLocation) then srcBtnData state else destBtnData state
         )]
 
-srcBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
+srcBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String, backgroundColor :: String, textColor :: String, borderRadius :: Number, padding :: Padding, height :: Length, width :: Length, margin :: Margin, visibility :: Boolean}
 srcBtnData state =
-  [ { text: (getString SELECT_ON_MAP), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_locate_on_map", action: SetLocationOnMap, buttonType: "LocateOnMap" }
-  , { text: (getString CURRENT_LOCATION), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_current_location", action: SetCurrentLocation, buttonType: "CurrentLocation" }
+  [ { text: (getString SELECT_ON_MAP), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_locate_on_map", action: SetLocationOnMap, buttonType: "LocateOnMap", backgroundColor: "", textColor: Color.black900, borderRadius: 0.0, padding: Padding 5 16 0 16, height: V 0, width: V 0, margin: Margin 0 0 0 0, visibility: true}
+  , { text: (getString CURRENT_LOCATION), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_current_location", action: SetCurrentLocation, buttonType: "CurrentLocation", backgroundColor: "", textColor: "", borderRadius: 0.0, padding: Padding 5 16 0 16, height: V 0, width: V 0, margin: Margin 0 0 0 0, visibility: true}
   ]
 
-destBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String }
+destBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String, backgroundColor :: String, textColor :: String, borderRadius :: Number, padding :: Padding, height :: Length, width :: Length, margin :: Margin, visibility :: Boolean}
 destBtnData state =
-  [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_locate_on_map", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
-
-
+  let 
+    isKeyboardOpen = spy "isKeyboardOpen" $ fromMaybe "" $ runFn3 getAnyFromWindow "keyboardState" Nothing Just    
+    len = length state.inputViewConfig.inputView
+    isEnabled = checkAllFieldsFilled state.inputViewConfig.inputView
+    _ = spy "isEnabled" state.inputViewConfig.inputView
+  in  
+  [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: HU.fetchImage HU.COMMON_ASSET "ny_ic_locate_on_map", action: SetLocationOnMap, buttonType: "LocateOnMap", backgroundColor: Color.white900, textColor: Color.black900, borderRadius: 0.0, padding: Padding 5 16 0 16, height: V 0, width: V 0, margin: Margin 0 0 0 0, visibility: isKeyboardOpen == "onKeyboardOpen" || len <= 2}
+  , { text: (getString CONFIRM_JOURNEY), imageUrl: "", action:  if isEnabled then ConfirmPickUp else NoAction, buttonType: "LocateOnMap", backgroundColor: if isEnabled then Color.black900 else Color.black650, textColor: Color.yellow900, borderRadius: 8.0, padding: Padding 5 16 0 16, height: V 0, width: V 0, margin: Margin 16 16 16 16, visibility: isKeyboardOpen == "onKeyboardClose" && len > 2}]   
+  
 separatorConfig :: SeparatorView.Config
 separatorConfig = 
   {
@@ -784,3 +792,10 @@ separatorConfig =
   , color : Color.black500
   , margin : Margin 0 0 0 0
   }
+
+checkAllFieldsFilled :: Array InputViewController.InputView -> Boolean
+checkAllFieldsFilled inputViewArray =
+  let
+    allFieldsFilled = all (\inputView -> inputView.place /= "") inputViewArray
+  in
+    allFieldsFilled

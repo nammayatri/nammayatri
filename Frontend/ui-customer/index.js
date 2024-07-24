@@ -362,6 +362,7 @@ window["onEvent'"] = function (_event, args) {
   }else if(_event == "onBundleUpdated"){
     purescript.onBundleUpdatedEvent(JSON.parse(args))();
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
+    console.log("Keyboard clicked")
     window.keyBoardCallback(_event);
   } else if (_event == "onLocationFetch") {
     console.log("Location Fetch Event", args);

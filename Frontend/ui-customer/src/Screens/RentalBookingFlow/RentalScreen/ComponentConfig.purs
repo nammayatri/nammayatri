@@ -153,8 +153,8 @@ mapInputViewConfig state =
   
     inputViewArray :: Boolean -> InputView.InputTextConfig -> InputView.InputView
     inputViewArray isSelectPackageStage item =
-      { padding : Padding 8 7 8 7 
-      , height : WRAP_CONTENT
+      { padding : Padding 5 5 0 5--Padding 8 7 8 7 
+      , height : V 37--WRAP_CONTENT
       , canClearText : false
       , isEditable : false
       , isClickable : true
@@ -180,6 +180,7 @@ mapInputViewConfig state =
       , placeLong : 0.0
       , inputTextViewContainerMargin : Margin 0 0 0 0 
       , index : 0
+      , crossBtnEnabled : true
       }
 
     inputTextConfigArray :: Boolean -> Array (InputView.InputTextConfig)
@@ -191,14 +192,14 @@ mapInputViewConfig state =
       [ { textValue : if isSelectPackageStage then pickUpText else formatDate "DD" <> " " <> formatDate "MMMM" <> " " <> formatDate "YYYY" <> ", " <> formatDate "HH" <> ":" <> formatDate "mm"
         , isFocussed : false
         , imageName : "ny_ic_green_circle"
-        , margin : MarginTop 0
+        , margin : Margin 0 12 0 5--MarginTop 0
         , placeHolder : ""
         , id : if isSelectPackageStage then "PickUpLoc" else "DateAndTime"
         , cornerRadius : 4.0
         , prefixImageVisibility : boolToVisibility $ not isSelectPackageStage
         , prefixImageConfig :  InputView.dummyImageConfig{
-            height = V 24,
-            width = V 24,
+            height = V 12,  -- 24
+            width = V 12,   -- 24
             padding = Padding 0 0 0 0,
             imageName = "ny_ic_clock_unfilled_white"
           }
@@ -210,7 +211,7 @@ mapInputViewConfig state =
         { textValue : if isSelectPackageStage then dropLocText else " " <> show state.data.rentalBookingData.baseDuration <> " hr · " <> show state.data.rentalBookingData.baseDistance <> " km"
         , isFocussed : false
         , imageName : "ny_ic_blue_circle"
-        , margin : MarginVertical 12 8
+        , margin : Margin 0 12 0 5 --MarginVertical 12 8
         , placeHolder : ""
         , id : if isSelectPackageStage then "FirstStop" else "RentalPackage"
         , cornerRadius : 4.0
