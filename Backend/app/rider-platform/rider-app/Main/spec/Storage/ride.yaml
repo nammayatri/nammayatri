@@ -28,7 +28,7 @@ Ride:
   derives: "Generic"
   types:
     RideStatus:
-      enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
+      enum: "UPCOMING,NEW,INPROGRESS,COMPLETED,CANCELLED"
       derive: "HttpInstance"
     BPPRide: {}
   fields:
@@ -46,6 +46,7 @@ Ride:
     driverRating: Maybe Centesimal
     driverMobileNumber: Text
     driverPhoneNumber: Maybe (EncryptedHashedField e Text)
+    driverAlternateNumber: Maybe (EncryptedHashedField e Text)
     driverMobileCountryCode: Maybe Text
     driverRegisteredAt: Maybe UTCTime
     driverImage: Maybe Text
@@ -117,6 +118,7 @@ Ride:
     vehicleNumber: character varying(255)
     vehicleVariant: character varying(60)
     driverNumberHash: bytea
+    driverAlternateNumberHash: bytea
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:
@@ -146,6 +148,9 @@ Ride:
     driverPhoneNumber:
       driverNumberEncrypted: Maybe Text
       driverNumberHash: Maybe DbHash
+    driverAlternateNumber:
+      driverAlternateNumberEncrypted: Maybe Text
+      driverAlternateNumberHash: Maybe DbHash
 
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -166,6 +171,7 @@ Ride:
     paymentDone: Kernel.Prelude.fromMaybe True paymentDone|E
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
     driverPhoneNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
+    driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -193,6 +199,8 @@ Ride:
     onlinePayment: Kernel.Prelude.Just onlinePayment|E
     driverNumberEncrypted: (driverPhoneNumber <&> unEncrypted . (.encrypted))|E
     driverNumberHash: (driverPhoneNumber <&> (.hash))|E
+    driverAlternateNumberEncrypted: (driverAlternateNumber <&> unEncrypted . (.encrypted))|E
+    driverAlternateNumberHash: (driverAlternateNumber <&> (.hash))|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -242,4 +250,3 @@ Ride:
 
   extraOperations:
     - EXTRA_QUERY_FILE
-

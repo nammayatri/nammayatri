@@ -41,6 +41,8 @@ data RideT f = RideT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverAccountId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.AccountId),
+    driverAlternateNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverAlternateNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     driverArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverImage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverMobileCountryCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

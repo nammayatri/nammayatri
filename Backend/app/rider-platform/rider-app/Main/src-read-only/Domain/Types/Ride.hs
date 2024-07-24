@@ -41,6 +41,7 @@ data RideE e = Ride
     createdAt :: Kernel.Prelude.UTCTime,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverAccountId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.AccountId,
+    driverAlternateNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -91,6 +92,7 @@ type DecryptedRide = RideE 'AsUnencrypted
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
   encryptItem (entity, salt) = do
+    driverAlternateNumber_ <- encryptItem $ (,salt) <$> driverAlternateNumber entity
     driverPhoneNumber_ <- encryptItem $ (,salt) <$> driverPhoneNumber entity
     pure
       Ride
@@ -110,6 +112,7 @@ instance EncryptedItem Ride where
           createdAt = createdAt entity,
           distanceUnit = distanceUnit entity,
           driverAccountId = driverAccountId entity,
+          driverAlternateNumber = driverAlternateNumber_,
           driverArrivalTime = driverArrivalTime entity,
           driverImage = driverImage entity,
           driverMobileCountryCode = driverMobileCountryCode entity,
@@ -152,6 +155,7 @@ instance EncryptedItem Ride where
           vehicleVariant = vehicleVariant entity
         }
   decryptItem entity = do
+    driverAlternateNumber_ <- fmap fst <$> decryptItem (driverAlternateNumber entity)
     driverPhoneNumber_ <- fmap fst <$> decryptItem (driverPhoneNumber entity)
     pure
       ( Ride
@@ -171,6 +175,7 @@ instance EncryptedItem Ride where
             createdAt = createdAt entity,
             distanceUnit = distanceUnit entity,
             driverAccountId = driverAccountId entity,
+            driverAlternateNumber = driverAlternateNumber_,
             driverArrivalTime = driverArrivalTime entity,
             driverImage = driverImage entity,
             driverMobileCountryCode = driverMobileCountryCode entity,
@@ -222,7 +227,7 @@ instance EncryptedItem' Ride where
 
 data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED | UPCOMING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 

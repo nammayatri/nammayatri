@@ -53,6 +53,10 @@ getPersonNumber :: (EncFlow m r) => Person -> m (Maybe Text)
 getPersonNumber person = do
   mapM decrypt person.mobileNumber
 
+getPersonAlternateNumber :: (EncFlow m r) => Person -> m (Maybe Text)
+getPersonAlternateNumber person = do
+  mapM decrypt person.alternateMobileNumber
+
 getPersonFullName :: Person -> Maybe Text
 getPersonFullName person = (\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName
 

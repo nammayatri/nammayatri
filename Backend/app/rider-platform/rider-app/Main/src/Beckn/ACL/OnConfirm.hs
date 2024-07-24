@@ -76,6 +76,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
               isFreeRide = False
               previousRideEndPos = Nothing
               vehicleAge = Nothing
+              driverAlternatePhoneNumber = Nothing
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
           driverName <- fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & maybe (Left "Missing fulfillment.agent.person.name in on_confirm") Right
