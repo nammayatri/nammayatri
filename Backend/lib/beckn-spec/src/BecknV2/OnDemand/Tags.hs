@@ -359,6 +359,7 @@ data BecknTag
   | IS_FREE_RIDE
   | DRIVER_TRACKING_URL
   | DRIVER_ACCOUNT_ID
+  | DRIVER_ALTERNATE_NUMBER
   | -- Driver arrived info tags
     ARRIVAL_TIME
   | -- Ride distance details tags

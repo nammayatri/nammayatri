@@ -72,6 +72,7 @@ data RideAssignedInfo = RideAssignedInfo
     driverRegisteredAt :: Maybe UTCTime,
     isDriverBirthDay :: Bool,
     vehicleAge :: Maybe Months,
+    driverAlternatePhoneNumber :: Maybe Text,
     isFreeRide :: Bool,
     previousRideEndPos :: Maybe LatLong,
     rideOtp :: Text,

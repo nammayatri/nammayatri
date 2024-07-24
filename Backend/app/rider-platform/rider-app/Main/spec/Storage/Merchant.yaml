@@ -493,6 +493,7 @@ MerchantPushNotification:
   constraints:
     key: PrimaryKey
     merchantOperatingCityId: PrimaryKey
+    language: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV

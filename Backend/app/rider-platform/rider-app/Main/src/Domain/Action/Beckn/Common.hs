@@ -80,6 +80,7 @@ data BookingDetails = BookingDetails
     driverName :: Text,
     driverImage :: Maybe Text,
     driverMobileNumber :: Text,
+    driverAlternatePhoneNumber :: Maybe Text,
     driverMobileCountryCode :: Maybe Text,
     driverRating :: Maybe Centesimal,
     driverRegisteredAt :: Maybe UTCTime,
@@ -229,6 +230,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
   driverPhoneNumber <- mapM encrypt (Just driverMobileNumber)
+  driverAlternateNumber' <- mapM encrypt driverAlternatePhoneNumber
   let fromLocation = booking.fromLocation
       toLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
@@ -277,6 +279,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         distanceUnit = booking.distanceUnit,
         driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
         paymentDone = False,
+        driverAlternateNumber = driverAlternateNumber',
         vehicleAge = req.vehicleAge,
         cancellationFeeIfCancelled = Nothing,
         ..

@@ -25,6 +25,7 @@ module Domain.Action.UI.Call
     getCallStatus,
     getDriverMobileNumber,
     callOnClickTracker,
+    DriverNumberType (..),
   )
 where
 
@@ -82,6 +83,8 @@ data CallAttachments = CallAttachments
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 type CallCallbackRes = AckResponse
+
+data DriverNumberType = AlternateNumber | PrimaryNumber
 
 type GetDriverMobileNumberResp = Text
 
@@ -184,8 +187,8 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   where
     updateCallStatus id callStatus url callAttemptStatus callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration) url callStatus callAttemptStatus id
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
-getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
+getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => DriverNumberType -> Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
+getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
   id <- generateGUID
 
   let callFrom = dropFirstZero callFrom_
@@ -206,7 +209,9 @@ getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
       Just (dtmfNumberUsed, booking) -> do
         ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
         ensureCallStatusExists id callSid ride.id callStatus
-        return (ride.driverMobileNumber, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
+        decRide <- decrypt ride
+        number <- getNumberBasedOnType driverNumberType decRide
+        return (number, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
       Nothing -> do
         ride <- runInReplica $ QRide.findLatestByDriverPhoneNumber callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
         ensureCallStatusExists id callSid ride.id callStatus
@@ -260,6 +265,13 @@ getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
             createdAt = now,
             updatedAt = now
           }
+
+    getNumberBasedOnType numberType ride =
+      case numberType of
+        PrimaryNumber ->
+          maybe (throwError $ RideFieldNotPresent "driverPhoneNumber") pure ride.driverPhoneNumber
+        AlternateNumber ->
+          maybe (throwError $ RideFieldNotPresent "driverAlternateNumber") pure ride.driverAlternateNumber
 
 callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id SRide.Ride -> m APISuccess
 callOnClickTracker rideId = do
