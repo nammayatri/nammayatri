@@ -210,8 +210,8 @@ selectList estimateId = do
 
 selectResult :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
+  estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   res <- runMaybeT $ do
-    estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
     when (UEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
     booking <- MaybeT . runInReplica $ QBooking.findBookingIdAssignedByEstimateId estimate.id [NEW, CONFIRMED, TRIP_ASSIGNED, AWAITING_REASSIGNMENT, CANCELLED]
     let bookingId = if booking.status == TRIP_ASSIGNED then Just booking.id else Nothing
@@ -220,7 +220,7 @@ selectResult estimateId = do
   case res of
     Just r -> pure r
     Nothing -> do
-      selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
+      selectedQuotes <- runInReplica $ QQuote.findAllQuotesBySRId estimate.requestId DDO.ACTIVE
       bppDetailList <- forM ((.providerId) <$> selectedQuotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
       return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList}
