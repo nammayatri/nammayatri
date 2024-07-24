@@ -19,6 +19,8 @@ instance FromTType' Beam.WhiteListOrg Domain.Types.WhiteListOrg.WhiteListOrg whe
         Domain.Types.WhiteListOrg.WhiteListOrg
           { domain = domain,
             id = Kernel.Types.Id.Id id,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             subscriberId = Kernel.Types.Id.ShortId subscriberId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -29,6 +31,8 @@ instance ToTType' Beam.WhiteListOrg Domain.Types.WhiteListOrg.WhiteListOrg where
     Beam.WhiteListOrgT
       { Beam.domain = domain,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

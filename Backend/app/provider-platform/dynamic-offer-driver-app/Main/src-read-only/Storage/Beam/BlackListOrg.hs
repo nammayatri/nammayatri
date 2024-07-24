@@ -13,7 +13,14 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain
 import Tools.Beam.UtilsTH
 
-data BlackListOrgT f = BlackListOrgT {domain :: B.C f Kernel.Types.Beckn.Domain.Domain, id :: B.C f Kernel.Prelude.Text, subscriberId :: B.C f Kernel.Prelude.Text} deriving (Generic, B.Beamable)
+data BlackListOrgT f = BlackListOrgT
+  { domain :: B.C f Kernel.Types.Beckn.Domain.Domain,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    subscriberId :: B.C f Kernel.Prelude.Text
+  }
+  deriving (Generic, B.Beamable)
 
 instance B.Table BlackListOrgT where
   data PrimaryKey BlackListOrgT f = BlackListOrgId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)

@@ -99,12 +99,6 @@ data RateCardBreakupItem = RateCardBreakupItem
     value :: Text
   }
 
-firstStop :: [Spec.Stop] -> Maybe Spec.Stop
-firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
-
-lastStop :: [Spec.Stop] -> Maybe Spec.Stop
-lastStop = find (\stop -> Spec.stopType stop == Just (show Enums.END))
-
 mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> Maybe [Spec.Stop]
 mkStops origin mbDestination = do
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
@@ -212,7 +206,7 @@ castVariant Variant.TAXI_PLUS = (show Enums.CAB, "TAXI_PLUS")
 castVariant Variant.PREMIUM_SEDAN = (show Enums.CAB, "PREMIUM_SEDAN")
 castVariant Variant.BLACK = (show Enums.CAB, "BLACK")
 castVariant Variant.BLACK_XL = (show Enums.CAB, "BLACK_XL")
-castVariant Variant.BIKE = (show Enums.MOTORCYCLE, "BIKE")
+castVariant Variant.BIKE = (show Enums.TWO_WHEELER, "BIKE")
 castVariant Variant.AMBULANCE_TAXI = (show Enums.AMBULANCE, "AMBULANCE_TAXI")
 castVariant Variant.AMBULANCE_TAXI_OXY = (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
 castVariant Variant.AMBULANCE_AC = (show Enums.AMBULANCE, "AMBULANCE_AC")
@@ -238,7 +232,8 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just Variant.AUTO_RICKSHAW
   (Just "CAB", Just "TAXI") -> Just Variant.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
-  (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE
+  (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE -- becomes redundant, TODO : remove in next release
+  (Just "TWO_WHEELER", Just "BIKE") -> Just Variant.BIKE
   (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just Variant.AMBULANCE_TAXI
   (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just Variant.AMBULANCE_TAXI_OXY
   (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just Variant.AMBULANCE_AC

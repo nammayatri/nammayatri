@@ -19,10 +19,9 @@ data WhiteListOrgD (s :: UsageSafety) = WhiteListOrg
     domain :: Kernel.Types.Beckn.Domain.Domain,
     id :: Kernel.Types.Id.Id Domain.Types.WhiteListOrg.WhiteListOrg,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
-    updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleVariant :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
 

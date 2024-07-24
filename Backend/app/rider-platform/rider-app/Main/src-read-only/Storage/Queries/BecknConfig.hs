@@ -46,9 +46,9 @@ findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do
 
 findByMerchantIdDomainandMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.BecknConfig.BecknConfig])
 findByMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperatingCityId = do
-  findOneWithKV
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
           Se.Is Beam.domain $ Se.Eq domain,

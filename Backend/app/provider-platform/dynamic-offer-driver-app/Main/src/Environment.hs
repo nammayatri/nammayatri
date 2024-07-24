@@ -53,10 +53,8 @@ import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
-import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
-import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment (lookupEnv)
 import Tools.Metrics
 import TransactionLogs.Types
@@ -290,15 +288,7 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance Registry Flow where
-  registryLookup req = do
-    mbSubscriber <- Registry.withSubscriberCache performLookup req
-
-    totalSubIds <- QWhiteList.countTotalSubscribers
-    if totalSubIds == 0
-      then do
-        Registry.checkBlacklisted isBlackListed mbSubscriber
-      else do
-        Registry.checkWhitelisted isNotWhiteListed req.merchant_id mbSubscriber
+  registryLookup = Registry.withSubscriberCache performLookup
     where
       performLookup sub =
         fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id >>>= \registryUrl ->
@@ -311,8 +301,6 @@ instance Registry Flow where
             do
               mbMerchant <- CM.findById (Id merchantId)
               pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
-      isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
-      isNotWhiteListed subscriberId domain _merchantId = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

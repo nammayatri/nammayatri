@@ -35,9 +35,9 @@ buildInitReqMessage uiConfirm isValueAddNP bapConfig = do
   let confirmReqMessageOrder_ = tfOrder uiConfirm isValueAddNP bapConfig
   BecknV2.OnDemand.Types.ConfirmReqMessage {confirmReqMessageOrder = confirmReqMessageOrder_}
 
-tfFulfillmentVehicle :: SharedLogic.Confirm.DConfirmRes -> Bool -> BecknV2.OnDemand.Types.Vehicle
-tfFulfillmentVehicle uiConfirm isValueAddNP = do
-  let (category, variant) = Beckn.OnDemand.Utils.Common.castVehicleVariant isValueAddNP uiConfirm.vehicleVariant
+tfFulfillmentVehicle :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Vehicle
+tfFulfillmentVehicle uiConfirm = do
+  let (category, variant) = Beckn.OnDemand.Utils.Common.castVehicleVariant uiConfirm.vehicleVariant
   let vehicleCategory_ = Just category
   let vehicleColor_ = Nothing
   let vehicleMake_ = Nothing
@@ -75,7 +75,7 @@ tfOrderFulfillments uiConfirm isValueAddNP = do
   let fulfillmentStops_ = Beckn.OnDemand.Utils.Init.mkStops uiConfirm.fromLoc uiConfirm.toLoc Nothing
   let fulfillmentTags_ = if isValueAddNP then Beckn.OnDemand.Utils.Init.mkFulfillmentTags uiConfirm.maxEstimatedDistance else Nothing
   let fulfillmentType_ = Utils.tripCategoryToFulfillmentType <$> uiConfirm.booking.tripCategory
-  let fulfillmentVehicle_ = tfFulfillmentVehicle uiConfirm isValueAddNP & Just
+  let fulfillmentVehicle_ = tfFulfillmentVehicle uiConfirm & Just
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
 
 tfOrderItems :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Item

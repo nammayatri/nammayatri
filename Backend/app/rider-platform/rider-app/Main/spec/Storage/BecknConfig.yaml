@@ -34,11 +34,10 @@ BecknConfig:
     trackTTLSec: Maybe Int
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
-    # blackListedVehicleCategories: -- shrey00 : type complete karo
 
   types:
     VehicleCategory:
-      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE, TWO_WHEELER"
+      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE"
 
     PaymentCollectedBy:
       enum: "BAP, BPP"
@@ -60,7 +59,7 @@ BecknConfig:
       kvFunction: findOneWithKV
       where: id
     findByMerchantIdDomainandMerchantOperatingCityId:
-      kvFunction: findOneWithKV
+      kvFunction: findAllWithKV
       where:
         and: [merchantId, domain, merchantOperatingCityId]
 

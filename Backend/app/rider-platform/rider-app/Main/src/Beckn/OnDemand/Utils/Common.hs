@@ -24,6 +24,7 @@ import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
+import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
@@ -186,8 +187,8 @@ mkPaymentTags =
             tagValue = Just "https://example-test-bap.com/static-terms.txt"
           }
 
-castVehicleVariant :: Bool -> VehVar.VehicleVariant -> (Text, Text)
-castVehicleVariant isValueAddNP = \case
+castVehicleVariant :: VehVar.VehicleVariant -> (Text, Text)
+castVehicleVariant = \case
   VehVar.SEDAN -> (show Enums.CAB, "SEDAN")
   VehVar.SUV -> (show Enums.CAB, "SUV")
   VehVar.HATCHBACK -> (show Enums.CAB, "HATCHBACK")
@@ -197,7 +198,7 @@ castVehicleVariant isValueAddNP = \case
   VehVar.PREMIUM_SEDAN -> (show Enums.CAB, "PREMIUM_SEDAN")
   VehVar.BLACK -> (show Enums.CAB, "BLACK")
   VehVar.BLACK_XL -> (show Enums.CAB, "BLACK_XL")
-  VehVar.BIKE -> if isValueAddNP then (show Enums.MOTORCYCLE, "BIKE") else (show Enums.TWO_WHEELER, "BIKE")
+  VehVar.BIKE -> (show Enums.TWO_WHEELER, "BIKE") -- When parsing from beckn to domain, convert to MOTORCYCLE
   VehVar.AMBULANCE_TAXI -> (show Enums.AMBULANCE, "AMBULANCE_TAXI")
   VehVar.AMBULANCE_TAXI_OXY -> (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
   VehVar.AMBULANCE_AC -> (show Enums.AMBULANCE, "AMBULANCE_AC")
@@ -217,14 +218,14 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "BLACK") -> Just VehVar.BLACK
     (Just "CAB", Just "BLACK_XL") -> Just VehVar.BLACK_XL
     (Just "CAB", Just "PREMIUM_SEDAN") -> Just VehVar.PREMIUM_SEDAN
-    (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE
+    (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE -- becomes redundant, TODO : remove in next release
+    (Just "TWO_WHEELER", Just "BIKE") -> Just VehVar.BIKE
     (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
     (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
     (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just VehVar.AMBULANCE_AC
     (Just "AMBULANCE", Just "AMBULANCE_AC_OXY") -> Just VehVar.AMBULANCE_AC_OXY
     (Just "AMBULANCE", Just "AMBULANCE_VENTILATOR") -> Just VehVar.AMBULANCE_VENTILATOR
     (Just "CAB", Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
-    (Just "TWO_WHEELER", _) -> Just VehVar.BIKE -- this is for off-us case only
     _ -> Nothing
 
 castCancellationSourceV2 :: Text -> SBCR.CancellationSource
@@ -343,36 +344,16 @@ makeStop stop =
           stopTime = Nothing
         }
 
--- mapVariantToVehicle :: VehVar.VehicleVariant -> VehicleCategory -- shrey00 : use this function
--- mapVariantToVehicle variant = do
---   case variant of
---     VehVar.SEDAN -> CAB
---     VehVar.HATCHBACK -> CAB
---     VehVar.TAXI -> CAB
---     VehVar.SUV -> CAB
---     VehVar.TAXI_PLUS -> CAB
---     VehVar.PREMIUM_SEDAN -> CAB
---     VehVar.BLACK -> CAB
---     VehVar.BLACK_XL -> CAB
---     VehVar.BIKE -> MOTORCYCLE
---     VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW
---     VehVar.AMBULANCE_TAXI -> AMBULANCE
---     VehVar.AMBULANCE_TAXI_OXY -> AMBULANCE
---     VehVar.AMBULANCE_AC -> AMBULANCE
---     VehVar.AMBULANCE_AC_OXY -> AMBULANCE
---     VehVar.AMBULANCE_VENTILATOR -> AMBULANCE
---     VehVar.SUV_PLUS -> CAB
-
-mapTextToVehicle :: Text -> Maybe VehicleCategory
+mapTextToVehicle :: Text -> Maybe Enums.VehicleCategory
 mapTextToVehicle = \case
-  "AUTO_RICKSHAW" -> Just AUTO_RICKSHAW
-  "CAB" -> Just CAB
-  "TWO_WHEELER" -> Just TWO_WHEELER
-  "MOTORCYCLE" -> Just MOTORCYCLE
-  "AMBULANCE" -> Just AMBULANCE
+  "AUTO_RICKSHAW" -> Just Enums.AUTO_RICKSHAW
+  "CAB" -> Just Enums.CAB
+  "TWO_WHEELER" -> Just Enums.MOTORCYCLE
+  "MOTORCYCLE" -> Just Enums.MOTORCYCLE
+  "AMBULANCE" -> Just Enums.AMBULANCE
   _ -> Nothing
 
-getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
+getServiceTierType :: Spec.Item -> Maybe DVST.ServiceTierType
 getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)
 
 getServiceTierName :: Spec.Item -> Maybe Text
@@ -401,7 +382,6 @@ validateSubscriber subscriberId merchantId merchantOperatingCityId = do
         checkBlacklisted subscriberId
       else do
         checkWhitelisted merchantId merchantOperatingCityId subscriberId
-  pure ()
 
 checkBlacklisted :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m ()
 checkBlacklisted subscriberId = do
@@ -417,9 +397,9 @@ checkWhitelisted merchantId merchantOperatingCityId subscriberId = do
     "It is not a whitelisted subscriber " <> subscriberId
 
 isNotWhiteListed :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Domain -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m Bool
-isNotWhiteListed subscriberId domain merchantId _merchantOperatingCityId = QWhiteList.findBySubscriberIdAndDomainAndMerchantId (ShortId subscriberId) domain merchantId <&> isNothing
+isNotWhiteListed subscriberId domain merchantId merchantOperatingCityId = QWhiteList.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId (ShortId subscriberId) domain merchantId merchantOperatingCityId <&> isNothing
 
-getBlackListedVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BecknConfig -> Text -> m [VehicleCategory]
+getBlackListedVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BecknConfig -> Text -> m [Enums.VehicleCategory]
 getBlackListedVehicles becknConfigId subscriberId = do
   vehicleConfigs <- CQVC.findAllByBecknConfigId becknConfigId
   let blackListedVehicles = filter (\vc -> subscriberId `elem` vc.blackListedSubscribers) vehicleConfigs

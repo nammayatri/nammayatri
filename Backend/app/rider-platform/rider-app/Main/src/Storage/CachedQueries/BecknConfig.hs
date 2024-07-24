@@ -20,8 +20,8 @@ module Storage.CachedQueries.BecknConfig
   )
 where
 
-import BecknV2.OnDemand.Enums
-import Domain.Types.BecknConfig
+import BecknV2.OnDemand.Enums as Enums
+import Domain.Types.BecknConfig as DBC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -36,7 +36,7 @@ import qualified Storage.Queries.BecknConfig as Queries
 findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [BecknConfig]
 findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
 
-findByMerchantIdDomainAndVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> VehicleCategory -> m (Maybe BecknConfig)
+findByMerchantIdDomainAndVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> Enums.VehicleCategory -> m (Maybe BecknConfig)
 findByMerchantIdDomainAndVehicle merchantId domain vehicle = do
   Hedis.safeGet (makeMerchantIdDomainKey merchantId domain vehicle) >>= \case
     Just a -> return a
@@ -49,21 +49,21 @@ cacheMerchantIdDomainAndVehicle config = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeMerchantIdDomainKey (fromJust config.merchantId) config.domain config.vehicleCategory) config expTime
 
-makeMerchantIdDomainKey :: Id Merchant -> Text -> VehicleCategory -> Text
+makeMerchantIdDomainKey :: Id Merchant -> Text -> Enums.VehicleCategory -> Text
 makeMerchantIdDomainKey merchantId domain vehicle = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":Vehicle:" <> show vehicle
 
-findByMerchantIdDomainandMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> Id MerchantOperatingCity -> m (Maybe BecknConfig)
+findByMerchantIdDomainandMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> Id MerchantOperatingCity -> m [BecknConfig]
 findByMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperatingCityId = do
   Hedis.safeGet (makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId domain merchantOperatingCityId) >>= \case
     Just a -> return a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheMerchantIdDomainandMerchantOperatingCityId /=<< Queries.findByMerchantIdDomainandMerchantOperatingCityId (Just merchantId) domain (Just merchantOperatingCityId)
+    findAndCache = cacheMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperatingCityId /=<< Queries.findByMerchantIdDomainandMerchantOperatingCityId (Just merchantId) domain (Just merchantOperatingCityId)
 
-cacheMerchantIdDomainandMerchantOperatingCityId :: (CacheFlow m r) => BecknConfig -> m ()
-cacheMerchantIdDomainandMerchantOperatingCityId config = do
+cacheMerchantIdDomainandMerchantOperatingCityId :: (CacheFlow m r) => Id Merchant -> Text -> Id MerchantOperatingCity -> [BecknConfig] -> m ()
+cacheMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperatingCityId config = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeMerchantIdDomainandMerchantOperatingCityIdKey (fromJust config.merchantId) config.domain (fromJust config.merchantOperatingCityId)) config expTime
+  Hedis.setExp (makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId domain merchantOperatingCityId) config expTime
 
 makeMerchantIdDomainandMerchantOperatingCityIdKey :: Id Merchant -> Text -> Id MerchantOperatingCity -> Text
 makeMerchantIdDomainandMerchantOperatingCityIdKey merchantId domain merchantOperatingCityId = "CachedQueries:BecknConfig:MerchantId:" <> merchantId.getId <> ":Domain:" <> domain <> ":MerchantOperatingCityId:" <> merchantOperatingCityId.getId

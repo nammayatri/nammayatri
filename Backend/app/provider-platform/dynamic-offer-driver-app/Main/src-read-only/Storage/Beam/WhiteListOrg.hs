@@ -16,6 +16,8 @@ import Tools.Beam.UtilsTH
 data WhiteListOrgT f = WhiteListOrgT
   { domain :: B.C f Kernel.Types.Beckn.Domain.Domain,
     id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     subscriberId :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

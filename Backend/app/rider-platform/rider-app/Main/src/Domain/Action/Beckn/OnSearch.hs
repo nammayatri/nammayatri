@@ -35,8 +35,8 @@ module Domain.Action.Beckn.OnSearch
 where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
-import Domain.Types.BecknConfig
 import qualified Domain.Types as DT
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
@@ -129,7 +129,7 @@ data EstimateInfo = EstimateInfo
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
     tripCategory :: DT.TripCategory,
-    vehicleCategory :: VehicleCategory
+    vehicleCategory :: Enums.VehicleCategory
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -185,7 +185,7 @@ data QuoteInfo = QuoteInfo
     specialLocationName :: Maybe Text,
     quoteBreakupList :: [QuoteBreakupInfo],
     tripCategory :: DT.TripCategory,
-    vehicleCategory :: VehicleCategory
+    vehicleCategory :: Enums.VehicleCategory
   }
 
 data QuoteDetails
@@ -247,7 +247,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   mkBppDetails >>= CQBppDetails.createIfNotPresent
 
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
-  becknConfig <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId (show Domain.MOBILITY) searchRequest.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
+  becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId (show Domain.MOBILITY) searchRequest.merchantOperatingCityId
+  becknConfig <- listToMaybe becknConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   blackListedVehicles <- Utils.getBlackListedVehicles becknConfig.id providerInfo.providerId
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
@@ -284,14 +285,14 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       Ideally, rental options should also be available for one-way preferences, but frontend limitations prevent this.
       Once the frontend is updated for compatibility, we can extend this feature.
     -}
-    filterQuotesByPrefference :: [QuoteInfo] -> [VehicleCategory] -> [QuoteInfo]
+    filterQuotesByPrefference :: [QuoteInfo] -> [Enums.VehicleCategory] -> [QuoteInfo]
     filterQuotesByPrefference _quotesInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
         Rental -> filter (not . isNotRental) _quotesInfo
         OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory) _quotesInfo
         _ -> filter isNotRental _quotesInfo
 
-    filterEstimtesByPrefference :: [EstimateInfo] -> [VehicleCategory] -> [EstimateInfo]
+    filterEstimtesByPrefference :: [EstimateInfo] -> [Enums.VehicleCategory] -> [EstimateInfo]
     filterEstimtesByPrefference _estimateInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
         OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
@@ -320,8 +321,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     isNotRental :: QuoteInfo -> Bool
     isNotRental quote = case quote.quoteDetails of RentalDetails _ -> False; _ -> True
 
-    isNotBlackListed :: [VehicleCategory] -> VehicleCategory -> Bool
-    isNotBlackListed blackListedVehicles vehicleCategory = not (vehicleCategory `elem` blackListedVehicles)
+    isNotBlackListed :: [Enums.VehicleCategory] -> Enums.VehicleCategory -> Bool
+    isNotBlackListed blackListedVehicles vehicleCategory = vehicleCategory `notElem` blackListedVehicles
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
