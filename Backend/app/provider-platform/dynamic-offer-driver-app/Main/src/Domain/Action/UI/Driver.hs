@@ -1823,6 +1823,9 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     specialZoneRideCount :: Int,
     totalSpecialZoneCharges :: HighPrecMoney,
     totalSpecialZoneChargesWithCurrency :: PriceAPIEntity,
+    gst :: HighPrecMoney,
+    gstWithCurrency :: PriceAPIEntity,
+    gstPercentage :: HighPrecMoney,
     vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -1876,14 +1879,18 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverIdAndServiceName driverFee.startTime driverFee.endTime driverFee.driverId serviceName
         mbPlan <- DAPlan.getPlanDataFromDriverFee driverFee
         let maxRidesEligibleForCharge = DAPlan.planMaxRides =<< mbPlan
+            driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee
+            cgst = maybe 0.0 (.cgstPercentage) mbPlan
+            sgst = maybe 0.0 (.sgstPercentage) mbPlan
+            gst = (driverFeeAmount + fromMaybe 0.0 driverFee.amountPaidByCoin) * (cgst + sgst)
         return
           DriverFeeInfoEntity
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoiceStatus,
               totalEarnings = driverFee.totalEarnings,
               totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency,
-              driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
-              driverFeeAmountWithCurrency = PriceAPIEntity (SLDriverFee.roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)) driverFee.currency,
+              driverFeeAmount = driverFeeAmount,
+              driverFeeAmountWithCurrency = PriceAPIEntity driverFeeAmount driverFee.currency,
               totalRides = SLDriverFee.calcNumRides driverFee transporterConfig,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               planAmountWithCurrency = PriceAPIEntity (fromMaybe 0 driverFee.feeWithoutDiscount) driverFee.currency,
@@ -1897,6 +1904,9 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
               totalSpecialZoneCharges = driverFee.specialZoneAmount,
               totalSpecialZoneChargesWithCurrency = flip PriceAPIEntity driverFee.currency driverFee.specialZoneAmount,
               vehicleNumber = driverFee.vehicleNumber,
+              gstWithCurrency = PriceAPIEntity gst driverFee.currency,
+              gst = gst,
+              gstPercentage = cgst + sgst,
               maxRidesEligibleForCharge
             }
     )
