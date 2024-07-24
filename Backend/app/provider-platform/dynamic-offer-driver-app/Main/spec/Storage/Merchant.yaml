@@ -1212,8 +1212,8 @@ MerchantPushNotification:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
-    findByMerchantOpCityIdAndMessageKey:
-      kvFunction: findOneWithKV
+    findAllByMerchantOpCityIdAndMessageKey:
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key]
 
@@ -1301,4 +1301,5 @@ PayoutConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled]
+
 
