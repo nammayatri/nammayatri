@@ -38,7 +38,7 @@ import Foreign.NullOrUndefined (undefined)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig)
 import Engineering.Helpers.Events as Events
-import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
+import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -62,6 +62,7 @@ import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
 import SessionCache
+import Helpers.API (getDeviceDetails)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -72,7 +73,7 @@ getHeaders dummy isGzipCompressionEnabled = do
                         Header "x-config-version" (getValueFromWindow "CONFIG_VERSION"),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        Header "x-device" getDeviceDetails
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]
@@ -88,7 +89,7 @@ getHeaders' dummy isGzipCompressionEnabled = do
                          Header "x-config-version" (getValueToLocalStore CONFIG_VERSION),
                         Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),
                         Header "session_id" (getValueToLocalStore SESSION_ID),
-                        Header "x-device" (getValueToLocalNativeStore DEVICE_DETAILS)
+                        Header "x-device" getDeviceDetails
                     ] <> case regToken of
                         Nothing -> []
                         Just token -> [Header "token" token]

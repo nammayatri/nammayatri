@@ -415,9 +415,10 @@ export const getVersionName = function () {
   }
 };
 
-export const getManufacturerName = function (unit) {
-  return window.JBridge.getManufacturerName();
-};
+
+export const getManufacturerName = function (){
+  return window.fetchCachedSessionInfo ? window.fetchCachedSessionInfo("manufacturer") : JSON.parse(window.JBridge.getSessionInfo())["manufacturer"];
+}
 
 export const getAndroidVersion = function (unit) {
   if (window.__OS == "IOS") {
