@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.SearchRequestForDriver where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Types.BapMetadata as DSM
 import Domain.Types.Common as DTC
 import Domain.Types.DriverGoHomeRequest (DriverGoHomeRequest)
@@ -71,6 +72,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     driverMinExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     driverMaxExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     driverDefaultStepFeeWithCurrency :: Maybe PriceAPIEntity,
+    driverDefaultStepFeeWithCurrencyV2 :: Maybe PriceAPIEntity,
     driverStepFeeWithCurrency :: Maybe PriceAPIEntity,
     specialZoneExtraTipWithCurrency :: Maybe PriceAPIEntity,
     pickupZone :: Bool,
@@ -101,6 +103,7 @@ makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchReque
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge =
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
+      driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
@@ -130,8 +133,9 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           driverMinExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMinExtraFee,
           driverMaxExtraFee = roundToIntegral <$> nearbyReq.driverMaxExtraFee,
           driverMaxExtraFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverMaxExtraFee,
-          driverDefaultStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverDefaultStepFee,
-          driverStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverStepFee,
+          driverDefaultStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.driverDefaultStepFee, -- TODO :: Deprecate this after UI stops consuming
+          driverDefaultStepFeeWithCurrencyV2 = flip PriceAPIEntity nearbyReq.currency <$> (min nearbyReq.driverMaxExtraFee driverDefaultStepFee),
+          driverStepFeeWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> (min nearbyReq.driverStepFee driverDefaultStepFee),
           rideRequestPopupDelayDuration = delayDuration,
           specialLocationTag = searchRequest.specialLocationTag,
           disabilityTag = searchRequest.disabilityTag,
@@ -144,8 +148,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           pickupZone = nearbyReq.pickupZone,
           driverPickUpCharges = roundToIntegral <$> driverPickUpCharges,
           driverPickUpChargesWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> driverPickUpCharges,
-          specialZoneExtraTip = roundToIntegral <$> specialZoneExtraTip,
-          specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip,
+          specialZoneExtraTip = roundToIntegral <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
+          specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
           vehicleServiceTier = nearbyReq.vehicleServiceTierName,
           airConditioned = nearbyReq.airConditioned,
           requestedVehicleVariant = castServiceTierToVariant requestedVehicleServiceTier,

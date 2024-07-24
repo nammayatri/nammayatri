@@ -136,6 +136,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowD
           driverPickUpCharges = Nothing,
           parkingCharge = Nothing,
           driverPickUpChargesWithCurrency = Nothing,
+          driverDefaultStepFeeWithCurrencyV2 = driverDefaultStepFeeWithCurrency,
           useSilentFCMForForwardBatch = False,
           isOnRide = False,
           ..
