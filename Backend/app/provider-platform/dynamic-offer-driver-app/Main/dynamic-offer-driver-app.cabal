@@ -566,6 +566,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.Dashboard.Management.Driver
       API.Action.UI.Cac
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfileQuestions

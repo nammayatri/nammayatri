@@ -28,6 +28,7 @@ library
   exposed-modules:
       Dashboard.Common
       Dashboard.Common.Booking
+      Dashboard.Common.Driver
       Dashboard.Common.DriverReferral
       Dashboard.Common.Exotel
       Dashboard.Common.Merchant
@@ -49,10 +50,12 @@ library
       Dashboard.RiderPlatform.Message
       Dashboard.RiderPlatform.Ride
       Dashboard.SafetyPlatform
+      API.Types.ProviderPlatform.Management.Driver
   other-modules:
       Paths_dashboard_helper_api
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
