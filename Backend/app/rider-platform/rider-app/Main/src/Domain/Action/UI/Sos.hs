@@ -58,30 +58,41 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Sos as QSos
-import qualified Text.Read as Read
 import Tools.Error
 import Tools.Ticket as Ticket
 
 data SOSVideoUploadReq = SOSVideoUploadReq
-  { video :: FilePath,
+  { payload :: FilePath,
     fileType :: S3.FileType,
-    reqContentType :: Text
+    fileExtension :: Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance FromMultipart Tmp SOSVideoUploadReq where
   fromMultipart form = do
-    SOSVideoUploadReq
-      <$> fmap fdPayload (lookupFile "video" form)
-      <*> (lookupInput "fileType" form >>= (Read.readEither . T.unpack))
-      <*> fmap fdFileCType (lookupFile "video" form)
+    fileData <- lookupFile "payload" form
+    let mimeType = fdFileCType fileData
+    let file = fdPayload fileData
+    let fileExtension = getFileExtension mimeType
+    fileType <- validateContentType mimeType
+    return $ SOSVideoUploadReq file fileType fileExtension
+    where
+      validateContentType = \case
+        "video/mp4" -> Right S3.Video
+        "audio/wave" -> Right S3.Audio
+        "audio/mpeg" -> Right S3.Audio
+        "audio/mp4" -> Right S3.Audio
+        _ -> Left "Unsupported file format"
+
+      getFileExtension :: Text -> Text
+      getFileExtension = T.takeWhileEnd (/= '/')
 
 instance ToMultipart Tmp SOSVideoUploadReq where
   toMultipart sosVideoUploadReq =
     MultipartData
-      [Input "fileType" (show sosVideoUploadReq.fileType)]
-      [FileData "video" (T.pack sosVideoUploadReq.video) "" (sosVideoUploadReq.video)]
+      []
+      [FileData (show sosVideoUploadReq.fileType) "" (show sosVideoUploadReq.fileType) (sosVideoUploadReq.payload)]
 
 newtype AddSosVideoRes = AddSosVideoRes
   { fileUrl :: Text
@@ -254,21 +265,20 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
           else " has initiated a test safety drill with you. This is a practice exercise, not a real emergency situation..."
     notificationTitle = "Test Safety Drill Alert"
 
-addSosVideo :: Id DSos.Sos -> Id Person.Person -> SOSVideoUploadReq -> Flow AddSosVideoRes
-addSosVideo sosId personId SOSVideoUploadReq {..} = do
+uploadMedia :: Id DSos.Sos -> Id Person.Person -> SOSVideoUploadReq -> Flow AddSosVideoRes
+uploadMedia sosId personId SOSVideoUploadReq {..} = do
   sosDetails <- runInReplica $ QSos.findById sosId >>= fromMaybeM (SosIdDoesNotExist sosId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
-  contentType <- validateContentType
   merchantConfig <- CQM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  fileSize <- L.runIO $ withFile video ReadMode hFileSize
+  fileSize <- L.runIO $ withFile payload ReadMode hFileSize
   when (fileSize > fromIntegral riderConfig.videoFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
-  mediaFile <- L.runIO $ base64Encode <$> BS.readFile video
-  filePath <- createFilePath "/sos-video/" ("sos-" <> getId sosId) Video contentType
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile payload
+  filePath <- createFilePath "/sos/" ("sos-" <> getId sosId) fileType fileExtension
   let fileUrl =
         merchantConfig.publicMediaFileUrlPattern
-          & T.replace "<DOMAIN>" "sos-video"
+          & T.replace "<DOMAIN>" "sos"
           & T.replace "<FILE_PATH>" filePath
   result <- try @_ @SomeException $ S3.putPublic (T.unpack filePath) mediaFile
   case result of
@@ -282,11 +292,6 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
       when riderConfig.enableSupportForSafety $
         void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue))
       createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
-  where
-    validateContentType = do
-      case fileType of
-        S3.Video | reqContentType == "video/mp4" -> pure "mp4"
-        _ -> throwError $ FileFormatNotSupported reqContentType
 
 createMediaEntry :: Common.AddLinkAsMedia -> Flow AddSosVideoRes
 createMediaEntry Common.AddLinkAsMedia {..} = do
