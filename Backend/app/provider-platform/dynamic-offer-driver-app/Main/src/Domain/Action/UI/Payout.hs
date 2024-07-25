@@ -74,7 +74,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   let merchantId = merchant.id
       serviceName' = DEMSC.PayoutService TPayout.Juspay
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId serviceName' merchanOperatingCityId
+    CQMSC.findByServiceAndCity serviceName' merchanOperatingCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show TPayout.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig psc' -> pure psc'

@@ -19,13 +19,12 @@ import Storage.Queries.OrphanInstances.MerchantServiceConfig
 import Storage.Queries.Transformers.MerchantServiceConfig
 import Tools.Error
 
-findByMerchantIdAndServiceWithCity ::
+findByServiceAndCity ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id Merchant ->
   ServiceName ->
   Id DMOC.MerchantOperatingCity ->
   m (Maybe MerchantServiceConfig)
-findByMerchantIdAndServiceWithCity _merchant serviceName merchantOperatingCityId = do
+findByServiceAndCity serviceName merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
         [ Se.Is BeamMSC.serviceName $ Se.Eq serviceName,
@@ -44,7 +43,7 @@ upsertMerchantServiceConfig merchantServiceConfig opCity = do
   now <- getCurrentTime
   let _serviceName = getServiceName merchantServiceConfig.serviceConfig
       configJSON = getConfigJSON merchantServiceConfig.serviceConfig
-  res <- findByMerchantIdAndServiceWithCity merchantServiceConfig.merchantId _serviceName opCity
+  res <- findByServiceAndCity _serviceName opCity
   if isJust res
     then
       updateWithKV

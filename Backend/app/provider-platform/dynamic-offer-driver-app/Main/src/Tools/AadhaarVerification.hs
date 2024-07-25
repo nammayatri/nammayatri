@@ -58,12 +58,12 @@ runWithServiceConfig ::
   Id DM.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func merchantId merchantOpCityId req = do
+runWithServiceConfig func _merchantId merchantOpCityId req = do
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchantOpCityId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService) merchantOpCityId
+    CQMSC.findByServiceAndCity (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService) merchantOpCityId
       >>= fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.AadhaarVerificationServiceConfig vsc -> func vsc req

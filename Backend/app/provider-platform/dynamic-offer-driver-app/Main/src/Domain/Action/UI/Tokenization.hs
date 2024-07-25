@@ -36,7 +36,7 @@ getDriverSdkToken ::
     Environment.Flow API.Types.UI.Tokenization.GetTokenRes
   )
 getDriverSdkToken (mbPersonId, merchantId, merchantOperatingCityId) expirySec svc = do
-  svcfg <- (CQMSC.findByMerchantIdAndServiceWithCity merchantId (DomainMSC.TokenizationService svc) merchantOperatingCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Tokenization" (show svc))) <&> (.serviceConfig)
+  svcfg <- (CQMSC.findByServiceAndCity (DomainMSC.TokenizationService svc) merchantOperatingCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Tokenization" (show svc))) <&> (.serviceConfig)
   hvsc <- case svcfg of
     DomainMSC.TokenizationServiceConfig sc -> return sc
     _ -> throwError $ ServiceConfigError "Service Config is not Tokenization service config !!!!"

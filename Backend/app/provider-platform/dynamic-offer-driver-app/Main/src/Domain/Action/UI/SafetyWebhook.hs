@@ -69,7 +69,7 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchanOperatingCityId.getId)
   logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchant.id (DMSC.DriverBackgroundVerificationService $ (.driverBackgroundVerificationService) merchantServiceUsageConfig) merchanOperatingCityId
+    CQMSC.findByServiceAndCity (DMSC.DriverBackgroundVerificationService $ (.driverBackgroundVerificationService) merchantServiceUsageConfig) merchanOperatingCityId
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchanOperatingCityId.getId)
   safetyWebhookAuthToken <- case merchantServiceConfig.serviceConfig of
     DMSC.DriverBackgroundVerificationServiceConfig vsc -> do

@@ -199,7 +199,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchanOperatingCityId serviceName'
       >>= fromMaybeM (NoSubscriptionConfigForService merchanOperatingCityId.getId $ show serviceName')
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (subscriptionConfig.paymentServiceName) merchanOperatingCityId
+    CQMSC.findByServiceAndCity (subscriptionConfig.paymentServiceName) merchanOperatingCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc' -> pure psc'

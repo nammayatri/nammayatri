@@ -754,7 +754,7 @@ postMerchantServiceConfigMapsUpdate merchantShortId city req = do
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
   CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
-  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
+  CQMSC.clearCache serviceName merchanOperatingCityId
   logTagInfo "dashboard -> postMerchantServiceConfigMapsUpdate : " (show merchant.id)
   pure Success
 
@@ -771,7 +771,7 @@ postMerchantServiceConfigSmsUpdate merchantShortId city req = do
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
   CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
-  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
+  CQMSC.clearCache serviceName merchanOperatingCityId
   logTagInfo "dashboard -> postMerchantServiceConfigSmsUpdate : " (show merchant.id)
   pure Success
 
@@ -809,7 +809,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndServiceWithCity merchant.id (DMSC.MapsService service) merchantOpCityId
+        CQMSC.findByServiceAndCity (DMSC.MapsService service) merchantOpCityId
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -842,7 +842,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity req = do
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndServiceWithCity merchant.id (DMSC.SmsService service) merchantOpCityId
+        CQMSC.findByServiceAndCity (DMSC.SmsService service) merchantOpCityId
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -869,7 +869,7 @@ postMerchantServiceConfigVerificationUpdate merchantShortId city req = do
   serviceConfig <- DMSC.VerificationServiceConfig <$> Common.buildVerificationServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
-  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
+  CQMSC.clearCache serviceName merchanOperatingCityId
   logTagInfo "dashboard -> postMerchantServiceConfigVerificationUpdate : " (show merchant.id)
   pure Success
 
