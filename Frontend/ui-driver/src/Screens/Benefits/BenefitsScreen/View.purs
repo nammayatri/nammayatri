@@ -369,7 +369,7 @@ driverReferralCode push state =
                ][ imageView
                    [ height $ V 16
                    , width $ V 16
-                   , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_black_900"
+                   , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_chevron_right_black_900"
                    ]
                 ]
               ]
