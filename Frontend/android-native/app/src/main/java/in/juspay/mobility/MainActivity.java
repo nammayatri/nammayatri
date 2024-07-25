@@ -126,6 +126,18 @@ import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.services.HyperServices;
 
+import static in.juspay.mobility.common.MobilityCommonBridge.isClassAvailable;
+
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import java.util.Iterator;
+
+
+import co.hyperverge.hyperkyc.HyperKyc;
+import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
+import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
+import in.juspay.hyper.core.BridgeComponents;
+
 
 
 public class MainActivity extends AppCompatActivity {
@@ -135,6 +147,7 @@ public class MainActivity extends AppCompatActivity {
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
+
     private FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
     private Context context;
@@ -150,6 +163,9 @@ public class MainActivity extends AppCompatActivity {
     private JSONObject preInitFutureTaskResult = null;
     long onCreateTimeStamp = 0;
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+    ActivityResultLauncher<HyperKycConfig> launcher;
+    private String registeredCallBackForHV;
+
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
@@ -395,6 +411,30 @@ public class MainActivity extends AppCompatActivity {
         context = getApplicationContext();
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         activity = this;
+        if (isClassAvailable ("co.hyperverge.hyperkyc.HyperKyc") && isClassAvailable("co.hyperverge.hyperkyc.data.models.result.HyperKycResult") && isClassAvailable("com.google.gson.Gson")) {
+            launcher = this.registerForActivityResult(new HyperKyc.Contract(), new ActivityResultCallback<HyperKycResult>() {
+                @Override
+                public void onActivityResult(HyperKycResult result) {
+                    try {
+                        Gson gson = new Gson();
+                        String jsonStr = gson.toJson(result);
+
+
+                        JSONObject processPL = new JSONObject();
+                        JSONObject innerPayload = getInnerPayload(new JSONObject(),"process_hv_resp");
+                        innerPayload.put("callback", registeredCallBackForHV)
+                                .put("hv_response", jsonStr);
+                        processPL.put(PaymentConstants.PAYLOAD, innerPayload)
+                                .put("requestId", UUID.randomUUID())
+                                .put("service", getService());
+                        hyperServices.process(processPL);
+                    } catch (Exception e) {
+                        Log.e("HV error : ", "error_in_HyperKycResult");
+                    }
+
+                }
+            });
+        }
 
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
@@ -820,6 +860,18 @@ public class MainActivity extends AppCompatActivity {
                         } catch (JSONException e) {
                             Log.e(LOG_TAG, "empty payload" + json);
                         }
+                        break;
+                    case "launchHyperVerge":
+                        try {
+                            String cb = jsonObject.getString("callback");
+                            registeredCallBackForHV = cb;
+                            initHyperVergeSdk(jsonObject.getString("accessToken"), jsonObject.getString("workFlowId"), jsonObject.getString("transactionId"), jsonObject.getBoolean("useLocation"), jsonObject.getString("defLanguageCode"),jsonObject.getString("inputJson"));
+                        }
+                        catch (JSONException e) {
+                            Log.e("Error Occurred while calling Hyperverge SDK ", e.toString());
+                        }
+                        break;
+
                     default:
                         Log.e(LOG_TAG, "json_payload" + json);
                 }
@@ -1252,4 +1304,35 @@ public class MainActivity extends AppCompatActivity {
         payload.put("bundleTimeOut",bundleTimeOut);
         return payload;
     }
+
+    public void initHyperVergeSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
+        if (isClassAvailable ("co.hyperverge.hyperkyc.data.models.HyperKycConfig")) {
+                HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
+                config.setUseLocation(useLocation);
+                config.setDefaultLangCode(defLanguageCode);
+                if (inputsJson.length() > 0) {
+                    Map<String, String> inpMap = new HashMap<>();
+                    JSONObject jsonObject;
+                    try {
+                        jsonObject = new JSONObject(inputsJson);
+                        for (Iterator<String> it = jsonObject.keys(); it.hasNext(); ) {
+                            String key = it.next();
+                            inpMap.put(key, jsonObject.getString(key));
+                        }
+                    }
+                    catch (JSONException e) {
+                        Log.e("Unable find Specified Key, So returning config without setting inputs.", inputsJson);
+                        e.printStackTrace();
+                        return;
+                    }
+                    if (inpMap.size() > 0)  config.setInputs(inpMap);
+                    else Log.d("HyperKycConfig Inputs JSON: ", "Empty json passed as input so not initializing inputs in config");
+                }
+                else Log.d("HyperKycConfig Inputs JSON: ", "Not initializing inputs as inputs json passed is null");
+                launcher.launch(config);
+            } else {
+
+        }
+        }
+
 }

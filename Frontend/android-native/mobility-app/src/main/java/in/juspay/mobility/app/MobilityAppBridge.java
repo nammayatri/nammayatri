@@ -31,6 +31,7 @@ import android.os.RemoteException;
 import android.provider.Settings;
 import android.text.Html;
 import android.util.Log;
+import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,6 +43,7 @@ import android.widget.ScrollView;
 import androidx.annotation.NonNull;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.android.installreferrer.api.InstallReferrerClient;
@@ -77,10 +79,16 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
@@ -137,6 +145,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     private CallBack callBack;
+
 
     private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
@@ -1173,6 +1182,23 @@ public class MobilityAppBridge extends HyperBridge {
             cameraUtils.stopRecord();
     }
 
+    @JavascriptInterface
+    public String decodeAndStoreImage(String base64ImageString) {
+        try {
+            byte[] imageBytes = Base64.decode(base64ImageString, Base64.DEFAULT);
+            String fileName = "image_" + System.currentTimeMillis() + ".png";
+            File outputDir = bridgeComponents.getContext().getCacheDir();
+            File outputFile = new File(outputDir, fileName);
+            FileOutputStream fos = new FileOutputStream(outputFile);
+            fos.write(imageBytes);
+            fos.close();
+            return outputFile.getAbsolutePath();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "FAILED";
+        }
+    }
+
     // region Override functions
 
     @Override
@@ -1208,6 +1234,8 @@ public class MobilityAppBridge extends HyperBridge {
             }
         });
     }
+
+
     @JavascriptInterface
     public void renderSlider(String config) {
         ExecutorManager.runOnMainThread(() -> {
