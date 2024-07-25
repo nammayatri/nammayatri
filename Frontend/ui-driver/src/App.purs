@@ -76,6 +76,9 @@ import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.CustomerReferralTrackerScreen.ScreenData as CustomerReferralTrackerScreenData
 import Screens.CustomerReferralTrackerScreen.Types as CustomerReferralScreenTypes
+import Screens.RideRequestScreen.ScreenData as RideRequestScreenData
+import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
+import Screens.ScheduledRideAcceptedScreen.ScreenData as ScheduledRideAcceptedScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -130,6 +133,9 @@ newtype GlobalState = GlobalState {
   , documentDetailsScreen :: DocumentDetailsScreenState
   , rateCardScreen :: RateCardScreenState
   , customerReferralTrackerScreen :: CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
+  , rideRequestScreen :: RideRequestScreenData.RideRequestScreenState
+  , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
+  , scheduledRideAcceptedScreen :: ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -184,6 +190,9 @@ defaultGlobalState = GlobalState {
 , documentDetailsScreen : DocumentDetailsScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
 , customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
+, rideRequestScreen : RideRequestScreenData.initData
+, rideSummaryScreen : RideSummaryScreenData.initData
+, scheduledRideAcceptedScreen :ScheduledRideAcceptedScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -248,6 +257,9 @@ data ScreenType =
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CustomerReferralTrackerScreenStateType (CustomerReferralScreenTypes.CustomerReferralTrackerScreenState -> CustomerReferralScreenTypes.CustomerReferralTrackerScreenState)
+  | RideRequestScreenStateType (RideRequestScreenData.RideRequestScreenState ->RideRequestScreenData.RideRequestScreenState)
+  | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
+  | ScheduleRideAcceptedScreenStateType (ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState -> ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState )
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -340,6 +352,7 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | GO_BACK_TO_HELP_AND_SUPPORT HelpAndSupportScreenState
                                     | GO_BACK_TO_HOME_SCREEN_FROM_HELP HelpAndSupportScreenState
                                     | GO_BACK_TO_TRIP_DETAILS HelpAndSupportScreenState
+                                    -- | UPDATE_ROUTE_11
 
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
@@ -376,6 +389,12 @@ data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreen
                                         | RC_ACTIVATION AddVehicleDetailsScreenState
                                         | CHANGE_VEHICLE_FROM_RC_SCREEN
                                         | CHANGE_LANG_FROM_RC_SCREEN
+data RIDE_REQUEST_SCREEN_OUTPUT  = GOTO_HOME
+                                  | GOTO_RIDE_SUMMARY RideRequestScreenData.RideRequestScreenState
+                                  | RIDE_REQUEST_REFRESH_SCREEN RideRequestScreenData.RideRequestScreenState
+                                  | LOADER__OUTPUT RideRequestScreenData.RideRequestScreenState
+
+data SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT = GOO_HOME
 
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN
 
@@ -423,6 +442,9 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_BOOKING_PREFERENCES
                           | UPDATE_ROUTE_ON_STAGE_SWITCH HomeScreenState
                           | GO_TO_CUSTOMER_REFERRAL_TRACKER HomeScreenState
+                          | GO_TO_RIDE_REQ_SCREEN
+                          | GO_TO_RIDE_SUMMARY
+                          | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -469,6 +491,17 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
   | GO_TO_HOME_FROM_AADHAAR
   | LOGOUT_FROM_AADHAAR
 
+data RIDE_SUMMARY_SCREEN_OUTPUT = GO_TO_RIDE_REQUEST
+                                    | ACCEPT_SCHEDULED_RIDE String
+                                    | UPDATE_ROUTE_INTERCITY Number Number Number Number
+                                    | UPDATE_ROUTE_RENTAL Number Number
+                                    | UPDATE_ROUTE_REGULAR Number Number Number Number
+                                    | CANCEL_SCHEDULED_RIDE {id :: String, info :: String , reason :: String} 
+                                    | BACK_HOME
+                                    | ON_CALLING  RideSummaryScreenData.RideSummaryScreenState String
+                                    | GO_TO_OPEN_GOOGLE_MAP  RideSummaryScreenData.RideSummaryScreenState
+                                    | GO_TO_HOME_SCREEN_FROM_BANNER
+                                     
 data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | NAV NAVIGATION_ACTIONS
                                   | MAKE_PAYMENT SubscriptionScreenState

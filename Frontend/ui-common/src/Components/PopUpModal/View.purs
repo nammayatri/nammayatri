@@ -447,7 +447,7 @@ view push state =
                             [ width WRAP_CONTENT
                             , height WRAP_CONTENT
                             , accessibility ENABLE
-                            , text $ if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text
+                            , text $ spy "priting timerValue -> " (if state.option1.enableTimer && state.option1.timerValue > 0 then (state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else state.option1.text)
                             , accessibilityHint $ (if state.option1.enableTimer && state.option1.timerValue > 0 then ( state.option1.text <> " (" <> (show state.option1.timerValue) <> ")") else (replaceAll (Pattern ",") (Replacement ":") state.option1.text)) <> " : Button"
                             , color $ state.option1.color
                             , gravity CENTER

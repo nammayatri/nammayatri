@@ -24,15 +24,3 @@ type Config =
   , openArrowImage :: String
   , closeArrowImage :: String 
   }
-
-
-
--- dummyConfig :: Config
--- dummyConfig = {
---   isOpen : false,
---   title : "Dummy Card",
---   layout : linearLayout 
---             [ height WRAP_CONTENT
---             , width WRAP_CONTENT
---             ][]
--- }
