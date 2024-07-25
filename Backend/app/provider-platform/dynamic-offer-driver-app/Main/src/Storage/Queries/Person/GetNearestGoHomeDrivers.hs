@@ -100,7 +100,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
       let personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
           vehicleHashMap = HashMap.fromList $ (\v -> (v.driverId, v)) <$> vehicles
-          driverBankAccountHashMap = HashMap.fromList $ (\dba -> (dba.driverId, dba.accountId)) <$> driverBankAccounts
+          driverBankAccountHashMap = HashMap.fromList $ catMaybes $ (\dba -> if dba.chargesEnabled then Just (dba.driverId, dba.accountId) else Nothing) <$> driverBankAccounts
        in -- driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
           concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap) driverLocations
 

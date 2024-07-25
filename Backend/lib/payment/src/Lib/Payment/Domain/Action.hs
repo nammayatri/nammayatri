@@ -24,6 +24,7 @@ module Lib.Payment.Domain.Action
     buildSDKPayload,
     refundService,
     createPaymentIntentService,
+    chargePaymentIntentService,
     createPayoutService,
     payoutStatusService,
     payoutStatusUpdates,
@@ -109,8 +110,10 @@ data PayoutPaymentStatus = PayoutPaymentStatus
 -- create payment intent --------------------------------------------
 
 createPaymentIntentService ::
+  forall m r c.
   ( EncFlow m r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasShortDurationRetryCfg r c
   ) =>
   Id Merchant ->
   Id Person ->
@@ -119,9 +122,12 @@ createPaymentIntentService ::
   Payment.CreatePaymentIntentReq ->
   (Payment.CreatePaymentIntentReq -> m Payment.CreatePaymentIntentResp) ->
   (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
+  (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
+  (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
   m Payment.CreatePaymentIntentResp
-createPaymentIntentService merchantId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall = do
+createPaymentIntentService merchantId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall = do
   let rideShortId = ShortId rideShortIdText
+  let cardFixedCharges = HighPrecMoney 0.3 -- 30 cents, we have to fix it later properly
   mbExistingOrder <- QOrder.findById (cast rideId)
   case mbExistingOrder of
     Nothing -> do
@@ -135,28 +141,41 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
       transactions <- QTransaction.findAllByOrderId existingOrder.id
       let mbInProgressTransaction = find (isInProgress . (.status)) transactions
       case mbInProgressTransaction of
-        Nothing -> do
-          -- if previous all payment intents are already charged or cancelled, then create a new payment intent
-          createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
-          let newOrderAmount = existingOrder.amount + createPaymentIntentReq.amount
-          transaction <- buildTransaction existingOrder createPaymentIntentResp
-          QOrder.updateAmountAndStatus existingOrder.id newOrderAmount createPaymentIntentResp.paymentIntentId
-          QTransaction.create transaction
-          return createPaymentIntentResp
+        Nothing -> createNewTransaction existingOrder -- if previous all payment intents are already charged or cancelled, then create a new payment intent
         Just transaction -> do
           paymentIntentId <- transaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId") -- should never happen
-          mbClientSecret <- mapM decrypt existingOrder.clientAuthToken
-          clientSecret <- mbClientSecret & fromMaybeM (InternalError "Client secret not found") -- should never happen
-          let newOrderAmount = existingOrder.amount + createPaymentIntentReq.amount
-          QOrder.updateAmountAndStatus existingOrder.id newOrderAmount paymentIntentId
           let newTransactionAmount = transaction.amount + createPaymentIntentReq.amount
-          QTransaction.updateAmount transaction.id newTransactionAmount
-          let paymentIntentStatus = Payment.caseToPaymentIntentStatus transaction.status
-          updatePaymentIntentAmountCall paymentIntentId newTransactionAmount createPaymentIntentReq.applicationFeeAmount
-          -- check if status will be updated in this
-          return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
+          let newApplicationFeeAmount = transaction.applicationFeeAmount + createPaymentIntentReq.applicationFeeAmount - cardFixedCharges -- card fixed charges already included in application fee
+          if newTransactionAmount > transaction.amount
+            then do
+              resp <- try @_ @SomeException (updatePaymentIntentAmountCall paymentIntentId newTransactionAmount newApplicationFeeAmount)
+              case resp of
+                Left err -> do
+                  logError $ "Failed to update payment intent amount for paymentIntentId: " <> paymentIntentId <> " err: " <> show err
+                  chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall -- charge older payment intent
+                  createNewTransaction existingOrder -- create new payment intent
+                Right _ -> updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder transaction
+            else updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder transaction
   where
     isInProgress = (`elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING])
+
+    createNewTransaction :: (EncFlow m r, BeamFlow m r) => DOrder.PaymentOrder -> m Payment.CreatePaymentIntentResp
+    createNewTransaction existingOrder = do
+      createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
+      let newOrderAmount = existingOrder.amount + createPaymentIntentReq.amount
+      transaction <- buildTransaction existingOrder createPaymentIntentResp
+      QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount createPaymentIntentResp.paymentIntentId
+      QTransaction.create transaction
+      return createPaymentIntentResp
+
+    updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder transaction = do
+      mbClientSecret <- mapM decrypt existingOrder.clientAuthToken
+      clientSecret <- mbClientSecret & fromMaybeM (InternalError "Client secret not found") -- should never happen
+      let newOrderAmount = existingOrder.amount + createPaymentIntentReq.amount
+      QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount paymentIntentId
+      QTransaction.updateAmount transaction.id newTransactionAmount newApplicationFeeAmount
+      let paymentIntentStatus = Payment.caseToPaymentIntentStatus transaction.status
+      return $ Payment.CreatePaymentIntentResp paymentIntentId clientSecret paymentIntentStatus
 
     buildPaymentOrder_ ::
       ( EncFlow m r,
@@ -228,6 +247,8 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
             orderId = order.id,
             merchantId = order.merchantId,
             amount = createPaymentIntentReq.amount,
+            applicationFeeAmount = createPaymentIntentReq.applicationFeeAmount,
+            retryCount = 0,
             currency = createPaymentIntentReq.currency,
             dateCreated = Nothing,
             statusId = 0, -- not used for stripe
@@ -244,6 +265,41 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
             createdAt = now,
             updatedAt = now
           }
+
+chargePaymentIntentService ::
+  forall m r c.
+  ( EncFlow m r,
+    BeamFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Payment.PaymentIntentId ->
+  (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
+  (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
+  m ()
+chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall = do
+  transaction <- QTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found: " <> paymentIntentId)
+  if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED] -- if not already charged or cancelled or auto refunded
+    then do
+      resp <- try @_ @SomeException $ withShortRetry $ capturePaymentIntentCall paymentIntentId transaction.amount transaction.applicationFeeAmount
+      case resp of
+        Left exec -> do
+          let err = fromException @Payment.StripeError exec
+              errorCode = err <&> toErrorCode
+              errorMessage = err >>= toMessage
+          logError $ "Error while charging payment intent: " <> show err
+          if transaction.retryCount >= 2 -- already 3 retries
+            then do
+              logError "Max retries reached, cancelling payment intent"
+              -- should we cancel the payment intent from stripe?
+              QTransaction.updateStatusAndError transaction.id Payment.CANCELLED errorCode errorMessage
+            else do
+              -- should we retry on basis of error?
+              QTransaction.updateRetryCountAndError transaction.id (transaction.retryCount + 1) errorCode errorMessage -- retry
+        Right () -> do
+          paymentIntentResp <- getPaymentIntentCall paymentIntentId
+          QTransaction.updateStatusAndError transaction.id (Payment.castToTransactionStatus paymentIntentResp.status) Nothing Nothing
+          QOrder.updateStatus transaction.orderId paymentIntentId (Payment.castToTransactionStatus paymentIntentResp.status)
+    else pure () -- if already charged or cancelled or auto refunded no need to charge again
 
 -- create order -----------------------------------------------------
 
@@ -540,6 +596,8 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
         txnUUID = transactionUUID,
         statusId = transactionStatusId,
         status = transactionStatus,
+        applicationFeeAmount = 0.0,
+        retryCount = 0,
         createdAt = now,
         updatedAt = now,
         juspayResponse = respDump,

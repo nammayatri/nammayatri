@@ -74,7 +74,7 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
       { totalReferralCount = driverStats.totalReferralCounts,
         dailyEarnings = dailyEarnings,
         vpaId = dInfo.payoutVpa,
-        orderId = (.shortId.getShortId) <$> mbRegistrationOrder,
+        orderId = dInfo.payoutRegistrationOrderId,
         orderStatus = (.status) <$> mbRegistrationOrder,
         referralRewardAmountPerRide = payoutConfig.referralRewardAmountPerRide,
         payoutRegistrationAmount = sum [payoutConfig.payoutRegistrationFee, payoutConfig.payoutRegistrationCgst, payoutConfig.payoutRegistrationSgst]

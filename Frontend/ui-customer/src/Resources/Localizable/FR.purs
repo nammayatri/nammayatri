@@ -1327,3 +1327,8 @@ getFR stringKey =
         TIRUNELVELI -> "Tirunelveli"
         SALEM -> "Salem"
         TRICHY -> "Trichy"
+        CANCEL_BOOKING_ -> "Annuler la réservation"
+        CANCEL_INTERCITY_BOOKING -> "Annuler la réservation interurbaine" 
+        RENTAL_BOOKING -> "Réservation de location"
+        INTERCITY_BOOKING -> "Réservation interurbaine"
+        BOOKING -> "Réservation"

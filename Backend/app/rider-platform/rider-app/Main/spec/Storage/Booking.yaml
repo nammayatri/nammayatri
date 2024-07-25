@@ -173,7 +173,6 @@ Booking:
     estimatedDuration: Maybe Seconds
     discount: Maybe Price
     estimatedTotalFare: Price
-    estimatedApplicationFee: Maybe Price
     isScheduled: Bool
     vehicleServiceTierType: VehicleServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
@@ -225,6 +224,8 @@ Booking:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
     bppEstimateId:
       itemId: Text
   beamInstance: MakeTableInstancesWithTModifier [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")]
@@ -232,7 +233,6 @@ Booking:
     discount: Maybe HighPrecMoney
     providerUrl: Text
     estimatedTotalFare: HighPrecMoney
-    estimatedApplicationFee: Maybe HighPrecMoney
     currency: Maybe Currency
     tripTermsId: Maybe Text
     isScheduled: Maybe Bool
@@ -242,6 +242,8 @@ Booking:
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
 
   sqlType:
     id: character(36)
@@ -255,7 +257,6 @@ Booking:
     estimatedFare: numeric(30,2)
     discount: numeric(30,2)
     estimatedTotalFare: numeric(30,2)
-    estimatedApplicationFee: numeric(30,2)
     distance: numeric(30,2)
     vehicleVariant: character varying(60)
     createdAt: timestamp with time zone
@@ -314,13 +315,14 @@ Booking:
     estimatedFare: ((.amount) estimatedFare)|E
     discount: (discount <&> (.amount))|E
     estimatedTotalFare: ((.amount) estimatedTotalFare)|E
-    estimatedApplicationFee: (estimatedApplicationFee <&> (.amount))|E
     currency: (Just $ (.currency) estimatedFare)|E
     tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     isScheduled: (Just isScheduled)|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     clientOsType: clientDevice <&> (.deviceType)|E
     clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
     clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
@@ -344,14 +346,13 @@ Booking:
     estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
     estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E
-    estimatedApplicationFee: (Kernel.Types.Common.mkPrice currency <$> estimatedApplicationFee)|E
     isScheduled: (fromMaybe False isScheduled)|E
     estimatedDistance: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit estimatedDistanceValue <$> estimatedDistance|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
     clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
-    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     itemId: bppEstimateId|E
 

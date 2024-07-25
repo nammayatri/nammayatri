@@ -162,7 +162,8 @@ data QuoteBreakupTitle
   | EXTRA_DISTANCE_FARE
   | RIDE_DURATION_FARE
   | INSURANCE_CHARGES
-  | CARD_CHARGES
+  | CARD_CHARGES_ON_FARE
+  | CARD_CHARGES_FIXED
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

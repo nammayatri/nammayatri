@@ -65,6 +65,7 @@ library
       API.Internal.Auth
       API.Internal.BulkLocUpdate
       API.Internal.Cac
+      API.Internal.CallCustomerFCM
       API.Internal.CustomerCancellationDues
       API.Internal.DriverCoordinates
       API.Internal.DriverInactiveFCM
@@ -161,6 +162,7 @@ library
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.Cac
+      Domain.Action.Internal.CallCustomerFCM
       Domain.Action.Internal.CustomerCancellationDues
       Domain.Action.Internal.DriverCoordinates
       Domain.Action.Internal.DriverInactiveFCM
@@ -297,6 +299,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
+      SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
@@ -619,6 +622,7 @@ library
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
+      Domain.Types.CancellationFarePolicy
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.DailyStats
@@ -732,6 +736,7 @@ library
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
       Storage.Beam.CancellationCharges
+      Storage.Beam.CancellationFarePolicy
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.DailyStats
@@ -830,6 +835,7 @@ library
       Storage.Beam.VehicleServiceTier
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.CancellationFarePolicy
       Storage.CachedQueries.SurgePricing
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
@@ -846,6 +852,7 @@ library
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationCharges
+      Storage.Queries.CancellationFarePolicy
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.DailyStats

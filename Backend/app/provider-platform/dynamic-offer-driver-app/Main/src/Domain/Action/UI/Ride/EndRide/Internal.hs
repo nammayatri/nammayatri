@@ -206,29 +206,29 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
         case minTripDistanceForReferralCfg of
           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
           Nothing -> True
-  when shouldUpdateRideComplete $
+  whenJust mbRiderDetails $ \riderDetails -> do
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
-      whenJust mbRiderDetails $ \riderDetails -> do
+      when shouldUpdateRideComplete $
         QRD.updateHasTakenValidRide True (Just now) riderDetails.id
-        case riderDetails.referredByDriver of
-          Just referredDriverId -> do
-            let referralMessage = "Congratulations!"
-            let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
-            driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
-            let mobileNumberHash = (.hash) riderDetails.mobileNumber
-            localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-            mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
-            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
-            whenJust mbFlagReason $ \flagReason -> do
-              QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) (Just flagReason) riderDetails.id
-            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
+      case riderDetails.referredByDriver of
+        Just referredDriverId -> do
+          let referralMessage = "Congratulations!"
+          let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
+          driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+          when shouldUpdateRideComplete $ do
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
-          Nothing -> pure ()
+          let mobileNumberHash = (.hash) riderDetails.mobileNumber
+          localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+          mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
+          (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
+          QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
+          when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
+        Nothing -> pure ()
   where
     updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId = do
-      mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey merchantOpCityId "PAYOUT_REFERRAL_REWARD"
+      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" driver.language
       whenJust mbMerchantPN $ \merchantPN -> do
         let entityData = NotifReq {entityId = referredDriverId.getId, title = merchantPN.title, message = merchantPN.body}
         notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward

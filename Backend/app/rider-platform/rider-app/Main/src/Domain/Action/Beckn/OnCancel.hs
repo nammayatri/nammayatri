@@ -24,28 +24,20 @@ where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
+import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment
 import Environment ()
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.MerchantConfig as SMC
-import qualified Storage.CachedQueries.BppDetails as CQBPP
-import qualified Storage.CachedQueries.MerchantConfig as CMC
-import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import Tools.Event
-import qualified Tools.Notifications as Notify
 
 data OnCancelReq = BookingCancelledReq
   { bppBookingId :: Id SRB.BPPBooking,
@@ -61,43 +53,27 @@ data ValidatedOnCancelReq = ValidatedBookingCancelledReq
     mbRide :: Maybe SRide.Ride
   }
 
--- TODO (Rupak): this is being called by BPP if cancellation initiated by customer
 onCancel :: ValidatedOnCancelReq -> Flow ()
 onCancel ValidatedBookingCancelledReq {..} = do
   let cancellationSource_ :: Maybe Enums.CancellationSource = readMaybe . T.unpack =<< cancellationSource
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
-  merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) (castCancellatonSource cancellationSource_)
-  fork "incrementing fraud counters" $ do
-    let merchantOperatingCityId = booking.merchantOperatingCityId
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs Nothing
-    whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
-  case mbRide of
-    Just ride -> do
-      case cancellationSource_ of
-        Just Enums.CONSUMER -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-        Just Enums.PROVIDER -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
-        _ -> pure ()
-      triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
-    Nothing -> logDebug "No ride found for the booking."
-  triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}}
-  _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
-  unless (booking.status == SRB.CANCELLED) $ void $ QRB.updateStatus booking.id SRB.CANCELLED
-  whenJust mbRide $ \ride -> void $ do
-    unless (ride.status == SRide.CANCELLED) $ void $ QRide.updateStatus ride.id SRide.CANCELLED
-  unless (cancellationSource_ == Just Enums.CONSUMER) $
-    QBCR.upsert bookingCancellationReason
-  -- notify customer
-  bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
-  Notify.notifyOnBookingCancelled booking (castCancellatonSource cancellationSource_) bppDetails mbRide
+  let castedCancellationSource = castCancellatonSource cancellationSource_
+  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee
   where
     castCancellatonSource = \case
       Just Enums.CONSUMER -> SBCR.ByUser
       _ -> SBCR.ByDriver
 
 onSoftCancel :: ValidatedOnCancelReq -> Flow ()
-onSoftCancel _ = logDebug "Soft cancel not implemented" -- TODO (Rupak): store cancellation fee in fare params
+onSoftCancel ValidatedBookingCancelledReq {..} =
+  case cancellationFee of
+    Just fee -> do
+      let cancellationFeeToBeSettled = Just fee.amount
+      whenJust mbRide $ \ride -> do
+        let rideId = ride.id
+        QRide.updateCancellationFeeIfCancelledField cancellationFeeToBeSettled rideId
+    _ -> pure ()
 
 validateRequest ::
   ( CacheFlow m r,
@@ -120,27 +96,3 @@ validateRequest BookingCancelledReq {..} = do
   where
     isBookingCancellable booking =
       booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
-
-mkBookingCancellationReason ::
-  (MonadFlow m) =>
-  SRB.Booking ->
-  Maybe (Id SRide.Ride) ->
-  SBCR.CancellationSource ->
-  m SBCR.BookingCancellationReason
-mkBookingCancellationReason booking mbRideId cancellationSource = do
-  now <- getCurrentTime
-  return $
-    SBCR.BookingCancellationReason
-      { bookingId = booking.id,
-        rideId = mbRideId,
-        merchantId = Just booking.merchantId,
-        distanceUnit = booking.distanceUnit,
-        source = cancellationSource,
-        reasonCode = Nothing,
-        reasonStage = Nothing,
-        additionalInfo = Nothing,
-        driverCancellationLocation = Nothing,
-        driverDistToPickup = Nothing,
-        createdAt = now,
-        updatedAt = now
-      }

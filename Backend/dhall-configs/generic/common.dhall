@@ -60,7 +60,7 @@ let eventType =
       | EventTracker
       >
 
-let httpClientOptions = { timeoutMs = +2000 }
+let httpClientOptions = { timeoutMs = +200000 }
 
 let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
 

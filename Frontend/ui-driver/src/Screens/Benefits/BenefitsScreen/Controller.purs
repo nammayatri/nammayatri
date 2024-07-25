@@ -1,10 +1,10 @@
 module Screens.Benefits.BenefitsScreen.Controller where
 
-import JBridge (shareTextMessage, minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
+import JBridge (shareTextMessage, minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage, openUrlInApp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($))
 import PrestoDOM (Eval, update, continue, exit)
-import PrestoDOM.Types.Core (class Loggable)
+import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types 
 import Effect.Unsafe (unsafePerformEffect)
@@ -19,7 +19,7 @@ import Components.BottomNavBar as BottomNavBar
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, getValueToLocalStore)
 import Helpers.Utils (incrementValueOfLocalStoreKey, generateReferralLink, generateQR)
 import Components.PrimaryButton as PrimaryButton
-import Common.Types.App (ShareImageConfig)
+import Common.Types.App (ShareImageConfig, LazyCheck(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
@@ -28,8 +28,19 @@ import Foreign (unsafeToForeign)
 import Data.Array (find)
 import Services.API
 import Effect.Uncurried (runEffectFn4)
-import Debug (spy)
 import Screens.Benefits.BenefitsScreen.Transformer (buildLmsModuleRes)
+import PrestoDOM.List (ListItem)
+import Storage (getValueToLocalStore, KeyStore(..))
+import Components.BannerCarousel as BannerCarousel
+import Data.String as DS
+import Locale.Utils(getLanguageLocale, languageKey)
+import RemoteConfig as RC
+import SessionCache (getValueFromWindow)
+import Data.Array as DA
+import Data.Int as DI
+import PrestoDOM.Core (processEvent)
+import Data.Function.Uncurried (runFn2)
+import Engineering.Helpers.Commons as EHC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -63,6 +74,8 @@ instance loggableAction :: Loggable Action where
     UpdateModuleList _ ->  trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list" "update_module_list"
     UpdateModuleListErrorOccurred -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "update_module_list_error_occurred" "update_module_list"
     ShareQRLink -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "render_qr_link"
+    GoToCustomerReferralTracker -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "go_to_customer_referral_tracker"
+    _ -> defaultPerformLog action appId
 
 data Action = BackPressed
             | AfterRender
@@ -82,6 +95,13 @@ data Action = BackPressed
             | OpenModule LmsModuleRes
             | UpdateModuleList LmsGetModuleRes
             | UpdateModuleListErrorOccurred
+            | GoToCustomerReferralTracker
+            | SetBannerItem ListItem
+            | BannerCarousal BannerCarousel.Action
+            | UpdateBanner
+            | BannerChanged String
+            | BannerStateChanged String
+            | NoAction
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -90,6 +110,7 @@ data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | EarningsScreen BenefitsScreenState
                   | GoBack
                   | GoToLmsVideoScreen BenefitsScreenState
+                  | GoToCustomerReferralTrackerScreen BenefitsScreenState
 
 eval :: Action -> BenefitsScreenState -> Eval Action ScreenOutput BenefitsScreenState
 
@@ -99,6 +120,8 @@ eval BackPressed state =
   else if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then 
     continue state{props{referralInfoPopType = NO_REFERRAL_POPUP}}
   else exit $ GoToHomeScreen state
+
+eval GoToCustomerReferralTracker state = exit $ GoToCustomerReferralTrackerScreen state
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
 
@@ -137,7 +160,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
     _ -> continue state
 
 eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do 
-  continue state {data {totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, totalActivatedCustomers = resp.referrals.totalActivatedCustomers, totalReferredCustomers = resp.referrals.totalReferredCustomers}}
+  continue state {data {totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, totalActivatedCustomers = resp.referrals.totalActivatedCustomers, totalReferredCustomers = resp.referrals.totalReferredCustomers}, props{isPayoutEnabled = Just resp.referrals.isPayoutEnabled}}
 
 eval (UpdateLeaderBoard (LeaderBoardRes resp)) state = do
   let currentDriverRank = case find (\(DriversInfo driverInfo) -> driverInfo.isCurrentDriver && driverInfo.totalRides /= 0) resp.driverList of
@@ -166,6 +189,45 @@ eval (UpdateModuleList modules) state = continue state {data {moduleList = build
 
 eval UpdateModuleListErrorOccurred state = continue state {props {showShimmer = false}}
 
+eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}, props{bannerLength = DA.length $ getRemoteBannerConfigs BannerCarousal}}
+
+eval UpdateBanner state = do
+  if state.data.bannerData.bannerScrollState == "1" then continue state
+  else do
+    let nextBanner = state.data.bannerData.currentBanner + 1
+        bannerArray = getRemoteBannerConfigs BannerCarousal
+        updatedIdx = if nextBanner >= (DA.length bannerArray) then 0 else nextBanner
+        newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
+    continue newState
+
+eval (BannerChanged item) state = do
+  let currentBanner = DI.fromString item
+  case currentBanner of
+    Just idx -> do 
+        let newState = state{data {bannerData{currentBanner = idx}}}
+        if state.data.bannerData.currentPage /= idx then void $ pure $ unsafePerformEffect $ processEvent "RestartAutoScroll" unit 
+          else pure unit
+        continue newState
+    Nothing  -> continue state
+
+eval (BannerStateChanged item) state = do
+  let newState = state{data {bannerData{bannerScrollState = item}}}
+  continue newState
+
+eval (BannerCarousal (BannerCarousel.OnClick index)) state =
+  continueWithCmd state [do
+    let banners = getRemoteBannerConfigs BannerCarousal
+    case DA.index banners index of
+      Just config -> do
+        let _ = runFn2 EHC.updatePushInIdMap "referralBannerCarousel" false
+        case config.type of
+          BannerCarousel.Remote link -> do
+            void $ openUrlInApp link
+            pure NoAction
+          _ -> pure NoAction
+      Nothing -> pure NoAction
+  ] 
+  
 eval _ state = update state
 
 shareImageMessageConfig :: BenefitsScreenState -> ShareImageConfig
@@ -175,3 +237,17 @@ shareImageMessageConfig state = {
   logoId : getNewIDWithTag "BenefitsScreenLogo",
   isReferral : true
   }
+
+getRemoteBannerConfigs :: forall action. (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
+getRemoteBannerConfigs action = do
+  let location = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+      language = getLanguage $ getLanguageLocale languageKey
+      variant = getValueToLocalStore VEHICLE_VARIANT
+      configName = "driver_referral_banner" <> language
+      datas = (RC.carouselConfigData location configName "driver_referral_banner_en" (getValueFromWindow "DRIVER_ID") "" variant)
+  BannerCarousel.remoteConfigTransformer datas action
+  where
+    getLanguage :: String -> String
+    getLanguage lang = 
+      let language = DS.toLower $ DS.take 2 lang
+      in if not (DS.null language) then "_" <> language else "_en"

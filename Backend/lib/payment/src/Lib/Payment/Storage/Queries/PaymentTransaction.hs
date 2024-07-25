@@ -16,6 +16,7 @@
 module Lib.Payment.Storage.Queries.PaymentTransaction where
 
 import Kernel.Beam.Functions
+import Kernel.External.Payment.Juspay.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -83,11 +84,36 @@ findNewTransactionByOrderId (Id orderId) =
     Nothing
     <&> listToMaybe
 
-updateAmount :: BeamFlow m r => Id PaymentTransaction -> HighPrecMoney -> m ()
-updateAmount id amount = do
+updateStatusAndError :: BeamFlow m r => Id PaymentTransaction -> TransactionStatus -> Maybe Text -> Maybe Text -> m ()
+updateStatusAndError transactionId status errorCode errorMessage = do
+  now <- getCurrentTime
+  mbTransaction <- findById transactionId
+  let newStatus = maybe status (\txn -> if txn.status == CHARGED then txn.status else status) mbTransaction -- don't change if status is already charged
+  updateWithKV
+    [ Se.Set BeamPT.status newStatus,
+      Se.Set BeamPT.bankErrorCode errorCode,
+      Se.Set BeamPT.bankErrorMessage errorMessage,
+      Se.Set BeamPT.updatedAt now
+    ]
+    [Se.Is BeamPT.id $ Se.Eq $ getId transactionId]
+
+updateAmount :: BeamFlow m r => Id PaymentTransaction -> HighPrecMoney -> HighPrecMoney -> m ()
+updateAmount id amount feeAmount = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamPT.amount amount,
+      Se.Set BeamPT.applicationFeeAmount (Just feeAmount),
+      Se.Set BeamPT.updatedAt now
+    ]
+    [Se.Is BeamPT.id $ Se.Eq $ getId id]
+
+updateRetryCountAndError :: BeamFlow m r => Id PaymentTransaction -> Int -> Maybe Text -> Maybe Text -> m ()
+updateRetryCountAndError id retryCount errorCode errorMessage = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPT.retryCount (Just retryCount),
+      Se.Set BeamPT.bankErrorCode errorCode,
+      Se.Set BeamPT.bankErrorMessage errorMessage,
       Se.Set BeamPT.updatedAt now
     ]
     [Se.Is BeamPT.id $ Se.Eq $ getId id]
@@ -100,6 +126,8 @@ instance FromTType' BeamPT.PaymentTransaction PaymentTransaction where
           { id = Id id,
             orderId = Id orderId,
             merchantId = Id merchantId,
+            applicationFeeAmount = fromMaybe (HighPrecMoney 0.0) applicationFeeAmount,
+            retryCount = fromMaybe 0 retryCount,
             ..
           }
 
@@ -109,5 +137,7 @@ instance ToTType' BeamPT.PaymentTransaction PaymentTransaction where
       { id = getId id,
         orderId = getId orderId,
         merchantId = merchantId.getId,
+        applicationFeeAmount = Just applicationFeeAmount,
+        retryCount = Just retryCount,
         ..
       }

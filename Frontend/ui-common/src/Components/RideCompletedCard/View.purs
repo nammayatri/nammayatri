@@ -13,7 +13,7 @@ import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Data.Array (mapWithIndex, length, (!!), null, any, (..))
+import Data.Array (mapWithIndex, length, (!!), null, any, (..),head)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -357,17 +357,26 @@ rideCustomerExperienceView config push =
   , orientation VERTICAL
   , gravity CENTER
   ]
-  [ customerIssueCaroselView push config.customerIssue 
+  [ customerIssueView push config.customerIssue 
   , customerRatingDriverView config push
   , needHelpPillView config push
   ]
 
 ---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
-customerIssueCaroselView :: forall w. (Action -> Effect Unit) -> CustomerIssue ->  PrestoDOM (Effect Unit) w
-customerIssueCaroselView push config = 
+customerIssueView :: forall w. (Action -> Effect Unit) -> CustomerIssue ->  PrestoDOM (Effect Unit) w
+customerIssueView push config  = 
   case config.bannerComputedView , config.showIssueBanners, (null config.customerIssueCards) of 
-    Just view , true, false -> 
-      linearLayout[
+    Just listView , true, false ->
+      if length config.customerIssueCards == 1 then customerIssuePopupView push config else customerIssueCarouselView listView push config 
+    _,_,_-> textView[
+      width $ V 0
+    , height $ V 0
+    ]
+
+
+customerIssueCarouselView :: forall w. ListItem -> (Action -> Effect Unit) -> CustomerIssue ->  PrestoDOM (Effect Unit) w
+customerIssueCarouselView listView push config  = 
+    linearLayout[
         width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
@@ -377,7 +386,7 @@ customerIssueCaroselView push config =
         , height WRAP_CONTENT
         , cornerRadius 8.0
         , stroke $ "1," <> Color.grey800
-        ][CarouselHolder.carouselView push $ getCarouselConfig view config]
+        ][CarouselHolder.carouselView push $ getCarouselConfig listView config]
       , linearLayout [
           width MATCH_PARENT
         , height WRAP_CONTENT
@@ -395,11 +404,7 @@ customerIssueCaroselView push config =
             ] []
           ) $ 0 .. ((length config.customerIssueCards) -1)
       ]
-    _,_,_-> textView[
-      width $ V 0
-    , height $ V 0
-    ]
-
+ 
 
 customerIssueCarousalView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerIssueCarousalView  push = 
@@ -485,6 +490,109 @@ customerIssueCarousalView  push =
         ]
       ]
     ]
+
+
+customerIssuePopupView :: forall w. (Action -> Effect Unit) ->  CustomerIssue -> PrestoDOM (Effect Unit) w
+customerIssuePopupView  push config = 
+  let 
+    cardsArray = config.customerIssueCards
+    firstCard  = head cardsArray 
+    title      = maybe "" (\x -> x.title) firstCard
+    selectedYes = maybe Nothing (\x -> x.selectedYes) firstCard
+    yestext    = maybe "" (\x -> x.yesText) firstCard
+    notext     = maybe "" (\x -> x.noText) firstCard
+    subtitle   = maybe "" (\x -> x.subTitle) firstCard
+  in
+  linearLayout 
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ Padding 16 24 16 24
+  , cornerRadius 6.0
+  , backgroundColor Color.white900
+  , orientation VERTICAL
+  , stroke $ "1,"<>Color.grey800
+  ][
+    textView $ 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text title
+    , color Color.black800 
+    , gravity CENTER
+    , padding $ PaddingBottom 4
+    ] <> FontStyle.h3 TypoGraphy
+  , textView $ 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text subtitle 
+    , color  Color.black700
+    , gravity CENTER
+    ] <> FontStyle.paragraphText TypoGraphy 
+  , linearLayout 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , margin $ MarginTop 16
+    ][
+      linearLayout
+      [ height WRAP_CONTENT
+      , weight 1.0
+      , gravity CENTER
+      , padding $ Padding 1 1 1 1
+      , cornerRadius 6.0
+      , background $ if selectedYes == Just true then Color.blue900 else Color.grey800
+      ][
+        linearLayout
+        [ height WRAP_CONTENT
+        ,  weight 1.0
+        , gravity CENTER
+        , padding $ PaddingVertical 14 14
+        , onClick push $ const  $  SelectButton true 0
+        , accessibility ENABLE
+        , accessibilityHint $ if selectedYes == Just true then  "Yes : selected" else "Yes : unselected "
+        , cornerRadius 6.0
+        , background $ if selectedYes == Just true then Color.blue600 else Color.white900
+        ][
+          textView $ 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ yestext 
+          , color Color.black800
+          ] <> FontStyle.subHeading1 TypoGraphy
+        ]
+      ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , weight 1.0
+      , gravity CENTER
+      , padding $ Padding 1 1 1 1
+      , margin $ MarginLeft 10
+      , cornerRadius 6.0
+      , background $ if selectedYes == Just false then Color.blue900 else Color.grey800
+      ][
+        linearLayout
+        [ height WRAP_CONTENT
+        , weight 1.0
+        , gravity CENTER
+        , onClick push $ const $ SelectButton false 0
+        , padding $ PaddingVertical 14 14
+        , accessibility ENABLE
+        , accessibilityHint $  if selectedYes == Just false then  "No : Selected" else "No : Unselected "
+        , cornerRadius 6.0
+        , background $ if selectedYes == Just false then Color.blue600 else Color.white900
+        ][
+          textView $ 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ notext
+          , color   Color.black800 
+          ] <> FontStyle.subHeading1 TypoGraphy
+        ]
+      ]
+    ]
+  ]
+
+
+
 
 
 ------------------------------------------- customerRatingDriverView -------------------------------------------------------------------------------------------------------------------------------------------------------------

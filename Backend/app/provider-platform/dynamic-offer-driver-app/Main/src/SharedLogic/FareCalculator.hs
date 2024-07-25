@@ -25,6 +25,8 @@ module SharedLogic.FareCalculator
     isNightAllowanceApplicable,
     timeZoneIST,
     UTCTime (UTCTime, utctDay),
+    calculateCancellationCharges,
+    calculateNoShowCharges,
   )
 where
 
@@ -32,6 +34,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (NightShiftChargeAPIEntity (..), Variant (..), WaitingChargeAPIEntity (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
+import Domain.Types.CancellationFarePolicy as DTCFP
 import Domain.Types.Common
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
@@ -93,8 +96,11 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       insuranceChargeCaption = show Enums.INSURANCE_CHARGES
       mbInsuranceChargeItem = mkBreakupItem insuranceChargeCaption . mkPrice <$> fareParams.insuranceCharge
 
-      cardChargesFareCaption = show Enums.CARD_CHARGES
-      mbCardChargesFareItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFareCaption . mkPrice <$> cardCharge.onFare `maybeAdd` cardCharge.fixed
+      cardChargesFareCaption = show Enums.CARD_CHARGES_ON_FARE
+      mbCardChargesFareItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFareCaption . mkPrice <$> cardCharge.onFare
+
+      cardChargesFixedCaption = show Enums.CARD_CHARGES_FIXED
+      mbCardChargesFixedItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFixedCaption . mkPrice <$> cardCharge.fixed
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
   catMaybes
@@ -111,7 +117,8 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbTollChargesItem,
       mbCustomerCancellationDues,
       mbInsuranceChargeItem,
-      mbCardChargesFareItem
+      mbCardChargesFareItem,
+      mbCardChargesFixedItem
     ]
     <> detailsBreakups
   where
@@ -182,10 +189,6 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           extraTimeFareItem = mkBreakupItem extraTimeCaption (mkPrice det.extraTimeFare)
 
       catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem]
-
-maybeAdd :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney
-maybeAdd (Just a) (Just b) = Just . HighPrecMoney $ a.getHighPrecMoney + b.getHighPrecMoney
-maybeAdd a b = a <|> b
 
 -- TODO: make some tests for it
 
@@ -347,10 +350,9 @@ calculateFareParameters params = do
 
     processFPAmbulanceDetailsSlab DFP.FPAmbulanceDetailsSlab {..} = do
       let estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
-          estimatedDistanceInKm = estimatedDistance `div` 1000
           actualDistance = (.getMeters) <$> params.actualDistance
-          actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
-          distBasedFare = HighPrecMoney $ perKmRate.getHighPrecMoney * toRational actualDistanceInKm
+          distanceInKm = (fromIntegral $ fromMaybe estimatedDistance actualDistance) / 1000
+          distBasedFare = HighPrecMoney $ perKmRate.getHighPrecMoney * distanceInKm
       ( [],
         baseFare,
         nightShiftCharge,
@@ -384,7 +386,7 @@ calculateFareParameters params = do
           actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
-          fareByDist = HighPrecMoney $ toRational (((max 0 (allowanceHours - defaultWaitTimeAtDestinationInHrs)) * kmPerPlannedExtraHour.getKilometers) + estimatedDistanceInKm) * perKmRate.getHighPrecMoney
+          fareByDist = HighPrecMoney $ toRational ((max 0 (allowanceHours - defaultWaitTimeAtDestinationInHrs) * kmPerPlannedExtraHour.getKilometers) + estimatedDistanceInKm) * perKmRate.getHighPrecMoney
 
       ( [],
         baseFare,
@@ -627,20 +629,20 @@ isTimeWithinBounds startTime endTime time =
 
 isNightAllowanceApplicable :: Maybe NightShiftBounds -> UTCTime -> UTCTime -> Seconds -> Bool
 isNightAllowanceApplicable nightShiftBounds tripStartTime tripEndTime timeDiffFromUtc = do
-  if (diffUTCTime tripEndTime tripStartTime >= 86400)
-    then True
-    else do
-      let localRideEndDate = utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripEndTime
-          localTripStartTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripStartTime
-          localRideEndTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripEndTime
-      case nightShiftBounds of
-        Nothing -> False
-        Just bounds -> do
-          let nightShiftStartTime = timeOfDayToDiffTime bounds.nightShiftStart
-              nightShiftEndTime = timeOfDayToDiffTime bounds.nightShiftEnd
-          if nightShiftStartTime <= 6 * 60 * 60 -- NS starting and ending on same date
-            then isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime 0 0
-            else isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime (-1) 0 || isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localRideEndTime localRideEndTime 0 1
+  (diffUTCTime tripEndTime tripStartTime >= 86400)
+    || ( do
+           let localRideEndDate = utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripEndTime
+               localTripStartTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripStartTime
+               localRideEndTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) tripEndTime
+           case nightShiftBounds of
+             Nothing -> False
+             Just bounds -> do
+               let nightShiftStartTime = timeOfDayToDiffTime bounds.nightShiftStart
+                   nightShiftEndTime = timeOfDayToDiffTime bounds.nightShiftEnd
+               if nightShiftStartTime <= 6 * 60 * 60 -- NS starting and ending on same date
+                 then isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime 0 0
+                 else isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime (-1) 0 || isNightShiftOverlap localRideEndDate nightShiftStartTime nightShiftEndTime localRideEndTime localRideEndTime 0 1
+       )
 
 isNightShiftOverlap :: Day -> DiffTime -> DiffTime -> UTCTime -> UTCTime -> Integer -> Integer -> Bool
 isNightShiftOverlap rideEndDate nightShiftStartTime nightShiftEndTime localTripStartTime localRideEndTime startAdd endAdd = do
@@ -655,7 +657,7 @@ timeOfDayToDiffTime (TimeOfDay h m s) = secondsToDiffTime $ fromIntegral (h * 36
 
 -- Converts UTC time to Local(IST) time
 utcToIst :: Minutes -> UTCTime -> LocalTime
-utcToIst timeZoneDiff utcTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) utcTime -- IST is UTC + 5:30
+utcToIst timeZoneDiff = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) -- IST is UTC + 5:30
 
 -- Calculates hours for a partial day
 hoursInDay :: UTCTime -> UTCTime -> LocalTime -> LocalTime -> Day -> Int
@@ -685,3 +687,34 @@ calculateAllowanceHours timeDiffFromUtc perDayMaxHourAllowance startTime endTime
     endIST = utcToIst (secondsToMinutes timeDiffFromUtc) endTime
     startDay = localDay startIST
     endDay = localDay endIST
+
+calculateCancellationCharges :: DTCFP.CancellationFarePolicy -> Maybe Meters -> Maybe Meters -> Int -> HighPrecMoney -> HighPrecMoney
+calculateCancellationCharges cancellationAndNoShowConfigs initialDistanceToPickup currDistanceToPickup timeSpentByDriver estimatedFare = do
+  case (currDistanceToPickup, initialDistanceToPickup) of
+    (Just currDist, Just initDist) -> do
+      let distanceTravelledByDriver = initDist - currDist
+      if distanceTravelledByDriver.getMeters > 0
+        then
+          let distanceCharges = cancellationAndNoShowConfigs.perMetreCancellationCharge * toHighPrecMoney distanceTravelledByDriver.getMeters
+              timeCharges = (toHighPrecMoney timeSpentByDriver / 60) * cancellationAndNoShowConfigs.perMinuteCancellationCharge
+              percentageOfRideFare = toHighPrecMoney cancellationAndNoShowConfigs.percentageOfRideFareToBeCharged * estimatedFare
+              timeAndDistanceCharges = distanceCharges + timeCharges
+              minCharge = cancellationAndNoShowConfigs.minCancellationCharge
+              maxCharge = cancellationAndNoShowConfigs.maxCancellationCharge
+              cancellationFee = max minCharge (min timeAndDistanceCharges (min percentageOfRideFare maxCharge))
+           in cancellationFee
+        else cancellationAndNoShowConfigs.minCancellationCharge
+    _ -> cancellationAndNoShowConfigs.minCancellationCharge
+
+calculateNoShowCharges :: Maybe UTCTime -> Maybe DTCFP.CancellationFarePolicy -> UTCTime -> Maybe HighPrecMoney
+calculateNoShowCharges mbDriverArrivalTime mbCancellationAndNoShowConfigs now = do
+  case (mbDriverArrivalTime, mbCancellationAndNoShowConfigs) of
+    (Just arrivalTime, Just cancellationAndNoShowConfigs) -> do
+      let timeDiff = roundToIntegral $ diffUTCTime now arrivalTime
+      if timeDiff > cancellationAndNoShowConfigs.maxWaitingTimeAtPickupSeconds
+        then
+          let maxWaitingTimeAtPickupMinutes = fromIntegral (cancellationAndNoShowConfigs.maxWaitingTimeAtPickupSeconds.getSeconds `div` 60)
+              cancellationFee = cancellationAndNoShowConfigs.maxCancellationCharge + (maxWaitingTimeAtPickupMinutes * cancellationAndNoShowConfigs.perMinuteCancellationCharge)
+           in Just cancellationFee
+        else Nothing
+    _ -> Nothing

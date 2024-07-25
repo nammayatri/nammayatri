@@ -16,13 +16,15 @@
 module Storage.CachedQueries.Merchant.MerchantPushNotification
   ( create,
     findAllByMerchantOpCityId,
-    findByMerchantOpCityIdAndMessageKey,
+    findMatchingMerchantPN,
     clearCache,
   )
 where
 
+import Control.Applicative ((<|>))
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MerchantPushNotification
+import qualified Kernel.External.Types as DLanguage
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -47,16 +49,24 @@ cacheMerchantPushNotificationForCity merchantOperatingCityId cfg = do
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "CachedQueries:MerchantPushNotification:MerchantOperatingCityId-" <> id.getId
 
-findByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> m (Maybe MerchantPushNotification)
-findByMerchantOpCityIdAndMessageKey id messageKey =
-  Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
-    Just a -> return a
-    Nothing -> flip whenJust cacheMerchantPushNotification /=<< Queries.findByMerchantOpCityIdAndMessageKey id messageKey
+findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe DLanguage.Language -> m (Maybe MerchantPushNotification)
+findMatchingMerchantPN id messageKey personLanguage = do
+  merchantPNs <-
+    Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
+      Just a -> return a
+      Nothing -> do
+        pns <- Queries.findAllByMerchantOpCityIdAndMessageKey id messageKey
+        cacheMerchantPushNotification id messageKey pns
+        return pns
+  let matchingPN =
+        find (\pn -> Just pn.language == personLanguage) merchantPNs
+          <|> find (\pn -> pn.language == DLanguage.ENGLISH) merchantPNs
+  return matchingPN
 
-cacheMerchantPushNotification :: CacheFlow m r => MerchantPushNotification -> m ()
-cacheMerchantPushNotification merchantPushNotification = do
+cacheMerchantPushNotification :: CacheFlow m r => Id MerchantOperatingCity -> Text -> [MerchantPushNotification] -> m ()
+cacheMerchantPushNotification id messageKey merchantPushNotification = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdAndMessageKey merchantPushNotification.merchantOperatingCityId merchantPushNotification.key
+  let idKey = makeMerchantOpCityIdAndMessageKey id messageKey
   Hedis.setExp idKey merchantPushNotification expTime
 
 makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> Text -> Text

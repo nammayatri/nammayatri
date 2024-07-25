@@ -27,6 +27,7 @@ data OnUpdateEventType
   | QUOTE_REPETITION
   | NEW_MESSAGE
   | SAFETY_ALERT
+  | PHONE_CALL_REQUEST
   | STOP_ARRIVED
   | TOLL_CROSSED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

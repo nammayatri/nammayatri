@@ -35,6 +35,8 @@ data PaymentTransactionT f = PaymentTransactionT
     merchantId :: B.C f Text,
     amount :: B.C f HighPrecMoney, -- FIXME Kernel.Types.Common.Price
     currency :: B.C f Currency, -- FIXME Kernel.Types.Common.Price
+    applicationFeeAmount :: B.C f (Maybe HighPrecMoney),
+    retryCount :: B.C f (Maybe Int),
     dateCreated :: B.C f (Maybe UTCTime),
     statusId :: B.C f Int,
     status :: B.C f Payment.TransactionStatus,

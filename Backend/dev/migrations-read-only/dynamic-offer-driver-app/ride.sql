@@ -125,3 +125,19 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN online_payment boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN enable_otp_less_ride boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_model_name text ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN client_manufacturer text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_fee_if_cancelled double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN previous_ride_trip_end_time timestamp with time zone ;

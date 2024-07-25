@@ -27,6 +27,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -102,7 +103,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
       searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled
+      transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled transporterConfig
       if isRepeatSearch
         then do
           DP.addDriverToSearchCancelledList searchReq.id ride.driverId
@@ -142,7 +144,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       quote <- QQuote.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
       searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
       searchTry <- QST.findLastByRequestId quote.searchRequestId >>= fromMaybeM (SearchTryNotFound quote.searchRequestId.getId)
-      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled
+      transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled transporterConfig
       if isRepeatSearch || isForceReallocation
         then do
           DP.addDriverToSearchCancelledList searchReq.id ride.driverId
@@ -150,9 +153,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
           quoteId <- generateGUID
           fareParamsId <- generateGUID
           searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-          let newFareParams = quote.fareParams{id = fareParamsId, updatedAt = now}
+          let newIsScheduled = booking.isScheduled && transporterConfig.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
+              newFareParams = quote.fareParams{id = fareParamsId, updatedAt = now}
               newQuote = quote{id = Id quoteId, fareParams = newFareParams, validTill = searchRequestExpirationSeconds `addUTCTime` now, isScheduled = booking.isScheduled} -- check if validTill req'D
-              newIsScheduled = booking.isScheduled && ride.status == DRide.UPCOMING
               newBooking = booking{id = bookingId, quoteId = quoteId, status = SRB.NEW, isScheduled = newIsScheduled, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
               mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
               driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
@@ -220,9 +223,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         QRB.updateStatus newBooking.id SRB.CANCELLED
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId -- shouldn't be required for new booking
       return False
-    checkIfRepeatSearch :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DST.SearchTry -> Maybe UTCTime -> Maybe Bool -> UTCTime -> Bool -> m Bool
-    checkIfRepeatSearch searchTry driverArrivalTime isReallocationEnabled now isScheduled = do
-      transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+    checkIfRepeatSearch :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DST.SearchTry -> Maybe UTCTime -> Maybe Bool -> UTCTime -> Bool -> TransporterConfig -> m Bool
+    checkIfRepeatSearch searchTry driverArrivalTime isReallocationEnabled now isScheduled transporterConfig = do
       let searchRepeatLimit = transporterConfig.searchRepeatLimit
           isSearchTryValid = searchTry.validTill > now
           arrivedPickupThreshold = highPrecMetersToMeters transporterConfig.arrivedPickupThreshold

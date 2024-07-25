@@ -573,6 +573,7 @@ eval (RideCompletedAC (RideCompletedCard.SelectButton selectedYes pageIndex)) st
         _ , _ -> update state
     Nothing -> update state
 
+
 eval (RideCompletedAC RideCompletedCard.Support) state = continue state {props {callSupportPopUp = true}}
 
 eval (RideCompletedAC RideCompletedCard.RideDetails) state = exit $ RideDetailsScreen state 

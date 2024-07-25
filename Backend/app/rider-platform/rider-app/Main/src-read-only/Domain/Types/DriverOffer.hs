@@ -6,6 +6,7 @@ module Domain.Types.DriverOffer where
 
 import Data.Aeson
 import qualified Domain.Types.Estimate
+import qualified Domain.Types.FarePolicy.FareProductType
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -21,6 +22,7 @@ data DriverOffer = DriverOffer
     driverName :: Kernel.Prelude.Text,
     durationToPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
+    fareProductType :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FareProductType.FareProductType,
     id :: Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

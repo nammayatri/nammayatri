@@ -24,6 +24,7 @@ import Tools.Beam.UtilsTH
 
 data FarePolicyT f = FarePolicyT
   { id :: B.C f Text,
+    cancellationFarePolicyId :: B.C f (Maybe Text),
     farePolicyType :: B.C f Domain.FarePolicyType,
     serviceCharge :: B.C f (Maybe Money),
     serviceChargeAmount :: B.C f (Maybe HighPrecMoney),

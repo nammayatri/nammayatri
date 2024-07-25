@@ -77,3 +77,12 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN exotel_app_id_mapping json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN incident_report_support boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN settle_cancellation_fee_before_next_ride boolean ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN exotel_status_check_scheduler_delay integer  default 120;

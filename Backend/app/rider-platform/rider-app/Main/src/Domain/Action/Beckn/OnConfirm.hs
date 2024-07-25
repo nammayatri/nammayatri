@@ -72,6 +72,7 @@ data RideAssignedInfo = RideAssignedInfo
     driverRegisteredAt :: Maybe UTCTime,
     isDriverBirthDay :: Bool,
     vehicleAge :: Maybe Months,
+    driverAlternatePhoneNumber :: Maybe Text,
     isFreeRide :: Bool,
     previousRideEndPos :: Maybe LatLong,
     rideOtp :: Text,
@@ -92,6 +93,32 @@ data ValidatedBookingConfirmedReq = ValidatedBookingConfirmedReq
     fareParams :: Maybe [DCommon.DFareBreakup]
   }
 
+createFareBreakup ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasField "storeRidesTimeLimit" r Int,
+    HasBAPMetrics m r,
+    EventStreamFlow m r
+  ) =>
+  Id DRB.Booking ->
+  Maybe [DCommon.DFareBreakup] ->
+  m ()
+createFareBreakup booking fareParams' = do
+  let fareParamsList = fromMaybe [] fareParams'
+  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.INITIAL_BOOKING) fareParamsList
+  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.BOOKING) fareParamsList
+  QFareBreakup.createMany fareBreakups
+  QFareBreakup.createMany fareBreakups'
+
 onConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -111,11 +138,7 @@ onConfirm ::
   ValidatedOnConfirmReq ->
   m ()
 onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
-  let fareParamsList = fromMaybe [] fareParams
-  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.INITIAL_BOOKING) fareParamsList
-  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareParamsList
-  QFareBreakup.createMany fareBreakups
-  QFareBreakup.createMany fareBreakups'
+  createFareBreakup booking.id fareParams
   whenJust specialZoneOtp $ \otp -> do
     void $ QRB.updateOtpCodeBookingId booking.id otp
     fork "sending Booking confirmed dasboard sms" $ do
@@ -138,9 +161,16 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
           Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         else do
           logInfo "Merchant not configured to send dashboard sms"
-  void $ QRB.updateStatus booking.id DRB.CONFIRMED
-onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
+  case booking.bookingDetails of
+    DRB.DriverOfferDetails _ -> return ()
+    _ -> void $ QRB.updateStatus booking.id DRB.CONFIRMED
+-- TODO: Find a Better way to remove this from on_confirm.
+-- void $ QRB.updateStatus booking.id DRB.CONFIRMED
+onConfirm (ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {..}) = do
+  createFareBreakup booking.id fareBreakups
+  DCommon.rideAssignedReqHandler DCommon.ValidatedRideAssignedReq {..}
 
+-- TODO: Make sure booking status is new here.
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
 validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
@@ -148,4 +178,4 @@ validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
 validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
   let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
-  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters = Nothing, driverTrackingUrl = Nothing, ..}
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters = Nothing, fareBreakups = Nothing, driverTrackingUrl = Nothing, ..}

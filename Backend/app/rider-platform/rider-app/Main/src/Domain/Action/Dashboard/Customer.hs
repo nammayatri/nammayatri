@@ -191,7 +191,7 @@ getCancellationDuesDetails ::
   Flow Common.CancellationDuesDetailsRes
 getCancellationDuesDetails merchantShortId personId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  res <- DCancel.getCancellationDuesDetails (cast personId, merchant.id)
+  res <- DCancel.getCancellationDuesDetails Nothing (cast personId, merchant.id)
   return $
     Common.CancellationDuesDetailsRes
       { cancellationDues = res.cancellationDues,

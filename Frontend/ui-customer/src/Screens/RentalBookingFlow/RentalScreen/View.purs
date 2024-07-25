@@ -52,7 +52,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable, textFromHtml)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..) , Accessiblity(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable, textFromHtml, accessibilityHint , accessibility)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote, DescriptionType(..))
@@ -142,6 +142,8 @@ rentalPackageSelectionView push state =
             , width $ V 16
             , margin $ Margin 4 (if EHC.os == "IOS" then 7 else 12) 0 0
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_black"
+            , accessibility ENABLE
+            , accessibilityHint $ "select package information button"
             , onClick push $ const RentalPolicyInfo
             ]  
           ]

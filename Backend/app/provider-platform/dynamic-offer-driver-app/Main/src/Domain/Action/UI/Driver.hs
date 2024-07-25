@@ -105,6 +105,7 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverHomeLocation as DDHL
@@ -283,9 +284,10 @@ data DriverInformationRes = DriverInformationRes
     blockStateModifier :: Maybe Text,
     isVehicleSupported :: Bool,
     checkIfACWorking :: Bool,
-    frontendConfigHash :: Maybe Text
+    frontendConfigHash :: Maybe Text,
+    bankDetails :: Maybe DOVT.BankAccountResp
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DriverEntityRes = DriverEntityRes
   { id :: Id Person,
@@ -608,7 +610,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
     when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
     when (planBasedChecks) $ throwError (NoPlanSelected personId.getId)
     when merchant.onlinePayment $ do
-      void $ QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
+      driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
+      unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
@@ -945,12 +948,18 @@ updateMetaData (personId, _, _) req = do
   return Success
 
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
-makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
+makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
+  bankDetails <-
+    if merchant.onlinePayment
+      then do
+        mbDriverBankAccount <- QDBA.findByPrimaryKey id
+        return $ mbDriverBankAccount <&> (\DOBA.DriverBankAccount {..} -> DOVT.BankAccountResp {..})
+      else return Nothing
   CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast id))) >>= \cfg ->
     return $
       DriverInformationRes
-        { organization = DM.makeMerchantAPIEntity org,
+        { organization = DM.makeMerchantAPIEntity merchant,
           referralCode = referralCode <&> (.getId),
           numberOfRides = driverStats.totalRides,
           driverGoHomeInfo = dghInfo,
@@ -1011,50 +1020,67 @@ offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..}
 
 respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverRespondReq -> Flow APISuccess
 respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbDevice req = do
-  Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
-    let reqOfferedValue = (req.offeredFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.offeredFare)
-    searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
-    searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-    SMerchant.checkCurrencies searchTry.currency [req.offeredFareWithCurrency]
-    now <- getCurrentTime
-    when (searchTry.validTill < now) $ throwError SearchRequestExpired
-    mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
-    sReqFD <-
-      case mSReqFD of
-        Just srfd -> return srfd
-        Nothing -> do
-          logError $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
-          throwError RideRequestAlreadyAccepted
-    let expiryTimeWithBuffer = addUTCTime 10 sReqFD.searchRequestValidTill ------ added 10 secs buffer so that if driver is accepting at last second then because of api latency it sholuldn't fail.
-    when (expiryTimeWithBuffer < now) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")
-    searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-    merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
-    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo
-    when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-    driverFCMPulledList <-
-      case req.response of
-        Pulled -> do
-          QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource sReqFD.id
-          throwError UnexpectedResponseValue
-        Accept -> do
-          whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-          pullList <-
-            case searchTry.tripCategory of
-              DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-              DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-              DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-              DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-              _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
-          QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource sReqFD.id
-          return pullList
-        Reject -> do
-          QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource sReqFD.id
-          pure []
-    DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList
-  pure Success
+  quoteRespondCoolDown <- asks (.quoteRespondCoolDown)
+  lockRespondQuote <- Redis.tryLockRedis (offerQuoteLockKeyWithCoolDown driverId) quoteRespondCoolDown
+  lockEditDestination <- Redis.tryLockRedis (editDestinationLockKey driverId) 10
+  callWithErrorHandling $
+    if lockRespondQuote && lockEditDestination
+      then do
+        let reqOfferedValue = (req.offeredFareWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.offeredFare)
+        searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
+        searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
+        SMerchant.checkCurrencies searchTry.currency [req.offeredFareWithCurrency]
+        now <- getCurrentTime
+        when (searchTry.validTill < now) $ throwError SearchRequestExpired
+        mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
+        sReqFD <-
+          case mSReqFD of
+            Just srfd -> return srfd
+            Nothing -> do
+              logError $ "Search request not found for the driver with driverId " <> driverId.getId <> " and searchTryId " <> searchTryId.getId
+              throwError RideRequestAlreadyAccepted
+        when (sReqFD.isForwardRequest) $ do
+          mbGeohash <- Redis.get (editDestinationUpdatedLocGeohashKey driverId)
+          when (maybe False (sReqFD.previousDropGeoHash /=) mbGeohash) $ throwError CustomerDestinationUpdated
+        let expiryTimeWithBuffer = addUTCTime 10 sReqFD.searchRequestValidTill ------ added 10 secs buffer so that if driver is accepting at last second then because of api latency it sholuldn't fail.
+        when (expiryTimeWithBuffer < now) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")
+        searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+        merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
+        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo sReqFD.isForwardRequest
+        when (sReqFD.response == Just Reject) $ do
+          throwError QuoteAlreadyRejected
+        driverFCMPulledList <-
+          case req.response of
+            Pulled -> do
+              QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource sReqFD.id
+              throwError UnexpectedResponseValue
+            Accept -> do
+              whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
+              pullList <-
+                case searchTry.tripCategory of
+                  DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
+                  DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
+                  DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
+                  DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
+                  _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
+              QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource sReqFD.id
+              return pullList
+            Reject -> do
+              QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource sReqFD.id
+              unlockRedisQuoteKeys
+              pure []
+        DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList
+        unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
+        pure Success
+      else do
+        if not lockEditDestination
+          then throwError $ DriverTransactionTryAgain Nothing
+          else do
+            void $ Redis.unlockRedis (editDestinationLockKey driverId)
+            pure Success
   where
     buildDriverRespondEventPayload searchTryId restActiveDriverSearchReqs =
       DST.OnDriverAcceptingSearchRequest
@@ -1062,6 +1088,21 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
           response = req.response,
           ..
         }
+    unlockRedisQuoteKeys = do
+      Redis.unlockRedis (offerQuoteLockKeyWithCoolDown driverId)
+      Redis.unlockRedis (editDestinationLockKey driverId)
+    callWithErrorHandling func = do
+      exep <- try @_ @SomeException func
+      case exep of
+        Left e -> do
+          unlockRedisQuoteKeys
+          someExceptionToAPIErrorThrow e
+        Right a -> pure a
+    someExceptionToAPIErrorThrow exc
+      | Just (HTTPException err) <- fromException exc = throwError err
+      | Just (BaseException err) <- fromException exc =
+        throwError . InternalError . fromMaybe (show err) $ toMessage err
+      | otherwise = throwError . InternalError $ show exc
 
     buildDriverQuote ::
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime, HasField "version" r DeploymentVersion) =>

@@ -59,6 +59,7 @@ Ride:
     tripStartPos: Maybe LatLong
     tripEndPos: Maybe LatLong
     previousRideTripEndPos: Maybe LatLong
+    previousRideTripEndTime: Maybe UTCTime
     isAdvanceBooking : Bool
     fromLocation: Location
     toLocation: Maybe Location
@@ -101,6 +102,7 @@ Ride:
     tripCategory: TripCategory
     onlinePayment: Bool
     enableOtpLessRide: Maybe Bool
+    cancellationFeeIfCancelled: Maybe HighPrecMoney
 
   sqlType:
     id: character(36)
@@ -131,6 +133,8 @@ Ride:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
     tripStartPos:
       tripStartLat: Maybe Double
       tripStartLon: Maybe Double
@@ -168,7 +172,7 @@ Ride:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     fare: fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     isAdvanceBooking: Kernel.Prelude.fromMaybe False|I
@@ -201,6 +205,8 @@ Ride:
     tripCategory: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
     onlinePayment: Kernel.Prelude.Just|I
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
 
   beamType:
     trackingUrl: Text
@@ -213,6 +219,8 @@ Ride:
     isAdvanceBooking: Maybe Bool
     tripCategory: Maybe TripCategory
     onlinePayment: Maybe Bool
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -220,7 +228,15 @@ Ride:
     driverId: "!SecondaryKey" # forcing to be a secondary key
     driverGoHomeRequestId: "!SecondaryKey" # forcing to be a secondary key
 
-  queries: {}
+  queries:
+    updateCancellationFeeIfCancelledField:
+      kvFunction: updateOneWithKV
+      params: [cancellationFeeIfCancelled]
+      where: id
+    updatePreviousRideTripEndPosAndTime:
+      kvFunction: updateOneWithKV
+      params: [previousRideTripEndPos, previousRideTripEndTime]
+      where: id
 
   excludedDefaultQueries:
     - create
@@ -230,3 +246,4 @@ Ride:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+

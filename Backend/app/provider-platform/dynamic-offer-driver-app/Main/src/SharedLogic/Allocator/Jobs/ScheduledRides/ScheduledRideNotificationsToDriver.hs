@@ -94,7 +94,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
         callStatus <- buildCallStatus callStatusId exotelResponse booking
         void $ QCallStatus.create callStatus
       PN -> do
-        merchantPN <- CPN.findByMerchantOpCityIdAndMessageKey merchantOpCityId notificationKey >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
+        merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey driver.language >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
         let entityData = generateReq merchantPN.title merchantPN.body booking
         notifyDriverOnEvents merchantOpCityId driverId driver.deviceToken entityData merchantPN.fcmNotificationType
       OVERLAY -> do
@@ -143,6 +143,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
             recordingUrl = Nothing,
             merchantId = Just booking.providerId.getId,
             callService = Just Exotel,
+            callAttempt = Just SCS.Resolved,
             callError = Nothing,
             createdAt = now
           }

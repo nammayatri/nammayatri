@@ -493,11 +493,13 @@ MerchantPushNotification:
   constraints:
     key: PrimaryKey
     merchantOperatingCityId: PrimaryKey
+    language: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
-    findByMerchantOpCityIdAndMessageKey:
-      kvFunction: findOneWithKV
+    findAllByMerchantOpCityIdAndMessageKey:
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key]
+

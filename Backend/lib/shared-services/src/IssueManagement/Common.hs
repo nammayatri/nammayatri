@@ -31,6 +31,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id, ShortId)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Sequelize.SQLObject (SQLObject (..), ToSQLObject (convertToSQLObject))
 import Servant hiding (Summary)
 import qualified Text.Show
 
@@ -200,6 +201,9 @@ instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Chat] w
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Chat]
 
 instance FromBackendRow Postgres [Chat]
+
+instance {-# OVERLAPPING #-} ToSQLObject Chat where
+  convertToSQLObject = SQLObjectValue . show
 
 data ChatDetail = ChatDetail
   { timestamp :: UTCTime,

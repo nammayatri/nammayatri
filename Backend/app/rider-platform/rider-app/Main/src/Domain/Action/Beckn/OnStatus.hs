@@ -163,6 +163,7 @@ isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
         RenewedRide {} -> True
   bookingStatusChanged || rideStatusChanged
 
+-- TODO: When making a onStatus request, make sure status only goes in forward direction.
 onStatus ::
   ( MonadFlow m,
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
@@ -291,6 +292,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   driverPhoneNumber' <- encrypt driverMobileNumber
+  driverAlternateNumber' <- mapM encrypt driverAlternatePhoneNumber
   let createdAt = now
       updatedAt = now
       merchantId = Just booking.merchantId
@@ -328,7 +330,9 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       driverAccountId = Nothing
       vehicleAge = Nothing
       driverPhoneNumber = Just driverPhoneNumber'
+      driverAlternateNumber = driverAlternateNumber'
       onlinePayment = maybe False (.onlinePayment) mbMerchant
+      cancellationFeeIfCancelled = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

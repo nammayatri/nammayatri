@@ -87,7 +87,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
         callStatus <- buildCallStatus callStatusId exotelResponse booking ride
         QCallStatus.create callStatus
       PN -> do
-        merchantPN <- CPN.findByMerchantOpCityIdAndMessageKey merchantOpCityId notificationKey >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
+        merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey person.language >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
         let entityData = generateReq merchantPN.title merchantPN.body booking ride
         notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
       SMS -> do
@@ -128,6 +128,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
             rideId = Just ride.id,
             dtmfNumberUsed = Nothing,
             status = exotelResponse.callStatus,
+            callAttempt = Nothing,
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Just booking.merchantId.getId,

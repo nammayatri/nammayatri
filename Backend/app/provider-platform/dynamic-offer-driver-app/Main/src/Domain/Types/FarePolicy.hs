@@ -19,6 +19,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as D
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text
+import qualified Domain.Types.CancellationFarePolicy as DTC
 import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyAmbulanceDetails as Reexport
@@ -49,6 +50,7 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     farePolicyDetails :: FarePolicyDetailsD s,
+    cancellationFarePolicyId :: Maybe (Id DTC.CancellationFarePolicy),
     description :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -135,6 +137,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     cardCharge :: Maybe CardCharge,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
+    cancellationFarePolicy :: Maybe DTC.CancellationFarePolicy,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -162,13 +165,14 @@ mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> Conge
 mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge
 mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
 
-farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory FarePolicy {..} =
+farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> FarePolicy -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory cancellationFarePolicy FarePolicy {..} =
   FullFarePolicy {..}
 
 fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy
-fullFarePolicyToFarePolicy FullFarePolicy {..} =
-  FarePolicy {..}
+fullFarePolicyToFarePolicy ffp@FullFarePolicy {..} =
+  let cancellationFarePolicyId = (.id) <$> ffp.cancellationFarePolicy
+   in FarePolicy {..}
 
 getFarePolicyType :: FarePolicy -> FarePolicyType
 getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of

@@ -89,6 +89,8 @@ Person:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
 
     alternateMobileNumber:
       alternateMobileNumberEncrypted: Maybe Text
@@ -102,6 +104,8 @@ Person:
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
     merchantOperatingCityId: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
 
   fromTType:
       merchantOperatingCityId:  Storage.Queries.Transformers.Person.getMerchantOpCId merchantId merchantOperatingCityId |EM
@@ -109,7 +113,7 @@ Person:
       clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
       clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
       backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-      clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+      clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
       mobileNumber: EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash|E
       alternateMobileNumber: EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash|E
 
@@ -125,6 +129,8 @@ Person:
       mobileNumberHash: (mobileNumber <&> (.hash))|E
       alternateMobileNumberHash: (alternateMobileNumber <&> (.hash))|E
       alternateMobileNumberEncrypted: (alternateMobileNumber <&> unEncrypted . (.encrypted))|E
+      clientModelName: (clientDevice <&> (.deviceModel))|E
+      clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
 
   constraints:
     id: PrimaryKey

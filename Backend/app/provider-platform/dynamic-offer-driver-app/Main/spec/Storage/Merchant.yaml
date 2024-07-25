@@ -754,6 +754,7 @@ TransporterConfig:
     nightSafetyEndTime: Seconds
     cancellationFee: HighPrecMoney
     currency: Currency
+    exotelStatusCheckSchedulerDelay : Int
     distanceUnit: DistanceUnit
     driverDistanceTravelledOnPickupThresholdOnCancel: Meters
     driverTimeSpentOnPickupThresholdOnCancel: Seconds
@@ -780,6 +781,7 @@ TransporterConfig:
     kaptureQueue: Text
     dummyFromLocation: DummyLocationInfo
     dummyToLocation: DummyLocationInfo
+    dummyShowDriverAdditions: Maybe Bool
     scheduleRideBufferTime: NominalDiffTime
     scheduledRideJobRescheduleTime: NominalDiffTime
     graceTimeForScheduledRidePickup: NominalDiffTime
@@ -844,6 +846,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: Maybe Seconds
     minmRentalAndScheduledBookingLeadTimeHours: Maybe Int
     scheduledRideFilterExclusionThresholdHours: Maybe Int
+    exotelStatusCheckSchedulerDelay: Maybe Seconds
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -889,6 +892,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     minmRentalAndScheduledBookingLeadTimeHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
+    exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -936,6 +940,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> graceTimeForScheduledRidePickup)|E
     minmRentalAndScheduledBookingLeadTimeHours: fromMaybe 24 (Kernel.Types.Common.Hours <$> minmRentalAndScheduledBookingLeadTimeHours)|E
     scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
+    exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1105,8 +1110,9 @@ TransporterConfig:
     updatePayoutStatusBatchSize: "20"
     lastNdaysToCheckForPayoutOrderStatus: "2"
     minRideDistanceThresholdForReferralPayout: "1500.0"
-    minPickupDistanceThresholdForReferralPayout: "500"
+    minPickupDistanceThresholdForReferralPayout: "10"
     maxPayoutReferralForADay: "5"
+    exotelStatusCheckSchedulerDelay: "120"
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1202,12 +1208,13 @@ MerchantPushNotification:
   constraints:
     key: PrimaryKey
     merchantOperatingCityId: PrimaryKey
+    language: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
-    findByMerchantOpCityIdAndMessageKey:
-      kvFunction: findOneWithKV
+    findAllByMerchantOpCityIdAndMessageKey:
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key]
 

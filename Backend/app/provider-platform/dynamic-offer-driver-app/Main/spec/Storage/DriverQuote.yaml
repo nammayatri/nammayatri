@@ -75,6 +75,8 @@ DriverQuote:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     clientOsVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
     merchantOperatingCityId: Maybe Text
     createdAt: LocalTime
     updatedAt: LocalTime
@@ -85,6 +87,8 @@ DriverQuote:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
 
     estimatedFare:
       estimatedFare: Money
@@ -101,7 +105,7 @@ DriverQuote:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion)|E
+    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
     updatedAt: Data.Time.localTimeToUTC Data.Time.utc updatedAt|E
     validTill: Data.Time.localTimeToUTC Data.Time.utc validTill|E
@@ -126,6 +130,8 @@ DriverQuote:
     estimatedFareAmount: Kernel.Prelude.Just|I
     estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
     distanceUnit: Kernel.Prelude.Just|I
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
 
   queries:
     findById:

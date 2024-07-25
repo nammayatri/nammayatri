@@ -29,6 +29,7 @@ module Tools.Payment
     updateAmountInPaymentIntent,
     createSetupIntent,
     deleteCard,
+    getPaymentIntent,
   )
 where
 
@@ -49,6 +50,7 @@ import Kernel.External.Payment.Interface as Reexport hiding
     createSetupIntent,
     deleteCard,
     getCardList,
+    getPaymentIntent,
     orderStatus,
     updateAmountInPaymentIntent,
     updatePaymentMethodInIntent,
@@ -85,6 +87,9 @@ getCardList = runWithServiceConfig1 Payment.getCardList (.getCardList)
 
 createPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreatePaymentIntentReq -> m CreatePaymentIntentResp
 createPaymentIntent = runWithServiceConfig1 Payment.createPaymentIntent (.createPaymentIntent)
+
+getPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> m CreatePaymentIntentResp
+getPaymentIntent = runWithServiceConfig1 Payment.getPaymentIntent (.createPaymentIntent)
 
 updatePaymentMethodInIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> PaymentMethodId -> m ()
 updatePaymentMethodInIntent = runWithServiceConfig2 Payment.updatePaymentMethodInIntent (.updatePaymentMethodInIntent)

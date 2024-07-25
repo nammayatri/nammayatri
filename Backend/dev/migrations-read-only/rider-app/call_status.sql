@@ -18,3 +18,4 @@ ALTER TABLE atlas_app.call_status ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.call_status ADD COLUMN customer_ivr_response text ;
+ALTER TABLE atlas_app.call_status ADD COLUMN call_attempt text ;

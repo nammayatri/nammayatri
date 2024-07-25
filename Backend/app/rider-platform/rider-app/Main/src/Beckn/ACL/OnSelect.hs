@@ -24,6 +24,7 @@ import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
+import Domain.Types.FarePolicy.FareProductType
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -87,7 +88,12 @@ buildQuoteInfoV2 ::
 buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   fulfillmentType <- fulfillment.fulfillmentType & fromMaybeM (InvalidRequest "Missing fulfillmentType")
   quoteDetails <- case fulfillmentType of
-    "DELIVERY" -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill
+    "DELIVERY" -> do
+      qDetails <- buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill (Just DRIVER_OFFER)
+      pure $ DOnSelect.OneWay qDetails
+    "AMBULANCE" -> do
+      qDetails <- buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill (Just AMBULANCE)
+      pure $ DOnSelect.Ambulance qDetails
     "RIDE_OTP" -> throwError $ InvalidRequest "select not supported for ride otp trip"
     _ -> throwError $ InvalidRequest "Invalid fulfillmentType"
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
@@ -142,8 +148,9 @@ buildDriverOfferQuoteDetailsV2 ::
   Spec.Quotation ->
   UTCTime ->
   UTCTime ->
+  Maybe FareProductType ->
   m DOnSelect.DriverOfferQuoteDetails
-buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
+buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl fareProductType = do
   let agentTags = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personTags)
       itemTags = item.itemTags
       driverName = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personName) & fromMaybe "Driver"

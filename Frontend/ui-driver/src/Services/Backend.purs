@@ -282,7 +282,7 @@ driverActiveInactiveBT status status_n = do
             BackT $ pure GoBack
 --------------------------------- startRide ---------------------------------------------------------------------------------------------------------------------------------
 
-startRide :: String -> StartRideReq -> Flow GlobalState (Either ErrorResponse StartRideResponse)
+startRide :: String -> StartRideReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 startRide productId payload = do
         headers <- getHeaders "" false
         withAPIResult (EP.startRide productId) unwrapResponse $ callAPI headers ((StartRideRequest productId payload))
@@ -331,7 +331,7 @@ makeEndRideReq endOtp endOdometerReading fileId lat lon numDeviation tripDistanc
 
 --------------------------------- ARRIVED AT STOP ---------------------------------------------------------------------------------------------------------------------------------
 
-arrivedStop :: String -> LatLong -> Flow GlobalState (Either ErrorResponse ArrivedAtStopResponse)
+arrivedStop :: String -> LatLong -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 arrivedStop productId payload = do
         headers <- getHeaders "" false
         withAPIResult (EP.arrivedAtStop productId) unwrapResponse $ callAPI headers ((ArrivedAtStopRequest productId payload))
@@ -363,7 +363,7 @@ makeCancelRideReq info reason = DriverCancelRideReq {
 
 --------------------------------- logOutBT ---------------------------------------------------------------------------------------------------------------------------------
 
-logOutBT :: LogOutReq -> FlowBT String LogOutRes
+logOutBT :: LogOutReq -> FlowBT String ApiSuccessResult
 logOutBT payload = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.logout "") identity errorHandler (lift $ lift $ callAPI headers payload)
@@ -467,7 +467,7 @@ dummyVehicleObject = Vehicle
       serviceTierType : Nothing
    }
 --------------------------------- offerRideBT ---------------------------------------------------------------------------------------------------------------------------------
-offerRideBT :: OfferRideReq -> FlowBT String OfferRideResp
+offerRideBT :: OfferRideReq -> FlowBT String ApiSuccessResult
 offerRideBT payload = do
     headers <- getHeaders' "" false
     withAPIResultBT (EP.offerRide "") identity errorHandler (lift $ lift $ callAPI headers payload)
@@ -491,7 +491,7 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
     }
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
-
+getRideHistoryReq :: String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse GetRidesHistoryResp)
 getRideHistoryReq limit offset onlyActive status day = do
         headers <- getHeaders "" true
         withAPIResult (EP.getRideHistory limit offset onlyActive status day) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status day)
@@ -508,6 +508,7 @@ getRideHistoryReqBT limit offset onlyActive status day= do
         BackT $ pure GoBack
 
 --------------------------------- GetRidesSummaryListResp --------------------------------------------------------------------------------------------------
+getRideSummaryListReq :: Array String -> Flow GlobalState (Either ErrorResponse GetRidesSummaryListResp)
 getRideSummaryListReq dateList = do
         headers <- getHeaders "" true
         withAPIResult (EP.getRidesSummaryList dateList) unwrapResponse $ callAPI headers (GetRidesSummaryListReq dateList)
@@ -679,19 +680,21 @@ getCorrespondingErrorMessage errorPayload = do
         "RC_ACTIVE_ON_OTHER_ACCOUNT" -> "RC " <> getString ACTIVE_RC_ON_ANOTHER_DRIVER
         undefined -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
 
+registerDriverRC :: DriverRCReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 registerDriverRC payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.registerDriverRC "") unwrapResponse $ callAPI headers payload
     where
         unwrapResponse (x) = x
 
+makeRcActiveOrInactive :: MakeRcActiveOrInactiveReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 makeRcActiveOrInactive payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.makeRcActiveOrInactive "") unwrapResponse $ callAPI headers payload
     where
         unwrapResponse (x) = x
 
-deleteRc :: DeleteRcReq -> Flow GlobalState (Either ErrorResponse DeleteRcResp)
+deleteRc :: DeleteRcReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 deleteRc payload = do
         headers <- getHeaders "" false
         withAPIResult (EP.deleteRc "" ) unwrapResponse $ callAPI headers $ payload
@@ -742,7 +745,7 @@ mkCategory category =
                 "BikeCategory" -> Just "MOTORCYCLE"
                 _ -> Nothing
 
-registerDriverDLBT :: DriverDLReq -> FlowBT String  DriverDLResp
+registerDriverDLBT :: DriverDLReq -> FlowBT String  ApiSuccessResult
 registerDriverDLBT payload = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.registerDriverDL "" ) (\x -> x) errorHandler (lift $ lift $ callAPI headers payload)
@@ -750,6 +753,7 @@ registerDriverDLBT payload = do
     errorHandler (ErrorPayload errorPayload) = do
         BackT $ pure GoBack
 
+registerDriverDL :: DriverDLReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 registerDriverDL payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.registerDriverDL "") unwrapResponse $ callAPI headers payload
@@ -776,6 +780,7 @@ validateImageBT payload = do
     errorHandler (ErrorPayload errorPayload) = do
         BackT $ pure GoBack
 
+validateImage :: ValidateImageReq -> Flow GlobalState (Either ErrorResponse ValidateImageRes)
 validateImage payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.validateImage "") unwrapResponse $ callAPI headers payload
@@ -799,6 +804,7 @@ driverRegistrationStatusBT payload = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
+referDriver :: ReferDriverReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 referDriver payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.referDriver "") unwrapResponse $ callAPI headers payload
@@ -826,7 +832,7 @@ getDriverProfileStats payload = do
     where
         unwrapResponse x = x
 
-driverArrived :: String -> DriverArrivedReq -> Flow GlobalState (Either ErrorResponse DriverArrivedRes)
+driverArrived :: String -> DriverArrivedReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 driverArrived rideId payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.driverArrived rideId) unwrapResponse $ callAPI headers $ DriverArrivedRequest rideId payload
@@ -850,7 +856,7 @@ messageListBT limit offset = do
         BackT $ pure GoBack
 
 --------------------------------- messageSeen  --------------------------------------------------------------------------------------------------------
-messageSeenBT :: String -> FlowBT String MessageSeenRes
+messageSeenBT :: String -> FlowBT String ApiSuccessResult
 messageSeenBT messageId = do
         headers <- lift $ lift $ getHeaders "" false
         withAPIResultBT (EP.messageSeen messageId) identity errorHandler (lift $ lift $ callAPI headers (MessageSeenReq messageId))
@@ -859,7 +865,7 @@ messageSeenBT messageId = do
         BackT $ pure GoBack
 
 --------------------------------- likeMessage  --------------------------------------------------------------------------------------------------------
-likeMessageBT :: String -> FlowBT String LikeMessageRes
+likeMessageBT :: String -> FlowBT String ApiSuccessResult
 likeMessageBT messageId = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.likeMessage messageId) identity errorHandler (lift $ lift $ callAPI headers (LikeMessageReq messageId))
@@ -868,7 +874,7 @@ likeMessageBT messageId = do
         BackT $ pure GoBack
 
 --------------------------------- messageResponse --------------------------------------------------------------------------------------------------------
-messageResponseBT :: String -> MessageReplyReq -> FlowBT String MessageResponseRes
+messageResponseBT :: String -> MessageReplyReq -> FlowBT String ApiSuccessResult
 messageResponseBT messageId reply = do
         headers <- lift $ lift $ getHeaders "" false
         withAPIResultBT (EP.messageResponse messageId) identity errorHandler (lift $ lift $ callAPI headers (MessageResponseReq messageId reply))
@@ -889,6 +895,7 @@ makeLinkReferralCodeReq  referralCode  referralLinkPassword = LinkReferralCodeRe
     , "referralCode" : referralCode
     }
 
+linkReferralCode :: LinkReferralCodeReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 linkReferralCode payload = do
      headers <- getHeaders "" false
      withAPIResult (EP.linkReferralCode "") unwrapResponse $ callAPI headers payload
@@ -914,6 +921,7 @@ generateReferralCode payload = do
 
 ----------------------------------- validateAlternateNumber --------------------------
 
+validateAlternateNumber :: DriverAlternateNumberReq -> Flow GlobalState (Either ErrorResponse DriverAlternateNumberResp)
 validateAlternateNumber payload = do
     headers <- getHeaders "" false
     withAPIResult (EP.driverAlternateNumber "") unwrapResponse $ callAPI headers payload
@@ -928,6 +936,7 @@ makeValidateAlternateNumberRequest number = DriverAlternateNumberReq {
  }
 
 ---------------------------------- ResendAlternateNumberOtp ------------------------------------------
+resendAlternateNumberOTP :: AlternateNumberResendOTPRequest -> Flow GlobalState (Either ErrorResponse AlternateNumberResendOTPResp)
 resendAlternateNumberOTP payload = do
     headers <- getHeaders "" false
     withAPIResult (EP.alternateNumberResendOTP "") unwrapResponse $ (callAPI headers payload)
@@ -941,6 +950,7 @@ makeResendAlternateNumberOtpRequest number = AlternateNumberResendOTPRequest {
  }
 
 ---------------------------verifyAlternateNumber------------------------------------
+verifyAlternateNumberOTP :: DriverAlternateNumberOtpReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 verifyAlternateNumberOTP payload = do
     headers <- getHeaders "" false
     withAPIResult (EP.verifyAlternateNumberOTP "") unwrapResponse (callAPI headers payload)
@@ -955,6 +965,7 @@ makeVerifyAlternateNumberOtpRequest otp = DriverAlternateNumberOtpReq {
 
 -----------------------------------removeAlternateNumber-----------------------------------
 
+removeAlternateNumber :: RemoveAlternateNumberRequest -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 removeAlternateNumber payload = do
       headers <- getHeaders "" false
       withAPIResult (EP.removeAlternateNumber "") unwrapResponse (callAPI headers payload)
@@ -1011,7 +1022,7 @@ fetchIssueListBT payload = do
 
 
 ----------------------------------- deleteIssue -------------------------------------
-deleteIssueBT :: String -> FlowBT String DeleteIssueResp
+deleteIssueBT :: String -> FlowBT String ApiSuccessResult
 deleteIssueBT issueId = do
      headers <- getHeaders' "" false
      withAPIResultBT (EP.deleteIssue issueId) identity errorHandler (lift $ lift $ callAPI headers (DeleteIssueReq issueId))
@@ -1030,6 +1041,7 @@ currentDateAndTimeBT _ = do
 
 ---------------------------------------- otpRide ---------------------------------------------
 
+otpRide :: String -> OTPRideReq -> Flow GlobalState (Either ErrorResponse RidesInfo) 
 otpRide dummyRideOtp payload = do
         headers <- getHeaders "" false
         withAPIResult (EP.otpRide dummyRideOtp) unwrapResponse $ callAPI headers ((OTPRideRequest payload))
@@ -1048,7 +1060,7 @@ makeOTPRideReq otp lat lon ts = OTPRideReq {
 
 ------------------------------------------------------------------------ OnCallBT Function ------------------------------------------------------------------------------------
 
-onCallBT :: OnCallReq -> FlowBT String OnCallRes
+onCallBT :: OnCallReq -> FlowBT String ApiSuccessResult
 onCallBT payload = do
   headers <- getHeaders' "" false
   withAPIResultBT (EP.onCall "") identity errorHandler (lift $ lift $ callAPI headers payload)
@@ -1074,6 +1086,7 @@ leaderBoardBT request = do
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
+leaderBoard :: LeaderBoardReq -> Flow GlobalState (Either ErrorResponse LeaderBoardRes) 
 leaderBoard request = do
     headers <- getHeaders "" true
     case request of
@@ -1197,28 +1210,28 @@ paymentDues dummy = do
     where
         unwrapResponse (x) = x
 
-selectPlan :: String  -> Flow GlobalState (Either ErrorResponse SelectPlanResp)
+selectPlan :: String  -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 selectPlan planId = do
   headers <- getHeaders "" false
   withAPIResult (EP.selectPlan planId) unwrapResponse $ callAPI headers (SelectPlanReq planId)
   where
     unwrapResponse x = x
 
-resumeMandate :: String -> Flow GlobalState (Either ErrorResponse ResumeMandateResp)
+resumeMandate :: String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 resumeMandate driverId = do
     headers <- getHeaders "" false
     withAPIResult (EP.resumeMandate driverId) unwrapResponse $ callAPI headers (ResumeMandateReq driverId)
     where
         unwrapResponse (x) = x
 
-suspendMandate :: String -> Flow GlobalState (Either ErrorResponse SuspendMandateResp)
+suspendMandate :: String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 suspendMandate _ = do
     headers <- getHeaders "" false
     withAPIResult (EP.suspendMandate "") unwrapResponse $ callAPI headers (SuspendMandateReq "")
     where
         unwrapResponse (x) = x
 
-postRideFeedback :: String ->  Int -> String -> Flow GlobalState (Either ErrorResponse PostRideFeedbackResp)
+postRideFeedback :: String ->  Int -> String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 postRideFeedback rideId rating feedback = do 
     headers <- getHeaders "" false 
     withAPIResult (EP.postRideFeedback "") unwrapResponse $ callAPI headers $ makeReq rideId rating feedback
@@ -1307,7 +1320,7 @@ makePlaceNameReqByPlaceId placeId language = GetPlaceNameReq
 
 -------------------------------------------Driver Go To--------------------------------------------------
 
-addDriverHomeLocation :: Number -> Number  -> String -> String -> Flow GlobalState (Either ErrorResponse AddHomeLocationResp)
+addDriverHomeLocation :: Number -> Number  -> String -> String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 addDriverHomeLocation lat lon address tag = do
   headers <- getHeaders "" false
   withAPIResult (EP.addDriverHomeLocation "") unwrapResponse $ callAPI headers $ makeAddReq lat lon address tag
@@ -1331,28 +1344,28 @@ getDriverHomeLocation _ = do
   where
     unwrapResponse x = x
 
-activateDriverGoTo :: String -> String -> Flow GlobalState (Either ErrorResponse ActivateDriverGoToResp)
+activateDriverGoTo :: String -> String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 activateDriverGoTo id currentLocation = do
   headers <- getHeaders "" false
   withAPIResult (EP.activateDriverGoTo id currentLocation) unwrapResponse $ callAPI headers (ActivateDriverGoToReq id currentLocation)
   where
     unwrapResponse x = x
 
-deactivateDriverGoTo :: String -> Flow GlobalState (Either ErrorResponse DeactivateDriverGoToResp)
+deactivateDriverGoTo :: String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 deactivateDriverGoTo _ = do
   headers <- getHeaders "" false
   withAPIResult (EP.deactivateDriverGoTo "") unwrapResponse $ callAPI headers (DeactivateDriverGoToReq)
   where
     unwrapResponse x = x
 
-deleteDriverHomeLocation :: String -> Flow GlobalState (Either ErrorResponse DeleteDriverHomeLocationResp)
+deleteDriverHomeLocation :: String -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 deleteDriverHomeLocation id = do
   headers <- getHeaders "" false
   withAPIResult (EP.deleteDriverHomeLocation id) unwrapResponse $ callAPI headers (DeleteDriverHomeLocationReq id)
   where
     unwrapResponse x = x
 
-updateDriverHomeLocation :: String -> Number ->Number -> String -> String  -> Flow GlobalState (Either ErrorResponse UpdateHomeLocationResp)
+updateDriverHomeLocation :: String -> Number ->Number -> String -> String  -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 updateDriverHomeLocation qParam lat lon address tag = do
   headers <- getHeaders "" false
   withAPIResult (EP.updateDriverHomeLocation qParam) unwrapResponse $ callAPI headers $ makeUpdateReq qParam lat lon address tag
@@ -1405,7 +1418,7 @@ getCoinUsageHistoryReqBT limit offset = do
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack
 
-convertCoinToCash :: Int -> Flow GlobalState (Either ErrorResponse ConvertCoinToCashRes)
+convertCoinToCash :: Int -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 convertCoinToCash coins = do 
     headers <- getHeaders "" false 
     withAPIResult (EP.convertCoinToCash "") unwrapResponse $ callAPI headers $ makeReq coins
@@ -1439,7 +1452,7 @@ detectCity lat lon = do
     }
 
 ------------------------------------------------------------------------- Push SDK Events -----------------------------------------------------------------------------
-pushSDKEvents :: Flow GlobalState (Either ErrorResponse SDKEventsResp)
+pushSDKEvents :: Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 pushSDKEvents = do
     headers <- getHeaders "" false
     events <- liftFlow $ Events.getEvents
@@ -1469,14 +1482,14 @@ getAllLmsQuestions moduleId language = do
   where
     unwrapResponse x = x
 
-markVideoAsStarted :: StartVideoUpdateAPIReq -> Flow GlobalState (Either ErrorResponse StartVideoUpdateRes)
+markVideoAsStarted :: StartVideoUpdateAPIReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 markVideoAsStarted req = do
   headers <- getHeaders "" false
   withAPIResult (EP.markVideoAsStarted "") unwrapResponse $ callAPI headers req
   where
     unwrapResponse x = x
 
-markVideoAsCompleted :: CompletedVideoUpdateAPIReq -> Flow GlobalState (Either ErrorResponse CompletedVideoUpdateRes)
+markVideoAsCompleted :: CompletedVideoUpdateAPIReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 markVideoAsCompleted req = do
   headers <- getHeaders "" false
   withAPIResult (EP.markVideoAsCompleted "") unwrapResponse $ callAPI headers req
@@ -1545,3 +1558,37 @@ getRideStatusPastDays payload = do
     withAPIResult (EP.getRideStatusPastDays "")  unwrapResponse $ callAPI headers (RideStatusPastDaysReq)
     where
         unwrapResponse x = x
+
+--------------------------------- getReferralEarnings --------------------------------------------------------------------------------------------------
+getReferralEarnings :: String -> String -> Flow GlobalState (Either ErrorResponse ReferralEarningsResp)
+getReferralEarnings fromDate toDate = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getReferralEarnings fromDate toDate) unwrapResponse $ callAPI headers (ReferralEarningsReq fromDate toDate)
+    where
+        unwrapResponse (x) = x
+
+getReferralEarningsBT :: String -> String -> FlowBT String ReferralEarningsResp
+getReferralEarningsBT fromDate toDate = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getReferralEarnings fromDate toDate) (\x → x) errorHandler (lift $ lift $ callAPI headers (ReferralEarningsReq fromDate toDate))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+--------------------------------- deleteVpaID ---------------------------------------------------------------------------------------------------
+
+deleteVPA :: String -> Flow GlobalState (Either ErrorResponse DeleteVPARes)
+deleteVPA vpaId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.deleteVPA vpaId) unwrapResponse $ callAPI headers (DeleteVPAReq vpaId)
+    where
+        unwrapResponse (x) = x
+
+--------------------------------- payoutRegistration ---------------------------------------------------------------------------------------------------
+
+payoutRegistration :: String -> Flow GlobalState (Either ErrorResponse PayoutRegisterRes)
+payoutRegistration dummy = do
+    headers <- getHeaders "" true
+    withAPIResult (EP.registerPayout dummy) unwrapResponse $ callAPI headers (PayoutRegisterReq dummy)
+    where
+        unwrapResponse (x) = x

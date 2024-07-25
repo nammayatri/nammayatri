@@ -52,6 +52,7 @@ upsert a@VehicleRegistrationCertificate {..} = do
           Se.Set BeamVRC.airConditioned airConditioned,
           Se.Set BeamVRC.luggageCapacity luggageCapacity,
           Se.Set BeamVRC.userPassedVehicleCategory userPassedVehicleCategory,
+          Se.Set BeamVRC.mYManufacturing mYManufacturing,
           Se.Set BeamVRC.updatedAt updatedAt
         ]
         [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash))]

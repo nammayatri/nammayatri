@@ -33,6 +33,7 @@ module Domain.Action.Beckn.OnUpdate
     EditDestConfirmUpdateReq (..),
     EditDestErrorReq (..),
     TollCrossedEventReq (..),
+    PhoneCallRequestEventReq (..),
   )
 where
 
@@ -54,7 +55,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment ()
 import Kernel.Beam.Functions
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types as DLanguage
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -65,6 +66,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
+import qualified Storage.CachedQueries.Merchant as QCM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -102,6 +104,7 @@ data OnUpdateReq
   | OUEditDestSoftUpdateReq EditDestSoftUpdateReq
   | OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq
   | OUTollCrossedEventReq TollCrossedEventReq
+  | OUPhoneCallRequestEventReq PhoneCallRequestEventReq
   | OUEditDestError EditDestErrorReq
 
 data ValidatedOnUpdateReq
@@ -121,6 +124,7 @@ data ValidatedOnUpdateReq
   | OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq
   | OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq
   | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
+  | OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
 
 data BookingReallocationReq = BookingReallocationReq
@@ -313,6 +317,15 @@ data ValidatedTollCrossedEventReq = ValidatedTollCrossedEventReq
     person :: DPerson.Person
   }
 
+data PhoneCallRequestEventReq = PhoneCallRequestEventReq
+  { transactionId :: Text
+  }
+
+data ValidatedPhoneCallRequestEventReq = ValidatedPhoneCallRequestEventReq
+  { booking :: DRB.Booking,
+    person :: DPerson.Person
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -377,9 +390,14 @@ onUpdate = \case
     now <- getCurrentTime
     bookingId <- generateGUID
     quoteId_ <- generateGUID
+    newIsScheduled <-
+      if booking.isScheduled
+        then do
+          merchant <- QCM.findById searchReq.merchantId >>= fromMaybeM (MerchantNotFound searchReq.merchantId.getId)
+          return $ merchant.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
+        else return False
     let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
-        newIsScheduled = booking.isScheduled && ride.status == DRide.UPCOMING
-        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = booking.startTime, createdAt = now, updatedAt = now}
+        newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
     void $ SQQ.createQuote newQuote
     void $ QRB.createBooking newBooking
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
@@ -428,7 +446,12 @@ onUpdate = \case
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
     Notify.notifyOnTripUpdate booking ride "Destination and Fare Updated" "Your edit request was accepted by your driver!"
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
-    mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey booking.merchantOperatingCityId "TOLL_CROSSED"
+    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "TOLL_CROSSED" person.language
+    whenJust mbMerchantPN $ \merchantPN -> do
+      let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
+      TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
+  OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
+    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" person.language
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
@@ -528,6 +551,10 @@ validateRequest = \case
     booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
     person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
     return $ OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..}
+  OUPhoneCallRequestEventReq PhoneCallRequestEventReq {..} -> do
+    booking <- QEBooking.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId - " <> transactionId)
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    return $ OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..}
   OUEditDestError EditDestErrorReq {..} -> do
     bookingUpdateReqDetails <- runInReplica $ QBUR.findById (Id messageId) >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> messageId)
     booking <- runInReplica $ QRB.findById bookingUpdateReqDetails.bookingId >>= fromMaybeM (BookingDoesNotExist $ "bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)

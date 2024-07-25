@@ -80,8 +80,8 @@ updateStatus orderId paymentServiceOrderId status = do
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
 
-updateAmountAndStatus :: BeamFlow m r => Id DOrder.PaymentOrder -> HighPrecMoney -> Text -> m ()
-updateAmountAndStatus orderId amount paymentServiceOrderId = do
+updateAmountAndPaymentIntentId :: BeamFlow m r => Id DOrder.PaymentOrder -> HighPrecMoney -> Text -> m ()
+updateAmountAndPaymentIntentId orderId amount paymentServiceOrderId = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamPO.amount amount,

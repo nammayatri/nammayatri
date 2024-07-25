@@ -12,7 +12,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data CallStatus = CallStatus
-  { callError :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { callAttempt :: Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus,
+    callError :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     callId :: Kernel.Prelude.Text,
     callService :: Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService,
     conversationDuration :: Kernel.Prelude.Int,
@@ -25,3 +26,7 @@ data CallStatus = CallStatus
     status :: Kernel.External.Call.Interface.Types.CallStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data CallAttemptStatus = Attempted | Resolved | Failed | Pending deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallAttemptStatus)

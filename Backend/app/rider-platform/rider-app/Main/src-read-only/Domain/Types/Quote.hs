@@ -74,6 +74,7 @@ data OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails {distan
 
 data QuoteAPIDetails
   = OneWayAPIDetails Domain.Types.Quote.OneWayQuoteAPIDetails
+  | AmbulanceAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
   | InterCityAPIDetails Domain.Types.InterCityDetails.InterCityDetailsAPIEntity
   | RentalAPIDetails Domain.Types.RentalDetails.RentalDetailsAPIEntity
   | DriverOfferAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
@@ -82,6 +83,7 @@ data QuoteAPIDetails
 
 data QuoteDetails
   = OneWayDetails Domain.Types.Quote.OneWayQuoteDetails
+  | AmbulanceDetails Domain.Types.DriverOffer.DriverOffer
   | InterCityDetails Domain.Types.InterCityDetails.InterCityDetails
   | RentalDetails Domain.Types.RentalDetails.RentalDetails
   | DriverOfferDetails Domain.Types.DriverOffer.DriverOffer

@@ -34,6 +34,8 @@ data PaymentTransaction = PaymentTransaction
     orderId :: Id PaymentOrder,
     merchantId :: Id Merchant,
     amount :: HighPrecMoney,
+    applicationFeeAmount :: HighPrecMoney,
+    retryCount :: Int,
     currency :: Currency,
     dateCreated :: Maybe UTCTime,
     statusId :: Int,

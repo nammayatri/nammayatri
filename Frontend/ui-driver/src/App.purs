@@ -74,6 +74,8 @@ import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
+import Screens.CustomerReferralTrackerScreen.ScreenData as CustomerReferralTrackerScreenData
+import Screens.CustomerReferralTrackerScreen.Types as CustomerReferralScreenTypes
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -127,6 +129,7 @@ newtype GlobalState = GlobalState {
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
   , rateCardScreen :: RateCardScreenState
+  , customerReferralTrackerScreen :: CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -180,6 +183,7 @@ defaultGlobalState = GlobalState {
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
+, customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -243,6 +247,7 @@ data ScreenType =
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
+  | CustomerReferralTrackerScreenStateType (CustomerReferralScreenTypes.CustomerReferralTrackerScreenState -> CustomerReferralScreenTypes.CustomerReferralTrackerScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -417,6 +422,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | UPDATE_AIR_CONDITIONED Boolean
                           | GO_TO_BOOKING_PREFERENCES
                           | UPDATE_ROUTE_ON_STAGE_SWITCH HomeScreenState
+                          | GO_TO_CUSTOMER_REFERRAL_TRACKER HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -513,8 +519,9 @@ data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen
 
 data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
 data BENEFITS_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
-                                   | DRIVER_CONTEST_SCREEN
-                                   | GO_TO_LMS_VIDEO_SCREEN BenefitsScreenState
+                              | DRIVER_CONTEST_SCREEN
+                              | GO_TO_LMS_VIDEO_SCREEN BenefitsScreenState
+                              | CUSTOMER_REFERRAL_TRACKER_NAV
 
 data LMS_VIDEO_SCREEN_OUTPUT = GO_TO_QUIZ_SCREEN LmsVideoScreenState | REFRESH_LMS_VIDEO_SCREEN LmsVideoScreenState | GO_TO_BENEFITS_SCREEN | SELECT_LANGUAGE_FOR_VIDEOS LmsVideoScreenState
 
@@ -532,3 +539,7 @@ data DOCUMENT_CAPTURE_SCREEN_OUTPUT = UPLOAD_DOC_API DocumentCaptureScreenState 
                                       | CHANGE_VEHICLE_FROM_DOCUMENT_CAPTURE
 
 data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD_API RateCardScreenState Int
+
+data CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT = ADD_UPI_FLOW CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
+                                               | DELETE_UPI_FLOW CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
+                                               | REFRESH_ORDER_STATUS CustomerReferralScreenTypes.CustomerReferralTrackerScreenState

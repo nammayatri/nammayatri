@@ -353,6 +353,7 @@ mkAddress DLoc.LocationAddress {..} =
 
 data DriverInfo = DriverInfo
   { mobileNumber :: Text,
+    alternateMobileNumber :: Maybe Text,
     name :: Text,
     tags :: Maybe [Spec.TagGroup]
   }
@@ -497,11 +498,13 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
   where
     driverInfo = forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
+      dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
+            alternateMobileNumber = dAlternatePhoneNum,
             name = dName,
             tags = if isValueAddNP then dTags else Nothing
           }
@@ -525,8 +528,8 @@ tfCustomer riderPhone riderName =
               }
       }
 
-mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe [Spec.TagGroup]
-mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl =
+mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Maybe [Spec.TagGroup]
+mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl driverAlternateNumber =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -545,6 +548,7 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
                 ++ isFreeRideSingleton
                 ++ driverAccountIdSingleton
                 ++ driverTrackingUrlSingleton
+                ++ driverAlternateNumberSingleton
         }
     ]
   where
@@ -639,6 +643,21 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
             tagDisplay = Just False,
             tagValue = Just $ showBaseUrl driverTrackingUrl
           }
+    driverAlternateNumberSingleton
+      | isNothing driverAlternateNumber = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.DRIVER_ALTERNATE_NUMBER,
+                      descriptorName = Just "Driver Alternate Number",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = driverAlternateNumber
+            }
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkLocationTagGroupV2 location' =
@@ -1094,7 +1113,9 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
       pricingMinFare = minFare,
-      fulfillmentType = show Enums.DELIVERY,
+      fulfillmentType = case tripCategory of
+        DTC.Ambulance _ -> show Enums.AMBULANCE
+        _ -> show Enums.DELIVERY,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
@@ -1140,7 +1161,9 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       tripCategory = tripCategory,
       fareParams = Just fareParams,
       farePolicy = Nothing,
-      fulfillmentType = show Enums.DELIVERY,
+      fulfillmentType = case tripCategory of
+        DTC.Ambulance _ -> show Enums.AMBULANCE
+        _ -> show Enums.DELIVERY,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
@@ -1460,11 +1483,13 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
   where
     driverInfo = forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
+      dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
+            alternateMobileNumber = dAlternatePhoneNum,
             name = dName,
             tags = if isValueAddNP then dTags else Nothing
           }

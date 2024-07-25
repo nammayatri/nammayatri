@@ -115,6 +115,9 @@ import Screens.PaymentHistoryScreen.Transformer (buildTransactionDetails)
 import Screens.PopUpScreen.Controller (transformAllocationData)
 import Screens.RegistrationScreen.Controller (getStatusValue)
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
+import Screens.CustomerReferralTrackerScreen.Handler (customerReferralTrackerScreen) as UI
+import Screens.CustomerReferralTrackerScreen.Transformer (getDailyEarnings, getOrderStatus)
+import Screens.CustomerReferralTrackerScreen.Types as CRST
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
 import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
@@ -124,7 +127,7 @@ import Screens.DriverEarningsScreen.Transformer (checkPopupShowToday, isPopupSho
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -133,7 +136,7 @@ import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Timers (clearTimerWithId)
-import Types.App (LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..))
+import Types.App (LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
@@ -776,7 +779,7 @@ onBoardingFlow = do
 
     updateOnboardingDocs :: Boolean ->  FlowBT String Unit
     updateOnboardingDocs manageVehicle = do
-      resp <- lift $ lift $ HelpersAPI.callApi $ API.OnboardingDocsReq if manageVehicle then "?onlyVehicle=true" else ""
+      (resp :: (Either ErrorResponse API.OnboardingDocsRes)) <- lift $ lift $ HelpersAPI.callApi $ API.OnboardingDocsReq if manageVehicle then "?onlyVehicle=true" else ""
       case resp of
         Right docs -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Just docs }
         Left err -> pure unit -- handle error
@@ -900,7 +903,7 @@ uploadDrivingLicenseFlow = do
         registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue resp.imageId resp.imageId state.data.vehicleCategory)
         void $ pure $ setValueToLocalStore ENTERED_DL state.data.driver_license_number
         case registerDriverDLResp of
-          Right (DriverDLResp resp) -> do
+          Right (API.ApiSuccessResult resp) -> do
             liftFlowBT $ logEvent logField_ "ny_driver_submit_dl_details"
             setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
             modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {validating = false, successfulValidation = true}}
@@ -939,7 +942,7 @@ uploadDrivingLicenseFlow = do
       registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue state.data.imageIDFront state.data.imageIDFront state.data.vehicleCategory)
       void $ pure $ setValueToLocalStore ENTERED_DL state.data.driver_license_number
       case registerDriverDLResp of
-        Right (DriverDLResp resp) -> do
+        Right (API.ApiSuccessResult resp) -> do
           void $ lift $ lift $ toggleLoader false
           liftFlowBT $ logEvent logField_ "ny_driver_submit_dl_details"
           setValueToLocalStore DOCUMENT_UPLOAD_TIME (getCurrentUTC "")
@@ -988,7 +991,7 @@ addVehicleDetailsflow addRcFromProf = do
         else do
           registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex)
           case registerDriverRCResp of
-            Right (DriverRCResp resp) -> do
+            Right (API.ApiSuccessResult resp) -> do
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
               modifyScreenState $ HomeScreenStateType $ \hss -> hss{ props {acExplanationPopup = true}}
               liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
@@ -1038,7 +1041,7 @@ addVehicleDetailsflow addRcFromProf = do
           registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex)
           void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
           case registerDriverRCResp of
-            Right (DriverRCResp resp) -> do
+            Right (API.ApiSuccessResult resp) -> do
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
               modifyScreenState $ HomeScreenStateType $ \hss -> hss{ props {acExplanationPopup = true}}
               liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
@@ -1067,7 +1070,7 @@ addVehicleDetailsflow addRcFromProf = do
       void $ lift $ lift $ toggleLoader true
       referDriverResponse <- lift $ lift $ Remote.referDriver (makeReferDriverReq state.data.referral_mobile_number)
       case referDriverResponse of
-        Right (ReferDriverResp resp) -> do
+        Right (API.ApiSuccessResult resp) -> do
           void $ lift $ lift $ toggleLoader false
           modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state{ props{isValid = false, openReferralMobileNumber = false, referralViewstatus = true}})
           addVehicleDetailsflow state.props.addRcFromProfile
@@ -1085,7 +1088,7 @@ addVehicleDetailsflow addRcFromProf = do
       void $ lift $ lift $ toggleLoader true
       activateRCResp <- lift $ lift $ Remote.makeRcActiveOrInactive (Remote.makeRcActiveOrInactiveReq true (state.data.vehicle_registration_number))
       case activateRCResp of
-        Right (MakeRcActiveOrInactiveResp resp) -> do
+        Right (API.ApiSuccessResult resp) -> do
           void $ lift $ lift $ toggleLoader false
           pure $ toast $ "RC-"<>state.data.vehicle_registration_number<> (getString IS_ACTIVE_NOW)
           refreshDriverProfile
@@ -1153,7 +1156,7 @@ applicationSubmittedFlow screenType = do
     VALIDATE_OTP state -> do
       getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.data.otpValue))
       case getVerifyAlternateMobileOtpResp of
-        Right (DriverAlternateNumberOtpResp resp) -> do
+        Right (API.ApiSuccessResult resp) -> do
           pure $ toast $ getString NUMBER_ADDED_SUCCESSFULLY
           modifyScreenState $ ApplicationStatusScreenType (\applicationStatusScreen ->  state{props{enterOtp = false , enterMobileNumberView = false , alternateNumberAdded = true}})
           applicationSubmittedFlow screenType
@@ -1238,7 +1241,7 @@ driverProfileFlow = do
     GO_TO_ACTIVATE_OR_DEACTIVATE_RC state -> do
       res <- lift $ lift $ Remote.makeRcActiveOrInactive (Remote.makeRcActiveOrInactiveReq (not state.data.isRCActive) (state.data.rcNumber))
       case res of
-        Right (MakeRcActiveOrInactiveResp response) -> do
+        Right (API.ApiSuccessResult response) -> do
           pure $ toast $ if state.data.isRCActive then "RC-"<>state.data.rcNumber<>" "<> (getString DEACTIVATED) else "RC-"<>state.data.rcNumber<> (getString IS_ACTIVE_NOW)
           if state.data.isRCActive then do
             globalstate <- getState
@@ -1335,7 +1338,7 @@ driverProfileFlow = do
            finalAlternateMobileNumber = state.data.driverEditAlternateMobile
        getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.props.alternateMobileOtp))
        case getVerifyAlternateMobileOtpResp of
-         Right (DriverAlternateNumberOtpResp resp) -> do
+         Right (API.ApiSuccessResult resp) -> do
               pure $ toast (toast_value)
               liftFlowBT $ logEvent logField_ "ny_driver_added_alternate_number"
               void $ pure $ finalAlternateMobileNumber >>= \alternateNumber -> void $ pure $ setCleverTapUserProp [{key : "Alternate Number", value : unsafeToForeign alternateNumber }]
@@ -1366,7 +1369,7 @@ driverProfileFlow = do
     ALTERNATE_NUMBER_REMOVE1 state -> do
        getAlternateMobileRemoveResp <- lift $ lift $ Remote.removeAlternateNumber (RemoveAlternateNumberRequest {} )
        case  getAlternateMobileRemoveResp of
-          Right (RemoveAlternateNumberResp resp) -> do
+          Right (API.ApiSuccessResult resp) -> do
                 pure $ toast (getString NUMBER_REMOVED_SUCCESSFULLY)
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {  driverAlternateMobile = Nothing  }})
                 modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {data {driverAlternateNumber = Nothing}, props{checkAlternateNumber = true, numberExistError = false, alternateNumberView = false }})
@@ -1456,7 +1459,7 @@ driverDetailsFlow = do
            finalAlternateMobileNumber = state.data.driverEditAlternateMobile
        getVerifyAlternateMobileOtpResp <- lift $ lift $ Remote.verifyAlternateNumberOTP (makeVerifyAlternateNumberOtpRequest (state.props.alternateMobileOtp))
        case getVerifyAlternateMobileOtpResp of
-         Right (DriverAlternateNumberOtpResp resp) -> do
+         Right (API.ApiSuccessResult resp) -> do
               pure $ toast (toast_value)
               modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state {data {driverAlternateMobile = finalAlternateMobileNumber , driverEditAlternateMobile = Nothing} , props {otpIncorrect = false ,otpAttemptsExceeded = false ,keyboardModalType = NONE , alternateMobileOtp = "",checkAlternateNumber = false,isEditAlternateMobile = false}})
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {  driverAlternateMobile = finalAlternateMobileNumber  }})
@@ -1487,7 +1490,7 @@ driverDetailsFlow = do
     ALTERNATE_NUMBER_REMOVE state -> do
        getAlternateMobileRemoveResp <- lift $ lift $ Remote.removeAlternateNumber (RemoveAlternateNumberRequest {} )
        case  getAlternateMobileRemoveResp of
-          Right (RemoveAlternateNumberResp resp) -> do
+          Right (API.ApiSuccessResult resp) -> do
                 pure $ toast (getString NUMBER_REMOVED_SUCCESSFULLY)
                 modifyScreenState $ DriverDetailsScreenStateType (\driverDetailsScreen -> state { data {driverAlternateMobile = Nothing}, props  { checkAlternateNumber = true}})
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data = homeScreen.data {  driverAlternateMobile = Nothing  }})
@@ -1654,7 +1657,7 @@ bookingOptionsFlow = do
   action <- UI.bookingOptions
   case action of
     UPDATE_AC_AVAILABILITY state toggleVal -> do
-      resp <- lift $ lift $ HelpersAPI.callApi $ Remote.mkUpdateAirConditionWorkingStatus toggleVal
+      (resp :: (Either ErrorResponse API.UpdateDriverVehicleServiceTierResp)) <- lift $ lift $ HelpersAPI.callApi $ Remote.mkUpdateAirConditionWorkingStatus toggleVal
       case resp of
         Right _ -> do
           let toastMessage = if toggleVal 
@@ -1664,7 +1667,7 @@ bookingOptionsFlow = do
           bookingOptionsFlow
         Left _ -> bookingOptionsFlow
     CHANGE_RIDE_PREFERENCE state service -> do
-      void $ HelpersAPI.callApiBT $ Remote.mkUpdateDriverVehiclesServiceTier service
+      (_ :: API.UpdateDriverVehicleServiceTierResp) <- HelpersAPI.callApiBT $ Remote.mkUpdateDriverVehiclesServiceTier service
       bookingOptionsFlow
     HOME_SCREEN_FROM_BOOKING_PREFS -> handleDeepLinksFlow Nothing Nothing Nothing
     SELECT_CAB state toggleDowngrade -> do
@@ -1692,7 +1695,7 @@ bookingOptionsFlow = do
       bookingOptionsFlow
     GO_TO_PROFILE -> driverProfileFlow
     EXIT_TO_RATE_CARD_SCREEN bopState -> do
-      response <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just RC.defaultSliderDist)
+      (response :: (Either ErrorResponse API.GetDriverRateCardRes)) <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just RC.defaultSliderDist)
       case response of
         Right resp -> do
           let prefs = map (\item ->  HU.setPerKmRate resp item ) bopState.data.ridePreferences
@@ -1732,7 +1735,7 @@ rateCardScreenFlow = do
   action <- UI.rateCardScreen
   case action of
     TA.RATE_CARD_API updatedState dist -> do
-      response <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just dist)
+      (response :: (Either ErrorResponse API.GetDriverRateCardRes)) <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just dist)
       case response of
         Left _ -> pure unit
         Right resp -> do
@@ -1785,7 +1788,7 @@ helpAndSupportFlow = do
        modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
        helpAndSupportFlow
     DUMMY_RIDE_REQUEST updatedState -> do
-      resp <- HelpersAPI.callApiBT $ DummyRideRequestReq ""
+      (resp :: API.ApiSuccessResult) <- HelpersAPI.callApiBT $ DummyRideRequestReq ""
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
       helpAndSupportFlow
     GO_BACK_TO_PROFILE_SCREEN updatedState -> do
@@ -2248,6 +2251,7 @@ homeScreenFlow = do
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_rankings"
       referralFlow
+    GO_TO_CUSTOMER_REFERRAL_TRACKER state -> customerReferralTrackerFlow
     DRIVER_AVAILABILITY_STATUS state status -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) if status == Online then (getString SETTING_YOU_ONLINE) else if status == Silent then (getString SETTING_YOU_SILENT) else (getString SETTING_YOU_OFFLINE)
       void $ lift $ lift $ toggleLoader true
@@ -2355,31 +2359,36 @@ homeScreenFlow = do
       let fileId = if state.data.activeRide.tripType == ST.Rental then
           state.props.odometerFileId
         else Nothing 
-        
-      (endRideResp) <- lift $ lift $ Remote.endRide id (Remote.makeEndRideReq endRideOtp endOdometerReading fileId (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation tripDistance tripDistanceWithAcc ts)
-      case (endRideResp) of
-        Right (API.EndRideResponse response) -> do
-          when state.data.driverGotoState.isGotoEnabled do
-            getDriverInfoResp <- Remote.getDriverInfoBT ""
-            modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
-              { driverInformation = Just getDriverInfoResp,
-                gotoPopupType = case response.homeLocationReached of 
-                  Nothing -> ST.NO_POPUP_VIEW
-                  Just true -> ST.REACHED_HOME
-                  Just false -> ST.MORE_GOTO_RIDES
-              })
-          onSuccessEndRide
-        Left errorPayload -> do
-          (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-          let getCurrentRideInfo = head rideHistoryResponse.list
-          case Tuple (DA.length $ rideHistoryResponse.list) (isJust state.data.advancedRideData)  of
-            Tuple 1 true -> do 
-              case getCurrentRideInfo , state.data.advancedRideData of
-                Just (RidesInfo rideDataResp), Just advRide -> if (rideDataResp.id == advRide.id) then onSuccessEndRide else errorHandlerEndRide errorPayload endRideOtpModalOnError
-                _ , _ -> onSuccessEndRide
-            Tuple 2 true -> errorHandlerEndRide errorPayload endRideOtpModalOnError
-            Tuple 1 false -> errorHandlerEndRide errorPayload endRideOtpModalOnError
-            Tuple _ _ ->  onSuccessEndRide
+      case Number.fromString lat, Number.fromString lon of 
+        Just lt, Just ln | lt /= 0.0 && ln /= 0.0-> do
+          (endRideResp) <- lift $ lift $ Remote.endRide id (Remote.makeEndRideReq endRideOtp endOdometerReading fileId lt ln numDeviation tripDistance tripDistanceWithAcc ts)
+          case (endRideResp) of
+            Right (API.EndRideResponse response) -> do
+              when state.data.driverGotoState.isGotoEnabled do
+                getDriverInfoResp <- Remote.getDriverInfoBT ""
+                modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
+                  { driverInformation = Just getDriverInfoResp,
+                    gotoPopupType = case response.homeLocationReached of 
+                      Nothing -> ST.NO_POPUP_VIEW
+                      Just true -> ST.REACHED_HOME
+                      Just false -> ST.MORE_GOTO_RIDES
+                  })
+              onSuccessEndRide
+            Left errorPayload -> do
+              (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
+              let getCurrentRideInfo = head rideHistoryResponse.list
+              case Tuple (DA.length $ rideHistoryResponse.list) (isJust state.data.advancedRideData)  of
+                Tuple 1 true -> do 
+                  case getCurrentRideInfo , state.data.advancedRideData of
+                    Just (RidesInfo rideDataResp), Just advRide -> if (rideDataResp.id == advRide.id) then onSuccessEndRide else errorHandlerEndRide errorPayload endRideOtpModalOnError
+                    _ , _ -> onSuccessEndRide
+                Tuple 2 true -> errorHandlerEndRide errorPayload endRideOtpModalOnError
+                Tuple 1 false -> errorHandlerEndRide errorPayload endRideOtpModalOnError
+                Tuple _ _ ->  onSuccessEndRide
+        _, _ -> do
+          void $ lift $ lift $ toggleLoader false
+          pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+          pure unit
       where
         errorHandlerEndRide errorPayload endRideOtpModalOnError = do
           void $ lift $ lift $ toggleLoader false
@@ -2557,7 +2566,7 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { route = [] }, props{ mapRendered = true }})
       currentRideFlow Nothing Nothing
     GO_TO_ARRIVED_AT_STOP {id, lat, lon, ts} state -> do
-      resp <- lift $ lift $ callApi $ API.ArrivedAtStopRequest id (Remote.makeArrivedAtStopReq lat lon)
+      (resp :: (Either ErrorResponse API.ApiSuccessResult)) <- lift $ lift $ callApi $ API.ArrivedAtStopRequest id (Remote.makeArrivedAtStopReq lat lon)
       case resp of
         Left errorPayload -> do
           _ <- pure $ printLog "GO_TO_ARRIVED_AT_STOP" (show resp)
@@ -2672,7 +2681,7 @@ homeScreenFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{alternateNumberView = true, isEditAlternateMobile = true, mNumberEdtFocused = true}, data {fromHomeScreen = true}})
       driverProfileFlow
     ON_CALL state exophoneNumber -> do
-      (OnCallRes resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
+      (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow
     HOMESCREEN_NAV GoToSubscription -> do
@@ -2757,12 +2766,12 @@ homeScreenFlow = do
       updateDriverDataToStates      
       homeScreenFlow
     UPDATE_SPECIAL_LOCATION_LIST -> do
-      resp <- HelpersAPI.callApiBT $ API.SpecialLocationFullReq
+      (resp :: API.SpecialLocationFullRes) <- HelpersAPI.callApiBT $ API.SpecialLocationFullReq
       void $ pure $ HU.transformSpecialLocationList resp
       homeScreenFlow
     GO_TO_BOOKING_PREFERENCES -> bookingOptionsFlow
     UPDATE_AIR_CONDITIONED isAcWorking -> do
-      resp <- lift $ lift $ HelpersAPI.callApi $ API.UpdateAirConditionUpdateRequest { isAirConditioned : isAcWorking }
+      (resp :: (Either ErrorResponse API.ApiSuccessResult)) <- lift $ lift $ HelpersAPI.callApi $ API.UpdateAirConditionUpdateRequest { isAirConditioned : isAcWorking }
       case resp of
         Right _ -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showAcWorkingPopup = Just false }})
@@ -3225,10 +3234,10 @@ popUpScreenFlow entityPayload = do
   case action of
     POPUP_REQUEST_RIDE id extraFare -> do
       if extraFare > 0.0 then do
-        (OfferRideResp resp) <- Remote.offerRideBT (makeOfferRideReq id (Just extraFare))
+        (API.ApiSuccessResult resp) <- Remote.offerRideBT (makeOfferRideReq id (Just extraFare))
         pure unit
         else do
-          (OfferRideResp resp) <- Remote.offerRideBT (makeOfferRideReq id Nothing)
+          (API.ApiSuccessResult resp) <- Remote.offerRideBT (makeOfferRideReq id Nothing)
           pure unit
       homeScreenFlow
     _ -> homeScreenFlow
@@ -3589,7 +3598,7 @@ logoutFlow :: FlowBT String Unit
 logoutFlow = do
   logField_ <- lift $ lift $ getLogFields
   liftFlowBT $ logEvent logField_ "ny_driver_logout"
-  (LogOutRes resp) <- Remote.logOutBT LogOutReq
+  (API.ApiSuccessResult resp) <- Remote.logOutBT LogOutReq
   removeChatService ""
   lift $ lift $ liftFlow $ stopLocationPollingAPI
   deleteValueFromLocalStore REGISTERATION_TOKEN
@@ -3707,6 +3716,75 @@ benefitsScreenFlow = do
                               else cachedSelectedLanguage
       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {selectedLanguage = selectedLanguage, selectedModule = state.props.selectedModule}})
       lmsVideoScreenFlow
+    CUSTOMER_REFERRAL_TRACKER_NAV -> customerReferralTrackerFlow
+
+customerReferralTrackerFlow :: FlowBT String Unit 
+customerReferralTrackerFlow = do 
+  liftFlowBT $ runEffectFn1 initiatePP unit
+  (GlobalState globalState) <- getState
+  appConfig <- getAppConfigFlowBT Constants.appConfig
+  logField_ <- lift $ lift $ getLogFields
+  let customerReferralTrackerScreenState = globalState.customerReferralTrackerScreen
+  modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{config = appConfig}})
+  void $ pure $ toggleBtnLoader "" false
+  void $ lift $ lift $ toggleLoader false
+  customerReferralTrackerScreenAction <- UI.customerReferralTrackerScreen
+  case customerReferralTrackerScreenAction of
+    ADD_UPI_FLOW state -> addUPIFlow state
+    DELETE_UPI_FLOW state -> do
+      response <- lift $ lift $ Remote.deleteVPA $ fromMaybe "" state.data.upiID
+      case response of 
+        Right val -> modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{upiID = Nothing, currentStage = CRST.Tracker}, props{showDeleteUPIView = false, showUPIOptions = false}})
+        Left (errorPayload) -> do 
+          modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{props{showDeleteUPIView = false, showUPIOptions = false}})
+          pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+      customerReferralTrackerFlow
+    REFRESH_ORDER_STATUS state -> do 
+      case state.data.orderId of  
+        Just orderId -> do 
+          void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
+          void $ lift $ lift $ toggleLoader true
+          checkPaymentStatus orderId
+        Nothing -> pure unit 
+      customerReferralTrackerFlow
+
+addUPIFlow :: CRST.CustomerReferralTrackerScreenState -> FlowBT String Unit 
+addUPIFlow state = do 
+  void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
+  void $ lift $ lift $ toggleLoader true
+  liftFlowBT $ initiatePaymentPage
+  response <- lift $ lift $ Remote.payoutRegistration "dummy"
+  case response of
+    Right (API.PayoutRegisterRes payoutRegisterRes) -> do
+      let (CreateOrderRes createOrderRes) = payoutRegisterRes.orderResp 
+          (PaymentPagePayload sdk_payload) = createOrderRes.sdk_payload
+          (PayPayload innerpayload) = sdk_payload.payload
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
+          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+      modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{orderId = Just payoutRegisterRes.orderId}})
+      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      void $ paymentPageUI sdkPayload
+      checkPaymentStatus payoutRegisterRes.orderId
+    Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+  customerReferralTrackerFlow
+
+checkPaymentStatus :: String -> FlowBT String Unit
+checkPaymentStatus orderId = do
+  orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
+  case orderStatus of
+    Right (OrderStatusRes statusResp) -> do
+      let orderStatus = getOrderStatus statusResp.status
+      setUPIPaymentStatus orderStatus
+    Left err -> setUPIPaymentStatus CRST.PENDING
+
+setUPIPaymentStatus :: CRST.OrderStatus -> FlowBT String Unit
+setUPIPaymentStatus status = do
+  (GlobalState globalState) <- getState
+  case status of
+    CRST.CHARGED -> modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{orderStatus = Just status}, props{showInfoPopUp = true, callEarningsAPI = true, showShimmer = true}})
+    CRST.FAILED -> modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{orderStatus = Just status}, props{showInfoPopUp = true}})
+    CRST.PENDING -> modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{data{orderStatus = Just status}})
+    _ -> pure unit
 
 referralFlow :: FlowBT String Unit
 referralFlow = do
@@ -3955,7 +4033,7 @@ activateReferralCode :: ST.RegistrationScreenState -> String -> FlowBT String Un
 activateReferralCode state code = do
   referDriverResponse <- lift $ lift $ Remote.referDriver $ makeReferDriverReq code
   case referDriverResponse of
-    Right (ReferDriverResp (API.ApiSuccessResult res)) -> do
+    Right (API.ApiSuccessResult res) -> do
       case res.result of
         "Success" -> do
           logField_ <- lift $ lift $ getLogFields

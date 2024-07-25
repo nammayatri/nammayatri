@@ -11,8 +11,10 @@ imports:
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
   TimeBound : Domain.Types.TimeBound
+  Currency: Kernel.Utils.Common
   DayOfWeek: Data.Time
   Centesimal: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -181,3 +183,33 @@ SurgePricing:
       dbQuery: findByHexDayHourAndVehicleServiceTier
       dbQueryParams: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]
       keyParams: [sourceHex, dayOfWeek, hourOfDay, vehicleServiceTier]
+
+CancellationFarePolicy:
+  tableName: cancellation_fare_policy
+
+  fields:
+    id : Id CancellationFarePolicy
+    currency: Currency
+    minCancellationCharge: HighPrecMoney
+    maxCancellationCharge: HighPrecMoney
+    perMetreCancellationCharge: HighPrecMoney
+    perMinuteCancellationCharge: HighPrecMoney
+    maxWaitingTimeAtPickupSeconds:  Seconds
+    freeCancellationTimeSeconds: Seconds
+    percentageOfRideFareToBeCharged: Centesimal
+    description: Text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+
+  cachedQueries:
+    findById:
+      keyParams: [id]
+      dbQuery: findById
+      dbQueryParams: [id]
+      queryType: FindAndCache
+
+  excludedFields: [merchantId, merchantOperatingCityId]

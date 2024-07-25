@@ -28,7 +28,7 @@ Ride:
   derives: "Generic"
   types:
     RideStatus:
-      enum: "NEW,INPROGRESS,COMPLETED,CANCELLED"
+      enum: "UPCOMING,NEW,INPROGRESS,COMPLETED,CANCELLED"
       derive: "HttpInstance"
     BPPRide: {}
   fields:
@@ -46,6 +46,7 @@ Ride:
     driverRating: Maybe Centesimal
     driverMobileNumber: Text
     driverPhoneNumber: Maybe (EncryptedHashedField e Text)
+    driverAlternateNumber: Maybe (EncryptedHashedField e Text)
     driverMobileCountryCode: Maybe Text
     driverRegisteredAt: Maybe UTCTime
     driverImage: Maybe Text
@@ -87,6 +88,7 @@ Ride:
     driverAccountId: Maybe AccountId
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
+    cancellationFeeIfCancelled: Maybe HighPrecMoney
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -116,6 +118,7 @@ Ride:
     vehicleNumber: character varying(255)
     vehicleVariant: character varying(60)
     driverNumberHash: bytea
+    driverAlternateNumberHash: bytea
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:
@@ -124,6 +127,8 @@ Ride:
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
     fare:
       currency: Maybe Currency
       fare: Maybe HighPrecMoney
@@ -143,6 +148,9 @@ Ride:
     driverPhoneNumber:
       driverNumberEncrypted: Maybe Text
       driverNumberHash: Maybe DbHash
+    driverAlternateNumber:
+      driverAlternateNumberEncrypted: Maybe Text
+      driverAlternateNumberHash: Maybe DbHash
 
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -155,7 +163,7 @@ Ride:
     clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
     clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
-    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion|E
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     driversPreviousRideDropLoc: Storage.Queries.Extra.Transformers.Ride.mkLatLong|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc|E
@@ -163,6 +171,7 @@ Ride:
     paymentDone: Kernel.Prelude.fromMaybe True paymentDone|E
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
     driverPhoneNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
+    driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -180,6 +189,8 @@ Ride:
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     clientOsType: clientDevice <&> (.deviceType)|E
     clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
     driversPreviousRideDropLat: Kernel.Prelude.fmap (.lat)|I
     driversPreviousRideDropLon: Kernel.Prelude.fmap (.lon)|I
@@ -188,6 +199,8 @@ Ride:
     onlinePayment: Kernel.Prelude.Just onlinePayment|E
     driverNumberEncrypted: (driverPhoneNumber <&> unEncrypted . (.encrypted))|E
     driverNumberHash: (driverPhoneNumber <&> (.hash))|E
+    driverAlternateNumberEncrypted: (driverAlternateNumber <&> unEncrypted . (.encrypted))|E
+    driverAlternateNumberHash: (driverAlternateNumber <&> (.hash))|E
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -199,6 +212,8 @@ Ride:
     showDriversPreviousRideDropLoc : Maybe Bool
     paymentDone: Maybe Bool
     onlinePayment: Maybe Bool
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -222,6 +237,10 @@ Ride:
     markPaymentDone:
       kvFunction: updateOneWithKV
       params: [paymentDone]
+      where: id
+    updateCancellationFeeIfCancelledField:
+      kvFunction: updateOneWithKV
+      params: [cancellationFeeIfCancelled]
       where: id
   excludedDefaultQueries:
     - create

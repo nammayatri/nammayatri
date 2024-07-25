@@ -22,3 +22,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN verified_by text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pan_card ADD COLUMN driver_name_on_govt_db text ;

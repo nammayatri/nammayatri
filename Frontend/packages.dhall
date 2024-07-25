@@ -127,7 +127,7 @@ in  upstream
       , "tuples"
       , "unsafe-coerce"
       ]
-    , repo = "https://github.com/juspay/purescript-presto.git"
+    , repo = "https://github.com/RitikaHanish/purescript-presto.git"
     , version = "update/github-purescript-presto"
     }
   with backtrack =

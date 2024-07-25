@@ -263,7 +263,7 @@ skipButtonConfig state =
       config
         { textConfig
           { text = getString DONE
-          , accessibilityHint = if clickale then "Proceed Button with : "  <> (if accessibilityOption.selectedYes == Just true then "Yes" else "No") <> " option selected" else "Done Button : InActive"
+          , accessibilityHint = "Done : Button"
           , color = state.data.config.primaryTextColor
           }
         , background = state.data.config.primaryBackground
