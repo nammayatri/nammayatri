@@ -47,3 +47,13 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN back
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN sdk_verification_service text NOT NULL default 'HyperVerge';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_distances_for_scheduled_rides text  default 'OSRM';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN get_distances_for_scheduled_rides SET NOT NULL;

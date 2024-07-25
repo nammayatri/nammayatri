@@ -93,8 +93,12 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
       cancelOrReallocate ride cReason True (RideCancel.ApplicationRequestorId id.getId)
       return $ Terminate "Job is Terminated and Ride is Reallocated driverInfo not found"
     (Just ride, Just driverInfo) -> do
-      case (driverInfo.onRide, ride.status) of
-        (False, DRide.UPCOMING) -> do
+      case (driverInfo.onRide, ride.status, driverInfo.active) of
+        (_, _, False) -> do
+          let cReason = "Ride is Reallocated because driver is not active"
+          cancelOrReallocate ride cReason True (RideCancel.ApplicationRequestorId id.getId)
+          return $ Terminate "Job is Terminated and Ride is Reallocated because driver is not active"
+        (False, DRide.UPCOMING, _) -> do
           mbDriver <- runInReplica $ QP.findById driverId
           mbBooking <- QBooking.findById bookingId
           mbVehicle <- runInReplica $ QVeh.findById driverId
@@ -109,7 +113,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               let cReason = "Ride is Reallocated driver/vehicle/booking not found"
               cancelOrReallocate ride cReason True (RideCancel.ApplicationRequestorId id.getId)
               return $ Terminate "Job is Terminated and Ride is Reallocated driver/vehicle/booking not found"
-        (True, DRide.UPCOMING) -> do
+        (True, DRide.UPCOMING, _) -> do
           now <- getCurrentTime
           mbActiveRide <- QRide.getActiveByDriverId driverId
           mbVehicle <- runInReplica $ QVeh.findById driverId
@@ -130,7 +134,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                     let dloc = head currentDriverLocation'
                         currentDriverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
                     currentLocationtoDropDistance <-
-                      TMaps.getDistance merchantId merchantOperatingCityId $
+                      TMaps.getDistanceForScheduledRides merchantId merchantOperatingCityId $
                         TMaps.GetDistanceReq
                           { origin = currentDriverLocation,
                             destination = dropLoc,
@@ -138,7 +142,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                             distanceUnit = Meter
                           }
                     currentDroptoScheduledPickupDistance <-
-                      TMaps.getDistance merchantId merchantOperatingCityId $
+                      TMaps.getDistanceForScheduledRides merchantId merchantOperatingCityId $
                         TMaps.GetDistanceReq
                           { origin = dropLoc,
                             destination = scheduledPickup,
@@ -157,7 +161,6 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                         expectedEndTime = addUTCTime totalTimeInSeconds now
                         scheduledPickupTime = fromJust driverInfo.latestScheduledBooking
                         scheduledPickupTimeWithGraceTime = addUTCTime (transporterConfig.graceTimeForScheduledRidePickup) scheduledPickupTime
-                    logDebug $ "estimatedDistanceinKM  : " <> show estimatedDistinKm
                     if expectedEndTime > scheduledPickupTimeWithGraceTime
                       then do
                         let cReason = "Ride is Cancelled because driver can't reach pickup of its scheduled booking on time"
@@ -174,7 +177,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                     return $ Terminate "Job is Terminated and Ride is Reallocated because errorFree && checkTransporterAndAvgSpeed && checkToLocation is False"
                 )
             )
-        (_, _) -> do
+        (_, _, _) -> do
           return $ Terminate "Job is terminated due to invalid ride status "
 
 cancelOrReallocate ::

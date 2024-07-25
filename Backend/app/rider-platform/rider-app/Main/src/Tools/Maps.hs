@@ -24,6 +24,7 @@ module Tools.Maps
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
+    getDistanceForScheduledRides,
   )
 where
 
@@ -73,6 +74,17 @@ getDistanceForCancelRide ::
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesForCancelRide)
+
+getDistanceForScheduledRides ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  GetDistanceReq a b ->
+  m (GetDistanceResp a b)
+getDistanceForScheduledRides = runWithServiceConfig Maps.getDistance (.getDistancesForScheduledRides)
 
 getDistances ::
   ( ServiceFlow m r,
