@@ -34,7 +34,7 @@ import Domain.Types.SearchTry
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.External.Maps (LatLong (..))
-import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -107,7 +107,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
-  Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
+  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
@@ -117,7 +117,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
 
   return (ride, rideDetails, vehicle)
   where
-    notificationType = FCM.DRIVER_ASSIGNMENT
+    notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
     message uBooking =
       cs $

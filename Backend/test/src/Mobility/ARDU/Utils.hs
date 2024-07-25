@@ -356,8 +356,8 @@ changeCachedMapsConfig googleCfg = runARDUFlow "change cached maps config" $ do
 
 clearCachedMapsConfig :: IO ()
 clearCachedMapsConfig = runARDUFlow "clear cached maps config" do
-  TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantId (TDMSC.MapsService Maps.Google) (Id "mobility-opcity")
-  TCQMSC.clearCache Fixtures.otherMerchant2Id (TDMSC.MapsService Maps.Google) (Id "mobility-opcity")
+  TCQMSC.clearCache (TDMSC.MapsService Maps.Google) (Id "mobility-opcity")
+  TCQMSC.clearCache (TDMSC.MapsService Maps.Google) (Id "mobility-opcity")
 
 rideSync :: ShortId TDM.Merchant -> Context.City -> Id TRide.Ride -> ClientsM ()
 rideSync merchantId city rideId = do

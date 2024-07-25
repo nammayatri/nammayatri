@@ -66,10 +66,10 @@ runWithServiceConfig ::
   Id DMOC.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func merchantId merchantOpCityId req = do
+runWithServiceConfig func _merchantId merchantOpCityId req = do
   orgBackgroundVerificationsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgBackgroundVerificationServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.BackgroundVerificationService orgBackgroundVerificationsConfig.backgroundVerification) merchantOpCityId
+    CQMSC.findByServiceAndCity (DMSC.BackgroundVerificationService orgBackgroundVerificationsConfig.backgroundVerification) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "BackgroundVerifications" (show $ orgBackgroundVerificationsConfig.backgroundVerification))
   case orgBackgroundVerificationServiceConfig.serviceConfig of
     DMSC.BackgroundVerificationServiceConfig msc -> func msc req

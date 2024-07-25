@@ -51,10 +51,10 @@ runWithServiceConfig ::
   Id MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
+runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
   merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantCallServiceConfig <-
-    QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.CallService $ getCfg merchantConfig) merchantOpCityId
+    QMSC.findByServiceAndCity (DMSC.CallService $ getCfg merchantConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "call" (show $ getCfg merchantConfig))
   case merchantCallServiceConfig.serviceConfig of
     DMSC.CallServiceConfig msc -> func msc req

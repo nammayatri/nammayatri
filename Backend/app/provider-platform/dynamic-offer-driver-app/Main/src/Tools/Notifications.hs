@@ -229,6 +229,36 @@ notifyDriver ::
   m ()
 notifyDriver merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing
 
+notifyDriverWithProviders ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.Category ->
+  Text ->
+  Text ->
+  Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceToken = runWithServiceConfigForProviders merchantOpCityId notificationData EulerHS.Prelude.id (clearDeviceToken driver.id) False
+  where
+    notificationData =
+      Notification.NotificationReq
+        { category = category,
+          subCategory = Nothing,
+          showNotification = Notification.SHOW,
+          messagePriority = Just Notification.HIGH,
+          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId (),
+          dynamicParams = EmptyDynamicParam,
+          body = body,
+          title = title,
+          auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
+          ttl = Nothing,
+          sound = Nothing
+        }
+
 -- Send notification to device, i.e. notifications that should not be shown to the user,
 -- but contains payload used by the app
 notifyDevice ::
@@ -799,26 +829,9 @@ sendSearchRequestToDriverNotification ::
   Id Person ->
   Notification.NotificationReq SearchRequestForDriverAPIEntity EmptyDynamicParam ->
   m ()
-sendSearchRequestToDriverNotification merchantId merchantOpCityId driverId req = Notification.notifyPersonWithAllProviders handler req (clearDeviceToken driverId) True
+sendSearchRequestToDriverNotification _merchantId merchantOpCityId driverId req = runWithServiceConfigForProviders merchantOpCityId req iosModifier (clearDeviceToken driverId) True
   where
-    handler = Notification.NotficationServiceHandler {..}
-
-    getNotificationServiceList = do
-      merchantServiceUsageConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      let sendSearchReqNotificationList = merchantServiceUsageConfig.sendSearchRequestToDriver
-      when (null sendSearchReqNotificationList) $ throwError $ InternalError ("No notification service provider configured for the merchant Op city : " <> merchantOpCityId.getId)
-      pure sendSearchReqNotificationList
-
-    getServiceConfig service = do
-      merchantNotificationServiceConfig <-
-        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.NotificationService service) merchantOpCityId
-          >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Notification" (show service))
-      case merchantNotificationServiceConfig.serviceConfig of
-        DMSC.NotificationServiceConfig nsc -> pure nsc
-        _ -> throwError $ InternalError "Unknow Service Config"
-
     iosModifier (iosFCMdata :: (FCM.FCMData SearchRequestForDriverAPIEntity)) = iosFCMdata {fcmEntityData = modifyEntity iosFCMdata.fcmEntityData}
-
     modifyEntity SearchRequestForDriverAPIEntity {..} = IOSSearchRequestForDriverAPIEntity {..}
 
 data StopReq = StopReq
@@ -860,8 +873,10 @@ notifyStopModification person entityData = do
           ]
 
 notifyOnRideStarted ::
-  ( CacheFlow m r,
-    EsqDBFlow m r
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DRide.Ride ->
   m ()
@@ -884,7 +899,7 @@ notifyOnRideStarted ride = do
               then "Please turn on AC, offer " <> offerAdjective <> " service and have a safe ride!"
               else "Offer " <> offerAdjective <> " service and have a safe ride!"
           )
-  notifyDriver merchantOperatingCityId FCM.TRIP_STARTED title body person person.deviceToken
+  notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken
 
 ----------------- we have to remove this once YATRI_PARTNER is migrated to new version ------------------
 
@@ -940,3 +955,35 @@ notifyDriverOnEvents merchantOpCityId personId mbDeviceToken entityData notifTyp
         EulerHS.Prelude.unwords
           [ entityData.message
           ]
+
+{- Run with service Providers can be used to trigger Critical Notifications over multiple channels FCM & GRPC -}
+runWithServiceConfigForProviders ::
+  ( ServiceFlow m r,
+    ToJSON a,
+    ToJSON b,
+    ToJSON c,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.NotificationReq a b ->
+  (FCMData a -> FCMData c) ->
+  m () ->
+  Bool ->
+  m ()
+runWithServiceConfigForProviders merchantOpCityId req iosModifier = Notification.notifyPersonWithAllProviders handler req
+  where
+    handler = Notification.NotficationServiceHandler {..}
+
+    getNotificationServiceList = do
+      merchantServiceUsageConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      let sendSearchReqNotificationList = merchantServiceUsageConfig.sendSearchRequestToDriver
+      when (null sendSearchReqNotificationList) $ throwError $ InternalError ("No notification service provider configured for the merchant Op city : " <> merchantOpCityId.getId)
+      pure sendSearchReqNotificationList
+
+    getServiceConfig service = do
+      merchantNotificationServiceConfig <-
+        QMSC.findByServiceAndCity (DMSC.NotificationService service) merchantOpCityId
+          >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" (show service))
+      case merchantNotificationServiceConfig.serviceConfig of
+        DMSC.NotificationServiceConfig nsc -> pure nsc
+        _ -> throwError $ InternalError "Unknow Service Config"

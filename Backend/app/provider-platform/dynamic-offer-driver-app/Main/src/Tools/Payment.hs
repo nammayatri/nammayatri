@@ -61,7 +61,7 @@ runWithServiceConfigAndName ::
   m resp
 runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName req = do
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId serviceName merchantOperatingCity
+    CQMSC.findByServiceAndCity serviceName merchantOperatingCity
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig vsc -> func vsc req
@@ -100,10 +100,10 @@ runWithServiceConfig ::
   Id DMOC.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
+runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
   orgPaymentsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgPaymentServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.PaymentService $ getCfg orgPaymentsConfig) merchantOpCityId
+    CQMSC.findByServiceAndCity (DMSC.PaymentService $ getCfg orgPaymentsConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Payments" (show $ getCfg orgPaymentsConfig))
   case orgPaymentServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig msc -> func msc req

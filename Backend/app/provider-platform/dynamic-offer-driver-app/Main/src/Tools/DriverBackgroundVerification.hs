@@ -52,7 +52,7 @@ runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.DriverBackgroundVerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
+    CQMSC.findByServiceAndCity (DMSC.DriverBackgroundVerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.DriverBackgroundVerificationServiceConfig vsc -> func vsc req

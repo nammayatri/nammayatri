@@ -37,7 +37,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 
 whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GupShup.OptApiReq -> m APISuccess
-whatsAppOptAPI merchantId merchantOpCityId req = do
+whatsAppOptAPI _merchantId merchantOpCityId req = do
   void $ GupShup.whatsAppOptApi handler req
   return Success
   where
@@ -51,7 +51,7 @@ whatsAppOptAPI merchantId merchantOpCityId req = do
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-
-        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.WhatsappService provider) merchantOpCityId
+        QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       case merchantWhatsappServiceConfig.serviceConfig of
         DMSC.WhatsappServiceConfig msc -> pure msc
@@ -70,7 +70,7 @@ whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId = GupShup.whats
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-
-        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.WhatsappService provider) merchantOpCityId
+        QMSC.findByServiceAndCity (DMSC.WhatsappService provider) merchantOpCityId
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantWhatsappServiceConfig.serviceConfig of
         DMSC.WhatsappServiceConfig msc -> pure msc
