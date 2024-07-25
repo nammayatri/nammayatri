@@ -210,7 +210,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.tripCategory
             farePolicy <- getFarePolicy (Just srcPt) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just (TransactionId (Id booking.transactionId)))
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
-            let isTollAllowed = maybe True (\(_, _, isAutoRickshawAllowed) -> booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed) mbTollInfo
+            let isTollAllowed = maybe True (\(_, _, isAutoRickshawAllowed) -> (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed) || booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW) mbTollInfo
             when (not isTollAllowed) $ do
               sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Auto rickshaw not allowed for toll route."
               throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
