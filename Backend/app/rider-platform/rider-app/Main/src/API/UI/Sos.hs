@@ -34,13 +34,13 @@ import Tools.Auth
 type API =
   "sos"
     :> Capture "sosId" (Id Sos.Sos)
-    :> "addVideo"
+    :> "upload"
     :> TokenAuth
     :> MultipartForm Tmp DSos.SOSVideoUploadReq
     :> Post '[JSON] DSos.AddSosVideoRes
 
 handler :: FlowServer API
-handler = addSosVideo
+handler = uploadMedia
 
-addSosVideo :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SOSVideoUploadReq -> FlowHandler DSos.AddSosVideoRes
-addSosVideo sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.addSosVideo sosId personId
+uploadMedia :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SOSVideoUploadReq -> FlowHandler DSos.AddSosVideoRes
+uploadMedia sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.uploadMedia sosId personId
