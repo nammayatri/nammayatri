@@ -43,3 +43,7 @@
  }
  -dontwarn in.juspay.hypertrident.TridentBridge
  -dontwarn dalvik.system.ZipPathValidator
+ -dontwarn co.hyperverge.**
+ -dontwarn org.openjsse.net.ssl.OpenJSSE
+ -dontwarn org.openjsse.javax.net.ssl.SSLParameters
+ -dontwarn org.openjsse.javax.net.ssl.SSLSocket

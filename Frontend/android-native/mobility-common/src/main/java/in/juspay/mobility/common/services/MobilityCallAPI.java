@@ -22,6 +22,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -55,50 +57,56 @@ public class MobilityCallAPI {
         defaultResp.setResponseBody("");
         defaultResp.setStatusCode(-1);
         try {
-
-            HttpURLConnection connection = (HttpURLConnection) (new URL(endpoint).openConnection());
-            if (connection instanceof HttpsURLConnection)
-                ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
-
-
-
-            connection.setRequestMethod(apiMethod);
-
-            if (headers != null) {
-                for (Map.Entry<String, String> entry : headers.entrySet()) {
-                    connection.setRequestProperty(entry.getKey(), entry.getValue());
-                }
-            }
-
-            connection.setDoOutput(doOutput);
-
-            if (requestBody != null) {
-
-                OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
-                writer.write(requestBody);
-                writer.flush();
-                writer.close();
-            }
-
-            connection.connect();
-
+            HttpURLConnection connection = callAPIConnection(endpoint, headers, requestBody, apiMethod, doOutput);
             int responseCode = connection.getResponseCode();
 
             MobilityAPIResponse response = new MobilityAPIResponse();
             response.setStatusCode(responseCode);
-
-            InputStream responseStream;
-            if (responseCode >= 200 && responseCode < 300) {
-                responseStream = connection.getInputStream();
-            } else {
-                responseStream = connection.getErrorStream();
-            }
-            response.setResponseBody(apiResponseBuilder(responseStream));
+            response.setResponseBody(apiResponseBuilder(getResponseStream(connection)));
             return response;
         }catch (Exception e){
             e.printStackTrace();
             return defaultResp;
         }
+    }
+
+    public static InputStream getResponseStream (HttpURLConnection connection) throws IOException {
+        int responseCode = connection.getResponseCode();
+        InputStream responseStream;
+        if (responseCode >= 200 && responseCode < 300) {
+            responseStream = connection.getInputStream();
+        } else {
+            responseStream = connection.getErrorStream();
+        }
+        return responseStream;
+    }
+
+    public static HttpURLConnection callAPIConnection(String endpoint, Map<String, String> headers, String requestBody, String apiMethod, Boolean doOutput) throws IOException, NoSuchAlgorithmException, KeyManagementException {
+        HttpURLConnection connection = (HttpURLConnection) (new URL(endpoint).openConnection());
+        if (connection instanceof HttpsURLConnection)
+            ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());
+
+
+
+        connection.setRequestMethod(apiMethod);
+
+        if (headers != null) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                connection.setRequestProperty(entry.getKey(), entry.getValue());
+            }
+        }
+
+        connection.setDoOutput(doOutput);
+
+        if (requestBody != null) {
+
+            OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
+            writer.write(requestBody);
+            writer.flush();
+            writer.close();
+        }
+        connection.connect();
+        return connection;
     }
 
 
