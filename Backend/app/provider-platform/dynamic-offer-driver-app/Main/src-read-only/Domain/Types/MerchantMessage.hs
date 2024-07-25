@@ -62,6 +62,7 @@ data MessageKey
   | SMS_TO_GO_ONLINE_IN_SCHEDULED_RIDE
   | FLEET_JOINING_MESSAGE
   | FLEET_JOIN_AND_DOWNLOAD_APP_MESSAGE
+  | WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

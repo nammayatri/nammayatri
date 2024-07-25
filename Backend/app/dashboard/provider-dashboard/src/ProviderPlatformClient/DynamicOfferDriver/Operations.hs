@@ -20,6 +20,7 @@ where
 
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified API.Dashboard.Management.Subscription as MSubscription
+import qualified API.Types.ProviderPlatform.Management.Driver as DriverDSL
 import qualified API.Types.ProviderPlatform.Management.Merchant as MerchantDSL
 import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
 import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
@@ -71,6 +72,7 @@ data DriverOperationAPIs = DriverOperationAPIs
     bookings :: BookingsAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs,
     revenueDSL :: RevenueDSL.RevenueAPIs,
+    driverDSL :: DriverDSL.DriverAPIs,
     rideDSL :: RideDSL.RideAPIs
   }
 
@@ -262,6 +264,7 @@ mkDriverOperationAPIs merchantId city token = do
 
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
   let revenueDSL = RevenueDSL.mkRevenueAPIs revenueClientDSL
+  let driverDSL = DriverDSL.mkDriverAPIs driverClientDSL
   let rideDSL = RideDSL.mkRideAPIs rideClientDSL
   DriverOperationAPIs {..}
   where
@@ -275,7 +278,8 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> bookingsClient
       :<|> merchantClientDSL
       :<|> revenueClientDSL
-      :<|> rideClientDSL =
+      :<|> rideClientDSL
+      :<|> driverClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     planListV2

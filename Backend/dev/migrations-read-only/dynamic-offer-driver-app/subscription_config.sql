@@ -20,3 +20,9 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN merchant_opera
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD PRIMARY KEY ( service_name, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN sgst_percentage_one_time_security_deposit double precision ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN cgst_percentage_one_time_security_deposit double precision ;
