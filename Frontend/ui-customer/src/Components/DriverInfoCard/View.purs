@@ -89,6 +89,8 @@ import Screens.Types (FareProductType(..)) as FPT
 import Data.String as STR
 import JBridge as JB
 import Animation as Anim
+import DecodeUtil
+import Data.Function.Uncurried 
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -830,13 +832,15 @@ brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -
 brandingBannerView driverInfoConfig isVisible uid onUsRide providerName = 
   let providerRideText = getString if onUsRide then GUARANTEED_RIDE else THIS_RIDE_FULFILLED_BY providerName
       style = if onUsRide then FontStyle.captions else FontStyle.body3
+      appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+      appLogo = fetchImage FF_ASSET $ if appName == "Namma Yatri" then "ic_nammayatri_logo" else "ic_namma_yatri_logo"
+
   in 
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , alignParentBottom "true,-1"
-    , gravity BOTTOM
     , visibility $ isVisible
     ][ separator (MarginTop 0) (V 1) Color.grey900 true
      , linearLayout
@@ -846,8 +850,9 @@ brandingBannerView driverInfoConfig isVisible uid onUsRide providerName =
        , background driverInfoConfig.footerBackgroundColor
        , padding $ Padding 12 12 12 (12+safeMarginBottom)
        ] <> if isJust uid then [id $ getNewIDWithTag $ fromMaybe "" uid] else [])
-       [ imageView
-          [ imageWithFallback $ driverInfoConfig.footerImageUrl
+       [ 
+        imageView
+          [ imageWithFallback $  spy "AppLogoImage" appLogo
           , height $ V 20
           , width $ V 62
           , margin $ MarginHorizontal 10 10

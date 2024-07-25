@@ -637,7 +637,7 @@ quoteListView push config =
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
                             ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
                         ) topProviderList)
-           , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
+           , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[height $ V 0][]-- TODO:: Temporary fix, should make scrollable list better
           ]
       ]
     -- , linearLayout -- TODO:: Temporary removing gradient for estimates
