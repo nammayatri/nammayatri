@@ -36,6 +36,7 @@ homeScreen = do
   liftFlowBT $ markPerformance "HOME_SCREEN_RUN"
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
+  let _ = spy "HOME_SCREEN_OUTPUT" act
   void $ lift $ lift $ toggleLoader false
   case act of
     UpdateLocationName updatedState lat lng-> do

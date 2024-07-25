@@ -2717,3 +2717,11 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCDate();
   }
 }
+
+export const checkIfPointInsidePolygon = (polygon, latitude, longitude) => {
+  if (JBridge.checkIfPointInsidePolygon) {
+    console.log("checkIfPointInsidePolygon", polygon, latitude, longitude);
+    return JBridge.checkIfPointInsidePolygon(polygon, latitude, longitude);
+  }
+  return false;
+}

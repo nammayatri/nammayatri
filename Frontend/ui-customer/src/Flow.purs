@@ -75,7 +75,7 @@ import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min, (>>>))
 import Mobility.Prelude (capitalize)
 import ModifyScreenState (modifyScreenState, updateRepeatRideDetails, FlowState(..))
-import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
+import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, Flow)
 import Helpers.Pooling (delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice, estimateLabelMaxWidth, locateOnMapLabelMaxWidth, markerArrowSize)
@@ -305,7 +305,7 @@ handleExternalLocations mBGlobalPayload = do
               case destinationObj.name of
                 Just src -> updateDataInState destinationObj.lat destinationObj.lon src (encodeAddress src [] Nothing destinationObj.lat destinationObj.lon)
                 Nothing -> do
-                    mbDestination <- getPlaceName destinationObj.lat destinationObj.lon HomeScreenData.dummyLocation true
+                    mbDestination <- Remote.getPlaceName destinationObj.lat destinationObj.lon HomeScreenData.dummyLocation true
                     case mbDestination of
                       Just (PlaceName destination) -> updateDataInState destinationObj.lat destinationObj.lon destination.formattedAddress (encodeAddress destination.formattedAddress destination.addressComponents destination.placeId destinationObj.lat destinationObj.lon)
                       Nothing -> pure unit
@@ -355,7 +355,7 @@ currentFlowStatus = do
     WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus
     RIDE_ASSIGNED _ -> checkRideStatus true
     PENDING_RATING _ -> do
-      firstRideCompletedEvent ""
+      -- void $ lift $ lift $ fork $ firstRideCompletedEvent ""
       checkRideStatus false
     _ -> checkRideStatus false
   liftFlowBT $ markPerformance "HIDE_LOADER_FLOW"
@@ -741,7 +741,7 @@ homeScreenFlow = do
   let
     bookingTimeList = decodeBookingTimeList FunctionCall
 
-    nearestScheduledBookingTime = maybe (getCurrentUTC "") (\bookingTimeList -> bookingTimeList.rideStartTime) $ head $ bookingTimeList
+    -- nearestScheduledBookingTime = maybe (getCurrentUTC "") (\bookingTimeList -> bookingTimeList.rideStartTime) $ head $ bookingTimeList
 
     _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
 
@@ -751,15 +751,12 @@ homeScreenFlow = do
 
     diffInSeconds = (INT.toNumber $ fromMaybe 0 $ head $ filter (\item -> item >= 0) $ sort $ map (\date -> EHC.compareUTCDate date.rideStartTime currTime) bookingTimeList)
 
-    famousDestinations = if null currentState.homeScreen.data.famousDestinations 
-                          then fetchFamousDestinations FunctionCall 
-                          else currentState.homeScreen.data.famousDestinations
   modifyScreenState
     $ HomeScreenStateType
         ( \homeScreen ->
             homeScreen
               { props { scheduledRidePollingDelay = diffInSeconds, hasTakenRide = (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE"), isReferred = (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE"), city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION }
-              , data { currentCityConfig = currentCityConfig, famousDestinations = famousDestinations }
+              , data { currentCityConfig = currentCityConfig}
               }
         )
   liftFlowBT $ handleUpdatedTerms $ getString STR.TERMS_AND_CONDITIONS_UPDATED
@@ -1486,7 +1483,7 @@ homeScreenFlow = do
         homeScreenFlow
       else do
         if state.homeScreen.props.sourceLat /= 0.0 && state.homeScreen.props.sourceLong /= 0.0 then do
-          (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.homeScreen.props.sourceLat state.homeScreen.props.sourceLong) ORIGIN
+          (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.homeScreen.props.sourceLat state.homeScreen.props.sourceLong) ORIGIN -- 
           let
             (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
           let
@@ -1501,7 +1498,7 @@ homeScreenFlow = do
 
               geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
             (GlobalState currentState) <- getState
-            fullAddress <- getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation false
+            fullAddress <- Remote.getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation false
             case fullAddress of
               Just (PlaceName address) -> do
                 modifyScreenState
@@ -1558,9 +1555,7 @@ homeScreenFlow = do
     CHECK_SERVICEABILITY updatedState lat long -> do
       let
         isWhitelisted = any (_ == getValueFromWindow (show MOBILE_NUMBER)) (getNumbersToWhiteList "")
-      (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq lat long) ORIGIN
-      let
-        (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation sourceServiceabilityResp.specialLocation
+      (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq lat long) ORIGIN --
       let
         sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
 
@@ -1569,7 +1564,7 @@ homeScreenFlow = do
         cityName = if sourceServiceabilityResp.serviceable then getCityNameFromCode sourceServiceabilityResp.city else updatedState.props.city
 
         srcServiceability = isWhitelisted || sourceServiceabilityResp.serviceable
-      sourcePlaceName <- getPlaceName sourceLat sourceLong HomeScreenData.dummyLocation false  
+      sourcePlaceName <- Remote.getPlaceName sourceLat sourceLong HomeScreenData.dummyLocation false
       setValueToLocalStore CUSTOMER_LOCATION (show cityName)
       void $ pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
       when (updatedState.props.currentStage == ConfirmingLocation) $ do
@@ -1671,7 +1666,7 @@ homeScreenFlow = do
       let
         state = globalState.homeScreen
       if isMoreThan20Meters || cachedLocation == "" || (state.props.isSource == Just true && isJust gateAddress.address) then do
-        fullAddress <- getPlaceName lat lon gateAddress true
+        fullAddress <- Remote.getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName placeDetails) -> do
             let
@@ -1755,7 +1750,7 @@ homeScreenFlow = do
                   }
             )
       if isMoreThan20Meters || isJust gateAddress.address then do
-        fullAddress <- getPlaceName lat lon gateAddress true
+        fullAddress <- Remote.getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do
             void $ liftFlowBT $ logEvent logField_ "ny_user_placename_api_cpu_onDrag"
@@ -2238,7 +2233,7 @@ findEstimates updatedState = do
   void $ liftFlowBT $ setMapPadding 0 0 0 0
   logField_ <- lift $ lift $ getLogFields
   if updatedState.data.source == getString STR.CURRENT_LOCATION then do
-    fullAddress <- getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation true
+    fullAddress <- Remote.getPlaceName updatedState.props.sourceLat updatedState.props.sourceLong HomeScreenData.dummyLocation true
     case fullAddress of
       Just (PlaceName address) -> do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState { data { source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing updatedState.props.sourceLat updatedState.props.sourceLong } })
@@ -2869,7 +2864,7 @@ selectLanguageScreenFlow = do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData)
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data { categories = [] } })
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = [] }, props { needIssueListApiCall = true } })
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { famousDestinations = [] }})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { famousDestinations = [], remoteBannerConfigs = [] }})
       homeScreenFlow
     GO_TO_HOME_SCREEN -> homeScreenFlow
 
@@ -3270,7 +3265,7 @@ addNewAddressScreenFlow input = do
         liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, labelId = getNewIDWithTag "AddAddressPin", locationName = srcSpecialLocation.locationName }
         addNewAddressScreenFlow ""
       else do
-        fullAddress <- getPlaceName lat lon gateAddress true
+        fullAddress <- Remote.getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do
             modifyScreenState
@@ -3391,7 +3386,7 @@ addNewAddressScreenFlow input = do
       void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       homeScreenFlow
     GO_TO_SEARCH_LOC_SCREEN -> do
-      void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "SearchLocationScreenMap")
+      void $ lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
       searchLocationFlow
   pure unit
 
@@ -3662,47 +3657,6 @@ getPlaceCoordinates address =
 isAddressFieldsNothing :: Address -> Boolean
 isAddressFieldsNothing address = all isNothing [ address.area, address.state, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward, address.placeId ]
 
-getPlaceName :: Number -> Number -> Location -> Boolean -> FlowBT String (Maybe PlaceName)
-getPlaceName lat long location getApiResponse = do
-  case location.address of
-    Just address -> do
-      let
-        addressComponent = mkAddressComponent location "sublocality"
-      pure $ Just $ mkPlaceName lat long address (Just addressComponent)
-    Nothing -> do
-      let
-        address = runFn2 getLocationNameV2 lat long
-      config <- getAppConfigFlowBT appConfig
-      logField_ <- lift $ lift $ getLogFields
-      if address /= "NO_LOCATION_FOUND" && config.geoCoder.enableLLtoAddress then do
-        liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_found"
-        pure $ Just $ mkPlaceName lat long address Nothing
-      else do
-        if getApiResponse then do
-          (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getLanguageLocale languageKey)
-          liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_fallback"
-          pure $ locationName !! 0
-        else do
-          pure Nothing
-  where
-  mkPlaceName :: Number -> Number -> String -> Maybe AddressComponents -> PlaceName
-  mkPlaceName lat long address addressComponent =
-    PlaceName
-      { formattedAddress: address
-      , location: LatLong { lat: lat, lon: long }
-      , plusCode: Nothing
-      , addressComponents: [] <> catMaybes [ addressComponent ]
-      , placeId: Nothing
-      }
-
-  mkAddressComponent :: Location -> String -> AddressComponents
-  mkAddressComponent location addressType =
-    AddressComponents
-      { longName: location.place
-      , shortName: location.place
-      , types: [ addressType ]
-      }
-
 dummyLocationData :: LocationData
 dummyLocationData =
   LocationData
@@ -3821,7 +3775,7 @@ updateSourceLocation _ = do
       Nothing -> Just ""
   when (disabled == Just "BLIND_LOW_VISION")
     $ do
-        fullAddress <- getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation true
+        fullAddress <- Remote.getPlaceName currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong HomeScreenData.dummyLocation true
         case fullAddress of
           Just (PlaceName address) -> do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { source = address.formattedAddress, sourceAddress = encodeAddress address.formattedAddress [] Nothing currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong } })
@@ -3832,7 +3786,7 @@ updateSourceLocation _ = do
 updateCurrentLocation :: String -> FlowBT String Unit
 updateCurrentLocation _ = do
   (GlobalState currentState) <- getState
-  currentAddress <- getPlaceName currentState.homeScreen.props.currentLocation.lat currentState.homeScreen.props.currentLocation.lng HomeScreenData.dummyLocation false
+  currentAddress <- Remote.getPlaceName currentState.homeScreen.props.currentLocation.lat currentState.homeScreen.props.currentLocation.lng HomeScreenData.dummyLocation false
   case currentAddress of
     Just (PlaceName address) -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentLocation { place = address.formattedAddress } } })
@@ -4563,7 +4517,7 @@ searchLocationFlow = do
           { currentLat, currentLng } = { currentLat: fromMaybe 0.0 state.data.currentLoc.lat, currentLng: fromMaybe 0.0 state.data.currentLoc.lon }
 
           focussedField = maybe Nothing (\currField -> if currField == SearchLocPickup then (state.data.srcLoc) else (state.data.destLoc)) (state.props.focussedTextField)
-        fullAddress <- getPlaceName currentLat currentLng HomeScreenData.dummyLocation true
+        fullAddress <- Remote.getPlaceName currentLat currentLng HomeScreenData.dummyLocation true
         let
           address = maybe "" (\(PlaceName address) -> address.formattedAddress) fullAddress
         modifyScreenState $ SearchLocationScreenStateType (\_ -> state { data { latLonOnMap = fromMaybe (maybe SearchLocationScreenData.dummyLocationInfo (\srcLoc -> srcLoc { address = address }) state.data.srcLoc) focussedField } })
@@ -4817,7 +4771,7 @@ searchLocationFlow = do
 
       focussedField = fromMaybe SearchLocPickup state.props.focussedTextField
     when (isDistMoreThanThreshold) do
-      fullAddress <- getPlaceName lat lon gateAddress true
+      fullAddress <- Remote.getPlaceName lat lon gateAddress true
       case fullAddress of
         Just (PlaceName address) -> do
           let
@@ -5449,37 +5403,38 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       pure unit
   else
     pure unit
-firstRideCompletedEvent :: String -> FlowBT String Unit
-firstRideCompletedEvent str = do
-  logField_ <- lift $ lift $ getLogFields
-  let
-    appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+-- firstRideCompletedEvent :: String -> Flow GlobalState Unit
+-- firstRideCompletedEvent str = do
+--   logField_ <- getLogFields
+--   let
+--     appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
 
-    eventPrefix = case appName of
-      "Mana Yatri" -> "my_"
-      "Yatri" -> "y_"
-      "Namma Yatri" -> "ny_"
-      _ -> fromMaybe "" $ (DS.split (DS.Pattern " ") appName) !! 0
+--     eventPrefix = case appName of
+--       "Mana Yatri" -> "my_"
+--       "Yatri" -> "y_"
+--       "Namma Yatri" -> "ny_"
+--       _ -> fromMaybe "" $ (DS.split (DS.Pattern " ") appName) !! 0
 
-    firstRideEventCheck = getValueToLocalStore CUSTOMER_FIRST_RIDE
-  if firstRideEventCheck == "false" then do
-    let
-      clientId = getValueToLocalStore CUSTOMER_CLIENT_ID
-    rideBookingListResponse <- lift $ lift $ HelpersAPI.callApi $ Remote.makeRideBookingListWithStatus "2" "0" "COMPLETED" (Just clientId)
-    case rideBookingListResponse of
-      Right (RideBookingListRes listResp) -> do
-        let
-          arraySize = Arr.length listResp.list
-        if (arraySize == 1) then do
-          void $ liftFlowBT $ logEvent logField_ $ eventPrefix <> "user_first_ride_completed"
-          setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
-        else if arraySize > 1 then do
-          setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
-        else
-          setValueToLocalStore CUSTOMER_FIRST_RIDE "false"
-      Left (err) -> pure unit
-  else
-    pure unit
+--     firstRideEventCheck = getValueToLocalStore CUSTOMER_FIRST_RIDE
+--   if firstRideEventCheck == "false" then do
+--     let
+--       clientId = getValueToLocalStore CUSTOMER_CLIENT_ID
+--     rideBookingListResponse <- HelpersAPI.callApi $ Remote.makeRideBookingListWithStatus "2" "0" "COMPLETED" (Just clientId)
+--     case rideBookingListResponse of
+--       Right (RideBookingListRes listResp) -> do
+--         let
+--           arraySize = Arr.length listResp.list
+--         -- if (arraySize == 1) then do
+--         --   void $ liftFlow $ logEvent logField_ $ eventPrefix <> "user_first_ride_completed"
+--         --   -- setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+--         -- -- else if arraySize > 1 then do
+--         --   -- setValueToLocalStore CUSTOMER_FIRST_RIDE "true"
+--         -- else
+--         --   -- setValueToLocalStore CUSTOMER_FIRST_RIDE "false"
+--         pure unit
+--       Left (err) -> pure unit
+--   else
+--     pure unit
 
 fetchParticularIssueCategory :: String -> FlowBT String (Maybe String)
 fetchParticularIssueCategory categoryLabel = do
@@ -5564,8 +5519,8 @@ rentalScreenFlow = do
             dropLocLat = fromMaybe 0.0 dropLoc.lat
 
             dropLocLon = fromMaybe 0.0 dropLoc.lon
-          srcFullAddress <- getPlaceName pickUpLocLat pickUpLocLon HomeScreenData.dummyLocation true
-          destFullAddress <- getPlaceName dropLocLat dropLocLon HomeScreenData.dummyLocation true
+          srcFullAddress <- Remote.getPlaceName pickUpLocLat pickUpLocLon HomeScreenData.dummyLocation true
+          destFullAddress <- Remote.getPlaceName dropLocLat dropLocLon HomeScreenData.dummyLocation true
           let
             source = maybe ("") (\(PlaceName address) -> address.formattedAddress) srcFullAddress
 
@@ -5660,8 +5615,8 @@ findRentalEstimates state = do
       else do
         void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
         void $ lift $ lift $ toggleLoader true
-        srcFullAddress <- getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation true
-        destFullAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation true
+        srcFullAddress <- Remote.getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation true
+        destFullAddress <- Remote.getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation true
         let
           currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 60 -- TODO-codex :: Delay, need to check if this is the correct way
 
@@ -5740,8 +5695,8 @@ enterRideSearchFLow = do
 
 fetchSrcAndDestLoc :: HomeScreenState -> FlowBT String SearchLocationController.SrcAndDestLocations
 fetchSrcAndDestLoc state = do
-  srcFullAddress <- getPlaceName state.props.sourceLat state.props.sourceLong HomeScreenData.dummyLocation true
-  destFullAddress <- getPlaceName state.props.destinationLat state.props.destinationLong HomeScreenData.dummyLocation true
+  srcFullAddress <- Remote.getPlaceName state.props.sourceLat state.props.sourceLong HomeScreenData.dummyLocation true
+  destFullAddress <- Remote.getPlaceName state.props.destinationLat state.props.destinationLong HomeScreenData.dummyLocation true
   let
     address = maybe "" (\(PlaceName address) -> address.formattedAddress) srcFullAddress
 
@@ -5906,7 +5861,7 @@ fcmHandler notification state = do
     "TRIP_FINISHED" -> do -- TRIP FINISHED
       logStatus "trip_finished_notification" ("bookingId : " <> state.props.bookingId)
       void $ pure $ JB.exitLocateOnMap ""
-      firstRideCompletedEvent ""
+      -- firstRideCompletedEvent ""
       let
         sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
 

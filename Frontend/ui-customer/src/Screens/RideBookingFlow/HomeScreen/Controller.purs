@@ -101,7 +101,7 @@ import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..))
 import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..))
 import Services.Backend as Remote
-import Services.Config (getDriverNumber, getSupportNumber)
+import Services.Config (getDriverNumber, getSupportNumber, getNumbersToWhiteList)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore, deleteValueFromLocalStore)
 import Control.Monad.Trans.Class (lift)
 import Presto.Core.Types.Language.Flow (doAff)
@@ -136,7 +136,7 @@ import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import LocalStorage.Cache (getValueFromCache, setValueToCache, getFromCache, setInCache, removeValueFromCache)
 import DecodeUtil (getAnyFromWindow, stringifyJSON, decodeForeignAny, parseJSON, decodeForeignAnyImpl)
 import JBridge as JB
-import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon,getSpecialTag)
+import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon,getSpecialTag, transformGeoJsonFeature)
 import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Commons as EHC
 import Components.ServiceTierCard.View as ServiceTierCard
@@ -149,6 +149,9 @@ import Helpers.Utils as HU
 import ConfigProvider
 import Screens.HomeScreen.Controllers.Types
 import Data.Show.Generic 
+import Services.API as API
+import SessionCache (getValueFromWindow)
+import Engineering.Helpers.BackTrack (liftFlowBT)
 
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -167,6 +170,7 @@ eval2 action  =
     GenderBannerModal a -> CarouselBannerController.genderBannerModal a
     SafetyBannerAction a -> CarouselBannerController.safetyBannerAction a
     UpdateBanner -> CarouselBannerController.updateBanner
+    -- UpdateRemoteCarouselBanners -> continue state --CarouselBannerController.updateRemoteBanners
 
     ------------------------ Other Home Screen Controller ------------------------
     _ -> eval action 
@@ -891,6 +895,7 @@ eval BackPressed state = do
                   , followers = state.data.followers
                 , currentCityConfig = state.data.currentCityConfig
                 , famousDestinations = state.data.famousDestinations
+                , remoteBannerConfigs = state.data.remoteBannerConfigs
                 }
               , props { 
                   isBanner = state.props.isBanner
@@ -2385,7 +2390,9 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
 
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
   case tag of 
-    "RENTALS" -> exit $ GoToRentalsFlow state { data {rentalsInfo = Nothing } }
+    "RENTALS" -> do
+      let _ = removeMarker $ getCurrentLocationMarker ""
+      exit $ GoToRentalsFlow state { data {rentalsInfo = Nothing } }
     "INTER_CITY" ->
       if state.data.currentCityConfig.enableIntercity then do 
         void $ pure $ updateLocalStage SearchLocationModel 
@@ -2708,6 +2715,48 @@ eval (ShimmerTimer seconds status timerID) state = do
     continue state{props{shimmerViewTimerId = "", showShimmer = false}}
   else update state{props{shimmerViewTimer = seconds, shimmerViewTimerId = timerID}}
 
+eval (UpdateServiceability (API.ServiceabilityRes response) lat lon isRealLocationServiceable) state = do
+  let
+    isWhitelisted = any (_ == getValueFromWindow (show MOBILE_NUMBER)) (getNumbersToWhiteList "")
+    sourceLat = if response.serviceable then lat else state.props.sourceLat
+    sourceLong = if response.serviceable then lon else state.props.sourceLong
+    cityName = if response.serviceable then HU.getCityNameFromCode response.city else state.props.city
+    srcServiceability = isWhitelisted || response.serviceable
+  void $ pure $ setValueToLocalStore CUSTOMER_LOCATION (show cityName)
+  continue state
+    {props { 
+      locateOnMapLocation
+      { sourceLat = sourceLat
+      , sourceLng = sourceLong
+      }
+    , sourceLat = sourceLat
+    , sourceLong = sourceLong
+    , isSrcServiceable = srcServiceability
+    , showlocUnserviceablePopUp = not srcServiceability
+    , city = cityName
+    , showShimmer = false
+    , isRealLocationServiceable = isRealLocationServiceable
+    }}
+
+eval (UpdateSourceLocation response) state = do
+  continue state
+    {props { 
+      locateOnMapLocation
+      { source =
+        case response of
+          Just (PlaceName placeDetails) -> placeDetails.formattedAddress
+          Nothing -> getString CURRENT_LOCATION
+      }
+    }}
+
+eval UpdateRemoteConfigData state = do
+  let famousDestinations = if null state.data.famousDestinations then fetchFamousDestinations FunctionCall else state.data.famousDestinations
+  let location = STR.toLower $ show state.props.city
+      language = RC.getLanguagePrefix $ getLanguageLocale languageKey
+      configName = "customer_carousel_banner" <> language
+      remoteBannerConfigs = if null state.data.remoteBannerConfigs then RC.carouselConfigData location configName "customer_carousel_banner_en" (getValueFromWindow "CUSTOMER_ID") "" "" else state.data.remoteBannerConfigs
+  continue state{data{famousDestinations = famousDestinations, remoteBannerConfigs = remoteBannerConfigs}}
+
 eval _ state = update state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
@@ -2895,7 +2944,67 @@ recenterCurrentLocation state = continueWithCmd state [ do
   ]
 
 updateCurrentLocation :: HomeScreenState -> String -> String -> Eval Action  ScreenOutput HomeScreenState
-updateCurrentLocation state lat lng = exit $ (CheckLocServiceability state (fromMaybe 0.0 (NUM.fromString lat )) (fromMaybe 0.0 (NUM.fromString lng)))
+updateCurrentLocation state lat lng = do
+  let Tuple result isRealLocationChecked = spy "checkIfLocationInCachedCity" $ checkIfLocationInCachedCity state (NUM.fromString lat) (NUM.fromString lng)
+      latitude = fromMaybe 0.0 $ NUM.fromString lat
+      longitude = fromMaybe 0.0 $ NUM.fromString lng
+  if result 
+    then continue state {props{currentLocation{lat = latitude, lng = longitude}, showShimmer = false, isRealLocationServiceable = isRealLocationChecked}}
+  else if isRealLocationChecked 
+    then updateServiceablity latitude longitude isRealLocationChecked
+  else update state
+    
+  where
+    updateServiceablity latitude longitude isRealLocationChecked = do
+      continueWithCmd state [ do
+        push <- getPushFn Nothing "HomeScreen"
+        void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+          let _ = spy "in thread" "in thread"
+          sourceServiceabilityResp <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq latitude longitude) API.ORIGIN --
+          liftFlowBT $ push $ UpdateServiceability sourceServiceabilityResp latitude longitude isRealLocationChecked
+          sourcePlaceName <- Remote.getPlaceName latitude longitude HomeScreenData.dummyLocation false
+          liftFlowBT $ push $ UpdateSourceLocation sourcePlaceName
+        pure NoAction   
+      ]
+  
+  -- exit $ (CheckLocServiceability state (fromMaybe 0.0 (NUM.fromString lat )) (fromMaybe 0.0 (NUM.fromString lng)))
+
+  -- let
+  --       isWhitelisted = any (_ == getValueFromWindow (show MOBILE_NUMBER)) (getNumbersToWhiteList "")
+  --     (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq lat long) ORIGIN --
+  --     let
+  --       sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
+
+  --       sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
+
+  --       cityName = if sourceServiceabilityResp.serviceable then getCityNameFromCode sourceServiceabilityResp.city else updatedState.props.city
+
+  --       srcServiceability = isWhitelisted || sourceServiceabilityResp.serviceable
+  --     sourcePlaceName <- getPlaceName sourceLat sourceLong HomeScreenData.dummyLocation false
+  --     setValueToLocalStore CUSTOMER_LOCATION (show cityName)
+  --     void $ pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
+  --     modifyScreenState
+  --       $ HomeScreenStateType
+  --           ( \homeScreen ->
+  --               homeScreen
+  --                 { props
+  --                   { locateOnMapLocation
+  --                     { sourceLat = sourceLat
+  --                     , sourceLng = sourceLong
+  --                     , source =
+  --                       case sourcePlaceName of
+  --                         Just (PlaceName placeDetails) -> placeDetails.formattedAddress
+  --                         Nothing -> getString STR.CURRENT_LOCATION
+  --                     }
+  --                   , sourceLat = sourceLat
+  --                   , sourceLong = sourceLong
+  --                   , isSrcServiceable = srcServiceability
+  --                   , showlocUnserviceablePopUp = not srcServiceability
+  --                   , city = cityName
+  --                   , showShimmer = false
+  --                   }
+  --                 }
+  --           )
 
 locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState
 locationSelected item addToRecents state isEditDestination = do
@@ -3284,3 +3393,20 @@ truncate precision value = if isJust value then Just $ EHC.truncate precision ((
 
 roundOff :: Maybe Number -> Maybe Int
 roundOff value = if isJust value then Just $ round (fromMaybe 0.0 value) else Nothing
+
+checkIfLocationInCachedCity :: HomeScreenState -> Maybe Number -> Maybe Number -> Tuple Boolean Boolean
+checkIfLocationInCachedCity state mbLat mbLon = do
+  let cityGeoJson = transformGeoJsonFeature (Just $ getValueToLocalStore CACHED_CITY_GEO_JSON) []
+      cachedLat = (NUM.fromString (getValueToLocalStore LAST_KNOWN_LAT))
+      cachedLng = (NUM.fromString (getValueToLocalStore LAST_KNOWN_LON))
+  if elem cityGeoJson ["", "__failed","(null)"]  
+    then Tuple false (isJust mbLat && isJust mbLon) -- Call Serv
+  else do
+    let location = case mbLat, mbLon of
+                    Just lat, Just lon -> {lat : lat, lon : lon}
+                    _,_ -> case cachedLat, cachedLng of 
+                            Just lat, Just lon -> {lat : lat, lon : lon}
+                            _,_ -> {lat : 0.0, lon : 0.0}
+        _ = spy "checkIfPointInsidePolygon" location
+        _ = spy "polygon" cityGeoJson
+    spy "checkIfPointInsidePolygon" (Tuple (runFn3 JB.checkIfPointInsidePolygon cityGeoJson location.lat location.lon) (isJust mbLat && isJust mbLon))

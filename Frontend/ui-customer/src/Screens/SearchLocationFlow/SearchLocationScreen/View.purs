@@ -110,7 +110,7 @@ searchLocationScreen initialState globalProps =
         ConfirmLocationStage -> do 
           storeCallBackLocateOnMap push LocFromMap
         ChooseYourRide -> do
-          void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+          -- void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
           when (DA.null initialState.data.quotesList) $ do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ getEstOrQuotes GetQuotes CheckFlowStatusAction 10 1000.0 push initialState
           pure unit

@@ -46,22 +46,7 @@ getBannerConfigs state action =
   --   else [])
   -- <> (if  state.data.config.banners.homeScreenSafety && state.props.sosBannerType == Just ST.SETUP_BANNER && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
   -- <> 
-  (getRemoteBannerConfigs state.props.city)
-  where
-    getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
-    getRemoteBannerConfigs city = do
-      let location = toLower $ show city
-          language = getLanguage $ getLanguageLocale languageKey
-          configName = "customer_carousel_banner" <> language
-          datas = RC.carouselConfigData location configName "customer_carousel_banner_en" (getValueFromWindow "CUSTOMER_ID") "" ""
-      BannerCarousel.remoteConfigTransformer datas action
-    getLanguage :: String -> String
-    getLanguage lang = 
-      let language = toLower $ take 2 lang
-      in if not (null language) then "_" <> language else "_en"
-
-    cityConfig :: HomeScreenState -> CityConfig
-    cityConfig state = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+  (BannerCarousel.remoteConfigTransformer state.data.remoteBannerConfigs) action
 
 
 getDriverInfoCardBanners :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))

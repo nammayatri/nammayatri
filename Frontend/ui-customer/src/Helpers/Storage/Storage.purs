@@ -114,6 +114,7 @@ data KeyStore
   | CONFIRM_QUOTES_START_TIME
   | BOOKING_TIME_LIST
   | TICKETS_BOOKED_IN_EVENT
+  | CACHED_CITY_GEO_JSON
 
 derive instance genericKeyStore :: Generic KeyStore _
 

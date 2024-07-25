@@ -313,6 +313,7 @@ public class MainActivity extends AppCompatActivity {
 
     protected JSONObject preInitFlow() {
         Vector<String> res = handleDeepLinkIfAvailable(getIntent());
+        System.out.println("resdeeplink" + res);
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
 
         String viewParam = null, deepLinkJson =null;
@@ -341,6 +342,7 @@ public class MainActivity extends AppCompatActivity {
 
         JSONObject results = new JSONObject();
         try {
+            System.out.println("deepLinkJson" + deepLinkJson);
             if (viewParam != null) results.put("viewParam", viewParam);
             if (viewParam != null) results.put("view_param", viewParam);
             if (deepLinkJson != null) results.put("deepLinkJSON", deepLinkJson);
@@ -721,20 +723,21 @@ public class MainActivity extends AppCompatActivity {
                             JSONObject driverInfoResponse = null;
                             if(preInitFutureTaskResult != null) {
                                 Log.i("APP_PERF", "PRE_INIT : " + System.currentTimeMillis());
+                                System.out.println("preInitFutureTaskResult"+preInitFutureTaskResult);
                                 viewParam = preInitFutureTaskResult.optString("viewParam");
-                                deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                                deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
                             } else {
                                 try {
                                     JSONObject preInitFutureTaskResult = preInitFutureTask.get(4500, TimeUnit.MILLISECONDS);
                                     Log.i("APP_PERF", "PRE_INIT_NO_EXCEPTION : " + System.currentTimeMillis());
                                     viewParam = preInitFutureTaskResult.optString("viewParam");
-                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
                                 } catch (InterruptedException | ExecutionException | TimeoutException e) {
                                     preInitFutureTask.cancel(true);
                                     JSONObject preInitFutureTaskResult = preInitFlow();
                                     Log.i("APP_PERF", "PRE_INIT_EXCEPTION : " + System.currentTimeMillis());
                                     viewParam = preInitFutureTaskResult.optString("viewParam");
-                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
                                 }
                                 try {
                                     JSONObject driverInfoFutureTaskResult = driverInfoFutureTask.get(4500, TimeUnit.MILLISECONDS);

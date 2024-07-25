@@ -180,6 +180,7 @@ initData = let
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
     , famousDestinations : []
+    , remoteBannerConfigs : []
     },
     props: {
       rideRequestFlow : false
@@ -374,6 +375,7 @@ initData = let
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
+    , isRealLocationServiceable : false
   }
 }
 

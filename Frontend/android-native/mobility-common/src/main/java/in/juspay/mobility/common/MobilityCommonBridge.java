@@ -1192,6 +1192,17 @@ public class MobilityCommonBridge extends HyperBridge {
         return null;
     }
 
+    @JavascriptInterface
+    public boolean checkIfPointInsidePolygon(String geoJson, double latitude, double longitude) {
+        List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
+        System.out.println("polygonCoordinates1" + polygonCoordinates);
+        System.out.println("d1latitude" + latitude);
+        System.out.println("d2longitude" + longitude);
+        Boolean res = pointInsidePolygon(polygonCoordinates, latitude, longitude);
+        System.out.println("polygonCoordinates" + res);
+        return res;
+    }
+
     private Boolean pointInsidePolygon(List<List<LatLng>> polygonCoordinates, Double latitude, Double longitide) {
         try {
             double y = latitude;
@@ -1624,6 +1635,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (markers.containsKey(title)) {
                     Marker m = (Marker) markers.get(title);
                     m.setVisible(false);
+                    m.remove();
                     markers.remove(title);
                     Log.i(MAPS, "Removed marker " + title);
                 }

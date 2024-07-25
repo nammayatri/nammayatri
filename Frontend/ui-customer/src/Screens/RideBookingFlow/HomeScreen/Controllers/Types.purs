@@ -41,6 +41,7 @@ import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, Ho
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 
 import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes, SelectListRes)
+import Services.API as API
 import Common.Types.App as CTP
 
 
@@ -324,6 +325,10 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | UpdateServiceability API.ServiceabilityRes Number Number Boolean
+  | UpdateSourceLocation (Maybe API.PlaceName)
+  | UpdateRemoteCarouselBanners
+  | UpdateRemoteConfigData
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

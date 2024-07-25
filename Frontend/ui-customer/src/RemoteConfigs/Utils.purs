@@ -4,7 +4,7 @@ import Prelude
 import DecodeUtil (decodeForeignObject, parseJSON)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
-import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultRemoteConfig)
+import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultRemoteConfig, RCCarousel)
 import Data.Maybe (Maybe(..), maybe)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Generic.Rep (class Generic)
@@ -54,16 +54,12 @@ defPlaces = {
 
 getFamousDestinations :: String -> Array FamousDestination
 getFamousDestinations city = do
-    let langConfig = fetchRemoteConfigString $ "famous_destinations" <> (getLanguage $ getLanguageLocale languageKey)
-        config = if not $ DS.null langConfig
-                   then langConfig 
+    let langBasedConfig = fetchRemoteConfigString $ "famous_destinations" <> (getLanguagePrefix $ getLanguageLocale languageKey)
+        config = if not $ DS.null langBasedConfig
+                   then langBasedConfig 
                    else fetchRemoteConfigString "famous_destinations_en"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
-  where
-    getLanguage lang = 
-      let language = DS.toLower $ DS.take 2 lang
-      in if not (DS.null language) then "_" <> language else "_en"
 
 getEstimatesOrder :: String -> Array String
 getEstimatesOrder city = do
@@ -82,3 +78,8 @@ getBookAnySelectedServices city = do
     let config = fetchRemoteConfigString "book_any_selected_services"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ["Auto", "Non-AC Mini", "AC Mini"]
     getCityBasedConfig value city
+  
+getLanguagePrefix :: String -> String
+getLanguagePrefix lang = 
+    let language = DS.toLower $ DS.take 2 lang
+    in if not (DS.null language) then "_" <> language else "_en"

@@ -294,7 +294,7 @@ ridePreferencesView push state ridePreferences =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           ]
-          [ serviceTierItem state push item state.props.downgraded false $ getActualIndex index]
+          [ serviceTierItem state push item state.props.downgraded false index]
     ) ridePreferences
   where
     getActualIndex index = DA.length ridePreferences - index - 1

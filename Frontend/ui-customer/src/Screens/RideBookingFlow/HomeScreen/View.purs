@@ -206,14 +206,23 @@ screen initialState =
        [ (\push -> do
           if initialState.props.currentStage == HomeScreen 
             then do
+              void $ launchAff $ flowRunner defaultGlobalState $  liftFlow $ push $ UpdateRemoteConfigData
               let currLocation = runFn3 getAnyFromWindow "current_location" Nothing Just
                   _ = removeFromWindow "current_location"
+                  _ = spy "current_location" currLocation
               case currLocation of
                 Just loc -> push $ UpdateCurrentLocation loc.lat loc.lon
                 Nothing -> do
                   if (initialState.props.sourceLat == 0.0 && initialState.props.sourceLong == 0.0) 
                     then startTimer initialState.props.shimmerViewTimer "shimmerTimer" "1" push ShimmerTimer
-                    else pure unit
+                    else 
+                  let _ = spy "HomeScreen" "using old location"
+                  when (not initialState.props.isRealLocationServiceable) $ liftFlow $ 
+                  push $ UpdateCurrentLocation "" ""
+                  void $ launchAff $ flowRunner defaultGlobalState $ do
+                    void $ delay $ Milliseconds 500.0
+                    let _ = spy "HomeScreen" "using old location"
+                    when (not initialState.props.isRealLocationServiceable) $ liftFlow $ push $ UpdateCurrentLocation "" ""
             else pure unit
           pure $ runEffectFn1 clearTimerWithIdEffect "shimmerTimer")
       , ( \push -> do
@@ -286,7 +295,7 @@ screen initialState =
                   let pollingCount = ceil ((toNumber $ findingQuotesSearchExpired false false)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT))) / 1000.0))
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen pollingCount 3000.0 push initialState
-              HomeScreen -> do
+              HomeScreen -> do                
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
@@ -402,7 +411,7 @@ screen initialState =
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
               case initialState.props.sourceLat, initialState.props.sourceLong of
                 0.0, 0.0 -> do
-                  _ <- getCurrentPosition push CurrentLocation
+                  -- _ <- getCurrentPosition push CurrentLocation
                   pure (pure unit)
                 _, _ -> pure (pure unit)
             else
@@ -4199,14 +4208,14 @@ repeatRideCard push state index trip =
                 ]
             ]
         , linearLayout
-            [ width WRAP_CONTENT
+            [ width MATCH_PARENT
             , height MATCH_PARENT
             , gravity BOTTOM
             , alignParentBottom "true,-1"
             , visibility $ boolToVisibility pillTagVisibility
             ][ linearLayout
                 [ height WRAP_CONTENT
-                , width WRAP_CONTENT
+                , width MATCH_PARENT
                 , gravity CENTER
                 ][ linearLayout -- tag
                     [ width WRAP_CONTENT

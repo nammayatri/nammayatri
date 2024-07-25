@@ -144,4 +144,3 @@ safetyBannerAction action state =
       else do 
         exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
     Banner.NoAction -> update state
-  

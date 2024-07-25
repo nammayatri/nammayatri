@@ -53,6 +53,8 @@ import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
 import Services.API (DeadKmFare)
+import Common.RemoteConfig.Types as RCT
+
 type Contacts = {
   name :: String,
   number :: String
@@ -671,6 +673,7 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
+  , remoteBannerConfigs :: Array RCT.RCCarousel
   }
 
 type InteroperabilityState = {
@@ -936,6 +939,7 @@ type HomeScreenStateProps =
   , shimmerViewTimerId :: String
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
+  , isRealLocationServiceable :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

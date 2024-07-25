@@ -140,7 +140,7 @@ eval (MapReady _ _ _) state = do
       pure (LocationListItemAC [] (LocationListItemController.OnClick state.data.predictionSelectedFromHome))
     ]
     else if state.props.searchLocStage == ChooseYourRide then do
-      pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+      -- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
       drawRouteOnMap state
     else continue state
 
@@ -395,7 +395,7 @@ eval (SetLocationOnMap) state = do
       { lat, lng } = 
         MB.maybe { lat : currentLat, lng : currentLng} (\loc -> mkLatLong currentLat currentLng loc) focussedField
   void $ pure $ hideKeyboardOnNavigation true
-  pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+  -- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
   void $ pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lng, geoJson = "", points = [], zoomLevel = 17.0}
   let newState = state{props{searchLocStage = LocateOnMapStage, locUnserviceable = false}, data{latLonOnMap = MB.fromMaybe (MB.fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc) focussedField}}
   updateAndExit newState $ Reload newState
@@ -498,6 +498,7 @@ removeDuplicates arr = DA.nubByEq (\item1 item2 -> (item1.lat == item2.lat && it
 
 
 handleBackPress state = do 
+  -- let _ = removeMarker $ getCurrentLocationMarker ""
   if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
     else do
       case state.props.searchLocStage of 
@@ -506,9 +507,15 @@ handleBackPress state = do
           continue state {props {searchLocStage = PredictionsStage}, data{latLonOnMap = SearchLocationScreenData.dummyLocationInfo}}
         PredictionsStage -> do 
           void $ pure $ hideKeyboardOnNavigation true
-          if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
-          else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
-          else exit $ RentalsScreen state 
+          if state.data.fromScreen == getScreen HOME_SCREEN then do
+            -- let _ = removeMarker $ getCurrentLocationMarker ""
+            exit $ HomeScreen state 
+          else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then do
+            -- let _ = removeMarker $ getCurrentLocationMarker ""
+            exit $ RideScheduledScreen state
+          else do
+            -- let _ = removeMarker $ getCurrentLocationMarker ""
+            exit $ RentalsScreen state 
         AllFavouritesStage -> continue state{props{searchLocStage = PredictionsStage}}
         LocateOnMapStage -> do 
           void $ pure $ exitLocateOnMap ""

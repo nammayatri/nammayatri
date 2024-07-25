@@ -70,6 +70,8 @@ import LocalStorage.Cache (removeValueFromCache)
 import Helpers.API (callApiBT)
 import Screens.Types (FareProductType(..)) as FPT
 import Services.API (ServiceabilityType(..)) as ServiceabilityType
+import Presto.Core.Types.Language.Flow (getLogFields)
+import Engineering.Helpers.LogEvent (logEvent)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -1430,3 +1432,44 @@ makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq booki
 
 makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
 makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId
+
+getPlaceName :: Number -> Number -> JB.Location -> Boolean -> FlowBT String (Maybe PlaceName)
+getPlaceName lat long location getApiResponse = do
+  case location.address of
+    Just address -> do
+      let
+        addressComponent = mkAddressComponent location "sublocality"
+      pure $ Just $ mkPlaceName lat long address (Just addressComponent)
+    Nothing -> do
+      let
+        address = runFn2 JB.getLocationNameV2 lat long
+      config <- CP.getAppConfigFlowBT CP.appConfig
+      logField_ <- lift $ lift $ getLogFields
+      if address /= "NO_LOCATION_FOUND" && config.geoCoder.enableLLtoAddress then do
+        liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_found"
+        pure $ Just $ mkPlaceName lat long address Nothing
+      else do
+        if getApiResponse then do
+          (GetPlaceNameResp locationName) <- placeNameBT (makePlaceNameReq lat long $ EHC.getMapsLanguageFormat $ getLanguageLocale languageKey)
+          liftFlowBT $ logEvent logField_ "ny_geocode_ll_address_fallback"
+          pure $ locationName !! 0
+        else do
+          pure Nothing
+  where
+  mkPlaceName :: Number -> Number -> String -> Maybe AddressComponents -> PlaceName
+  mkPlaceName lat long address addressComponent =
+    PlaceName
+      { formattedAddress: address
+      , location: LatLong { lat: lat, lon: long }
+      , plusCode: Nothing
+      , addressComponents: [] <> catMaybes [ addressComponent ]
+      , placeId: Nothing
+      }
+
+  mkAddressComponent :: JB.Location -> String -> AddressComponents
+  mkAddressComponent location addressType =
+    AddressComponents
+      { longName: location.place
+      , shortName: location.place
+      , types: [ addressType ]
+      }
