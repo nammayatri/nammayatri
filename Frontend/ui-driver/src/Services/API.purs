@@ -4522,6 +4522,7 @@ data ServiceTierType
   | RENTALS
   | INTERCITY
   | BIKE_TIER
+  | BIKE_DELIVERY
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4582,6 +4583,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "RENTALS"      -> except $ Right RENTALS
                   "INTERCITY"    -> except $ Right INTERCITY
                   "BIKE"         -> except $ Right BIKE_TIER
+                  "BIKE_DELIVERY" -> except $ Right BIKE_DELIVERY
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4597,6 +4599,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode TAXI = standardEncode "TAXI"
     standardEncode TAXI_PLUS = standardEncode "TAXI_PLUS"
     standardEncode BIKE_TIER = standardEncode "BIKE"
+    standardEncode BIKE_DELIVERY = standardEncode "BIKE_DELIVERY"
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
 

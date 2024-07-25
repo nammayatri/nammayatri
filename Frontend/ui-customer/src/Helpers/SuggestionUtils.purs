@@ -365,6 +365,7 @@ correctServiceTierName serviceTierName =
     Just "HATCHBACK" -> Just "Hatchback"
     Just "BIKE" -> Just "Bike Taxi"
     Just "BIKE_TIER" -> Just "Bike Taxi"
+    Just "BIKE_DELIVERY" -> Just "Bike Parcel"
     _ -> serviceTierName
 
 removeDuplicateTrips :: Array Trip -> Int -> Array Trip

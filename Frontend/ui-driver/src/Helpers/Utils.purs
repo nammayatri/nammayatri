@@ -621,6 +621,7 @@ getVehicleVariantImage variant =
                         "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
                         "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
                         "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+                        "BIKE_DELIVERY" -> "ny_ic_bike_parcel_side," <> commonUrl <> "ny_ic_bike_parcel_side.png"
                         _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 getVariantRideType :: String -> String
@@ -1005,3 +1006,4 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+  SA.BIKE_DELIVERY -> "BIKE_DELIVERY"

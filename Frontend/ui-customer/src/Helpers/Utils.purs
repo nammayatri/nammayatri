@@ -677,6 +677,7 @@ getVehicleVariantImage variant viewType =
                                       Kolkata -> variantConfig.bookAny.leftViewImage
                                       _ -> variantConfig.bookAny.leftViewImage
           "BIKE"          -> variantConfig.bike.leftViewImage
+          "BIKE_DELIVERY" -> variantConfig.bikeDelivery.leftViewImage
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -703,6 +704,7 @@ getVehicleVariantImage variant viewType =
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
           "BIKE"          -> variantConfig.bike.image
+          "BIKE_DELIVERY" -> variantConfig.bikeDelivery.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
