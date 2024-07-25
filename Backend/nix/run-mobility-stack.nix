@@ -7,9 +7,11 @@
         common = { config, ... }: {
           imports = [
             (import ./services/nammayatri.nix { inherit (perSystem) config self' inputs'; inherit inputs; })
+            (import ./services/cac.nix { inherit inputs; })
           ];
           apiServer = false;
-          services.nammayatri.enable = true;
+          services.nammayatri.enable = false;
+          services.cac.enable = true;
         };
       in
       {

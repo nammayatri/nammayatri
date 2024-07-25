@@ -31,7 +31,12 @@
         shared-kernel.follows = "shared-kernel";
       };
     };
-
+    context-aware-config = {
+      url = "github:nammayatri/superposition/nammayatri/akhilesh";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
     location-tracking-service.url = "github:nammayatri/location-tracking-service";
     passetto = {
       url = "github:nammayatri/passetto/nixify";
