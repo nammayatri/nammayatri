@@ -36,6 +36,7 @@ packages:
   lib/special-zone
   lib/scheduler
   lib/sessionizer-metrics
+  lib/yudhishthira
   test
   lib/producer
   lib/utils

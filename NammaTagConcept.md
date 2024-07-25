@@ -66,9 +66,11 @@
 
 ## Example Workflow
 
-### Search Level Tagging
+### Event Level Tagging
 - User searches for a ride from a high-demand area.
 - The system automatically assigns a "High-Demand Area" tag to the search.
+- Unsafe area
+- Driver takes a deroute, should mark it as Unsafe ride
 
 ### Driver Level Tagging
 - A driver receives positive feedback for good behavior.
@@ -117,17 +119,17 @@ No input, it will take data from clickhouse
 **Output**
 Nothing
 
-### YudhishthiraEvent
+### Lib.Yudhishthira
 Library in application, which will have all the haskell types of NammaTags, event handler which handle all events coming from application and call Yudhishthira to decide on tag and update the tag in particular transaction object.
 
 ## Types
 
 ```haskell
-data Source = Application Stage | KaalChakra Chakra
+data Source = Application Event | KaalChakra Chakra
 
 data SourceData = Application ApplicationData | KaalChakra KaalChakraData
 
-data Stage = Search | RideAssign | RideStart | RideEnd | RideCancel
+data Event = Search | RideAssign | RideStart | RideEnd | RideCancel
 
 data Chakra = Daily | Weekly | Monthly | Quaterly
 
@@ -173,7 +175,7 @@ data NammaTagApplication = NammaTagApplication
   { tagCategory :: Text,
     tagName :: Text,
     tagPossibleValues :: [Text],
-    tagStage :: Stage,
+    tagStage :: Event,
     tagRule :: TagRule
   } 
 
