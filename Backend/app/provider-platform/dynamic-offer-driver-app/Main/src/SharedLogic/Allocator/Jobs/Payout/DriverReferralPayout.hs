@@ -80,11 +80,13 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   let dStatsList = filter (\ds -> ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- filtering the max referral flagged payouts
   statsWithVpaList <- mapM getStatsWithVpaList dStatsList
   let dailyStatsWithVpaList = filter (\dsv -> isJust dsv.payoutVpa) statsWithVpaList
-  if null dailyStatsWithVpaList || null payoutConfigList
+  logDebug $ "DriverStatsWithVpaList: " <> show dailyStatsWithVpaList
+  if null dailyStatsWithVpaList
     then do
       when toScheduleNextPayout $ do
         case reschuleTimeDiff of
           Just timeDiff' -> do
+            logDebug $ "Rescheduling the Job for Next Day"
             maxShards <- asks (.maxShards)
             createJobIn @_ @'DriverReferralPayout timeDiff' maxShards $
               DriverReferralPayoutJobData
