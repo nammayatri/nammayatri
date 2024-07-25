@@ -146,7 +146,7 @@ referralStepsView push state =
 
 earningsView :: forall w. (Action -> Effect Unit) -> CustomerReferralTrackerScreenState -> PrestoDOM (Effect Unit) w
 earningsView push state =
-  (if state.data.referralCount > 0 then scrollView else linearLayout) 
+  (if isNothing state.data.upiID || state.data.referralCount > 0 then scrollView else linearLayout) 
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , scrollBarY false
@@ -314,7 +314,7 @@ emptyReferralView push state =
      , gravity CENTER
      ] <> FontStyle.h3 TypoGraphy
    , textView $ 
-     [ height $ V 18
+     [ height WRAP_CONTENT
      , text $ getString START_REFERRING_NOW
      , width MATCH_PARENT
      , gravity CENTER
@@ -423,7 +423,7 @@ upiOptionView push state =
     , padding $ PaddingVertical 4 4
     , onClick push $ const $ ShowDeleteUPI
     ][ imageView
-      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_bin_black"
+      [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_bin_black"
       , height $ V 24
       , width $ V 24
       , margin $ MarginRight 12
@@ -434,7 +434,7 @@ upiOptionView push state =
       ] <> FontStyle.subHeading2 TypoGraphy
     , linearLayout[height WRAP_CONTENT, weight 1.0][]
     , imageView
-      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_black_700"
+      [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_chevron_right_black_700"
       , height $ V 24
       , width $ V 24
       ]
@@ -621,7 +621,7 @@ menuView push state =
               , padding $ PaddingVertical 14 14
               , onClick push $ const $ ShowReferralSteps
               ][ imageView 
-                 [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_help_circle_outline"
+                 [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_help_circle_outline"
                  , height $ V 20
                  , width $ V 20
                  , margin $ MarginRight 8
@@ -637,7 +637,7 @@ menuView push state =
               , padding $ PaddingVertical 14 14
               , onClick push $ const $ ShowUPIDetails
               ][ imageView 
-                 [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_bhim_black"
+                 [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_bhim_black"
                  , height $ V 20
                  , width $ V 20
                  , margin $ MarginRight 8
@@ -675,7 +675,7 @@ calendarView push state =
       , visibility GONE
       ]
       [ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar_unfilled_blue,"
+          [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_calendar_unfilled_blue,"
           , height $ V 16
           , width $ V 16
           , margin $ MarginRight 4
@@ -814,7 +814,7 @@ totalEarningsView push state =
           , height $ V 32
           , margin $ MarginTop 8
           , gravity LEFT
-          , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 0 then "ny_ic_chevron_left_light_grey" else "ny_ic_chevron_left_light"
+          , imageWithFallback $ fetchImage COMMON_ASSET $ if state.props.weekIndex == 0 then "ny_ic_chevron_left_light_grey" else "ny_ic_chevron_left_light"
           , onClick push $ const $ LeftChevronClicked state.props.weekIndex
           , clickable $ state.props.weekIndex > 0
           ]
@@ -855,7 +855,7 @@ totalEarningsView push state =
        ][ imageView
           [ width $ V 32
           , height $ V 32
-          , imageWithFallback $ fetchImage FF_ASSET $ if state.props.weekIndex == 3 then "ny_ic_chevron_right_light_grey" else "ny_ic_chevron_right"
+          , imageWithFallback $ fetchImage COMMON_ASSET $ if state.props.weekIndex == 3 then "ny_ic_chevron_right_light_grey" else "ny_ic_chevron_right"
           , margin $ MarginTop 8
           , gravity RIGHT
           , onClick push $ const $ RightChevronClicked state.props.weekIndex
@@ -936,7 +936,7 @@ genericHeader push state title =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , background Color.white900
-  ][ headerIconView push BackPressed (fetchImage FF_ASSET "ny_ic_chevron_left_black") true
+  ][ headerIconView push BackPressed (fetchImage COMMON_ASSET "ny_ic_chevron_left_black") true
    , textView $ 
      [ text title
      , width $ V ((screenWidth unit) - 112)
@@ -948,7 +948,7 @@ genericHeader push state title =
      , padding $ PaddingBottom 3
      , color Color.darkCharcoal
      ] <> FontStyle.h3 TypoGraphy
-   , headerIconView push HeaderSuffixImgOnClick (fetchImage FF_ASSET "ny_ic_more_vertical") suffixImageVisibility
+   , headerIconView push HeaderSuffixImgOnClick (fetchImage COMMON_ASSET "ny_ic_more_vertical") suffixImageVisibility
   ]
 
 headerIconView :: forall w. (Action -> Effect Unit) -> Action -> String -> Boolean ->PrestoDOM (Effect Unit) w 
@@ -1008,7 +1008,7 @@ dottedLineView push margintop earnings currency =
       [ height $ V 2
       , width MATCH_PARENT
       , margin $ MarginRight 8
-      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_dotted_line"
+      , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_dotted_line"
       , weight 1.0
       ]
   , textView $ 
@@ -1044,6 +1044,7 @@ emptyPayoutsView state =
   , visibility $ boolToVisibility $ null $ state.data.currPayoutHistory
   ][textView $ 
     [ width WRAP_CONTENT
+    , height WRAP_CONTENT
     , gravity CENTER
     , text $ getString NO_ACTIVATED_REFERRAL
     , color Color.black900
@@ -1051,6 +1052,7 @@ emptyPayoutsView state =
     ] <> FontStyle.body25 TypoGraphy
   , textView $ 
     [ width WRAP_CONTENT
+    , height WRAP_CONTENT
     , gravity CENTER
     , text $ getString NO_ACTIVE_REFERRAL_ON_DATE
     , color Color.black700
