@@ -14,6 +14,7 @@
 
 module API.Dashboard.Management where
 
+import qualified API.Action.Dashboard.Management.Driver as DriverDSL
 import qualified API.Dashboard.Management.Booking as Booking
 import qualified API.Dashboard.Management.Driver as Driver
 import qualified API.Dashboard.Management.Issue as Issue
@@ -41,6 +42,7 @@ type API =
            :<|> Issue.API
            :<|> Driver.API
            :<|> Booking.API
+           :<|> DriverDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -54,3 +56,4 @@ handler merchantId city _ = do
     :<|> Issue.handler merchantId city
     :<|> Driver.handler merchantId city
     :<|> Booking.handler merchantId city
+    :<|> DriverDSL.handler merchantId city

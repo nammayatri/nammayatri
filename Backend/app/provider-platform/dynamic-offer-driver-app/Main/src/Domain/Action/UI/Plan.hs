@@ -57,6 +57,7 @@ import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverPlan as QDPlan
+import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
@@ -95,6 +96,7 @@ data PlanEntity = PlanEntity
     autopayDuesWithCurrency :: PriceAPIEntity,
     dueBoothChargesWithCurrency :: PriceAPIEntity,
     dues :: [DriverDuesEntity],
+    coinEntity :: Maybe CoinEntity,
     bankErrors :: [ErrorEntity]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -134,6 +136,12 @@ data CurrentPlanRes = CurrentPlanRes
     latestManualPaymentDate :: Maybe UTCTime,
     isLocalized :: Maybe Bool,
     askForPlanSwitch :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data CoinEntity = CoinEntity
+  { coinDiscountUpto :: HighPrecMoney,
+    coinDiscountUptoWithCurrency :: PriceAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -650,8 +658,12 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)
   now <- getCurrentTime
-
+  mbDriverStat <- QDS.findById (cast driverId)
   let planFareBreakup = mkPlanFareBreakup currency offers.offerResp
+      coinCashLeft = if plan.eligibleForCoinDiscount then Just $ max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else Nothing
+      planChargeWithDiscount = find (\x -> x.component == "DISCOUNTED_FEE") planFareBreakup <&> (.amount)
+      maxPlanCharge = find (\x -> x.component == "MAX_FEE_LIMIT") planFareBreakup <&> (.amount)
+      coinDiscountUpto = min <$> coinCashLeft <*> minMaybe planChargeWithDiscount maxPlanCharge
   driver <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbtranslation <- CQPTD.findByPlanIdAndLanguage plan.id (fromMaybe ENGLISH driver.language)
   let translatedName = maybe plan.name (.name) mbtranslation
@@ -682,6 +694,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
         currentDuesWithCurrency = PriceAPIEntity currentDues currency,
         autopayDuesWithCurrency = PriceAPIEntity autopayDues currency,
         dueBoothChargesWithCurrency = PriceAPIEntity dueBoothCharges currency,
+        coinEntity = CoinEntity <$> coinDiscountUpto <*> (PriceAPIEntity <$> coinDiscountUpto <*> pure currency),
         ..
       }
   where
@@ -863,3 +876,7 @@ calcExecutionTime transporterConfig' autopayPaymentStage scheduledAt = do
     Just DF.NOTIFICATION_ATTEMPTING -> addUTCTime executionTimeDiff scheduledAt
     Just DF.EXECUTION_SCHEDULED -> addUTCTime executionTimeDiff scheduledAt
     _ -> scheduledAt
+
+minMaybe :: Ord a => Maybe a -> Maybe a -> Maybe a
+minMaybe (Just a) (Just b) = Just $ min a b
+minMaybe a b = a <|> b

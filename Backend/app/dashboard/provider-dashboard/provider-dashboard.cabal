@@ -55,10 +55,12 @@ library
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
+      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Driver
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
