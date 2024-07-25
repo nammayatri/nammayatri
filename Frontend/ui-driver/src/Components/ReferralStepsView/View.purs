@@ -51,7 +51,7 @@ view push config =
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_gift_boxes"
+            [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_gift_boxes"
             , height $ V 122
             , width $ V 118
             ]
@@ -120,7 +120,7 @@ stagesView push config =
               ][ imageView 
                 [ height $ V 16
                 , width $ V 16
-                , imageWithFallback $ fetchImage FF_ASSET item.icon
+                , imageWithFallback item.icon
                 ]
               ]
             , linearLayout

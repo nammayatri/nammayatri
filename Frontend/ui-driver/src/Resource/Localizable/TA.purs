@@ -1475,7 +1475,7 @@ getTA stringKey =
         FIRST_RIDES_FREE count -> "முதலாவது " <> count <> " சவாரிகள் இலவசம்"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "பிக்கப் இடத்திற்கு அருகில் டிரைவர் இருக்கும்போது கூடுதல் கட்டணங்கள் விதிக்கப்படலாம்."
         REFERRAL_FIRST_RIDE_DESCRIPTION money -> "பரிந்துரைக்கப்பட்ட வாடிக்கையாளர் எடுக்கும் முதல் சவாரிக்கு " <> money <> " பெறுங்கள்"
-        STEPS -> "படிகள்"
+        STEPS -> "கட்டங்கள்"
         CUSTOMER_COMPLETED_FIRST_RIDE -> "வாடிக்கையாளர் முதல் பயணத்தை முடித்தார்"
         VERIFYING -> "சரிபார்க்கிறது"
         PROCESSING -> "செயலாக்கம்"
