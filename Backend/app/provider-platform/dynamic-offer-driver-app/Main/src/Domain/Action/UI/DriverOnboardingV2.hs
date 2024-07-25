@@ -320,18 +320,22 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
               }
       else return Nothing
 
-  {- Atleast one intercity/rental service tier should be selected for displaying intercity/rental rides toggle option to driver -}
+  {- Atleast one intercity/rental non usage restricted service tier should be selected for displaying intercity/rental rides toggle option to driver -}
   let canSwitchToInterCity' =
         foldl
-          ( \canSwitchToInterCityForAnyServiceTierSoFar (selectedServiceTier, _) ->
-              canSwitchToInterCityForAnyServiceTierSoFar || fromMaybe True selectedServiceTier.isIntercityEnabled
+          ( \canSwitchToInterCityForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
+              if isUsageRestricted
+                then canSwitchToInterCityForAnyServiceTierSoFar
+                else canSwitchToInterCityForAnyServiceTierSoFar || fromMaybe True selectedServiceTier.isIntercityEnabled
           )
           False
           driverVehicleServiceTierTypes
       canSwitchToRental' =
         foldl
-          ( \canSwitchToRentalsForAnyServiceTierSoFar (selectedServiceTier, _) ->
-              canSwitchToRentalsForAnyServiceTierSoFar || fromMaybe True selectedServiceTier.isRentalsEnabled
+          ( \canSwitchToRentalsForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
+              if isUsageRestricted
+                then canSwitchToRentalsForAnyServiceTierSoFar
+                else canSwitchToRentalsForAnyServiceTierSoFar || fromMaybe True selectedServiceTier.isRentalsEnabled
           )
           False
           driverVehicleServiceTierTypes
@@ -376,27 +380,25 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
 
   QVehicle.updateSelectedServiceTiers (map (.serviceTierType) $ catMaybes mbSelectedServiceTiers) personId
 
-  {- Atleast one intercity/rental service tier should be selected for getting intercity/rental rides -}
+  {- Atleast one intercity/rental non usage resctricted service tier should be selected for getting intercity/rental rides -}
   let canSwitchToInterCity' =
         foldl
-          ( \canSwitchToInterCityForAnyServiceTierSoFar selectedServiceTier ->
-              canSwitchToInterCityForAnyServiceTierSoFar
-                || ( fromMaybe driverInfo.canSwitchToInterCity canSwitchToInterCity
-                       && fromMaybe True selectedServiceTier.isIntercityEnabled
-                   )
+          ( \canSwitchToInterCityForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
+              if isUsageRestricted
+                then canSwitchToInterCityForAnyServiceTierSoFar
+                else canSwitchToInterCityForAnyServiceTierSoFar || (fromMaybe driverInfo.canSwitchToInterCity canSwitchToInterCity && fromMaybe True selectedServiceTier.isIntercityEnabled)
           )
           False
-          (catMaybes mbSelectedServiceTiers)
+          driverVehicleServiceTierTypes
       canSwitchToRental' =
         foldl
-          ( \canSwitchToRentalsForAnyServiceTierSoFar selectedServiceTier ->
-              canSwitchToRentalsForAnyServiceTierSoFar
-                || ( fromMaybe driverInfo.canSwitchToRental canSwitchToRental
-                       && fromMaybe True selectedServiceTier.isRentalsEnabled
-                   )
+          ( \canSwitchToRentalsForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
+              if isUsageRestricted
+                then canSwitchToRentalsForAnyServiceTierSoFar
+                else canSwitchToRentalsForAnyServiceTierSoFar || (fromMaybe driverInfo.canSwitchToRental canSwitchToRental && fromMaybe True selectedServiceTier.isRentalsEnabled)
           )
           False
-          (catMaybes mbSelectedServiceTiers)
+          driverVehicleServiceTierTypes
 
   QDI.updateRentalAndInterCitySwitch canSwitchToRental' canSwitchToInterCity' personId
 

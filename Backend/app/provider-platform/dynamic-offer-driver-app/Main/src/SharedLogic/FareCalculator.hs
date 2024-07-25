@@ -158,8 +158,8 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           distBasedCaption = show Enums.DIST_BASED_FARE
           mbDistBasedFare = mkBreakupItem distBasedCaption (mkPrice det.distBasedFare)
           deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
-          mbDeadKmFare = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
-      catMaybes [Just mbTimeBasedFare, Just mbDistBasedFare, Just mbDeadKmFare]
+          mbDeadKmFare = mkBreakupItem deadKmFareCaption . mkPrice <$> checkIfZero det.deadKmFare
+      catMaybes [Just mbTimeBasedFare, Just mbDistBasedFare, mbDeadKmFare]
 
     mkFPAmbulanceDetailsBreakupList det = do
       let platformFeeCaption = show Enums.PLATFORM_FEE
@@ -189,6 +189,11 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           extraTimeFareItem = mkBreakupItem extraTimeCaption (mkPrice det.extraTimeFare)
 
       catMaybes [Just deadKmFareItem, Just mbTimeBasedFare, Just mbDistBasedFare, Just extraDistanceFareItem, Just extraTimeFareItem]
+
+    checkIfZero fare =
+      if fare > 0
+        then Just fare
+        else Nothing
 
 -- TODO: make some tests for it
 
