@@ -109,7 +109,7 @@ genericHeaderConfig state =
       , prefixImageConfig
         { height = V 30
         , width = V 30
-        , imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left_black"
+        , imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_left_black"
         , enableRipple = true
         , margin = MarginRight 8
         , layoutMargin = MarginBottom 0
@@ -117,7 +117,7 @@ genericHeaderConfig state =
       , suffixImageConfig
         { height = V 24
         , width = V 24
-        , imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_more_vertical"
+        , imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_more_vertical"
         , enableRipple = false
         , visibility = boolToVisibility $ (any (_ == state.data.currentStage) [Tracker, ReferralSteps]) || (state.data.currentStage == UPIDetails && isJust state.data.upiID)
         }
