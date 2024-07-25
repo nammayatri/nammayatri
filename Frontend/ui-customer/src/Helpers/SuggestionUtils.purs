@@ -374,6 +374,7 @@ correctServiceTierName serviceTierName =
     Just "SEDAN" -> Just "Sedan"
     Just "AUTO_RICKSHAW" -> Just "Auto"
     Just "HATCHBACK" -> Just "Hatchback"
+    Just "BIKE_DELIVERY" -> Just "Bike Parcel"
     _ -> serviceTierName
 
 removeDuplicateTrips :: Array Trip -> Int -> Array Trip
