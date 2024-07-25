@@ -32,6 +32,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
+    getDistancesForScheduledRides :: B.C f Kernel.External.Maps.Types.MapsService,
     getEstimatedPickupDistances :: B.C f Kernel.External.Maps.Types.MapsService,
     getExophone :: B.C f Kernel.External.Call.CallService,
     getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
