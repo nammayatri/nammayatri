@@ -117,6 +117,9 @@ No input, it will take data from clickhouse
 **Output**
 Nothing
 
+### YudhishthiraEvent
+Library in application, which will have all the haskell types of NammaTags, event handler which handle all events coming from application and call Yudhishthira to decide on tag and update the tag in particular transaction object.
+
 ## Types
 
 ```haskell
@@ -189,3 +192,5 @@ data NammaTagResponse = NammaTagResponse
     tagCategory :: Text,
     tagValidity :: Maybe Hours
   }
+
+```
