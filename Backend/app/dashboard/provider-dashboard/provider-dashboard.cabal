@@ -54,6 +54,7 @@ library
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
+      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Driver
       API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant
       API.Action.ProviderPlatform.DynamicOfferDriver.Management.Revenue
       API.Action.ProviderPlatform.DynamicOfferDriver.Management.Ride

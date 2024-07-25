@@ -12,6 +12,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -19,6 +20,7 @@ data SubscriptionConfig = SubscriptionConfig
   { allowDriverFeeCalcSchedule :: Kernel.Prelude.Bool,
     allowDueAddition :: Kernel.Prelude.Bool,
     allowManualPaymentLinks :: Kernel.Prelude.Bool,
+    cgstPercentageOneTimeSecurityDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     deepLinkExpiryTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     genericBatchSizeForJobs :: Kernel.Prelude.Int,
     genericJobRescheduleTime :: Data.Time.NominalDiffTime,
@@ -30,6 +32,7 @@ data SubscriptionConfig = SubscriptionConfig
     sendDeepLink :: Kernel.Prelude.Bool,
     sendInAppFcmNotifications :: Kernel.Prelude.Bool,
     serviceName :: Domain.Types.Plan.ServiceNames,
+    sgstPercentageOneTimeSecurityDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     useOverlayService :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

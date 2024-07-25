@@ -25,6 +25,8 @@ SubscriptionConfig:
     serviceName : Domain.Types.Plan.ServiceNames
     sendDeepLink : Bool
     deepLinkExpiryTimeInMinutes : Maybe Int
+    sgstPercentageOneTimeSecurityDeposit : Maybe  Kernel.Types.Common.HighPrecMoney
+    cgstPercentageOneTimeSecurityDeposit : Maybe Kernel.Types.Common.HighPrecMoney
     isTriggeredAtEndRide : Bool
     allowDriverFeeCalcSchedule : Bool
 

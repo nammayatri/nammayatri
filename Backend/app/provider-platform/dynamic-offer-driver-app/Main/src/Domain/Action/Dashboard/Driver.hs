@@ -79,9 +79,11 @@ module Domain.Action.Dashboard.Driver
     updateFleetOwnerInfo,
     getFleetOwnerInfo,
     linkRCWithDriverForFleet,
+    postDriverClearFee,
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management.Driver
 import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
@@ -2323,3 +2325,24 @@ linkRCWithDriverForFleet merchantShortId opCity fleetOwnerId req = do
     driverRCAssoc <- makeRCAssociation driver.merchantId driver.merchantOperatingCityId driver.id rc.id (convertTextToUTC (Just "2099-12-12"))
     QRCAssociation.create driverRCAssoc
   return Success
+
+postDriverClearFee :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> API.Types.ProviderPlatform.Management.Driver.ClearDriverFeeReq -> Flow APISuccess)
+postDriverClearFee _merchantShortId _opCity driverId req = do
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  let serviceName = mapServiceName req.serviceName
+  let feeType = castCommonFeeTypeToDomainFeeType req.feeType
+  let currency = fromMaybe INR req.currency
+      gstPercentages = (,) <$> req.sgstPercentage <*> req.cgstPercentage
+  void $ DDriver.clearDriverFeeWithCreate (personId, driver.merchantId, merchantOpCityId) serviceName (gstBreakup gstPercentages req.platformFee) feeType currency Nothing req.sendManualLink
+  return Kernel.Types.APISuccess.Success
+  where
+    castCommonFeeTypeToDomainFeeType feeTypeCommon = case feeTypeCommon of
+      API.Types.ProviderPlatform.Management.Driver.PAYOUT_REGISTRATION -> PAYOUT_REGISTRATION
+      API.Types.ProviderPlatform.Management.Driver.ONE_TIME_SECURITY_DEPOSIT -> ONE_TIME_SECURITY_DEPOSIT
+    gstBreakup gstPercentages fee = case gstPercentages of
+      Just (sgstPer, cgstPer) -> (fee * (1.0 - ((cgstPer + sgstPer) / 100.0)), Just $ (cgstPer * fee) / 100.0, Just $ (sgstPer * fee) / 100.0)
+      _ -> (fee, Nothing, Nothing)

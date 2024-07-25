@@ -255,6 +255,7 @@ data UserActionType
   | VERIFY_FLEET_JOINING_OTP
   | LIST_DRIVER_RIDES
   | LINK_RC_WITH_DRIVER
+  | CLEAR_FEE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
