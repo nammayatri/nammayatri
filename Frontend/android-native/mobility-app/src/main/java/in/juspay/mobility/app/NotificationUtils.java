@@ -62,11 +62,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.TimeZone;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -108,6 +111,7 @@ public class NotificationUtils {
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
+    private static final Map<String, Long> processedNotificationIds = new HashMap<>();
 
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
@@ -948,5 +952,80 @@ public class NotificationUtils {
         bHardware = bHardware == null || bHardware.isEmpty() ? "null" : bHardware;
         deviceDetails = bManufacturer + "/" + bModel + "/" + bDevice + "/" + bBoard + "/" + bHardware;
         return deviceDetails;
+    }
+
+    public static void handleNotifications (String notificationType, JSONObject payload, String notificationId, Context context, SharedPreferences sharedPref,boolean triggerUICallback){
+        try {
+            if (notificationAlreadyProcessed(notificationId)) return;
+            String title = payload.getString("title");
+            String body = payload.getString("body");
+            String imageUrl = payload.getString("imageUrl");
+            String key = context.getString(R.string.service);
+            String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
+            if (triggerUICallback) NotificationUtils.triggerUICallbacks(notificationType, String.valueOf(new JSONObject().put("title", title).put("msg" , body)));
+            switch (notificationType){
+                case MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT:
+                    NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                    sharedPref.edit().putString(context.getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
+                    sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.DRIVER_ASSIGNMENT)).apply();
+                    startMainActivity(context);
+                    if (merchantType.equals("DRIVER")){
+                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                    }
+                    break;
+                case MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED:
+                    if (payload.get("show_notification").equals("true")) {
+                        NotificationUtils.showNotification(context, title, body, payload, imageUrl);
+                    }
+                    if (merchantType.equals("DRIVER")){
+                        NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+                    }
+                    break;
+            }
+        }catch (Exception e){
+            FirebaseCrashlytics.getInstance().recordException(e);
+        }
+    }
+
+    public static boolean notificationAlreadyProcessed (String notificationId){
+        long currentTime = System.currentTimeMillis();
+        synchronized (processedNotificationIds) {
+            if (processedNotificationIds.containsKey(notificationId)) {
+                return true;
+            }
+            //put new notificationId
+            processedNotificationIds.put(notificationId, currentTime);
+        }
+        // Remove expired entries
+        long notificationExpiryTime = remoteConfigs.hasKey("notificationExpiryTime") ? remoteConfigs.getLong("notificationExpiryTime") : 5 * 60 * 1000; // 5 minutes
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            processedNotificationIds.entrySet().removeIf(entry -> currentTime - entry.getValue() >= notificationExpiryTime);
+        } else {
+            Iterator<Map.Entry<String, Long>> iterator = processedNotificationIds.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Long> entry = iterator.next();
+                if (currentTime - entry.getValue() > notificationExpiryTime) {
+                    iterator.remove();
+                }
+            }
+        }
+        return false;
+    }
+
+    public static void startMainActivity(Context context) {
+        SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String key = context.getString(R.string.service);
+        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
+        if (merchantType.equals("DRIVER") && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+            Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            try {
+                context.getApplicationContext().startActivity(intent);
+            } catch (Exception e) {
+                Exception exception = new Exception("Error in startMainActivity " + e);
+                FirebaseCrashlytics.getInstance().recordException(exception);
+                NotificationUtils.firebaseLogEventWithParams(context, "exception_in_startMainActivity", "startMainActivity", String.valueOf(e));
+            }
+        }
     }
 }

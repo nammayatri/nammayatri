@@ -142,12 +142,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 NotificationInfo info = CleverTapAPI.getNotificationInfo(extras);
                 if (info.fromCleverTap) {
                     new CTFcmMessageHandler().createNotification(getApplicationContext(), remoteMessage);
-                } else {
-                    payload.put("notification_id", remoteMessage.getData().get("notification_id"));
-                    payload.put("notification_type", remoteMessage.getData().get("notification_type"));
-                    payload.put("entity_ids", remoteMessage.getData().get("entity_ids"));
-                    payload.put("entity_type", remoteMessage.getData().get("entity_type"));
-                    payload.put("show_notification", remoteMessage.getData().get("show_notification"));
+                    return;
+                }
 
                     String title;
                     String body;
@@ -186,8 +182,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         }
                     }
 
+                    payload.put("notification_id", remoteMessage.getData().get("notification_id"));
+                    payload.put("notification_type", remoteMessage.getData().get("notification_type"));
+                    payload.put("entity_ids", remoteMessage.getData().get("entity_ids"));
+                    payload.put("entity_type", remoteMessage.getData().get("entity_type"));
+                    payload.put("show_notification", remoteMessage.getData().get("show_notification"));
+                    payload.put("title", title);
+                    payload.put("body", body);
+                    payload.put("imageUrl", imageUrl);
+
                     SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     String notificationType = (String) payload.get("notification_type");
+                    String notificationId = remoteMessage.getData().get("notification_id");
                     stopChatService(notificationType, sharedPref);
                     String key = getString(R.string.service);
                     String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
@@ -265,7 +271,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             }
                             sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
                             if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
-                                startMainActivity();
+                                NotificationUtils.startMainActivity(this);
                             } else {
                                NotificationUtils.startWidgetService(this, getString(R.string.ride_cancelled), payload, entity_payload, NotificationUtils.RequestSource.FCM);
                             }
@@ -303,13 +309,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             }
                             break;
                         case NotificationTypes.DRIVER_ASSIGNMENT:
-                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
-                            sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.DRIVER_ASSIGNMENT)).apply();
-                            startMainActivity();
-                            if (merchantType.equals("DRIVER")){
-                                NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
-                            }
+                        case NotificationTypes.TRIP_STARTED:
+                            NotificationUtils.handleNotifications(notificationType, payload, notificationId, this, sharedPref, false);
                             break;
 
                         case NotificationTypes.TRIP_UPDATED:
@@ -318,14 +319,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             }
                             for (ShowNotificationCallBack callbacks: showNotificationCallBacks) {
                                 callbacks.hideInAppNotification("EditDest");
-                            }
-                            break;
-                        case NotificationTypes.TRIP_STARTED:
-                            if (payload.get("show_notification").equals("true")) {
-                                NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                            }
-                            if (merchantType.equals("DRIVER")){
-                                NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                             }
                             break;
 
@@ -466,7 +459,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             }  // Silent notification
                             break;
                     }
-                }
+
             }
         } catch (Exception e) {
             Exception exception = new Exception("Error in exception_in_notification " + e);
@@ -657,25 +650,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 executor.shutdown();
             });
         });
-    }
-
-
-
-    private void startMainActivity() {
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        String key = getString(R.string.service);
-        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
-        if (merchantType.equals("DRIVER") && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
-            Intent intent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            try {
-                getApplicationContext().startActivity(intent);
-            } catch (Exception e) {
-                Exception exception = new Exception("Error in startMainActivity " + e);
-                FirebaseCrashlytics.getInstance().recordException(exception);
-                NotificationUtils.firebaseLogEventWithParams(this, "exception_in_startMainActivity", "startMainActivity", String.valueOf(e));
-            }
-        }
     }
 
     private void stopChatService(String notificationType, SharedPreferences sharedPref) {
