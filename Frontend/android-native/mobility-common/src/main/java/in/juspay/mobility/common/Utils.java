@@ -16,6 +16,11 @@ import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
@@ -25,7 +30,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
-import com.theartofdev.edmodo.cropper.CropImage;
+import in.juspay.mobility.common.cropImage.CropImage;
+import in.juspay.mobility.common.cropImage.CropImageActivity;
+import in.juspay.mobility.common.cropImage.CropImageView;
 
 import org.json.JSONObject;
 
