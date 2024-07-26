@@ -36,7 +36,6 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import Kernel.External.Encryption (decrypt, encrypt)
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -292,6 +291,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         cancellationFeeIfCancelled = Nothing,
         isAlreadyFav = Just isAlreadyFav,
         favCount = Just favCount,
+        driverMobileNumberHash = mobileNumberHash,
         ..
       }
 
@@ -360,7 +360,7 @@ rideAssignedReqHandler req = do
       let BookingDetails {..} = req'.bookingDetails
       let fareParams = fromMaybe [] req'.fareBreakups
       let driverNumber = req'.bookingDetails.driverMobileNumber
-      let mobileNumberHash <- getDbHash driverNumber
+      mobileNumberHash <- getDbHash driverNumber
       ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount mobileNumberHash
       let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
       let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams

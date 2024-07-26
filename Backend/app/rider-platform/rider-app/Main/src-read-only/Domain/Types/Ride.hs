@@ -88,9 +88,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE 'AsEncrypted
+type Ride = RideE ('AsEncrypted)
 
-type DecryptedRide = RideE 'AsUnencrypted
+type DecryptedRide = RideE ('AsUnencrypted)
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -120,6 +120,7 @@ instance EncryptedItem Ride where
           driverImage = driverImage entity,
           driverMobileCountryCode = driverMobileCountryCode entity,
           driverMobileNumber = driverMobileNumber entity,
+          driverMobileNumberHash = driverMobileNumberHash entity,
           driverName = driverName entity,
           driverPhoneNumber = driverPhoneNumber_,
           driverRating = driverRating entity,
@@ -185,6 +186,7 @@ instance EncryptedItem Ride where
             driverImage = driverImage entity,
             driverMobileCountryCode = driverMobileCountryCode entity,
             driverMobileNumber = driverMobileNumber entity,
+            driverMobileNumberHash = driverMobileNumberHash entity,
             driverName = driverName entity,
             driverPhoneNumber = driverPhoneNumber_,
             driverRating = driverRating entity,
@@ -236,6 +238,6 @@ data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))
