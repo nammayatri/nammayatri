@@ -32,6 +32,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
@@ -158,7 +159,9 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
   when (isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
-  void $ fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
+  fork "S3 Put Image" do
+    Redis.withLockRedis (imageS3Lock imagePath) 5 $
+      S3.put (T.unpack imagePath) image
   imageEntity <- mkImage personId merchantId imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId
   Query.create imageEntity
 
@@ -254,3 +257,6 @@ getImage merchantId imageId = do
   case imageMetadata of
     Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
     _ -> pure T.empty
+
+imageS3Lock :: Text -> Text
+imageS3Lock path = "image-s3-lock-" <> path
