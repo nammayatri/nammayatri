@@ -225,9 +225,10 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
             mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
             (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
             QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
-            when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
+            when (isValidRideForPayout && isConsideredForPayout riderDetails) $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
         Nothing -> pure ()
   where
+    isConsideredForPayout riderDetails = maybe False (\referredAt -> referredAt >= getDefaultTime) riderDetails.referredAt
     updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId = do
       mbMerchantPN <- CPN.findByMerchantOpCityIdAndMessageKey merchantOpCityId "PAYOUT_REFERRAL_REWARD"
       whenJust mbMerchantPN $ \merchantPN -> do
@@ -284,6 +285,13 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
       return (isValid, mbFlagReason)
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
+
+getDefaultTime :: UTCTime
+getDefaultTime = defaultTime
+  where
+    day = fromGregorian 2024 7 26
+    time = secondsToDiffTime 0
+    defaultTime = UTCTime day time
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
 updateLeaderboardZScore merchantId merchantOpCityId ride = do
