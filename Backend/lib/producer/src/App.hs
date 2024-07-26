@@ -66,4 +66,5 @@ startProducerWithEnv flowRt appCfg appEnv = do
       loopIt fstFn
     loopIt a = do
       !_ <- a
+      threadDelay 100
       loopIt a
