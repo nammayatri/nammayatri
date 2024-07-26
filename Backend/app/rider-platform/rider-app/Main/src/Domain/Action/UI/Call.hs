@@ -29,6 +29,7 @@ module Domain.Action.UI.Call
   )
 where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import Data.Text hiding (elem)
 import qualified Data.Text as T
@@ -56,8 +57,10 @@ import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -109,7 +112,8 @@ initiateCallToDriver ::
   ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->
   m CallRes
@@ -129,6 +133,9 @@ initiateCallToDriver rideId = do
   exotelResponse <- Call.initiateCall booking.merchantId merchantOperatingCityId callReq
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from customer to driver."
   let dCallStatus = Just $ handleCallStatus exotelResponse.callStatus
+  when (dCallStatus == Just DCallStatus.Failed) $ do
+    merchant <- SMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+    void $ CallBPPInternal.callCustomerFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl (getId ride.bppRideId)
   callStatus <- buildCallStatus callStatusId exotelResponse dCallStatus booking
   QCallStatus.create callStatus
   return $ CallRes callStatusId
@@ -153,21 +160,23 @@ initiateCallToDriver rideId = do
             customerIvrResponse = Nothing
           }
 
-callStatusCallback :: (CacheFlow m r, EsqDBFlow m r) => CallCallbackReq -> m CallCallbackRes
+callStatusCallback :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
-  _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
+  callStatus <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
   let interfaceStatus = exotelStatusToInterfaceStatus req.status
   let dCallStatus = Just $ handleCallStatus interfaceStatus
+  sendFCMToDriverOnCallFailure dCallStatus (Just req.customField.rideId) callStatus.merchantId
   QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) interfaceStatus dCallStatus callStatusId
   return Ack
 
-directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel callDurationFallback = do
   let callDuration = callDuratioExotel <|> callDurationFallback
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
   let dCallStatus = Just $ handleCallStatus newCallStatus
+  sendFCMToDriverOnCallFailure dCallStatus callStatus.rideId callStatus.merchantId
   _ <- case recordingUrl_ of
     Just recordUrl -> do
       if recordUrl == ""
@@ -374,3 +383,20 @@ handleCallStatus status
   where
     failedCallStatuses = [CallTypes.INVALID_STATUS, CallTypes.NOT_CONNECTED, CallTypes.FAILED]
     ignoredCallStatuses = [CallTypes.BUSY, CallTypes.NO_ANSWER, CallTypes.MISSED]
+
+sendFCMToDriverOnCallFailure ::
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Maybe DCallStatus.CallAttemptStatus ->
+  Maybe (Id SRide.Ride) ->
+  Maybe Text ->
+  m ()
+sendFCMToDriverOnCallFailure dCallStatus mbRideId mbMerchantId =
+  when (dCallStatus == Just DCallStatus.Failed) $ do
+    rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") mbRideId
+    ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    merchantId <- fromMaybeM (RideFieldNotPresent "merchantId") mbMerchantId
+    merchant <- SMerchant.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+    void $ CallBPPInternal.callCustomerFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl (getId ride.bppRideId)

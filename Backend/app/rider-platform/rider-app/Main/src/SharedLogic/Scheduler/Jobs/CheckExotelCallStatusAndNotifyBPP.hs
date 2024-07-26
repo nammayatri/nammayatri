@@ -61,7 +61,6 @@ handleCallStatus callStatus bppRideId driverOfferApiKey driverOfferBaseUrl = do
     Just DCallStatus.Resolved ->
       return Complete
     Just DCallStatus.Failed -> do
-      void $ CallBPPInternal.callCustomerFCM driverOfferApiKey driverOfferBaseUrl (getId bppRideId)
       return Complete
     Just DCallStatus.Attempted -> do
       -- attempted to call or unregistered Call Stuck

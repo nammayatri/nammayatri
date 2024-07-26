@@ -81,8 +81,6 @@ handleCallStatus callStatus rideId = do
     Just DCallStatus.Resolved ->
       return Complete
     Just DCallStatus.Failed -> do
-      -- Exotel Call Erros
-      CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
       return Complete
     Just DCallStatus.Attempted -> do
       -- attempted to call or unregistered Call Stuck
