@@ -229,8 +229,8 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
           fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
           buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, DRide.Driver)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
-    DashboardRequestorId (reqMerchantId, mocId) -> do
-      unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
+    DashboardRequestorId (reqMerchantId, _) -> do
+      unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
     ApplicationRequestorId jobId -> do

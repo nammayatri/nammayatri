@@ -697,12 +697,11 @@ validateRideAssignedReq ::
   RideAssignedReq ->
   m ValidatedRideAssignedReq
 validateRideAssignedReq RideAssignedReq {..} = do
-  let isInitiatedByCronJob = bookingDetails.isInitiatedByCronJob
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
   -- TODO: Should we put 'TRIP_ASSIGNED' status check in the 'isAssignable' function for normal booking Or Handle for crone Job in Different Way?
-  unless (isAssignable booking || isInitiatedByCronJob) $ throwError (BookingInvalidStatus $ show booking.status)
+  unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   onlinePaymentParameters <-
     if onlinePayment
       then do
