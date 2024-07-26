@@ -135,7 +135,7 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
       bookingDetails <- case fareProductType of
         DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
         DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-        DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
+        DFF.DRIVER_OFFER -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
         DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
         DFF.INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
         DFF.AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
