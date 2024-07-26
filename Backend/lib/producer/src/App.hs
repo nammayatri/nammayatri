@@ -11,7 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE BangPatterns #-}
 
 module App (startProducer) where
 
@@ -24,7 +24,6 @@ import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Prelude
-import Kernel.Tools.LoopGracefully (loopGracefully)
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Flow (runFlowR)
 import qualified Kernel.Utils.Common as KUC
@@ -59,4 +58,12 @@ startProducerWithEnv flowRt appCfg appEnv = do
     )
   let producers = map (\_ -> PF.runProducer) [1 .. appCfg.producersPerPod]
   runFlowR flowRt appEnv $ do
-    loopGracefully $ bool producers ([PF.runReviver] <> producers) appEnv.runReviver
+    loopAll $ bool producers ([PF.runReviver] <> producers) appEnv.runReviver
+  where
+    loopAll [] = pure ()
+    loopAll (fstFn : rstFns) = do
+      mapM_ (\fn -> void . KUC.fork "" $ loopIt fn) rstFns
+      loopIt fstFn
+    loopIt a = do
+      !_ <- a
+      loopIt a
