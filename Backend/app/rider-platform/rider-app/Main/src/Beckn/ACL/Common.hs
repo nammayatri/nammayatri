@@ -182,7 +182,9 @@ parseRideAssignedEvent order msgId txnId = do
         driverAccountId,
         previousRideEndPos,
         fareBreakups,
-        driverTrackingUrl
+        driverTrackingUrl,
+        isAlreadyFav,
+        favCount
       }
   where
     castToInt :: Maybe Text -> Maybe Int
