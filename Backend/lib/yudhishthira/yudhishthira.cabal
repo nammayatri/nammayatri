@@ -68,6 +68,7 @@ library
       TypeApplications
       TypeFamilies
       TypeOperators
+      TemplateHaskell
       ViewPatterns
       BlockArguments
       TypeSynonymInstances
@@ -92,10 +93,12 @@ library
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , scheduler
     , sequelize
     , servant
     , servant-client
     , servant-server
+    , singletons-th
     , text
     , time
     , unordered-containers

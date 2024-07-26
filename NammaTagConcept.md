@@ -113,6 +113,17 @@ No input, it will take data from clickhouse
 
 **Process**
 1. Create data on the basis Chakra from clickhouse and fetch all tags for that Chakra
+```
+inputField = driver or rider id
+
+query :: Text
+queryResult :: Value
+
+[{
+  query = "select driverId, totalRides, totalDistance, totalDuration from users where createdAt > now - 1hr group by driverId;",
+  queryResult = [("totalRides", "Int"), ("totalDistance", "Int"), ("totalDuration", "Int")]
+}]
+```
 2. Loop through each data point, for each tag, apply rule and update user_tag_mapping table, along with domain table of application
 3. Delete all expired user_tag_mapping entries and also delete from domain tables of application (make sure to delete from domain table before deleting from user_tag_mapping)
 
@@ -121,6 +132,9 @@ Nothing
 
 ### Lib.Yudhishthira
 Library in application, which will have all the haskell types of NammaTags, event handler which handle all events coming from application and call Yudhishthira to decide on tag and update the tag in particular transaction object.
+
+### Dronacharya
+Dashboard side interface to create and validate tags and their rules. We should validate the rules by running them.
 
 ## Types
 

@@ -3,7 +3,7 @@ module Lib.Yudhishthira.Types
     YudhishthiraDecideReq (..),
     YudhishthiraDecideResp (..),
     Source (..),
-    SourceData (..),
+    SourceData,
     NammaTag (..),
   )
 where
@@ -19,10 +19,7 @@ data Source
   | KaalChakra Chakra
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SourceData
-  = ApplicationD ApplicationData
-  | KaalChakraD KaalChakraData
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+type SourceData = Text -- json to be decoded in the respective tag
 
 data NammaTag
   = ApplicationTag NammaTagApplication

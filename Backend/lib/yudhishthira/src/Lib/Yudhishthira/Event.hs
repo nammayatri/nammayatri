@@ -1,5 +1,8 @@
 module Lib.Yudhishthira.Event where
 
+import qualified Data.Aeson as A
+import qualified Data.Text.Lazy as DTE
+import qualified Data.Text.Lazy.Encoding as DTE
 import EulerHS.Types as Euler
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
@@ -31,22 +34,24 @@ yudhishthiraDecide req = do
   callAPI url eulerClient "yudhishthira-decide" proxy
     >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_YUDHISHTHIRA_DECIDE") url)
 
-data Handle m = Handle
+data Handle m a = Handle
   { updateTags :: (Text -> m ()),
-    getData :: m ApplicationData
+    getData :: m a
   }
 
 addEvent ::
   ( MonadFlow m,
     Metrics.CoreMetrics m,
-    HasFlowEnv m r '["yudhishthiraUrl" ::: BaseUrl]
+    HasFlowEnv m r '["yudhishthiraUrl" ::: BaseUrl],
+    ToJSON a
   ) =>
   ApplicationEvent ->
-  Handle m ->
+  Handle m a ->
   m ()
 addEvent event Handle {..} = do
-  sourceData <- getData
-  let req = YudhishthiraDecideReq {source = Application event, sourceData = ApplicationD sourceData}
+  sourceData_ <- getData
+  let sourceData = DTE.toStrict . DTE.decodeUtf8 $ A.encode sourceData_
+  let req = YudhishthiraDecideReq {source = Application event, sourceData}
   resp <- yudhishthiraDecide req
   resp.tags `forM_` \tag -> do
     let tagText = tag.tagName <> "#" <> tag.tagValue

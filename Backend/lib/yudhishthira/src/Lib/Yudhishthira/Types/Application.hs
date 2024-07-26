@@ -19,13 +19,3 @@ data ApplicationEvent
   | RideEnd
   | RideCancel
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-data ApplicationData = ApplicationData
-  { ride :: Maybe Text,
-    booking :: Maybe Text,
-    search :: Maybe Text,
-    riderDetails :: Maybe Text,
-    driver :: Maybe Text,
-    driverInfo :: Maybe Text
-  }
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
