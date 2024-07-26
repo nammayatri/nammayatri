@@ -411,30 +411,7 @@ public class MainActivity extends AppCompatActivity {
         context = getApplicationContext();
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         activity = this;
-        if (isClassAvailable ("co.hyperverge.hyperkyc.HyperKyc") && isClassAvailable("co.hyperverge.hyperkyc.data.models.result.HyperKycResult") && isClassAvailable("com.google.gson.Gson")) {
-            launcher = this.registerForActivityResult(new HyperKyc.Contract(), new ActivityResultCallback<HyperKycResult>() {
-                @Override
-                public void onActivityResult(HyperKycResult result) {
-                    try {
-                        Gson gson = new Gson();
-                        String jsonStr = gson.toJson(result);
-
-
-                        JSONObject processPL = new JSONObject();
-                        JSONObject innerPayload = getInnerPayload(new JSONObject(),"process_hv_resp");
-                        innerPayload.put("callback", registeredCallBackForHV)
-                                .put("hv_response", jsonStr);
-                        processPL.put(PaymentConstants.PAYLOAD, innerPayload)
-                                .put("requestId", UUID.randomUUID())
-                                .put("service", getService());
-                        hyperServices.process(processPL);
-                    } catch (Exception e) {
-                        Log.e("HV error : ", "error_in_HyperKycResult");
-                    }
-
-                }
-            });
-        }
+        initiateHvLauncher();
 
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
@@ -508,6 +485,33 @@ public class MainActivity extends AppCompatActivity {
         countAppUsageDays();
     }
 
+    public void initiateHvLauncher() {
+        boolean enableHvLauncherRegistration = remoteConfigs.hasKey("enable_hv_launcher_registration") && remoteConfigs.getBoolean("enable_hv_launcher_registration");
+        if (enableHvLauncherRegistration && isClassAvailable ("co.hyperverge.hyperkyc.HyperKyc") && isClassAvailable("co.hyperverge.hyperkyc.data.models.result.HyperKycResult") && isClassAvailable("com.google.gson.Gson")) {
+            launcher = this.registerForActivityResult(new HyperKyc.Contract(), new ActivityResultCallback<HyperKycResult>() {
+                @Override
+                public void onActivityResult(HyperKycResult result) {
+                    try {
+                        Gson gson = new Gson();
+                        String jsonStr = gson.toJson(result);
+
+
+                        JSONObject processPL = new JSONObject();
+                        JSONObject innerPayload = getInnerPayload(new JSONObject(),"process_hv_resp");
+                        innerPayload.put("callback", registeredCallBackForHV)
+                                .put("hv_response", jsonStr);
+                        processPL.put(PaymentConstants.PAYLOAD, innerPayload)
+                                .put("requestId", UUID.randomUUID())
+                                .put("service", getService());
+                        hyperServices.process(processPL);
+                    } catch (Exception e) {
+                        Log.e("HV error : ", "error_in_HyperKycResult");
+                    }
+
+                }
+            });
+        }
+    }
     private void handleSplashScreen() {
         try {
             setContentView(R.layout.activity_main);
