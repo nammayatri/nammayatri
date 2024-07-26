@@ -662,34 +662,6 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
             tagValue = Just $ show favCount
           }
 
-    isAlreadyFavSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.IS_ALREADY_FAVOURITE,
-                    descriptorName = Just "Is already favourite",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show isAlreadyFav
-          }
-
-    favCountSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.FAVOURITE_COUNT,
-                    descriptorName = Just "Favourite Count",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show favCount
-          }
-
     driverTrackingUrlSingleton =
       List.singleton $
         Spec.Tag

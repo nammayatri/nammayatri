@@ -159,7 +159,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.PhoneCallRequestBuildReq OU.DPhoneCallRequestReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.PHONE_CALL_REQUEST) isValueAddNP Nothing
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.PHONE_CALL_REQUEST) isValueAddNP Nothing False 0
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,

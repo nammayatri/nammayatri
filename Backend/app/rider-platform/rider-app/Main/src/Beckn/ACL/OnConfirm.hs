@@ -76,7 +76,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
               isFreeRide = False
               previousRideEndPos = Nothing
               vehicleAge = Nothing
-              driverAlternatePhoneNumber = Nothing              
+              driverAlternatePhoneNumber = Nothing
               isAlreadyFav = False
               favCount = 0
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
