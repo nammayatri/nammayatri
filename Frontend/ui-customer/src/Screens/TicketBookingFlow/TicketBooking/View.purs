@@ -1135,12 +1135,14 @@ getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of
   Pending -> "ny_ic_transaction_pending"
   Booked -> "ny_ic_white_tick"
   Failed -> "ny_ic_payment_failed"
+  Cancelled -> "ny_ic_cancelled"
 
 getTicketStatusBackgroundColor :: BookingStatus -> {bgColor :: String, statusText :: String }
 getTicketStatusBackgroundColor status = case status of 
   Pending -> { bgColor : Color.yellow900, statusText : "Pending" }
   Booked ->  { bgColor : Color.green900, statusText : "Booked" }
   Failed ->  { bgColor : Color.red900, statusText : "Cancelled" }
+  Cancelled ->  { bgColor : Color.red900, statusText : "Cancelled" }
 
 individualBookingInfoView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 individualBookingInfoView state push =

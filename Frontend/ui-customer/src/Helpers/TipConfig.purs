@@ -27,7 +27,8 @@ type TipVehicleConfig = {
   hatchback :: TipConfig,
   autoRickshaw :: TipConfig,
   taxi :: TipConfig,
-  taxiPlus :: TipConfig
+  taxiPlus :: TipConfig,
+  bike :: TipConfig
 }
 
 
@@ -39,6 +40,8 @@ getTipConfig variant = do
     Hyderabad -> hyderabadConfig variant
     Chennai   -> chennaiConfig variant
     Delhi     -> delhiConfig variant
+    Kolkata   -> yatriSathiConfig variant
+    Siliguri  -> yatriSathiConfig variant
     _         -> defaultTipConfig variant
 
 mkTipConfig :: Array Int -> TipConfig
@@ -96,7 +99,14 @@ defaultTipConfig variant =
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
     "TAXI" -> mkTipConfig []
     "TAXI_PLUS" -> mkTipConfig []
+    "BIKE" -> mkTipConfig []
     _ -> mkTipConfig []
+
+yatriSathiConfig :: String -> TipConfig
+yatriSathiConfig variant = 
+  case variant of
+    "BIKE" -> mkTipConfig [0, 10, 20, 30]
+    _ -> mkTipConfig [0, 20, 30, 50]
 
 getTipViewProps :: TipViewProps -> String -> TipViewProps
 getTipViewProps tipViewProps vehicleVariant = do

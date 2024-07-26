@@ -1352,3 +1352,5 @@ getTE stringKey =
     RENTAL_BOOKING -> "అద్దె బుకింగ్"
     INTERCITY_BOOKING -> "ఇంటర్‌సిటీ బుకింగ్"
     BOOKING -> "బుకింగ్"
+    CLEAN_BIKE -> "స్వచ్ఛంగా బైక్"
+    UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"

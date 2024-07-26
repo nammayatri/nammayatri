@@ -1339,3 +1339,5 @@ getML stringKey =
         RENTAL_BOOKING -> "വാടക ബുക്കിംഗ്"
         INTERCITY_BOOKING -> "ഇന്റർസിറ്റി ബുക്കിംഗ്"
         BOOKING -> "ബുക്കിംഗ്"
+        CLEAN_BIKE -> "വൃത്തിയാക്കിയ ബൈക്ക്"
+        UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"

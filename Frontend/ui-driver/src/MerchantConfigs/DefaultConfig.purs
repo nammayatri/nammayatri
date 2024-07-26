@@ -25,6 +25,13 @@ config =
       showSavedCommission : false,
       lottieQRAnim : false
     }
+   , rateCardScreen : {
+      showYoutubeVideo : true,
+      showRateCard : true,
+      showTollCharges : true
+    },
+    rcLimit : 3
+  , acExplanation : true
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,
@@ -572,7 +579,16 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
-              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig {
+                cab {
+                  freeSeconds = 180,
+                  perMinCharges = 1.0
+                },
+                auto {
+                  freeSeconds = 180,
+                  perMinCharges = 1.0
+                }
+              },
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
@@ -756,6 +772,7 @@ config =
   }
   , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , showProfileAadhaarPan : true
+  , clientName : ""
 }
 
 registrationConfig :: CTC.RegistrationConfig

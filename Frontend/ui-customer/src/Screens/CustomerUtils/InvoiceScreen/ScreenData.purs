@@ -22,6 +22,7 @@ import Foreign.Object (empty)
 import Prelude ((==))
 import MerchantConfig.Utils as MU
 import Common.Types.App (LazyCheck(..))
+import Screens.Types as ST
 
 initData :: InvoiceScreenState
 initData = {
@@ -34,7 +35,8 @@ initData = {
     selectedItem : dummyIndividualCard,
     config : getAppConfig appConfig,
     logField : empty,
-    pdfHeading : if (MU.getMerchant FunctionCall == MU.NAMMAYATRI) then ", here's your driver receipt" else ", here's your invoice"
+    pdfHeading : if (MU.getMerchant FunctionCall == MU.NAMMAYATRI) then ", here's your driver receipt" else ", here's your invoice",
+    rideType : ST.ONE_WAY
   },
   props: {
     paymentMode : "Cash"

@@ -99,7 +99,7 @@ myRideListTransformer isSrcServiceable listRes config = filter (\item -> any (_ 
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-    updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
+    updatedFareList = getFaresList ride.fareBreakup baseDistanceVal (rideApiDetails.fareProductType == "OneWaySpecialZoneAPIDetails")
     specialTags = getSpecialTag ride.specialLocationTag
     cityStr = getValueToLocalStore CUSTOMER_LOCATION
     city = getCityFromString cityStr    
@@ -107,16 +107,19 @@ myRideListTransformer isSrcServiceable listRes config = filter (\item -> any (_ 
     rideType = getFareProductType rideApiDetails.fareProductType
     autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
     cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+    bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
           autoWaitingCharges
+      else if rideDetails.vehicleVariant == "BIKE" then
+          bikeWaitingCharges
       else 
           cabsWaitingCharges
     nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
     nightChargeTill = "5 AM"
     referenceString' = (if nightChargesVal && (getMerchant CTP.FunctionCall) /= YATRI then "1.5" <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")
                         <> (if isHaveFare "DRIVER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO else "")
-                        <> (if isHaveFare "WAITING_CHARGES" updatedFareList || isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList then "\n\n" <> if cityConfig.enableWaitingConfig  then ( getVarString WAITING_CHARGE_DESCRIPTION [show waitingCharges.freeMinutes, show waitingCharges.perMinCharges]) else (getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE) else "")
+                        <> (if ((isHaveFare "WAITING_CHARGES" updatedFareList || isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) && (rideApiDetails.fareProductType /= "OneWaySpecialZoneAPIDetails")) then "\n\n" <> if cityConfig.enableWaitingConfig  then ( getVarString WAITING_CHARGE_DESCRIPTION [show waitingCharges.freeMinutes, show waitingCharges.perMinCharges]) else (getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE) else "")
                         <> (if isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList then "\n\n" <> getEN EARLY_END_RIDE_CHARGES_DESCRIPTION else "")
                         <> (if isHaveFare "CUSTOMER_SELECTED_FARE" updatedFareList then "\n\n" <> getEN CUSTOMER_TIP_DESCRIPTION else "")
                         <> (if isHaveFare "TOLL_CHARGES" updatedFareList then "\n\n" <> "⁺" <> getEN TOLL_CHARGES_DESC else "")

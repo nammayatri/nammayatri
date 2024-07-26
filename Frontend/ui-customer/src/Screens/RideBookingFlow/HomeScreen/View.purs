@@ -266,7 +266,6 @@ screen initialState =
                 else if estimatesPolling.shouldPush then do
                      void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 40 1000.0 push initialState estimatesPolling.id
                 else pure unit
-
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   void $ pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
@@ -3008,8 +3007,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                 Tuple false _ -> RIDE_TRACKING
                                 _ -> DRIVER_TRACKING
 
-              markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.fareProductType
-              markers' = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city DRIVER_TRACKING state.data.fareProductType
+              markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.fareProductType (Just state.props.currentStage)
+              markers' = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city DRIVER_TRACKING state.data.fareProductType (Just state.props.currentStage)
               sourceSpecialTagIcon = zoneLabelIcon state.props.zoneType.sourceTag
               destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
               onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS
@@ -3461,7 +3460,7 @@ homeScreenContent push state =  let
                                 then followView push followers
                                 else emptyTextView state
           , mapView' push state "CustomerHomeScreenMap" 
-          , contentView state
+          -- , contentView state
           , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
           , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
           , suggestionsView push state
@@ -4274,7 +4273,9 @@ repeatRideCard push state index trip =
     getTripSubTitle destination = 
       (DS.drop ((fromMaybe 0 (DS.indexOf (DS.Pattern ",") (destination))) + 2) (destination))
 
-    imageName = case trip.vehicleVariant, isJust trip.serviceTierNameV2 of
+    imageName = do 
+      let _ = spy "RepeatRideCard Trip" trip
+      case trip.vehicleVariant, isJust trip.serviceTierNameV2 of
                   Just variant, true -> getVehicleVariantImage variant RIGHT_VIEW
                   _,_ -> fetchImage FF_ASSET "ny_ic_green_loc_tag"
     
