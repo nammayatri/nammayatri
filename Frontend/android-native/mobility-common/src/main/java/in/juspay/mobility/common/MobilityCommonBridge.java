@@ -157,7 +157,7 @@ import com.google.maps.android.data.Layer;
 import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonPolygonStyle;
-import com.theartofdev.edmodo.cropper.CropImage;
+import in.juspay.mobility.common.cropImage.CropImage;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -304,6 +304,18 @@ public class MobilityCommonBridge extends HyperBridge {
     private MapRemoteConfig mapRemoteConfig;
     protected LocateOnMapManager locateOnMapManager = null;
     private Timer polylineAnimationTimer = null;
+    protected BridgeComponents bridgeComponents ;
+    
+    public MobilityCommonBridge(BridgeComponents bridgeComponents) {
+        super(bridgeComponents);
+        this.bridgeComponents = bridgeComponents;
+        client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
+        receivers = new Receivers(bridgeComponents);
+        receivers.initReceiver();
+        callBack = this::callImageUploadCallBack;
+        Utils.registerCallback(callBack);
+        fetchAndUpdateLastKnownLocation();
+    }
 
     protected enum AppType {
         CONSUMER, PROVIDER
@@ -481,16 +493,6 @@ public class MobilityCommonBridge extends HyperBridge {
         public void setEnableMapClickListener(boolean enable) {
             this.enableMapClickListener = enable;
         }
-    }
-
-    public MobilityCommonBridge(BridgeComponents bridgeComponents) {
-        super(bridgeComponents);
-        client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
-        receivers = new Receivers(bridgeComponents);
-        receivers.initReceiver();
-        callBack = this::callImageUploadCallBack;
-        Utils.registerCallback(callBack);
-        fetchAndUpdateLastKnownLocation();
     }
 
     public MapRemoteConfig getMapRemoteConfig() {
