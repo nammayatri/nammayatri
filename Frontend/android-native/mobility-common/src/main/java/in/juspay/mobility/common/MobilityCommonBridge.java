@@ -157,7 +157,7 @@ import com.google.maps.android.data.Layer;
 import com.google.maps.android.data.geojson.GeoJsonFeature;
 import com.google.maps.android.data.geojson.GeoJsonLayer;
 import com.google.maps.android.data.geojson.GeoJsonPolygonStyle;
-import com.theartofdev.edmodo.cropper.CropImage;
+import in.juspay.mobility.common.cropImage.CropImage;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -312,6 +312,33 @@ public class MobilityCommonBridge extends HyperBridge {
     private MapRemoteConfig mapRemoteConfig;
     protected LocateOnMapManager locateOnMapManager = null;
     private static Hashtable<String, Hashtable <String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
+    protected BridgeComponents bridgeComponents ;
+    
+   public MobilityCommonBridge(BridgeComponents bridgeComponents) {
+        super(bridgeComponents);
+        this.bridgeComponents = bridgeComponents;
+        client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
+        if (isLocationPermissionEnabled()){
+            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
+                    .addOnSuccessListener( location -> {
+                        JSONObject currLoc = new JSONObject();
+                        try {
+                            currLoc.put("lat", location.getLatitude());
+                            currLoc.put("lon", location.getLongitude());
+                            String command = String.format("window[\"onEvent'\"]('%s','%s')", "onLocationFetch", currLoc.toString());
+                            callbackQueue.add(command);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+        }
+
+        receivers = new Receivers(bridgeComponents);
+        receivers.initReceiver();
+        callBack = this::callImageUploadCallBack;
+        Utils.registerCallback(callBack);
+        fetchAndUpdateLastKnownLocation();
+    }
 
     protected enum AppType {
         CONSUMER, PROVIDER
@@ -509,31 +536,6 @@ public class MobilityCommonBridge extends HyperBridge {
         public void setEnableMapClickListener(boolean enable) {
             this.enableMapClickListener = enable;
         }
-    }
-
-    public MobilityCommonBridge(BridgeComponents bridgeComponents) {
-        super(bridgeComponents);
-        client = LocationServices.getFusedLocationProviderClient(bridgeComponents.getContext());
-        if (isLocationPermissionEnabled()){
-            client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
-                    .addOnSuccessListener( location -> {
-                        JSONObject currLoc = new JSONObject();
-                        try {
-                            currLoc.put("lat", location.getLatitude());
-                            currLoc.put("lon", location.getLongitude());
-                            String command = String.format("window[\"onEvent'\"]('%s','%s')", "onLocationFetch", currLoc.toString());
-                            callbackQueue.add(command);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
-        }
-
-        receivers = new Receivers(bridgeComponents);
-        receivers.initReceiver();
-        callBack = this::callImageUploadCallBack;
-        Utils.registerCallback(callBack);
-        fetchAndUpdateLastKnownLocation();
     }
 
     public MapRemoteConfig getMapRemoteConfig() {

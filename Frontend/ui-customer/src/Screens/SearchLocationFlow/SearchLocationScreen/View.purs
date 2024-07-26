@@ -749,7 +749,7 @@ searchLottieLoader push state =
       , id (EHC.getNewIDWithTag "searchLoader")
       , visibility $ boolToVisibility state.props.showLoader
       , afterRender (\action -> do
-        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (EHC.getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/ny_search_loader.json", lottieId = (EHC.getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
         push action
         ) (const NoAction)
       ]

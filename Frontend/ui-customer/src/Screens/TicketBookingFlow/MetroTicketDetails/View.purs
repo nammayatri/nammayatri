@@ -244,7 +244,7 @@ softCancelStatusLottieLoader push state =
       , gravity CENTER
       , id (getNewIDWithTag "softCancelStatusLoader")
       , afterRender (\action -> do
-        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "softCancelStatusLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/ny_search_loader.json", lottieId = (getNewIDWithTag "softCancelStatusLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
         push action
         ) (const NoAction)
       ]

@@ -29,6 +29,8 @@ import android.util.Log;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 
+import in.juspay.mobility.common.cropImage.CropImageActivity;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
