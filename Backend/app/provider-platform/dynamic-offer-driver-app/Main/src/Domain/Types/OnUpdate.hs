@@ -87,7 +87,7 @@ data DEditDestinationUpdateReq = DEditDestinationUpdateReq
     updateType :: UpdateType
   }
 
-data DTollCrossedBuildReq = DTollCrossedBuildReq
+newtype DTollCrossedBuildReq = DTollCrossedBuildReq
   { bookingDetails :: BookingDetails
   }
 
