@@ -237,7 +237,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   return $
     mkRideInterpolationHandler
       isEndRide
-      (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned))
+      (\driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed -> QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls numberOfSelfTuned isDistCalcFailed)
       (\driverId tollCharges tollNames -> void (QRide.updateTollChargesAndNames driverId tollCharges tollNames))
       ( \driverId batchWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
