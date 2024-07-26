@@ -35,6 +35,7 @@ import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types as ST
 
 initData :: HomeScreenState
 initData = let
@@ -287,7 +288,6 @@ initData = let
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
     , showEducationalCarousel : false
-    , specialZoneType : ""
     , currentLocation : dummyLocation
     , isShorterTrip : false
     , locateOnMapLocation : {
@@ -486,6 +486,7 @@ dummyDriverInfo =
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
   , addressWard : Nothing
+  , currentSearchResultType : ST.ESTIMATES
   }
 
 dummySettingBar :: SettingSideBarState
@@ -513,23 +514,6 @@ dummyAddress =
   , "ward"      : Nothing
   , "placeId"   : Nothing
   }
-dummyQuoteAPIEntity :: QuoteAPIEntity
-dummyQuoteAPIEntity = QuoteAPIEntity {
-  agencyNumber : Nothing,
-  createdAt : "",
-  discount : Nothing,
-  estimatedTotalFare : 0,
-  agencyName : "",
-  vehicleVariant : "",
-  estimatedFare : 0,
-  tripTerms : [],
-  id : "",
-  agencyCompletedRidesCount : Nothing,
-  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity},
-  serviceTierShortDesc : Nothing,
-  serviceTierName : Nothing, 
-  airConditioned : Nothing
-}
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents
 dummyDriverOfferAPIEntity =

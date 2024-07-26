@@ -76,7 +76,7 @@ import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
 import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
@@ -101,6 +101,7 @@ import Data.Argonaut.Encode.Class as AE
 import Data.String.Regex (match, regex)
 import Data.String.Regex.Flags (noFlags)
 import Data.Array.NonEmpty (toArray)
+import Data.Array as DA
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -530,7 +531,7 @@ instance encodeFetchImageFrom :: Encode FetchImageFrom where encode = defaultEnu
 instance decodeFetchImageFrom :: Decode FetchImageFrom where decode = defaultEnumDecode
 
 showCarouselScreen :: LazyCheck -> Boolean
-showCarouselScreen a = if os == "IOS" then not ( isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.3.1" ) && getMerchant FunctionCall == NAMMAYATRI else getMerchant FunctionCall == NAMMAYATRI
+showCarouselScreen a = if os == "IOS" then not ( isPreviousVersion (getValueToLocalStore VERSION_NAME) "1.3.1" ) && getMerchant FunctionCall == NAMMAYATRI else getMerchant FunctionCall == NAMMAYATRI || getMerchant FunctionCall == YATRISATHI
 
 terminateApp :: Stage -> Boolean -> Unit
 terminateApp stage exitApp = emitTerminateApp (Just $ getScreenFromStage stage) exitApp
@@ -668,13 +669,14 @@ getVehicleVariantImage variant viewType =
                               Delhi -> variantConfig.autoRickshaw.image
                               _ -> variantConfig.autoRickshaw.leftViewImage
           "BOOK_ANY"      -> case getMerchant FunctionCall of 
-                              YATRISATHI -> variantConfig.bookAny.leftViewImage
                               _ -> case city of 
                                       Hyderabad -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> fetchImage FF_ASSET "ny_ic_auto_cab_yellow"
                                       _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
                                       Delhi -> fetchImage FF_ASSET "ny_ic_auto_cab_black"
+                                      Kolkata -> variantConfig.bookAny.leftViewImage
                                       _ -> variantConfig.bookAny.leftViewImage
+          "BIKE"          -> variantConfig.bike.leftViewImage
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -700,15 +702,19 @@ getVehicleVariantImage variant viewType =
                                       _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum] -> fetchImage COMMON_ASSET "ny_ic_cab_auto_black"
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
+          "BIKE"          -> variantConfig.bike.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
 getVariantRideType variant =
   case getMerchant FunctionCall of
     YATRISATHI -> case variant of
-                    "TAXI" -> getString NON_AC_TAXI
-                    "SUV"  -> getString AC_SUV
-                    _      -> getString AC_CAB
+                    "TAXI" -> "Non-AC Mini"
+                    "SUV"  -> "XL Cab"
+                    "BIKE" -> "Bike Taxi"
+                    "SEDAN" -> "Sedan"
+                    "HATCHBACK" -> "AC Mini"
+                    _      -> "AC Cab"
     _          -> getString AC_CAB
 
 getTitleConfig :: forall w. String -> {text :: String , color :: String}
@@ -717,6 +723,7 @@ getTitleConfig vehicleVariant =
         "TAXI" -> mkReturnObj ((getString NON_AC )<> " " <> (getString TAXI)) CommonColor.orange900
         "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
         "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
+        "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
         _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
   where mkReturnObj text' color' = 
           {
@@ -773,11 +780,18 @@ quoteModalVariantImage variant =
       else  "ny_ic_no_quotes_color"
 
 getCancellationImage :: String -> Int -> String
-getCancellationImage vehicleVariant distance = 
-  if distance <= 500 
-  then if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawNearImage  else "ny_ic_driver_near"
-  else if vehicleVariant == "AUTO_RICKSHAW" then getAutoRickshawStartedImage else "ny_ic_driver_started"
-
+getCancellationImage vehicleVariant distance =
+  if distance <= 500
+  then case vehicleVariant of
+    "AUTO_RICKSHAW" -> getAutoRickshawNearImage
+    "BIKE" -> "ny_ic_driver_near_bike"
+    "AMBULANCE" -> "ny_ic_driver_near_ambulance"
+    _ -> "ny_ic_driver_near"
+  else case vehicleVariant of
+    "AUTO_RICKSHAW" -> getAutoRickshawStartedImage
+    "BIKE" -> "ny_ic_driver_started_bike"
+    "AMBULANCE" -> "ny_ic_driver_started_ambulance"
+    _ -> "ny_ic_driver_started"
 getAutoRickshawNearImage :: String
 getAutoRickshawNearImage  = 
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
@@ -992,7 +1006,8 @@ getAllServices dummy =
     Delhi -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
     Chennai -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Mysore -> ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
-    Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
+    Kolkata -> ["Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
+    Siliguri -> ["Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     _ | elem city [Kochi, Kozhikode, Thrissur, Trivandrum]  -> ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
     Pondicherry -> ["Auto", "Eco"]
     Noida -> ["AC Mini", "AC Sedan", "Auto", "AC SUV"]
@@ -1010,39 +1025,13 @@ getSelectedServices dummy =
     Delhi -> ["AC Mini", "AC Sedan"]
     Chennai -> ["Eco", "Hatchback", "Sedan"]
     Mysore -> ["Non-AC Mini", "AC Mini", "Sedan"]
-    Kolkata -> ["Non-AC", "Hatchback", "Sedan"]
+    Kolkata -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Siliguri -> ["Non-AC Mini", "AC Mini", "Sedan"]
     Kochi -> ["Eco", "Hatchback", "Sedan"]
     Pondicherry -> ["Eco", "Auto"]
     Noida -> ["AC Mini", "AC Sedan"]
     Gurugram -> ["AC Mini", "AC Sedan"]
     _ ->  ["Eco", "Hatchback", "Sedan"] 
-
-getVariantDescription :: String -> { text :: String, airConditioned :: Boolean}
-getVariantDescription variant = 
-  case variant of
-    "AUTO_RICKSHAW" -> { text : "Commute friendly", airConditioned : false}
-    "TAXI" ->{text : "Non-AC Taxi" , airConditioned : false}
-    "TAXI_PLUS" ->{text : "AC Taxi" , airConditioned : false}
-    "SEDAN" ->{text : "AC, Plush rides" , airConditioned : true}
-    "SUV" ->{text : "AC , Spacious rides" , airConditioned : true}
-    "HATCHBACK" ->{text : "Non-AC , Budget rides " , airConditioned : false}
-    _ ->{text : "Non-AC Taxi" , airConditioned : false}
-
-getVehicleName :: String -> String
-getVehicleName vaiant = 
-  case (getMerchant FunctionCall) of
-    YATRISATHI -> case vaiant of
-                    "TAXI" -> "Non AC Taxi"
-                    "SUV"  -> "AC SUV"
-                    _      -> "AC Cab"
-    _          -> case vaiant of
-                    "AUTO_RICKSHAW" -> "Auto Rickshaw"
-                    "TAXI" -> "Non-AC Taxi"
-                    "TAXI_PLUS" -> "AC Taxi"
-                    "SEDAN" -> "Comfy" 
-                    "SUV" -> "SUV"
-                    "HATCHBACK" -> "Eco" 
-                    _ -> "Non-AC Taxi"
 
 encodeBookingTimeList :: Array BookingTime -> String
 encodeBookingTimeList bookingTimeList = do
@@ -1094,22 +1083,23 @@ type Markers = {
 
 data TrackingType = RIDE_TRACKING | DRIVER_TRACKING | ADVANCED_RIDE_TRACKING
 
-getRouteMarkers :: String -> City -> TrackingType -> FareProductType -> Markers
-getRouteMarkers variant city trackingType fareProductType = 
-  { srcMarker : mkSrcMarker city variant,
+getRouteMarkers :: String -> City -> TrackingType -> FareProductType -> Maybe Stage -> Markers
+getRouteMarkers variant city trackingType fareProductType currentStage = 
+  { srcMarker : mkSrcMarker city variant currentStage,
     destMarker : mkDestMarker trackingType fareProductType
   }
 
-mkSrcMarker :: City -> String -> String
+mkSrcMarker :: City -> String ->Maybe Stage -> String
 mkSrcMarker = getCitySpecificMarker
 
-getCitySpecificMarker :: City -> String -> String
-getCitySpecificMarker city variant = 
+getCitySpecificMarker :: City -> String -> Maybe Stage -> String
+getCitySpecificMarker city variant currentStage = 
     case variant of
         "AUTO_RICKSHAW" -> getAutoImage city
         "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
         "SUV"           -> "ny_ic_suv_nav_on_map"
         "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
+        "BIKE"          -> if currentStage == Just RideStarted then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
         _               -> "ny_ic_vehicle_nav_on_map"
 
 mkDestMarker :: TrackingType -> FareProductType -> String

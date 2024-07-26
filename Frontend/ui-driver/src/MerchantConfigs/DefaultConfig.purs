@@ -25,6 +25,13 @@ config =
       showSavedCommission : false,
       lottieQRAnim : false
     }
+   , rateCardScreen : {
+      showYoutubeVideo : true,
+      showRateCard : true,
+      showTollCharges : true
+    },
+    rcLimit : 3
+  , acExplanation : true
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,
@@ -552,7 +559,16 @@ config =
               },
               waitingCharges : 1.50,
               waitingChargesConfig : defWaitingChargesConfig,
-              rentalWaitingChargesConfig : defRentalWaitingChargesConfig,
+              rentalWaitingChargesConfig : defRentalWaitingChargesConfig {
+                cab {
+                  freeSeconds = 180,
+                  perMinCharges = 1.0
+                },
+                auto {
+                  freeSeconds = 180,
+                  perMinCharges = 1.0
+                }
+              },
               rateCardConfig : defRateCardConfig,
               assets :{
                 auto_image :  "ny_ic_black_yellow_auto_side_view",
@@ -726,6 +742,7 @@ config =
     startTime : "21:00:00"
   , endTime : "06:00:00"
   }
+  , clientName : ""
 }
 
 registrationConfig :: CTC.RegistrationConfig

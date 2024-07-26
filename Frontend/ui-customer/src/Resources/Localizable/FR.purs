@@ -1332,3 +1332,5 @@ getFR stringKey =
         RENTAL_BOOKING -> "Réservation de location"
         INTERCITY_BOOKING -> "Réservation interurbaine"
         BOOKING -> "Réservation"
+        CLEAN_BIKE -> "Vélo propre"
+        UNCOMFORTABLE_BIKE -> "Vélo inconfortable"

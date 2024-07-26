@@ -61,7 +61,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Localizable.EN (getEN)
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..), City(..), NavigationMode(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..), City(..), NavigationMode(..))
 import Storage (KeyStore(..))
 import Storage ( getValueToLocalStore, KeyStore(..)) as STO
 import Styles.Colors as Color
@@ -89,10 +89,14 @@ import Screens.Types (FareProductType(..)) as FPT
 import Data.String as STR
 import JBridge as JB
 import Animation as Anim
+import Screens.Types as ST
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
   let enableShareRide = state.data.config.feature.enableShareRide && (not $ rideNotStarted state)
+      _ = spy "DriverInfoCardView" state
+      _ = spy "DriverInfoCardView enableShareRide" enableShareRide
+      _ = spy "DriverInfoCardView rideNotStarted" $ show $ not $ rideNotStarted state
       enableSupport = state.data.config.feature.enableSupport && (Array.any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
   in
   PrestoAnim.animationSet
@@ -256,37 +260,39 @@ sizedBox height' width' =
 
 shareRideButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 shareRideButton push state = 
-  linearLayout
-  [ height $ WRAP_CONTENT
-  , width $ MATCH_PARENT
-  , gravity RIGHT
-  , orientation VERTICAL
-  , clickable $ state.data.providerType == ONUS
-  , accessibility DISABLE
-  , clipChildren false
-  ][ linearLayout
-     [ width $ V 40
-     , height $ V 40
-     , gravity CENTER
-     , background Color.white900
-     , stroke $ "1,"<> Color.grey900
-     , cornerRadius if os == "IOS" then 20.0 else 32.0
-     , clickable $ state.data.providerType == ONUS
-     , accessibilityHint "Share Ride : Button : Select to share ride details"
-     , accessibility ENABLE
-     , onClick push $ const ShareRide
-     , margin $ Margin 8 8 8 8
-     , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-     , rippleColor Color.rippleShade
-     ][ imageView
-       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
-       , height $ V 16
-       , width $ V 16
-       , accessibility DISABLE
-       , alpha if state.data.providerType == ONUS then 1.0 else 0.5
-       ]
-     ]
-  ]
+  let _ = spy "Coming to shareRideButton" state
+  in
+    linearLayout
+    [ height $ WRAP_CONTENT
+    , width $ MATCH_PARENT
+    , gravity RIGHT
+    , orientation VERTICAL
+    , clickable true -- $ state.data.providerType == ONUS
+    , accessibility DISABLE
+    , clipChildren false
+    ][ linearLayout
+      [ width $ V 40
+      , height $ V 40
+      , gravity CENTER
+      , background Color.white900
+      , stroke $ "1,"<> Color.grey900
+      , cornerRadius if os == "IOS" then 20.0 else 32.0
+      , clickable true -- $ state.data.providerType == ONUS
+      , accessibilityHint "Share Ride : Button : Select to share ride details"
+      , accessibility ENABLE
+      , onClick push $ const ShareRide
+      , margin $ Margin 8 8 8 8
+      , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+      , rippleColor Color.rippleShade
+      ][ imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
+        , height $ V 16
+        , width $ V 16
+        , accessibility DISABLE
+        -- , alpha if state.data.providerType == ONUS then 1.0 else 0.5
+        ]
+      ]
+    ]
 
 contactSupport :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 contactSupport push state =
@@ -395,7 +401,7 @@ otpAndWaitView push state =
                , accessibility DISABLE
                , margin $ MarginRight 4
                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-               , visibility $ boolToVisibility $ state.props.isRateCardAvailable || state.data.fareProductType == FPT.RENTAL 
+               , visibility $ boolToVisibility $ state.props.isRateCardAvailable || state.data.fareProductType == FPT.RENTAL
                ]
            , waitTimeView push state
            ])]
@@ -627,7 +633,7 @@ navigateView push state =
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
   , visibility $ boolToVisibility $ state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE && rideNotStarted state
-  , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
+  , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
   ][ imageView
      [ width $ V 20
      , height $ V 20
@@ -1075,6 +1081,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , gravity CENTER_VERTICAL
           , padding $ Padding 0 5 20 5
           , onClick push $ const RateCardInfo
+          , clickable state.props.isRateCardAvailable 
           ][ textView $
              [ text title
              , color Color.black700
@@ -1083,7 +1090,7 @@ paymentMethodView push state title shouldShowIcon uid =
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
             , height $ V 16
             , width $ V 16
-            , visibility $ boolToVisibility state.props.isRateCardAvailable 
+            , visibility $ boolToVisibility $  spy "Clickable" state.props.isRateCardAvailable 
             , margin $ MarginLeft 2
             ]
           ]
@@ -1508,6 +1515,7 @@ rideNotStarted :: DriverInfoCardState -> Boolean
 rideNotStarted state = 
   let lastStage = if state.props.isChatWithEMEnabled then RideStarted else RideAccepted
   in Array.any (_ == state.props.currentStage) [RideAccepted, ChatWithDriver] && (lastStage == RideAccepted || state.props.stageBeforeChatScreen == RideAccepted)
+
 rentalDetailsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 rentalDetailsView push state =
   let rentalData = state.data.rentalData

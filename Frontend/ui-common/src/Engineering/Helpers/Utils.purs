@@ -335,6 +335,7 @@ cityCodeMap =
   , Tuple "std:0452" "madurai"
   , Tuple "std:0416" "vellore"
   , Tuple "std:0353" "siliguri"
+  , Tuple "std:0341" "asansol"
   ]
 
 getCityFromCode :: String -> String

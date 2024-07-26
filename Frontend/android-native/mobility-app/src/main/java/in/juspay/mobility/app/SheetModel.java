@@ -20,6 +20,7 @@ public class SheetModel {
     private double offeredPrice;
     private int customerExtraFee;
     private final int airConditioned;
+    private final int ventilator;
     private final int baseFare;
     private final int reqExpiryTime;
     private final int driverMinExtraFee;
@@ -68,6 +69,7 @@ public class SheetModel {
                       int specialZoneExtraTip,
                       boolean downgradeEnabled,
                       int airConditioned,
+                      int ventilator,
                       String vehicleServiceTier,
                       String rideProductType,
                       String rideDuration,
@@ -119,6 +121,7 @@ public class SheetModel {
         this.specialZoneExtraTip = specialZoneExtraTip;
         this.downgradeEnabled = downgradeEnabled;
         this.airConditioned = airConditioned;
+        this.ventilator = ventilator;
         this.vehicleServiceTier = vehicleServiceTier;
         this.rideProductType = rideProductType;
         this.rideDuration = rideDuration;
@@ -135,6 +138,10 @@ public class SheetModel {
 
     public int isAirConditioned() {
         return airConditioned;
+    }
+
+    public int isVentilator() {
+        return ventilator;
     }
 
     public String getRideProductType() {

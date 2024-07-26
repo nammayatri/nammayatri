@@ -288,7 +288,11 @@ window.getMerchantConfig = function () {
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
           "image" : "ny_ic_single_estimate_auto,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_single_estimate_auto.png"
-        }
+        },
+        "bike" : {
+          "name" : "Bike",
+          "image" : "ny_ic_bike_side,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_bike_side.png"
+        },
 
       }
       , "enableOnlyAuto" : true

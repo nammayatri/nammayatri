@@ -125,6 +125,7 @@ data ScreenOutput = LogoutUser
   | EditDestLocSelected HomeScreenState
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
+  | SelectEstimateAndQuotes HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -164,7 +165,6 @@ data Action = NoAction
   | PopUpModalAction PopUpModal.Action
   | TrackDriver GetDriverLocationResp
   | HandleCallback
-  | UpdatePickupLocation String String String
   | CloseLocationTracking
   | ShowCallDialer CallType
   | CloseShowCallDialer
@@ -324,6 +324,8 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | LocateOnMapCallBack String String String
+  | UpdatePickupLocation String String String
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where
@@ -602,7 +604,6 @@ instance loggableAction :: Loggable Action where
   --   SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "source_to_destination"
   --   TrackDriver resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "track_driver"
   --   HandleCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "handle_call_back"
-  --   UpdatePickupLocation  key lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pickup_location"
   --   ContinueCmd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_cmd"
   --   Restart err -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "restart"
   --   UpdateSourceName lat lon name -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_source_name"

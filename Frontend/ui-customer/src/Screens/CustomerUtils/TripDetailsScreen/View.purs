@@ -349,7 +349,7 @@ tripDetailsView state =
         , width MATCH_PARENT
         , margin $ MarginLeft 10
         ][  textView $
-            [ text $ capitalize $ DS.toLower state.data.selectedItem.vehicleModel
+            [ text $ capitalize $ DS.toLower $ spy "ComingHereTripDetailsScreen" $ getProperVehicleModelName state.data.selectedItem.vehicleModel
             , accessibilityHint $ "date : " <> state.data.date
             , accessibility ENABLE
             , color Color.greyShade
@@ -363,6 +363,9 @@ tripDetailsView state =
           ]
       ]
     ]
+  where
+    getProperVehicleModelName :: String -> String
+    getProperVehicleModelName vehicleModel = if vehicleModel == "Unkown" then "Bike Taxi" else vehicleModel
 
 ------------------- separator -------------------
 separatorView ::  forall w . PrestoDOM (Effect Unit) w

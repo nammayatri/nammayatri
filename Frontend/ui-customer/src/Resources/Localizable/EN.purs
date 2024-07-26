@@ -1332,3 +1332,5 @@ getEN stringKey =
         RENTAL_BOOKING -> "Rental Booking"
         INTERCITY_BOOKING -> "Intercity Booking"
         BOOKING -> "Booking"
+        CLEAN_BIKE -> "Clean Bike"
+        UNCOMFORTABLE_BIKE -> "Uncomfortable Bike"
