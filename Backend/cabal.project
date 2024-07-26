@@ -11,6 +11,7 @@ packages:
   app/rider-platform/rider-app/search-result-aggregator
   app/safety-dashboard
   app/kaal-chakra
+  app/yudhishthira
   app/mocks/sms
   app/mocks/fcm
   app/dashboard/rider-dashboard
@@ -37,7 +38,6 @@ packages:
   lib/special-zone
   lib/scheduler
   lib/sessionizer-metrics
-  lib/yudhishthira
   test
   lib/producer
   lib/utils

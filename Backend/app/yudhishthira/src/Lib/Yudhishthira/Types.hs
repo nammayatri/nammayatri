@@ -17,7 +17,7 @@ import Lib.Yudhishthira.Types.Tag as Reexport
 data Source
   = Application ApplicationEvent
   | KaalChakra Chakra
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type SourceData = Text -- json to be decoded in the respective tag
 

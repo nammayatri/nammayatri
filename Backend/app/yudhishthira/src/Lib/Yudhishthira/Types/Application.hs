@@ -2,9 +2,11 @@ module Lib.Yudhishthira.Types.Application where
 
 import Kernel.Prelude
 import Lib.Yudhishthira.Types.Common
+import Tools.Beam.UtilsTH
 
 data NammaTagApplication = NammaTagApplication
   { tagCategory :: Text,
+    description :: Maybe Text,
     tagName :: Text,
     tagPossibleValues :: [Text],
     tagStage :: ApplicationEvent,
@@ -18,4 +20,6 @@ data ApplicationEvent
   | RideStart
   | RideEnd
   | RideCancel
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''ApplicationEvent)

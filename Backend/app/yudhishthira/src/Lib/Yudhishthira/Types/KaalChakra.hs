@@ -10,10 +10,12 @@ import Kernel.Types.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 import Lib.Yudhishthira.Types.Common
+import Tools.Beam.UtilsTH
 
 data NammaTagChakra = NammaTagChakra
   { tagCategory :: Text,
     tagName :: Text,
+    description :: Maybe Text,
     tagPossibleValues :: [Text],
     tagChakra :: Chakra,
     tagValidity :: Maybe Hours,
@@ -28,8 +30,9 @@ data Chakra
   | Weekly
   | Monthly
   | Quaterly
-  deriving (Eq, Show, Read, FromDhall, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, FromDhall, Generic, ToJSON, FromJSON, ToSchema)
 
+$(mkBeamInstancesForEnum ''Chakra)
 genSingletons [''Chakra]
 showSingInstance ''Chakra
 

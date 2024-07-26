@@ -1,0 +1,16 @@
+imports:
+  NammaTag: Lib.Yudhishthira.Types
+  APISuccess: Kernel.Types.APISuccess
+
+module: Dashboard
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /tag/create
+      auth: ApiTokenAuth
+      request:
+        type: NammaTag
+      response:
+        type: APISuccess

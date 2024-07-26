@@ -4,7 +4,7 @@ github: "nammayatri/nammayatri"
 license: AllRightsReserved
 author: "nammayatri"
 maintainer: "nammayatri"
-copyright: "2023 Juspay Technologies Private Limited"
+copyright: "2024 Moving Innovation Technologies Private Limited"
 
 flags:
   Local:
@@ -19,7 +19,7 @@ flags:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description: Please see the README on GitHub
+description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
 
 default-extensions:
   - ConstraintKinds
@@ -40,59 +40,94 @@ default-extensions:
   - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
-  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
-  - StandaloneDeriving
   - TupleSections
   - TypeApplications
   - TypeFamilies
   - TypeOperators
-  - TemplateHaskell
   - ViewPatterns
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - StandaloneDeriving
+  - PackageImports
+  - TemplateHaskell
 
 dependencies:
-  - base >= 4.7 && < 5
-  - record-dot-preprocessor
-  - record-hasfield
-  - uri-encode
-  - base16-bytestring
-  - bytestring
-  - cryptohash
-  - text
-  - time
   - aeson
-  - servant-client
-  - servant
-  - servant-server
-  - euler-hs
-  - http-types
-  - exceptions
-  - http-client
+  - base >= 4.7 && < 5
+  - generic-lens
+  - bytestring
+  - cryptonite
   - containers
+  - data-default-class
+  - euler-hs
+  - passetto-client
+  - exceptions
+  - hspec
+  - http-client
+  - lens
+  - servant
+  - servant-client
+  - servant-client-core
+  - servant-server
+  - servant-multipart
+  - text
+  - wai
+  - wai-extra
+  - http-types
+  - warp
+  - time
+  - stm
+  - resource-pool
+  - uuid
+  - prometheus-client
+  - record-hasfield
+  - record-dot-preprocessor
+  - servant-openapi3
+  - openapi3
+  - string-conversions
+  - either
+  - persistent
+  - text-conversions
+  - esqueleto
+  - beckn-services
   - unordered-containers
+  - dashboard-helper-api
+  - shared-services
+  - extra
+  - scheduler
+  - singletons
+  - singletons-th
+  - cassava
+  - vector
+  - geohash == 1.0.1
   - cereal
   - beam-core
   - beam-mysql
   - beam-postgres
-  - postgresql-simple
+  - template-haskell
   - sequelize
-
+  - casing
+  - postgresql-simple
+  - random
+  - JuicyPixels
+  - JuicyPixels-extra
+  - base64-bytestring
+  - pureMD5
+  - lens-aeson
+  - http-client-tls
+  - http-conduit
+  - split
+  - hashable
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -Wall
-  - -Wcompat
-  - -Widentities
-  - -fhide-source-paths
-  - -Werror
   - -fplugin=RecordDotPreprocessor
 
 library:
@@ -105,6 +140,7 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror
+    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
@@ -121,5 +157,38 @@ library:
           - -j4
   dependencies:
     - mobility-core
-    - singletons-th
-    - scheduler
+    - haskell-cac
+    - sessionizer-metrics
+    - utils
+  extra-libraries:
+    - cac_client
+
+executables:
+  yudhishthira-exe:
+    main: Main.hs
+    source-dirs: server
+    other-modules: []
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
+    dependencies:
+      - yudhishthira
+      - mobility-core
+      - haskell-cac
+    extra-libraries:
+      - cac_client

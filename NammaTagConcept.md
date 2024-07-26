@@ -115,7 +115,6 @@ No input, it will take data from clickhouse
 1. Create data on the basis Chakra from clickhouse and fetch all tags for that Chakra
 ```
 inputField = driver or rider id
-
 query :: Text
 queryResult :: Value
 
@@ -123,6 +122,7 @@ queryResult :: Value
   query = "select driverId, totalRides, totalDistance, totalDuration from users where createdAt > now - 1hr group by driverId;",
   queryResult = [("totalRides", "Int"), ("totalDistance", "Int"), ("totalDuration", "Int")]
 }]
+First field of query should always be the driverId
 ```
 2. Loop through each data point, for each tag, apply rule and update user_tag_mapping table, along with domain table of application
 3. Delete all expired user_tag_mapping entries and also delete from domain tables of application (make sure to delete from domain table before deleting from user_tag_mapping)

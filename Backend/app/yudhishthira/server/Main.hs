@@ -14,8 +14,8 @@
 
 module Main where
 
-import qualified "kaal-chakra" App
+import qualified "yudhishthira" App
 import Kernel.Prelude
 
 main :: IO ()
-main = App.runKaalChakra identity
+main = App.runService identity

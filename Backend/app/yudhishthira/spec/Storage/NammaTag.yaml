@@ -1,0 +1,51 @@
+imports:
+  TagRule: Lib.Yudhishthira.Types
+  Chakra: Lib.Yudhishthira.Types
+  ApplicationEvent: Lib.Yudhishthira.Types
+  Hours: Kernel.Types.Common
+
+NammaTag:
+  tableName: namma_tag
+  types:
+    TagInfo:
+      enum: "Application ApplicationTagInfo, KaalChakra KaalChakraTagInfo"
+    TagType:
+      enum: "ApplicationTag, KaalChakraTag"
+    ApplicationTagInfo:
+      recordType: NewType
+      event: ApplicationEvent
+      derive: "Eq,Ord,Read"
+    KaalChakraTagInfo:
+      chakra: Chakra
+      validity: Maybe Hours
+      derive: "Eq,Ord,Read"
+
+  fields:
+    name: Text
+    description: Maybe Text
+    category: Text
+    possibleValues: '[Text]'
+    rule: TagRule
+    info: TagInfo
+
+  constraints:
+    name: PrimaryKey
+
+  beamFields:
+    info:
+      tagType: TagType
+      event: Maybe ApplicationEvent
+      chakra: Maybe Chakra
+      validity: Maybe Hours
+
+  fromTType:
+    info: mkTagInfo
+
+  toTType:
+    tagType: getTag
+    event: getEvent
+    chakra: getChakra
+    validity: getValidity
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -12,10 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Main where
+module Tools.Beam.UtilsTH (module Reexport, module Tools.Beam.UtilsTH) where
 
-import qualified "kaal-chakra" App
+import Kernel.Beam.Lib.UtilsTH as Reexport hiding (mkTableInstances, mkTableInstancesWithTModifier)
+import qualified Kernel.Beam.Lib.UtilsTH as TH
 import Kernel.Prelude
+import Language.Haskell.TH
 
-main :: IO ()
-main = App.runKaalChakra identity
+currentSchemaName :: String
+currentSchemaName = "yudhishthira"
+
+mkTableInstances :: Name -> String -> Q [Dec]
+mkTableInstances name table = TH.mkTableInstances name table currentSchemaName
+
+mkTableInstancesWithTModifier :: Name -> String -> [(String, String)] -> Q [Dec]
+mkTableInstancesWithTModifier name table = TH.mkTableInstancesWithTModifier name table currentSchemaName
