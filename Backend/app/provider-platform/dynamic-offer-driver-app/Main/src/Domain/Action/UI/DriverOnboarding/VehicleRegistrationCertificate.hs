@@ -38,6 +38,7 @@ import Data.Aeson hiding (Success)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import Data.Text as T hiding (elem, find, length, map, null, zip)
+import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.IdfyVerification as DIV
@@ -201,7 +202,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
       unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
         throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) (show imageMetadata.imageType))
-      S3.get $ T.unpack imageMetadata.s3Path
+      Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
+        S3.get $ T.unpack imageMetadata.s3Path
 
     buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel =
       Verification.RCVerificationResponse
