@@ -120,9 +120,9 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data FavouriteBookingAPIEntity = FavouriteBookingAPIEntity
-  { id :: Id Ride,
+  { id :: Id DRide.Ride,
     rideRating :: Maybe Int,
-    fromLocation :: Location, 
+    fromLocation :: Location,
     toLocation :: Maybe Location,
     totalFare :: Maybe Money,
     startTime :: Maybe UTCTime
@@ -301,7 +301,7 @@ mkBookingAPIDetails = \case
           estimatedDistanceWithUnit = distance
         }
 
-makeFavouriteBookingAPIEntity :: Ride -> FavouriteBookingAPIEntity
+makeFavouriteBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 makeFavouriteBookingAPIEntity ride = do
   FavouriteBookingAPIEntity
     { id = ride.id,
@@ -364,7 +364,7 @@ buildBookingStatusAPIEntity booking = do
   rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
   return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus
 
-favouritebuildBookingAPIEntity :: Ride -> FavouriteBookingAPIEntity
+favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 
 -- TODO move to Domain.Types.Ride.Extra
