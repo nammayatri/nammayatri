@@ -76,7 +76,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   cancellationRateExceeded <- overallCancellationRate driverStats merchantConfig
   when (driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
     logDebug $ "Blocking Driver: " <> driverId.getId
-    QDI.updateBlockedState (cast driverId) True (Just "AUTOMATICALLY_BLOCKED")
+    QDI.updateBlockedState (cast driverId) True (Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS")
   DP.incrementCancellationCount merchantOpCityId driverId
   where
     overallCancellationRate driverStats merchantConfig = do
