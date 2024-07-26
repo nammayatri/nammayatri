@@ -627,11 +627,12 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
         return 0;
     }
-
+    
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {
         return super.onActivityResult(requestCode, resultCode, data);
     }
+
     @Override
     public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
         switch (requestCode) {

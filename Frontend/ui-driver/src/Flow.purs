@@ -3614,6 +3614,7 @@ logoutFlow = do
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   deleteValueFromLocalStore REFERRAL_CODE_ADDED
   deleteValueFromLocalStore ENTERED_RC
+  deleteValueFromLocalStore GULLAK_TOKEN
   pure $ factoryResetApp ""
   void $ lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit

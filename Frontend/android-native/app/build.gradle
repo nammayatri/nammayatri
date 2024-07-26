@@ -347,8 +347,6 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
 //    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
-    compileOnly 'co.hyperverge:hyperkyc:0.26.0'
-    compileOnly 'com.google.code.gson:gson:2.8.8'
 
     implementation 'com.google.android.play:feature-delivery:2.1.0'
     implementation 'com.google.code.gson:gson:2.8.8'
