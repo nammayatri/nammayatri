@@ -77,11 +77,12 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let lastNthDay = addDays (fromMaybe (-1) transporterConfig.schedulePayoutForDay) (utctDay localTime)
   dailyStatsForEveryDriverList <- QDSE.findAllByDateAndPayoutStatus (Just transporterConfig.payoutBatchLimit) (Just 0) lastNthDay statusForRetry
+  void $ mapM (updateManualStatus transporterConfig) dailyStatsForEveryDriverList
   let dStatsList = filter (\ds -> ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- filtering the max referral flagged payouts
   statsWithVpaList <- mapM getStatsWithVpaList dStatsList
   let dailyStatsWithVpaList = filter (\dsv -> isJust dsv.payoutVpa) statsWithVpaList
   logDebug $ "DriverStatsWithVpaList: " <> show dailyStatsWithVpaList
-  if null dailyStatsWithVpaList
+  if null dailyStatsForEveryDriverList
     then do
       when toScheduleNextPayout $ do
         case reschuleTimeDiff of
@@ -106,7 +107,15 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   where
     getStatsWithVpaList dStats = do
       dInfo <- QDI.findById dStats.driverId >>= fromMaybeM (PersonNotFound dStats.driverId.getId)
+      when (isNothing dInfo.payoutVpa) do
+        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 $ do
+          QDailyStats.updatePayoutStatusById DS.PendingForVpa dStats.id
       pure $ DailyStatsWithVpa {dailyStats = dStats, payoutVpa = dInfo.payoutVpa}
+
+    updateManualStatus transporterConfig dStats = do
+      when (dStats.activatedValidRides > transporterConfig.maxPayoutReferralForADay) do
+        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 $ do
+          QDailyStats.updatePayoutStatusById DS.ManualReview dStats.id
 
 callPayout ::
   ( EncFlow m r,
