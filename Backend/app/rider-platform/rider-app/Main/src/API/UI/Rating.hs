@@ -64,12 +64,12 @@ handler =
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
 rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let filePath = "/path/to/dummy/video.mp4"
-      contentType = T.pack "video/mp4"
+      contType = T.pack "video/mp4"
       fileType = Video
       feedbackMediaUploadReqVideo =
         DFeedback.FeedbackMediaUploadReq
           { file = filePath,
-            reqContentType = contentType,
+            reqContentType = contType,
             fileType = fileType
           }
   _media <- DFeedback.audioFeedbackUpload (personId, merchantId) feedbackMediaUploadReqVideo
