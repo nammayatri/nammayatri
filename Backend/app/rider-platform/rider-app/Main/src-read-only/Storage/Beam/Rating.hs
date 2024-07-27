@@ -16,6 +16,7 @@ data RatingT f = RatingT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
     feedbackDetails :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    mediaId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ratingValue :: B.C f Kernel.Prelude.Int,
     rideId :: B.C f Kernel.Prelude.Text,
     riderId :: B.C f Kernel.Prelude.Text,

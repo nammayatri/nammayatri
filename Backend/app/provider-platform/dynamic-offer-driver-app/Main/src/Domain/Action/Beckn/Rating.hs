@@ -14,8 +14,10 @@
 
 module Domain.Action.Beckn.Rating where
 
+import qualified AWS.S3 as S3
 import Data.List.Extra ((!?))
 import Data.Maybe
+import qualified Data.Text as T
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Merchant
@@ -26,6 +28,8 @@ import qualified Domain.Types.RiderDriverCorrelation as RDCD
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import IssueManagement.Domain.Types.MediaFile as D
+import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
 import Kernel.Types.Common hiding (id)
@@ -33,6 +37,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import Storage.Beam.IssueManagement ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -47,7 +53,8 @@ data DRatingReq = DRatingReq
     ratingValue :: Int,
     feedbackDetails :: [Maybe Text],
     shouldFavDriver :: Maybe Bool,
-    riderPhoneNum :: Maybe Text
+    riderPhoneNum :: Maybe Text,
+    filePath :: Maybe Text
   }
 
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
@@ -107,18 +114,19 @@ handler merchantId req ride = do
       else return (driverStats.totalRatings, driverStats.totalRatingScore)
 
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
+  mediaId <- audioFeedbackUpload mbBooking req.filePath
   _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver
+      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
       QRating.create newRating
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver rideRating.id driverId
+      QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
       logDebug "Driver Rating Coin Event"
       fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance)
   calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum
@@ -143,8 +151,8 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue mbtotalRatin
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> m DRating.Rating
-buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance isFavourite = do
+buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe (Id D.MediaFile) -> m DRating.Rating
+buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance isFavourite mediaId = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now
@@ -160,3 +168,34 @@ validateRequest req = do
   unless (ride.status == DRide.COMPLETED) $
     throwError $ RideInvalidStatus ("Ride is not ready for rating." <> Text.pack (show ride.status))
   return ride
+
+audioFeedbackUpload :: Maybe DBooking.Booking -> Maybe Text -> Flow (Maybe (Id D.MediaFile))
+audioFeedbackUpload mbBooking mbFilePath = do
+  case (mbBooking, mbFilePath) of
+    (Just booking, Just filePath) -> do
+      transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (MerchantNotFound booking.merchantOperatingCityId.getId)
+      let fileType = S3.Audio
+      let fileUrl =
+            transporterConfig.mediaFileUrlPattern
+              & T.replace "<DOMAIN>" "feedback"
+              & T.replace "<FILE_PATH>" filePath
+      mediaId <- createMediaEntry fileUrl fileType
+      return $ Just mediaId
+    (_, _) -> return Nothing
+
+createMediaEntry :: Text -> S3.FileType -> Flow (Id D.MediaFile)
+createMediaEntry url fileType = do
+  fileEntity <- mkFile url
+  _ <- QMF.create fileEntity
+  return fileEntity.id
+  where
+    mkFile fileUrl = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        D.MediaFile
+          { id,
+            _type = fileType,
+            url = fileUrl,
+            createdAt = now
+          }

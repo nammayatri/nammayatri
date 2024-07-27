@@ -22,3 +22,8 @@ ALTER TABLE atlas_driver_offer_bpp.rating ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.rating ADD COLUMN is_favourite boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rating ADD COLUMN media_id character varying(36) ;

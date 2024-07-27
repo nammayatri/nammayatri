@@ -407,6 +407,7 @@ data BecknTag
   | SHOULD_FAVOURITE_DRIVER
   | DEVICE_ID_FLAG
   | TO_UPDATE_DEVICE_ID
+  | MEDIA_FILE_PATH
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
