@@ -20,7 +20,9 @@ module API.UI.Rating
   )
 where
 
+import AWS.S3 (FileType (..))
 import qualified Beckn.ACL.Rating as ACL
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Feedback as DFeedback
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
@@ -61,6 +63,16 @@ handler =
 
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
 rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  let filePath = "/path/to/dummy/video.mp4"
+      contentType = T.pack "video/mp4"
+      fileType = Video
+      feedbackMediaUploadReqVideo =
+        DFeedback.FeedbackMediaUploadReq
+          { file = filePath,
+            reqContentType = contentType,
+            fileType = fileType
+          }
+  _media <- DFeedback.audioFeedbackUpload (personId, merchantId) feedbackMediaUploadReqVideo
   dFeedbackRes <- DFeedback.feedback request personId
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
   fork "call bpp rating api" $ do
@@ -73,3 +85,6 @@ knowYourDriver (personId, _merchantId) rideId = withFlowHandlerAPI . withPersonI
 
 knowYourFavDriver :: (Id Person.Person, Id Merchant.Merchant) -> Text -> App.FlowHandler DFeedback.DriverProfileResponse
 knowYourFavDriver (personId, merchantId) driverId = withFlowHandlerAPI . withPersonIdLogTag personId $ DFeedback.knowYourFavDriver driverId merchantId
+
+-- _audioFeedbackUpload :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackMediaUploadReq ->  App.FlowHandler APISuccess
+-- _audioFeedbackUpload (personId, merchantId) req = withFlowHandlerAPI $ DFeedback.audioFeedbackUpload (cast personId, cast merchantId) req

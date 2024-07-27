@@ -44,3 +44,34 @@ handler =
 
 rating :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> CallBAPInternal.FeedbackReq -> FlowHandler APISuccess
 rating (_, _, _) req = withFlowHandlerAPI $ Domain.rating req
+
+-- type IssueUploadAPI =
+--   MultipartForm Tmp RatingUploadReq
+--     :> Post '[JSON] IssueMediaUploadRes
+
+-- data RatingUploadReq = RatingUploadReq
+--   { file :: FilePath,
+--     reqContentType :: CallBAPInternal.FeedbackReq,
+--     fileType :: FileType
+--   }
+--   deriving stock (Eq, Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- instance FromMultipart Tmp RatingUploadReq where
+--   fromMultipart form = do
+--     RatingUploadReq
+--       <$> fmap fdPayload (lookupFile "file" form)
+--       <*> fmap fdFileCType (lookupFile "file" form)
+--       <*> fmap (TR.read . T.unpack) (lookupInput "fileType" form)
+
+-- instance ToMultipart Tmp RatingUploadReq where
+--   toMultipart RatingUploadReq =
+--     MultipartData
+--       [Input "fileType" (show RatingUploadReq.fileType)]
+--       [FileData "file" (T.pack RatingUploadReq.file) "" (RatingUploadReq.file)]
+
+-- newtype IssueMediaUploadRes = IssueMediaUploadRes
+--   { fileId :: Id MediaFile
+--   }
+--   deriving stock (Eq, Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
