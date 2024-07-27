@@ -486,7 +486,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void initiateHvLauncher() {
-        boolean enableHvLauncherRegistration = remoteConfigs.hasKey("enable_hv_launcher_registration") && remoteConfigs.getBoolean("enable_hv_launcher_registration");
+        boolean enableHvLauncherRegistration = remoteConfigs.hasKey("enable_hv_launcher_registration")? remoteConfigs.getBoolean("enable_hv_launcher_registration") : true;
         if (enableHvLauncherRegistration && isClassAvailable ("co.hyperverge.hyperkyc.HyperKyc") && isClassAvailable("co.hyperverge.hyperkyc.data.models.result.HyperKycResult") && isClassAvailable("com.google.gson.Gson")) {
             launcher = this.registerForActivityResult(new HyperKyc.Contract(), new ActivityResultCallback<HyperKycResult>() {
                 @Override
