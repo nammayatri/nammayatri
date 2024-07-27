@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -67,7 +68,7 @@ handler hnd = do
       expirationTime <- asks (.expirationTime)
       withDynamicLogLevel jobType' . Hedis.withCrossAppRedis . Hedis.whenWithLockRedis (mkRunningJobKey id.getId) (fromIntegral expirationTime) $
         withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
-          res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+          !res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
           registerExecutionResult hnd anyJob res
           releaseLock parentJobId
 
@@ -97,11 +98,12 @@ runnerIterationRedis SchedulerHandle {..} runTask = do
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask
   logTagDebug "Available tasks - Count" . show $ length readyTasks
-  mapM_ (runTask . fst) readyTasks
+  !_ <- mapM (runTask . fst) readyTasks
   let recordIds = map snd readyTasks
   fork "removingFromStream" . unless (null recordIds) $ do
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xAck key groupName recordIds
     void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.xDel key recordIds
+  threadDelay 100000 -- 100 milliseconds
 
 runnerIteration :: forall t. (JobProcessor t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 runnerIteration SchedulerHandle {..} runTask = do
