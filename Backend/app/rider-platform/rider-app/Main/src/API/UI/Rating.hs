@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Tools.Auth
