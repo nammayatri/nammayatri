@@ -34,7 +34,7 @@
 
     location-tracking-service.url = "github:nammayatri/location-tracking-service";
     passetto = {
-      url = "github:nammayatri/passetto/nixify";
+      url = "github:nammayatri/passetto/use-crypton";
       inputs = {
         nixpkgs.follows = "common/nixpkgs";
         flake-parts.follows = "common/flake-parts";
