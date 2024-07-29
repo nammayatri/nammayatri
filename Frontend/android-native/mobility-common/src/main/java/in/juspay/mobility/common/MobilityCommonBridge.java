@@ -203,6 +203,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.Objects;
+import java.io.FileNotFoundException;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -304,7 +305,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected HashMap<String, GroundOverlay> groundOverlays = new HashMap<>();
 
 
-    private  MediaPlayer mediaPlayer = null;
+    public MediaPlayer mediaPlayer = null;
     private android.media.MediaPlayer audioPlayer;
     protected AppType app;
     protected MapUpdate mapUpdate = new MapUpdate();
@@ -4814,13 +4815,21 @@ public class MobilityCommonBridge extends HyperBridge {
     //region Audio Recorder
 
     // Deprecated on 16-Feb-24
-    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID) {
-        addMediaFile(viewID, source, actionPlayerID, playIcon,pauseIcon, timerID, false);
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID, String sourceType) {
+        addMediaFile(viewID, source, actionPlayerID, playIcon,pauseIcon, timerID, false, sourceType);
     }
     @JavascriptInterface
-    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID, boolean autoPlay) {
-        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        mediaPlayer.addMediaFile(viewID, source, actionPlayerID, playIcon, pauseIcon, timerID, autoPlay);
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID, boolean autoPlay, String sourceType) {
+        System.out.println("ADD MEDIA FILE viewID -> " + viewID );
+        System.out.println("ADD MEDIA FILE source -> " + source );
+        System.out.println("ADD MEDIA FILE actionPlayerID -> " + actionPlayerID);
+        System.out.println("ADD MEDIA FILE playIcon ->" + playIcon);
+        System.out.println("ADD MEDIA FILE pauseIcon ->" + pauseIcon);
+        System.out.println("ADD MEDIA FILE timerID ->" + timerID );
+        System.out.println("ADD MEDIA FILE autoPlay ->" + autoPlay );
+        System.out.println("ADD MEDIA FILE sourceType  ->" + sourceType);
+        mediaPlayer = new MediaPlayer(bridgeComponents);
+        mediaPlayer.addMediaFile(viewID, source, actionPlayerID, playIcon, pauseIcon, timerID, autoPlay,sourceType);
     }
 
     // Deprecated on 16-Feb-24
@@ -5056,6 +5065,123 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void storeCallBackContacts(String callback) {
         storeContactsCallBack = callback;
+    }
+
+//    @JavascriptInterface
+//    public String encodeAudioToBase64(String fileUri) {
+//        try {
+//            System.out.println("ENTER ENCODE BASE 64.");
+//            Uri uriFile = Uri.parse(fileUri);
+//            if (uriFile == null) return "";
+//
+//            InputStream audioStream = bridgeComponents.getContext().getContentResolver().openInputStream(uriFile);
+//            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//
+//            byte[] buffer = new byte[1024];
+//            int bytesRead;
+//            while ((bytesRead = audioStream.read(buffer)) != -1) {
+//                baos.write(buffer, 0, bytesRead);
+//            }
+//
+//            byte[] audioBytes = baos.toByteArray();
+//            String encodedAudio = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
+//            System.out.println("RETURN ENC");
+//            return encodedAudio;
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return "";
+//        }
+//    }
+
+//    @JavascriptInterface
+//    public String encodeAudioToBase64(String fileUri) {
+//        try {
+//            System.out.println("ENTER ENCODE BASE 64.");
+//            Uri uriFile = Uri.parse(fileUri);
+//            System.out.println("audio uri."+ uriFile);
+//            if (uriFile == null) {
+//                return "";
+//            }
+//
+//            // Ensure permission check here if necessary
+//            System.out.println("checkuri");
+//            ContentResolver contentResolver = bridgeComponents.getContext().getContentResolver();
+//            System.out.println("checkuri1");
+//            InputStream audioStream = contentResolver.openInputStream(uriFile);
+//            System.out.println("checkuri2");
+//            if (audioStream == null) {
+//                return "";
+//            }
+//
+//            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//            byte[] buffer = new byte[1024];
+//            int bytesRead;
+//            while ((bytesRead = audioStream.read(buffer)) != -1) {
+//                baos.write(buffer, 0, bytesRead);
+//            }
+//
+//            byte[] audioBytes = baos.toByteArray();
+//            String encodedAudio = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
+//            System.out.println("RETURN ENC");
+//            return encodedAudio;
+//
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//            System.out.println("IO EXC ENC");
+//            return "";
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            return "";
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return "";
+//        }
+//    }
+
+    @JavascriptInterface
+    public String encodeAudioToBase64(String fileUri) {
+        Uri uriFile = Uri.fromFile(new File(fileUri));
+        System.out.println("ENC FILE"+uriFile);
+        if (uriFile == null) {
+            System.err.println("URI is null");
+            return "";
+        }
+
+        ContentResolver contentResolver = bridgeComponents.getContext().getContentResolver();
+
+        try (InputStream audioStream = contentResolver.openInputStream(uriFile);
+             ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+
+            if (audioStream == null) {
+                System.err.println("InputStream is null");
+                return "";
+            }
+
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = audioStream.read(buffer)) != -1) {
+                baos.write(buffer, 0, bytesRead);
+            }
+
+            byte[] audioBytes = baos.toByteArray();
+            String encodedAudio = Base64.encodeToString(audioBytes, Base64.NO_WRAP);
+            System.out.println("RETURN ENC" + encodedAudio);
+            return encodedAudio;
+
+        } catch (FileNotFoundException e) {
+            System.err.println("File not found: " + e.getMessage());
+            e.printStackTrace();
+            return "";
+        } catch (IOException e) {
+            System.err.println("IOException: " + e.getMessage());
+            e.printStackTrace();
+            return "";
+        } catch (Exception e) {
+            System.err.println("Exception: " + e.getMessage());
+            e.printStackTrace();
+            return "";
+        }
     }
 
 }

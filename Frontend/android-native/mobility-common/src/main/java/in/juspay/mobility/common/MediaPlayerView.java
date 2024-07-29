@@ -110,8 +110,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     public void addAudioFileUri(final Uri audioFileUri) throws IOException {
         player.setAudioSource(context, audioFileUri);
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -121,13 +120,11 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
                     }
                 }
             });
-        }
     }
 
     public void addAudioFileUrl(String audioFileUrl) throws IOException {
         player.setAudioSource(audioFileUrl);
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -137,20 +134,17 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
                     }
                 }
             });
-        }
     }
 
     public void addAudioFileInput(FileInputStream file) throws IOException {
         player.setAudioSource(file);
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     visualizerBar.updateVisualizer(file);
+                    onTaskComplete();
                 }
             });
-        }
-        onTaskComplete();
     }
 
     public void updateVisualizer(Uri audioFileUrl) throws IOException {
@@ -162,7 +156,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
     }
 
     protected void init(final Context context) {
-        View view = LayoutInflater.from(context).inflate(layout, this);
+        View view = LayoutInflater.from(context).inflate(layout, null);
 
         player.setOnCompleteListener(this)
                 .setOnDurationListener(this)
@@ -244,8 +238,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     @Override
     public void onComplete(MediaPlayerControl player) {
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     actionButton.setImageDrawable(getDrawable(context, playIcon));
@@ -253,44 +246,37 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
                     timer.setText(getTime(player.getDuration()));
                 }
             });
-        }
     }
 
     @Override
     public void onDurationProgress(MediaPlayerControl player, Long duration, Long currentTimestamp) {
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     visualizerBar.updatePlayerPercent(currentTimestamp / (float) duration);
                     timer.setText(getTime(Math.max(0, duration - currentTimestamp)));
                 }
             });
-        }
     }
 
     @Override
     public void onPause(MediaPlayerControl player) {
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     actionButton.setImageDrawable(getDrawable(context, playIcon));
                 }
             });
-        }
     }
 
     @Override
     public void onPlay(MediaPlayerControl player) {
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     actionButton.setImageDrawable(getDrawable(context, pauseIcon));
                 }
             });
-        }
     }
 
     public Drawable getDrawable(Context context, String name) {
@@ -302,8 +288,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     @Override
     public void onPrepared(MediaPlayerControl player) {
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     timer.setText(getTime(player.getDuration()));
@@ -311,7 +296,6 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
                     if(autoPlay) player.play();
                 }
             });
-        }
     }
 
     public String getTime(long milliseconds) {
@@ -322,15 +306,13 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
 
     @Override
     public void onTaskComplete() {
-        if (activity != null) {
-            activity.runOnUiThread(new Runnable() {
+            ExecutorManager.runOnMainThread(new Runnable() {
                 @Override
                 public void run() {
                     actionButton.setVisibility(VISIBLE);
                     progressLoader.setVisibility(GONE);
                 }
             });
-        }
     }
 
     public static class AudioRecorder {
@@ -346,7 +328,7 @@ public class MediaPlayerView extends FrameLayout implements MediaPlayerOnPlayLis
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
             recorder.setOutputFile(fileName);
-            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
             try {
                 recorder.prepare();
             } catch (Exception e) {

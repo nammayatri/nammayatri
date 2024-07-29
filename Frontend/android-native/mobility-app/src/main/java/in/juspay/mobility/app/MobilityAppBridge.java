@@ -179,8 +179,8 @@ public class MobilityAppBridge extends HyperBridge {
             }
 
             @Override
-            public void chatCallBack(String message, String sentBy, String dateFormatted, String len) {
-                callChatMessageCallBack(message, sentBy, dateFormatted, len);
+            public void chatCallBack(String message, String type, String sentBy, String dateFormatted, String len) {
+                callChatMessageCallBack(message, type, sentBy, dateFormatted, len);
             }
 
             @Override
@@ -230,9 +230,9 @@ public class MobilityAppBridge extends HyperBridge {
         ChatService.chatUserId = uuid;
     }
 
-    public void callChatMessageCallBack(String message, String sentBy, String dateFormatted, String len) {
+    public void callChatMessageCallBack(String message, String type, String sentBy, String dateFormatted, String len) {
         if (storeChatMessageCallBack != null) {
-            String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, sentBy, dateFormatted, len);
+            String javascript = String.format("window.callUICallback(\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\");", storeChatMessageCallBack, message, type, sentBy, dateFormatted, len);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
@@ -477,9 +477,17 @@ public class MobilityAppBridge extends HyperBridge {
 
     //region Chat Utiils
     @JavascriptInterface
+    public void sendMessageV2(final String message, final String type) {
+        for (SendMessageCallBack sendMessageCallBack : sendMessageCallBacks) {
+            System.out.println("InSendMsgV2");
+            sendMessageCallBack.sendMessage(message, type);
+        }
+    }
+
+    @JavascriptInterface
     public void sendMessage(final String message) {
         for (SendMessageCallBack sendMessageCallBack : sendMessageCallBacks) {
-            sendMessageCallBack.sendMessage(message);
+            sendMessageCallBack.sendMessage(message, "Text");
         }
     }
 
@@ -528,7 +536,7 @@ public class MobilityAppBridge extends HyperBridge {
     }
 
     public interface SendMessageCallBack {
-        void sendMessage(String message);
+        void sendMessage(String message, String Type);
     }
 
     public static void registerSendMessageCallBack(SendMessageCallBack callBack) {

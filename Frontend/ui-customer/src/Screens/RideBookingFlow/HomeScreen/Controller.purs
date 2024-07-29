@@ -71,14 +71,14 @@ import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2)
+import Effect.Uncurried (runEffectFn1, runEffectFn9, runEffectFn2, runEffectFn7, runEffectFn3)
 import Engineering.Helpers.Commons
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, startAudioRecording, removeMediaPlayer, stopAudioRecording, addMediaFile, saveAudioFile, uploadMultiPartData, encodeAudioToBase64)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -101,6 +101,7 @@ import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..))
 import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..))
 import Services.Backend as Remote
+import Types.EndPoint (uploadFile) as EndPoint
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore, deleteValueFromLocalStore)
 import Control.Monad.Trans.Class (lift)
@@ -121,7 +122,7 @@ import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
-import Timers (clearTimerWithId)
+import Timers (clearTimerWithId, waitingCountdownTimerV2)
 import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
 import Data.Tuple (Tuple(..))
@@ -628,7 +629,7 @@ eval (UpdateNextIssueBanneerSwipe index) state = update state --{data {rideCompl
 
 ------------------------------- ChatService - Start --------------------------
 
-eval (UpdateMessages message sender timeStamp size) state = do
+eval (UpdateMessages message messageType sender timeStamp size) state = do
   if not state.props.chatcallbackInitiated then continue state else do
     continueWithCmd state{data{messagesSize = size}} [do
       pure $ LoadMessages
@@ -717,7 +718,7 @@ eval(MessagingViewActionController (MessagingView.Call)) state = do
 eval (MessagingViewActionController (MessagingView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
   then do
-    pure $ sendMessage state.data.messageToBeSent
+    void $ pure $ runFn2 sendMessage state.data.messageToBeSent "Text"
     pure $ setText (getNewIDWithTag "ChatInputEditText") ""
     continue state{data{messageToBeSent = ""},props {sendMessageActive = false}}
   else
@@ -753,7 +754,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.WaitingInfo)) sta
 
 eval (SendQuickMessage chatSuggestion) state = do
   if state.props.canSendSuggestion then do
-    _ <- pure $ sendMessage chatSuggestion
+    void $ pure $ runFn2 sendMessage chatSuggestion "Text"
     continue state {props {unReadMessages = false}}
   else continue state
 
@@ -791,13 +792,72 @@ eval MessageViewAnimationEnd state = do
 
 eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion)) state = do
   if state.props.canSendSuggestion then do
-    _ <- pure $ sendMessage chatSuggestion
+    void $ pure $ runFn2 sendMessage chatSuggestion "Text"
     continue state {data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
+eval (UpdateState updatedState) state = continue updatedState
+
+eval (MessagingViewActionController (MessagingView.RecordAudio)) state = 
+  continueWithCmd state { data { recordAudioMessageState { isRecording = true} } } [do
+    recordingStarted <- runEffectFn1 startAudioRecording ""
+    if recordingStarted then do
+      void $ runEffectFn1 removeMediaPlayer ""
+      pure $ NoAction
+    else
+      pure $ NoAction
+  ]
+
+eval (UpdateAudioRecord url) state = do
+  continueWithCmd state { data { recordAudioMessageState { recordedFile = Just url } } } [do 
+    -- let hello = spy
+    -- void $ runEffectFn7  addMediaFile (getNewIDWithTag "recordedAudioInChatView") url (getNewIDWithTag "recordActionButtonInChatView") "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false
+    pure $ MessagingViewActionController (MessagingView.UploadAudioFile)
+  ]
+
+eval (MessagingViewActionController (MessagingView.UploadAudioFile)) state = 
+  continueWithCmd state { data { recordAudioMessageState { isUploading = true } } } [do
+    -- void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "audio_upload_animation.json", lottieId = (getNewIDWithTag "audio_recording_done"), scaleType = "FIT_CENTER", speed = 1.0 }
+    -- void $ pure $ clearTimerWithId state.props.timerId
+    case state.data.recordAudioMessageState.recordedFile of
+      Just url -> do
+                  res <- runEffectFn1 saveAudioFile url
+                  -- void $  runEffectFn3 uploadMultiPartData url "" "Audio"
+                  encodedAudioUrl <- runEffectFn1 encodeAudioToBase64 res 
+                  -- pure $ sendMessage encodedAudioUrl
+                  void $ pure $ runFn2 sendMessage encodedAudioUrl "Audio"
+                  pure NoAction
+      Nothing  -> do
+                  -- if true --state.data.recordAudioMessageState.recordingDone
+                  -- then do
+                  --   void $ runEffectFn1 removeMediaPlayer ""
+                  --   pure $ UpdateState state { data  { recordAudioMessageState { stateChanged = true } } }
+                  -- else
+                    pure $ UpdateState state { data  { recordedAudioUrl = Nothing } }
+  ]
+
+eval (MessagingViewActionController (MessagingView.StopAudioRecording )) state = 
+  continueWithCmd state { data { recordAudioMessageState { isRecording = false, recordingDone = true, timer = "00:00" } } } [do
+    -- _   <- pure $ clearTimerWithId state.props.timerId
+    res <- runEffectFn1 stopAudioRecording ""
+    pure $ UpdateAudioRecord res 
+  ]
+
+eval (MessagingViewActionController (MessagingView.CancelAudioRecording)) state = 
+  -- if state.data.recordAudioState.openAddAudioModel
+  -- then
+  continueWithCmd state { data { recordAudioMessageState { recordedFile = Nothing, recordingDone = false, isRecording = false, isUploading = false, timer = "00:00" } } } [do
+    void $ runEffectFn1 removeMediaPlayer ""
+    void $  runEffectFn1 stopAudioRecording ""
+    -- void $  pure $ clearTimerWithId state.props.timerId
+    pure $ UpdateState state { data { recordAudioMessageState { recordedFile = Nothing, recordingDone = false, isRecording = false, isUploading = false, timer = "00:00", audioFile = Nothing, stateChanged = true } } }
+  ]
+  -- else
+    -- continue state { data  { recordAudioMessageState { recordedFile = Nothing } }}
+
 eval AllChatsLoaded state = do
   if state.props.isChatWithEMEnabled then do
-    void $ pure $ sendMessage "c013253fcbe2fdc50b1c261501de9045"
+    void $ pure $ runFn2 sendMessage "c013253fcbe2fdc50b1c261501de9045" "Text"
     continue state
   else
     continue state

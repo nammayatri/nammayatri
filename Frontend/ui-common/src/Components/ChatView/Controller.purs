@@ -27,6 +27,10 @@ data Action = SendMessage
             | NoAction
             | OnImageClick String
             | MessageAnimationEnd
+            | RecordAudio
+            | StopAudioRecording
+            | UploadAudioFile
+            | CancelAudioRecording
 
 type Config = 
   { userConfig :: UserConfig
@@ -56,6 +60,7 @@ type Config =
   , chatBodyPadding :: Padding
   , chatMargin :: Margin 
   , showNavigate :: Boolean
+  , isRecording :: Boolean
   }
 
 type UserConfig =
@@ -106,6 +111,7 @@ config =
     , chatBodyPadding : Padding 0 0 0 0
     , chatMargin : Margin 0 0 0 0
     , showNavigate : true
+    , isRecording : false
   }
 
 makeChatComponent' :: String -> String -> String -> String -> Int -> ChatComponentConfig 

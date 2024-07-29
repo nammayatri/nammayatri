@@ -272,11 +272,12 @@ public class ChatService extends Service {
 
     }
 
-    public void sendMessages(final String message) {
+    public void sendMessages(final String message, final String type) {
         HashMap<String, Object> _newMessage = new HashMap<>();
         _newMessage.put("message", message);
         _newMessage.put("sentBy", chatUserId);
         _newMessage.put("timestamp", System.currentTimeMillis());
+        _newMessage.put("type",type);
         if (sharedPrefs != null) chatChannelID = sharedPrefs.getString("CHAT_CHANNEL_ID", null);
         if (chatChannelID != null) {
             try {
@@ -333,7 +334,7 @@ public class ChatService extends Service {
             if (appState.equals("onPause") || appState.equals("onResume")) {
                 try {
                     for (int i = 0; i < callBack.size(); i++) {
-                        callBack.get(i).chatCallBack(_message, _sentBy, _dateFormatted, len);
+                        callBack.get(i).chatCallBack(_message, newMessage.type, _sentBy, _dateFormatted, len);
                     }
                 } catch (Exception err) {
                     Log.e(LOG_TAG, "Error sending the message to jbridge : " + err);
@@ -430,13 +431,15 @@ public class ChatService extends Service {
     }
 
     static class Message {
-        public Message(String message, String sentBy, String timestamp) {
+        public Message(String message, String type, String sentBy, String timestamp) {
             this.message = message;
+            this.type = type;
             this.sentBy = sentBy;
             this.timestamp = timestamp;
         }
 
         String message;
+        String type;
         String sentBy;
         String timestamp;
     }
@@ -444,8 +447,10 @@ public class ChatService extends Service {
     private Message createMessageObj(Map<String, Object> map) {
         String timestamp = getChatDate((Long) map.get("timestamp"));
         String message = (String) map.get("message");
+        Object type = map.get("type");
+        if(type == null) type = "Text";
         String sentBy = (String) map.get("sentBy");
-        return new Message(message, sentBy, timestamp);
+        return new Message(message, (String) type, sentBy, timestamp);
     }
 
     private void sendFCM(String message) {

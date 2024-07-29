@@ -19,7 +19,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class DefaultMediaPlayerControl implements MediaPlayerControl {
 
-    public static MediaPlayer mediaPlayer = new MediaPlayer();
+    public MediaPlayer mediaPlayer = new MediaPlayer();
+
     private Handler handler = new Handler();
     private Runnable runnable;
     private AtomicLong durationCounter = new AtomicLong();
@@ -31,6 +32,10 @@ public class DefaultMediaPlayerControl implements MediaPlayerControl {
     private MediaPlayerOnCompleteListener onCompleteListener;
 
     private final long INTERVAL = 1000;
+
+    public MediaPlayer getMediaPlayer() {
+        return mediaPlayer;
+    }
 
     @Override
     public void preparePlayer() {
@@ -112,7 +117,6 @@ public class DefaultMediaPlayerControl implements MediaPlayerControl {
     @Override
     public void setAudioSource(String url) throws IOException {
         mediaPlayer.setDataSource(url);
-
         preparePlayer();
     }
 

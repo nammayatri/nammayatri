@@ -671,7 +671,20 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
+  , recordAudioMessageState :: RecordAudioMessageState
+  , recordedAudioUrl :: Maybe String
   }
+
+type RecordAudioMessageState = {
+  isRecording :: Boolean ,
+  timer :: String,
+  recordingDone :: Boolean,
+  recordedFile :: Maybe String,
+  stateChanged :: Boolean, 
+  isUploading :: Boolean,
+  audioFile :: Maybe String
+  -- recordedAudioUrl :: Maybe String
+}
 
 type InteroperabilityState = {
   timerId :: String,

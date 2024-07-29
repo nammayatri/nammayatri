@@ -995,7 +995,9 @@ type HomeScreenData =  {
   isVehicleSupported :: Boolean,
   linkedVehicleCategory :: String,
   linkedVehicleVariant :: String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  recordAudioMessageState :: RecordAudioMessageState,
+  recordedAudioUrl :: Maybe String
 }
 
 type BannerCarousalData = {
@@ -1243,6 +1245,7 @@ type HomeScreenProps =  {
   showAdvancedRidePopUp :: Boolean,
   showInterOperablePopUp :: Boolean
  }
+
 
 type TollState = {
   showTollChargePopup :: Boolean
@@ -2790,4 +2793,15 @@ type RateCardScreenProps = {
   sliderMinValue :: Int,
   sliderMaxValue :: Int,
   sliderLoading :: Boolean
+}
+
+type RecordAudioMessageState = {
+  isRecording :: Boolean ,
+  timer :: String,
+  recordingDone :: Boolean,
+  recordedFile :: Maybe String,
+  stateChanged :: Boolean, 
+  isUploading :: Boolean,
+  audioFile :: Maybe String
+  -- recordedAudioUrl :: Maybe String
 }

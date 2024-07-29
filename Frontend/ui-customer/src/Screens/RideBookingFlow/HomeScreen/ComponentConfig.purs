@@ -1087,6 +1087,7 @@ messagingViewConfig state =
         , otp = state.data.driverInfoCardState.otp
         , suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
         , isKeyBoardOpen = state.props.isKeyBoardOpen
+        , isRecording = state.data.recordAudioMessageState.isRecording
         }
   in
     messagingViewConfig'

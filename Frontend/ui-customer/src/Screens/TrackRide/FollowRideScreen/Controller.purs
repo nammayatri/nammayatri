@@ -16,7 +16,7 @@ module Screens.FollowRideScreen.Controller where
 
 import Accessor (_lat, _lon)
 import Data.Array (elem, last, length, filter, delete, notElem)
-import Data.Function.Uncurried (runFn3, runFn1)
+import Data.Function.Uncurried (runFn3, runFn1, runFn2)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Effect.Unsafe (unsafePerformEffect)
@@ -78,7 +78,7 @@ data Action
   | MapReady String String String
   | UpdateStatus RideBookingRes
   | PersonSelected ST.Followers
-  | UpdateMessages String String String String
+  | UpdateMessages String String String String String
   | LoadMessages
   | OpenChatScreen
   | MessageEmergencyContact
@@ -260,7 +260,7 @@ eval action state = case action of
             showNotification = isChatNotificationDismissed && unReadMessages
           updateMessagesWithCmd state { data { messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value }, props { unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification } }
       Nothing -> continue state { props { canSendSuggestion = true } }
-  UpdateMessages message sender timeStamp size -> do
+  UpdateMessages message messageType sender timeStamp size -> do
     if not state.props.chatCallbackInitiated then
       continue state
     else
@@ -319,7 +319,7 @@ eval action state = case action of
         continue newState
   SendQuickMessage chatSuggestion -> do
     if state.props.canSendSuggestion then do
-      _ <- pure $ sendMessage chatSuggestion
+      void $ pure $ runFn2 sendMessage chatSuggestion "Text"
       continue state { props { unReadMessages = false } }
     else
       continue state
@@ -346,7 +346,7 @@ eval action state = case action of
           continue state
     MessagingView.SendMessage -> do
       if state.data.messageToBeSent /= "" then do
-        pure $ sendMessage state.data.messageToBeSent
+        void $ pure $ runFn2 sendMessage state.data.messageToBeSent "Text"
         pure $ setText (getNewIDWithTag "ChatInputEditText") ""
         continue state { data { messageToBeSent = "" }, props { sendMessageActive = false } }
       else
@@ -360,7 +360,7 @@ eval action state = case action of
         ]
     MessagingView.SendSuggestion chatSuggestion ->
       if state.props.canSendSuggestion then do
-        _ <- pure $ sendMessage chatSuggestion
+        void $ pure $ runFn2 sendMessage chatSuggestion "Text"
         continue state { data { chatSuggestionsList = [] }, props { canSendSuggestion = false } }
       else
         continue state

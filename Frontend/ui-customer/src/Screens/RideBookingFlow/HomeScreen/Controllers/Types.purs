@@ -210,7 +210,7 @@ data Action = NoAction
   | UpdateSourceFromPastLocations
   | UpdateLocAndLatLong String String
   | UpdateSavedLoc (Array LocationListItemState)
-  | UpdateMessages String String String String
+  | UpdateMessages String String String String String
   | InitializeChat
   | RemoveChat
   | OpenChatScreen
@@ -324,6 +324,9 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | UpdateState HomeScreenState
+  | UpdateAudioRecord String
+  -- | UploadMultiPartDataCallback String String
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

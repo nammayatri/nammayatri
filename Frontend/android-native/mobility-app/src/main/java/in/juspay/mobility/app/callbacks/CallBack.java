@@ -9,7 +9,7 @@ public interface CallBack {
 
     void addStopCallBack(String newStopLocation);
 
-    void chatCallBack(String message, String sentBy, String time, String len);
+    void chatCallBack(String message, String type ,String sentBy, String time, String len);
 
     void inAppCallBack(String onTapAction);
 

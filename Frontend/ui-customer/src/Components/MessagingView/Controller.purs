@@ -26,6 +26,11 @@ data Action = SendMessage
             | TextChanged String
             | Call
             | NoAction
+            | RecordAudio
+            | StopAudioRecording
+            | UploadAudioFile
+            | CancelAudioRecording
+            -- | UpdateAudioRecord String
 
 type Config = 
   { userConfig :: UserConfig
@@ -45,6 +50,7 @@ type Config =
   , feature :: Feature
   , suggestionKey :: String
   , isKeyBoardOpen :: Boolean
+  , isRecording :: Boolean
   }
 
 type Feature = 
@@ -96,6 +102,7 @@ config =
   , otp : ""
   , suggestionKey : chatSuggestion
   , isKeyBoardOpen : false
+  , isRecording : false
   }
 
 

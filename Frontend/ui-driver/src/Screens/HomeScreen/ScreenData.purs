@@ -28,7 +28,9 @@ import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 initData :: HomeScreenState
 initData = 
   { data: 
-      { linkedVehicleCategory: ""
+      { recordAudioMessageState : initialRecordAudioMessageState
+      , recordedAudioUrl : Nothing 
+      , linkedVehicleCategory: ""
       , linkedVehicleVariant: ""
       , snappedOrigin: Nothing
       , config: getAppConfig appConfig
@@ -298,4 +300,16 @@ dummyRideData = {
       , acRide : Nothing
       , bapName : ""
       , bookingFromOtherPlatform : false
-      }
+}
+
+initialRecordAudioMessageState :: RecordAudioMessageState
+initialRecordAudioMessageState = {
+  isRecording: false, 
+  timer : "00:00", 
+  recordingDone : false, 
+  recordedFile : Nothing , 
+  isUploading : false, 
+  stateChanged : false, 
+  audioFile : Nothing
+  -- recordedAudioUrl : Nothing
+}

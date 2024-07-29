@@ -703,6 +703,7 @@ chatViewConfig state = let
     , enableCall = (not (state.data.activeRide.disabilityTag == Just ST.HEAR_IMPAIRMENT))
     , enableSuggestions = state.data.config.feature.enableSuggestions
     , showNavigate = if state.data.activeRide.tripType == ST.Rental then isJust state.data.activeRide.nextStopLat && isJust state.data.activeRide.nextStopLon else true
+    , isRecording = state.data.recordAudioMessageState.isRecording
   }
   in chatViewConfig'
 

@@ -35,7 +35,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Mobility.Prelude (boolToVisibility)
-import Effect.Uncurried (runEffectFn7)
+import Effect.Uncurried (runEffectFn7, runEffectFn8)
 
 view :: forall w. (Action -> Effect Unit) -> AddAudioModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -133,7 +133,7 @@ bodyView push state =
                 , height MATCH_PARENT
                 , afterRender
                     ( \action -> do
-                        void $ runEffectFn7 addMediaFile (getNewIDWithTag "addAudioFileView") (fromMaybe "" state.audioFile) "-1" "ic_play" "ic_pause" "-1" false
+                        void $ runEffectFn8 addMediaFile (getNewIDWithTag "addAudioFileView") (fromMaybe "" state.audioFile) "-1" "ic_play" "ic_pause" "-1" false ""
                         pure unit
                     )
                     (const NoAction)

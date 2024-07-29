@@ -2588,7 +2588,7 @@ homeScreenFlow = do
           Right _ -> do
             setValueToLocalStore WAITING_TIME_STATUS (show ST.Triggered) 
             setValueToLocalStore WAITING_TIME_VAL (state.data.activeRide.id <> "<$>" <> getCurrentUTC "")
-            void $ pure $ JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
+            void $ pure $ runFn2 JB.sendMessage $ if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then (EHS.getMessageFromKey EHS.chatSuggestion "dis1AP" "EN_US") else "dis1AP"
             liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_i_have_arrived_clicked" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
                                                                                                     {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle},
                                                                                                     {key : "Estimated Toll Charge", value : unsafeToForeign (fromMaybe 0.0 state.data.activeRide.estimatedTollCharge)},

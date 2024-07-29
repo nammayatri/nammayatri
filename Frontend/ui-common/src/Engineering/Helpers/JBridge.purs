@@ -175,11 +175,11 @@ foreign import startService :: String -> Unit
 foreign import stopService :: String -> Unit
 foreign import scrollOnResume :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
 foreign import stopChatListenerService :: Effect Unit
-foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> action) -> action -> Effect Unit
+foreign import storeCallBackMessageUpdated :: forall action. (action -> Effect Unit) -> String -> String  -> (String -> String -> String -> String -> String -> action) -> action -> Effect Unit
 foreign import dateCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
 foreign import unregisterDateAndTime :: Effect Unit
 foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
-foreign import sendMessage :: String -> Unit
+foreign import sendMessage :: Fn2 String String Unit
 foreign import getSuggestionsfromLocal :: String -> String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String -> String
 foreign import setYoutubePlayer :: forall action. Fn5 YoutubeData String String (action -> Effect Unit) (String -> action) Unit
@@ -211,7 +211,7 @@ foreign import clearNoInternetAction :: Unit -> Effect Unit
 
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
-foreign import addMediaFile :: EffectFn7 String String String String String String Boolean Unit
+foreign import addMediaFile :: EffectFn8 String String String String String String Boolean String Unit
 foreign import clearFocus :: EffectFn1 String Unit
 foreign import removeMediaPlayer :: EffectFn1 String Unit
 foreign import renderBase64ImageFile :: EffectFn4 String String Boolean String Unit
@@ -220,6 +220,7 @@ foreign import uploadMultiPartData :: EffectFn3 String String String Unit
 foreign import startAudioRecording :: EffectFn1 String Boolean
 foreign import stopAudioRecording :: EffectFn1 String String
 foreign import differenceBetweenTwoUTC :: Fn2 String String Int
+foreign import encodeAudioToBase64 :: EffectFn1 String String
 
 foreign import differenceBetweenTwoUTCInMinutes :: Fn2 String String Int
 

@@ -180,6 +180,8 @@ initData = let
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
     , famousDestinations : []
+    , recordAudioMessageState :{ isRecording: false, timer : "00:00", recordingDone : false, recordedFile : Nothing , isUploading : false, stateChanged : false, audioFile : Nothing}  --recordAudioUrl:nothing
+    , recordedAudioUrl : Nothing
     },
     props: {
       rideRequestFlow : false
