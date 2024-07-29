@@ -31,7 +31,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleServiceTier as DVST
-import EulerHS.Prelude hiding (id, length, null)
+import EulerHS.Prelude hiding (elem, id, length, null)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
@@ -346,7 +346,7 @@ buildBookingStatusAPIEntity booking = do
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: DRide.Ride -> RideAPIEntity
 makeRideAPIEntity DRide.Ride {..} =
-  let driverMobileNumber' = if status == DRide.NEW then Just driverMobileNumber else Just "xxxx"
+  let driverMobileNumber' = if status `elem` [DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
