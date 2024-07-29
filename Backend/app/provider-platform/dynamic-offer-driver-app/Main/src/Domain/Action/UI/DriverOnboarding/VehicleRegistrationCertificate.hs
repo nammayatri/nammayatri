@@ -454,7 +454,7 @@ validateRCActivation driverId merchantOpCityId rc = do
   mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id True
   case mActiveAssociation of
     Just activeAssociation -> do
-      if (activeAssociation.driverId == driverId)
+      if activeAssociation.driverId == driverId
         then return False
         else do
           deactivateIfWeCanDeactivate activeAssociation.driverId now (deactivateRC rc)
