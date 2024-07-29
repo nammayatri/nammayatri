@@ -48,7 +48,8 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person -> m (Maybe Person),
     findByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity),
-    findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig
+    findMerchantConfig :: Id Merchant -> Id MerchantOperatingCity -> Maybe (Id Person) -> m MerchantConfig,
+    mbSendUnattendedTicketAlert :: Maybe (Text -> m ())
   }
 
 checkMerchantCityAccess :: BeamFlow m r => ShortId Merchant -> Context.City -> DIR.IssueReport -> Maybe Person -> ServiceHandle m -> m MerchantOperatingCity
@@ -292,33 +293,40 @@ ticketStatusCallBack ::
   Identifier ->
   m APISuccess
 ticketStatusCallBack req issueHandle identifier = do
-  issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
   transformedStatus <- transformKaptureStatus req
-  when (transformedStatus == RESOLVED) $ do
-    merchantOpCityId <-
-      maybe
-        ( issueHandle.findPersonById issueReport.personId
-            >>= fromMaybeM (PersonNotFound issueReport.personId.getId) <&> (.merchantOperatingCityId)
-        )
-        return
-        issueReport.merchantOperatingCityId
-    issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
-    mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
-    let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
-    now <- getCurrentTime
-    let updatedChats =
-          issueReport.chats
-            ++ map
-              ( \id ->
-                  Chat
-                    { chatType = IssueMessage,
-                      chatId = id.getId,
-                      timestamp = now
-                    }
-              )
-              issueMessageIds
-    QIR.updateChats issueReport.id updatedChats
-  QIR.updateIssueStatus req.ticketId transformedStatus
+  case transformedStatus of
+    RESOLVED -> do
+      issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+      merchantOpCityId <-
+        maybe
+          ( issueHandle.findPersonById issueReport.personId
+              >>= fromMaybeM (PersonNotFound issueReport.personId.getId) <&> (.merchantOperatingCityId)
+          )
+          return
+          issueReport.merchantOperatingCityId
+      issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
+      mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
+      let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
+      now <- getCurrentTime
+      let updatedChats =
+            issueReport.chats
+              ++ map
+                ( \id ->
+                    Chat
+                      { chatType = IssueMessage,
+                        chatId = id.getId,
+                        timestamp = now
+                      }
+                )
+                issueMessageIds
+      QIR.updateChats issueReport.id updatedChats
+      QIR.updateIssueStatus req.ticketId transformedStatus
+    PENDING_EXTERNAL -> case (req.subStatus, req.queue, issueHandle.mbSendUnattendedTicketAlert) of
+      (Just "Unattended", Just "SOS", Just sendUnattendedTicketAlert) -> sendUnattendedTicketAlert req.ticketId
+      _ -> do
+        _issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+        QIR.updateIssueStatus req.ticketId transformedStatus
+    _ -> return ()
   return Success
 
 transformKaptureStatus :: BeamFlow m r => Common.TicketStatusCallBackReq -> m IssueStatus

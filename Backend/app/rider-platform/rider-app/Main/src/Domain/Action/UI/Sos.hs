@@ -8,7 +8,9 @@ import AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
+import qualified Data.HashMap.Strict as HM
 import Data.Text as T
+import qualified Domain.Action.UI.Call as DUCall
 import qualified Domain.Action.UI.FollowRide as DFR
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Profile as DP
@@ -29,7 +31,6 @@ import GHC.IO.IOMode (IOMode (..))
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
-import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Encryption
 import qualified Kernel.External.IncidentReport as IncidentReport
 import Kernel.External.IncidentReport.Interface.Types as IncidentReportTypes
@@ -50,6 +51,7 @@ import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import SharedLogic.Scheduler.Jobs.CallPoliceApi
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QBooking
@@ -58,6 +60,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Sos as QSos
+import qualified Tools.Call as Call
 import Tools.Error
 import Tools.Ticket as Ticket
 
@@ -465,3 +468,56 @@ incidentReportHandler person merchantId merchantOpCityId rideId token coordinate
       Redis.withCrossAppRedis $ Redis.setExp (mkRideCallPoliceAPIKey rideId) (1 :: Int) riderConfig.hardLimitForSafetyJobs
       createJobIn @_ @'CallPoliceApi scheduleAfter maxShards callPoliceAPIJobData
       pure ()
+
+sendUnattendedSosTicketAlert :: Text -> Flow ()
+sendUnattendedSosTicketAlert ticketId = do
+  sos <- QSos.findByTicketId (Just ticketId) >>= fromMaybeM (InvalidRequest $ "SOS with ticketId-" <> ticketId <> " does not exist.")
+  merchantOpCityId <-
+    maybe
+      ( ( QP.findById sos.personId
+            >>= fromMaybeM (PersonNotFound sos.personId.getId)
+        )
+          <&> (.merchantOperatingCityId)
+      )
+      return
+      sos.merchantOperatingCityId
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  let maybeAppId = (HM.lookup DRC.UnattendedTicketAppletID . DRC.exotelMap) =<< riderConfig.exotelAppIdMapping
+  mapM_ (sendAlert merchantOperatingCity sos maybeAppId) (fromMaybe [] riderConfig.cxAgentPhoneNumbers)
+  where
+    sendAlert :: DMOC.MerchantOperatingCity -> DSos.Sos -> Maybe Text -> Text -> Flow ()
+    sendAlert merchantOpCity sos maybeAppId agentPhNumber =
+      fork ("Sending unattended sos ticket alert to agent with phone number" <> show agentPhNumber) $ do
+        callStatusId <- generateGUID
+        let callReq =
+              Call.InitiateCallReq
+                { fromPhoneNum = agentPhNumber,
+                  toPhoneNum = Nothing,
+                  attachments = Call.Attachments $ DUCall.CallAttachments {callStatusId = callStatusId, rideId = sos.rideId},
+                  appletId = maybeAppId
+                }
+        exotelResponse <- Call.initiateCall merchantOpCity.merchantId merchantOpCity.id callReq
+        callStatus <- buildCallStatus callStatusId exotelResponse sos
+        QCallStatus.create callStatus
+
+    buildCallStatus :: Id DCall.CallStatus -> Call.InitiateCallResp -> DSos.Sos -> Flow DCall.CallStatus
+    buildCallStatus callStatusId exotelResponse sos = do
+      now <- getCurrentTime
+      return $
+        DCall.CallStatus
+          { id = callStatusId,
+            callId = exotelResponse.callId,
+            rideId = Just sos.rideId,
+            dtmfNumberUsed = Nothing,
+            status = exotelResponse.callStatus,
+            callAttempt = Nothing,
+            conversationDuration = 0,
+            recordingUrl = Nothing,
+            merchantId = sos.merchantId <&> (.getId),
+            callService = Just Call.Exotel,
+            callError = Nothing,
+            createdAt = now,
+            updatedAt = now,
+            customerIvrResponse = Nothing
+          }

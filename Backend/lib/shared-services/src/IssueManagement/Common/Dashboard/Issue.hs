@@ -243,7 +243,9 @@ type TicketStatusCallBackAPI =
 
 data TicketStatusCallBackReq = TicketStatusCallBackReq
   { ticketId :: Text,
-    status :: Text
+    status :: Text,
+    subStatus :: Maybe Text,
+    queue :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

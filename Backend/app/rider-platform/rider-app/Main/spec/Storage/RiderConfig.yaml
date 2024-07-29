@@ -43,6 +43,7 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay : Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
+    cxAgentPhoneNumbers: Maybe [Text]
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -102,3 +103,4 @@ RiderConfig:
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
+
