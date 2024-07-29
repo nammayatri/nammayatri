@@ -492,7 +492,7 @@ config =
 
            defaultCityConfig 
           {   cityName = "Tirunelveli"
-            , cityCode = "std:04362"
+            , cityCode = "std:0462"
             , geoCodeConfig
                 { radius = 50000
                 , strictBounds = true
@@ -510,7 +510,7 @@ config =
 
            defaultCityConfig 
           {   cityName = "Thanjavur"
-            , cityCode = "std:0416"
+            , cityCode = "std:04362"
             , geoCodeConfig
                 { radius = 50000
                 , strictBounds = true
@@ -528,7 +528,7 @@ config =
 
            defaultCityConfig 
           {   cityName = "Madurai"
-            , cityCode = "std:0427"
+            , cityCode = "std:0452"
             , geoCodeConfig
                 { radius = 50000
                 , strictBounds = true
@@ -546,7 +546,7 @@ config =
 
            defaultCityConfig 
           {   cityName = "Salem"
-            , cityCode = "std:04344"
+            , cityCode = "std:0427"
             , geoCodeConfig
                 { radius = 50000
                 , strictBounds = true
@@ -564,7 +564,7 @@ config =
 
            defaultCityConfig 
           {   cityName = "Hosur"
-            , cityCode = "std:0431"
+            , cityCode = "std:04344"
             , geoCodeConfig
                 { radius = 50000
                 , strictBounds = true
@@ -582,7 +582,7 @@ config =
 
            defaultCityConfig 
           {   cityName = "Trichy"
-            , cityCode = "std:0820"
+            , cityCode = "std:0431"
             , geoCodeConfig
                 { radius = 50000
                 , strictBounds = true

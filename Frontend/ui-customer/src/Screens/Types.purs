@@ -987,6 +987,12 @@ data City
   | Tirunelveli
   | Salem
   | Trichy
+  | Davanagere
+  | Shivamogga
+  | Hubli
+  | Mangalore
+  | Gulbarga
+  | Udupi
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow
