@@ -347,7 +347,7 @@ findAllByRiderIdAndDriverNumber (Id personId) mbLimit mbOffset mbOnlyActive mbBo
       (Se.Desc BeamB.createdAt)
       (Just limit')
       (Just offset')
-  findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings, Se.Is BeamR.driverMobileNumberHash $ Se.Eq driverNumber]] (Se.Desc BeamR.createdAt) (Just limit') (Just offset')
+  findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings, Se.Is BeamR.driverNumberHash $ Se.Eq (Just driverNumber)]] (Se.Desc BeamR.createdAt) (Just limit') (Just offset')
 
 countRidesByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
 countRidesByRiderId riderId = do
