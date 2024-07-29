@@ -79,6 +79,7 @@ import Locale.Utils
 import RemoteConfig (ReelItem(..))
 import Mobility.Prelude as MP
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import ConfigProvider
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -971,8 +972,14 @@ duesView push state =
         ] 
     ]
     , if (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY || state.data.myPlanData.manualDueAmount > 0.0) then PrimaryButton.view (push <<< ResumeAutoPay) (clearDueButtonConfig state) else dummyView 
-    , if (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && state.data.myPlanData.manualDueAmount > 0.0) then PrimaryButton.view (push <<< OneTimeSettlement) (settlementButtonConfig state) else dummyView
+    , if showManualPaymentButton then PrimaryButton.view (push <<< OneTimeSettlement) (settlementButtonConfig state) else dummyView
     ]
+  where
+    showManualPaymentButton = do
+      let driverAppConfig = getAppConfig appConfig
+      if driverAppConfig.hideManualPayButton
+        then (DA.any (_ == state.data.myPlanData.autoPayStatus) [SUSPENDED, CANCELLED_PSP]) || state.data.myPlanData.manualDueAmount > state.data.myPlanData.maxDueAmount
+        else state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && state.data.myPlanData.manualDueAmount > 0.0
   
 
 promoCodeView :: forall w. (Action -> Effect Unit) -> PromoConfig -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w 

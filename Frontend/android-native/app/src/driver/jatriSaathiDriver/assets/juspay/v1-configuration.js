@@ -277,6 +277,7 @@ window.getMerchantConfig = function () {
     , "termsVersion" : 1.0
     , "enableDriverReferral": true
     , "enableCustomerReferral": true
+    , "hideManualPayButton" : true
     , "privacyLink" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E"
     , "feature" : {
       "enableBonus" : false

@@ -71,6 +71,7 @@ config =
     lowestFeesFromDate : "Oct 2nd 2024-*$*-ಅಕ್ಟೋಬರ್ 2, 2024-*$*-2 अक्टूबर 2024-*$*-২য় অক্টোবর, ২০২৪-*$*-രണ്ടാം ഒക്ടോബര്‍, 2024-*$*-அக்டோபர் 2, 2024-*$*-అక్టోబరు 2, 2024"
   },
   showPaymentDetails : true,
+  hideManualPayButton : false,
   enableDriverReferral : false,
   enableCustomerReferral : false,
   rideActionModelConfig : {
