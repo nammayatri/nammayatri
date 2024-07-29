@@ -36,6 +36,7 @@ types:
 
   MultiModalRouteLegInfo:
     enum: "WalkLeg WalkLegInfo, MetroLeg MetroLegInfo, TaxiLeg TaxiLegInfo"
+    derive: "Eq, Show"
 
   MultiModalRouteLegStatus:
     enum: "Pending, Completed"
@@ -81,6 +82,7 @@ types:
 
   TaxiLegStage:
     enum: "SearchStage (Id SearchRequest) (Maybe (Id Estimate)), SearchingForDriverStage (Id Estimate), PickupStage (Id Booking), OngoingStage (Id Booking), CompletedStage"
+    derive: "Eq, Show"
 
 apis:
   # add multiModalEstimates object in search/{searchId}/results api response

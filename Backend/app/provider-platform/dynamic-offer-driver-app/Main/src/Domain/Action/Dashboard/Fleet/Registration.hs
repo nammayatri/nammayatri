@@ -15,10 +15,10 @@
 module Domain.Action.Dashboard.Fleet.Registration where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
 import Data.OpenApi (ToSchema)
-import qualified Domain.Action.Dashboard.Driver.Registration as DReg
+import qualified Domain.Action.Dashboard.Management.DriverRegistration as DReg
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA

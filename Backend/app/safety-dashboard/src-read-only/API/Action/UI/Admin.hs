@@ -20,11 +20,11 @@ import Servant
 import "lib-dashboard" Tools.Auth
 
 type API =
-  ( DashboardAuth ('DASHBOARD_ADMIN) :> "change" :> "suspectFlag" :> ReqBody ('[JSON]) API.Types.UI.Admin.SuspectFlagChangeRequestList
+  ( DashboardAuth 'DASHBOARD_ADMIN :> "change" :> "suspectFlag" :> ReqBody '[JSON] API.Types.UI.Admin.SuspectFlagChangeRequestList
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> DashboardAuth ('DASHBOARD_ADMIN)
+      :<|> DashboardAuth 'DASHBOARD_ADMIN
       :> "admin"
       :> "upload"
       :> "suspect"
@@ -33,51 +33,51 @@ type API =
            "flaggedStatus"
            Domain.Types.Suspect.FlaggedStatus
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Suspect.SuspectBulkUploadReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Suspect.SuspectBulkUploadResp
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "merchant"
       :> "admin"
       :> "upload"
       :> "suspect"
       :> "bulk"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Suspect.SuspectBulkUploadReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Suspect.SuspectBulkUploadResp
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "check"
       :> "webhook"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Admin.WebhookCheck
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "merchant"
       :> "user"
       :> "assignRole"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Admin.AssignRoleMerchantUserReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "merchant"
       :> "user"
       :> "delete"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Admin.DeleteMerchantUserReq
       :> Delete
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -87,7 +87,7 @@ handler = postChangeSuspectFlag :<|> postAdminUploadSuspectBulk :<|> postMerchan
 postChangeSuspectFlag :: (TokenInfo -> API.Types.UI.Admin.SuspectFlagChangeRequestList -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postChangeSuspectFlag a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Admin.postChangeSuspectFlag a2 a1
 
-postAdminUploadSuspectBulk :: (TokenInfo -> Kernel.Prelude.Maybe (Domain.Types.Suspect.FlaggedStatus) -> API.Types.UI.Suspect.SuspectBulkUploadReq -> Environment.FlowHandler API.Types.UI.Suspect.SuspectBulkUploadResp)
+postAdminUploadSuspectBulk :: (TokenInfo -> Kernel.Prelude.Maybe Domain.Types.Suspect.FlaggedStatus -> API.Types.UI.Suspect.SuspectBulkUploadReq -> Environment.FlowHandler API.Types.UI.Suspect.SuspectBulkUploadResp)
 postAdminUploadSuspectBulk a3 a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Admin.postAdminUploadSuspectBulk a3 a2 a1
 
 postMerchantAdminUploadSuspectBulk :: (TokenInfo -> API.Types.UI.Suspect.SuspectBulkUploadReq -> Environment.FlowHandler API.Types.UI.Suspect.SuspectBulkUploadResp)

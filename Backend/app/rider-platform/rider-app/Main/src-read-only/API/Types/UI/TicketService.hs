@@ -34,7 +34,8 @@ data BusinessHourResp = BusinessHourResp
     specialDayType :: Kernel.Prelude.Maybe Domain.Types.SpecialOccasion.SpecialDayType,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CategoriesResp = CategoriesResp
   { allowedSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -45,7 +46,8 @@ data CategoriesResp = CategoriesResp
     name :: Data.Text.Text,
     peopleCategories :: [API.Types.UI.TicketService.PeopleCategoriesResp]
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PeopleCategoriesResp = PeopleCategoriesResp
   { cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
@@ -55,7 +57,8 @@ data PeopleCategoriesResp = PeopleCategoriesResp
     pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
     pricePerUnitWithCurrency :: Kernel.Types.Common.PriceAPIEntity
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PeopleCategoriesVerificationRes = PeopleCategoriesVerificationRes
   { id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
@@ -63,7 +66,8 @@ data PeopleCategoriesVerificationRes = PeopleCategoriesVerificationRes
     pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
     pricePerUnitWithCurrency :: Kernel.Types.Common.PriceAPIEntity
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingAPIEntity = TicketBookingAPIEntity
   { amount :: Kernel.Types.Common.HighPrecMoney,
@@ -75,10 +79,12 @@ data TicketBookingAPIEntity = TicketBookingAPIEntity
     ticketShortId :: Data.Text.Text,
     visitDate :: Data.Time.Calendar.Day
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingCancelReq = TicketBookingCancelReq {ticketBookingServices :: [API.Types.UI.TicketService.TicketBookingServiceCancelReq], ticketBookingShortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingCategoryDetails = TicketBookingCategoryDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
@@ -91,10 +97,12 @@ data TicketBookingCategoryDetails = TicketBookingCategoryDetails
     peopleCategories :: [API.Types.UI.TicketService.TicketBookingPeopleCategoryDetails],
     serviceCategoryId :: Kernel.Prelude.Maybe Data.Text.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, peopleCategories :: [API.Types.UI.TicketService.TicketBookingPeopleCategoryReq]}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingDetails = TicketBookingDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
@@ -108,7 +116,8 @@ data TicketBookingDetails = TicketBookingDetails
     ticketShortId :: Data.Text.Text,
     visitDate :: Data.Time.Calendar.Day
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingPeopleCategoryDetails = TicketBookingPeopleCategoryDetails
   { amountToRefund :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -120,19 +129,24 @@ data TicketBookingPeopleCategoryDetails = TicketBookingPeopleCategoryDetails
     pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
     pricePerUnitWithCurrency :: Kernel.Types.Common.PriceAPIEntity
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingPeopleCategoryReq = TicketBookingPeopleCategoryReq {numberOfUnits :: Kernel.Prelude.Int, peopleCategoryId :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TicketBookingReq = TicketBookingReq {services :: [API.Types.UI.TicketService.TicketBookingServicesReq], visitDate :: Data.Time.Calendar.Day} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data TicketBookingReq = TicketBookingReq {services :: [API.Types.UI.TicketService.TicketBookingServicesReq], visitDate :: Data.Time.Calendar.Day}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingServiceCancelReq = TicketBookingServiceCancelReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     serviceCategory :: [API.Types.UI.TicketService.TicketBookingServiceCategoryCancelReq],
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingServiceCategoryCancelReq = TicketBookingServiceCategoryCancelReq
   { id :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
@@ -140,7 +154,8 @@ data TicketBookingServiceCategoryCancelReq = TicketBookingServiceCategoryCancelR
     serviceCategoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
     visitDate :: Data.Time.Calendar.Day
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingServiceDetails = TicketBookingServiceDetails
   { allowCancellation :: Kernel.Prelude.Bool,
@@ -155,17 +170,20 @@ data TicketBookingServiceDetails = TicketBookingServiceDetails
     ticketServiceShortId :: Data.Text.Text,
     verificationCount :: Kernel.Prelude.Int
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingServicePeopleCategoryCancelReq = TicketBookingServicePeopleCategoryCancelReq {id :: Kernel.Types.Id.Id Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory, quantity :: Kernel.Prelude.Int}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingServicesReq = TicketBookingServicesReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     categories :: [API.Types.UI.TicketService.TicketBookingCategoryReq],
     serviceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketBookingUpdateSeatsReq = TicketBookingUpdateSeatsReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
@@ -174,7 +192,8 @@ data TicketBookingUpdateSeatsReq = TicketBookingUpdateSeatsReq
     ticketServiceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     updatedBookedSeats :: Kernel.Prelude.Int
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketServiceCancelReq = TicketServiceCancelReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
@@ -183,7 +202,8 @@ data TicketServiceCancelReq = TicketServiceCancelReq
     ticketServiceCategoryId :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
     ticketServiceId :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketServiceResp = TicketServiceResp
   { allowCancellation :: Kernel.Prelude.Bool,
@@ -196,7 +216,8 @@ data TicketServiceResp = TicketServiceResp
     placesId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     shortDesc :: Kernel.Prelude.Maybe Data.Text.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketServiceVerificationResp = TicketServiceVerificationResp
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -212,7 +233,8 @@ data TicketServiceVerificationResp = TicketServiceVerificationResp
     verificationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     visitDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TicketVerificationStatus
   = BookingSuccess
@@ -223,4 +245,5 @@ data TicketVerificationStatus
   | PaymentPending
   | InvalidBooking
   | CancelledBooking
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -43,18 +43,8 @@ library
       API.Dashboard.Fleet.Operations
       API.Dashboard.Fleet.Registration
       API.Dashboard.Management
-      API.Dashboard.Management.Booking
-      API.Dashboard.Management.Driver
-      API.Dashboard.Management.Driver.Coin
-      API.Dashboard.Management.Driver.Common
-      API.Dashboard.Management.Driver.GoHome
-      API.Dashboard.Management.Driver.Referral
-      API.Dashboard.Management.Driver.Registration
       API.Dashboard.Management.Issue
-      API.Dashboard.Management.Merchant
-      API.Dashboard.Management.Message
       API.Dashboard.Management.Overlay
-      API.Dashboard.Management.Ride
       API.Dashboard.Management.Subscription
       API.Dashboard.RideBooking
       API.Dashboard.RideBooking.Driver
@@ -145,19 +135,24 @@ library
       Domain.Action.Beckn.Status
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
-      Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Driver
-      Domain.Action.Dashboard.Driver.Coin
       Domain.Action.Dashboard.Driver.Notification
-      Domain.Action.Dashboard.Driver.Registration
-      Domain.Action.Dashboard.DriverReferral
       Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.Registration
-      Domain.Action.Dashboard.Merchant
-      Domain.Action.Dashboard.Message
+      Domain.Action.Dashboard.Management.Booking
+      Domain.Action.Dashboard.Management.Driver
+      Domain.Action.Dashboard.Management.DriverCoins
+      Domain.Action.Dashboard.Management.DriverGoHome
+      Domain.Action.Dashboard.Management.DriverReferral
+      Domain.Action.Dashboard.Management.DriverRegistration
+      Domain.Action.Dashboard.Management.Merchant
+      Domain.Action.Dashboard.Management.Message
+      Domain.Action.Dashboard.Management.Revenue
+      Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Overlay
-      Domain.Action.Dashboard.Revenue
       Domain.Action.Dashboard.Ride
+      Domain.Action.Dashboard.RideBooking.Driver
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
@@ -582,10 +577,18 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.Dashboard.Fleet.Driver
+      API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Driver
+      API.Action.Dashboard.Management.DriverCoins
+      API.Action.Dashboard.Management.DriverGoHome
+      API.Action.Dashboard.Management.DriverReferral
+      API.Action.Dashboard.Management.DriverRegistration
       API.Action.Dashboard.Management.Merchant
+      API.Action.Dashboard.Management.Message
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.RideBooking.Driver
       API.Action.UI.Cac
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfileQuestions
@@ -1019,6 +1022,7 @@ library
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DerivingStrategies
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
@@ -1143,6 +1147,7 @@ executable dynamic-offer-driver-app-exe
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DerivingStrategies
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric

@@ -14,7 +14,7 @@
 
 module API.Dashboard.RideBooking.Ride where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler

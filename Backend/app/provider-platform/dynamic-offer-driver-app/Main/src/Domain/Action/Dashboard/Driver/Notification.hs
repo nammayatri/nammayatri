@@ -18,7 +18,7 @@ module Domain.Action.Dashboard.Driver.Notification
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Common as DTC

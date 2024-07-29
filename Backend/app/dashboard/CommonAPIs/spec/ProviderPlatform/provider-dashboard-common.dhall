@@ -3,6 +3,9 @@ let rootDir = env:GIT_ROOT_PATH
 let outputPrefixDashboardReadOnly =
       rootDir ++ "/Backend/app/dashboard/provider-dashboard/src-read-only/"
 
+let outputPrefixDashboard =
+      rootDir ++ "/Backend/app/dashboard/provider-dashboard/src/"
+
 let outputPrefixCommonApisReadOnly =
       rootDir ++ "/Backend/app/dashboard/CommonAPIs/src-read-only/"
 
@@ -32,11 +35,12 @@ let outputPath =
           outputPrefixDashboardReadOnly ++ "Storage/CachedQueries"
       , _beamTable = outputPrefixDashboardReadOnly ++ "Storage/Beam"
       , _domainHandler = outputPrefixDriverApp ++ "Domain/Action/Dashboard"
+      , _domainHandlerDashboard =
+          outputPrefixDashboard ++ "Domain/Action/ProviderPlatform"
       , _domainType = outputPrefixDashboardReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixDriverAppReadOnly ++ "API/Action/Dashboard"
       , _servantApiDashboard =
-              outputPrefixDashboardReadOnly
-          ++  "API/Action/ProviderPlatform/DynamicOfferDriver"
+          outputPrefixDashboardReadOnly ++ "API/Action/ProviderPlatform"
       , _sql = [ { _1 = migrationPath, _2 = "atlas_driver_offer_bpp" } ]
       , _purescriptFrontend = ""
       }
@@ -46,6 +50,7 @@ let GeneratorType =
       | SERVANT_API_DASHBOARD
       | API_TYPES
       | DOMAIN_HANDLER
+      | DOMAIN_HANDLER_DASHBOARD
       | BEAM_QUERIES
       | CACHED_QUERIES
       | BEAM_TABLE
@@ -71,22 +76,29 @@ let DefaultImports =
 
 let defaultTypeImportMapper =
       [ { _1 = "Text", _2 = "Kernel.Prelude" }
+      , { _1 = "String", _2 = "Kernel.Prelude" }
       , { _1 = "Maybe", _2 = "Kernel.Prelude" }
       , { _1 = "Double", _2 = "Kernel.Prelude" }
+      , { _1 = "Float", _2 = "Kernel.Prelude" }
       , { _1 = "TimeOfDay", _2 = "Kernel.Prelude" }
       , { _1 = "Day", _2 = "Data.Time.Calendar" }
       , { _1 = "Int", _2 = "Kernel.Prelude" }
+      , { _1 = "Integer", _2 = "Kernel.Prelude" }
       , { _1 = "Bool", _2 = "Kernel.Prelude" }
       , { _1 = "NonEmpty", _2 = "Kernel.Prelude" }
+      , { _1 = "Either", _2 = "Kernel.Prelude" }
       , { _1 = "Id", _2 = "Kernel.Types.Id" }
       , { _1 = "ShortId", _2 = "Kernel.Types.Id" }
       , { _1 = "UTCTime", _2 = "Kernel.Prelude" }
+      , { _1 = "FilePath", _2 = "Kernel.Prelude" }
       , { _1 = "Meters", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMeters", _2 = "Kernel.Types.Common" }
       , { _1 = "Kilometers", _2 = "Kernel.Types.Common" }
       , { _1 = "Money", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMoney", _2 = "Kernel.Types.Common" }
       , { _1 = "Seconds", _2 = "Kernel.Types.Common" }
+      , { _1 = "Minutes", _2 = "Kernel.Types.Common" }
+      , { _1 = "Centesimal", _2 = "Kernel.Types.Common" }
       , { _1 = "Currency", _2 = "Kernel.Types.Common" }
       , { _1 = "Price", _2 = "Kernel.Types.Common" }
       , { _1 = "PriceAPIEntity", _2 = "Kernel.Types.Common" }
@@ -144,11 +156,10 @@ let defaultImports =
         , _generationType = GeneratorType.SERVANT_API
         }
       , { _simpleImports =
-          [ "EulerHS.Prelude"
+          [ "EulerHS.Prelude hiding (sortOn)"
           , "Servant"
           , "Tools.Auth.Api"
-          , "Tools.Auth.Merchant"
-          , "Kernel.Utils.Common"
+          , "Kernel.Utils.Common hiding (INFO)"
           , "Storage.Beam.CommonInstances ()"
           ]
         , _qualifiedImports =
@@ -157,7 +168,6 @@ let defaultImports =
           , "Control.Lens"
           , "Kernel.Types.Id"
           , "Kernel.Types.Beckn.Context"
-          , "SharedLogic.Transaction"
           ]
         , _packageImports =
           [ { _importType = ImportType.QUALIFIED
@@ -172,7 +182,33 @@ let defaultImports =
         , _generationType = GeneratorType.SERVANT_API_DASHBOARD
         }
       , { _simpleImports =
-          [ "EulerHS.Prelude hiding (id)"
+          [ "EulerHS.Prelude"
+          , "Tools.Auth.Api"
+          , "Tools.Auth.Merchant"
+          , "Kernel.Utils.Common"
+          , "Storage.Beam.CommonInstances ()"
+          ]
+        , _qualifiedImports =
+          [ "Kernel.Prelude"
+          , "Domain.Types.Person"
+          , "Kernel.Types.Id"
+          , "Kernel.Types.Beckn.Context"
+          , "SharedLogic.Transaction"
+          ]
+        , _packageImports =
+          [ { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Domain.Types.Merchant"
+            }
+          , { _importType = ImportType.QUALIFIED
+            , _importPackageName = "lib-dashboard"
+            , _importModuleName = "Environment"
+            }
+          ]
+        , _generationType = GeneratorType.DOMAIN_HANDLER_DASHBOARD
+        }
+      , { _simpleImports =
+          [ "EulerHS.Prelude hiding (id, state)"
           , "Servant"
           , "Data.OpenApi (ToSchema)"
           , "Servant.Client"
@@ -186,6 +222,7 @@ let defaultImports =
           , "Kernel.Types.Id"
           , "EulerHS.Types"
           , "Kernel.Types.APISuccess"
+          , "Kernel.Types.HideSecrets"
           ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.API_TYPES
@@ -254,6 +291,7 @@ let defaultConfigs =
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =
         [ GeneratorType.DOMAIN_HANDLER
+        , GeneratorType.DOMAIN_HANDLER_DASHBOARD
         , GeneratorType.API_TYPES
         , GeneratorType.SERVANT_API
         , GeneratorType.SERVANT_API_DASHBOARD

@@ -26,6 +26,9 @@ data EstimateApi = EstimateApi
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FareResponse = FareResponse {estimatedFares :: [API.Types.UI.FareCalculator.EstimateApi]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data FareResponse = FareResponse {estimatedFares :: [API.Types.UI.FareCalculator.EstimateApi]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

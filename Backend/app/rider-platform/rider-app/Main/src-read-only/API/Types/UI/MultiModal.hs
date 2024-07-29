@@ -17,7 +17,9 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data MetroLegInfo = MetroLegInfo {metroLines :: [API.Types.UI.MultiModal.MetroLineInfo]} deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+data MetroLegInfo = MetroLegInfo {metroLines :: [API.Types.UI.MultiModal.MetroLineInfo]}
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MetroLineInfo = MetroLineInfo
   { endStation :: API.Types.UI.MultiModal.MetroStationInfo,
@@ -28,10 +30,12 @@ data MetroLineInfo = MetroLineInfo
     lineTimings :: API.Types.UI.MultiModal.MetroLineTiming,
     startStation :: API.Types.UI.MultiModal.MetroStationInfo
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MetroLineTiming = MetroLineTiming {endTime :: Kernel.Prelude.TimeOfDay, frequency :: Kernel.Types.Common.Seconds, startTime :: Kernel.Prelude.TimeOfDay}
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MetroStationInfo = MetroStationInfo
   { exit :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -40,7 +44,8 @@ data MetroStationInfo = MetroStationInfo
     stationLocation :: Kernel.External.Maps.LatLong,
     stationName :: Kernel.Prelude.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MultiModalEstimate = MultiModalEstimate
   { estimatedFare :: Kernel.Types.Common.PriceAPIEntity,
@@ -51,7 +56,8 @@ data MultiModalEstimate = MultiModalEstimate
     travelModes :: [Domain.Types.Common.TravelMode],
     validTill :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MultiModalRouteDetails = MultiModalRouteDetails
   { automaticBooking :: Kernel.Prelude.Bool,
@@ -60,7 +66,8 @@ data MultiModalRouteDetails = MultiModalRouteDetails
     totalDistance :: Kernel.Types.Common.Distance,
     totalDuration :: Kernel.Types.Common.Seconds
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MultiModalRouteLeg = MultiModalRouteLeg
   { distance :: Kernel.Types.Common.Distance,
@@ -68,18 +75,25 @@ data MultiModalRouteLeg = MultiModalRouteLeg
     legInfo :: API.Types.UI.MultiModal.MultiModalRouteLegInfo,
     status :: API.Types.UI.MultiModal.MultiModalRouteLegStatus
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MultiModalRouteLegInfo
   = WalkLeg API.Types.UI.MultiModal.WalkLegInfo
   | MetroLeg API.Types.UI.MultiModal.MetroLegInfo
   | TaxiLeg API.Types.UI.MultiModal.TaxiLegInfo
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MultiModalRouteLegStatus = Pending | Completed deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data MultiModalRouteLegStatus
+  = Pending
+  | Completed
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TaxiLegInfo = TaxiLegInfo {endLocation :: Domain.Types.Location.LocationAPIEntity, legStage :: API.Types.UI.MultiModal.TaxiLegStage, startLocation :: Domain.Types.Location.LocationAPIEntity}
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TaxiLegStage
   = SearchStage (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest) (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate))
@@ -87,7 +101,9 @@ data TaxiLegStage
   | PickupStage (Kernel.Types.Id.Id Domain.Types.Booking.Booking)
   | OngoingStage (Kernel.Types.Id.Id Domain.Types.Booking.Booking)
   | CompletedStage
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data WalkLegInfo = WalkLegInfo {endLocation :: Domain.Types.Location.LocationAPIEntity, startLocation :: Domain.Types.Location.LocationAPIEntity}
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

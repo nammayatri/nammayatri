@@ -27,24 +27,19 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Validation
-import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data BookingEndpoint
   = StuckBookingsCancelEndpoint
   | MultipleBookingSyncEndpoint
+  | PostBookingCancelAllStuckEndpoint
+  | PostBookingSyncMultipleEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "BookingEndpoint"
 
 ---------------------------------------------------------
 -- bookings cancel --------------------------------------
-
-type StuckBookingsCancelAPI =
-  "cancel"
-    :> "allStuck"
-    :> ReqBody '[JSON] StuckBookingsCancelReq
-    :> Post '[JSON] StuckBookingsCancelRes
 
 newtype StuckBookingsCancelReq = StuckBookingsCancelReq
   { bookingIds :: [Id Booking]
@@ -83,11 +78,6 @@ instance HideSecrets StuckBookingsCancelRes where
 
 ---------------------------------------------------------
 -- multiple booking sync --------------------------
-
-type MultipleBookingSyncAPI =
-  "sync"
-    :> ReqBody '[JSON] MultipleBookingSyncReq
-    :> Post '[JSON] MultipleBookingSyncResp
 
 newtype MultipleBookingSyncReq = MultipleBookingSyncReq
   { bookings :: [MultipleBookingItem]

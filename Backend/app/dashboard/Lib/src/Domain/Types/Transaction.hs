@@ -30,14 +30,14 @@ import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
 import qualified "rider-app" API.Dashboard.Tickets as ADT
 import Control.Lens.Operators
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
+import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
 import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.DriverReferral as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverReferral as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety

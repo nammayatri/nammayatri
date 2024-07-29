@@ -12,7 +12,11 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data OAuthProvider = Google | IOS deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data OAuthProvider
+  = Google
+  | IOS
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SocialLoginReq = SocialLoginReq
   { email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -24,9 +28,12 @@ data SocialLoginReq = SocialLoginReq
     registrationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     tokenId :: Kernel.Prelude.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SocialLoginRes = SocialLoginRes {isNew :: Kernel.Prelude.Bool, token :: Kernel.Prelude.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data SocialLoginRes = SocialLoginRes {isNew :: Kernel.Prelude.Bool, token :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SocialUpdateProfileReq = SocialUpdateProfileReq
   { email :: Kernel.Prelude.Text,
@@ -35,4 +42,5 @@ data SocialUpdateProfileReq = SocialUpdateProfileReq
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

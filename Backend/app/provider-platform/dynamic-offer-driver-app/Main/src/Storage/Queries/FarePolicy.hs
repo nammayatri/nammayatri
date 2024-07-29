@@ -20,7 +20,7 @@ module Storage.Queries.FarePolicy
     #-}
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant as DPM
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions

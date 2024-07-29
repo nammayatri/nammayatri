@@ -80,7 +80,7 @@ where
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
 import qualified Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
 import Data.Digest.Pure.MD5 as MD5

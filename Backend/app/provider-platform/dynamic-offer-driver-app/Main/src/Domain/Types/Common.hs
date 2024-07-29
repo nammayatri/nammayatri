@@ -19,7 +19,7 @@
 module Domain.Types.Common where
 
 import Control.Lens.Operators hiding ((.=))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant as Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List

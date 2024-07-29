@@ -16,6 +16,7 @@ let outputPath =
       , _extraCachedQueries = outputPrefix ++ "Storage/CachedQueries/"
       , _beamTable = outputPrefixReadOnly ++ "Storage/Beam"
       , _domainHandler = outputPrefix ++ "Domain/Action/UI"
+      , _domainHandlerDashboard = ""
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixReadOnly ++ "API/Action/UI"
       , _servantApiDashboard = ""
@@ -28,6 +29,7 @@ let GeneratorType =
       | SERVANT_API_DASHBOARD
       | API_TYPES
       | DOMAIN_HANDLER
+      | DOMAIN_HANDLER_DASHBOARD
       | BEAM_QUERIES
       | CACHED_QUERIES
       | BEAM_TABLE

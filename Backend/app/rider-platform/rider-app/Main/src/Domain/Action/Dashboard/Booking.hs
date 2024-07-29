@@ -13,8 +13,8 @@
 -}
 
 module Domain.Action.Dashboard.Booking
-  ( stuckBookingsCancel,
-    multipleBookingSync,
+  ( postBookingCancelAllStuck,
+    postBookingSyncMultiple,
   )
 where
 
@@ -49,12 +49,12 @@ import Tools.Error
 --   bookings, when status is NEW for more than 6 hours
 --   bookings and rides, when ride status is NEW for more than 6 hours
 
-stuckBookingsCancel ::
+postBookingCancelAllStuck ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.StuckBookingsCancelReq ->
   Flow Common.StuckBookingsCancelRes
-stuckBookingsCancel merchantShortId opCity req = do
+postBookingCancelAllStuck merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let distanceUnit = merchantOpCity.distanceUnit
@@ -110,12 +110,12 @@ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems = do
     }
 
 ---------------------------------------------------------------------
-multipleBookingSync ::
+postBookingSyncMultiple ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.MultipleBookingSyncReq ->
   Flow Common.MultipleBookingSyncResp
-multipleBookingSync merchantShortId opCity req = do
+postBookingSyncMultiple merchantShortId opCity req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)

@@ -16,7 +16,8 @@ data DriverProfileQuesReq = DriverProfileQuesReq
     pledges :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     whyNY :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverProfileQuesRes = DriverProfileQuesRes
   { aspirations :: [Kernel.Prelude.Text],
@@ -25,4 +26,5 @@ data DriverProfileQuesRes = DriverProfileQuesRes
     pledges :: [Kernel.Prelude.Text],
     whyNY :: [Kernel.Prelude.Text]
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

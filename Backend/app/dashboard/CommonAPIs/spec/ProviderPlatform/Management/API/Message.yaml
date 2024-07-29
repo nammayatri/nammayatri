@@ -1,0 +1,162 @@
+imports:
+  Message: Dashboard.Common
+  File: Dashboard.Common
+  Summary: Dashboard.Common
+  Receiver: Dashboard.Common
+  FileType: AWS.S3
+  Language: Kernel.External.Types
+
+module: Message
+
+apis:
+  - POST:
+      endpoint: /uploadFile
+      multipart:
+        type: UploadFileRequest
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE UPLOAD_FILE
+      response:
+        type: UploadFileResponse
+  - POST:
+      endpoint: /addLink
+      request:
+        type: AddLinkAsMedia
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_LINK
+      response:
+        type: UploadFileResponse
+  - POST:
+      endpoint: /add
+      request:
+        type: AddMessageRequest
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_MESSAGE
+      response:
+        type: AddMessageResponse
+  - POST:
+      endpoint: /send
+      multipart:
+        type: SendMessageRequest
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /list
+      query:
+        - limit: Int
+        - offset: Int
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_LIST
+      response:
+        type: MessageListResponse
+  - GET:
+      endpoint: /{messageId}/info
+      params:
+        messageId: (Id Message)
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_INFO
+      response:
+        type: MessageInfoResponse
+  - GET:
+      endpoint: /{messageId}/deliveryInfo
+      params:
+        messageId: (Id Message)
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_DELIVERY_INFO
+      response:
+        type: MessageDeliveryInfoResponse
+  - GET:
+      endpoint: /{messageId}/receiverList
+      params:
+        messageId: (Id Message)
+      query:
+        - number: Text
+        - status: MessageDeliveryStatus
+        - limit: Int
+        - offset: Int
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_RECEIVER_LIST
+      response:
+        type: MessageReceiverListResponse
+types:
+  AddLinkAsMedia:
+    - url: Text
+    - fileType: FileType
+  UploadFileRequest:
+    - file: FilePath
+    - reqContentType: Text
+    - fileType: FileType
+    - derive: "'HideSecrets"
+  UploadFileResponse:
+    - recordType: NewType
+    - fileId: Id File
+  AddMessageRequest:
+    - _type: MessageType
+    - title: Text # max character 100
+    - description: Text # no max character limit
+    - shortDescription: Text
+    - label: Maybe Text
+    - alwaysTriggerOnOnboarding: Maybe Bool
+    - translations: [MessageTranslation]
+    - mediaFiles: [Id File]
+    - derive: "'HideSecrets"
+  MessageType:
+    - enum: "Action Text, Read"
+  MediaFile:
+    - _type: FileType
+    - link: Text
+  MessageTranslation:
+    - language: Language
+    - title: Text
+    - description: Text
+    - shortDescription: Text
+    - label: Maybe Text
+  AddMessageResponse:
+    - recordType: NewType
+    - messageId: Id Message
+  SendMessageRequest:
+    - csvFile: Maybe FilePath
+    - _type: InputType
+    - messageId: Text
+    - derive: "'HideSecrets"
+  InputType:
+    - enum: "Include, Exclude, AllEnabled"
+    - derive: "Kernel.Prelude.Read"
+  MessageListResponse:
+    - messages: [MessageListItem]
+    - summary: Summary
+  MessageListItem:
+    - messageId: Id Message
+    - title: Text
+    - _type: MessageType
+  MessageInfoResponse:
+    - messageId: Id Message
+    - title: Text
+    - description: Text
+    - shortDescription: Text
+    - _type: MessageType
+    - mediaFiles: [MediaFile]
+  MessageDeliveryInfoResponse:
+    - messageId: Id Message
+    - success: Int
+    - failed: Int
+    - queued: Int
+    - sending: Int
+    - seen: Int
+    - liked: Int
+    - viewed: Int
+  MessageReceiverListResponse:
+    - receivers: [MessageReceiverListItem]
+    - summary: Summary
+  MessageReceiverListItem:
+    - receiverId: Id Receiver
+    - receiverName: Text
+    - receiverNumber: Text
+    - reply: Maybe Text
+    - seen: Maybe Bool
+    - liked: Maybe Bool
+    - status: MessageDeliveryStatus
+  MessageDeliveryStatus:
+    - enum: "Failed, Success, Queued, Sending"
+    - derive: "Kernel.Prelude.ToParamSchema"

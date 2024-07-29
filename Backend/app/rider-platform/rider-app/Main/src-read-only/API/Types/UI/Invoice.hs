@@ -11,7 +11,9 @@ import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
 
-data FareBreakup = FareBreakup {price :: Data.Text.Text, title :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data FareBreakup = FareBreakup {price :: Data.Text.Text, title :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data InvoiceRes = InvoiceRes
   { chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
@@ -27,4 +29,5 @@ data InvoiceRes = InvoiceRes
     totalAmount :: Data.Text.Text,
     vehicleNumber :: Data.Text.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

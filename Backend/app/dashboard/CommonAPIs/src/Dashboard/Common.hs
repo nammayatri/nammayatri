@@ -21,6 +21,7 @@ module Dashboard.Common
 where
 
 import Data.Aeson
+import qualified Data.ByteString.Lazy as LBS
 import Data.OpenApi
 import Kernel.Prelude
 import Kernel.Types.HideSecrets as Reexport
@@ -116,3 +117,6 @@ listItemTaggedObject =
 -- is it correct to show every error?
 listItemErrHandler :: Monad m => SomeException -> m ListItemResult
 listItemErrHandler = pure . FailItem . show @Text @SomeException
+
+addMultipartBoundary :: LBS.ByteString -> ((LBS.ByteString, req) -> res) -> (req -> res)
+addMultipartBoundary boundary clientFn reqBody = clientFn (boundary, reqBody)

@@ -6,7 +6,7 @@ module: SocialLogin
 
 types:
   OAuthProvider:
-    enum: "Google | IOS"
+    enum: "Google, IOS"
   SocialLoginReq:
     name: Maybe Text
     email: Maybe Text

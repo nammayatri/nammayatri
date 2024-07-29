@@ -18,38 +18,38 @@ import Servant
 import "lib-dashboard" Tools.Auth
 
 type API =
-  ( DashboardAuth ('DASHBOARD_USER) :> "list" :> "notification" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
+  ( DashboardAuth 'DASHBOARD_USER :> "list" :> "notification" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
            "readStatus"
            Kernel.Prelude.Bool
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Notification.NotificationList
-      :<|> DashboardAuth ('DASHBOARD_USER)
+      :<|> DashboardAuth 'DASHBOARD_USER
       :> "read"
       :> "notification"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Notification.NotificationReadRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> DashboardAuth ('DASHBOARD_USER)
+      :<|> DashboardAuth 'DASHBOARD_USER
       :> "update"
       :> "receive"
       :> "notificationStatus"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Notification.UpdateRecieveNotificationStatusRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
 handler = getListNotification :<|> postReadNotification :<|> postUpdateReceiveNotificationStatus
 
-getListNotification :: (TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler API.Types.UI.Notification.NotificationList)
+getListNotification :: (TokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.UI.Notification.NotificationList)
 getListNotification a4 a3 a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.Notification.getListNotification a4 a3 a2 a1
 
 postReadNotification :: (TokenInfo -> API.Types.UI.Notification.NotificationReadRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

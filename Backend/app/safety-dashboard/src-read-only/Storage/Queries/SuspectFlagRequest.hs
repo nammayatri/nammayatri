@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByDlAndAdminApprovalAndMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest]))
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.SuspectFlagRequest.AdminApproval -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m [Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findAllByDlAndAdminApprovalAndMerchantId dl adminApproval merchantId = do
   findAllWithKV
     [ Se.And
@@ -37,12 +37,12 @@ findAllByDlAndAdminApprovalAndMerchantId dl adminApproval merchantId = do
 
 findAllByMerchantIdAndDl ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findAllByMerchantIdAndDl merchantId dl = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.dl $ Se.Eq dl]]
 
 findAllByMerchantIdAndVoterId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.SuspectFlagRequest.SuspectFlagRequest]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.SuspectFlagRequest.SuspectFlagRequest])
 findAllByMerchantIdAndVoterId merchantId voterId = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.voterId $ Se.Eq voterId]]
 
 findByDlOrVoterId ::

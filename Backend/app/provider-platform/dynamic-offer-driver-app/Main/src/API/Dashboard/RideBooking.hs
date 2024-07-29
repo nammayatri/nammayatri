@@ -14,6 +14,7 @@
 
 module API.Dashboard.RideBooking where
 
+import qualified API.Action.Dashboard.RideBooking.Driver as DriverActivateDSL
 import qualified API.Dashboard.RideBooking.Driver as Driver
 import qualified API.Dashboard.RideBooking.Maps as Maps
 import qualified API.Dashboard.RideBooking.Ride as Ride
@@ -29,15 +30,15 @@ type API =
   DashboardTokenAuth
     :> ( Driver.AuthAPI
            :<|> Ride.API
-           :<|> Driver.ActivateAPI
            :<|> Volunteer.API
            :<|> Maps.API
+           :<|> DriverActivateDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city _ = do
   Driver.authHandler merchantId city
     :<|> Ride.handler merchantId city
-    :<|> Driver.activateHandler merchantId city
     :<|> Volunteer.handler merchantId city
     :<|> Maps.handler merchantId city
+    :<|> DriverActivateDSL.handler merchantId city
