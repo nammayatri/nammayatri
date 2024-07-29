@@ -21,19 +21,30 @@ import Servant
 import Tools.Auth
 
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp, status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSBookingPaymentStatusAPI = NEW | PENDING | SUCCESS | FAILURE | REFUND_PENDING | REFUNDED deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data FRFSBookingPaymentStatusAPI
+  = NEW
+  | PENDING
+  | SUCCESS
+  | FAILURE
+  | REFUND_PENDING
+  | REFUNDED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSCanCancelStatus = FRFSCanCancelStatus
   { cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     isCancellable :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     refundAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSCancelStatus = FRFSCancelStatus {cancellationCharges :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney, refundAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSConfigAPIRes = FRFSConfigAPIRes
   { bookingEndTime :: Kernel.Prelude.UTCTime,
@@ -49,7 +60,8 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
     roundTripTicketLimit :: Kernel.Prelude.Int,
     ticketsBookedInEvent :: Kernel.Prelude.Int
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
@@ -63,11 +75,16 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSSearchAPIReq = FRFSSearchAPIReq {fromStationCode :: Data.Text.Text, quantity :: Kernel.Prelude.Int, toStationCode :: Data.Text.Text} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data FRFSSearchAPIReq = FRFSSearchAPIReq {fromStationCode :: Data.Text.Text, quantity :: Kernel.Prelude.Int, toStationCode :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSSearchAPIRes = FRFSSearchAPIRes {searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data FRFSSearchAPIRes = FRFSSearchAPIRes {searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSStationAPI = FRFSStationAPI
   { address :: Data.Maybe.Maybe Data.Text.Text,
@@ -79,10 +96,12 @@ data FRFSStationAPI = FRFSStationAPI
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.StationType
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSTicketAPI = FRFSTicketAPI {qrData :: Data.Text.Text, status :: Domain.Types.FRFSTicket.FRFSTicketStatus, ticketNumber :: Data.Text.Text, validTill :: Kernel.Prelude.UTCTime}
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
@@ -102,6 +121,13 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data StationType = START | END | TRANSIT | INTERMEDIATE deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data StationType
+  = START
+  | END
+  | TRANSIT
+  | INTERMEDIATE
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

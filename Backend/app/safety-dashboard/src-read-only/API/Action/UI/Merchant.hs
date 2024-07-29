@@ -18,43 +18,43 @@ import Servant
 import "lib-dashboard" Tools.Auth
 
 type API =
-  ( DashboardAuth ('MERCHANT_ADMIN) :> "set" :> "merchantConfig" :> ReqBody ('[JSON]) API.Types.UI.Merchant.SetMerchantConfigReq
+  ( DashboardAuth 'MERCHANT_ADMIN :> "set" :> "merchantConfig" :> ReqBody '[JSON] API.Types.UI.Merchant.SetMerchantConfigReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "merchant"
       :> "user"
       :> "list"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Merchant.MerchantUserList
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "merchant"
       :> "user"
       :> "resetPassword"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Merchant.ResetPasswordReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "merchant"
       :> "get"
       :> "webhookConfig"
       :> Get
-           ('[JSON])
+           '[JSON]
            Domain.Types.MerchantConfigs.MerchantConfigs
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "merchant"
       :> "webhookConfig"
       :> "preference"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Merchant.WebHookConfigPreferenceReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

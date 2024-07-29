@@ -26,11 +26,11 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
-import qualified Domain.Action.Dashboard.Merchant as DM
+import qualified Domain.Action.Dashboard.Management.Merchant as DM
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide

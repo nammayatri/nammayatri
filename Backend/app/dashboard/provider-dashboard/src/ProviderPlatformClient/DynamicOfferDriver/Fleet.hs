@@ -19,8 +19,7 @@ module ProviderPlatformClient.DynamicOfferDriver.Fleet
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
-import qualified Dashboard.ProviderPlatform.Driver as Driver
-import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
+import qualified API.Types.ProviderPlatform.Fleet.Driver as DriverDSL
 import Data.Time
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride as DARide
@@ -39,27 +38,8 @@ import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
 
-data FleetOperationsAPIs = FleetOperationsAPIs
-  { addVehicleForFleet :: Text -> Maybe Text -> Text -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
-    registerRCForFleetWithoutDriver :: Text -> Registration.RegisterRCReq -> Euler.EulerClient APISuccess,
-    getAllVehicleForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.ListVehicleRes,
-    getAllDriverForFleet :: Text -> Maybe Int -> Maybe Int -> Euler.EulerClient Driver.FleetListDriverRes,
-    fleetUnlinkVehicle :: Text -> Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
-    fleetRemoveVehicle :: Text -> Text -> Euler.EulerClient APISuccess,
-    fleetRemoveDriver :: Text -> Id Driver.Driver -> Euler.EulerClient APISuccess,
-    fleetTotalEarning :: Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.FleetTotalEarningResponse,
-    fleetVehicleEarning :: Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.FleetEarningListRes,
-    fleetDriverEarning :: Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe UTCTime -> Maybe Bool -> Maybe Driver.SortOn -> Euler.EulerClient Driver.FleetEarningListRes,
-    getFleetDriverVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetDriverAssociation :: Text -> Maybe Bool -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Driver.DriverMode -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    getFleetVehicleAssociation :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Driver.FleetVehicleStatus -> Euler.EulerClient Driver.DrivertoVehicleAssociationRes,
-    setVehicleDriverRcStatusForFleet :: Id Driver.Driver -> Text -> Driver.RCStatusReq -> Euler.EulerClient APISuccess,
-    updateFleetOwnerInfo :: Id Driver.Driver -> Driver.UpdateFleetOwnerInfoReq -> Euler.EulerClient APISuccess,
-    getFleetOwnerInfo :: Id Driver.Driver -> Euler.EulerClient Driver.FleetOwnerInfoRes,
-    sendFleetJoiningOtp :: Text -> Registration.AuthReq -> Euler.EulerClient Registration.AuthRes,
-    verifyFleetJoiningOtp :: Text -> Maybe Text -> Driver.VerifyFleetJoiningOtpReq -> Euler.EulerClient APISuccess,
-    listDriverRidesForFleet :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Euler.EulerClient DARide.DriverRideListRes,
-    linkRCWithDriverForFleet :: Text -> Driver.LinkRCWithDriverForFleetReq -> Euler.EulerClient APISuccess
+newtype FleetOperationsAPIs = FleetOperationsAPIs
+  { listDriverRidesForFleet :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Euler.EulerClient DARide.DriverRideListRes
   }
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs
@@ -70,38 +50,24 @@ data FleetRegistrationAPIs = FleetRegistrationAPIs
 
 data FleetAPIs = FleetAPIs
   { operations :: FleetOperationsAPIs,
-    registration :: FleetRegistrationAPIs
+    registration :: FleetRegistrationAPIs,
+    driverDSL :: DriverDSL.DriverAPIs
   }
 
 mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> FleetAPIs
 mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
   let operations = FleetOperationsAPIs {..}
       registration = FleetRegistrationAPIs {..}
+
+  -- TODO rename to operations
+  let driverDSL = DriverDSL.mkDriverAPIs driverClientDSL
   FleetAPIs {..}
   where
     fleetOperationsClient
-      :<|> fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> fleetRegisterationClient
+      :<|> driverClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
-    addVehicleForFleet
-      :<|> registerRCForFleetWithoutDriver
-      :<|> getAllVehicleForFleet
-      :<|> getAllDriverForFleet
-      :<|> fleetUnlinkVehicle
-      :<|> fleetRemoveVehicle
-      :<|> fleetRemoveDriver
-      :<|> fleetTotalEarning
-      :<|> fleetVehicleEarning
-      :<|> fleetDriverEarning
-      :<|> getFleetDriverVehicleAssociation
-      :<|> getFleetDriverAssociation
-      :<|> getFleetVehicleAssociation
-      :<|> setVehicleDriverRcStatusForFleet
-      :<|> updateFleetOwnerInfo
-      :<|> getFleetOwnerInfo
-      :<|> sendFleetJoiningOtp
-      :<|> verifyFleetJoiningOtp
-      :<|> listDriverRidesForFleet
-      :<|> linkRCWithDriverForFleet = fleetOperationsClient
+    listDriverRidesForFleet = fleetOperationsClient
 
     fleetOwnerLogin
       :<|> fleetOwnerVerify

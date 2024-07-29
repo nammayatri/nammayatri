@@ -20,13 +20,12 @@ module API.RiderPlatform
   )
 where
 
-import qualified API.Action.RiderPlatform.Management.Merchant as MerchantDSL
-import qualified API.RiderPlatform.Booking as Booking
+import qualified API.Action.RiderPlatform.Management.Booking as ManagementBookingDSL
+import qualified API.Action.RiderPlatform.Management.Merchant as ManagementMerchantDSL
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.HotSpot as HotSpot
 import qualified API.RiderPlatform.Issue as Issue
 import qualified API.RiderPlatform.IssueList as IssueList
-import qualified API.RiderPlatform.Merchant as Merchant
 import qualified API.RiderPlatform.Ride as Ride
 import qualified API.RiderPlatform.RideBooking as RideBooking
 import qualified API.RiderPlatform.Tickets as Tickets
@@ -50,30 +49,26 @@ type APIV2 =
 
 type API' =
   Customer.API
-    :<|> Booking.API
-    :<|> Merchant.API
     :<|> Ride.API
     :<|> RideBooking.API
     :<|> IssueList.API
     :<|> Issue.API
     :<|> Tickets.API
     :<|> HotSpot.API
-    :<|> MerchantDSL.API
+    :<|> ManagementAPI
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
 handler merchantId = do
   let city = getCity merchantId.getShortId
   Customer.handler merchantId city
-    :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
     :<|> Ride.handler merchantId city
     :<|> RideBooking.handler merchantId city
     :<|> IssueList.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Tickets.handler merchantId city
     :<|> HotSpot.handler merchantId city
-    :<|> MerchantDSL.handler merchantId city
+    :<|> managementHandler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI" -> City.Bangalore
@@ -84,12 +79,19 @@ handler merchantId = do
 handlerV2 :: FlowServer APIV2
 handlerV2 merchantId city =
   Customer.handler merchantId city
-    :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
     :<|> Ride.handler merchantId city
     :<|> RideBooking.handler merchantId city
     :<|> IssueList.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Tickets.handler merchantId city
     :<|> HotSpot.handler merchantId city
-    :<|> MerchantDSL.handler merchantId city
+    :<|> managementHandler merchantId city
+
+type ManagementAPI =
+  ManagementBookingDSL.API
+    :<|> ManagementMerchantDSL.API
+
+managementHandler :: ShortId DMerchant.Merchant -> City.City -> FlowServer ManagementAPI
+managementHandler merchantId city =
+  ManagementBookingDSL.handler merchantId city
+    :<|> ManagementMerchantDSL.handler merchantId city

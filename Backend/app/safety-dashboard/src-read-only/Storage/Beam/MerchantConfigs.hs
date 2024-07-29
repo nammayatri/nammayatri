@@ -13,14 +13,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantConfigsT f = MerchantConfigsT
-  { id :: (B.C f Kernel.Prelude.Text),
-    merchantShortId :: (B.C f Kernel.Prelude.Text),
-    requestWebHook :: (B.C f Kernel.Prelude.Bool),
-    webHookHeaders :: (B.C f [Domain.Types.MerchantConfigs.WebHookHeaders]),
-    webHookUrl :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { id :: B.C f Kernel.Prelude.Text,
+    merchantShortId :: B.C f Kernel.Prelude.Text,
+    requestWebHook :: B.C f Kernel.Prelude.Bool,
+    webHookHeaders :: B.C f [Domain.Types.MerchantConfigs.WebHookHeaders],
+    webHookUrl :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table MerchantConfigsT where
 
 type MerchantConfigs = MerchantConfigsT Identity
 
-$(enableKVPG (''MerchantConfigsT) [('id)] [])
+$(enableKVPG ''MerchantConfigsT ['id] [])
 
-$(mkTableInstances (''MerchantConfigsT) "merchant_configs")
+$(mkTableInstances ''MerchantConfigsT "merchant_configs")

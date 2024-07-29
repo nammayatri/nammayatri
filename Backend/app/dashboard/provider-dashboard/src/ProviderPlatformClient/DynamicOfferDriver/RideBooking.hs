@@ -19,9 +19,9 @@ module ProviderPlatformClient.DynamicOfferDriver.RideBooking
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.RideBooking as BPP
-import qualified Dashboard.ProviderPlatform.Driver as Driver
-import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
-import qualified Dashboard.ProviderPlatform.Ride as Ride
+import qualified API.Types.ProviderPlatform.RideBooking.Driver as DriverDSL
+import qualified Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
+import qualified Dashboard.ProviderPlatform.Management.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Maps as DMaps
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -41,23 +41,9 @@ import "lib-dashboard" Tools.Metrics
 data DriverRideBookingAPIs = DriverRideBookingAPIs
   { driverRegistration :: DriverRegistrationAPIs,
     rides :: RidesAPIs,
-    drivers :: DriversAPIs,
     volunteer :: VolunteerAPIs,
-    maps :: MapsAPIs
-  }
-
-data DriversAPIs = DriversAPIs
-  { getDriverDue :: Maybe Text -> Text -> Euler.EulerClient [Driver.DriverOutstandingBalanceResp],
-    enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    collectCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
-    collectCashV2 :: Id Driver.Driver -> Text -> Driver.ServiceNames -> Euler.EulerClient APISuccess,
-    exemptCash :: Id Driver.Driver -> Text -> Euler.EulerClient APISuccess,
-    exemptCashV2 :: Id Driver.Driver -> Text -> Driver.ServiceNames -> Euler.EulerClient APISuccess,
-    driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Euler.EulerClient Driver.DriverInfoRes,
-    unlinkVehicle :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    endRCAssociation :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
-    setRCStatus :: Id Driver.Driver -> Driver.RCStatusReq -> Euler.EulerClient APISuccess
+    maps :: MapsAPIs,
+    driverDSL :: DriverDSL.DriverAPIs
   }
 
 data RidesAPIs = RidesAPIs
@@ -86,30 +72,19 @@ data MapsAPIs = MapsAPIs
 
 mkDriverRideBookingAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> DriverRideBookingAPIs
 mkDriverRideBookingAPIs merchantId city token = do
-  let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
   let driverRegistration = DriverRegistrationAPIs {..}
   let volunteer = VolunteerAPIs {..}
   let maps = MapsAPIs {..}
+
+  let driverDSL = DriverDSL.mkDriverAPIs driverClientDSL
   DriverRideBookingAPIs {..}
   where
     driverRegistrationClient
       :<|> ridesClient
-      :<|> driversClient
       :<|> volunteerClient
-      :<|> mapsClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
-
-    getDriverDue
-      :<|> enableDriver
-      :<|> collectCash
-      :<|> collectCashV2
-      :<|> exemptCash
-      :<|> exemptCashV2
-      :<|> driverInfo
-      :<|> unlinkVehicle
-      :<|> endRCAssociation
-      :<|> addVehicle
-      :<|> setRCStatus = driversClient
+      :<|> mapsClient
+      :<|> driverClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     rideStart
       :<|> rideEnd

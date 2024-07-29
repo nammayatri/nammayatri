@@ -5,7 +5,7 @@ module Domain.Action.UI.Sos where
 
 import API.Types.UI.Sos
 import AWS.S3 as S3
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import Data.Text as T

@@ -9,4 +9,6 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data ReferredCustomers = ReferredCustomers {count :: Kernel.Prelude.Int} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data ReferredCustomers = ReferredCustomers {count :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

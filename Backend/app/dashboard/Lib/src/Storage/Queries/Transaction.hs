@@ -15,7 +15,7 @@
 
 module Storage.Queries.Transaction where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified Database.Beam as B
 import Domain.Types.Person as DP
 import Domain.Types.ServerName as DSN

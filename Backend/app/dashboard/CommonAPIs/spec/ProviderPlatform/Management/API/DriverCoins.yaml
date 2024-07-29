@@ -1,0 +1,90 @@
+imports:
+  Driver: Dashboard.Common
+
+module: DriverCoins # module: Driver.Coins TODO Driver.Coins.yaml should generate Driver.Coins.hs
+apiPrefix: coins
+
+apis:
+  - POST: # BulkUploadCoinsAPI
+      endpoint: bulkUploadCoins
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
+      request:
+        type: BulkUploadCoinsReq
+      response:
+        type: APISuccess
+  - POST: # BulkUploadCoinsAPIV2
+      endpoint: bulkUploadCoinsV2
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
+      request:
+        type: BulkUploadCoinsReqV2
+      response:
+        type: APISuccess
+  - GET: # CoinHistoryAPI
+      endpoint: coinHistory/{driverId}
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_HISTORY
+      params:
+        driverId: (Id Driver)
+      query:
+        - limit: Integer
+        - offset: Integer
+      response:
+        type: CoinHistoryRes
+
+types:
+  BulkUploadCoinsReq:
+    - driverIdListWithCoins: [DriverIdListWithCoins]
+    - bulkUploadTitle: Translations
+    - expirationTime: Maybe Int
+  BulkUploadCoinsReqV2:
+    - driverIdListWithCoins: [DriverIdListWithAmount]
+    - bulkUploadTitle: Translations
+    - expirationTime: Maybe Int
+    - eventFunction: DriverCoinsFunctionType
+  DriverIdListWithAmount:
+    - driverId: Text
+    - amount: HighPrecMoney
+    - amountWithCurrency: Maybe PriceAPIEntity
+  DriverIdListWithCoins:
+    - driverId: Text
+    - coins: Int
+  Translations:
+    - en: Text
+    - bn: Text
+    - hi: Text
+    - ml: Text
+    - ta: Text
+    - te: Text
+    - kn: Text
+    - fr: Text
+    - derive: "Show, Eq, Ord"
+  CoinHistoryRes:
+    - coinBalance: Int
+    - coinEarned: Int
+    - coinUsed: Int
+    - coinExpired: Int
+    - coinEarnHistory: [CoinEarnHistoryItem]
+    - coinBurnHistory: [CoinBurnHistoryItem]
+  CoinEarnHistoryItem:
+    - coins: Int
+    - eventFunction: DriverCoinsFunctionType
+    - createdAt: UTCTime
+    - expirationAt: Maybe UTCTime
+    - coinsUsed: Int
+    - status: CoinStatus
+    - bulkUploadTitle: Maybe Translations
+  CoinBurnHistoryItem:
+    - numCoins: Int
+    - cash: HighPrecMoney
+    - cashWithCurrency: PriceAPIEntity
+    - title: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  CoinStatus:
+    - enum: "Used, Remaining"
+    - derive: "Read"
+  DriverCoinsFunctionType:
+    - enum: "OneOrTwoStarRating, RideCompleted, FiveStarRating, BookingCancellation, CustomerReferral, DriverReferral, TwoRidesCompleted, FiveRidesCompleted, EightPlusRidesInOneDay, PurpleRideCompleted, LeaderBoardTopFiveHundred, TrainingCompleted, BulkUploadFunction, BulkUploadFunctionV2 CoinMessage"
+    - derive: "Show, Read"
+  CoinMessage:
+    - enum: "CoinAdded, CoinSubtracted, FareRecomputation"
+    - derive: "Read"

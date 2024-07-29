@@ -22,7 +22,8 @@ data DailyEarning = DailyEarning
     referrals :: Kernel.Prelude.Int,
     status :: Domain.Types.DailyStats.PayoutStatus
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ReferralEarningsRes = ReferralEarningsRes
   { dailyEarnings :: [API.Types.UI.ReferralPayout.DailyEarning],
@@ -33,4 +34,5 @@ data ReferralEarningsRes = ReferralEarningsRes
     totalReferralCount :: Kernel.Prelude.Int,
     vpaId :: Kernel.Prelude.Maybe Data.Text.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

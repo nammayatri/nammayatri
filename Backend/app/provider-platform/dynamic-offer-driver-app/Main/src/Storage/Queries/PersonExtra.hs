@@ -10,7 +10,7 @@ where
 -- Extra code goes here --
 
 import Control.Applicative ((<|>))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified Data.HashMap.Strict as HashMap
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))

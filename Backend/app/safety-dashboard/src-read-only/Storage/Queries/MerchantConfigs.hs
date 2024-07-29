@@ -25,7 +25,7 @@ createMany = traverse_ create
 findByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m (Maybe Domain.Types.MerchantConfigs.MerchantConfigs))
 findByMerchantId merchantId = do findOneWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]
 
-findByRequestWebHook :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> m ([Domain.Types.MerchantConfigs.MerchantConfigs]))
+findByRequestWebHook :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> m [Domain.Types.MerchantConfigs.MerchantConfigs])
 findByRequestWebHook requestWebHook = do findAllWithKV [Se.Is Beam.requestWebHook $ Se.Eq requestWebHook]
 
 updateRequestWebHookById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.MerchantConfigs.MerchantConfigs -> m ())

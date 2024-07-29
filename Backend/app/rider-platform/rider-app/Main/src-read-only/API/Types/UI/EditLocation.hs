@@ -9,4 +9,6 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import Tools.Auth
 
-data EditLocationResultAPIResp = EditLocationResultAPIResp {bookingUpdateRequestDetails :: Domain.Types.BookingUpdateRequest.BookingUpdateRequest} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data EditLocationResultAPIResp = EditLocationResultAPIResp {bookingUpdateRequestDetails :: Domain.Types.BookingUpdateRequest.BookingUpdateRequest}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

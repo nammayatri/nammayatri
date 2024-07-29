@@ -43,13 +43,11 @@ library
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
       API.Dashboard
-      API.Dashboard.Booking
       API.Dashboard.Customer
       API.Dashboard.Exotel
       API.Dashboard.HotSpot
       API.Dashboard.Issue
       API.Dashboard.IssueList
-      API.Dashboard.Merchant
       API.Dashboard.Ride
       API.Dashboard.RideBooking
       API.Dashboard.RideBooking.Booking
@@ -387,6 +385,7 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Merchant
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
@@ -708,6 +707,7 @@ library
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DerivingStrategies
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
@@ -832,6 +832,7 @@ executable rider-app-exe
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DerivingStrategies
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric

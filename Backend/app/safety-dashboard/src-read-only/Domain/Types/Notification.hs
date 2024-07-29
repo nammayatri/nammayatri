@@ -36,4 +36,4 @@ data NotificationCategory
   | ADMIN_CLEAN_SUSPECT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationCategory)

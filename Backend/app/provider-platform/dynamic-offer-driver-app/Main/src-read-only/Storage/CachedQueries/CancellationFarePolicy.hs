@@ -16,7 +16,7 @@ findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.CancellationFarePolicy.CancellationFarePolicy -> m (Kernel.Prelude.Maybe Domain.Types.CancellationFarePolicy.CancellationFarePolicy))
 findById id = do
-  Hedis.safeGet ("driverOfferCachedQueries:CancellationFarePolicy:" <> ":Id-" <> Kernel.Types.Id.getId id)
+  (Hedis.safeGet $ "driverOfferCachedQueries:CancellationFarePolicy:" <> ":Id-" <> Kernel.Types.Id.getId id)
     >>= ( \case
             Just a -> pure (Just a)
             Nothing ->

@@ -14,17 +14,18 @@
 
 module API.Dashboard.Management where
 
+import qualified API.Action.Dashboard.Management.Booking as BookingDSL
 import qualified API.Action.Dashboard.Management.Driver as DriverDSL
+import qualified API.Action.Dashboard.Management.DriverCoins as DriverCoinsDSL
+import qualified API.Action.Dashboard.Management.DriverGoHome as DriverGoHomeDSL
+import qualified API.Action.Dashboard.Management.DriverReferral as DriverReferralDSL
+import qualified API.Action.Dashboard.Management.DriverRegistration as DriverRegistrationDSL
 import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
+import qualified API.Action.Dashboard.Management.Message as MessageDSL
 import qualified API.Action.Dashboard.Management.Revenue as RevenueDSL
 import qualified API.Action.Dashboard.Management.Ride as RideDSL
-import qualified API.Dashboard.Management.Booking as Booking
-import qualified API.Dashboard.Management.Driver as Driver
 import qualified API.Dashboard.Management.Issue as Issue
-import qualified API.Dashboard.Management.Merchant as Merchant
-import qualified API.Dashboard.Management.Message as Message
 import qualified API.Dashboard.Management.Overlay as Overlay
-import qualified API.Dashboard.Management.Ride as Ride
 import qualified API.Dashboard.Management.Subscription as Subscription
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -36,30 +37,32 @@ import Tools.Auth
 type API =
   DashboardTokenAuth
     :> ( Subscription.API
-           :<|> Ride.API
            :<|> Overlay.API
-           :<|> Message.API
-           :<|> Merchant.API
            :<|> Issue.API
-           :<|> Driver.API
-           :<|> Booking.API
            :<|> MerchantDSL.API
+           :<|> MessageDSL.API
            :<|> RevenueDSL.API
            :<|> RideDSL.API
            :<|> DriverDSL.API
+           :<|> DriverCoinsDSL.API
+           :<|> DriverGoHomeDSL.API
+           :<|> DriverReferralDSL.API
+           :<|> DriverRegistrationDSL.API
+           :<|> BookingDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city _ =
   Subscription.handler merchantId city
-    :<|> Ride.handler merchantId city
     :<|> Overlay.handler merchantId city
-    :<|> Message.handler merchantId city
-    :<|> Merchant.handler merchantId city
     :<|> Issue.handler merchantId city
-    :<|> Driver.handler merchantId city
-    :<|> Booking.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
+    :<|> MessageDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city
     :<|> DriverDSL.handler merchantId city
+    :<|> DriverCoinsDSL.handler merchantId city
+    :<|> DriverGoHomeDSL.handler merchantId city
+    :<|> DriverReferralDSL.handler merchantId city
+    :<|> DriverRegistrationDSL.handler merchantId city
+    :<|> BookingDSL.handler merchantId city

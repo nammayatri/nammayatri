@@ -1,11 +1,17 @@
 imports:
   Ride: Dashboard.Common
   Summary: Dashboard.Common
+  CancellationReasonCode: Dashboard.Common.Booking
+  MultipleRideSyncResp: Dashboard.Common.Ride
+  LatLong: Kernel.External.Maps.Types
+  Driver: Dashboard.Common
+  Variant: Dashboard.Common
+  Classification: Kernel.External.Ticket.Interface.Types
 
 module: Ride
 
 apis:
-  - GET:
+  - GET: # RideListAPI
       endpoint: /list
       query:
         limit: Int
@@ -22,27 +28,263 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_LIST
       response:
         type: RideListRes
+  - POST: # MultipleRideEndAPI
+      endpoint: /end
+      name: PostRideEndMultiple
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_END
+      request:
+        type: MultipleRideEndReq
+      response:
+        type: MultipleRideEndResp
+      validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideEndReq
+  - POST: # MultipleRideCancelAPI
+      endpoint: /cancel
+      name: PostRideCancelMultiple
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_CANCEL
+      request:
+        type: MultipleRideCancelReq
+      response:
+        type: MultipleRideCancelResp
+      validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideCancelReq
+  - GET: # RideInfoAPI
+      endpoint: /{rideId}/info
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_INFO
+      params:
+        rideId: (Id Ride)
+      response:
+        type: RideInfoRes
+  - POST: # RideSyncAPI
+      endpoint: /{rideId}/sync
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_SYNC
+      params:
+        rideId: (Id Ride)
+      response:
+        type: RideSyncRes
+  - POST: # MultipleRideSyncAPI
+      endpoint: /sync
+      name: PostRideSyncMultiple
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_SYNC
+      request:
+        type: MultipleRideSyncReq
+      response:
+        type: MultipleRideSyncRes
+  - POST: # RideRouteAPI
+      endpoint: /{rideId}/route
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_ROUTE
+      params:
+        rideId: (Id Ride)
+      response:
+        type: RideRouteRes
+  - GET: # TicketRideListAPI
+      endpoint: /kapture/list
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES TICKET_RIDE_LIST_API
+      query:
+        - rideShortId: (ShortId Ride)
+        - countryCode: Text
+        - phoneNumber: Text
+        - supportPhoneNumber: Text
+      response:
+        type: TicketRideListRes
 
+
+# TODO add validation
 types:
   RideListRes:
-    totalItems: Int # for backward compatibility
-    summary: Summary
-    rides: [RideListItem]
+    - totalItems: Int # for backward compatibility
+    - summary: Summary
+    - rides: [RideListItem]
   RideListItem:
-    rideId: Id Ride
-    rideShortId: ShortId Ride
-    customerName: Maybe Text
-    customerPhoneNo: Text
-    driverName: Text
-    driverPhoneNo: Maybe Text
-    tripCategory: TripCategory
-    vehicleNo: Text
-    fareDiff: Maybe Money
-    fareDiffWithCurrency: Maybe PriceAPIEntity
-    bookingStatus: BookingStatus
-    rideCreatedAt: UTCTime
+    - rideId: Id Ride
+    - rideShortId: ShortId Ride
+    - customerName: Maybe Text
+    - customerPhoneNo: Text
+    - driverName: Text
+    - driverPhoneNo: Maybe Text
+    - tripCategory: TripCategory
+    - vehicleNo: Text
+    - fareDiff: Maybe Money
+    - fareDiffWithCurrency: Maybe PriceAPIEntity
+    - bookingStatus: BookingStatus
+    - rideCreatedAt: UTCTime
   BookingStatus:
-    enum: "UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, COMPLETED, CANCELLED"
-    derive: "Read, Kernel.Prelude.ToParamSchema"
+    - enum: "UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, COMPLETED, CANCELLED"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
   TripCategory:
-    enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"
+    - enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"
+  MultipleRideEndReq:
+    - recordType: NewType
+    - rides: [MultipleRideEndItem]
+    - derive: "'HideSecrets"
+  MultipleRideEndItem:
+    - rideId: Id Ride
+    - point: Maybe LatLong # FIXME not used for distance calculation, remove when possible
+  MultipleRideEndResp:
+    - recordType: Type
+    - type: MultipleRideSyncResp
+  MultipleRideCancelReq:
+    - recordType: NewType
+    - rides: [MultipleRideCancelItem]
+    - derive: "'HideSecrets"
+  MultipleRideCancelItem:
+    - rideId: Id Ride
+    - reasonCode: CancellationReasonCode
+    - additionalInfo: Maybe Text
+  MultipleRideCancelResp:
+    - recordType: Type
+    - type: MultipleRideSyncResp
+  RideInfoRes:
+    - rideId: Id Ride
+    - customerName: Maybe Text
+    - customerPhoneNo: Text
+    - rideOtp: Text
+    - customerPickupLocation: LocationAPIEntity
+    - customerDropLocation: Maybe LocationAPIEntity
+    - actualDropLocation: Maybe LatLong
+    - driverId: Id Driver
+    - driverName: Text
+    - driverPhoneNo: Maybe Text
+    - vehicleNo: Text
+    - driverStartLocation: Maybe LatLong
+    - driverCurrentLocation: Maybe LatLong
+    - rideBookingTime: UTCTime
+    - estimatedDriverArrivalTime: Maybe UTCTime
+    - actualDriverArrivalTime: Maybe UTCTime
+    - rideStartTime: Maybe UTCTime
+    - rideEndTime: Maybe UTCTime
+    - tripCategory: TripCategory
+    - scheduledAt: Maybe UTCTime
+    - rideDistanceEstimated: Maybe Meters
+    - rideDistanceActual: Meters
+    - chargeableDistance: Maybe Meters
+    - maxEstimatedDistance: Maybe Meters
+    - rideDistanceEstimatedWithUnit: Maybe Distance
+    - rideDistanceActualWithUnit: Distance
+    - chargeableDistanceWithUnit: Maybe Distance
+    - maxEstimatedDistanceWithUnit: Maybe Distance
+    - estimatedRideDuration: Maybe Minutes
+    - pickupDropOutsideOfThreshold: Maybe Bool
+    - estimatedFare: Money
+    - actualFare: Maybe Money
+    - driverOfferedFare: Maybe Money
+    - estimatedFareWithCurrency: PriceAPIEntity
+    - actualFareWithCurrency: Maybe PriceAPIEntity
+    - driverOfferedFareWithCurrency: Maybe PriceAPIEntity
+    - pickupDuration: Maybe Minutes
+    - rideDuration: Maybe Minutes
+    - bookingStatus: BookingStatus
+    - cancelledTime: Maybe UTCTime
+    - cancelledBy: Maybe CancellationSource
+    - cancellationReason: Maybe CancellationReasonCode
+    - driverInitiatedCallCount: Int
+    - bookingToRideStartDuration: Maybe Minutes
+    - distanceCalculationFailed: Maybe Bool
+    - driverDeviatedFromRoute: Maybe Bool
+    - vehicleVariant: Maybe Variant
+    - vehicleServiceTierName: Text
+    - nextStopLocation: Maybe LocationAPIEntity
+    - lastStopLocation: Maybe LocationAPIEntity
+    - endOtp: Maybe Text
+    - mbDefaultServiceTierName: Maybe Text
+    - rideCity: Maybe Text
+    - merchantOperatingCityId: Maybe Text
+    - rideCreatedAt: UTCTime
+  LocationAPIEntity:
+    - lat: Double
+    - lon: Double
+    - street: Maybe Text
+    - city: Maybe Text
+    - state: Maybe Text
+    - country: Maybe Text
+    - building: Maybe Text
+    - areaCode: Maybe Text
+    - area: Maybe Text
+  CancellationSource:
+    - enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication"
+  RideSyncRes:
+    - newStatus: RideStatus
+    - message: Text
+    - derive: "Show, 'HideSecrets"
+  RideStatus:
+    - enum: "RIDE_UPCOMING, RIDE_NEW, RIDE_INPROGRESS, RIDE_COMPLETED, RIDE_CANCELLED"
+  MultipleRideSyncReq:
+    - recordType: NewType
+    - rideIds: [Id Ride]
+    - derive: "'HideSecrets"
+  MultipleRideSyncRes:
+    - recordType: NewType
+    - list: [Either Text MultipleRideData]
+    - derive: "'HideSecrets"
+  MultipleRideData:
+    - rideId: Id Ride
+    - newStatus: RideStatus
+    - message: Text
+  Status:
+    - enum: "ON_RIDE, ON_PICKUP, IDLE"
+  ActualRoute:
+    - lat: Double
+    - lon: Double
+    - timestamp: UTCTime
+    - accuracy: Maybe Double
+    - rideStatus: Maybe Status
+  RideRouteRes:
+    - recordType: NewType
+    - actualRoute: [ActualRoute]
+    - derive: "'HideSecrets"
+  DriverEdaKafka:
+    - driver_id: String
+    - rid: Maybe String
+    - ts: String
+    - acc: Maybe String
+    - rideStatus: Maybe String
+    - lat: Maybe String
+    - lon: Maybe String
+    - mid: Maybe String
+    - updated_at: Maybe String
+    - created_at: Maybe String
+    - on_ride: Maybe String
+    - active: Maybe String
+    - partition_date: String
+    - date: String
+  TicketRideListRes:
+    - recordType: NewType
+    - rides: [RideInfo]
+    - derive': "Show, Generic, ToSchema"
+  RideInfo:
+    - rideShortId: ShortId Ride
+    - customerName: Maybe Text
+    - customerPhoneNo: Text
+    - driverName: Text
+    - driverPhoneNo: Maybe Text
+    - vehicleNo: Text
+    - status: BookingStatus
+    - rideCreatedAt: UTCTime
+    - pickupLocationLat: Maybe Double
+    - pickupLocationLon: Maybe Double
+    - pickupLocationStreet: Maybe Text
+    - pickupLocationCity: Maybe Text
+    - pickupLocationState: Maybe Text
+    - pickupLocationCountry: Maybe Text
+    - pickupLocationBuilding: Maybe Text
+    - pickupLocationAreaCode: Maybe Text
+    - pickupLocationArea: Maybe Text
+    - dropLocationLat: Maybe Double
+    - dropLocationLon: Maybe Double
+    - dropLocationStreet: Maybe Text
+    - dropLocationCity: Maybe Text
+    - dropLocationState: Maybe Text
+    - dropLocationCountry: Maybe Text
+    - dropLocationBuilding: Maybe Text
+    - dropLocationAreaCode: Maybe Text
+    - dropLocationArea: Maybe Text
+    - fare: Maybe Money
+    - fareWithCurrency: Maybe PriceAPIEntity
+    - personId: Id Driver
+    - classification: Classification
+    - derive': "Show, Generic, ToSchema"

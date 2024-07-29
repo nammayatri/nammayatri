@@ -14,7 +14,7 @@
 
 module Storage.Clickhouse.DriverFee where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
 import qualified Data.Time.Calendar as Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP

@@ -14,7 +14,7 @@
 
 module Domain.Action.UI.DriverCoin where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins hiding (CoinStatus)
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins hiding (CoinStatus)
 import Data.OpenApi hiding (title)
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory

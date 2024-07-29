@@ -25,10 +25,10 @@ createMany = traverse_ create
 
 findAllByMerchantId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m ([Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m [Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest])
 findAllByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId)]
 
-findAllByReqStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectFlagRequest.AdminApproval -> m ([Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest]))
+findAllByReqStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SuspectFlagRequest.AdminApproval -> m [Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest])
 findAllByReqStatus reqStatus = do findAllWithKV [Se.Is Beam.reqStatus $ Se.Eq reqStatus]
 
 findBySuspectId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.SuspectStatusChangeRequest.SuspectStatusChangeRequest))

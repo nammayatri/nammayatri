@@ -2,11 +2,23 @@ imports:
   ExophoneReq: Dashboard.Common.Merchant
   FCMConfigUpdateReq: Dashboard.Common.Merchant
   MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  SmsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  ServiceUsageConfigRes: Dashboard.Common.Merchant
+  MapsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  SmsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityReq: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityRes: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityReqT: Dashboard.Common.Merchant
+  SpecialLocation: Lib.Types.SpecialLocation
+  UpsertSpecialLocationReq: Dashboard.Common.Merchant
+  UpsertSpecialLocationReqT: Dashboard.Common.Merchant
+  UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
+  UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
 
 module: Merchant
 
 apis:
-  - POST:
+  - POST: # MerchantUpdateAPI
       endpoint: /update
       auth:
         ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_UPDATE
@@ -15,7 +27,13 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.RiderPlatform.Merchant.validateMerchantUpdateReq
-  - POST:
+  - GET: # ServiceUsageConfigAPI
+      endpoint: /serviceUsageConfig
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
+      response:
+        type: ServiceUsageConfigRes
+  - POST: # MapsServiceConfigUpdateAPI
       endpoint: /serviceConfig/maps/update
       auth:
         ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
@@ -23,14 +41,116 @@ apis:
         type: MapsServiceConfigUpdateReq
       response:
         type: APISuccess
+  - POST: # MapsServiceUsageConfigUpdateAPI
+      endpoint: /serviceUsageConfig/maps/update
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
+      request:
+        type: MapsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateMapsServiceUsageConfigUpdateReq
+  - POST: # SmsServiceConfigUpdateAPI
+      endpoint: /serviceConfig/sms/update
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
+      request:
+        type: SmsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+  - POST: # SmsServiceUsageConfigUpdateAPI
+      endpoint: /serviceUsageConfig/sms/update
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
+      request:
+        type: SmsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateSmsServiceUsageConfigUpdateReq
+  - POST: # CreateMerchantOperatingCityAPI
+      endpoint: /config/operatingCity/create
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+      multipart:
+        type: CreateMerchantOperatingCityReq
+      response:
+        type: CreateMerchantOperatingCityRes
+      helperApi:
+        - POST:
+            endpoint: /config/operatingCity/create
+            auth: # TODO remove
+              ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+            request:
+              type: CreateMerchantOperatingCityReqT
+            response:
+              type: CreateMerchantOperatingCityRes
+  - POST: # UpsertSpecialLocationAPI
+      endpoint: /specialLocation/upsert
+      query:
+        specialLocationId: (Id SpecialLocation)
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
+      multipart:
+        type: UpsertSpecialLocationReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /specialLocation/upsert
+            query:
+              specialLocationId: (Id SpecialLocation)
+            auth:
+              ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION # TODO serverName move to dhall
+            request:
+              type: UpsertSpecialLocationReqT
+            response:
+              type: APISuccess
+  - DELETE: # DeleteSpecialLocationAPI
+      endpoint: /specialLocation/{specialLocationId}/delete
+      params:
+        specialLocationId : Id SpecialLocation
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
+      response:
+        type: APISuccess
+  - POST: # UpsertSpecialLocationGateAPI
+      endpoint: /specialLocation/{specialLocationId}/gates/upsert
+      params:
+        specialLocationId : Id SpecialLocation
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+      multipart:
+        type: UpsertSpecialLocationGateReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /specialLocation/{specialLocationId}/gates/upsert
+            params:
+              specialLocationId : Id SpecialLocation
+            auth:
+              ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+            request:
+              type: UpsertSpecialLocationGateReqT
+            response:
+              type: APISuccess
+  - DELETE: # DeleteSpecialLocationGateAPI
+      endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
+      params:
+        specialLocationId : Id SpecialLocation
+        gateName: Text
+      auth:
+        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+      response:
+        type: APISuccess
 
 types:
   MerchantUpdateReq:
-    name: Maybe Text
-    exoPhones: Maybe (NonEmpty ExophoneReq)
-    fcmConfig: Maybe FCMConfigUpdateReq
-    gatewayUrl: Maybe BaseUrl
-    registryUrl: Maybe BaseUrl
+    - name: Maybe Text
+    - exoPhones: Maybe (NonEmpty ExophoneReq)
+    - fcmConfig: Maybe FCMConfigUpdateReq
+    - gatewayUrl: Maybe BaseUrl
+    - registryUrl: Maybe BaseUrl
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

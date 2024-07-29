@@ -13,6 +13,9 @@ import Servant
 import Tools.Auth
 
 data Followers = Followers {bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking, mobileNumber :: Data.Text.Text, name :: Kernel.Prelude.Maybe Data.Text.Text, priority :: Kernel.Prelude.Int}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ShareRideReq = ShareRideReq {emergencyContactNumbers :: [Data.Text.Text]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data ShareRideReq = ShareRideReq {emergencyContactNumbers :: [Data.Text.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

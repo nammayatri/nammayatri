@@ -98,6 +98,7 @@ library
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DerivingStrategies
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric
@@ -179,6 +180,7 @@ executable safety-dashboard-exe
       ConstraintKinds
       DataKinds
       DefaultSignatures
+      DerivingStrategies
       DeriveAnyClass
       DeriveFunctor
       DeriveGeneric

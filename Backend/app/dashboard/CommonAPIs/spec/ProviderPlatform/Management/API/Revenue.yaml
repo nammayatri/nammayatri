@@ -1,28 +1,28 @@
 imports:
   Day: Data.Time
-  DriverFeeStatus: Dashboard.ProviderPlatform.Driver
+  DriverFeeStatus: Dashboard.ProviderPlatform.RideBooking.Driver
 
 module: Revenue
 
 types:
   AllFees:
-    status: DriverFeeStatus
-    numRides: Int
-    numDrivers: Int
-    totalAmount: Int
-    specialZoneAmount: Int
-    openMarketAmount: Int
+    - status: DriverFeeStatus
+    - numRides: Int
+    - numDrivers: Int
+    - totalAmount: Int
+    - specialZoneAmount: Int
+    - openMarketAmount: Int
   CollectionListElem:
-    totalAmount: Int
-    specialZoneAmount: Int
-    openMarketAmount: Int
-    totalRides: Int
-    numDrivers: Int
-    date: Day
-    hour: Int
+    - totalAmount: Int
+    - specialZoneAmount: Int
+    - openMarketAmount: Int
+    - totalRides: Int
+    - numDrivers: Int
+    - date: Day
+    - hour: Int
   CollectionList:
-    onlineCollection: [CollectionListElem]
-    offlineCollection: [CollectionListElem]
+    - onlineCollection: [CollectionListElem]
+    - offlineCollection: [CollectionListElem]
 
 apis:
   - GET:

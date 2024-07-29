@@ -31,22 +31,29 @@ library
       API.Fleet.Registration
       API.ProviderPlatform
       API.ProviderPlatform.DynamicOfferDriver
-      API.ProviderPlatform.DynamicOfferDriver.Booking
       API.ProviderPlatform.DynamicOfferDriver.CacAuth
       API.ProviderPlatform.DynamicOfferDriver.Driver
-      API.ProviderPlatform.DynamicOfferDriver.Driver.Coin
       API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
-      API.ProviderPlatform.DynamicOfferDriver.DriverReferral
       API.ProviderPlatform.DynamicOfferDriver.Issue
       API.ProviderPlatform.DynamicOfferDriver.Maps
-      API.ProviderPlatform.DynamicOfferDriver.Merchant
-      API.ProviderPlatform.DynamicOfferDriver.Message
       API.ProviderPlatform.DynamicOfferDriver.Overlay
       API.ProviderPlatform.DynamicOfferDriver.Ride
       API.ProviderPlatform.DynamicOfferDriver.Subscription
       API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
       App
+      Domain.Action.ProviderPlatform.Fleet.Driver
+      Domain.Action.ProviderPlatform.Management.Booking
+      Domain.Action.ProviderPlatform.Management.Driver
+      Domain.Action.ProviderPlatform.Management.DriverCoins
+      Domain.Action.ProviderPlatform.Management.DriverGoHome
+      Domain.Action.ProviderPlatform.Management.DriverReferral
+      Domain.Action.ProviderPlatform.Management.DriverRegistration
+      Domain.Action.ProviderPlatform.Management.Merchant
+      Domain.Action.ProviderPlatform.Management.Message
+      Domain.Action.ProviderPlatform.Management.Revenue
+      Domain.Action.ProviderPlatform.Management.Ride
+      Domain.Action.ProviderPlatform.RideBooking.Driver
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
       ProviderPlatformClient.DynamicOfferDriver.Operations
@@ -54,10 +61,18 @@ library
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
-      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Driver
-      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant
-      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Revenue
-      API.Action.ProviderPlatform.DynamicOfferDriver.Management.Ride
+      API.Action.ProviderPlatform.Fleet.Driver
+      API.Action.ProviderPlatform.Management.Booking
+      API.Action.ProviderPlatform.Management.Driver
+      API.Action.ProviderPlatform.Management.DriverCoins
+      API.Action.ProviderPlatform.Management.DriverGoHome
+      API.Action.ProviderPlatform.Management.DriverReferral
+      API.Action.ProviderPlatform.Management.DriverRegistration
+      API.Action.ProviderPlatform.Management.Merchant
+      API.Action.ProviderPlatform.Management.Message
+      API.Action.ProviderPlatform.Management.Revenue
+      API.Action.ProviderPlatform.Management.Ride
+      API.Action.ProviderPlatform.RideBooking.Driver
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:

@@ -14,6 +14,7 @@
 
 module API.Dashboard.Fleet where
 
+import qualified API.Action.Dashboard.Fleet.Driver as OperationsDSL
 import qualified API.Dashboard.Fleet.Operations as Operations
 import qualified API.Dashboard.Fleet.Registration as Registration
 import qualified Domain.Types.Merchant as DM
@@ -27,9 +28,11 @@ type API =
   DashboardTokenAuth
     :> ( Operations.API
            :<|> Registration.API
+           :<|> OperationsDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city _ = do
   Operations.handler merchantId city
     :<|> Registration.handler merchantId city
+    :<|> OperationsDSL.handler merchantId city

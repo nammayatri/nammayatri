@@ -83,18 +83,20 @@ module Domain.Action.Dashboard.Driver
   )
 where
 
-import qualified API.Types.ProviderPlatform.Management.Driver
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverGoHome as Common
 import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as DC
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as DC
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
-import qualified Domain.Action.Dashboard.Merchant as DashboardMerchant
+import qualified Domain.Action.Dashboard.Management.Merchant as DashboardMerchant
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
 import Domain.Action.UI.DriverGoHomeRequest (CachedGoHomeRequest (..))
@@ -2326,7 +2328,7 @@ linkRCWithDriverForFleet merchantShortId opCity fleetOwnerId req = do
     QRCAssociation.create driverRCAssoc
   return Success
 
-postDriverClearFee :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> API.Types.ProviderPlatform.Management.Driver.ClearDriverFeeReq -> Flow APISuccess)
+postDriverClearFee :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ClearDriverFeeReq -> Flow APISuccess)
 postDriverClearFee _merchantShortId _opCity driverId req = do
   merchant <- findMerchantByShortId _merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
@@ -2341,8 +2343,8 @@ postDriverClearFee _merchantShortId _opCity driverId req = do
   return Kernel.Types.APISuccess.Success
   where
     castCommonFeeTypeToDomainFeeType feeTypeCommon = case feeTypeCommon of
-      API.Types.ProviderPlatform.Management.Driver.PAYOUT_REGISTRATION -> PAYOUT_REGISTRATION
-      API.Types.ProviderPlatform.Management.Driver.ONE_TIME_SECURITY_DEPOSIT -> ONE_TIME_SECURITY_DEPOSIT
+      Common.PAYOUT_REGISTRATION -> PAYOUT_REGISTRATION
+      Common.ONE_TIME_SECURITY_DEPOSIT -> ONE_TIME_SECURITY_DEPOSIT
     gstBreakup gstPercentages fee = case gstPercentages of
       Just (sgstPer, cgstPer) -> (fee * (1.0 - ((cgstPer + sgstPer) / 100.0)), Just $ (cgstPer * fee) / 100.0, Just $ (sgstPer * fee) / 100.0)
       _ -> (fee, Nothing, Nothing)

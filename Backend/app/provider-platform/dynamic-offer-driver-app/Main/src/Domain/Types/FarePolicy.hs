@@ -15,7 +15,7 @@
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant as DPM
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text

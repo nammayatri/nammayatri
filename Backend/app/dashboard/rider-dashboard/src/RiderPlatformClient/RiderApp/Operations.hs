@@ -20,13 +20,11 @@ module RiderPlatformClient.RiderApp.Operations
 where
 
 import qualified "rider-app" API.Dashboard as BAP
+import qualified API.Types.RiderPlatform.Management.Booking as BookingDSL
 import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
-import qualified Dashboard.Common.Booking as Booking
-import qualified Dashboard.Common.Merchant as CMerchant
 import qualified Dashboard.RiderPlatform.Customer as Customer
-import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time
@@ -53,20 +51,18 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common hiding (callAPI)
-import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (route)
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
 data AppBackendAPIs = AppBackendAPIs
   { customers :: CustomerAPIs,
-    bookings :: BookingsAPIs,
-    merchant :: MerchantAPIs,
     rides :: RidesAPIs,
     issues :: ListIssueAPIs,
     issuesV2 :: IssueAPIs,
     tickets :: TicketAPIs,
     hotSpot :: HotSpotAPIs,
+    bookingDSL :: BookingDSL.BookingAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs
   }
 
@@ -79,23 +75,6 @@ data CustomerAPIs = CustomerAPIs
     customerCancellationDuesSync :: Id Customer.Customer -> Customer.CustomerCancellationDuesSyncReq -> Euler.EulerClient APISuccess,
     getCancellationDuesDetails :: Id Customer.Customer -> Euler.EulerClient Customer.CancellationDuesDetailsRes,
     updateSafetyCenterBlocking :: Id Customer.Customer -> Customer.UpdateSafetyCenterBlockingReq -> Euler.EulerClient APISuccess
-  }
-
-data BookingsAPIs = BookingsAPIs
-  { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes,
-    multipleBookingSync :: Booking.MultipleBookingSyncReq -> Euler.EulerClient Booking.MultipleBookingSyncResp
-  }
-
-data MerchantAPIs = MerchantAPIs
-  { serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
-    mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
-    upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> CMerchant.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
-    deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
-    upsertSpecialLocationGate :: Id SL.SpecialLocation -> CMerchant.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
-    deleteSpecialLocationGate :: Id SL.SpecialLocation -> Text -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -147,25 +126,23 @@ newtype HotSpotAPIs = HotSpotAPIs
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId city token = do
   let customers = CustomerAPIs {..}
-  let bookings = BookingsAPIs {..}
-  let merchant = MerchantAPIs {..}
   let rides = RidesAPIs {..}
   let issues = ListIssueAPIs {..}
   let issuesV2 = IssueAPIs {..}
   let tickets = TicketAPIs {..}
   let hotSpot = HotSpotAPIs {..}
 
+  let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
   AppBackendAPIs {..}
   where
     customersClient
-      :<|> bookingsClient
-      :<|> merchantClient
       :<|> ridesClient
       :<|> issueClient
       :<|> issueV2Client
       :<|> ticketsClient
       :<|> hotSpotClient
+      :<|> bookingClientDSL
       :<|> merchantClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
@@ -179,9 +156,6 @@ mkAppBackendAPIs merchantId city token = do
       :<|> updateSafetyCenterBlocking =
         customersClient
 
-    stuckBookingsCancel
-      :<|> multipleBookingSync = bookingsClient
-
     shareRideInfo
       :<|> shareRideInfoByShortId
       :<|> rideList
@@ -190,16 +164,6 @@ mkAppBackendAPIs merchantId city token = do
       :<|> multipleRideCancel
       :<|> multipleRideSync
       :<|> ticketRideList = ridesClient
-
-    serviceUsageConfig
-      :<|> mapsServiceUsageConfigUpdate
-      :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate
-      :<|> createMerchantOperatingCity
-      :<|> upsertSpecialLocation
-      :<|> deleteSpecialLocation
-      :<|> upsertSpecialLocationGate
-      :<|> deleteSpecialLocationGate = merchantClient
 
     listIssue
       :<|> ticketStatusCallBack = issueClient

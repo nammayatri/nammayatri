@@ -3,38 +3,42 @@
 
 module API.Types.ProviderPlatform.Management.Revenue where
 
-import qualified Dashboard.ProviderPlatform.Driver
+import qualified Dashboard.ProviderPlatform.RideBooking.Driver
 import Data.OpenApi (ToSchema)
 import qualified Data.Time
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
+import Kernel.Types.Common
 import Servant
 import Servant.Client
 
 data AllFees = AllFees
-  { numDrivers :: Kernel.Prelude.Int,
+  { status :: Dashboard.ProviderPlatform.RideBooking.Driver.DriverFeeStatus,
     numRides :: Kernel.Prelude.Int,
-    openMarketAmount :: Kernel.Prelude.Int,
+    numDrivers :: Kernel.Prelude.Int,
+    totalAmount :: Kernel.Prelude.Int,
     specialZoneAmount :: Kernel.Prelude.Int,
-    status :: Dashboard.ProviderPlatform.Driver.DriverFeeStatus,
-    totalAmount :: Kernel.Prelude.Int
+    openMarketAmount :: Kernel.Prelude.Int
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CollectionList = CollectionList {offlineCollection :: [API.Types.ProviderPlatform.Management.Revenue.CollectionListElem], onlineCollection :: [API.Types.ProviderPlatform.Management.Revenue.CollectionListElem]}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+data CollectionList = CollectionList {onlineCollection :: [API.Types.ProviderPlatform.Management.Revenue.CollectionListElem], offlineCollection :: [API.Types.ProviderPlatform.Management.Revenue.CollectionListElem]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CollectionListElem = CollectionListElem
-  { date :: Data.Time.Day,
-    hour :: Kernel.Prelude.Int,
-    numDrivers :: Kernel.Prelude.Int,
-    openMarketAmount :: Kernel.Prelude.Int,
+  { totalAmount :: Kernel.Prelude.Int,
     specialZoneAmount :: Kernel.Prelude.Int,
-    totalAmount :: Kernel.Prelude.Int,
-    totalRides :: Kernel.Prelude.Int
+    openMarketAmount :: Kernel.Prelude.Int,
+    totalRides :: Kernel.Prelude.Int,
+    numDrivers :: Kernel.Prelude.Int,
+    date :: Data.Time.Day,
+    hour :: Kernel.Prelude.Int
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 type API = ("revenue" :> (GetRevenueCollectionHistory :<|> GetRevenueAllFeeHistory))
 

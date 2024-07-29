@@ -21,12 +21,19 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data LmsEntityCompletionStatus = ENTITY_COMPLETED | ENTITY_INCOMPLETE deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data LmsEntityCompletionStatus
+  = ENTITY_COMPLETED
+  | ENTITY_INCOMPLETE
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LmsGetModuleRes = LmsGetModuleRes {completed :: [API.Types.UI.LmsModule.LmsModuleRes], remaining :: [API.Types.UI.LmsModule.LmsModuleRes]} deriving (Generic, ToJSON, FromJSON, ToSchema)
+data LmsGetModuleRes = LmsGetModuleRes {completed :: [API.Types.UI.LmsModule.LmsModuleRes], remaining :: [API.Types.UI.LmsModule.LmsModuleRes]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsGetQuizRes = LmsGetQuizRes {questions :: [API.Types.UI.LmsModule.LmsQuestionRes], selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsGetVideosRes = LmsGetVideosRes
   { completed :: [API.Types.UI.LmsModule.LmsVideoRes],
@@ -35,7 +42,8 @@ data LmsGetVideosRes = LmsGetVideosRes
     quizStatus :: API.Types.UI.LmsModule.LmsEntityCompletionStatus,
     selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsModuleRes = LmsModuleRes
   { category :: Domain.Types.LmsModule.LmsCategory,
@@ -54,7 +62,8 @@ data LmsModuleRes = LmsModuleRes
     thumbnailImage :: Data.Text.Text,
     variant :: Data.Maybe.Maybe Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsQuestionRes = LmsQuestionRes
   { language :: Kernel.External.Types.Language,
@@ -64,12 +73,18 @@ data LmsQuestionRes = LmsQuestionRes
     question :: Domain.Types.LmsEnumTypes.QuizQuestion,
     questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LmsQuestionStatus = CORRECT | INCORRECT deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data LmsQuestionStatus
+  = CORRECT
+  | INCORRECT
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsQuizHistory = LmsQuizHistory {attemptNumber :: Kernel.Prelude.Int, selectedOptions :: [Data.Text.Text], status :: API.Types.UI.LmsModule.LmsQuestionStatus}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsTranslatedModuleInfoRes = LmsTranslatedModuleInfoRes
   { category :: Domain.Types.LmsModule.LmsCategory,
@@ -85,7 +100,8 @@ data LmsTranslatedModuleInfoRes = LmsTranslatedModuleInfoRes
     thumbnailImage :: Data.Text.Text,
     variant :: Data.Maybe.Maybe Domain.Types.Vehicle.Variant
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LmsVideoRes = LmsVideoRes
   { attemptNumber :: Kernel.Prelude.Int,
@@ -109,9 +125,12 @@ data LmsVideoRes = LmsVideoRes
     viewCount :: Kernel.Prelude.Int,
     ytVideoId :: Data.Text.Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data Options = Options {options :: [Domain.Types.QuestionInformation.OptionEntity]} deriving (Generic, ToJSON, FromJSON, ToSchema, Eq, Show)
+data Options = Options {options :: [Domain.Types.QuestionInformation.OptionEntity]}
+  deriving stock (Generic, Eq, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data QuestionConfirmReq = QuestionConfirmReq
   { language :: Kernel.External.Types.Language,
@@ -119,27 +138,45 @@ data QuestionConfirmReq = QuestionConfirmReq
     questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping,
     selectedOption :: API.Types.UI.LmsModule.SelectedOption
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data QuestionConfirmRes = QuestionConfirmRes {validation :: API.Types.UI.LmsModule.QuestionValidation, validationRes :: API.Types.UI.LmsModule.SelectedOptionValidation}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data QuestionValidation = CORRECT_ANSWER | INCORRECT_ANSWER deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data QuestionValidation
+  = CORRECT_ANSWER
+  | INCORRECT_ANSWER
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data QuizOptions = SingleSelect API.Types.UI.LmsModule.Options | MultiSelect API.Types.UI.LmsModule.Options deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data QuizOptions
+  = SingleSelect API.Types.UI.LmsModule.Options
+  | MultiSelect API.Types.UI.LmsModule.Options
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SelectedOption = SingleSelectedOption Data.Text.Text | MultiSelectedOption [Data.Text.Text] deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+data SelectedOption
+  = SingleSelectedOption Data.Text.Text
+  | MultiSelectedOption [Data.Text.Text]
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SelectedOptionValidation
   = SingleSelectedOptionValidation API.Types.UI.LmsModule.ValidationResult
   | MultiSelectedOptionValidation [API.Types.UI.LmsModule.ValidationResult]
-  deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ValidationResult = ValidationResult {id :: Data.Text.Text, isCorrect :: Kernel.Prelude.Bool} deriving (Generic, ToJSON, FromJSON, ToSchema, Show, Eq)
+data ValidationResult = ValidationResult {id :: Data.Text.Text, isCorrect :: Kernel.Prelude.Bool}
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VideoUpdateAPIReq = VideoUpdateAPIReq
   { language :: Kernel.External.Types.Language,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     videoId :: Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

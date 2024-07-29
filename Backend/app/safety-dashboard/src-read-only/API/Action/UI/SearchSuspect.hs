@@ -20,11 +20,11 @@ import "lib-dashboard" Tools.Auth
 import Tools.Auth.Webhook
 
 type API =
-  ( DashboardAuth ('DASHBOARD_USER) :> "search" :> "suspectList" :> ReqBody ('[JSON]) API.Types.UI.SearchSuspect.SearchSuspectReqList
+  ( DashboardAuth 'DASHBOARD_USER :> "search" :> "suspectList" :> ReqBody '[JSON] API.Types.UI.SearchSuspect.SearchSuspectReqList
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.SuspectsList
-      :<|> DashboardAuth ('DASHBOARD_ADMIN)
+      :<|> DashboardAuth 'DASHBOARD_ADMIN
       :> "check"
       :> "suspectStatusHistory"
       :> QueryParam
@@ -34,32 +34,32 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.SearchSuspectReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.CheckSuspectStatusHistoryResp
-      :<|> DashboardAuth ('MERCHANT_MAKER)
+      :<|> DashboardAuth 'MERCHANT_MAKER
       :> "merchant"
       :> "check"
       :> "suspectStatusHistory"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.SearchSuspectReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.CheckSuspectStatusHistoryResp
-      :<|> SafetyWebhookAuth ('MERCHANT_SERVER)
+      :<|> SafetyWebhookAuth 'MERCHANT_SERVER
       :> "partner"
       :> "search"
       :> "agent"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.SearchSuspectReqList
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.SuspectsList
-      :<|> DashboardAuth ('DASHBOARD_ADMIN)
+      :<|> DashboardAuth 'DASHBOARD_ADMIN
       :> "suspect"
       :> "list"
       :> QueryParam
@@ -90,9 +90,9 @@ type API =
            "voterId"
            Data.Text.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.SuspectsList
-      :<|> DashboardAuth ('MERCHANT_ADMIN)
+      :<|> DashboardAuth 'MERCHANT_ADMIN
       :> "partner"
       :> "suspect"
       :> "list"
@@ -109,7 +109,7 @@ type API =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchSuspect.SuspectsList
   )
 
@@ -119,7 +119,7 @@ handler = postSearchSuspectList :<|> postCheckSuspectStatusHistory :<|> postMerc
 postSearchSuspectList :: (TokenInfo -> API.Types.UI.SearchSuspect.SearchSuspectReqList -> Environment.FlowHandler API.Types.UI.SearchSuspect.SuspectsList)
 postSearchSuspectList a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.SearchSuspect.postSearchSuspectList a2 a1
 
-postCheckSuspectStatusHistory :: (TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> API.Types.UI.SearchSuspect.SearchSuspectReq -> Environment.FlowHandler API.Types.UI.SearchSuspect.CheckSuspectStatusHistoryResp)
+postCheckSuspectStatusHistory :: (TokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> API.Types.UI.SearchSuspect.SearchSuspectReq -> Environment.FlowHandler API.Types.UI.SearchSuspect.CheckSuspectStatusHistoryResp)
 postCheckSuspectStatusHistory a4 a3 a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.SearchSuspect.postCheckSuspectStatusHistory a4 a3 a2 a1
 
 postMerchantCheckSuspectStatusHistory :: (TokenInfo -> API.Types.UI.SearchSuspect.SearchSuspectReq -> Environment.FlowHandler API.Types.UI.SearchSuspect.CheckSuspectStatusHistoryResp)
@@ -128,8 +128,8 @@ postMerchantCheckSuspectStatusHistory a2 a1 = withFlowHandlerAPI' $ Domain.Actio
 postPartnerSearchAgent :: (AuthToken -> API.Types.UI.SearchSuspect.SearchSuspectReqList -> Environment.FlowHandler API.Types.UI.SearchSuspect.SuspectsList)
 postPartnerSearchAgent a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.SearchSuspect.postPartnerSearchAgent a2 a1
 
-getSuspectList :: (TokenInfo -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Domain.Types.Suspect.FlaggedStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Environment.FlowHandler API.Types.UI.SearchSuspect.SuspectsList)
+getSuspectList :: (TokenInfo -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Domain.Types.Suspect.FlaggedStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Environment.FlowHandler API.Types.UI.SearchSuspect.SuspectsList)
 getSuspectList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.SearchSuspect.getSuspectList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
 
-getPartnerSuspectList :: (TokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.UI.SearchSuspect.SuspectsList)
+getPartnerSuspectList :: (TokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.UI.SearchSuspect.SuspectsList)
 getPartnerSuspectList a5 a4 a3 a2 a1 = withFlowHandlerAPI' $ Domain.Action.UI.SearchSuspect.getPartnerSuspectList a5 a4 a3 a2 a1

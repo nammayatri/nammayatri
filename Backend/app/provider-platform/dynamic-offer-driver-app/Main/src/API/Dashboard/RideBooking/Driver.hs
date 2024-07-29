@@ -14,10 +14,8 @@
 
 module API.Dashboard.RideBooking.Driver where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
-import qualified Domain.Action.Dashboard.Driver as DDriver
-import qualified Domain.Action.Dashboard.Driver.Registration as DReg
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import qualified Domain.Action.Dashboard.Management.DriverRegistration as DReg
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
@@ -50,113 +48,3 @@ auth merchantShortId opCity = withFlowHandlerAPI . DReg.auth merchantShortId opC
 
 verify :: Text -> Bool -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
 verify authId mbFleet fleetOwnerId req = withFlowHandlerAPI $ DReg.verify authId mbFleet fleetOwnerId req
-
-type ActivateAPI =
-  "driver"
-    :> ( Common.DriverOutstandingBalanceAPI
-           :<|> Common.EnableDriverAPI
-           :<|> DriverCashCollectionAPI
-           :<|> DriverCashCollectionAPIV2
-           :<|> DriverCashExemptionAPI
-           :<|> DriverCashExemptionAPIV2
-           :<|> DriverInfoAPI
-           :<|> Common.UnlinkVehicleAPI
-           :<|> Common.EndRCAssociationAPI
-           :<|> Common.AddVehicleAPI
-           :<|> Common.SetRCStatusAPI
-       )
-
--- driver cash collection api ----------------------------------------
--- have to write like that because in this case i have to store the dashboard used id for it. and which i am getting internally
-type DriverCashCollectionAPI =
-  Capture "driverId" (Id Common.Driver)
-    :> "collectCash"
-    :> ReqBody '[JSON] Text
-    :> Post '[JSON] APISuccess
-
-type DriverCashCollectionAPIV2 =
-  Capture "driverId" (Id Common.Driver)
-    :> "collectCash"
-    :> "v2"
-    :> Capture "token" Text
-    :> Capture "serviceName" Common.ServiceNames
-    :> Post '[JSON] APISuccess
-
--------------------------------------
-
--- driver cash exemption api ----------------------------------------
-
-type DriverCashExemptionAPI =
-  Capture "driverId" (Id Common.Driver)
-    :> "exemptCash"
-    :> ReqBody '[JSON] Text
-    :> Post '[JSON] APISuccess
-
-type DriverCashExemptionAPIV2 =
-  Capture "driverId" (Id Common.Driver)
-    :> "exemptCash"
-    :> "v2"
-    :> Capture "token" Text
-    :> Capture "serviceName" Common.ServiceNames
-    :> Post '[JSON] APISuccess
-
------ payment history ----------
-type DriverInfoAPI =
-  "info"
-    :> QueryParam "mobileNumber" Text
-    :> QueryParam "mobileCountryCode" Text
-    :> QueryParam "vehicleNumber" Text
-    :> QueryParam "dlNumber" Text
-    :> QueryParam "rcNumber" Text
-    :> QueryParam "email" Text
-    :> Capture "fleetOwnerId" Text
-    :> Capture "mbFleet" Bool
-    :> Get '[JSON] Common.DriverInfoRes
-
-activateHandler :: ShortId DM.Merchant -> Context.City -> FlowServer ActivateAPI
-activateHandler merchantId city =
-  getDriverDue merchantId city
-    :<|> enableDriver merchantId city
-    :<|> collectCash merchantId city
-    :<|> collectCashV2 merchantId city
-    :<|> exemptCash merchantId city
-    :<|> exemptCashV2 merchantId city
-    :<|> driverInfo merchantId city
-    :<|> unlinkVehicle merchantId city
-    :<|> endRCAssociation merchantId city
-    :<|> addVehicle merchantId city
-    :<|> setRCStatus merchantId city
-
-getDriverDue :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Text -> FlowHandler [Common.DriverOutstandingBalanceResp]
-getDriverDue merchantShortId opCity mobileCountryCode phone =
-  withFlowHandlerAPI $ DDriver.getDriverDue merchantShortId opCity mobileCountryCode phone
-
-enableDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
-enableDriver merchantShortId opCity = withFlowHandlerAPI . DDriver.enableDriver merchantShortId opCity
-
-collectCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> FlowHandler APISuccess
-collectCash merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.collectCash merchantShortId opCity driverId
-
-collectCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> FlowHandler APISuccess
-collectCashV2 merchantShortId opCity driverId rId serviceName = withFlowHandlerAPI $ DDriver.collectCashV2 merchantShortId opCity driverId rId serviceName
-
-exemptCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> FlowHandler APISuccess
-exemptCash merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.exemptCash merchantShortId opCity driverId
-
-exemptCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> FlowHandler APISuccess
-exemptCashV2 merchantShortId opCity driverId rId serviceName = withFlowHandlerAPI $ DDriver.exemptCashV2 merchantShortId opCity driverId rId serviceName
-
-driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail fleetOwnerId mbFleet = withFlowHandlerAPI $ DDriver.driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail fleetOwnerId mbFleet
-
-unlinkVehicle :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
-unlinkVehicle merchantShortId opCity = withFlowHandlerAPI . DDriver.unlinkVehicle merchantShortId opCity
-
-endRCAssociation :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
-endRCAssociation merchantShortId opCity = withFlowHandlerAPI . DDriver.endRCAssociation merchantShortId opCity
-
-addVehicle :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
-addVehicle merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.addVehicle merchantShortId opCity driverId
-
-setRCStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
-setRCStatus merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.setRCStatus merchantShortId opCity driverId

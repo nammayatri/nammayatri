@@ -18,10 +18,9 @@ module API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Role as DRole
-import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
@@ -29,10 +28,8 @@ import Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import qualified ProviderPlatformClient.DynamicOfferDriver.RideBooking as Client
 import Servant
-import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Storage.Queries.Role as QRole
@@ -42,122 +39,18 @@ import "lib-dashboard" Tools.Error
 
 type API =
   "driver"
-    :> ( DocumentsListAPI
-           :<|> GetDocumentAPI
-           :<|> UploadDocumentAPI
-           :<|> RegisterDLAPI
-           :<|> RegisterRCAPI
-           :<|> GenerateAadhaarOtpAPI
-           :<|> VerifyAadhaarOtpAPI
-           :<|> AuthAPI
+    :> ( AuthAPI
            :<|> VerifyAPI
-           :<|> UnderReviewDriversListAPI
-           :<|> DriverDocumentInfoAPI
-           :<|> UpdateDocumentAPI
        )
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  documentsList merchantId city
-    :<|> getDocument merchantId city
-    :<|> uploadDocument merchantId city
-    :<|> registerDL merchantId city
-    :<|> registerRC merchantId city
-    :<|> generateAadhaarOtp merchantId city
-    :<|> verifyAadhaarOtp merchantId city
-    :<|> auth merchantId city
+  auth merchantId city
     :<|> verify merchantId city
-    :<|> underReviewDriversList merchantId city
-    :<|> driverDocumentInfo merchantId city
-    :<|> updateDocument merchantId city
-
-type DocumentsListAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DOCUMENT_LIST :> Common.DocumentsListAPI
-
-type GetDocumentAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'GET_DOCUMENT :> Common.GetDocumentAPI
-
-type UploadDocumentAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPLOAD_DOCUMENT :> Common.UploadDocumentAPI
-
-type RegisterDLAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REGISTER_DL :> Common.RegisterDLAPI
-
-type RegisterRCAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REGISTER_RC :> Common.RegisterRCAPI
-
-type GenerateAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'GENERATE_AADHAAR_OTP :> Common.GenerateAadhaarOtpAPI
-
-type VerifyAadhaarOtpAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'VERIFY_AADHAAR_OTP :> Common.VerifyAadhaarOtpAPI
 
 type AuthAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'AUTH :> Common.AuthAPI
 
 type VerifyAPI = ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'VERIFY :> Common.VerifyAPI
-
-type UnderReviewDriversListAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UNDER_REVIEW_DRIVERS_LIST :> Common.UnderReviewDriversListAPI
-
-type DriverDocumentInfoAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_DOCUMENT_INFO :> Common.DriverDocumentInfoAPI
-
-type UpdateDocumentAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'UPDATE_DOCUMENT :> Common.UpdateDocumentAPI
-
-buildTransaction ::
-  ( MonadFlow m,
-    Common.HideSecrets request
-  ) =>
-  Common.DriverRegistrationEndpoint ->
-  ApiTokenInfo ->
-  Maybe (Id Common.Driver) ->
-  Maybe request ->
-  m DT.Transaction
-buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.DriverRegistrationAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) driverId Nothing
-
-documentsList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
-documentsList merchantShortId opCity apiTokenInfo driverId =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.documentsList) driverId
-
-getDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
-getDocument merchantShortId opCity apiTokenInfo imageId =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.getDocument) imageId
-
-uploadDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
-uploadDocument merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.UploadDocumentEndpoint apiTokenInfo (Just driverId) (Just req)
-    T.withResponseTransactionStoring transaction $
-      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.uploadDocument) driverId req
-
-registerDL :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
-registerDL merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.RegisterDLEndpoint apiTokenInfo (Just driverId) (Just req)
-    T.withTransactionStoring transaction $
-      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.registerDL) driverId req
-
-registerRC :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
-registerRC merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.RegisterRCEndpoint apiTokenInfo (Just driverId) (Just req)
-    T.withTransactionStoring transaction $
-      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.registerRC) driverId req
-
-generateAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> FlowHandler Common.GenerateAadhaarOtpRes
-generateAadhaarOtp merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.GenerateAadhaarOtpEndpoint apiTokenInfo (Just driverId) (Nothing :: Maybe Common.GenerateAadhaarOtpReq)
-    T.withTransactionStoring transaction $
-      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.generateAadhaarOtp) driverId req
-
-verifyAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> FlowHandler Common.VerifyAadhaarOtpRes
-verifyAadhaarOtp merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.VerifyAadhaarOtpEndpoint apiTokenInfo (Just driverId) (Nothing :: Maybe Common.VerifyAadhaarOtpReq)
-    T.withTransactionStoring transaction $
-      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.verifyAadhaarOtp) driverId req
 
 auth :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AuthReq -> FlowHandler Common.AuthRes
 auth merchantShortId opCity apiTokenInfo req =
@@ -173,23 +66,3 @@ verify merchantShortId opCity apiTokenInfo authId req =
     role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
     let mbFleet = role.dashboardAccessType == DRole.FLEET_OWNER || role.dashboardAccessType == DRole.RENTAL_FLEET_OWNER
     Client.callDriverOfferBPP checkedMerchantId opCity (.driverRegistration.verify) authId mbFleet apiTokenInfo.personId.getId req
-
-underReviewDriversList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.UnderReviewDriversListResponse
-underReviewDriversList merchantShortId opCity apiTokenInfo limit offset =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.underReviewDriversList) limit offset
-
-driverDocumentInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler [Common.DriverDocument]
-driverDocumentInfo merchantShortId opCity apiTokenInfo driverId =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.driverDocumentInfo) driverId
-
-updateDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateDocumentRequest -> FlowHandler APISuccess
-updateDocument merchantShortId opCity apiTokenInfo req =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    transaction <- buildTransaction Common.UpdateDocumentEndpoint apiTokenInfo Nothing (Just req)
-    T.withTransactionStoring transaction $
-      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverRegistration.updateDocument) req
