@@ -61,6 +61,7 @@ import Services.API (GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBooki
 import Services.Backend (getQuotes, rideBooking)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
+import Resources.Localizable.EN (getEN)
 
 rentalScreen :: RentalScreenState -> Screen Action RentalScreenState ScreenOutput
 rentalScreen initialState =
@@ -136,6 +137,8 @@ rentalPackageSelectionView push state =
         ][ textView  $ 
             [ text $ getString SELECT_PACKAGE 
             , color Color.black800
+            , accessibility ENABLE
+            , accessibilityHint $ getEN SELECT_PACKAGE
             ] <> FontStyle.h1 TypoGraphy
           , imageView
             [ height $ V 16
@@ -162,6 +165,8 @@ rentalPackageSelectionView push state =
           , gravity CENTER
           , text $ (show state.data.rentalBookingData.baseDuration) <> " " <> getString HOURS
           , color Color.white900
+          , accessibility ENABLE
+          , accessibilityHint $ ((show state.data.rentalBookingData.baseDuration) <> " " <> getEN HOURS)
           ] <> FontStyle.heading TypoGraphy
         , sliderView push state
         ]
@@ -171,6 +176,8 @@ rentalPackageSelectionView push state =
       [ text $ getString (RENTAL_SCREEN_EXPLAINER )
       , color Color.black700 
       , margin $ Margin 16 0 16 16
+      , accessibility ENABLE
+      , accessibilityHint $ getEN (RENTAL_SCREEN_EXPLAINER)
       ] <> FontStyle.paragraphText TypoGraphy
     , linearLayout [
         height MATCH_PARENT
@@ -210,6 +217,10 @@ sliderView push state =
           , padding $ buttonPadding
           , clickable updateSliderMethodExists
           , onClick push $ const $ UpdateSliderValue (state.data.rentalBookingData.baseDuration - 1 )
+          , accessibility ENABLE
+          , accessibilityHint $ case state.data.rentalBookingData.baseDuration of 
+                1 -> "Cannot decrease the rental package minimum limit reached"
+                _ -> "Click to decrease the rental Package duration to " <> (show $ state.data.rentalBookingData.baseDuration-1) <> " " <> getEN HOURS
           ] <> fontStyle
       , PrestoAnim.animationSet [Anim.fadeIn true] $
           linearLayout
@@ -243,6 +254,10 @@ sliderView push state =
           , clickable updateSliderMethodExists
           , onClick push $ const $ UpdateSliderValue (state.data.rentalBookingData.baseDuration + 1 )
           , color Color.white900
+          , accessibility ENABLE
+          , accessibilityHint $ case state.data.rentalBookingData.baseDuration of 
+            10 -> "Cannot increase rental Booking Duration maximum limit reached"
+            _ -> "rental package selected for " <>(show $ state.data.rentalBookingData.baseDuration+1) <> " " <> getEN HOURS
           ] <> fontStyle
     ]
 
@@ -296,6 +311,8 @@ fareBreakupView push state = let
                               , ellipsize true
                               , text $ fromMaybe "" selectedQuote.quoteDetails.serviceTierName
                               , color Color.black800
+                              , accessibility ENABLE
+                              , accessibilityHint $ "current Vehicle Varient : " <> (fromMaybe "" selectedQuote.quoteDetails.serviceTierName)
                               ]
                             <> FontStyle.body7 TypoGraphy
                         , capacityView push selectedQuote.quoteDetails 
@@ -305,6 +322,8 @@ fareBreakupView push state = let
                           , height WRAP_CONTENT
                           , text selectedQuote.quoteDetails.price
                           , color Color.black800
+                          , accessibility ENABLE
+                          , accessibilityHint $ "Price : " <> selectedQuote.quoteDetails.price
                           ]
                         <> FontStyle.body7 TypoGraphy
 
@@ -363,6 +382,8 @@ fareBreakupView push state = let
                 , height WRAP_CONTENT
                 , text description
                 , color Color.black700
+                , accessibility ENABLE
+                , accessibilityHint $ description
                 ]
               <> FontStyle.tags TypoGraphy
           , linearLayout[
@@ -382,6 +403,8 @@ fareBreakupView push state = let
                   , height WRAP_CONTENT
                   , text $ vehicleDesc
                   , color Color.black700
+                  , accessibility ENABLE
+                  , accessibilityHint $ vehicleDesc
                   ]
                 <> FontStyle.tags TypoGraphy]     
         ]
@@ -398,6 +421,8 @@ fareBreakUpItemView push state item showSeparator =
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , textFromHtml item.title
+          , accessibility ENABLE
+          , accessibilityHint (item.accessibilityHint)
           , color Color.black800
           ]
         <> FontStyle.subHeading1 TypoGraphy
@@ -417,12 +442,16 @@ fareBreakUpItemView push state item showSeparator =
                   , height WRAP_CONTENT
                   , textFromHtml $ subHeading.title
                   , color Color.black800
+                  , accessibility ENABLE
+                  , accessibilityHint $ subHeading.accessibilityHintTitle
                   ] <> FontStyle.body20 TypoGraphy
                 , textView $ 
                   [ width WRAP_CONTENT
                   , height WRAP_CONTENT
                   , textFromHtml $ subHeading.description
                   , color Color.black700
+                  , accessibility ENABLE
+                  , accessibilityHint $ subHeading.accessibilityHintDesc
                   ] <> FontStyle.paragraphText TypoGraphy
                 ]) item.subHeadings
           )
@@ -430,7 +459,7 @@ fareBreakUpItemView push state item showSeparator =
     ]
 
 
-getDataFromDescType :: DescriptionType -> RentalScreenState -> { title :: String, subHeadings :: Array { title :: String, description :: String } }
+getDataFromDescType :: DescriptionType -> RentalScreenState -> { title :: String, subHeadings :: Array { title :: String, description :: String,accessibilityHintTitle :: String,accessibilityHintDesc::String },accessibilityHint :: String }
 getDataFromDescType descriptionType state =
   let baseDuration = show state.data.rentalBookingData.baseDuration
       startTimeUTC = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
@@ -442,22 +471,43 @@ getDataFromDescType descriptionType state =
         BookingTimeAndDist -> {
           title : "<b>Booking from " <> formatDateInHHMM startTimeUTC <> " - " <> rideEndTime <> "</b>",
           subHeadings : [
-            { title : (getString INCLUDED_TIME) <> ": <b>" <> show state.data.rentalBookingData.baseDuration <> " hrs</b>", description : getString (EXCESS_TIME_DESCRIPTION (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min"))},
-            { title : getString INCLUDED_DISTANCE <> ": <b>" <> show state.data.rentalBookingData.baseDistance <> " km</b>", description : getString (EXCESS_DISTANCE_CHARGE_DESCRIPTION (currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km.")) }
+            {   title : (getString INCLUDED_TIME) <> ": <b>" <> show state.data.rentalBookingData.baseDuration <> " hrs</b>"
+             ,  description : getString (EXCESS_TIME_DESCRIPTION (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min"))
+             ,  accessibilityHintTitle :(getEN INCLUDED_TIME <> " : " <>show state.data.rentalBookingData.baseDuration <> " hrs")
+             ,  accessibilityHintDesc :getString (EXCESS_TIME_DESCRIPTION (currency <> show selectedQuote.fareDetails.perExtraMinRate <> "/min"))  
+            },
+            {  title : getString INCLUDED_DISTANCE <> ": <b>" <> show state.data.rentalBookingData.baseDistance <> " km</b>"
+            ,  description : getString (EXCESS_DISTANCE_CHARGE_DESCRIPTION (currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km.")) 
+            ,  accessibilityHintTitle : (getString INCLUDED_DISTANCE <> " : " <> show state.data.rentalBookingData.baseDistance <> " km")
+            ,  accessibilityHintDesc :getString (EXCESS_DISTANCE_CHARGE_DESCRIPTION (currency <> (show selectedQuote.fareDetails.perExtraKmRate) <> "/km.")) }
           ]
+          , accessibilityHint : "Booking from" <> formatDateInHHMM startTimeUTC <> " - " <> rideEndTime
           }
         EstimatedCharges -> {
           title : getString ESTIMATED_CHARGES,
           subHeadings : [
-            { title : getString ESTIMATED_FARE <> ": <b>" <> selectedQuote.quoteDetails.price <> "</b>" , description : getString ADDITIONAL_CHARGES_DESCRIPTION}
+            { title : getString ESTIMATED_FARE <> ": <b>" <> selectedQuote.quoteDetails.price <> "</b>" 
+            , description : getString ADDITIONAL_CHARGES_DESCRIPTION
+            , accessibilityHintDesc : getEN ADDITIONAL_CHARGES_DESCRIPTION 
+            , accessibilityHintTitle :getString ESTIMATED_FARE <> ":" <> selectedQuote.quoteDetails.price <> "" }
           ]
+          , accessibilityHint : getEN ESTIMATED_CHARGES
         }
         AdditionalCharges -> {
           title : getString ADDITIONAL_CHARGES,
           subHeadings : [
-            { title : getString PARKING_AND_OTHER_CHARGES , description : getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED},
-            { title : getString NIGHT_TIME_FEES , description : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge}
-          ]
+            { title : getString PARKING_AND_OTHER_CHARGES 
+            , description : getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
+            , accessibilityHintTitle : getEN PARKING_AND_OTHER_CHARGES 
+            , accessibilityHintDesc : getEN PARKING_FEES_AND_TOLLS_NOT_INCLUDED
+            },
+            { title : getString NIGHT_TIME_FEES 
+            , description : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge
+            , accessibilityHintTitle : getEN NIGHT_TIME_FEES
+            , accessibilityHintDesc : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge
+            }
+          ],
+          accessibilityHint : getEN ADDITIONAL_CHARGES
       }
 
 formatDateInHHMM :: String -> String
@@ -515,6 +565,8 @@ noQuotesErrorModel state =
         [ height WRAP_CONTENT
         , width $ V ((EHC.screenWidth unit / 2) + (EHC.screenWidth unit /3))
         , color Color.black800
+        , accessibility ENABLE
+        , accessibilityHint (getEN SORRY_WE_COULDNT_FIND_ANY_RIDES)
         , text (getString SORRY_WE_COULDNT_FIND_ANY_RIDES)
         , margin $ MarginVertical 20 4
         , gravity CENTER
@@ -522,6 +574,8 @@ noQuotesErrorModel state =
       , textView $
         [ height WRAP_CONTENT
         , width $ V ((EHC.screenWidth unit / 2) + (EHC.screenWidth unit /3))
+        , accessibility ENABLE
+        , accessibilityHint (getEN IT_SEEMS_TO_BE_A_VERY_BUSY_DAY)
         , text (getString IT_SEEMS_TO_BE_A_VERY_BUSY_DAY)
         , color Color.black700
         , gravity CENTER

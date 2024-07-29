@@ -79,6 +79,7 @@ genericHeaderConfig _ = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = Margin 12 12 12 12
+      , accessibilityHint = "Back Button"
       }
     , textConfig {
         text = getString RENTAL_RIDE
