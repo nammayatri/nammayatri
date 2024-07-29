@@ -4455,7 +4455,18 @@ rentalBanner push state =
           else rentalBannerView state push]
 
 rentalBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rentalBannerView state push =  
+rentalBannerView state push = 
+  let 
+    bannerText = (maybe "" (\rentalsInfo ->
+                              if rentalsInfo.multipleScheduled then getEN UPCOMING_BOOKINGS
+                              else do
+                                let timeUTC = rentalsInfo.rideScheduledAtUTC
+                                    fpt = rentalsInfo.fareProductType
+                                    bookingInfoString = if fpt == FPT.INTER_CITY then YOU_HAVE_UPCOMING_INTERCITY_BOOKING
+                                                        else YOU_HAVE_UPCOMING_RENTAL_BOOKING
+                                getEN $ bookingInfoString $ convertUTCtoISC timeUTC "D" <> " " <> convertUTCtoISC timeUTC "MMMM" <> " " <> convertUTCtoISC timeUTC "YYYY" <> " , " <> convertUTCtoISC timeUTC "HH" <> ":" <> convertUTCtoISC timeUTC "mm"
+                          ) state.data.rentalsInfo)
+  in 
   linearLayout 
     [ height WRAP_CONTENT 
     , width MATCH_PARENT 
@@ -4468,16 +4479,10 @@ rentalBannerView state push =
     ][  textView
         [ weight 1.0 
         , height WRAP_CONTENT
-        , textFromHtml $ (maybe "" (\rentalsInfo ->
-                              if rentalsInfo.multipleScheduled then getString UPCOMING_BOOKINGS
-                              else do
-                                let timeUTC = rentalsInfo.rideScheduledAtUTC
-                                    fpt = rentalsInfo.fareProductType
-                                    bookingInfoString = if fpt == FPT.INTER_CITY then YOU_HAVE_UPCOMING_INTERCITY_BOOKING
-                                                        else YOU_HAVE_UPCOMING_RENTAL_BOOKING
-                                getString $ bookingInfoString $ convertUTCtoISC timeUTC "D" <> " " <> convertUTCtoISC timeUTC "MMMM" <> " " <> convertUTCtoISC timeUTC "YYYY" <> " , " <> convertUTCtoISC timeUTC "HH" <> ":" <> convertUTCtoISC timeUTC "mm"
-                          ) state.data.rentalsInfo)
+        , textFromHtml $ bannerText
         , color Color.black900
+        , accessibility ENABLE
+        , accessibilityHint $ bannerText
         ]
       , frameLayout
         [ height WRAP_CONTENT
