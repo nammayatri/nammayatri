@@ -22,7 +22,9 @@ data NammaTagT f = NammaTagT
     tagType :: (B.C f Domain.Types.NammaTag.TagType),
     validity :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Hours)),
     name :: (B.C f Kernel.Prelude.Text),
-    possibleValues :: (B.C f [Kernel.Prelude.Text]),
+    rangeEnd :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    rangeStart :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    tags :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     rule :: (B.C f Lib.Yudhishthira.Types.TagRule),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)

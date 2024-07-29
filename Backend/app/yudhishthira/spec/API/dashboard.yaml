@@ -1,6 +1,7 @@
 imports:
   NammaTag: Lib.Yudhishthira.Types
   APISuccess: Kernel.Types.APISuccess
+  ChakraQueriesAPIEntity: Domain.Types.ChakraQueries
 
 module: Dashboard
 
@@ -12,5 +13,12 @@ apis:
       auth: ApiTokenAuth
       request:
         type: NammaTag
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /query/create
+      auth: ApiTokenAuth
+      request:
+        type: ChakraQueriesAPIEntity
       response:
         type: APISuccess

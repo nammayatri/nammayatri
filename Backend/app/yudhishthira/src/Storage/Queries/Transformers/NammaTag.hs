@@ -42,3 +42,23 @@ mkTagInfo chakra event tagType validity =
   case tagType of
     Domain.Types.NammaTag.ApplicationTag -> Domain.Types.NammaTag.Application (Domain.Types.NammaTag.ApplicationTagInfo (fromMaybe Lib.Yudhishthira.Types.RideEnd event))
     Domain.Types.NammaTag.KaalChakraTag -> Domain.Types.NammaTag.KaalChakra (Domain.Types.NammaTag.KaalChakraTagInfo (fromMaybe Lib.Yudhishthira.Types.Monthly chakra) validity)
+
+getRangeEnd :: (Lib.Yudhishthira.Types.TagValues -> Kernel.Prelude.Maybe Kernel.Prelude.Double)
+getRangeEnd = \case
+  Lib.Yudhishthira.Types.Range _ end -> Just end
+  _ -> Kernel.Prelude.Nothing
+
+getRangeStart :: (Lib.Yudhishthira.Types.TagValues -> Kernel.Prelude.Maybe Kernel.Prelude.Double)
+getRangeStart = \case
+  Lib.Yudhishthira.Types.Range start _ -> Just start
+  _ -> Kernel.Prelude.Nothing
+
+getTags :: (Lib.Yudhishthira.Types.TagValues -> Kernel.Prelude.Maybe [Kernel.Prelude.Text])
+getTags = \case
+  Lib.Yudhishthira.Types.Range _ _ -> Nothing
+  Lib.Yudhishthira.Types.Tags tags -> Just tags
+
+mkTagValues :: (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Lib.Yudhishthira.Types.TagValues)
+mkTagValues rangeEnd rangeStart mbTags = case mbTags of
+  Just tags -> Lib.Yudhishthira.Types.Tags tags
+  Nothing -> Lib.Yudhishthira.Types.Range (fromMaybe 0 rangeStart) (fromMaybe 0 rangeEnd)

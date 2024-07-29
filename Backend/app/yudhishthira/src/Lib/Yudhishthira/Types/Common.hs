@@ -11,3 +11,10 @@ data TagRule
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnumAndList ''TagRule)
+
+data TagValues
+  = Tags [Text]
+  | Range Double Double
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnumAndList ''TagValues)

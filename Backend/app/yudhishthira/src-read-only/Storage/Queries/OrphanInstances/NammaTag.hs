@@ -21,7 +21,7 @@ instance FromTType' Beam.NammaTag Domain.Types.NammaTag.NammaTag where
             description = description,
             info = mkTagInfo chakra event tagType validity,
             name = name,
-            possibleValues = possibleValues,
+            possibleValues = mkTagValues rangeEnd rangeStart tags,
             rule = rule,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -37,7 +37,9 @@ instance ToTType' Beam.NammaTag Domain.Types.NammaTag.NammaTag where
         Beam.tagType = getTag info,
         Beam.validity = getValidity info,
         Beam.name = name,
-        Beam.possibleValues = possibleValues,
+        Beam.rangeEnd = getRangeEnd possibleValues,
+        Beam.rangeStart = getRangeStart possibleValues,
+        Beam.tags = getTags possibleValues,
         Beam.rule = rule,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

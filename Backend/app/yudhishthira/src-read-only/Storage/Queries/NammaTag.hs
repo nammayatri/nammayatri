@@ -35,7 +35,9 @@ updateByPrimaryKey (Domain.Types.NammaTag.NammaTag {..}) = do
       Se.Set Beam.event (getEvent info),
       Se.Set Beam.tagType (getTag info),
       Se.Set Beam.validity (getValidity info),
-      Se.Set Beam.possibleValues possibleValues,
+      Se.Set Beam.rangeEnd (getRangeEnd possibleValues),
+      Se.Set Beam.rangeStart (getRangeStart possibleValues),
+      Se.Set Beam.tags (getTags possibleValues),
       Se.Set Beam.rule rule,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

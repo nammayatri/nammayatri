@@ -43,9 +43,13 @@ library
       Tools.Auth
       Tools.Beam.UtilsTH
       Tools.Error
+      Tools.Utils
       API.Action.Dashboard
+      Domain.Types.ChakraQueries
       Domain.Types.NammaTag
+      Storage.Beam.ChakraQueries
       Storage.Beam.NammaTag
+      Storage.Queries.ChakraQueries
       Storage.Queries.NammaTag
       Storage.Queries.OrphanInstances.NammaTag
   other-modules:

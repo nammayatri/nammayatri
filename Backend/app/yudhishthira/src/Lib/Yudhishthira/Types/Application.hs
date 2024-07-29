@@ -8,7 +8,7 @@ data NammaTagApplication = NammaTagApplication
   { tagCategory :: Text,
     description :: Maybe Text,
     tagName :: Text,
-    tagPossibleValues :: [Text],
+    tagPossibleValues :: TagValues,
     tagStage :: ApplicationEvent,
     tagRule :: TagRule
   }

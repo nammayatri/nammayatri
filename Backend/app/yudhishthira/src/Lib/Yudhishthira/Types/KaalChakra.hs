@@ -16,7 +16,7 @@ data NammaTagChakra = NammaTagChakra
   { tagCategory :: Text,
     tagName :: Text,
     description :: Maybe Text,
-    tagPossibleValues :: [Text],
+    tagPossibleValues :: TagValues,
     tagChakra :: Chakra,
     tagValidity :: Maybe Hours,
     tagRule :: TagRule

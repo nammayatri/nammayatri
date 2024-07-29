@@ -19,6 +19,7 @@ module Tools.Error
   )
 where
 
+import Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.Error as Error hiding (MerchantError)
 import Kernel.Types.Error.BaseError.HTTPError.HttpCode
@@ -27,6 +28,8 @@ import Kernel.Utils.Common hiding (Error)
 data Error
   = TagNotFound Text
   | TagAlreadyExists Text
+  | RepeatedQueryFields [Text]
+  | MissingQueryFields [Text]
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''Error
@@ -35,14 +38,20 @@ instance IsBaseError Error where
   toMessage = \case
     TagNotFound name -> Just $ "Tag not found: " <> name
     TagAlreadyExists name -> Just $ "Tag already exists: " <> name
+    RepeatedQueryFields fields -> Just $ "Repeated query fields: " <> T.intercalate ", " fields
+    MissingQueryFields fields -> Just $ "Missing query fields: " <> T.intercalate ", " fields
 
 instance IsHTTPError Error where
   toErrorCode = \case
     TagNotFound _ -> "TAG_NOT_FOUND"
     TagAlreadyExists _ -> "TAG_ALREADY_EXISTS"
+    RepeatedQueryFields _ -> "REPEATED_QUERY_FIELDS"
+    MissingQueryFields _ -> "MISSING_QUERY_FIELDS"
 
   toHttpCode = \case
     TagNotFound _ -> E400
     TagAlreadyExists _ -> E400
+    RepeatedQueryFields _ -> E400
+    MissingQueryFields _ -> E400
 
 instance IsAPIError Error

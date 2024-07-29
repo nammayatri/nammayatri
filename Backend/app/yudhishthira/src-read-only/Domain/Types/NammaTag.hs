@@ -15,7 +15,7 @@ data NammaTag = NammaTag
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     info :: Domain.Types.NammaTag.TagInfo,
     name :: Kernel.Prelude.Text,
-    possibleValues :: [Kernel.Prelude.Text],
+    possibleValues :: Lib.Yudhishthira.Types.TagValues,
     rule :: Lib.Yudhishthira.Types.TagRule,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
