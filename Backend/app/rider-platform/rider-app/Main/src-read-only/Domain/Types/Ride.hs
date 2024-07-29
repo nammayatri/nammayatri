@@ -46,7 +46,6 @@ data RideE e = Ride
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverMobileNumber :: Kernel.Prelude.Text,
-    driverMobileNumberHash :: Kernel.External.Encryption.DbHash,
     driverName :: Kernel.Prelude.Text,
     driverPhoneNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
@@ -88,9 +87,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE ('AsEncrypted)
+type Ride = RideE 'AsEncrypted
 
-type DecryptedRide = RideE ('AsUnencrypted)
+type DecryptedRide = RideE 'AsUnencrypted
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -120,7 +119,6 @@ instance EncryptedItem Ride where
           driverImage = driverImage entity,
           driverMobileCountryCode = driverMobileCountryCode entity,
           driverMobileNumber = driverMobileNumber entity,
-          driverMobileNumberHash = driverMobileNumberHash entity,
           driverName = driverName entity,
           driverPhoneNumber = driverPhoneNumber_,
           driverRating = driverRating entity,
@@ -186,7 +184,6 @@ instance EncryptedItem Ride where
             driverImage = driverImage entity,
             driverMobileCountryCode = driverMobileCountryCode entity,
             driverMobileNumber = driverMobileNumber entity,
-            driverMobileNumberHash = driverMobileNumberHash entity,
             driverName = driverName entity,
             driverPhoneNumber = driverPhoneNumber_,
             driverRating = driverRating entity,
@@ -238,6 +235,6 @@ data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)
