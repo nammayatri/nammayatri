@@ -54,12 +54,12 @@ checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this 
 checkRideStatus rideAssigned = do
   logField_ <- lift $ lift $ getLogFields
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+  (GlobalState state') <- getState
+  let state = state'.homeScreen
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
       if not (null listResp.list) then do
-        (GlobalState state') <- getState
-        let state = state'.homeScreen
-            multipleScheduled = length listResp.list > 1
+        let multipleScheduled = length listResp.list > 1
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
             bookingStatus = resp.status
@@ -182,7 +182,6 @@ checkRideStatus rideAssigned = do
                   hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isBlindPerson
                   hasTollIssue' = getValueToLocalStore HAS_TOLL_CHARGES == "true" && not isBlindPerson
 
-
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
@@ -255,7 +254,7 @@ checkRideStatus rideAssigned = do
                           }
                         })
                 updateLocalStage RideCompleted
-              when (length listResp.list == 0) $ do 
+              when (length listResp.list == 0 && not state.props.isSharedLocationFlow) $ do 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
                 updateLocalStage HomeScreen
           Left err -> do 

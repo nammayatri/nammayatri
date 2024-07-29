@@ -524,7 +524,7 @@ locateOnMapConfig = {
         showLabel : false
       , showLabelActionImage : false
       , labelImage : ""
-      , labelMaxWidth : if os == "IOS" then 140 else 400 
+      , labelMaxWidth : Constant.locateOnMapLabelMaxWidth
       , labelActionImage : ""
       , theme : "LIGHT"
       , spotIcon : "ny_ic_zone_pickup_marker_green"
