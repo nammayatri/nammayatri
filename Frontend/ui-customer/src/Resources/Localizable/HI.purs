@@ -979,6 +979,7 @@ getHI stringKey =
         CHENNAI_METRO_TERM_1 -> "टिकट का नामंजूर करना लागू नहीं है"
         CHENNAI_METRO_TERM_2 -> "टिकटें सभी दिनों 4:30 बजे से 10:30 बजे तक खरीदी जा सकती हैं।"
         CHENNAI_METRO_TERM_EVENT -> "रद्द टिकट मुफ्त टिकट प्रस्ताव की गणना में शामिल नहीं होंगी"
+        FREE_TICKET_CASHBACK -> "मुफ़्त टिकट ऑफ़र के लिए कैशबैक 24 घंटे के भीतर जमा कर दिया जाएगा"
         NO_OF_PASSENGERS -> "यात्री की संख्या"
         MAXIMUM -> "अधिकतम"
         TICKETS_ALLOWED_PER_USER -> "प्रति उपयोगकर्ता को अनुमति दी जाती है।"

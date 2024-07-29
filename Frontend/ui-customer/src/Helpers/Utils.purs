@@ -950,8 +950,8 @@ getMetroConfigFromAppConfig config city = do
 getMetroConfigFromCity :: City -> Maybe Boolean -> CityMetroConfig
 getMetroConfigFromCity city isEventOngoing =
   case city of
-    Kochi -> mkCityBasedConfig "ny_ic_kochi_metro" (getString TICKETS_FOR_KOCHI_METRO) "ny_ic_kochi_metro_map" "ny_ic_kochi_metro_banner" "#F5FFFF" "#02B0AF" "https://metro-terms.triffy.in/kochi/index.html" [getString KOCHI_METRO_TERM_1 ,getString KOCHI_METRO_TERM_2] (getString KOCHI_METRO_TIME)  true
-    Chennai -> mkCityBasedConfig "ny_ic_chennai_metro" (getString TICKETS_FOR_CHENNAI_METRO) "ny_ic_chennai_metro_map" "ny_ic_chennai_metro_banner" "#D8E2FF" Color.metroBlue "https://metro-terms.triffy.in/chennai/index.html" [getString CHENNAI_METRO_TERM_2 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1] (getString $ CHENNAI_METRO_TIME "04:30:00" "22:30:00") false
+    Kochi -> mkCityBasedConfig "ny_ic_kochi_metro" (getString TICKETS_FOR_KOCHI_METRO) "ny_ic_kochi_metro_map" "ny_ic_kochi_metro_banner" "#F5FFFF" "#02B0AF" "https://metro-terms.triffy.in/kochi/index.html" [getString KOCHI_METRO_TERM_1 ,getString KOCHI_METRO_TERM_2, if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else "" , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else "" ] (getString KOCHI_METRO_TIME)  true
+    Chennai -> mkCityBasedConfig "ny_ic_chennai_metro" (getString TICKETS_FOR_CHENNAI_METRO) "ny_ic_chennai_metro_map" "ny_ic_chennai_metro_banner" "#D8E2FF" Color.metroBlue "https://metro-terms.triffy.in/chennai/index.html" [getString CHENNAI_METRO_TERM_2 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1, if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""  ] (getString $ CHENNAI_METRO_TIME "04:30:00" "22:30:00") false
     _ -> mkCityBasedConfig "" "" "" "" "" "" "" [] "" false
   where
     mkCityBasedConfig logoImage title mapImage bannerImage bannerBackgroundColor bannerTextColor termsAndConditionsUrl termsAndConditions errorPopupTitle showCancelButton = 
