@@ -86,3 +86,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN settle_cancellation_fee_before_nex
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN exotel_status_check_scheduler_delay integer  default 120;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN cx_agent_phone_numbers text[] ;

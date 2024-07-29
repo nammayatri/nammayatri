@@ -40,6 +40,9 @@ Sos:
     findByRideId:
       kvFunction: findOneWithKV
       where: rideId
+    findByTicketId:
+      kvFunction: findOneWithKV
+      where: ticketId
 
   constraints:
     id: PrimaryKey

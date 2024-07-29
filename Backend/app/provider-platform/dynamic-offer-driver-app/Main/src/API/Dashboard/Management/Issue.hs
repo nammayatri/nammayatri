@@ -43,7 +43,8 @@ dashboardIssueHandle =
   DIssue.ServiceHandle
     { findPersonById = AUI.castPersonById,
       findByMerchantShortIdAndCity = AUI.castMOCityByMerchantShortIdAndCity,
-      findMerchantConfig = AUI.buildMerchantConfig
+      findMerchantConfig = AUI.buildMerchantConfig,
+      mbSendUnattendedTicketAlert = Nothing
     }
 
 issueCategoryList ::

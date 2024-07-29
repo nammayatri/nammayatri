@@ -21,6 +21,7 @@ data RiderConfigT f = RiderConfigT
     bookingSyncStatusCallSecondsDiffThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     collectMMIRouteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    cxAgentPhoneNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     distanceWeightage :: B.C f Kernel.Prelude.Int,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,

@@ -1,6 +1,7 @@
 module API.Dashboard.Issue where
 
 import qualified API.UI.Issue as AUI
+import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified IssueManagement.API.Dashboard.Issue as IMD
@@ -43,7 +44,8 @@ dashboardIssueHandle =
   DIssue.ServiceHandle
     { findPersonById = AUI.castPersonById,
       findByMerchantShortIdAndCity = AUI.castMOCityByMerchantShortIdAndCity,
-      findMerchantConfig = AUI.buildMerchantConfig
+      findMerchantConfig = AUI.buildMerchantConfig,
+      mbSendUnattendedTicketAlert = Just Sos.sendUnattendedSosTicketAlert
     }
 
 issueCategoryList ::
