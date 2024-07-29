@@ -590,6 +590,7 @@ view push state =
             , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then rideCompletedCardView push state else emptyTextView state
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
+            , if state.props.currentStage == GoToTripSelect then (selectTripViewIntercity push state) else emptyTextView state
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
@@ -604,6 +605,7 @@ view push state =
             , if state.props.zoneOtpExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
             , if state.data.rideCompletedData.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
+            , if state.props.searchLocationModelProps.showRideInfo then rideInfoCardView push state  else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -1206,7 +1208,10 @@ rateCardView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RateCard.view (push <<< RateCardAction) (rateCardConfig state) ]
+        [ RateCard.view (push <<< RateCardAction) (getCardConfig state) ]
+  where 
+  getCardConfig state = do 
+    if (state.data.fareProductType == FPT.INTER_CITY) then (intercityRateCardConfig state) else (rateCardConfig state)
 
 buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 buttonLayout state push =
@@ -4873,3 +4878,52 @@ exploreCityCard push state index locationItem =
           , accessibility DISABLE
           ] <> FontStyle.body3 TypoGraphy
     ]
+
+
+--- select Trip view  -- 
+
+selectTripViewIntercity :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+selectTripViewIntercity push state = 
+  linearLayout [
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background  Color.red
+][ SearchLocationModel.selectTripView (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
+
+rideInfoCardConfig :: forall w. HomeScreenState ->  RequestInfoCard.Config
+rideInfoCardConfig state = let 
+  config = RequestInfoCard.config
+  rideInfoCardConfig' = config{
+    title {
+      text = "Round Trip Policy" ,
+      accessibilityHint = "Round Trip Policy",
+      textStyle = FontStyle.Heading1
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_COMMON_ASSET "ic_baggage",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 2 2 0,
+      visibility = VISIBLE
+    }
+  , bulletPoints = ["By default, 1hr is added to your booking in addition to the estimated travel duration.","For every extra hour you add, you will be allocated 10 extra kilometers of distance in your package."]
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20,
+      accessibilityHint = (getEN GOT_IT) <> " : Button"
+    }
+  }
+  in rideInfoCardConfig'
+
+rideInfoCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rideInfoCardView push state = 
+  PrestoAnim.animationSet [ fadeIn true ]
+  $ linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility DISABLE
+  ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (rideInfoCardConfig state) ]
+
+
+--- Intercity Confirmation view----

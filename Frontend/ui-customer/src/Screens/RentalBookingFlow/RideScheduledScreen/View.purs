@@ -8,7 +8,7 @@ import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination.View as SourceToDestinationView
 import Components.PopUpModal as PopUpModal
-import Data.Array (singleton, head)
+import Data.Array (singleton, head ,filter ,any)
 import Data.Either (Either(..))
 import Data.Maybe (maybe, fromMaybe, Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
@@ -36,6 +36,9 @@ import Helpers.CommonView (dummyView)
 import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Screens.Types (FareProductType(..)) as FPT
+import Control.Monad.Except.Trans (lift)
+import Accessor(_status)
+import Data.Lens((^.))
 
 rideScheduledScreen :: RideScheduledScreenState -> Screen Action RideScheduledScreenState ScreenOutput
 rideScheduledScreen initialState =
@@ -58,11 +61,14 @@ rideScheduledScreen initialState =
     getBookingList :: forall action. (RideBookingListRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> RideScheduledScreenState -> Flow GlobalState Unit
     getBookingList action flowStatusAction count duration push state = do
       if(count > 0 && state.data.bookingId == "") then do
-        resp <- Remote.rideBookingListWithStatus "1" "0" "CONFIRMED" Nothing
-        case resp of
+        -- resp <- Remote.rideBookingListWithStatus "1" "0" "CONFIRMED" Nothing
+        rideBookingListResponse <- Remote.rideBookingList "10" "0" "true"
+        case rideBookingListResponse of
           Right response -> do
             let (RideBookingListRes listResp) = response
-                (RideBookingRes resp) = fromMaybe dummyRideBooking $ head listResp.list
+                filteredList = filter (\item -> any (_ == item ^. _status) ["CONFIRMED" , "TRIP_ASSIGNED"])  listResp.list
+                _ = spy "filteredList" filteredList
+                (RideBookingRes resp) = fromMaybe dummyRideBooking $ head filteredList
             if not (resp.id == "") then doAff do liftEffect $ push $ action response
             else do
               if count == 1 then do

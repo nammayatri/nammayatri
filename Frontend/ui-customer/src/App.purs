@@ -84,6 +84,7 @@ import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType)
 import Services.API (BookingStatus(..))
+import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -127,6 +128,7 @@ newtype GlobalState = GlobalState {
   , globalFlowCache :: GlobalFlowCache
   , rentalScreen :: RentalScreenState
   , pickupInstructionsScreen :: PickupInstructionsScreenState
+  , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -170,6 +172,7 @@ defaultGlobalState = GlobalState {
   , globalFlowCache : defaultGlobalFlowCache 
   , rentalScreen : RentalScreenData.initData
   , pickupInstructionsScreen : PickupInstructionsScreenData.initData
+  , rideSummaryScreen : RideSummaryScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -286,6 +289,9 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EDIT_LOCATION_DEST_SELECTED
                         | EDIT_DEST_BACKPRESSED
                         | EXIT_AND_ENTER_HOME_SCREEN
+                        | GO_TO_TRIP_TYPE_SELECTION HomeScreenState
+                        | GO_TO_RIDE_SUMMARY
+                        | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -358,6 +364,13 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
 
 data PICKUP_INSTRUCTIONS_SCREEN_OP = GO_TO_HOME_SCREEN_FROM_PICKUP_INSTRUCTIONS
 
+data RIDE_SUMMARY_SCREEN_OUTPUT =     GO_TO_RIDE_REQUEST
+                                    | ACCEPT_SCHEDULED_RIDE String
+                                    | UPDATE_ROUTE_INTERCITY Number Number Number Number
+                                    | UPDATE_ROUTE_RENTAL Number Number
+                                    | UPDATE_ROUTE_REGULAR Number Number Number Number
+                                    | RIDE_CONFIRMED String (Maybe String)
+                                    | CANCEL_INTERCITY_RIDE String
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -395,3 +408,4 @@ data ScreenType =
   | GlobalFlowCacheType (GlobalFlowCache -> GlobalFlowCache)
   | RentalScreenStateType (RentalScreenState -> RentalScreenState)
   | PickupInstructionsScreenStateType (PickupInstructionsScreenState -> PickupInstructionsScreenState)
+  | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)

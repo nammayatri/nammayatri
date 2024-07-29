@@ -33,6 +33,9 @@ data Action = Close
               | GoToFareUpdate 
               | GoToWaitingCharges
               | GoToTollOrParkingCharges
+              | GoToDriverAllowance
+              | GoToNightShiftCharges
+              | GoToTollAndParkingCharges
               | PrimaryButtonAC PrimaryButton.Action
 
 

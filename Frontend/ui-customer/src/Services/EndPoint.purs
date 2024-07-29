@@ -52,7 +52,10 @@ sendIssue :: String -> String
 sendIssue dummyString = (getBaseUrl "9") <> "/support/sendIssue"
 
 getRoute :: String -> String
-getRoute routeType = (getBaseUrl "10") <> if routeType == "trip" then "/trip/route" else "/pickup/route"
+getRoute routeType = (getBaseUrl "10") <> case routeType of
+                                                "trip" -> "/trip/route"
+                                                "intercity" -> "/route"
+                                                _ -> "/pickup/route" 
 
 driverFeedBack :: String -> String
 driverFeedBack dummyString = (getBaseUrl "12") <> "/feedback/rateRide"

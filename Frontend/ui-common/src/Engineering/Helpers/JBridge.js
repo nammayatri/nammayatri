@@ -2664,18 +2664,21 @@ export const clearAudioPlayer = function () {
   }
 }
 
-export const datePickerImpl = function (cb , action, delay){
+export const datePickerImpl = function (cb , action, delay,prevDateUTC){
+  const prevDate = new Date(prevDateUTC);
+  const epoch = prevDate.getTime();
   const callback = callbackMapper.map(function (str, year, month, date) {
     cb(action(str)(year)(month)(date))();
   })
   if (window.__OS == "IOS")
     window.JBridge.datePicker(callback, "", "DatePicker");
   else 
-    window.JBridge.datePicker(callback, "");
+    window.JBridge.datePicker(callback, "",epoch.toString());
 }
 
-export const timePickerImpl = function (cb , action, delay){
-  
+export const timePickerImpl = function (cb , action,prevDateUTC){
+  const prevDate = new Date(prevDateUTC);
+  const epoch = prevDate.getTime();
   if (window.__OS == "IOS"){
     const callback = callbackMapper.map(function (resp, year, month, date, hour, min) {
       cb(action(hour)(min)(resp))();
@@ -2685,7 +2688,8 @@ export const timePickerImpl = function (cb , action, delay){
     const callback = callbackMapper.map(function (hour, min, resp) {
       cb(action(hour)(min)(resp))();
     })
-    window.JBridge.timePicker(callback);}
+    window.JBridge.timePicker(callback,"",epoch.toString());
+  }
 }
 
 export const renderSliderImpl = (cb, action, config) => {

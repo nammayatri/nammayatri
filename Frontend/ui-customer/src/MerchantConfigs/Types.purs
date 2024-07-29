@@ -412,6 +412,7 @@ type CityConfig = {
   geoCodeConfig :: GeoCodeConfig,
   enableRentals :: Boolean,
   enableIntercity :: Boolean,
+  enableScheduling :: Boolean,
   enableCabs :: Boolean,
   iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,

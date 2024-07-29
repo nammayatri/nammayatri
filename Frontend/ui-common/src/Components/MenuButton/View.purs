@@ -20,7 +20,7 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Components.MenuButton.Controller (Action(..), Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Padding(..), Accessiblity(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Padding(..), Accessiblity(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, accessibilityHint, accessibility,weight,margin)
 import Common.Types.App
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -32,6 +32,8 @@ view push config =
   , padding config.padding
   , stroke config.layoutStroke
   , background config.layoutBg
+  , weight config.weight 
+  , margin config.margin
   , cornerRadius config.cornerRadius
   , onClick push  (const (OnClick config))
   , gravity CENTER_VERTICAL

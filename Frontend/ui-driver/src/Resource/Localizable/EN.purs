@@ -1500,3 +1500,6 @@ getEN stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "You did not have any activated referrals on the selected date"
         PAYMENT_IN_PROGRESS -> "Payment in progress..."
         REFRESH_PAYMENT -> "Refresh"
+        ROUND_TRIP_EXPLAINER -> "(You will be dropped at your origin at this date & time)"
+        RESERVE -> "Reserve"
+        LEAVE_NOW -> "Leave Now" 

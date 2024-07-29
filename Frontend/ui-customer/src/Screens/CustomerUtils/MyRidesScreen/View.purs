@@ -174,7 +174,7 @@ ridesView listItemm push state =
                     true -> GONE
         , PrestoList.listItem listItemm
         , background Color.white900
-        , PrestoList.listDataV2 $ (DA.filter (\item -> DA.any (_ == item.status) $ map (toPropValue) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED"]) state.prestoListArrayItems)
+        , PrestoList.listDataV2 $ (DA.filter (\item -> DA.any (_ == item.status) $ map (toPropValue) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED","UPCOMING","TRIP_ASSIGNED"]) state.prestoListArrayItems)
         ]
       , Tuple "NoRides"
         $ linearLayout
@@ -256,7 +256,11 @@ shimmerData i = {
   showVariantImage : toPropValue "",
   showRepeatRide : toPropValue "visible",
   isScheduled : toPropValue "gone",
-  showDestination : toPropValue "visible"
+  showDestination : toPropValue "visible",
+  itemRideType : toPropValue "ONE_WAY",
+  rideTypeVisibility : toPropValue "visible",
+  rideTypeBackground : toPropValue "#454545",
+  cornerRadius : toPropValue "16.0,true,true,false,false"
 }
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> ST.MyRidesScreenState ->  Flow GlobalState Unit

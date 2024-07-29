@@ -64,9 +64,9 @@ checkRideStatus rideAssigned = do
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
             bookingStatus = resp.status
             fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
-            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
+            rideStatus = if status == "NEW" || ((bookingStatus == "CONFIRMED" || bookingStatus == "TRIP_ASSIGNED") && fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
-            rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
+            rideScheduledAt = if bookingStatus == "CONFIRMED" || bookingStatus == "TRIP_ASSIGNED" then fromMaybe "" resp.rideScheduledTime else ""
             dropLocation = if (fareProductType == FPT.RENTAL) then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
             newState = 

@@ -3493,9 +3493,14 @@ public class MobilityCommonBridge extends HyperBridge {
     //endregion
 
     // region DATE / TIME UTILS
+
+    @JavascriptInterface
+    public void timePicker(final String callback, String label) {
+        timePicker(callback, label, null);
+    }
     @JavascriptInterface
     @RequiresApi(api = Build.VERSION_CODES.N)
-    public void timePicker(final String callback) {
+    public void timePicker(final String callback,String label,String defaultDate) {
         ExecutorManager.runOnMainThread(() -> {
             final Calendar c = Calendar.getInstance();
             int hour = c.get(Calendar.HOUR_OF_DAY);
@@ -3508,7 +3513,6 @@ public class MobilityCommonBridge extends HyperBridge {
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             }, hour, minute, false);
-
             timePickerDialog.setOnCancelListener(var1 -> {
                 if (callback != null) {
                     String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
@@ -3523,8 +3527,19 @@ public class MobilityCommonBridge extends HyperBridge {
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             });
-            timePickerDialog.show();
 
+            if (defaultDate != null && defaultDate!="") {
+                    try {
+                        long defaultDateMillis = Long.parseLong(defaultDate);
+                        Calendar defaultCa = Calendar.getInstance();
+                        defaultCa.setTimeInMillis(defaultDateMillis);
+                        timePickerDialog.updateTime(defaultCa.get(Calendar.HOUR_OF_DAY), defaultCa.get(Calendar.MINUTE));
+                    } catch (NumberFormatException e) {
+                        Log.e(DTUTILS, "Invalid default time format: " + e);
+                    }
+                }
+            timePickerDialog.show();
+            
         });
     }
 
@@ -3579,9 +3594,12 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    @SuppressLint("DiscouragedApi")
     public void datePicker(final String callback, String label) {
+        datePicker(callback,label,null);
+    }
+    @JavascriptInterface
+    @SuppressLint("DiscouragedApi")
+    public void datePicker(final String callback, String label, String defaultDate) {
         ExecutorManager.runOnMainThread(new Runnable() {
             @Override
             public void run() {
@@ -3678,6 +3696,16 @@ public class MobilityCommonBridge extends HyperBridge {
                         datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis() - 1000);
                         break;
                 }
+                if (defaultDate != null && defaultDate!="") {
+                    try {
+                        long defaultDateMillis = Long.parseLong(defaultDate);
+                        Calendar defaultCa = Calendar.getInstance();
+                        defaultCa.setTimeInMillis(defaultDateMillis);
+                        datePickerDialog.updateDate(defaultCa.get(Calendar.YEAR), defaultCa.get(Calendar.MONTH), defaultCa.get(Calendar.DAY_OF_MONTH));
+                    } catch (NumberFormatException e) {
+                        Log.e(DTUTILS, "Invalid default date format: " + e);
+                    }
+                }
                 if (Build.VERSION.SDK_INT > Build.VERSION_CODES.N)
                     datePickerDialog.setTitle(bridgeComponents.getContext().getString(R.string.select_date));
                 else datePickerDialog.setTitle("");
@@ -3714,8 +3742,6 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
     //endregion
-
-    // region OTHER UTILS
 
     // region OTHER UTILS
     @JavascriptInterface

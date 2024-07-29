@@ -1502,3 +1502,6 @@ getTE stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "మీరు ఎంచుకున్న తేదీలో సక్రియం చేయబడిన సిఫార్సులు ఏవీ లేవు"
         PAYMENT_IN_PROGRESS -> "చెల్లింపు పురోగతిలో ఉంది..."
         REFRESH_PAYMENT -> "రిఫ్రెష్ చేయండి"
+        ROUND_TRIP_EXPLAINER -> "(మీరు ఈ తేదీ మరియు సమయంలో మీ మూల స్థలానికి చేరుస్తారు)"
+        RESERVE -> "రిజర్వ్ చేయండి"
+        LEAVE_NOW -> "ఇప్పుడు వెళ్లండి"

@@ -1500,3 +1500,6 @@ getHI stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "चयनित तिथि पर आपके पास कोई सक्रिय रेफरल नहीं था"
         PAYMENT_IN_PROGRESS -> "भुगतान प्रगति पर है..."
         REFRESH_PAYMENT -> "ताज़ा करना"
+        ROUND_TRIP_EXPLAINER -> "(आपको इस तारीख और समय पर आपके मूल स्थान पर वापस लाया जाएगा)"
+        RESERVE -> "आरक्षित करें"
+        LEAVE_NOW -> "अभी निकलें"

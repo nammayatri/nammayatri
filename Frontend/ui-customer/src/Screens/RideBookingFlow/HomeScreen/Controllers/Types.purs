@@ -125,6 +125,8 @@ data ScreenOutput = LogoutUser
   | EditDestLocSelected HomeScreenState
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
+  | GoToTripSelectionScreen HomeScreenState
+  | RideSummary HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -324,6 +326,7 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | DateSelectAction String String Int Int Int String Int Int
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where
