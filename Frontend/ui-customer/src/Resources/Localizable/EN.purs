@@ -986,6 +986,7 @@ getEN stringKey =
         CHENNAI_METRO_TERM_1 -> "Cancellation of tickets is not applicable"
         CHENNAI_METRO_TERM_2 -> "The tickets can be purchased between 4:30 AM to 10:30 PM on all days."
         CHENNAI_METRO_TERM_EVENT -> "Cancelled tickets will not count towards the FREE ticket offer"
+        FREE_TICKET_CASHBACK -> "Cashback for the FREE ticket offer will be credited within 24 hours"
         NO_OF_PASSENGERS -> "No of Passengers"
         MAXIMUM -> "Maximum"
         TICKETS_ALLOWED_PER_USER -> "tickets are allowed per user."
