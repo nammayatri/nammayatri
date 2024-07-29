@@ -52,10 +52,6 @@ CallStatus:
       kvFunction: findOneWithKV
       where: callId
 
-    findByRideId:
-      kvFunction: findOneWithKV
-      where: rideId
-
     updateCallStatus:
       kvFunction: updateWithKV
       params: [conversationDuration, recordingUrl, status, callAttempt]
@@ -88,4 +84,5 @@ CallStatus:
 
   excludedDefaultQueries:
     - create
+
 

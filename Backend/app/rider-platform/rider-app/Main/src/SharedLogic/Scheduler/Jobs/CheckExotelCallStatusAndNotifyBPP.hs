@@ -45,7 +45,7 @@ checkExotelCallStatusAndNotifyBPP Job {id, jobInfo} = withLogTag ("JobId-" <> id
   let rideId = jobData.rideId
   let bppRideId = jobData.bppRideId
   let merchantId = jobData.merchantId
-  callStatus <- QCallStatus.findByRideId (Just rideId) >>= fromMaybeM CallStatusDoesNotExist
+  callStatus <- QCallStatus.findOneByRideId (Just $ getId rideId) >>= fromMaybeM CallStatusDoesNotExist
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   handleCallStatus callStatus bppRideId merchant.driverOfferApiKey merchant.driverOfferBaseUrl
 

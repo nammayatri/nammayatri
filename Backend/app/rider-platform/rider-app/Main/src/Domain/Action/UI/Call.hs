@@ -249,7 +249,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
             Just activeBooking -> return $ Just (Nothing, activeBooking)
 
     ensureCallStatusExists id callId rideId callStatus' =
-      QCallStatus.findByRideId (Just rideId) >>= \case
+      QCallStatus.findOneByRideId (Just $ getId rideId) >>= \case
         Nothing -> do
           callStatusObj <- buildCallStatus id callId (Just rideId) (exotelStatusToInterfaceStatus callStatus')
           void $ QCallStatus.create callStatusObj

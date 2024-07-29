@@ -7,6 +7,7 @@ where
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
 import qualified API.Internal.Cac as Cac
+import qualified API.Internal.CallCustomerFCM as CallCustomerFCM
 import qualified API.Internal.CustomerCancellationDues as CancellationDues
 import qualified API.Internal.DriverCoordinates as DriverCoordinates
 import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
@@ -30,6 +31,7 @@ type API =
            :<|> BulkLocUpdate.API
            :<|> CancellationDues.API
            :<|> DriverInactiveFCM.API
+           :<|> CallCustomerFCM.API
            :<|> Cac.API
            :<|> FavouriteDrivers.API
            :<|> KnowYourDriver.API
@@ -46,6 +48,7 @@ handler =
     :<|> BulkLocUpdate.handler
     :<|> CancellationDues.handler
     :<|> DriverInactiveFCM.handler
+    :<|> CallCustomerFCM.handler
     :<|> Cac.handler
     :<|> FavouriteDrivers.handler
     :<|> KnowYourDriver.handler

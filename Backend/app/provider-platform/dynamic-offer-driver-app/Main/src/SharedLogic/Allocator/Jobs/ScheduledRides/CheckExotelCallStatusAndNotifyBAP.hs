@@ -54,7 +54,7 @@ checkExotelCallStatusAndNotifyBAP ::
 checkExotelCallStatusAndNotifyBAP Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let rideId = jobData.rideId
-  callStatus <- QCallStatus.findByEntityId (Just $ getId rideId) >>= fromMaybeM CallStatusDoesNotExist
+  callStatus <- QCallStatus.findOneByEntityId (Just $ getId rideId) >>= fromMaybeM CallStatusDoesNotExist
   handleCallStatus callStatus rideId
 
 handleCallStatus ::
