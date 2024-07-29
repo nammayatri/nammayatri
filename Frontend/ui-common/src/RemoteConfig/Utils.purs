@@ -57,6 +57,12 @@ defaultRemoteConfig defaultValue =
   , tirunelveli : Just defaultValue
   , salem : Just defaultValue
   , trichy : Just defaultValue 
+  , davanagere : Just defaultValue
+  , shivamogga : Just defaultValue
+  , hubli : Just defaultValue
+  , mangalore : Just defaultValue
+  , gulbarga : Just defaultValue
+  , udupi : Just defaultValue
   , config: Nothing
   }
 
@@ -145,6 +151,12 @@ getCityBasedConfig config city = case city of
   "tirunelveli" -> fromMaybe config.default config.tirunelveli
   "salem" -> fromMaybe config.default config.salem
   "trichy" -> fromMaybe config.default config.trichy
+  "davanagere" -> fromMaybe config.default config.davanagere
+  "shivamogga" -> fromMaybe config.default config.shivamogga
+  "hubli" -> fromMaybe config.default config.hubli
+  "mangalore" -> fromMaybe config.default config.mangalore
+  "gulbarga" -> fromMaybe config.default config.gulbarga
+  "udupi" -> fromMaybe config.default config.udupi
   _ -> config.default
 
 tipConfigData :: String -> String -> Array Int
