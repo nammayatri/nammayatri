@@ -1368,6 +1368,7 @@ newtype GetProfileRes = GetProfileRes
   , isSafetyCenterDisabled :: Maybe Boolean
   , customerReferralCode :: Maybe String
   , deviceId :: Maybe String
+  , androidId :: Maybe String
   }
 
 
@@ -1386,6 +1387,7 @@ newtype UpdateProfileReq = UpdateProfileReq
   , disability :: Maybe Disability
   , hasDisability :: Maybe Boolean
   , deviceId :: Maybe String
+  , androidId :: Maybe String
   }
 
 

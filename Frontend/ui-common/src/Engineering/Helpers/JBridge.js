@@ -662,6 +662,14 @@ export const getDeviceID = function () {
     return "NO_DEVICE_ID";
   }
 }
+
+export const getAndroidId = function () {
+  if(window.JBridge.getAndroidId){
+    return window.JBridge.getAndroidId();
+  }else {
+    return "NO_ANDROID_ID";
+  }
+}
                    
 
 export const updateMarker = function (markerConfig) {
