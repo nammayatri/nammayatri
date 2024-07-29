@@ -78,7 +78,7 @@ import ModifyScreenState (modifyScreenState, updateRepeatRideDetails, FlowState(
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling (delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice, estimateLabelMaxWidth, locateOnMapLabelMaxWidth, markerArrowSize)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, dummyPrice, estimateLabelMaxWidth, markerArrowSize)
 import Screens (getScreen)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, getAddressFromBooking, dummyPrice)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
@@ -134,7 +134,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
 import Constants.Configs
 import PrestoDOM (initUI)
-import Common.Resources.Constants (zoomLevel)
+import Common.Resources.Constants (zoomLevel,locateOnMapLabelMaxWidth)
 import PaymentPage
 import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Domain.Payments as PP
@@ -303,20 +303,22 @@ handleExternalLocations mBGlobalPayload = do
           case dest.serviceable of
             true -> do
               case destinationObj.name of
-                Just src -> updateDataInState destinationObj.lat destinationObj.lon src (encodeAddress src [] Nothing destinationObj.lat destinationObj.lon)
+                Just src -> updateDataInState destinationObj.lat destinationObj.lon src (encodeAddress src [] Nothing destinationObj.lat destinationObj.lon) Nothing
                 Nothing -> do
                     mbDestination <- getPlaceName destinationObj.lat destinationObj.lon HomeScreenData.dummyLocation true
                     case mbDestination of
-                      Just (PlaceName destination) -> updateDataInState destinationObj.lat destinationObj.lon destination.formattedAddress (encodeAddress destination.formattedAddress destination.addressComponents destination.placeId destinationObj.lat destinationObj.lon)
+                      Just (PlaceName destination) -> updateDataInState destinationObj.lat destinationObj.lon destination.formattedAddress (encodeAddress destination.formattedAddress destination.addressComponents destination.placeId destinationObj.lat destinationObj.lon) destination.placeId
                       Nothing -> pure unit
             false -> pure unit
         Nothing -> pure unit
     Nothing -> pure unit
   where
-    updateDataInState lat lon addressString address = do
+    updateDataInState lat lon addressString address placeId = do
       void $ updateLocalStage GoToConfirmLocation
-      modifyScreenState $ HomeScreenStateType (\homescreen -> homescreen{props{currentStage = GoToConfirmLocation, destinationLat = lat,destinationLong = lon}, data{ destination = addressString, destinationAddress =address}})
-
+      modifyScreenState $ HomeScreenStateType (\homescreen -> homescreen{
+          props{currentStage = GoToConfirmLocation, destinationLat = lat,destinationLong = lon,destinationPlaceId = placeId,sourceLong =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) ,sourceLat =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) ,isSource = Just false,isSharedLocationFlow = true}
+        , data{ source = (getString STR.CURRENT_LOCATION),destination = addressString, destinationAddress =address}
+      })
 hideSplashAndCallFlow :: FlowBT String Unit -> FlowBT String Unit
 hideSplashAndCallFlow flow = do
   hideLoaderFlow
