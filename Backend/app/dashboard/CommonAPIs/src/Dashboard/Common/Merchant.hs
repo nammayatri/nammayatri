@@ -224,7 +224,9 @@ updateMapsTReqConstructorModifier = \case
 data GoogleCfgUpdateReq = GoogleCfgUpdateReq
   { googleMapsUrl :: BaseUrl,
     googleRoadsUrl :: BaseUrl,
-    googleKey :: Text
+    googleKey :: Text,
+    useAdvancedDirections :: Bool,
+    googleRouteConfig :: Maps.GoogleRouteConfig
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -8,16 +8,26 @@ let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
 
+let googleRouteConfig =
+      { computeAlternativeRoutes = False
+      , routePreference = "TRAFFIC_AWARE_OPTIMAL"
+      , url = "https://roads.googleapis.com/v1/snapToRoads"
+      }
+
 let googleCfg =
       { googleMapsUrl = "https://maps.googleapis.com/maps/api/"
       , googleRoadsUrl = "https://roads.googleapis.com/"
       , googleKey = sec.googleKey
+      , useAdvancedDirections = True
+      , googleRouteConfig
       }
 
 let mockGoogleCfg =
       { googleMapsUrl = "http://localhost:8019/"
       , googleRoadsUrl = "http://localhost:8019/"
       , googleKey = "mock-google-key"
+      , useAdvancedDirections = True
+      , googleRouteConfig
       }
 
 let internalEndPointMap =
