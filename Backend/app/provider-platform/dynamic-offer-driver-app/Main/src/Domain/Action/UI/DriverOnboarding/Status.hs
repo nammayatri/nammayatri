@@ -245,7 +245,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
                     (status, mbReason, mbUrl) <- getInProgressVehicleDocuments docType personId transporterConfig.onboardingTryLimit merchantId merchantOpCityId
                     message <- documentStatusMessage status mbReason docType mbUrl language
                     return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
-                return $
+                return
                   [ VehicleDocumentItem
                       { registrationNo,
                         userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
@@ -268,7 +268,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
       when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
       mbVehicle <- Vehicle.findById personId -- check everytime
       when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
-        activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo
+        void $ try @_ @SomeException (activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo)
       if allVehicleDocsVerified then return $ VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
   (dlDetails, rcDetails) <-
@@ -280,8 +280,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
         allRCImgs <- runInReplica $ RCQuery.findAllByImageId vehRegImgIds
         allDLDetails <- mapM (convertDLToDLDetails merchantOperatingCity) allDlImgs
         allRCDetails <- mapM (convertRCToRCDetails merchantOperatingCity) allRCImgs
-        return $ (Just allDLDetails, Just allRCDetails)
-      _ -> return $ (Nothing, Nothing)
+        return (Just allDLDetails, Just allRCDetails)
+      _ -> return (Nothing, Nothing)
 
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
 
