@@ -22,6 +22,7 @@ module API.ProviderPlatform.DynamicOfferDriver
   )
 where
 
+import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Driver as DriverDSL
 import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant as MerchantDSL
 import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Revenue as RevenueDSL
 import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Ride as RideDSL
@@ -75,6 +76,7 @@ type API' =
     :<|> Volunteer.API
     :<|> Overlay.API
     :<|> Maps.API
+    :<|> DriverDSL.API
     :<|> MerchantDSL.API
     :<|> RevenueDSL.API
     :<|> RideDSL.API
@@ -96,6 +98,7 @@ handler merchantId = do
     :<|> Volunteer.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
+    :<|> DriverDSL.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city
@@ -121,6 +124,7 @@ handlerV2 merchantId city =
     :<|> Volunteer.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
+    :<|> DriverDSL.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city
