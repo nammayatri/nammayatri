@@ -608,6 +608,7 @@ mkUpdateProfileRequest _ =
         , disability : Nothing
         , hasDisability : Nothing
         , deviceId : Nothing
+        , androidId : Nothing
     }
 
 editProfileRequest :: Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe Boolean -> Maybe Disability -> UpdateProfileReq
@@ -633,6 +634,7 @@ editProfileRequest firstName middleName lastName emailID gender hasDisability di
         , disability : disabilityType
         , hasDisability : hasDisability
         , deviceId : Nothing
+        , androidId : Nothing
     }
 
 mkDisabilityData :: DisabilityT -> String -> Disability

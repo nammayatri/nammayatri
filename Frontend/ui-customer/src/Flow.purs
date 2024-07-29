@@ -465,8 +465,13 @@ currentFlowStatus = do
       referralStatus = getValueToLocalStore REFERRAL_STATUS
       language = response ^. _language
       deviceIdRes = response ^. _deviceId
+      androidIdRes = response ^. _androidId
       deviceId = JB.getDeviceID unit
+      androidId = JB.getAndroidId unit
       updateDeviceId = (isNothing deviceIdRes && deviceId /= "NO_DEVICE_ID")
+      updateAndroidId = (isNothing androidIdRes && androidId /= "NO_ANDROID_ID")
+      mbDeviceId = if deviceId /= "NO_DEVICE_ID" then Just deviceId else Nothing
+      mbAndroidId = if androidId /= "NO_ANDROID_ID" then Just androidId else Nothing
     let
       referralCode =
         if config.feature.enableReferral && config.feature.enableAutoReferral then do
@@ -475,7 +480,7 @@ currentFlowStatus = do
             _ -> Nothing
         else
           Nothing
-    if isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)) || isJust referralCode || updateDeviceId then do
+    if isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)) || isJust referralCode || updateDeviceId || updateAndroidId then do
       case referralCode of
         Just code
           | referralStatus == "NOT_REFERRED_NOT_TAKEN_RIDE" -> do
@@ -486,7 +491,7 @@ currentFlowStatus = do
               _ -> pure unit
         _ -> do
           let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
-              requiredData = if updateDeviceId then initialData{deviceId = Just deviceId} else initialData
+              requiredData = if updateDeviceId || updateAndroidId then initialData{deviceId = mbDeviceId, androidId = mbAndroidId} else initialData
           void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
     else
       pure unit
@@ -674,6 +679,8 @@ accountSetUpScreenFlow = do
 
         deviceId = JB.getDeviceID unit
 
+        androidId = JB.getAndroidId unit
+
         (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
 
         requiredData =
@@ -686,6 +693,7 @@ accountSetUpScreenFlow = do
                 Just disability -> Just (Remote.mkDisabilityData disability (fromMaybe "" state.data.disabilityOptions.otherDisabilityReason))
                 _ -> Nothing
             , deviceId = if deviceId /= "NO_DEVICE_ID" then Just deviceId else Nothing
+            , androidId = if androidId /= "NO_ANDROID_ID" then Just androidId else Nothing
             }
       setValueToLocalStore DISABILITY_UPDATED "true"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showDisabilityPopUp = (isJust selectedDisability) }, data { disability = selectedDisability } })

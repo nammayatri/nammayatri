@@ -32,7 +32,7 @@ public class DeviceIdentifier {
         return getFallbackUUID(context);
     }
 
-    private boolean isValid(String id) {
+    public static boolean isValid(String id) {
         return  id != null && !id.isEmpty() && !id.equals("null") && !id.equals("__failed") && !id.equals("(null)");
     }
 
@@ -52,7 +52,7 @@ public class DeviceIdentifier {
         }
     }
     @SuppressLint("HardwareIds")
-    private String getAndroidId(Context context) {
+    public static String getAndroidId(Context context) {
         if(context != null) return Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
         else return null;
     }

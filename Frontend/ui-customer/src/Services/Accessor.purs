@@ -322,3 +322,6 @@ _stopLocation = lens (unwrap >>> _.stopLocation) (\oldRec newVal -> wrap ((unwra
 
 _deviceId :: forall a b c. Newtype a { deviceId :: b | c } => Lens' a b
 _deviceId = lens (unwrap >>> _.deviceId) (\oldRec newVal -> wrap ((unwrap oldRec) { deviceId = newVal }))
+
+_androidId :: forall a b c. Newtype a { androidId :: b | c } => Lens' a b
+_androidId = lens (unwrap >>> _.androidId) (\oldRec newVal -> wrap ((unwrap oldRec) { androidId = newVal }))

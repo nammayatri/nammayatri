@@ -3434,6 +3434,16 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public String getAndroidId() {
+        String androidId = DeviceIdentifier.getAndroidId(bridgeComponents.getContext());
+        if(DeviceIdentifier.isValid(androidId)) {
+            return androidId;
+        }else {
+            return "NO_ANDROID_ID";
+        }
+    }
+
+    @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
         try {
             System.out.println("Inside showMap 123");

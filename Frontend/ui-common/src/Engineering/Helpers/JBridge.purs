@@ -291,6 +291,7 @@ foreign import renderSliderImpl :: forall action. EffectFn3 (action -> Effect Un
 foreign import isAccessibilityEnabled :: String -> Boolean
 foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
+foreign import getAndroidId :: Unit -> String
 
 type SliderConfig = { 
   id :: String,
