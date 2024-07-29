@@ -22,7 +22,7 @@ getEN stringKey =
         BY_CLICKING_CONTINUE_YOU_WILL_BE_AGREEING_TO_OUR -> "By clicking Continue, you agree to our"
         ENTER_OTP -> "Enter OTP"
         DIDNT_RECIEVE_OTP -> "Didn't receive an OTP? "
-        RESEND_OTP -> "<a href=\"\"> Resend OTP</a>"
+        RESEND_OTP -> "Resend OTP"
         PLEASE_ENTER_VALID_OTP -> "Please Enter Valid OTP"
         INVALID_MOBILE_NUMBER -> "Invalid mobile number"
         REGISTER -> "Register"

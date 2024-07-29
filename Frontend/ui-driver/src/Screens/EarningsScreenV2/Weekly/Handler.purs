@@ -41,4 +41,5 @@ earningScreenWeeklyV2 = do
     GoToDaily updatedState -> do
       void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
       pure $ (EarningsV2Daily true)
+    GoToHelpAndSupportScreen -> pure $ OpenHelpAndSuportScreen
     _ -> pure $ (EarningsV2Daily true)

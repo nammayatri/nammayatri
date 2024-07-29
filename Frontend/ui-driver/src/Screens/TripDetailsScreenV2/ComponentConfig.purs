@@ -50,7 +50,7 @@ genericHeaderConfig state= let
       , margin = MarginTop 0
       , imageUrl = fetchImage FF_ASSET "ny_ic_chevron_left"
       }
-    , padding = Padding 10 (EHC.safeMarginTopWithDefault 13) 0 13
+    , padding = Padding 10 13 0 13
     , gravity = CENTER_VERTICAL
     , textConfig {
         text = getString RIDE_DETAILS

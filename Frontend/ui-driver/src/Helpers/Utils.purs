@@ -577,8 +577,11 @@ getVehicleVariantImage variant =
                         "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
                         _           -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _ -> case variant of
+                        "BLACK"     -> "ny_ic_black," <> commonUrl <> "ny_ic_black.png"
+                        "BLACK_XL"  -> "ny_ic_black_xl," <> commonUrl <> "ny_ic_black_xl.png"
                         "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
                         "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+                        "PREMIUM_SEDAN" -> "ny_ic_premium_sedan" <> commonUrl <> "ny_ic_premium_sedan.png"
                         "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
                         "SUV_TIER"  -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
                         "HATCHBACK" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"

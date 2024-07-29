@@ -4092,6 +4092,12 @@ flowRouter flowState =
     TA.Notifications -> notificationFlow >>= (\_ -> pure TA.Notifications)
     TA.Subscription -> updateAvailableAppsAndGoToSubs >>= (\_ -> pure TA.Subscription)
     TA.Profile -> driverProfileFlow >>= (\_ -> pure TA.Profile)
+    TA.OpenRideDetails selectedCard -> do
+      tripDetailsTranformer selectedCard
+      tripDetailsScreenFlowV2 >>= (\_ -> pure $ TA.OpenRideDetails selectedCard)
+    TA.OpenHelpAndSuportScreen -> do
+      goToHelpAndSupportScreen
+      helpAndSupportFlow >>= (\_ -> pure $ TA.OpenHelpAndSuportScreen)
     TA.EarningsV2PayoutHistory -> lift $ lift $ UI.earningsHistoryFlow ESD.Payout) >>= flowRouter
 
 driverEarningsFlow :: FlowBT String Unit
@@ -4130,39 +4136,7 @@ driverEarningsFlow = do
         GOTO_PAYMENT_HISTORY_FROM_COINS -> paymentHistoryFlow
         GOTO_MY_PLAN_FROM_COINS -> updateAvailableAppsAndGoToSubs
         GOTO_TRIP_DETAILS  selectedCard -> do
-          sourceMod <- translateString selectedCard.source 400
-          destinationMod <- if selectedCard.tripType == ST.Rental then pure "" else translateString selectedCard.destination 400
-          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
-          tripId = selectedCard.id,
-          date = selectedCard.date,
-          time = selectedCard.time,
-          source = sourceMod,
-          destination = destinationMod,
-          totalAmount = selectedCard.total_amount,
-          totalAmountWithCurrency = selectedCard.total_amount_with_currency,
-          distance = selectedCard.rideDistance,
-          distanceWithUnit = selectedCard.rideDistanceWithUnit,
-          status = selectedCard.status,
-          vehicleType = selectedCard.vehicleType,
-          rider = selectedCard.riderName,
-          customerExtraFee = selectedCard.customerExtraFee,
-          purpleTagVisibility = selectedCard.purpleTagVisibility,
-          gotoTagVisibility = selectedCard.gotoTagVisibility,
-          spLocTagVisibility = selectedCard.spLocTagVisibility,
-          specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
-          specialZoneImage = selectedCard.specialZoneImage,
-          specialZoneText = selectedCard.specialZoneText,
-          specialZonePickup = selectedCard.specialZonePickup,
-          tollCharge = selectedCard.tollCharge,
-          tollChargeWithCurrency = selectedCard.tollChargeWithCurrency,
-          goBackTo = ST.Earning,
-          rideType = selectedCard.rideType,
-          tripStartTime = selectedCard.tripStartTime,
-          tripEndTime = selectedCard.tripEndTime,
-          vehicleModel = selectedCard.vehicleModel,
-          acRide = selectedCard.acRide,
-          vehicleServiceTier = selectedCard.vehicleServiceTier
-          }})
+          tripDetailsTranformer selectedCard
           tripDetailsScreenFlow ""
         LOAD_MORE_HISTORY state -> do
           modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{offsetValue = state.props.offsetValue + 10}})
@@ -4266,3 +4240,55 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
+
+tripDetailsTranformer :: ST.IndividualRideCardState -> FlowBT String Unit 
+tripDetailsTranformer selectedCard = do
+  sourceMod <- translateString selectedCard.source 400
+  destinationMod <- if selectedCard.tripType == ST.Rental then pure "" else translateString selectedCard.destination 400
+  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
+  tripId = selectedCard.id,
+  date = selectedCard.date,
+  time = selectedCard.time,
+  source = sourceMod,
+  destination = destinationMod,
+  totalAmount = selectedCard.total_amount,
+  totalAmountWithCurrency = selectedCard.total_amount_with_currency,
+  distance = selectedCard.rideDistance,
+  distanceWithUnit = selectedCard.rideDistanceWithUnit,
+  status = selectedCard.status,
+  vehicleType = selectedCard.vehicleType,
+  rider = selectedCard.riderName,
+  customerExtraFee = selectedCard.customerExtraFee,
+  purpleTagVisibility = selectedCard.purpleTagVisibility,
+  gotoTagVisibility = selectedCard.gotoTagVisibility,
+  spLocTagVisibility = selectedCard.spLocTagVisibility,
+  specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
+  specialZoneImage = selectedCard.specialZoneImage,
+  specialZoneText = selectedCard.specialZoneText,
+  specialZonePickup = selectedCard.specialZonePickup,
+  tollCharge = selectedCard.tollCharge,
+  tollChargeWithCurrency = selectedCard.tollChargeWithCurrency,
+  goBackTo = ST.Earning,
+  rideType = selectedCard.rideType,
+  tripStartTime = selectedCard.tripStartTime,
+  tripEndTime = selectedCard.tripEndTime,
+  vehicleModel = selectedCard.vehicleModel,
+  acRide = selectedCard.acRide,
+  vehicleServiceTier = selectedCard.vehicleServiceTier
+  }})
+
+goToHelpAndSupportScreen :: FlowBT String Unit 
+goToHelpAndSupportScreen = do
+  let language = ( case getLanguageLocale languageKey of
+                         "HI_IN" -> "hi"
+                         "KN_IN" -> "kn"
+                         "TA_IN" -> "ta"
+                         "TE_IN" -> "te"
+                         _       -> "en"
+                     )
+      categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
+      compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
+  (GetCategoriesRes response) <- Remote.getCategoriesBT language
+  let temp = categoryTransformer response.categories language 
+      categories' = sortBy compareByOrder temp
+  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )

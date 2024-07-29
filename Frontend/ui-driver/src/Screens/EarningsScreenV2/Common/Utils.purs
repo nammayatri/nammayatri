@@ -111,12 +111,12 @@ dummyRideData date =  {
 
 fromRidesInfoToRideData :: RidesInfo -> String -> RideData
 fromRidesInfoToRideData (RidesInfo rideInfo) date = {
-  earnings : rideInfo.estimatedBaseFare,
-  earningsWithCurrency : rideInfo.estimatedBaseFareWithCurrency,
-  rideDistance : rideInfo.estimatedDistance,
+  earnings : if rideInfo.status == "CANCELLED" then 0 else rideInfo.estimatedBaseFare,
+  earningsWithCurrency : if rideInfo.status == "CANCELLED" then dummyPrice else rideInfo.estimatedBaseFareWithCurrency,
+  rideDistance : if rideInfo.status == "CANCELLED" then 0 else rideInfo.estimatedDistance,
   rideDate : date,
   noOfRides : 1,
-  rideDistanceWithUnit : rideInfo.estimatedDistanceWithUnit,
+  rideDistanceWithUnit : if rideInfo.status == "CANCELLED" then dummyDistance else rideInfo.estimatedDistanceWithUnit,
   noSummaryFound : true,
   noRidesTaken : false,
   noListFetched : false,

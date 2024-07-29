@@ -35,6 +35,7 @@ data ScreenOutput
   | GoToReferralScreen State
   | SubscriptionScreen State
   | GoToPayoutHistory State
+  | GoToHelpAndSupportScreen
 
 data Action
   = NextClick
@@ -47,6 +48,7 @@ data Action
   | GetWeeklyEarnings Boolean
   | OptionClickedFromList Int
   | BottomNavBarAction BottomNavBar.Action
+  | GoToHelpAndSupport
 
 instance showAction :: Show Action where
   show _ = ""
@@ -103,6 +105,8 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
         _ = unsafePerformEffect $ JB.firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
     _ -> continue state
+
+eval GoToHelpAndSupport state = exit GoToHelpAndSupportScreen
 
 eval _ state = update state
 

@@ -617,7 +617,7 @@ bridgeLocationUpdateview push state =
   , margin$ MarginTop 16
   , padding $ Padding 16 13 16 13
   ][  textView $
-      [ text $ getString UPDATED_AT
+      [ text $ getString UPDATED_AT <> " "
       , color Color.black800
       ] <> FontStyle.body3 TypoGraphy
     , textView $

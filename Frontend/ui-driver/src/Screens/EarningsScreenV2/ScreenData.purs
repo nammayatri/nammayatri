@@ -13,6 +13,9 @@ import Styles.Colors as Color
 import MerchantConfig.Types
 import ConfigProvider
 import JBridge
+import Services.API 
+import Screens.DriverEarningsScreen.ScreenData (dummyIndividualRideCard)
+import Screens.Types (IndividualRideCardState)
 
 data HistoryScreen = Payout | Ride
 
@@ -33,6 +36,8 @@ type Data
     , currentDate :: String
     , calendarState :: CalendarState
     , selectedDateRides :: Maybe (Array RideComponent)
+    , selectedDatesRidesInfo :: Maybe (Array RidesInfo)
+    , selectedRideItem :: IndividualRideCardState
     }
 
 type Props
@@ -113,6 +118,8 @@ initialState =
       , selectedDate : Nothing
       , currentDate : formateDate getCurrentDate
       , selectedDateRides: Nothing
+      , selectedDatesRidesInfo: Nothing
+      , selectedRideItem: dummyIndividualRideCard
       , calendarState:
         { calendarPopup: false
         , endDate: Nothing

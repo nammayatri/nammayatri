@@ -451,4 +451,4 @@ translateInXWithPositioBoth fromX toX duration delay =
     , PrestoAnim.toX toX
     , PrestoAnim.interpolator $ PrestoAnim.EaseInOut
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
-    ] <> spy "translateInXWithPositioBoth" (if delay > 0 then [PrestoAnim.delay delay, PrestoAnim.fillMode PrestoAnim.Both] else []))
+    ] <> if delay > 0 then [PrestoAnim.delay delay, PrestoAnim.fillMode PrestoAnim.Both] else [])
