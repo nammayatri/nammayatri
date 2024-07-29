@@ -573,3 +573,5 @@ data FlowState = EarningsV2Daily Boolean
   | Notifications
   | Subscription
   | Profile
+  | OpenRideDetails IndividualRideCardState
+  | OpenHelpAndSuportScreen

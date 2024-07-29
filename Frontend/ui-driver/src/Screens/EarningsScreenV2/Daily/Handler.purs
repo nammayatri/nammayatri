@@ -36,4 +36,8 @@ earningScreenDailyV2 = do
     DateUpdated updatedState -> do 
       void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
       earningScreenDailyV2
+    SelectedTripDetails updatedState -> do
+      void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
+      pure $ OpenRideDetails updatedState.data.selectedRideItem
+    GoToHelpAndSupportScreen -> pure $ OpenHelpAndSuportScreen
     _ -> pure $ (EarningsV2Daily false)

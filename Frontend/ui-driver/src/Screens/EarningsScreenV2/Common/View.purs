@@ -1,23 +1,12 @@
 module Screens.EarningsScreen.Common.View where
 
-import Prelude
+import Screens.EarningsScreen.Daily.Controller
 import Screens.EarningsScreen.ScreenData
 import Common.Types.App
 import Data.Maybe
 import Effect
 import Prelude
 import PrestoDOM
-import Screens.EarningsScreen.Daily.Controller
-import Screens.EarningsScreen.ScreenData
-import Screens.EarningsScreen.Common.Types
-import Prelude
-import Common.Types.App
-import Data.Maybe
-import Effect
-import Prelude
-import PrestoDOM
-import Screens.EarningsScreen.Daily.Controller
-import Screens.EarningsScreen.ScreenData
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Language.Strings (getString)
@@ -31,6 +20,38 @@ import JBridge (getWidthFromPercent, getHeightFromPercent)
 import PrestoDOM.Types.DomAttributes (__IS_ANDROID)
 import Data.FoldableWithIndex
 import Debug
+
+
+
+headerLayout :: forall action w. (action -> Effect Unit) -> action -> State -> Layout w
+headerLayout push action state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 10 (EHC.safeMarginTopWithDefault 13) 10 13
+    ]
+    [ textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString EARNINGS
+          , margin $ MarginLeft 10
+          , padding $ PaddingBottom 2
+          , color Color.black900
+          ]
+        <> FontStyle.h3 TypoGraphy
+    , linearLayout [ weight 1.0 ] []
+    , textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString HELP_FAQ
+          , padding $ PaddingBottom 2
+          , color Color.purple700
+          , onClick push $ const $ action
+          ]
+        <> FontStyle.subHeading3 TypoGraphy
+    ]
 
 
 tabLayout :: forall action a. (action -> Effect Unit) -> action -> EarningsTab -> Boolean -> Boolean -> Layout a
@@ -102,8 +123,8 @@ tabLayout push action tabType startAnim resetAnim =
     )
   ]
 
-rideComponent :: forall a. Int -> RideComponent -> Layout a
-rideComponent idx item =
+rideComponent :: forall action a. (action -> Effect Unit) -> action -> Int -> RideComponent -> Layout a
+rideComponent push action idx item =
   let duration = idx * 20
   in
   PrestoAnim.animationSet 
@@ -117,6 +138,7 @@ rideComponent idx item =
     , gravity CENTER
     , margin $ MarginBottom 12
     , cornerRadius 8.0
+    , onClick push $ const $ action
     ]
     [ imageView
         [ height $ V 24

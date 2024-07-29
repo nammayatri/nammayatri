@@ -77,7 +77,7 @@ view push state =
   , background Color.white900
   , onBackPressed push (const BackPressed)
   , afterRender push (const AfterRender)
-  , padding $ PaddingBottom EHC.safeMarginBottom
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
   ][linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -88,7 +88,12 @@ view push state =
           , width MATCH_PARENT
           , background Color.grey900
           ][]
-        , scrollView
+        , linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , weight 1.0
+          ]
+          [ scrollView
           [ height MATCH_PARENT
             , width MATCH_PARENT
           ][ 
@@ -155,6 +160,7 @@ view push state =
                    ]
               ]
             ]
+          ]
         ]
     ]
 
@@ -499,9 +505,10 @@ earningsDetailsView push state =
 getVehicleImage :: ST.TripDetailsScreenState -> String
 getVehicleImage state = 
   case getMerchant FunctionCall of
-    YATRI     -> getVehicleVariantImage state.data.vehicleServiceTier
+    YATRI      -> getVehicleVariantImage state.data.vehicleServiceTier
     YATRISATHI -> getVehicleVariantImage state.data.vehicleServiceTier
     NAMMAYATRI -> getVehicleVariantImage state.data.vehicleServiceTier
+    BRIDGE     -> getVehicleVariantImage state.data.vehicleServiceTier
     _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
   
   where

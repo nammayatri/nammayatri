@@ -134,35 +134,6 @@ view push state =
     $ [ defaultLayout push state
       ]
 
-headerLayout :: forall w. (Action -> Effect Unit) -> State -> Layout w
-headerLayout state push =
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation HORIZONTAL
-    , gravity CENTER_VERTICAL
-    , padding $ Padding 10 (EHC.safeMarginTopWithDefault 13) 10 13
-    ]
-    [ textView
-        $ [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text $ getString EARNINGS
-          , margin $ MarginLeft 10
-          , padding $ PaddingBottom 2
-          , color Color.black900
-          ]
-        <> FontStyle.h3 TypoGraphy
-    , linearLayout [ weight 1.0 ] []
-    , textView
-        $ [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text $ getString HELP_FAQ
-          , padding $ PaddingBottom 2
-          , color Color.purple700
-          ]
-        <> FontStyle.subHeading3 TypoGraphy
-    ]
-
 defaultLayout :: forall w. (Action -> Effect Unit) -> State -> Layout w
 defaultLayout push state =
   linearLayout
@@ -172,7 +143,7 @@ defaultLayout push state =
     , orientation VERTICAL
     , padding $ PaddingBottom EHC.safeMarginBottom
     ]
-    [ headerLayout push state
+    [ headerLayout push GoToHelpAndSupport state
     , relativeLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT

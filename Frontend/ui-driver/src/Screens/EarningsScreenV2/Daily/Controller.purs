@@ -16,7 +16,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendarWithDay, saveObject, getCurrentDayFromDate)
 import Components.Calendar.Controller as CalendarController
-import Data.Array (head)
+import Data.Array (head, (!!))
 import Data.String as DS
 import Engineering.Helpers.Utils (priceToBeDisplayed, distanceTobeDisplayed)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
@@ -24,6 +24,7 @@ import Styles.Colors as Color
 import Data.Function.Uncurried (runFn2)
 import Debug
 import Screens.EarningsScreen.Common.Types
+import Screens.DriverEarningsScreen.Controller (rideHistoryItemTransformer, dummyRideHistoryItem)
 
 data ScreenOutput
   = NextScreen State
@@ -36,6 +37,8 @@ data ScreenOutput
   | GoToReferralScreen State
   | SubscriptionScreen State
   | DateUpdated State
+  | SelectedTripDetails State
+  | GoToHelpAndSupportScreen
 
 data Action
   = NextClick
@@ -52,6 +55,8 @@ data Action
   | AfterRender
   | UpdateDate String
   | NoAction
+  | OpenSelectedTripDetails Int
+  | GoToHelpAndSupport
 
 instance showAction :: Show Action where
   show _ = ""
@@ -86,7 +91,7 @@ eval (UpdateRideHistory item date) state =
   if date == state.data.currentDate
     then do 
       let datas = rideHistoryTransformer item
-      continue $ state{data{selectedDateRides = Just datas}}
+      continue $ state{data{selectedDateRides = Just datas, selectedDatesRidesInfo = Just item}}
     else update state
 
 eval AfterRender state = continue state{props{forwardBtnAlpha = if state.data.currentDate == formateDate getCurrentDate then 0.4 else 1.0}}
@@ -121,8 +126,8 @@ eval (CalendarAC (CalendarController.PrimaryButtonActionController (PrimaryButto
 eval (CalendarAC (CalendarController.PrimaryButtonCancelActionController (PrimaryButtonController.OnClick))) state = do
   continue state { data { calendarState { calendarPopup = false } } }
 
-eval (ChangeDate updatedDate) state = exit $ DateUpdated state{data{selectedDateRides = Nothing, selectedDate = Nothing}, props {forwardBtnAlpha = if updatedDate == getCurrentDate then 0.4 else 1.0}}
-eval (UpdateDate updatedDate) state = continue state{data{currentDate = formateDate updatedDate, selectedDateRides = Nothing, selectedDate = Nothing}, props {forwardBtnAlpha = if updatedDate == getCurrentDate then 0.4 else 1.0}}
+eval (ChangeDate updatedDate) state = exit $ DateUpdated state{data{selectedDateRides = Nothing, selectedDate = Nothing, selectedDatesRidesInfo = Nothing}, props {forwardBtnAlpha = if updatedDate == getCurrentDate then 0.4 else 1.0}}
+eval (UpdateDate updatedDate) state = continue state{data{currentDate = formateDate updatedDate, selectedDateRides = Nothing, selectedDate = Nothing, selectedDatesRidesInfo = Nothing}, props {forwardBtnAlpha = if updatedDate == getCurrentDate then 0.4 else 1.0}}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   pure $ hideKeyboardOnNavigation true
@@ -147,6 +152,15 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
         _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
     _ -> continue state
+
+eval (OpenSelectedTripDetails index) state = do
+  let 
+      selectedDatesRideInfoArray = fromMaybe [] state.data.selectedDatesRidesInfo
+      tripDetails = rideHistoryItemTransformer $ fromMaybe dummyRideHistoryItem (selectedDatesRideInfoArray !! index)
+      updateedState = state { data{selectedRideItem = tripDetails } }
+  updateAndExit updateedState $ SelectedTripDetails updateedState
+
+eval GoToHelpAndSupport state = exit GoToHelpAndSupportScreen
 
 eval _ state = continue state
 
