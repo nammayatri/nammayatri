@@ -93,6 +93,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.notificationSource notificationSource,
       Se.Set Beam.parallelSearchRequestCount parallelSearchRequestCount,
       Se.Set Beam.pickupZone pickupZone,
+      Se.Set Beam.previousDropGeoHash previousDropGeoHash,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.response response,
       Se.Set Beam.rideFrequencyScore rideFrequencyScore,

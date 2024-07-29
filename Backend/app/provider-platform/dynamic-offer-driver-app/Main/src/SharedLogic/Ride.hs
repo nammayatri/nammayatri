@@ -97,7 +97,9 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRideD.create rideDetails
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
     QDI.updateOnRide True (cast driver.id)
+    Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
+    Redis.unlockRedis (editDestinationLockKey ride.driverId)
   void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
@@ -289,6 +291,15 @@ isOnRideWithAdvRideConditionKey driverId = "Driver:SetOnRide:" <> driverId
 lockRide :: Text -> Text
 lockRide rideId = "D:C:Rd-" <> rideId
 
+editDestinationLockKey :: Id Person -> Text
+editDestinationLockKey driverId = "Driver:EditDes:DId-" <> driverId.getId
+
+editDestinationUpdatedLocGeohashKey :: Id Person -> Text
+editDestinationUpdatedLocGeohashKey driverId = "Driver:EditDes:GeoHash:DId-" <> driverId.getId
+
+offerQuoteLockKeyWithCoolDown :: Id Person -> Text
+offerQuoteLockKeyWithCoolDown driverId = "Driver:OffQuote:CD:DId-" <> driverId.getId
+
 updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe DRide.Ride -> m ()
 updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
   lockAcquired <- case mbRide of
@@ -300,9 +311,10 @@ updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
         hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
         unless hasAdvancedRide $ QDI.updateOnRide False (cast personId)
         QDI.updateHasAdvancedRide (cast personId) False
-    else throwError $ DriverTransactionTryAgain personId.getId
+        void $ Redis.del $ editDestinationUpdatedLocGeohashKey personId
+    else throwError $ DriverTransactionTryAgain (Just personId.getId)
 
-throwErrorOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> DDI.DriverInformation -> m ()
-throwErrorOnRide includeDriverCurrentlyOnRide driverInfo = do
-  let checkOnRide = if includeDriverCurrentlyOnRide then driverInfo.hasAdvanceBooking else driverInfo.onRide
+throwErrorOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> DDI.DriverInformation -> Bool -> m ()
+throwErrorOnRide includeDriverCurrentlyOnRide driverInfo isForwardRequest = do
+  let checkOnRide = if includeDriverCurrentlyOnRide && isForwardRequest then driverInfo.hasAdvanceBooking else driverInfo.onRide
   when checkOnRide $ throwError DriverOnRide

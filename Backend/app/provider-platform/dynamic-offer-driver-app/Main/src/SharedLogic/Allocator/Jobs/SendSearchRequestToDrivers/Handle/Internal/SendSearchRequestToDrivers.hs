@@ -187,6 +187,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 backendConfigVersion = dpwRes.driverPoolResult.backendConfigVersion,
                 backendAppVersion = Just deploymentVersion.getDeploymentVersion,
                 isForwardRequest = dpwRes.isForwardRequest,
+                previousDropGeoHash = dpwRes.previousDropGeoHash,
                 notificationSource = Nothing,
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
                 ..
