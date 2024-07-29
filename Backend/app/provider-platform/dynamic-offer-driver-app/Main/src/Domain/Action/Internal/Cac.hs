@@ -8,7 +8,8 @@ import Kernel.Prelude
 
 data CacTypeValidationReq = CacTypeValidationReq
   { key :: Text,
-    value :: Value
+    value :: Value,
+    pushToDb :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -17,4 +18,6 @@ newtype CacTypeValidationResp = CacTypeValidationResp {result :: Bool}
 
 typeCheckHandler :: CacTypeValidationReq -> Flow CacTypeValidationResp
 typeCheckHandler req = do
+  -- when (req.pushToDb == Just True) do
+
   return $ CacTypeValidationResp $ checkParseCommon (unpack (req.key), req.value)
