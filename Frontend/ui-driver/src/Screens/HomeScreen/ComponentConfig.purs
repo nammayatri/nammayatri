@@ -811,6 +811,7 @@ chatViewConfig state = let
     , enableSuggestions = state.data.config.feature.enableSuggestions
     , showNavigate = if state.data.activeRide.tripType == ST.Rental then isJust state.data.activeRide.nextStopLat && isJust state.data.activeRide.nextStopLon else true
     , useSuggestionsView = true
+    , isRecording = state.data.recordAudioMessageState.isRecording
   }
   in chatViewConfig'
 

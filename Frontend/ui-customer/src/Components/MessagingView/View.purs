@@ -31,20 +31,20 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, chatSuggestion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys, hideKeyboardOnNavigation)
+import JBridge (scrollToEnd, getLayoutBounds, getKeyInSharedPrefKeys, hideKeyboardOnNavigation, startLottieProcess, lottieAnimationConfig, addMediaFile, getWidthFromPercent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, negate, (+), (<=), discard, void, (>=), (<), when)
 import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing, rippleColor, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
+import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout, lottieAnimationView)
 import PrestoDOM.Events (afterRender)
 import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, sheetState)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Storage (KeyStore(..), getValueToLocalStore)
-import Mobility.Prelude (boolToVisibility, noView)
+import Mobility.Prelude (boolToVisibility, noView, boolToInvisibility)
 import Locale.Utils
 import Storage (KeyStore(..))
 import LocalStorage.Cache (getValueFromCache)
@@ -53,7 +53,8 @@ import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Components.MessagingView.Controller as CMC
-
+import Effect.Uncurried (runEffectFn8)
+import Debug(spy)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -404,15 +405,86 @@ chatFooterView config push =
             , ellipsize true
             , onChange push $ TextChanged
             , pattern "[^\n]*,255"
-            ] <> FontStyle.body1 LanguageStyle
+            , visibility $ boolToVisibility $ not $ config.isRecording
+         ] <> FontStyle.body1 LanguageStyle
           , linearLayout
             [ height $ V 36
+         , width $ V 36
+         , gravity CENTER
+         , accessibility ENABLE
+         , accessibilityHint "Delete Recorded Audio Message : Button"
+         , accessibility ENABLE
+         , visibility $ boolToVisibility config.isRecording
+         , onClick push $ const CancelAudioRecording
+         , padding $ PaddingRight 5
+          
+         ] [ imageView 
+           [imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_trash"
+           , height $ V 18
+           , width $ V 18
+           ]
+         ] 
+
+       , linearLayout 
+         [ width WRAP_CONTENT
+         , height $ V 36
+         , gravity CENTER
+         , visibility $ boolToVisibility $ config.isRecording
+         , background Color.blue800
+         , cornerRadius 24.0
+         ][ linearLayout 
+            [ width $ V 36
+            , height $ V 36
+            , gravity RIGHT
+            , padding $ Padding 0 9 8 0
+            ][ imageView
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_audio_mic"
+                , height $ V 16
+                , width $ V 16
+                ]
+              ]
+          , linearLayout 
+            [ gravity CENTER
+            , visibility $ boolToVisibility $ config.isRecording
+            ][ lottieAnimationView
+                [ width $ V $ (screenWidth unit) - 164
+                , padding $ PaddingRight 8 
+                , height $ V 36
+                , color Color.white900
+                , id $ getNewIDWithTag "recordAnimation"
+                , afterRender
+                    ( \action -> do
+                        void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = "record_audio_animation.json", lottieId = (getNewIDWithTag "recordAnimation"), scaleType = "FIT_CENTER", speed = 1.0 }
+                        pure unit
+                    )
+                    (const NoAction)
+                ]
+              ]
+          ]
+       , linearLayout 
+         [ height $ V 36
+         , width $ V 36
+         , gravity CENTER
+         , accessibility ENABLE
+         , onClick push $ const if config.isRecording then StopAudioRecording else RecordAudio
+         , accessibilityHint "Record Audio Message : Button"
+         , accessibility ENABLE
+        --  , visibility $ boolToVisibility $ config.isRecording
+          ] [imageView 
+            [ imageWithFallback $ if config.isRecording then fetchImage FF_COMMON_ASSET "ic_send_blue" else fetchImage FF_COMMON_ASSET "ny_ic_audio_in_chat"
+            , height $ if config.isRecording then V 20 else V 35
+            , width $ if config.isRecording then V 20 else V 34
+            ]
+          ]
+       , linearLayout     --send message
+         [ height $ V 36
             , width $ V 36
             , gravity CENTER
             , onClick push $ const $ SendMessage
             , accessibilityHint "Send Message : Button"
             , accessibility ENABLE
-            ][ imageView
+            , visibility $ boolToVisibility $ not $ config.isRecording
+         ][ imageView
                 [ imageWithFallback $ fetchImage FF_COMMON_ASSET imageName
                 , accessibility DISABLE
                 , height $ V 20 
@@ -509,39 +581,98 @@ chatComponent state push config isLastItem receiver index =
   , orientation VERTICAL
   , visibility $ boolToVisibility $ not $ STR.null message
   , onAnimationEnd (\_ -> when isLastItem $ void $ scrollToEnd (getNewIDWithTag "ChatScrollView") true) (const NoAction)
-  ][ ((if enableFlexBox then flexBoxLayout else linearLayout) $ 
-     [ height MATCH_PARENT
-     , width $ if (os == "IOS" && (STR.length message) > (if state.languageKey == "HI_IN" then 50 else if state.languageKey == "EN_US" then 35 else 30) ) then MATCH_PARENT else WRAP_CONTENT
-     , accessibility DISABLE_DESCENDANT
-     , background chatConfig.background
-     , cornerRadii chatConfig.cornerRadii
-     , gravity CENTER
+  -- TODO (Both Customer and Driver Side):
+  --    1. Add Pause icon in chatconfig and update the images as per sending and receiving 
+  --    2. Add the set visualizer or do it as per discussed (lottie or static)
+  --    3. Add the timestamp for audio and handle the cases as per the requirements
+  --    4. Add color in the timer callback of audio message
+  ][ case config.type of 
+      "Text"           ->  ((if enableFlexBox then flexBoxLayout else linearLayout) $  
+                            [ height MATCH_PARENT
+                            , width $ if (os == "IOS" && (STR.length message) > (if state.languageKey == "HI_IN" then 50 else if state.languageKey == "EN_US" then 35 else 30) ) then MATCH_PARENT else WRAP_CONTENT
+                            , accessibility DISABLE_DESCENDANT
+                            , background chatConfig.background
+                            , cornerRadii chatConfig.cornerRadii
+                            , gravity CENTER
      ] <> if enableFlexBox 
-            then [justifyContent JUSTIFY_END, flexDirection ROW, flexWrap WRAP, alignItems ALIGN_BASELINE, orientation VERTICAL, padding (Padding 10 6 10 6)] 
-            else [margin (MarginBottom 4), padding (Padding 12 12 12 12)])
-     [textView $
-      [ text $ message
-      , singleLine false
-      , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
-      , color chatConfig.textColor
-      ] <> FontStyle.body20 TypoGraphy
+                                    then [justifyContent JUSTIFY_END, flexDirection ROW, flexWrap WRAP, alignItems ALIGN_BASELINE, orientation VERTICAL, padding (Padding 10 6 10 6)] 
+                                    else [margin (MarginBottom 4), padding (Padding 12 12 12 12)])
+                            [textView $
+                              [ text $ message
+                              , singleLine false
+                              , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
+                              , color chatConfig.textColor
+                              ] <> FontStyle.body20 TypoGraphy
+                            , textView $ 
+                              [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
+                              , height $ MATCH_PARENT
+                              , visibility $ boolToVisibility enableFlexBox
+                              , color chatConfig.timeStampColor
+                              , margin $ MarginLeft 6
+                              ] <> FontStyle.body21 TypoGraphy
+                            ]
+      "Audio"          -> linearLayout
+                          [ gravity CENTER
+                          , padding $ Padding 12 8 12 8
+                          , background chatConfig.background
+                          , cornerRadii chatConfig.cornerRadii
+                          , width WRAP_CONTENT
+                          , height MATCH_PARENT
+                          , orientation HORIZONTAL
+                              
+                          ] [PrestoAnim.animationSet[translateInXForwardAnim true] $ linearLayout
+                              [ --width WRAP_CONTENT
+                              -- , height MATCH_PARENT
+                              -- , orientation HORIZONTAL
+                              -- , gravity CENTER
+                               onAnimationEnd (\action -> do
+                                                void $ runEffectFn8 addMediaFile (getNewIDWithTag $ "ChatAudioPlayer" <> show index) (spy (show index <> "message") config.message) (getNewIDWithTag $ "ChatAudioPlayerLoader" <> (spy "Value of index in chat view" $ show index)) chatConfig.playAudioImage "ny_ic_pause_no_background" (getNewIDWithTag $ "ChatAudioPlayerTimer" <> show index) false "base64" 
+                                                pure unit
+                                              ) (const NoAction)
+                              , padding $ PaddingTop 0
+                              ][ imageView
+                                [ width $ V 32
+                                , height $ V 32
+                                , gravity CENTER
+                                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_add_audio"
+                                , margin (MarginRight 8)
+                                ]
+                                , linearLayout
+                                [ width $ V 24
+                                , height $ V 24
+                                , id (getNewIDWithTag $ "ChatAudioPlayerLoader" <> show index)
+                                , margin (MarginRight 8)
+                                , gravity chatConfig.gravity
+                                
+                                ] []
+                                , linearLayout
+                                [ orientation VERTICAL
+                                ][ linearLayout
+                                [ id (getNewIDWithTag $ "ChatAudioPlayer" <> show index)
+                                , height $ V 24
+                                , background Color.red
+                                , width $ V (getWidthFromPercent 40)
+                                ] []
+                                , linearLayout
+                                [ id (getNewIDWithTag $ "ChatAudioPlayerTimer" <> show index)
+                                , color Color.blue600
+                                , width WRAP_CONTENT
+                                , height $ V 16
+                                ] []
+                                ]
+                            ]
+                          ]
+      _                -> linearLayout [] [] 
+
     , textView $ 
       [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
       , height $ MATCH_PARENT
-      , visibility $ boolToVisibility enableFlexBox
-      , color chatConfig.timeStampColor
-      , margin $ MarginLeft 6
-      ] <> FontStyle.body21 TypoGraphy
-    ]
-    , textView $ 
-      [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
-      , height $ MATCH_PARENT
-      , visibility $ boolToVisibility $ not enableFlexBox
+      , visibility $ boolToVisibility $ not enableFlexBox || config.type /= "Text" 
       , color Color.black800
     ] <> FontStyle.body21 TypoGraphy
   ]
 
-getChatConfig :: Config -> String -> Boolean -> Int -> {margin :: Margin, gravity :: Gravity, background :: String, cornerRadii :: Corners, textColor :: String, timeStampColor :: String}
+getChatConfig :: Config -> String -> Boolean -> Int -> {margin :: Margin, gravity :: Gravity, background :: String, cornerRadii :: Corners, textColor :: String, timeStampColor :: String, playAudioImage :: String}
 getChatConfig state sentBy isLastItem index =
   if (getCurrentUser (state.userConfig.receiver /= "Driver")) == sentBy then
     {
@@ -550,7 +681,8 @@ getChatConfig state sentBy isLastItem index =
       background : Color.blue800,
       cornerRadii : (Corners 12.0 true true false true),
       textColor :  Color.white900,
-      timeStampColor : Color.white900
+      timeStampColor : Color.white900,  
+      playAudioImage : "ny_ic_play_no_background"
     }
   else
     { margin : (Margin 0 8 ((screenWidth unit)/5) if isLastItem then 8 else 0),
@@ -558,7 +690,8 @@ getChatConfig state sentBy isLastItem index =
       background : Color.white900,
       cornerRadii : (Corners 12.0 true true true false ),
       textColor :   Color.black800,
-      timeStampColor : Color.black800
+      timeStampColor : Color.black800,
+      playAudioImage : "ny_ic_play_no_background_blue"
     }
 
 getChatFooterHeight :: Config -> Int

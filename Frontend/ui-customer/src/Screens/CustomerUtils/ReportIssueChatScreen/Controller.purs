@@ -421,7 +421,7 @@ eval (RecordAudioModelAction RecordAudioModel.BackPressed) state = do
 
 eval (UpdateRecordModelPlayer url) state = do
   continueWithCmd state { data { recordAudioState { recordedFile = Just url } } } [do
-    void $ runEffectFn7 addMediaFile (getNewIDWithTag "recordedAudioViewUniqueOne") url "-1" "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false
+    void $ runEffectFn8 addMediaFile (getNewIDWithTag "recordedAudioViewUniqueOne") url "-1" "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false ""
     pure NoAction
   ]
 

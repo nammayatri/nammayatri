@@ -221,7 +221,9 @@ screen initialState =
                     then startTimer initialState.props.shimmerViewTimer "shimmerTimer" "1" push ShimmerTimer
                     else pure unit
             else pure unit
-          pure $ runEffectFn1 clearTimerWithIdEffect "shimmerTimer")
+          pure $ runEffectFn1 clearTimerWithIdEffect "shimmerTimer" )
+          -- void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
+          
       , ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "." 
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated

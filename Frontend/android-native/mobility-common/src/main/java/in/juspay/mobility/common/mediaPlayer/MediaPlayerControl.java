@@ -9,6 +9,7 @@
 package in.juspay.mobility.common.mediaPlayer;
 
 import android.content.Context;
+import android.media.MediaPlayer;
 import android.net.Uri;
 
 import java.io.FileInputStream;
@@ -46,4 +47,5 @@ public interface MediaPlayerControl {
 
     public long getDuration();
 
+    public MediaPlayer getMediaPlayer();
 }

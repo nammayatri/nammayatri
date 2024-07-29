@@ -715,17 +715,22 @@ export const storeCallBackMessageUpdated = function (cb) {
             const messageLoaded = setTimeout(()=>{
               cb(messagesLoadedCallBack)();
             },2000)
-            const callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize) {
+            const callback = callbackMapper.map(function (message, messageType, sentBy, timeStamp, messagesSize) {
               clearTimeout(messageLoaded);
               if (messagesSize == undefined) {
                 messagesSize = "-1"
               }
+              console.log("message -> ", message);
+              console.log("messageType -> ", messageType);
+              console.log("sentBy -> ", sentBy);
+              console.log("timeStamp -> ", timeStamp);
+              console.log("messagesSize -> ", messagesSize);
               const messageObj = {
                 "message": message,
                 "sentBy": sentBy,
                 "timeStamp": timeStamp,
-                type: "Text",
-                delay: 0
+                "type": messageType === null || messageType === undefined ? "Text" : messageType,
+                "delay": 0
               }
               window.chatMessages = window.chatMessages || [];
               if (sentBy != chatUserId) window.didReceiverMessage = true;
@@ -737,7 +742,7 @@ export const storeCallBackMessageUpdated = function (cb) {
                   },1000)
                   delayedCallback = false;
                 }else{
-                  cb(action(message)(sentBy)(timeStamp)(messagesSize))();
+                  cb(action(message)(messageType)(sentBy)(timeStamp)(messagesSize))();
                 }
               }
             });
@@ -858,14 +863,18 @@ export const stopChatListenerService = function () {
   }
 }
 
-export const sendMessage = function (message) {
-  if (JBridge.sendMessage) {
-    if (timer) clearTimeout(timer);
-    const fn = function () {
-      return JBridge.sendMessage(message);
+export const sendMessage = function (message, type) {
+  if (timer) clearTimeout(timer);
+  console.log("SendMEssageType",type)
+  const fn = function () {
+    if(JBridge.sendMessageV2) {
+      JBridge.sendMessageV2(message, type);
     }
-    timer = setTimeout(fn, 200);
+    else if(JBridge.sendMessage) {
+      JBridge.sendMessage(message);
+    }
   }
+  timer = setTimeout(fn, 200);
 };
 
 export const scrollToEnd = function (id) {
@@ -997,11 +1006,15 @@ export const getSuggestionfromKey = function (configKey) {
   }
 };
 
-export const addMediaFile =  (viewID, source,actionButtonID, playIcon,pauseIcon, timerID, autoPlay) => {
+export const addMediaFile =  (viewID, source,actionButtonID, playIcon,pauseIcon, timerID, autoPlay, sourceType) => {
   try {
-    JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID, autoPlay);
+    JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID, autoPlay, sourceType);
   }catch(e){
-    JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
+    try {
+      JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID, autoPlay);
+    } catch(e) {
+      JBridge.addMediaFile(viewID, source, actionButtonID, playIcon, pauseIcon, timerID);
+    }
   }
 }
 
@@ -3079,4 +3092,12 @@ export const executeJS = (params, codeString) => {
     return ""
   }
   
+}
+
+export const encodeAudioToBase64 = function (fileUri) {
+  if (window.JBridge.encodeAudioToBase64){
+    let encodedFile = window.JBridge.encodeAudioToBase64(fileUri);
+    console.log("JBridgeEncFile",encodedFile);
+    return encodedFile;
+  }
 }

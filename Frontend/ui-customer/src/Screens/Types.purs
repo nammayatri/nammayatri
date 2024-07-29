@@ -833,6 +833,8 @@ type HomeScreenStateData =
   , deliveryImage :: Maybe String
   , deliveryDetailsInfo :: Maybe API.DeliveryDetails
   , requestorPartyRoles :: Maybe (Array String)
+  , recordAudioMessageState :: RecordAudioMessageState
+  , recordedAudioUrl :: Maybe String
 }
 
 type UpcomingRideDetails = {
@@ -857,6 +859,17 @@ type IntercityBusData = {
 , showWebView :: Boolean
 , hasPhoneNumberPermission :: Boolean
 , url :: Maybe String
+}
+
+type RecordAudioMessageState = {
+  isRecording :: Boolean ,
+  timer :: String,
+  recordingDone :: Boolean,
+  recordedFile :: Maybe String,
+  stateChanged :: Boolean, 
+  isUploading :: Boolean,
+  audioFile :: Maybe String
+  -- recordedAudioUrl :: Maybe String
 }
 
 type InteroperabilityState = {

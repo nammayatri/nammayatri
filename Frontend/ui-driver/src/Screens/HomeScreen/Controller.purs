@@ -69,7 +69,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
 import Engineering.Helpers.Commons as EHC
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig, renderBase64Image)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig, renderBase64Image, startAudioRecording, saveAudioFile, uploadMultiPartData, stopAudioRecording, encodeAudioToBase64)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
 import Engineering.Helpers.Utils (saveObject)
@@ -351,7 +351,7 @@ data Action = NoAction
             | RideActiveAction RidesInfo (Maybe RidesInfo)
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
-            | UpdateMessages String String String String
+            | UpdateMessages String String String String String
             | InitializeChat
             | OpenChatScreen
             | RemoveChat
@@ -480,6 +480,8 @@ uploadFileConfig = Common.UploadFileConfig {
   imageAspectHeight : 0,
   imageAspectWidth : 0
 }
+            | UpdateState ST.HomeScreenState
+            | UpdateAudioRecord String
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1118,7 +1120,7 @@ eval RemoveChat state = do
     pure $ NoAction
   ]
 
-eval (UpdateMessages message sender timeStamp size) state = do
+eval (UpdateMessages message messageType sender timeStamp size) state = do
   if not state.props.chatcallbackInitiated then continue state {props {canSendSuggestion = true}} else do
     continueWithCmd state{data{messagesSize = size}, props {canSendSuggestion = true}} [do
       pure $ (RideActionModalAction (RideActionModal.LoadMessages))
@@ -1154,7 +1156,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
   then
    continueWithCmd state{data{messageToBeSent = ""},props {sendMessageActive = false}} [do
-      _ <- pure $ sendMessage state.data.messageToBeSent
+      void $ pure $ runFn2 sendMessage state.data.messageToBeSent "Text"
       _ <- pure $ setText (getNewIDWithTag "ChatInputEditText") ""
       pure NoAction
    ]
@@ -1164,7 +1166,7 @@ eval (ChatViewActionController (ChatView.SendMessage)) state = do
 eval (ChatViewActionController (ChatView.SendSuggestion suggestions)) state = do
   if state.props.canSendSuggestion then do
     let message = if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant Common.FunctionCall)) then (getMessageFromKey chatSuggestion suggestions "EN_US") else suggestions
-    _ <- pure $ sendMessage message
+    void $ pure $ runFn2 sendMessage message "Text"
     continue state{data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
@@ -1673,6 +1675,65 @@ eval (SwitchBookingStage stage) state = do
       data {activeRide = activeRideData, currentRideData = Just currentRideData},
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
+
+
+eval (UpdateState updatedState) state = continue updatedState
+
+eval (ChatViewActionController (ChatView.RecordAudio)) state = 
+  continueWithCmd state { data { recordAudioMessageState { isRecording = true} } } [do
+    recordingStarted <- runEffectFn1 startAudioRecording ""
+    if recordingStarted then do
+      void $ runEffectFn1 removeMediaPlayer ""
+      pure $ NoAction
+    else
+      pure $ NoAction
+  ]
+
+eval (UpdateAudioRecord url) state = do
+  continueWithCmd state { data { recordAudioMessageState { recordedFile = Just url } } } [do 
+    -- let hello = spy
+    -- void $ runEffectFn7  addMediaFile (getNewIDWithTag "recordedAudioInChatView") url (getNewIDWithTag "recordActionButtonInChatView") "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false
+    pure $ ChatViewActionController (ChatView.UploadAudioFile)
+  ]
+
+
+eval (ChatViewActionController (ChatView.StopAudioRecording )) state = 
+  continueWithCmd state { data { recordAudioMessageState { isRecording = false, recordingDone = true, timer = "00:00" } } } [do
+    -- _   <- pure $ clearTimerWithId state.props.timerId
+    res <- runEffectFn1 stopAudioRecording ""
+    pure $ UpdateAudioRecord res 
+  ]
+
+eval (ChatViewActionController (ChatView.CancelAudioRecording)) state = 
+  -- if state.data.recordAudioState.openAddAudioModel
+  -- then
+  continueWithCmd state { data { recordAudioMessageState { recordedFile = Nothing, recordingDone = false, isRecording = false, isUploading = false, timer = "00:00" } } } [do
+    void $ runEffectFn1 removeMediaPlayer ""
+    void $  runEffectFn1 stopAudioRecording ""
+    -- void $  pure $ clearTimerWithId state.props.timerId
+    pure $ UpdateState state { data { recordAudioMessageState { recordedFile = Nothing, recordingDone = false, isRecording = false, isUploading = false, timer = "00:00", audioFile = Nothing, stateChanged = true } } }
+  ]
+
+eval (ChatViewActionController (ChatView.UploadAudioFile)) state = 
+  continueWithCmd state { data { recordAudioMessageState { isUploading = true } } } [do
+    -- void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "audio_upload_animation.json", lottieId = (getNewIDWithTag "audio_recording_done"), scaleType = "FIT_CENTER", speed = 1.0 }
+    -- void $ pure $ clearTimerWithId state.props.timerId
+    case state.data.recordAudioMessageState.recordedFile of
+      Just url -> do
+                  res <- runEffectFn1 saveAudioFile url
+                  -- void $  runEffectFn3 uploadMultiPartData url "" "Audio"
+                  encodedAudioUrl <- runEffectFn1 encodeAudioToBase64 res 
+                  -- pure $ sendMessage encodedAudioUrl
+                  void $ pure $ runFn2 sendMessage encodedAudioUrl "Audio"
+                  pure NoAction
+      Nothing  -> do
+                  -- if true --state.data.recordAudioMessageState.recordingDone
+                  -- then do
+                  --   void $ runEffectFn1 removeMediaPlayer ""
+                  --   pure $ UpdateState state { data  { recordAudioMessageState { stateChanged = true } } }
+                  -- else
+                    pure $ UpdateState state { data { recordedAudioUrl = Nothing } }
+  ]
 
 eval (PlanListResponse (API.UiPlansResp plansListResp)) state = do
   let isTamilSelected = (getLanguageLocale languageKey) == "TA_IN"

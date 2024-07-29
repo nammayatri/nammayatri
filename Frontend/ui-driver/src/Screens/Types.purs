@@ -1078,6 +1078,8 @@ type HomeScreenData =  {
   linkedVehicleCategory :: String,
   linkedVehicleVariant :: String,
   cityConfig :: CityConfig,
+  recordAudioMessageState :: RecordAudioMessageState,
+  recordedAudioUrl :: Maybe String,
   parking :: ParkingData,
   toll :: TollState,
   payoutVpa :: Maybe String,
@@ -3293,3 +3295,13 @@ type UploadParcelImageScreenProps = {
   isStartRideActive :: Boolean,
   uploading :: Boolean
 } 
+type RecordAudioMessageState = {
+  isRecording :: Boolean ,
+  timer :: String,
+  recordingDone :: Boolean,
+  recordedFile :: Maybe String,
+  stateChanged :: Boolean, 
+  isUploading :: Boolean,
+  audioFile :: Maybe String
+  -- recordedAudioUrl :: Maybe String
+}

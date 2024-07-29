@@ -41,9 +41,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Locale;
+import java.util.*;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
@@ -143,10 +141,10 @@ public class MediaPlayer {
             if (audioPlayers != null) {
                 for (MediaPlayerView audioPlayer : audioPlayers) {
                     audioPlayer.resetListeners();
+                    audioPlayer.getPlayer().getMediaPlayer().reset();
                 }
                 bridgeComponents.getContext().getCacheDir().delete();
                 audioPlayers.clear();
-                DefaultMediaPlayerControl.mediaPlayer.reset();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -155,10 +153,11 @@ public class MediaPlayer {
 
     public void pauseMediaPlayer() {
         ExecutorManager.runOnBackgroundThread(() -> {
-        if (DefaultMediaPlayerControl.mediaPlayer.isPlaying()) {
-            DefaultMediaPlayerControl.mediaPlayer.pause();
-        }
+//        if (DefaultMediaPlayerControl.mediaPlayer.isPlaying()) {
+//            DefaultMediaPlayerControl.mediaPlayer.pause();
+//        }
         for (MediaPlayerView audioPlayer : audioPlayers) {
+            audioPlayer.getPlayer().getMediaPlayer().pause();
             audioPlayer.onPause(audioPlayer.getPlayer());
         }
         });
@@ -177,7 +176,7 @@ public class MediaPlayer {
                             String base64 = MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
                             byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
                             File tempMp3 = File.createTempFile("audio_cache", "mp3", bridgeComponents.getContext().getCacheDir());
-                            tempMp3.deleteOnExit();
+//                            tempMp3.deleteOnExit();
                             FileOutputStream fos = new FileOutputStream(tempMp3);
                             fos.write(decodedAudio);
                             fos.close();
@@ -196,8 +195,9 @@ public class MediaPlayer {
         });
     }
 
-    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID, Boolean autoPlay) {
-        Log.d("ADD_MEDIA_FILE", "addMediaFile: " + source);
+    // can add a new parameter if we want to use lottie instead of setVisualizerBar  ->  String callback which will store the state and send the callback for deciding whether we want to show lottie or not.
+    public void addMediaFile(String viewID, String source, String actionPlayerID, String playIcon, String pauseIcon, String timerID, Boolean autoPlay, String sourceType) {
+        Log.d("ADD_MEDIA_FILE", "addMediaFile: " + source); 
         Context context = bridgeComponents.getContext();
         Activity activity = bridgeComponents.getActivity();
         ExecutorManager.runOnMainThread(() -> {
@@ -205,29 +205,38 @@ public class MediaPlayer {
             if (Integer.parseInt(actionPlayerID) != -1) {
                 if (Integer.parseInt(timerID) != -1) {
                     audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon, Integer.parseInt(timerID), autoPlay);
-                    audioPlayer.setTimerColorAndSize(Color.WHITE, 14);
-                    audioPlayer.setVisualizerBarPlayedColor(Color.WHITE);
+                    audioPlayer.setTimerColorAndSize(Color.WHITE, 8);
+                    audioPlayer.setVisualizerBarPlayedColor(Color.BLACK);
                 } else {
                     audioPlayer = new MediaPlayerView(context, activity, Integer.parseInt(actionPlayerID), playIcon, pauseIcon, autoPlay);
-                    audioPlayer.setTimerColorAndSize(Color.GRAY, 14);
+                    audioPlayer.setTimerColorAndSize(Color.GRAY, 8);
                 }
             } else {
                 audioPlayer = new MediaPlayerView(context, activity, autoPlay);
             }
             try {
                 audioPlayer.inflateView(Integer.parseInt(viewID));
-                if (source.startsWith("http")) {
+                if (source.startsWith("http") || (sourceType != null && sourceType.equals("base64"))) {
                     Thread thread = new Thread(() -> {
                         try {
-                            String base64 = MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
+                            String base64 = null;
+                            if(source.startsWith("http")) {
+                                base64 = MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody();
+                            }else{
+                                base64 = source;
+                            }
                             byte[] decodedAudio = Base64.decode(base64, Base64.DEFAULT);
-                            File tempMp3 = File.createTempFile("audio_cache", source.substring(source.length()-3), context.getCacheDir());
+                            File tempMp3 = File.createTempFile("audio_cache" + source.substring(source.length()-3),".mp3", context.getCacheDir());
+    //                        if (tempMp3.exists()){
+    //                            return;
+    //                        }
                             tempMp3.deleteOnExit();
                             FileOutputStream fos = new FileOutputStream(tempMp3);
                             fos.write(decodedAudio);
                             fos.close();
                             FileInputStream fis = new FileInputStream(tempMp3);
                             audioPlayer.addAudioFileInput(fis);
+                            audioPlayers.add(audioPlayer);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -237,8 +246,8 @@ public class MediaPlayer {
                     File file = new File(source);
                     FileInputStream fis = new FileInputStream(file);
                     audioPlayer.addAudioFileInput(fis);
+                    audioPlayers.add(audioPlayer);
                 }
-                audioPlayers.add(audioPlayer);
             } catch (IOException e) {
                 e.printStackTrace();
             }

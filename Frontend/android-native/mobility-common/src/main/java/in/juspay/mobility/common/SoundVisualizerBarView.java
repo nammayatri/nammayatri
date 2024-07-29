@@ -279,6 +279,7 @@ public class SoundVisualizerBarView extends View {
         byte buf[] = new byte[1024];
         int len;
         try {
+            inputStream.read();
             while ((len = inputStream.read(buf)) != -1) {
                 outputStream.write(buf, 0, len);
             }

@@ -25,18 +25,19 @@ import Font.Style as FontStyle
 import Data.Array (mapWithIndex , (!!), length, null)
 import Data.String (split, Pattern(..), length, null, null, replaceAll, Replacement(..)) as STR
 import Data.Maybe (fromMaybe, Maybe(..), maybe, isJust)
-import JBridge (renderBase64Image, scrollToEnd, addMediaFile, getSuggestionfromKey, getWidthFromPercent, getLayoutBounds, displayBase64Image, displayBase64ImageConfig)
+import JBridge (renderBase64Image, scrollToEnd, addMediaFile, getSuggestionfromKey, getWidthFromPercent, getLayoutBounds, displayBase64Image, displayBase64ImageConfig, startLottieProcess, lottieAnimationConfig)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponentConfig)
 import Common.Types.App
 import Common.Styles.Colors as Color
-import PrestoDOM.Elements.Elements (progressBar)
+import PrestoDOM.Elements.Elements (progressBar, lottieAnimationView)
 import PrestoDOM.Events (afterRender)
 import Engineering.Helpers.Commons (screenHeight, safeMarginTop, convertUTCtoISC)
 import Engineering.Helpers.Suggestions(getMessageFromKey, chatSuggestion)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude (boolToVisibility)
-import Effect.Uncurried (runEffectFn1, runEffectFn7)
+import Debug(spy)
+import Effect.Uncurried (runEffectFn1, runEffectFn7, runEffectFn8)
 import Debug
 import ConfigProvider 
 import Data.Foldable (foldl)
@@ -262,8 +263,76 @@ chatFooterView config push =
          , ellipsize true
          , onChange push $ TextChanged
          , pattern "[^\n]*,255"
+         , visibility $ boolToVisibility $ not $ config.isRecording
          ] <> FontStyle.body1 LanguageStyle
-       , linearLayout
+       , linearLayout 
+         [height $ V 36
+         , width $ V 36
+         , gravity CENTER
+         , accessibility ENABLE
+         , accessibilityHint "Delete Recorded Audio Message : Button"
+         , accessibility ENABLE
+         , visibility $ boolToVisibility config.isRecording
+         , onClick push $ const CancelAudioRecording
+         , padding $ PaddingRight 5
+         ] [ imageView 
+           [imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_trash"
+           , height $ V 18
+           , width $ V 18
+           ]
+          ]
+        , linearLayout 
+          [ width WRAP_CONTENT
+          , height $ V 36
+          , gravity CENTER
+          , visibility $ boolToVisibility $ config.isRecording
+          , background Color.blue800
+          , cornerRadius 24.0
+            ] [ linearLayout 
+                [ width $ V 36
+                , height $ V 36
+                , gravity RIGHT
+                , padding $ Padding 0 9 8 0
+                ][ imageView
+                    [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_audio_mic"
+                    , height $ V 16
+                    , width $ V 16
+                    ]
+                  ]
+              , linearLayout 
+                [ gravity CENTER
+                , visibility $ boolToVisibility $ config.isRecording
+                ][ lottieAnimationView
+                    [ width $ V $ (screenWidth unit) - 164
+                    , padding $ PaddingRight 8 
+                    , height $ V 36
+                    , color Color.white900
+                    , id $ getNewIDWithTag "recordAnimation"
+                    , afterRender
+                        ( \action -> do
+                            void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = "record_audio_animation.json", lottieId = (getNewIDWithTag "recordAnimation"), scaleType = "FIT_CENTER", speed = 1.0 }
+                            pure unit
+                        )
+                        (const NoAction)
+                    ]
+                  ]
+              ]
+       , linearLayout 
+         [ height $ V 36
+         , width $ V 36
+         , gravity CENTER
+         , accessibility ENABLE
+         , onClick push $ const if config.isRecording then StopAudioRecording else RecordAudio
+         , accessibilityHint "Record Audio Message : Button"
+         , accessibility ENABLE
+          --  , visibility $ boolToVisibility $ config.isRecording
+         ] [imageView                 --config.isRecording
+           [ imageWithFallback $ if config.isRecording then fetchImage FF_COMMON_ASSET "ic_send_blue" else fetchImage FF_COMMON_ASSET "ny_ic_audio_in_chat"
+           , height $ if config.isRecording then V 20 else V 35
+           , width $ if config.isRecording then V 20 else V 34
+           ]
+        ]
+       , linearLayout -- Send Message Button
          [ height $ V 36
          , width $ V 36
          , gravity CENTER
@@ -365,6 +434,7 @@ chatComponentView :: forall w. Config -> (Action -> Effect Unit) -> ChatComponen
 chatComponentView state push config nextConfig isLastItem index =
   let (ChatConfig chatConfig) = getChatConfig state config.sentBy isLastItem (hasTimeStamp config nextConfig) index
       value = getMessageFromKey chatSuggestion config.message state.languageKey
+      _ = spy "Value of index in chat view" $ show index
   in 
   linearLayout[
     height MATCH_PARENT
@@ -401,12 +471,13 @@ chatComponentView state push config nextConfig isLastItem index =
         pure unit
     ) (const MessageAnimationEnd)
   ][ linearLayout
-     [ padding (Padding 12 12 12 12)
+     [ padding (Padding 12 8 12 8)
      , height WRAP_CONTENT
      , width $ if (os == "IOS" && (STR.length config.message) > (if state.languageKey == "HI_IN" then 50 else 30) && config.type /= "Image" && config.type /= "Audio") then MATCH_PARENT else WRAP_CONTENT
      , background chatConfig.background
      , cornerRadii chatConfig.cornerRadii
      , gravity chatConfig.gravity
+     -- TODOs : See in View.purs of Messaging View.
      ][ case config.type of
         "Image"              -> PrestoAnim.animationSet[translateInXForwardAnim true] $ linearLayout
                                 [ cornerRadius 12.0
@@ -429,31 +500,33 @@ chatComponentView state push config nextConfig isLastItem index =
                                 , height MATCH_PARENT
                                 , orientation HORIZONTAL
                                 , onAnimationEnd (\action -> do
-                                                  void $ runEffectFn7 addMediaFile (getNewIDWithTag "ChatAudioPlayer") config.message (getNewIDWithTag "ChatAudioPlayerLoader") "ny_ic_play_no_background" "ny_ic_pause_no_background" (getNewIDWithTag "ChatAudioPlayerTimer") false
+                                                  let _ = spy "Value of index in chat view" $ show index
+                                                  void $ runEffectFn8 addMediaFile (getNewIDWithTag $ "ChatAudioPlayer" <> show index) (spy (show index <> "message") config.message) (getNewIDWithTag $ "ChatAudioPlayerLoader" <> (spy "Value of index in chat view" $ show index)) chatConfig.playAudioImage "ny_ic_pause_no_background" (getNewIDWithTag $ "ChatAudioPlayerTimer" <> show index) false "base64" 
                                                   pure unit
                                                 ) (const NoAction)
                                 ][ imageView
-                                  [ width $ V 48
-                                  , height $ V 48
+                                  [ width $ V 32
+                                  , height $ V 32
                                   , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_add_audio"
                                   , margin (MarginRight 8)
                                   ]
                                   , linearLayout
-                                  [ width $ V 32
-                                  , height $ V 32
-                                  , id (getNewIDWithTag "ChatAudioPlayerLoader")
+                                  [ width $ V 24
+                                  , height $ V 24
+                                  , id (getNewIDWithTag $ "ChatAudioPlayerLoader" <> show index)
                                   , margin (MarginRight 8)
                                   ] []
                                   , linearLayout
                                   [ orientation VERTICAL
                                   ][ linearLayout
-                                  [ id (getNewIDWithTag "ChatAudioPlayer")
-                                  , height $ V 32
+                                  [ id (getNewIDWithTag $ "ChatAudioPlayer" <> show index)
+                                  , height $ V 24
                                   , width $ V (getWidthFromPercent 40)
+                                  , background Color.red
                                   ] []
                                   , linearLayout
-                                  [ id (getNewIDWithTag "ChatAudioPlayerTimer")
-                                  , color Color.white900
+                                  [ id (getNewIDWithTag $ "ChatAudioPlayerTimer" <> show index)
+                                  , color chatConfig.textColor
                                   , width WRAP_CONTENT
                                   , height $ V 16
                                   ] []
@@ -559,7 +632,8 @@ getChatConfig state sentBy isLastItem hasTimeStamp index =
     , gravity : RIGHT
     , background : Color.blue800
     , cornerRadii : (Corners 16.0 true true false true)
-    , textColor :  Color.white900
+    , textColor :  Color.white900,
+      playAudioImage : "ny_ic_play_no_background"
     }
   else
     ChatConfig { 
@@ -568,7 +642,8 @@ getChatConfig state sentBy isLastItem hasTimeStamp index =
     , gravity :  LEFT
     , background : Color.grey900
     , cornerRadii : (Corners 16.0 true true true false )
-    , textColor :   Color.black800
+    , textColor :   Color.black800,
+      playAudioImage : "ny_ic_play_no_background_blue"
     }
 
 hasTimeStamp :: ChatComponentConfig -> Maybe ChatComponentConfig -> Boolean

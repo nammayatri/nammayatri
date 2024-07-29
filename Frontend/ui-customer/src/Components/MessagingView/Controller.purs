@@ -34,6 +34,11 @@ data Action = SendMessage
             | NoAction
             | ToggleMultiChatPopUp
             | SwitchChat ChatContacts
+            | RecordAudio
+            | StopAudioRecording
+            | UploadAudioFile
+            | CancelAudioRecording
+            -- | UpdateAudioRecord String
 
 type Config = 
   { userConfig :: UserConfig
@@ -56,6 +61,7 @@ type Config =
   , showChatListPopUp :: Boolean
   , contactList :: Array ChatContacts
   , currentChatRecipient :: ChatContacts
+  , isRecording :: Boolean
   }
 
 type Feature = 
@@ -126,6 +132,7 @@ config =
   , showChatListPopUp : false
   , contactList : []
   , currentChatRecipient : dummyChatRecipient
+  , isRecording : false
   }
 
 

@@ -29,7 +29,9 @@ import Common.RemoteConfig.Utils as CommonRC
 initData :: HomeScreenState
 initData = 
   { data: 
-      { linkedVehicleCategory: ""
+      { recordAudioMessageState : initialRecordAudioMessageState
+      , recordedAudioUrl : Nothing 
+      , linkedVehicleCategory: ""
       , linkedVehicleVariant: ""
       , snappedOrigin: Nothing
       , config: getAppConfig appConfig
@@ -363,4 +365,16 @@ initialParkingData :: ParkingData
 initialParkingData = {
   estimatedCharge : Nothing
 , finalCharge : Nothing
+}
+
+initialRecordAudioMessageState :: RecordAudioMessageState
+initialRecordAudioMessageState = {
+  isRecording: false, 
+  timer : "00:00", 
+  recordingDone : false, 
+  recordedFile : Nothing , 
+  isUploading : false, 
+  stateChanged : false, 
+  audioFile : Nothing
+  -- recordedAudioUrl : Nothing
 }

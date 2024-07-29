@@ -28,6 +28,10 @@ data Action = SendMessage
             | NoAction
             | OnImageClick String
             | MessageAnimationEnd
+            | RecordAudio
+            | StopAudioRecording
+            | UploadAudioFile
+            | CancelAudioRecording
 
 type Config = 
   { userConfig :: UserConfig
@@ -58,6 +62,7 @@ type Config =
   , chatMargin :: Margin 
   , showNavigate :: Boolean
   , useSuggestionsView :: Boolean
+  , isRecording :: Boolean
   }
 
 type UserConfig =
@@ -111,6 +116,7 @@ config =
     , chatMargin : Margin 0 0 0 0
     , showNavigate : true
     , useSuggestionsView : false
+    , isRecording : false
   }
 
 makeChatComponent' :: String -> Maybe String -> Maybe String -> String -> String -> String -> Int -> ChatComponentConfig 

@@ -205,7 +205,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     public void onDestroy() {
         Log.e("onDestroy", "onDestroy");
-        DefaultMediaPlayerControl.mediaPlayer.reset();
+//        DefaultMediaPlayerControl.mediaPlayer.reset();
+        mediaPlayer.removeMediaPlayer();
         if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
             LocationUpdateService.deRegisterCallback(locationCallback);
         }

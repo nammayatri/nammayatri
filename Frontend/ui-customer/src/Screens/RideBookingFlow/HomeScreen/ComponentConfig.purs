@@ -1194,6 +1194,7 @@ messagingViewConfig state =
         , showChatListPopUp = state.props.showChatListPopUp
         , contactList = getChatDetails state $ fromMaybe [] state.data.contactList
         , currentChatRecipient = state.data.driverInfoCardState.currentChatRecipient       
+        , isRecording = state.data.recordAudioMessageState.isRecording
         }
   in
     messagingViewConfig'

@@ -206,6 +206,8 @@ initData = let
     , deliveryImage : Nothing
     , deliveryDetailsInfo : Nothing
     , requestorPartyRoles : Nothing
+    , recordAudioMessageState :{ isRecording: false, timer : "00:00", recordingDone : false, recordedFile : Nothing , isUploading : false, stateChanged : false, audioFile : Nothing}  --recordAudioUrl:nothing
+    , recordedAudioUrl : Nothing
     },
     props: {
       rideRequestFlow : false
