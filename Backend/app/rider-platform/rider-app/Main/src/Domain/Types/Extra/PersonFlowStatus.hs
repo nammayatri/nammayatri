@@ -28,6 +28,11 @@ data FlowStatus
         validTill :: UTCTime,
         providerId :: Maybe Text
       }
+  | WAITING_FOR_DRIVER_ASSIGNMENT
+      { bookingId :: Id DB.Booking,
+        validTill :: UTCTime,
+        fareProductType :: Maybe DFPT.FareProductType
+      }
   deriving (Show, Eq, Ord, Generic)
 
 $(mkBeamInstancesForJSON ''FlowStatus)
