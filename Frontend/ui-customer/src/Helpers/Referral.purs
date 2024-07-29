@@ -20,7 +20,10 @@ applyReferralCode referralCode  = do
   if getValueToLocalStore REFERRAL_STATUS == "NOT_REFERRED_NOT_TAKEN_RIDE" then do
     let (UpdateProfileReq initialData) = Remote.mkUpdateProfileRequest FunctionCall
         deviceId = JB.getDeviceID unit
-        requiredData = initialData{referralCode = (Just referralCode), deviceId = if deviceId /= "NO_DEVICE_ID" then Just deviceId else Nothing}
+        androidId = JB.getAndroidId unit
+        mbDeviceId = if deviceId /= "NO_DEVICE_ID" then Just deviceId else Nothing
+        mbAndroidId = if androidId /= "NO_ANDROID_ID" then Just androidId else Nothing
+        requiredData = initialData{referralCode = (Just referralCode), deviceId = mbDeviceId, androidId = mbAndroidId}
     res <- lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
     case res of
       Right _ -> do
