@@ -116,7 +116,7 @@ import PrestoDOM.Properties (sheetState) as PP
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
 import Data.Function (const)
 import Data.List ((:))
-import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
+import Common.Resources.Constants (zoomLevel, pickupZoomLevel,locateOnMapLabelMaxWidth)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
@@ -949,7 +949,7 @@ eval BackPressed state = do
                       _ <- pure $ exitLocateOnMap ""
                       _ <- pure $ removeAllPolylines ""
                       _ <- pure $ updateLocalStage SearchLocationModel
-                      continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
+                      continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation,isSharedLocationFlow = false},data{polygonCoordinates = "", nearByPickUpPoints = []}}
 
     FindingEstimate -> do
                       void $ pure $ performHapticFeedback unit
@@ -1062,7 +1062,8 @@ eval LiveDashboardAction state = do
 
 eval (UpdateSourceName lat lon name) state = continue state {data{source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId lat lon}, props{searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} }
 
-eval (MAPREADY key latitude longitude) state = 
+eval (MAPREADY key latitude longitude) state = do
+  if state.props.isSharedLocationFlow then callLocateOnMap state else pure unit
   if any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate] then do
     continueWithCmd state [ do
       void $ pure $ removeAllPolylines ""
@@ -1084,6 +1085,17 @@ eval (MAPREADY key latitude longitude) state =
         _ <- checkPermissionAndUpdatePersonMarker state
         pure AfterRender
       ]
+  where 
+    callLocateOnMap state = do
+        pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig 
+            {   lat = state.props.sourceLat
+              , lon = state.props.sourceLong
+              , geoJson = state.data.polygonCoordinates
+              , points = state.data.nearByPickUpPoints
+              , labelId = getNewIDWithTag "LocateOnMapPin"
+              , locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName
+              , specialZoneMarkerConfig { labelImage = zoneLabelIcon state.props.confirmLocationCategory } 
+            }
 
 eval ShowBookingPreference state = continue state {props {showBookingPreference = not state.props.showBookingPreference, showMultipleRideInfo = false}}
 
@@ -1116,7 +1128,6 @@ eval (UpdateLocation key lat lon) state = do
       _ ->  case (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0 of
               Just spot -> exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
               Nothing -> continue updatedState
-    
 
 eval (UpdatePickupLocation key lat lon) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)

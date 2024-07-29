@@ -22,3 +22,6 @@ assetDomain = "assets.moving.tech"
 
 chatService :: String 
 chatService = "in.juspay.mobility.app.ChatService"
+
+locateOnMapLabelMaxWidth :: Int
+locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
