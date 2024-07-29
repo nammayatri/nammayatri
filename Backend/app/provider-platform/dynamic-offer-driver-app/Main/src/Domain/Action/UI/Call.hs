@@ -289,7 +289,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
   return requestorPhone
   where
     ensureCallStatusExists callStatusId callId rideId callStatus' dtmfNumberUsed =
-      QCallStatus.findByEntityId (Just $ getId rideId) >>= \case
+      QCallStatus.findOneByEntityId (Just $ getId rideId) >>= \case
         Just _ -> QCallStatus.updateCallStatusCallId callId callStatusId
         Nothing -> do
           now <- getCurrentTime

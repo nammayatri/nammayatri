@@ -35,10 +35,6 @@ CallStatus:
       kvFunction: findOneWithKV
       where: id
 
-    findByEntityId:
-      kvFunction: findOneWithKV
-      where: entityId
-
     updateCallStatus:
       kvFunction: updateWithKV
       params: [conversationDuration, recordingUrl, status, callAttempt]
@@ -78,3 +74,4 @@ CallStatus:
 
   excludedDefaultQueries:
     - create
+
