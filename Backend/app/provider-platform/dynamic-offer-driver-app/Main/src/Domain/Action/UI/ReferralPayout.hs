@@ -86,7 +86,7 @@ getPayoutReferralEarnings (mbPersonId, _merchantId, merchantOpCityId) fromDate t
           activatedItems = earning.activatedValidRides,
           earningDate = earning.merchantLocalDate,
           referrals = earning.referralCounts,
-          status = earning.payoutStatus,
+          status = if earning.payoutStatus == DS.PendingForVpa then DS.Verifying else earning.payoutStatus,
           payoutOrderId = earning.payoutOrderId
         }
 
@@ -131,6 +131,7 @@ postPayoutCreateOrder ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
+  void $ throwError $ InvalidRequest "You're Not Authorized To Use This API"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   let serviceName = DEMSC.PayoutService PT.Juspay
   let entityName = DLP.MANUAL

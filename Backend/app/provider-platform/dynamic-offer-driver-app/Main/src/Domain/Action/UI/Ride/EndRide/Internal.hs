@@ -219,22 +219,24 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
             logDebug "Driver Referral Coin Event"
             fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride.chargeableDistance)
-          let mobileNumberHash = (.hash) riderDetails.mobileNumber
-          localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-          mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
-          (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
-          QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
-          when isValidRideForPayout $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId
+          mbVehicle <- QV.findById referredDriverId
+          let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+          payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+          when (isNothing riderDetails.firstRideId && payoutConfig.isPayoutEnabled) $ do
+            let mobileNumberHash = (.hash) riderDetails.mobileNumber
+            localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+            mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
+            (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats
+            QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
+            when (isValidRideForPayout && isConsideredForPayout riderDetails) $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId payoutConfig
         Nothing -> pure ()
   where
-    updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId = do
+    isConsideredForPayout riderDetails = maybe False (\referredAt -> referredAt >= getDefaultTime) riderDetails.referredAt
+    updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId payoutConfig = do
       mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" driver.language
       whenJust mbMerchantPN $ \merchantPN -> do
         let entityData = NotifReq {entityId = referredDriverId.getId, title = merchantPN.title, message = merchantPN.body}
-        notifyDriverOnEvents driver.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward
-      mbVehicle <- QV.findById referredDriverId
-      let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
-      payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+        notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward
       let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
       driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId
@@ -285,6 +287,13 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
       return (isValid, mbFlagReason)
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
+
+getDefaultTime :: UTCTime
+getDefaultTime = defaultTime
+  where
+    day = fromGregorian 2024 7 26
+    time = secondsToDiffTime 0
+    defaultTime = UTCTime day time
 
 updateLeaderboardZScore :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Ride.Ride -> m ()
 updateLeaderboardZScore merchantId merchantOpCityId ride = do
