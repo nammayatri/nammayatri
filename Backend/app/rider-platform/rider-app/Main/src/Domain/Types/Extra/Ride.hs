@@ -53,6 +53,8 @@ data RideAPIEntity = RideAPIEntity
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
     vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.VehicleServiceTier.VehicleServiceTierType,
-    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
+    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
+    favCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    isAlreadyFav :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

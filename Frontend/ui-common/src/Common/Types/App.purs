@@ -272,6 +272,11 @@ type CalendarWeek = {
   , endMonth :: String
 }
 
+type CalendarMonth = {
+    utcDate :: String
+  , month :: Int
+}
+
 type CountryCodeObj = {
   countryName :: String 
   , countryCode :: String 

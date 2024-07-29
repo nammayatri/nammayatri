@@ -26,12 +26,12 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
-import Domain.Types.Location (LocationAPIEntity)
+import Domain.Types.Location (Location, LocationAPIEntity)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleServiceTier as DVST
-import EulerHS.Prelude hiding (id, length, null)
+import EulerHS.Prelude hiding (elem, id, length, null)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
@@ -97,6 +97,8 @@ data BookingAPIEntity = BookingAPIEntity
     isAirConditioned :: Maybe Bool,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
+    isAlreadyFav :: Maybe Bool,
+    favCount :: Maybe Int,
     cancellationReason :: Maybe BookingCancellationReasonAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -114,6 +116,16 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     isBookingUpdated :: Bool,
     bookingStatus :: BookingStatus,
     rideStatus :: Maybe DRide.RideStatus
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data FavouriteBookingAPIEntity = FavouriteBookingAPIEntity
+  { id :: Id DRide.Ride,
+    rideRating :: Maybe Int,
+    fromLocation :: Location,
+    toLocation :: Maybe Location,
+    totalFare :: Maybe Money,
+    startTime :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -236,7 +248,9 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       serviceTierShortDesc = booking.serviceTierShortDesc,
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
       driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
-      cancellationReason = mbCancellationReason
+      cancellationReason = mbCancellationReason,
+      isAlreadyFav = activeRide >>= (.isAlreadyFav),
+      favCount = activeRide >>= (.favCount)
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -286,6 +300,17 @@ mkBookingAPIDetails = \case
           estimatedDistance = distanceToHighPrecMeters distance,
           estimatedDistanceWithUnit = distance
         }
+
+makeFavouriteBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
+makeFavouriteBookingAPIEntity ride = do
+  FavouriteBookingAPIEntity
+    { id = ride.id,
+      rideRating = ride.rideRating,
+      fromLocation = ride.fromLocation,
+      toLocation = ride.toLocation,
+      totalFare = (.amountInt) <$> ride.totalFare,
+      startTime = ride.rideStartTime
+    }
 
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
 getActiveSos mbRide personId = do
@@ -339,10 +364,13 @@ buildBookingStatusAPIEntity booking = do
   rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
   return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus
 
+favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
+favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
+
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: DRide.Ride -> RideAPIEntity
 makeRideAPIEntity DRide.Ride {..} =
-  let driverMobileNumber' = if status == DRide.NEW then Just driverMobileNumber else Just "xxxx"
+  let driverMobileNumber' = if status `elem` [DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value

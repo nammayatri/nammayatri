@@ -303,16 +303,17 @@ updateStatusByIds rideIds status = do
     ]
     [Se.Is BeamR.id (Se.In $ getId <$> rideIds)]
 
-updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Int -> Int -> Maybe Int -> m ()
-updateDistance driverId distance googleSnapCalls osrmSnapsCalls selfTunedCount = do
+updateDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Int -> Int -> Maybe Int -> Bool -> m ()
+updateDistance driverId distance googleSnapCalls osrmSnapsCalls selfTunedCount isDistanceCalculationFailed = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamR.traveledDistance distance,
-      Se.Set BeamR.numberOfSnapToRoadCalls (Just googleSnapCalls),
-      Se.Set BeamR.numberOfOsrmSnapToRoadCalls (Just osrmSnapsCalls),
-      Se.Set BeamR.numberOfSelfTuned selfTunedCount,
-      Se.Set BeamR.updatedAt now
-    ]
+    ( [Se.Set BeamR.traveledDistance distance | not isDistanceCalculationFailed]
+        <> [ Se.Set BeamR.numberOfSnapToRoadCalls (Just googleSnapCalls),
+             Se.Set BeamR.numberOfOsrmSnapToRoadCalls (Just osrmSnapsCalls),
+             Se.Set BeamR.numberOfSelfTuned selfTunedCount,
+             Se.Set BeamR.updatedAt now
+           ]
+    )
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
 updateTollChargesAndNames :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> [Text] -> m ()

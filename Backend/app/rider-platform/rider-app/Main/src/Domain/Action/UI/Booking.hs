@@ -42,6 +42,7 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -66,8 +67,18 @@ data StopReq = StopReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+newtype DriverNo = DriverNo
+  { driverNumber :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 newtype BookingListRes = BookingListRes
   { list :: [SRB.BookingAPIEntity]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype FavouriteBookingListRes = FavouriteBookingListRes
+  { list :: [SRB.FavouriteBookingAPIEntity]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -147,6 +158,12 @@ bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClient
   fork "booking list status update" $ checkBookingsForStatus rbList
   logInfo $ "rbList: test " <> show rbList
   BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
+
+favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
+favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
+  mobileNumberHash <- getDbHash driver.driverNumber
+  rides <- runInReplica $ QR.findAllByRiderIdAndDriverNumber personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mobileNumberHash
+  pure $ FavouriteBookingListRes $ SRB.favouritebuildBookingAPIEntity <$> rides
 
 addStop :: (Id Person.Person, Id Merchant) -> Id SRB.Booking -> StopReq -> Flow APISuccess
 addStop (_, merchantId) bookingId req = do

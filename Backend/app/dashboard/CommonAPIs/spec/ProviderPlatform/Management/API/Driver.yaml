@@ -1,0 +1,31 @@
+imports:
+  ServiceNames: Dashboard.ProviderPlatform.Driver
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Driver : Dashboard.ProviderPlatform.Driver
+
+module: Driver
+
+apis:
+- POST:
+    endpoint: /clearFee
+    auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_FEE
+    mandatoryQuery:
+      driverId: (Id Driver)
+    request:
+      type: ClearDriverFeeReq
+    response:
+      type: APISuccess
+
+types:
+  ClearDriverFeeReq:
+    serviceName: ServiceNames
+    feeType: DriverFeeType
+    platformFee: HighPrecMoney
+    sgstPercentage : Maybe HighPrecMoney
+    cgstPercentage : Maybe HighPrecMoney
+    currency: Maybe Currency
+    sendManualLink: Bool
+  DriverFeeType:
+    enum: "PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT"
+    derive: "Read, Kernel.Prelude.ToParamSchema"

@@ -40,3 +40,13 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN capture_payment_i
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN delete_card text NOT NULL default 'Stripe';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_distances_for_scheduled_rides text  default 'OSRM';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN get_distances_for_scheduled_rides SET NOT NULL;

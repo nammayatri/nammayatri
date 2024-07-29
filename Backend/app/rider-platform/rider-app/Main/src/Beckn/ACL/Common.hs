@@ -162,10 +162,12 @@ parseRideAssignedEvent order msgId txnId = do
   let isDriverBirthDay = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
       isFreeRide = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
       vehicleAge :: Maybe Months = readMaybe . T.unpack =<< getTagV2' Tag.VEHICLE_AGE_INFO Tag.VEHICLE_AGE tagGroupsFullfillment
-      driverAlternateNumber :: Maybe Text = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ALTERNATE_NUMBER tagGroups
+      driverAlternateNumber :: Maybe Text = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ALTERNATE_NUMBER tagGroups
       (driverAccountId :: Maybe EPayment.AccountId) = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
       driverTrackingUrlText :: Maybe Text = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_TRACKING_URL tagGroups
       previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
+      isAlreadyFav = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
+      favCount = fromMaybe 0 $ castToInt $ getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
   let mbFareBreakupsQuotationBreakup = order.orderQuote >>= (.quotationBreakup)
   fareBreakups <- (traverse mkDFareBreakup) `mapM` mbFareBreakupsQuotationBreakup
   driverTrackingUrl <- mapM parseBaseUrl driverTrackingUrlText
@@ -180,8 +182,15 @@ parseRideAssignedEvent order msgId txnId = do
         driverAccountId,
         previousRideEndPos,
         fareBreakups,
-        driverTrackingUrl
+        driverTrackingUrl,
+        isAlreadyFav,
+        favCount
       }
+  where
+    castToInt :: Maybe Text -> Maybe Int
+    castToInt mbVar = case mbVar of
+      Just val -> readMaybe (T.unpack val)
+      _ -> Nothing
 
 parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideStartedReq
 parseRideStartedEvent order msgId = do

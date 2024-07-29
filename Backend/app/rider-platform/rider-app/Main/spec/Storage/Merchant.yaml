@@ -282,6 +282,7 @@ MerchantServiceUsageConfig:
     autoComplete: MapsService
     aadhaarVerificationService: AadhaarVerificationService
     getDistancesForCancelRide: MapsService
+    getDistancesForScheduledRides: MapsService
     smsProvidersPriorityList: "[SmsService]"
     whatsappProvidersPriorityList: "[WhatsappService]"
     issueTicketService: IssueTicketService
@@ -348,6 +349,7 @@ MerchantServiceUsageConfig:
     updateAmountInPaymentIntent: "'Stripe'"
     createSetupIntent: "'Stripe'"
     deleteCard: "'Stripe'"
+    getDistancesForScheduledRides: "'OSRM'"
 
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"

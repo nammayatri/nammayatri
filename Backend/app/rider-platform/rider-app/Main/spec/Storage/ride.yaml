@@ -89,6 +89,8 @@ Ride:
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
     cancellationFeeIfCancelled: Maybe HighPrecMoney
+    isAlreadyFav: Maybe Bool
+    favCount: Maybe Int
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -250,3 +252,4 @@ Ride:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+

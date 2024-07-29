@@ -93,7 +93,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let previousCancellationReasonsTags = UtilsOU.mkPreviousCancellationReasonsTags cancellationSource
-    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False Nothing (Just $ show Event.ESTIMATE_REPETITION) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False Nothing (Just $ show Event.ESTIMATE_REPETITION) isValueAddNP Nothing False 0 -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
         { orderId = Just booking.id.getId,
@@ -122,7 +122,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.NewMessageBuildReq OU.DNewMessageReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let newMessageTags = UtilsOU.mkNewMessageTags message
-    fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing newMessageTags Nothing False False Nothing (Just $ show Event.NEW_MESSAGE) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+    fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing newMessageTags Nothing False False Nothing (Just $ show Event.NEW_MESSAGE) isValueAddNP Nothing False 0 -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,
@@ -141,7 +141,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let safetyAlertTags = UtilsOU.mkSafetyAlertTags reason
-    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False Nothing (Just $ show Event.SAFETY_ALERT) isValueAddNP Nothing -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing safetyAlertTags Nothing False False Nothing (Just $ show Event.SAFETY_ALERT) isValueAddNP Nothing False 0 -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,
@@ -159,7 +159,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.PhoneCallRequestBuildReq OU.DPhoneCallRequestReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.PHONE_CALL_REQUEST) isValueAddNP Nothing
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.PHONE_CALL_REQUEST) isValueAddNP Nothing False 0
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,
@@ -177,7 +177,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.StopArrivedBuildReq OU.DStopArrivedBuildReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.STOP_ARRIVED) isValueAddNP Nothing
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.STOP_ARRIVED) isValueAddNP Nothing False 0
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,
@@ -215,8 +215,8 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         newDestination' <- newDestination & fromMaybeM (InternalError "New Destination not found for SOFT UPDATE")
         let updateDetailsTagGroup = if isValueAddNP then UtilsOU.mkUpdatedDistanceTags bookingUpdateReqDetails.estimatedDistance else Nothing
             personTag = if isValueAddNP then Utils.mkLocationTagGroupV2 currentLocation else Nothing
-        Utils.mkFulfillmentV2SoftUpdate (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing updateDetailsTagGroup personTag False False Nothing Nothing isValueAddNP newDestination'
-      OU.CONFIRM_UPDATE -> Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing Nothing Nothing False False Nothing Nothing isValueAddNP Nothing
+        Utils.mkFulfillmentV2SoftUpdate (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing updateDetailsTagGroup personTag False False Nothing Nothing isValueAddNP newDestination' False 0
+      OU.CONFIRM_UPDATE -> Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) Nothing Nothing Nothing False False Nothing Nothing isValueAddNP Nothing False 0
     pure $
       Spec.Order
         { orderId = Just $ booking.id.getId,
@@ -235,7 +235,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.QuoteRepetitionBuildReq OU.DQuoteRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let previousCancellationReasonsTags = UtilsOU.mkPreviousCancellationReasonsTags cancellationSource
-    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False Nothing (Just $ show Event.QUOTE_REPETITION) isValueAddNP Nothing
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing previousCancellationReasonsTags Nothing False False Nothing (Just $ show Event.QUOTE_REPETITION) isValueAddNP Nothing False 0
     pure $
       Spec.Order
         { orderId = Just booking.id.getId,
@@ -263,7 +263,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
         }
   OU.TollCrossedBuildReq OU.DTollCrossedBuildReq {..} -> do
     let BookingDetails {..} = bookingDetails
-    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.TOLL_CROSSED) isValueAddNP Nothing
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.TOLL_CROSSED) isValueAddNP Nothing False 0
     pure $
       Spec.Order
         { orderId = Just ride.bookingId.getId,

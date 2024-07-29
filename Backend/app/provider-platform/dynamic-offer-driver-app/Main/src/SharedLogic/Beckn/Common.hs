@@ -50,7 +50,9 @@ data DRideAssignedReq = DRideAssignedReq
     vehicleAge :: Maybe Months,
     isFreeRide :: Bool,
     driverAccountId :: Maybe Payment.AccountId,
-    estimateId :: Maybe Text
+    estimateId :: Maybe Text,
+    isAlreadyFav :: Bool,
+    favCount :: Int
   }
 
 data DRideStartedReq = DRideStartedReq

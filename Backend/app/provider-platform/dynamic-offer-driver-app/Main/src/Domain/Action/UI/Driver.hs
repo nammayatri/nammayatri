@@ -123,6 +123,7 @@ import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantMessage as DTM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as SP
@@ -1823,6 +1824,9 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     specialZoneRideCount :: Int,
     totalSpecialZoneCharges :: HighPrecMoney,
     totalSpecialZoneChargesWithCurrency :: PriceAPIEntity,
+    gst :: HighPrecMoney,
+    gstWithCurrency :: PriceAPIEntity,
+    gstPercentage :: HighPrecMoney,
     vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -1876,14 +1880,18 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
         driverFeesInWindow <- QDF.findFeeInRangeAndDriverIdAndServiceName driverFee.startTime driverFee.endTime driverFee.driverId serviceName
         mbPlan <- DAPlan.getPlanDataFromDriverFee driverFee
         let maxRidesEligibleForCharge = DAPlan.planMaxRides =<< mbPlan
+            driverFeeAmount = SLDriverFee.roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)
+            cgst = maybe 0.0 (.cgstPercentage) mbPlan
+            sgst = maybe 0.0 (.sgstPercentage) mbPlan
+            gst = (driverFeeAmount + fromMaybe 0.0 driverFee.amountPaidByCoin) * (cgst + sgst)
         return
           DriverFeeInfoEntity
             { autoPayStage = driverFee.autopayPaymentStage,
               paymentStatus = invoiceStatus,
               totalEarnings = driverFee.totalEarnings,
               totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency,
-              driverFeeAmount = (\dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)) driverFee,
-              driverFeeAmountWithCurrency = PriceAPIEntity (SLDriverFee.roundToHalf driverFee.currency (driverFee.govtCharges + driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst)) driverFee.currency,
+              driverFeeAmount = driverFeeAmount,
+              driverFeeAmountWithCurrency = PriceAPIEntity driverFeeAmount driverFee.currency,
               totalRides = SLDriverFee.calcNumRides driverFee transporterConfig,
               planAmount = fromMaybe 0 driverFee.feeWithoutDiscount,
               planAmountWithCurrency = PriceAPIEntity (fromMaybe 0 driverFee.feeWithoutDiscount) driverFee.currency,
@@ -1897,6 +1905,9 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = d
               totalSpecialZoneCharges = driverFee.specialZoneAmount,
               totalSpecialZoneChargesWithCurrency = flip PriceAPIEntity driverFee.currency driverFee.specialZoneAmount,
               vehicleNumber = driverFee.vehicleNumber,
+              gstWithCurrency = PriceAPIEntity gst driverFee.currency,
+              gst = gst,
+              gstPercentage = cgst + sgst,
               maxRidesEligibleForCharge
             }
     )
@@ -2059,37 +2070,56 @@ acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
   pure Success
 
 clearDriverFeeWithCreate ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
-  (HighPrecMoney, HighPrecMoney, HighPrecMoney) ->
+  (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney) ->
   DDF.FeeType ->
   Currency ->
   Maybe SPayment.DeepLinkData ->
+  Bool ->
   m ClearDuesRes
-clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee, cgst, sgst) feeType currency mbDeepLinkData = do
+clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbCgst, mbSgst) feeType currency mbDeepLinkData sendPaymentLink = do
   dueDriverFee <- QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.PAYMENT_PENDING] feeType serviceName
+  subscriptionConfig <-
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
+  (sgst, cgst) <- case gstPercentagesByFeeTypeAndServiceName feeType subscriptionConfig of
+    Just (sgstPercentage, cgstPercentage) -> do
+      let sgst' = fromMaybe (calcPercentage sgstPercentage) mbSgst
+          cgst' = fromMaybe (calcPercentage cgstPercentage) mbCgst
+      return (sgst', cgst')
+    Nothing -> return (0.0, 0.0)
+
+  let fee = fee' - if isJust mbSgst && isJust mbCgst then 0.0 else sgst + cgst
   driverFee <-
     case dueDriverFee of
       [] -> do
-        driverFee' <- mkDriverFee
+        driverFee' <- mkDriverFee fee cgst sgst
         QDF.create driverFee'
         pure [driverFee']
       dfee -> pure dfee
   invoices <- mapM (\fee_ -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee_.id (feeTypeToInvoicetype feeType) Domain.ACTIVE_INVOICE)) driverFee
-  subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
-      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   let paymentService = subscriptionConfig.paymentServiceName
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
-  case sortedInvoices of
-    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing mbDeepLinkData
-    (invoice_ : restinvoices) -> do
-      mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
-      (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ driverFee
-      let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) driverFee
-      let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) driverFee
-      mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice mbDeepLinkData
+  resp <- do
+    case sortedInvoices of
+      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing mbDeepLinkData
+      (invoice_ : restinvoices) -> do
+        mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
+        (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ driverFee
+        let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) driverFee
+        let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) driverFee
+        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice mbDeepLinkData
+  let mbPaymentLink = resp.orderResp.payment_links
+      payload = resp.orderResp.sdk_payload.payload
+      mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
+      mbMessageKey = messageByFeeType feeType
+  whenJust mbMessageKey $ \messageKey -> do
+    when sendPaymentLink $ do
+      fork "send link through dasboard" $ do
+        SPayment.sendLinkTroughChannelProvided mbPaymentLink personId mbAmount (Just subscriptionConfig.paymentLinkChannel) False messageKey
+  return resp
   where
     validateExistingInvoice invoice driverFees = do
       invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
@@ -2101,7 +2131,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee, cgst
         else do
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
           return (Nothing, driverFeeIds, [])
-    mkDriverFee = do
+    mkDriverFee fee cgst sgst = do
       id <- generateGUID
       now <- getCurrentTime
       return $
@@ -2155,3 +2185,16 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee, cgst
         DDF.ONE_TIME_SECURITY_DEPOSIT -> Domain.ONE_TIME_SECURITY_INVOICE
         DDF.PAYOUT_REGISTRATION -> Domain.PAYOUT_REGISTRATION_INVOICE
         _ -> Domain.MANUAL_INVOICE
+
+    messageByFeeType driverFeeType =
+      case (driverFeeType, serviceName) of
+        (DDF.ONE_TIME_SECURITY_DEPOSIT, YATRI_RENTAL) -> Just DTM.WHATSAPP_SEND_ONE_TIME_SECURITY_PAYMENT_LINK
+        (DDF.RECURRING_INVOICE, YATRI_RENTAL) -> Just DTM.WHATSAPP_SEND_MANUAL_PAYMENT_LINK
+        (_, _) -> Nothing
+
+    gstPercentagesByFeeTypeAndServiceName driverFeeType subscriptionConfig =
+      case (driverFeeType, serviceName) of
+        (DDF.ONE_TIME_SECURITY_DEPOSIT, YATRI_RENTAL) -> (,) <$> subscriptionConfig.sgstPercentageOneTimeSecurityDeposit <*> subscriptionConfig.cgstPercentageOneTimeSecurityDeposit
+        (_, _) -> Just (0.0, 0.0)
+
+    calcPercentage percentage = (percentage * fee') / 100.0

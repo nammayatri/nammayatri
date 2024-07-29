@@ -176,6 +176,7 @@ let defaultImports =
           , "Servant"
           , "Data.OpenApi (ToSchema)"
           , "Servant.Client"
+          , "Kernel.Types.Common"
           ]
         , _qualifiedImports =
           [ "Kernel.Prelude"

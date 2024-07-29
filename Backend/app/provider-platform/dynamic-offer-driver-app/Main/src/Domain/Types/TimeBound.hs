@@ -78,11 +78,11 @@ findBoundedDomain domains localTime = do
           ( \acc@(domainsBoundedByWeekday_, domainsBoundedByDay_) domain ->
               case domain.timeBounds of
                 BoundedByWeekday timeBounds ->
-                  if isWithin currTimeOfDay (getPeaksForCurrentDay currentDayOfWeek timeBounds)
+                  if isWithin currTimeOfDay (handleTwentyFourHourClockCycle $ getPeaksForCurrentDay currentDayOfWeek timeBounds)
                     then (domainsBoundedByWeekday_ <> [domain], domainsBoundedByDay_)
                     else acc
                 BoundedByDay days ->
-                  if maybe False (isWithin currTimeOfDay) (snd <$> find (\(day, _) -> day == currentDay) days)
+                  if maybe False (isWithin currTimeOfDay) (handleTwentyFourHourClockCycle <$> snd <$> find (\(day, _) -> day == currentDay) days)
                     then (domainsBoundedByWeekday_, domainsBoundedByDay_ <> [domain])
                     else acc
                 Unbounded -> acc
@@ -94,6 +94,15 @@ findBoundedDomain domains localTime = do
     isWithin _ [] = False
     isWithin currTime [(startTime, endTime)] = currTime > timeOfDayToTime startTime && currTime < timeOfDayToTime endTime
     isWithin currTime ((startTime, endTime) : xs) = (currTime > timeOfDayToTime startTime && currTime < timeOfDayToTime endTime) || isWithin currTime xs
+
+    handleTwentyFourHourClockCycle =
+      foldl
+        ( \timeBounds (startTime, endTime) ->
+            if endTime < startTime
+              then timeBounds <> [(startTime, TimeOfDay 23 59 59), (TimeOfDay 00 00 00, endTime)]
+              else timeBounds <> [(startTime, endTime)]
+        )
+        []
 
     getPeaksForCurrentDay currentDayOfWeek peaks =
       case currentDayOfWeek of
