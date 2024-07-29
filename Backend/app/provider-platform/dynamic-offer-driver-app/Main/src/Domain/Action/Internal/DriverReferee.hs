@@ -76,7 +76,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   merchOpCityId <- maybe (QP.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound (driverReferralLinkage.driverId.getId)) <&> (.merchantOperatingCityId)) pure driverInfo.merchantOperatingCityId
   transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId (Just (DriverId (cast driverReferralLinkage.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
   updateReferralStats driverReferralLinkage.driverId transporterConfig merchOpCityId
-  let isDeviceIdChecksRequired = fromMaybe True transporterConfig.isDeviceIdChecksRequired
+  let isDeviceIdChecksRequired = fromMaybe False transporterConfig.isDeviceIdChecksRequired
   let flagReason = if isDeviceIdChecksRequired then Nothing else if isMultipleDeviceIdExist_ then Just DRD.MultipleDeviceIdExists else if (isNothing isMultipleDeviceIdExist) then Just DRD.DeviceIdDoesNotExist else Nothing
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   _ <- case mbRiderDetails of

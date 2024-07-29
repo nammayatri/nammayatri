@@ -87,24 +87,25 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   case osr of
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
-      case payoutOrder.entityName of
-        Just DPayment.DRIVER_DAILY_STATS -> do
-          forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
-            dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DriverStats Not Found")
-            Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
-              let dPayoutStatus = castPayoutOrderStatus payoutStatus
-              when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
-            fork "Update Payout Status and Transactions for DailyStats" $ do
-              callPayoutService dailyStats.driverId payoutOrderId
-        Just DPayment.MANUAL -> do
-          forM_ (listToMaybe =<< payoutOrder.entityIds) $ \driverId -> do
-            fork "Update Payout Status and Transactions for Manual Payout" $ do
-              callPayoutService (Id driverId) payoutOrderId
-        Just DPayment.BACKLOG -> do
-          whenJust payoutOrder.entityIds $ \entityIds -> do
-            fork "Update Payout Status for Backlog" $ do
-              mapM_ (updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId) entityIds
-        _ -> pure ()
+      unless (payoutOrder.status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]) do
+        case payoutOrder.entityName of
+          Just DPayment.DRIVER_DAILY_STATS -> do
+            forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
+              dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DriverStats Not Found")
+              Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+                let dPayoutStatus = castPayoutOrderStatus payoutStatus
+                when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
+              fork "Update Payout Status and Transactions for DailyStats" $ do
+                callPayoutService dailyStats.driverId payoutOrderId
+          Just DPayment.MANUAL -> do
+            forM_ (listToMaybe =<< payoutOrder.entityIds) $ \driverId -> do
+              fork "Update Payout Status and Transactions for Manual Payout" $ do
+                callPayoutService (Id driverId) payoutOrderId
+          Just DPayment.BACKLOG -> do
+            whenJust payoutOrder.entityIds $ \entityIds -> do
+              fork "Update Payout Status for Backlog" $ do
+                mapM_ (updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId) entityIds
+          _ -> pure ()
       pure ()
     IPayout.BadStatusResp -> pure ()
   pure Ack
@@ -143,47 +144,48 @@ payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 
 processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
-processPreviousPayoutAmount personId mbVpa merchantOperatingCityId = do
-  redisLockDriverId <- Redis.tryLockRedis lockKey 10800
-  dailyStats_ <- if not redisLockDriverId then pure [] else QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.Verifying personId
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  let dailyStats = filter (\ds -> (ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) && ds.merchantLocalDate /= (utctDay localTime)) dailyStats_ -- filter out the flagged payouts and current day payout earning
-  when (length dailyStats > 0) $ do
-    person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    let statsIds = map (.id) dailyStats
-        pendingAmount = sum $ map (.referralEarnings) dailyStats
-    let merchOpCity = person.merchantOperatingCityId
-    mbVehicle <- QV.findById personId
-    let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
-    payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
-    case (mbVpa, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
-      (Just vpa, True) -> do
-        uid <- generateGUID
-        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
-          mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
-          mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
-        phoneNo <- mapM decrypt person.mobileNumber
-        let createPayoutOrderReq =
-              Juspay.CreatePayoutOrderReq
-                { orderId = uid,
-                  amount = pendingAmount,
-                  customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
-                  customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
-                  customerId = personId.getId,
-                  orderType = payoutConfig.orderType,
-                  remark = payoutConfig.remark,
-                  customerName = person.firstName,
-                  customerVpa = vpa
-                }
-        let serviceName = DEMSC.PayoutService TPayout.Juspay
-        let entityName = DPayment.BACKLOG
-            createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity serviceName
-        merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)
-        void $ DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-      (_, False) -> do
-        Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
-          mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount
-      _ -> pure ()
+processPreviousPayoutAmount personId mbVpa merchOpCity = do
+  mbVehicle <- QV.findById personId
+  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
+  when payoutConfig.isPayoutEnabled $ do
+    redisLockDriverId <- Redis.tryLockRedis lockKey 10800
+    dailyStats_ <- if not redisLockDriverId then pure [] else QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.Verifying personId
+    transporterConfig <- SCTC.findByMerchantOpCityId merchOpCity (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCity.getId)
+    localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    let dailyStats = filter (\ds -> (ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) && ds.merchantLocalDate /= (utctDay localTime)) dailyStats_ -- filter out the flagged payouts and current day payout earning
+    when (length dailyStats > 0) $ do
+      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      let statsIds = map (.id) dailyStats
+          pendingAmount = sum $ map (.referralEarnings) dailyStats
+      case (mbVpa, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
+        (Just vpa, True) -> do
+          uid <- generateGUID
+          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+            mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
+            mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
+          phoneNo <- mapM decrypt person.mobileNumber
+          let createPayoutOrderReq =
+                Juspay.CreatePayoutOrderReq
+                  { orderId = uid,
+                    amount = pendingAmount,
+                    customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
+                    customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
+                    customerId = personId.getId,
+                    orderType = payoutConfig.orderType,
+                    remark = payoutConfig.remark,
+                    customerName = person.firstName,
+                    customerVpa = vpa
+                  }
+          let serviceName = DEMSC.PayoutService TPayout.Juspay
+          let entityName = DPayment.BACKLOG
+              createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity serviceName
+          merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)
+          logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show pendingAmount <> " | orderId: " <> show uid
+          void $ DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+        (_, False) -> do
+          Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
+            mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount
+        _ -> pure ()
   where
     lockKey = "ProcessBacklogPayout:DriverId-" <> personId.getId

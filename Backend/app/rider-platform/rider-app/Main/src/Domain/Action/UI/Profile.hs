@@ -260,7 +260,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       (getDeviceFromText mbDevice)
       deploymentVersion.getDeploymentVersion
       req.enableOtpLessRide
-      req.deviceId
+      (if isJust person.deviceId then Nothing else req.deviceId)
       person
   updateDisability req.hasDisability req.disability personId
 
