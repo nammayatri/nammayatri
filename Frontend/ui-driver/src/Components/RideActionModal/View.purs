@@ -622,19 +622,25 @@ endRide push config =
 cancelRide :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 cancelRide push config =
   linearLayout
-  [ width MATCH_PARENT
+  [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , gravity CENTER
   , background Color.white900
   , visibility if config.startRideActive then VISIBLE else GONE
-  , padding $ PaddingBottom 16
-  ][  textView (
+  , onClick push (const CancelRide)
+  , padding $ Padding 16 8 16 24
+  ][  imageView 
+      [ width $ V 20
+      , height $ V 20
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close_grey" 
+      , visibility $ boolToVisibility config.appConfig.rideActionModelConfig.enablePrefixImage
+      ]
+  , textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , padding $ Padding 16 8 16 8
       , text (getString CANCEL_RIDE)
-      , color Color.red
-      , onClick push (const CancelRide)
+      , color config.appConfig.rideActionModelConfig.cancelRideColor
+      , padding $ PaddingLeft 4
       ] <> FontStyle.body1 TypoGraphy
       )
   ]

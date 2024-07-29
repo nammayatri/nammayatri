@@ -100,13 +100,14 @@ view push state =
 
 editTextSingleBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 editTextSingleBox push state =
+  let _ = showKeyboard (getNewIDWithTag "OtpKeyboard")
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
   , visibility if state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded && state.enableDeviceKeyboard then VISIBLE else GONE
-  , adjustViewWithKeyboard "true"
   ][  editText $
       [ width $ V 200
       , height WRAP_CONTENT
@@ -193,6 +194,7 @@ otpView push state =
         , height WRAP_CONTENT
         , margin (Margin 20 0 20 0)
         , orientation VERTICAL
+        , adjustViewWithKeyboard "true"
         , gravity if(state.modalType == KeyboardModalType.OTP || state.modalType == KeyboardModalType.ODOMETER) then CENTER else LEFT
        ]
         (

@@ -95,15 +95,23 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =
     else if state.props.isProfileView
       then
         case state.data.firstName, state.data.mobileNumber of
-          Nothing, _ -> continue state{props{isValidFirstName = false}}
-          _, Nothing -> continue state{props{isValidEmail = false}}
+          Nothing, _ -> do
+            _ <- pure $ JB.toggleBtnLoader "" false
+            continue state{props{isValidFirstName = false}}
+          _, Nothing -> do
+            _ <- pure $ JB.toggleBtnLoader "" false
+            continue state{props{isValidEmail = false}}
           Just name, Just mobileNumber -> do 
             let config = getAppConfig appConfig
                 validatorResp = mobileNumberValidator config.defaultCountryCodeConfig.countryCode config.defaultCountryCodeConfig.countryShortCode mobileNumber
                 isValidFirstName = (DS.length name) > 2 
                 isValid = isValidFirstName && (validatorResp == MVR.Valid)
             let newState = state{props{isValidMobileNumber = validatorResp == MVR.Valid, isValidFirstName = isValidFirstName}}
-            if isValid then updateAndExit state $ UpdateProfile newState else continue newState
+            if isValid 
+              then updateAndExit state $ UpdateProfile newState 
+              else do
+                _ <- pure $ JB.toggleBtnLoader "" false
+                continue newState
       else
         continueWithCmd state [do
           JB.uploadFile (state.data.docType == ST.PROFILE_PHOTO)

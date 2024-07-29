@@ -81,7 +81,9 @@ config =
   enableCustomerReferral : false,
   rideActionModelConfig : {
     showVehicleVariant : true,
-    mapBackground : "#0066FF"
+    mapBackground : "#0066FF",
+    cancelRideColor : "#E55454",
+    enablePrefixImage : false
   }
   , profileVerification : {
       aadharVerificationRequired : false

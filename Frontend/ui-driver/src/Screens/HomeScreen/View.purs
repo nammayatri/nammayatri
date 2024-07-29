@@ -1992,7 +1992,7 @@ goOfflineModal push state =
              , cornerRadius 8.0
              , gravity CENTER
              , margin (MarginRight 10)
-             , background Color.black900
+             , background state.data.config.primaryBackground
              , onClick push (const $ GoOffline if state.props.statusOnline then false else true)
              , rippleColor Color.rippleShade
              ][ textView  (
@@ -2000,7 +2000,7 @@ goOfflineModal push state =
                 , height WRAP_CONTENT
                 , gravity CENTER
                 , text (getString GO_OFFLINE)
-                , color Color.yellow900
+                , color state.data.config.primaryTextColor
                 ]  <> FontStyle.subHeading1 TypoGraphy
                 )
              ]

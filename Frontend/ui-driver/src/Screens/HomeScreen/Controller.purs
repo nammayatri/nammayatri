@@ -600,10 +600,10 @@ eval (KeyboardCallback keyBoardState) state = do
   if state.props.currentStage == ST.ChatWithCustomer && isOpen then do
     void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
     continue state
-  else if state.props.enterOtpModal && not isOpen then
+  else if state.props.enterOtpModal && EHC.os /= "IOS" && not isOpen then
     continue state{ props{ rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false } }
   else
-    continue state
+    update state
 
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
@@ -824,12 +824,12 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
           }
         }
       in if state.props.currentStage == ST.RideStarted then
-        updateAndExit newState $ EndRide newState
+        exit $ EndRide newState
       else 
         if state.props.zoneRideBooking then
-          updateAndExit newState $ StartZoneRide newState 
+          exit $ StartZoneRide newState 
         else
-          updateAndExit newState $ StartRide newState
+          exit $ StartRide newState
 
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do
   continue $ state { props = state.props { enterOtpModal = state.props.enterOdometerReadingModal, enterOdometerReadingModal = false,endRideOtpModal = state.props.endRideOdometerReadingModal,endRideOdometerReadingModal = false} }

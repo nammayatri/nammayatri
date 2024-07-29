@@ -163,7 +163,7 @@ config =
   , width : V 150
   , lottieURL : btnConfig.loaderUrl
   , autoDisableLoader : true
-  , forceToUseRemote: false
+  , forceToUseRemote: btnConfig.forceToUseRemote
   }
   , underlineConfig : {
     color : Color.grey900

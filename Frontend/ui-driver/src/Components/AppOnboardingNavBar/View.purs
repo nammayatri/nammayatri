@@ -16,8 +16,8 @@
 
 module Components.AppOnboardingNavBar.View where
 
-import Prelude (Unit, const, ($), (<>), (<<<), (+))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
+import Prelude (Unit, const, ($), (<>), (<<<), (+), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, stroke, text, textView, visibility, weight, width)
 import Effect (Effect)
 import Components.AppOnboardingNavBar.Controller (Action(..), Config)
 import Styles.Colors as Color
@@ -44,9 +44,8 @@ view push state =
       , gravity CENTER
       ][  imageView
           [ imageWithFallback $ HU.fetchImage HU.FF_ASSET state.prefixImageConfig.image
-          , height state.prefixImageConfig.height
-          , width state.prefixImageConfig.width 
-          , layoutGravity "center_vertical"
+          , height if state.prefixImageConfig.visibility == GONE then V 0 else state.prefixImageConfig.height
+          , width if state.prefixImageConfig.visibility == GONE then V 0 else state.prefixImageConfig.width
           , visibility $ state.prefixImageConfig.visibility
           , onClick push $ const PrefixImgOnClick
           ]

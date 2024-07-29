@@ -31,6 +31,7 @@ defaultPrimaryButtonConfig =  {
     isGradient : false
   , gradient : []
   , loaderUrl : "primary_button_loader.json"
+  , forceToUseRemote : false
   }
 
 defaultFontConfig :: FontConfig

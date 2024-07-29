@@ -49,6 +49,7 @@ type PrimaryButtonConfig = {
   isGradient :: Boolean
 , gradient :: Array String
 , loaderUrl :: String
+, forceToUseRemote :: Boolean
 }
 
 type FontConfig = {

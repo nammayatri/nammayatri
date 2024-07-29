@@ -33,6 +33,7 @@ import Screens.NoInternetScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Effect.Uncurried(runEffectFn3)
+import Engineering.Helpers.Commons as EHC
 
 screen :: ST.NoInternetScreenState -> String -> Screen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
@@ -102,6 +103,7 @@ noInternetScreenView push state triggertype =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
   ][ linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT

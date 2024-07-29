@@ -59,6 +59,7 @@ primaryButtonConfig state = let
         , enableLoader = if state.props.isSSNView then JB.getBtnLoader "DocCaptureButton" else false
         , lottieConfig {
           forceToUseRemote = true
+        , autoDisableLoader = true
         }
       }
   in primaryButtonConfig'
@@ -267,7 +268,7 @@ mobileNumberPrimaryEditTextConfig state =
         }
       , background = Color.white900
       , showErrorLabel = not state.props.isValidMobileNumber
-      , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
+      , id = (EHC.getNewIDWithTag "MobileNumberEditText")
       , topLabel
         { text = "Mobile Number"
         , color = Color.black800
@@ -303,7 +304,7 @@ mobileNumberConfig state = let
       , textStyle = FontStyle.SubHeading1
       }
     , type = "number"
-    , id = (EHC.getNewIDWithTag "EnterMobileNumberEditText")
+    , id = (EHC.getNewIDWithTag "MobileNumberEditText")
     , errorLabel
         { text = (getString INVALID_MOBILE_NUMBER)
         , margin = MarginBottom 1

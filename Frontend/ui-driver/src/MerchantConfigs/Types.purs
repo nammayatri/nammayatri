@@ -140,6 +140,8 @@ type GradientConfig = {
 type RideActionModelConfig = {
   showVehicleVariant :: Boolean
 , mapBackground :: String
+, cancelRideColor :: String
+, enablePrefixImage :: Boolean
 }
 
 type RideCompletedCardConfig = {
