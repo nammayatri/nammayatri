@@ -17,6 +17,7 @@
 module SharedLogic.DriverPool
   ( calculateDriverPool,
     calculateDriverPoolWithActualDist,
+    calculateDriverPoolWithActualDistV2,
     calculateGoHomeDriverPool,
     calculateDriverCurrentlyOnRideWithActualDist,
     calculateDriverPoolCurrentlyOnRide,
@@ -40,6 +41,7 @@ module SharedLogic.DriverPool
     mkAvailableTimeKey,
     mkBlockListedDriversKey,
     mkBlockListedDriversForRiderKey,
+    mkSpecialZoneQueueActualDistanceResult,
     addDriverToSearchCancelledList,
     addDriverToRiderCancelledList,
     convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult,
@@ -710,6 +712,53 @@ calculateDriverPool cityServiceTiers poolStage driverPoolCfg serviceTiers pickup
           ..
         }
 
+mkSpecialZoneQueueActualDistanceResult :: DriverPoolResult -> DriverPoolWithActualDistResult
+mkSpecialZoneQueueActualDistanceResult dpr = do
+  DriverPoolWithActualDistResult
+    { driverPoolResult = dpr,
+      actualDistanceToPickup = dpr.distanceToPickup,
+      actualDurationToPickup = Seconds 180, -- deafult 3 minutes here as its a queue on the gate
+      intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing 0,
+      isPartOfIntelligentPool = False,
+      pickupZone = False,
+      specialZoneExtraTip = Nothing,
+      keepHiddenForSeconds = Seconds 0,
+      goHomeReqId = Nothing,
+      isForwardRequest = False
+    }
+
+calculateDriverPoolWithActualDistV2 ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    HasCoordinates a,
+    LT.HasLocationService m r
+  ) =>
+  [DriverPoolResult] ->
+  DriverPoolConfig ->
+  a ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m [DriverPoolWithActualDistResult]
+calculateDriverPoolWithActualDistV2 driverPool driverPoolCfg pickup merchantId merchantOpCityId = do
+  case driverPool of
+    [] -> return []
+    (a : pprox) -> do
+      filtDriverPoolWithActualDist <- do
+        driverPoolWithActualDist <- computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOpCityId pickup (a :| pprox)
+        pure $ case driverPoolCfg.actualDistanceThreshold of
+          Nothing -> NE.toList driverPoolWithActualDist
+          Just threshold -> map fst $ NE.filter (\(dis, dp) -> filterFunc threshold dis dp.distanceToPickup) $ NE.zip (NE.sortOn (.driverPoolResult.driverId) driverPoolWithActualDist) (NE.sortOn (.driverId) $ a :| pprox)
+      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist
+      return filtDriverPoolWithActualDist
+  where
+    filterFunc threshold estDist distanceToPickup =
+      case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
+        Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
+        Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+
 calculateDriverPoolWithActualDist ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -749,20 +798,6 @@ calculateDriverPoolWithActualDist poolCalculationStage poolType driverPoolCfg se
       logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist
       return filtDriverPoolWithActualDist
   where
-    mkSpecialZoneQueueActualDistanceResult dpr = do
-      DriverPoolWithActualDistResult
-        { driverPoolResult = dpr,
-          actualDistanceToPickup = dpr.distanceToPickup,
-          actualDurationToPickup = Seconds 180, -- deafult 3 minutes here as its a queue on the gate
-          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing 0,
-          isPartOfIntelligentPool = False,
-          pickupZone = False,
-          specialZoneExtraTip = Nothing,
-          keepHiddenForSeconds = Seconds 0,
-          goHomeReqId = Nothing,
-          isForwardRequest = False
-        }
-
     filterFunc threshold estDist distanceToPickup =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)

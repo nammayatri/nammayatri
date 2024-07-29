@@ -54,6 +54,7 @@ import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Tools.Maps as Maps
 import Utils.Common.Cac.KeyNameConstants
 
@@ -144,15 +145,19 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               _ -> [NormalPool]
       logDebug $ "poolTypesWithFallback: " <> show poolTypesWithFallback
       let shouldDoMicroBatching = batchNum /= -1
-      prepareDriverPoolBatchEntity <-
+      prepareDriverPoolBatchEntity <- do
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId_
+        let pickupLatLong = LatLong searchReq.fromLocation.lat searchReq.fromLocation.lon
+        let serviceTiers = tripQuoteDetails <&> (.vehicleServiceTier)
+        nearByDrivers <- calculateDriverPool cityServiceTiers DriverSelection driverPoolCfg serviceTiers pickupLatLong searchReq.providerId True (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isInterCityTrip searchTry.tripCategory) isValueAddNP
+        allDriversNotOnRide <- calculateDriverPoolWithActualDistV2 nearByDrivers driverPoolCfg pickupLatLong searchReq.providerId merchantOpCityId_
         calculateWithFallback poolTypesWithFallback $ \poolType -> do
-          allDriversNotOnRide <- calcDriverPool poolType radiusStep merchantOpCityId_
           case poolType of
             SkipPool -> do
               incrementBatchNum searchTry.id
               prepareDriverPoolBatch' previousBatchesDrivers (batchNum + 1) True merchantOpCityId_ txnId isValueAddNP
             SpecialZoneQueuePool -> do
-              (driversInQueue, _) <- splitDriverFromGateAndRest allDriversNotOnRide
+              (driversInQueue, _) <- splitDriverFromGateAndRest $ map mkSpecialZoneQueueActualDistanceResult nearByDrivers
               logDebug $ "SpecialPickupZonePoolBatch DriversInQueue -" <> show driversInQueue
               (goHomeDriversInQueue, goHomeInQueueNotToDestination) <-
                 case searchReq.toLocation of
@@ -402,12 +407,6 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry tripQuoteDetails starti
               return $ filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
             _ -> return []
 
-        calcDriverPool poolType radiusStep merchantOpCityId = do
-          let serviceTiers = tripQuoteDetails <&> (.vehicleServiceTier)
-              merchantId = searchReq.providerId
-          let pickupLoc = searchReq.fromLocation
-          let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          calculateDriverPoolWithActualDist DriverSelection poolType driverPoolCfg serviceTiers pickupLatLong merchantId merchantOpCityId True (Just radiusStep) (isRentalTrip searchTry.tripCategory) (isInterCityTrip searchTry.tripCategory) isValueAddNP
         calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig merchantOpCityId batchNum' = do
           let merchantId = searchReq.providerId
           if transporterConfig.includeDriverCurrentlyOnRide && driverPoolCfg.enableForwardBatching && radiusStep > 0
