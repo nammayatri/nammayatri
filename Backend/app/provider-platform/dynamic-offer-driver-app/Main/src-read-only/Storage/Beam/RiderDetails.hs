@@ -23,6 +23,7 @@ data RiderDetailsT f = RiderDetailsT
     hasTakenValidRide :: B.C f Kernel.Prelude.Bool,
     hasTakenValidRideAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     id :: B.C f Kernel.Prelude.Text,
+    isDeviceIdExists :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     mobileCountryCode :: B.C f Kernel.Prelude.Text,
     mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
