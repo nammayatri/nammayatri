@@ -2,8 +2,27 @@ let common = ./common.dhall
 
 let useRealGoogle = Some common.googleCfg
 
+let RoutingPreference =
+      < ROUTING_PREFERENCE_UNSPECIFIED
+      | TRAFFIC_UNAWARE
+      | TRAFFIC_AWARE
+      | TRAFFIC_AWARE_OPTIMAL
+      >
+
+let googleRouteConfigType =
+      { computeAlternativeRoutes : Bool
+      , routePreference : RoutingPreference
+      , url : Text
+      }
+
 let doNotUseRealGoogle =
-      None { googleMapsUrl : Text, googleRoadsUrl : Text, googleKey : Text }
+      None
+        { googleMapsUrl : Text
+        , googleRoadsUrl : Text
+        , googleKey : Text
+        , useAdvancedDirections : Bool
+        , googleRouteConfig : googleRouteConfigType
+        }
 
 in  { port = +8019
     , loggerConfig =

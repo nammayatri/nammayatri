@@ -14,12 +14,15 @@
 
 module Lib.GoogleConfig where
 
+import qualified Kernel.External.Maps.Google.Config as GoogleMaps
 import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 
 data GoogleCfgUnencrypted = GoogleCfgUnencrypted
   { googleMapsUrl :: BaseUrl,
     googleRoadsUrl :: BaseUrl,
-    googleKey :: Text
+    googleKey :: Text,
+    useAdvancedDirections :: Bool,
+    googleRouteConfig :: GoogleMaps.GoogleRouteConfig
   }
   deriving (Generic, FromDhall)
