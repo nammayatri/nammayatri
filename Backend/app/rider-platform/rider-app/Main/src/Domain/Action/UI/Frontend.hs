@@ -66,6 +66,7 @@ getPersonFlowStatus personId _ _ = do
     Just personStatus -> do
       case personStatus of
         DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId -> findValueAddNP personStatus providerId
+        DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
         _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
     Nothing -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
   where

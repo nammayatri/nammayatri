@@ -27,6 +27,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalDetails as DRental
 import qualified Domain.Types.SearchRequest as DSReq
@@ -55,6 +56,7 @@ import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
+import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -158,6 +160,7 @@ confirm DConfirmReq {..} = do
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
   void $ QRideB.createBooking booking
+  void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails)}
   void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   QPFS.clearCache searchRequest.riderId
   return $
