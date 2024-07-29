@@ -141,7 +141,8 @@ mkItemTags res =
       itemTags' = if isJust res.customerExtraFee then mkCustomerTipTagGroup res : itemTags else itemTags
       itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
       itemTags''' = mkAdvancedBookingEnabledTagGroup res : itemTags''
-   in itemTags'''
+      itemTags'''' = mkDeviceIdTagGroup res : itemTags'''
+   in itemTags''''
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
 mkCustomerTipTagGroup res =
@@ -220,6 +221,44 @@ mkAutoAssignEnabledTagGroup res =
                       },
                 tagDisplay = Just False,
                 tagValue = Just $ show res.autoAssignEnabled
+              }
+          ]
+    }
+
+mkDeviceIdTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
+mkDeviceIdTagGroup res =
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just $ show Tags.DEVICE_ID_INFO,
+              descriptorName = Just "Device Id Info",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList =
+        Just
+          [ Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.DEVICE_ID_FLAG,
+                        descriptorName = Just "Multiple or No Device Id Exists",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = show <$> res.isMultipleOrNoDeviceIdExist
+              },
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just $ show Tags.TO_UPDATE_DEVICE_ID,
+                        descriptorName = Just "Is Device Id Update Required",
+                        descriptorShortDesc = Nothing
+                      },
+                tagDisplay = Just False,
+                tagValue = Just $ show res.toUpdateDeviceIdInfo
               }
           ]
     }

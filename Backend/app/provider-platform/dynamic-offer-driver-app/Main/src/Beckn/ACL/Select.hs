@@ -64,6 +64,7 @@ buildSelectReqV2 subscriber req = do
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
+      (toUpdateDeviceIdInfo, isMultipleOrNoDeviceIdExist) = getDeviceIdInfo item.itemTags
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
     _ -> pure Nothing
@@ -80,7 +81,9 @@ buildSelectReqV2 subscriber req = do
         customerExtraFee = customerExtraFee,
         estimateIds = [Id estimateIdText] <> (maybe [] (map Id) bookAnyEstimates),
         customerPhoneNum = customerPhoneNum,
-        isAdvancedBookingEnabled = isAdvancedBoookingEnabled
+        isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
+        isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
+        toUpdateDeviceIdInfo = toUpdateDeviceIdInfo
       }
 
 getBookAnyEstimates :: Maybe [Spec.TagGroup] -> Maybe [Text]
@@ -108,6 +111,18 @@ getAdvancedBookingEnabled tagGroups =
         Just "True" -> True
         Just "False" -> False
         _ -> False
+
+getDeviceIdInfo :: Maybe [Spec.TagGroup] -> (Bool, Maybe Bool)
+getDeviceIdInfo tagGroups = do
+  let isMultipleDeviceIdExist = case (Utils.getTagV2 Tag.DEVICE_ID_INFO Tag.DEVICE_ID_FLAG tagGroups) of
+        Just "True" -> Just True
+        Just "False" -> Just False
+        _ -> Nothing
+  let toUpdateDeviceIdInfo = case (Utils.getTagV2 Tag.DEVICE_ID_INFO Tag.TO_UPDATE_DEVICE_ID tagGroups) of
+        Just "True" -> True
+        Just "False" -> False
+        _ -> False
+  (toUpdateDeviceIdInfo, isMultipleDeviceIdExist)
 
 cacheSelectMessageId :: CacheFlow m r => Text -> Text -> m ()
 cacheSelectMessageId messageId transactionId = do
