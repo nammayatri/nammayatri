@@ -74,3 +74,7 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN notifica
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN total_rides integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN previous_drop_geo_hash text ;
