@@ -18,6 +18,8 @@ module Components.SearchLocationModel.Controller where
 import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBarController
 import Components.PrimaryButton as PrimaryButton
+import Components.Selector as Selector
+import Components.DateTimeSelector as DateTimeSelector
 import Data.Maybe (Maybe(..))
 import Prelude (show)
 import Effect (Effect)
@@ -25,10 +27,15 @@ import PrestoDOM (Visibility(..), Padding(..), Gravity(..), Prop)
 import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..),TicketType(..))
 import Prelude
 import Foreign.Object (Object)
 import Foreign (Foreign)
+import Screens.Types (DateTimeConfig)
+import PrestoDOM
+import Styles.Colors as Color
+import Language.Types 
+import Components.RequestInfoCard as RequestInfoCardController
 
 data Action = GoBack
             | NoAction
@@ -47,6 +54,12 @@ data Action = GoBack
             | UpdateCurrentLocation String String
             | RecenterCurrentLocation
             | DateTimePickerButtonClicked
+            | GoBackSearchModel
+            | RequestInfoCardAction RequestInfoCardController.Action
+            | RideInfoButtonPressed
+            | DateSelectButtonClicked DateTimeSelector.Action
+            | SelectorControllerAction Selector.Action
+
 
 type SearchLocationModelState = {
     isSearchLocation :: SearchLocationModelType
@@ -73,7 +86,14 @@ type SearchLocationModelState = {
   , suffixButton :: ButtonLayoutConfig
   , headerVisibility :: Boolean
   , headerText :: String
-}
+  , tripType :: TicketType
+  , pickupConfig :: DateTimeSelector.DateSelectorConfig 
+  , returnConfig :: DateTimeSelector.DateSelectorConfig
+  , totalRideDuration :: Int
+  , totalRideDistance :: Int
+  , showRideInfo :: Boolean
+  , isIntercityFlow :: Boolean
+ }
 
 type ButtonLayoutConfig = 
   { text :: String

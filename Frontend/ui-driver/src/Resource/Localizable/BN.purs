@@ -1500,4 +1500,7 @@ getBN stringKey =
         NO_ACTIVATED_REFERRAL -> "কোন সক্রিয় রেফারেল"
         NO_ACTIVE_REFERRAL_ON_DATE -> "নির্বাচিত তারিখে আপনার কোনো সক্রিয় রেফারেল নেই"
         PAYMENT_IN_PROGRESS -> "পেমেন্ট চলছে..."
-        REFRESH_PAYMENT -> "রিফ্রেশ"
+        REFRESH_PAYMENT -> "রিফ্রেশ"        
+        ROUND_TRIP_EXPLAINER -> "(আপনাকে এই তারিখ এবং সময়ে আপনার মূল স্থানে ফেরত দেওয়া হবে)"
+        RESERVE -> "রিজার্ভ করুন"
+        LEAVE_NOW -> "এখনই চলে যান"

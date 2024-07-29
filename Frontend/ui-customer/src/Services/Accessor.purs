@@ -322,3 +322,15 @@ _stopLocation = lens (unwrap >>> _.stopLocation) (\oldRec newVal -> wrap ((unwra
 
 _deviceId :: forall a b c. Newtype a { deviceId :: b | c } => Lens' a b
 _deviceId = lens (unwrap >>> _.deviceId) (\oldRec newVal -> wrap ((unwrap oldRec) { deviceId = newVal }))
+
+_currency :: forall a b c. Newtype a {currency :: c | b} => Lens' a c
+_currency = lens (unwrap >>> _.currency) (\oldRec newVal -> wrap ((unwrap oldRec) {currency = newVal}))
+
+_quoteDetails :: forall a b c. Newtype a { quoteDetails :: b | c } => Lens' a b
+_quoteDetails = lens (unwrap >>> _.quoteDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { quoteDetails = newVal }))
+
+_baseFare :: forall a b c. Newtype a { baseFare :: b | c } => Lens' a b
+_baseFare = lens (unwrap >>> _.baseFare) (\oldRec newVal -> wrap ((unwrap oldRec) { baseFare = newVal }))
+
+_nightShiftCharge :: forall a b c. Newtype a { nightShiftCharge :: b | c } => Lens' a b
+_nightShiftCharge = lens (unwrap >>> _.nightShiftCharge) (\oldRec newVal -> wrap ((unwrap oldRec) { nightShiftCharge = newVal }))

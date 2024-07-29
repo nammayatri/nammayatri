@@ -214,7 +214,7 @@ eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFoc
       if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props{showPrimaryButton = true}} 
         [ do 
           push <- getPushFn Nothing "RentalScreen"
-          _ <- launchAff $ showDateTimePicker push DateTimePickerAction
+          _ <- launchAff $ showDateTimePicker push DateTimePickerAction Nothing
           pure NoAction
         ]
       else genericBackPressed state {props{showPrimaryButton = true}}
@@ -245,7 +245,7 @@ openDateTimePicker state =
   continueWithCmd state
     [ do 
       push <- getPushFn Nothing "RentalScreen"
-      _ <- launchAff $ showDateTimePicker push DateTimePickerAction
+      _ <- launchAff $ showDateTimePicker push DateTimePickerAction Nothing
       pure NoAction
     ]
 

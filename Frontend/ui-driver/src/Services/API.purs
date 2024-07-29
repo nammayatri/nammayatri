@@ -450,7 +450,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Boolean
     , checkIfACWorking      :: Maybe Boolean
-    , canSwitchToIntercity  :: Maybe Boolean
+    , canSwitchToInterCity  :: Maybe Boolean
     }
 
 
@@ -836,7 +836,7 @@ newtype UpdateDriverInfoReq
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
-  , canSwitchToIntercity :: Maybe Boolean
+  , canSwitchToInterCity :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp

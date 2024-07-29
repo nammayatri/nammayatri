@@ -1029,4 +1029,7 @@ getFR stringKey =
         REGISTER_YOUR_BIKE -> "Enregistrez votre vélo"
         BIKE_TAXI -> "Taxi Moto"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE ->  "Des frais supplémentaires peuvent être applicables lorsque le conducteur se trouve à proximité du lieu de prise en charge."
+        ROUND_TRIP_EXPLAINER -> "(Vous serez déposé à votre origine à cette date et heure)"
+        RESERVE -> "Réserver"
+        LEAVE_NOW -> "Partir maintenant"
         _ -> ""

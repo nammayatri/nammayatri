@@ -1499,3 +1499,6 @@ getKN stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "ಆಯ್ಕೆಮಾಡಿದ ದಿನಾಂಕದಂದು ನೀವು ಯಾವುದೇ ಸಕ್ರಿಯ ರೆಫರಲ್‌ಗಳನ್ನು ಹೊಂದಿಲ್ಲ"
         PAYMENT_IN_PROGRESS -> "ಪಾವತಿ ಪ್ರಗತಿಯಲ್ಲಿದೆ..."
         REFRESH_PAYMENT -> "ರಿಫ್ರೆಶ್ ಮಾಡಿ"
+        ROUND_TRIP_EXPLAINER -> "(ನೀವು ಈ ದಿನಾಂಕ ಮತ್ತು ಸಮಯದಲ್ಲಿ ನಿಮ್ಮ ಮೂಲ ಸ್ಥಳಕ್ಕೆ ಇಳಿಸಲಾಗುತ್ತದೆ)"
+        RESERVE -> "ಆಹ್ವಾನಿಸು"
+        LEAVE_NOW -> "ಈಗ ಹೋಗಿ"
