@@ -977,6 +977,7 @@ getBN stringKey =
         CHENNAI_METRO_TERM_1 -> "টিকেট বাতিল করা যায় না"
         CHENNAI_METRO_TERM_2 -> "টিকেটগুলি সকল দিনে 4:30 টা থেকে 10:30 টা পর্যন্ত ক্রয় করা যায়।"
         CHENNAI_METRO_TERM_EVENT -> "বাতিল টিকেটগুলি ফ্রি টিকেট অফারের মধ্যে গণনা করা হবে না"
+        FREE_TICKET_CASHBACK -> "বিনামূল্যে টিকিট অফারের জন্য ক্যাশব্যাক 24 ঘন্টার মধ্যে জমা হবে৷"
         NO_OF_PASSENGERS -> "যাত্রীর সংখ্যা"
         MAXIMUM -> "সর্বাধিক"
         TICKETS_ALLOWED_PER_USER -> "প্রতি ব্যবহারকারীকে অনুমোদিত টিকেটগুলি।"
