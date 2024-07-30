@@ -814,6 +814,8 @@ TransporterConfig:
     schedulePayoutForDay : Maybe Integer
     isDeviceIdChecksRequired: Maybe Bool
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
+    cancellationRateWindow: Maybe Int
+    cancellationRateCalculationThreshold: Maybe Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
