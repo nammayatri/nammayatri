@@ -7,6 +7,7 @@ imports:
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
+  CxAgentDetails: IssueManagement.Common
 
 RiderConfig:
   tableName: rider_config
@@ -43,7 +44,7 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay : Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
-    cxAgentPhoneNumbers: Maybe [Text]
+    cxAgentDetails: "Maybe [CxAgentDetails]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -100,7 +101,7 @@ RiderConfig:
     emailOtpConfig: "json"
     kaptureConfig: "json"
     exotelAppIdMapping: "json"
+    cxAgentDetails: text []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
-

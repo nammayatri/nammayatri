@@ -28,6 +28,7 @@ import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
+import qualified IssueManagement.Common as IC
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
@@ -484,15 +485,15 @@ sendUnattendedSosTicketAlert ticketId = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   let maybeAppId = (HM.lookup DRC.UnattendedTicketAppletID . DRC.exotelMap) =<< riderConfig.exotelAppIdMapping
-  mapM_ (sendAlert merchantOperatingCity sos maybeAppId) (fromMaybe [] riderConfig.cxAgentPhoneNumbers)
+  mapM_ (sendAlert merchantOperatingCity sos maybeAppId) (fromMaybe [] riderConfig.cxAgentDetails)
   where
-    sendAlert :: DMOC.MerchantOperatingCity -> DSos.Sos -> Maybe Text -> Text -> Flow ()
-    sendAlert merchantOpCity sos maybeAppId agentPhNumber =
-      fork ("Sending unattended sos ticket alert to agent with phone number" <> show agentPhNumber) $ do
+    sendAlert :: DMOC.MerchantOperatingCity -> DSos.Sos -> Maybe Text -> IC.CxAgentDetails -> Flow ()
+    sendAlert merchantOpCity sos maybeAppId cxAgentDetails =
+      fork ("Sending unattended sos ticket alert to agent with phone number" <> show cxAgentDetails) $ do
         callStatusId <- generateGUID
         let callReq =
               Call.InitiateCallReq
-                { fromPhoneNum = agentPhNumber,
+                { fromPhoneNum = cxAgentDetails.agentMobileNumber,
                   toPhoneNum = Nothing,
                   attachments = Call.Attachments $ DUCall.CallAttachments {callStatusId = callStatusId, rideId = sos.rideId},
                   appletId = maybeAppId
