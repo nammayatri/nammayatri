@@ -79,6 +79,7 @@ executable alchemist-generator-exe
     , template-haskell
     , text
     , time
+    , turtle
     , yaml
   default-language: Haskell2010
   if flag(Local)

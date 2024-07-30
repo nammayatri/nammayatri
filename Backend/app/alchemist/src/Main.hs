@@ -2,49 +2,21 @@
 
 module Main where
 
---import qualified Data.ByteString as BS
-import Data.List (isInfixOf, isSuffixOf)
---import qualified Data.Yaml as Yaml
+import Data.List (dropWhileEnd, isInfixOf, isSuffixOf)
+import Data.Text (unpack)
 import Kernel.Prelude
 import qualified NammaDSL.App as NammaDSL
 import System.Directory
 import System.Environment (getArgs, setEnv)
 import System.FilePath
+import Turtle (ExitCode (..), shellStrict)
 
-findGitRoot :: FilePath -> IO (Maybe FilePath)
-findGitRoot dir = do
-  let gitPath = dir </> ".git"
-  exists <- doesDirectoryExist gitPath
-  if exists
-    then return (Just dir)
-    else
-      let parent = takeDirectory dir
-       in if parent == dir
-            then return Nothing -- No more directories to check
-            else findGitRoot parent
-
--- applyDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
--- applyDirectory dirPath processFile = do
---   exists <- doesDirectoryExist dirPath
---   when exists $ do
---     files <- listDirectory dirPath
---     let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
---     mapM_ (processFile . (dirPath </>)) yamlFiles
-
--- data Apps = DriverApp | RiderApp deriving (Generic, FromJSON, Show)
-
--- data LibraryPaths = LibraryPaths
---   { libPath :: FilePath,
---     usedIn :: [Apps]
---   }
---   deriving (Generic, FromJSON, Show)
-
--- getFilePathsForConfiguredApps :: FilePath -> IO [LibraryPaths]
--- getFilePathsForConfiguredApps rootDir = do
---   contents <- BS.readFile $ rootDir </> "Backend/dslLibs.yaml"
---   case Yaml.decodeEither' contents of
---     Left err -> error $ show err
---     Right yml -> return yml
+findGitRoot :: IO (Maybe FilePath)
+findGitRoot = do
+  (exitStatus, rootpath') <- shellStrict "git rev-parse --show-toplevel" mempty
+  return $ case exitStatus of
+    ExitSuccess -> Just (dropWhileEnd (== '\n') $ unpack rootpath')
+    ExitFailure _ -> Nothing
 
 processSpecFolders :: Bool -> Bool -> FilePath -> IO ()
 processSpecFolders isGenAll insideOfSpecFolder specFolderPath =
@@ -99,22 +71,8 @@ main :: IO ()
 main = do
   putStrLn ("Version " ++ NammaDSL.version)
   generateAllSpecs <- ("--all" `elem`) <$> getArgs
-  currentDir <- getCurrentDirectory
-  maybeGitRoot <- findGitRoot currentDir
+  maybeGitRoot <- findGitRoot
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
   setEnv "GIT_ROOT_PATH" (show rootDir)
   putStrLn' "32" ("Root dir: " ++ rootDir)
   processSpecFolders generateAllSpecs False rootDir
-
--- What about Library apps ? --TODO
--- mapM_
---   ( \libPaths ->
---       mapM_
---         ( \lib -> do
---             let (databaseName, appName) =
---                   case lib of
---                     DriverApp -> (driverAppDatabaseName, driverAppName)
---                     RiderApp -> (riderAppDatabaseName, riderAppDatabaseName)
---             processApp generateAllSpecs databaseName rootDir libPaths.libPath appName
---         )
---         libPaths.usedIn
