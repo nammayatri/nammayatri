@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -130,10 +131,7 @@ insertIntoStream jobs = do
   entryId <- asks (.entryId)
   forM_ jobs $ \job -> fork "putting into stream" $ do
     eqId <- generateGUID
-    let eqIdByteString = TE.encodeUtf8 eqId
-    let job_ = job
-    let fieldValue = [(eqIdByteString, job_)]
-    _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId fieldValue
+    !_ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xAdd streamName entryId [(TE.encodeUtf8 eqId, job)]
     return ()
 
 splitIntoBatches :: Int -> [a] -> [[a]]
