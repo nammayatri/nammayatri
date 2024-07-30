@@ -50,6 +50,8 @@ data TransporterConfigT f = TransporterConfigT
     cancellationDistDiff :: B.C f Kernel.Prelude.Int,
     cancellationFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     cancellationFeeDisputeLimit :: B.C f Kernel.Prelude.Int,
+    cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationRateWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationTimeDiff :: B.C f Kernel.Types.Common.Seconds,
     checkImageExtractionForDashboard :: B.C f Kernel.Prelude.Bool,
     coinConversionRate :: B.C f Kernel.Types.Common.HighPrecMoney,

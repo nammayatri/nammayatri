@@ -187,6 +187,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), ScheduledRideAssignedOnUpda
 import SharedLogic.Booking
 import SharedLogic.Cac
 import SharedLogic.CallBAP (sendDriverOffer, sendRideAssignedUpdateToBAP)
+import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -294,7 +295,11 @@ data DriverInformationRes = DriverInformationRes
     payoutVpaStatus :: Maybe DriverInfo.PayoutVpaStatus,
     isPayoutEnabled :: Maybe Bool,
     payoutRewardAmount :: Maybe HighPrecMoney,
-    payoutVpaBankAccount :: Maybe Text
+    payoutVpaBankAccount :: Maybe Text,
+    cancellationRateInWindow :: Maybe Int,
+    cancelledRidesCountInWindow :: Maybe Int,
+    assignedRidesCountInWindow :: Maybe Int,
+    windowSize :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -970,6 +975,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
   mbVehicle <- QVehicle.findById id
   let vehicleCategory = fromMaybe SV.AUTO_CATEGORY ((.category) =<< mbVehicle)
   mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory
+  cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   bankDetails <-
     if merchant.onlinePayment
       then do
@@ -993,6 +999,10 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
           payoutVpaStatus = payoutVpaStatus,
           payoutRewardAmount = mbPayoutConfig <&> (.referralRewardAmountPerRide),
           payoutVpaBankAccount = payoutVpaBankAccount,
+          cancellationRateInWindow = cancellationRateData.cancellationRate,
+          cancelledRidesCountInWindow = cancellationRateData.cancelledCount,
+          assignedRidesCountInWindow = cancellationRateData.assignedCount,
+          windowSize = cancellationRateData.windowSize,
           ..
         }
 

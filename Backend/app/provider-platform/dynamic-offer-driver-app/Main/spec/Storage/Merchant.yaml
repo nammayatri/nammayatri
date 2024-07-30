@@ -813,6 +813,8 @@ TransporterConfig:
     createDocumentRequired: Maybe Bool
     schedulePayoutForDay : Maybe Integer
     isDeviceIdChecksRequired: Maybe Bool
+    cancellationRateWindow: Maybe Int
+    cancellationRateCalculationThreshold: Maybe Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
