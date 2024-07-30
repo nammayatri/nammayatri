@@ -88,6 +88,7 @@ data DriverCoinsFunctionType
   | DriverReferral
   | TwoRidesCompleted
   | FiveRidesCompleted
+  | TenRidesCompleted
   | EightPlusRidesInOneDay
   | PurpleRideCompleted
   | LeaderBoardTopFiveHundred
