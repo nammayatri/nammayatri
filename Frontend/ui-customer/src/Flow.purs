@@ -1125,6 +1125,8 @@ homeScreenFlow = do
                             , rentalData 
                                 { finalDuration = (fromMaybe 0 resp.duration) / 60
                                 , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
+                                , rideStartedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"
+                                , rideEndedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"
                                 }
                             }
                         , vehicleVariant = ride.vehicleVariant

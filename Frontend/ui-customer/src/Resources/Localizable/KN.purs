@@ -1017,3 +1017,7 @@ getKN stringKey =
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "ಈ ಸವಾರಿಯಲ್ಲಿ ಎಸಿ ಲಭ್ಯವಿಲ್ಲ"
         AC_NOT_WORKING_DESC -> "ಎಸಿ ಕೆಲಸ ಮಾಡುತ್ತಿಲ್ಲ / ಚಾಲಕ ಆನ್ ಮಾಡಲು ನಿರಾಕರಿಸಿದ"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "ಅಂಚೆಗಳು ಅವಧಿ ಮುಗಿದಿದೆ. ಮತ್ತೆ ಹೊಂದಿಕೊಳ್ಳುತ್ತಿದೆ, ದಯವಿಟ್ಟು ಕೆಲವು ಕ್ಷಣಗಳ ಪ್ರತೀಕ್ಷೆ ಮಾಡಿ ಮತ್ತೆ ಪರಿಶೀಲಿಸಿ."
+        CHARGEABLE -> "ಚಾರ್ಜ್ ಮಾಡುವ"
+        BOOKED -> "ಬುಕ್ ಮಾಡಲಾಗಿದೆ"
+        PLACE_A_CALL -> "ಕರೆ ಇಟ್ಟುಕೊಳ್ಳಿ"
+        YOU_CAN_WRITE_TO_US_AT -> "ನೀವು ನಮಗೆ ಬರೆಯಬಹುದು"

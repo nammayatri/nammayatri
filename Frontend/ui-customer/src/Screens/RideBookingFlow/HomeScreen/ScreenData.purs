@@ -301,6 +301,7 @@ initData = {
     , showIntercityUnserviceablePopUp : false
     , showNormalRideNotSchedulablePopUp : false
     , zoneOtpExpired : false
+    , isContactSupportPopUp : false
     }
 }
 
@@ -550,4 +551,6 @@ dummyRentalBookingConfig =
   , finalFare : 0
   , finalDuration : 0
   , finalDistance : 0
+  , rideStartedAt : ""
+  , rideEndedAt : ""
   }

@@ -1015,3 +1015,7 @@ getHI stringKey =
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "इस राइड पर एसी उपलब्ध नहीं है"
         AC_NOT_WORKING_DESC -> "एसी काम नहीं कर रहा / ड्राइवर ने ऑन करने से मना कर दिया"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "अनुमान समाप्त हो गया है। फिर से ले रहे हैं, कृपया कुछ क्षण"
+        CHARGEABLE -> "चार्ज योग्य"
+        BOOKED -> "बुक किया गया"
+        PLACE_A_CALL -> "कॉल करें"
+        YOU_CAN_WRITE_TO_US_AT -> "आप हमें लिख सकते हैं"

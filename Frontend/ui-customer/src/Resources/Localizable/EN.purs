@@ -1014,3 +1014,7 @@ getEN stringKey =
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "AC is not available on this ride"
         AC_NOT_WORKING_DESC -> "AC not working/Driver refused to switch on"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Estimates has been expired. Fetching again, Please wait a moment and check again."
+        CHARGEABLE -> "Chargeable" 
+        BOOKED -> "Booked"
+        PLACE_A_CALL -> "Place a call"
+        YOU_CAN_WRITE_TO_US_AT -> "You can write to us at"

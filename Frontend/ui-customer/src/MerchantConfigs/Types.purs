@@ -237,7 +237,8 @@ type Features = {
   enableSelfServe :: Boolean,
   enableAdditionalServices :: Boolean,
   enableSafetyFlow :: Boolean,
-  shareWithEmergencyContacts :: Boolean
+  shareWithEmergencyContacts :: Boolean,
+  enableHelpAndSupport :: Boolean
   }
 
 type RideCompletedCardConfig = {

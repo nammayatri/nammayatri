@@ -76,6 +76,7 @@ instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
 
 type RentalTextConfig = {
   title :: String,
+  subTitle :: String,
   estimatedValue :: String,
   actualValue :: String,
   color :: String
@@ -284,6 +285,7 @@ type LottieQRAnim = {
 type RentalRowConfig = {
     rideTime :: String
   , rideDistance :: String
+  , rideDistanceInfo :: String
   , rideStartedAt :: String
   , rideEndedAt :: String
   , estimatedFare :: String
@@ -297,6 +299,7 @@ dummyRentalRowConfig :: RentalRowConfig
 dummyRentalRowConfig = {
     rideTime : ""
   , rideDistance : ""
+  , rideDistanceInfo : ""
   , rideStartedAt : ""
   , rideEndedAt : ""
   , estimatedFare : ""
@@ -318,4 +321,6 @@ dummyRentalBookingConfig =
   , finalFare : 0
   , finalDuration : 0
   , finalDistance : 0
+  , rideStartedAt : ""
+  , rideEndedAt : ""
   }

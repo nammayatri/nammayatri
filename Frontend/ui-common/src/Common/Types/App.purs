@@ -467,6 +467,8 @@ type RentalBookingConfig = {
   , estimatedFare :: Int
   , finalFare :: Int
   , nightCharge :: String
+  , rideStartedAt :: String
+  , rideEndedAt :: String
 }
 
 data RideType =

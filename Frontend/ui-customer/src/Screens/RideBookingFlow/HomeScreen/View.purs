@@ -426,6 +426,7 @@ view push state =
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain, ConfirmingQuotes]) then (quoteListModelView push state) else emptyTextView state
             , if (state.props.isCancelRide) then (cancelRidePopUpView push state) else emptyTextView state
+            , if (state.props.isContactSupportPopUp) then contactSupportPopUpView push state else emptyTextView state
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
             , if (state.props.isEstimateChanged) then (estimateChangedPopUp push state) else emptyTextView state
@@ -2892,6 +2893,15 @@ logOutPopUpView push state =
     , accessibility DISABLE
     ]
     [ PopUpModal.view (push <<< PopUpModalAction) (logOutPopUpModelConfig state) ]
+
+contactSupportPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+contactSupportPopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , accessibility DISABLE
+    ]
+    [ PopUpModal.view (push <<< ContactSupportAction) (CommonComponentConfig.contactSupportPopUpConfig state.data.config) ]
 
 favouriteLocationModel :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 favouriteLocationModel push state =

@@ -551,10 +551,14 @@ export const openUrlInApp = function (str) {
 
 export const openUrlInMailApp = function (str) {
   return function (unit) {
-    if (window.JBridge.openUrlInMailApp) {
-      return window.JBridge.openUrlInMailApp(str);
+    if (window.__OS == "IOS") {
+      const payload = btoa(str);
+      if (JBridge.canOpenApp(payload) == "1"){
+        JBridge.openApp(payload)
+      }
+    } else {
+      openUrlInApp(str)();
     }
-
   };
 };
 

@@ -707,11 +707,11 @@ rentalTripDetailsView config push =
       , stroke $ "1,"<> Color.grey900
       , orientation VERTICAL
       ] 
-      [ rentalTripRowView config push RideTime
-      , rentalTripRowView config push RideDistance
+      [--   rentalTripRowView config push RideTime
+      -- , rentalTripRowView config push RideDistance
       -- , separatorView
-      -- , rentalTripRowView config push RideStartedAt
-      -- , rentalTripRowView config push RideEndedAt
+        rentalTripRowView config push RideStartedAt
+      , rentalTripRowView config push RideEndedAt
       ]
     -- , textView $
     --   [ text rentalRowDetails.fareUpdateTitle
@@ -743,13 +743,24 @@ rentalTripRowView config push description =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
-    , margin $ MarginTop if (description == RideTime || description == EstimatedFare) then 0 else 16
+    , margin $ MarginTop if (description == RideTime || description == EstimatedFare || description == RideStartedAt) then 0 else 16
     ] 
-    [ textView $ [
-        text $ textConfig.title
+    [ linearLayout
+      [ height WRAP_CONTENT
       , weight 0.1
+      , orientation VERTICAL 
+      ][  textView $ [
+            text $ textConfig.title
       , gravity LEFT
-      ] <> FontStyle.body1 TypoGraphy
+      , gravity LEFT
+          , gravity LEFT
+          ] <> FontStyle.body1 TypoGraphy
+        , textView $ [
+            text $ textConfig.subTitle
+          , gravity LEFT 
+          , visibility $ boolToVisibility (textConfig.subTitle /= "")
+          ] <> FontStyle.body1 TypoGraphy
+        ]
     , linearLayout [
         height MATCH_PARENT
       , width WRAP_CONTENT
@@ -780,16 +791,17 @@ rentalTripRowView config push description =
             rentalRowDetails = config'.rentalRowDetails
         in
           case description' of
-            RideTime -> mkRentalTextConfig rentalRowDetails.rideTime (" / " <> show rentalBookingData.baseDuration <> "hr") (Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
-            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> "km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
-            RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt (rentalBookingData.startOdometer <> " km") "" Color.black600
-            RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt (rentalBookingData.endOdometer <> " km") "" Color.black600
-            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare ("₹" <> show rentalBookingData.estimatedFare) "" Color.black600
-            ExtraTimePrice -> mkRentalTextConfig rentalRowDetails.extraTimePrice ("₹" <> show (rentalBookingData.finalFare - rentalBookingData.estimatedFare)) "" Color.black600
-            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare ("₹" <> show rentalBookingData.finalFare) "" Color.black600
+            RideTime -> mkRentalTextConfig rentalRowDetails.rideTime "" (" / " <> show rentalBookingData.baseDuration <> "hr") (Utils.formatMinIntoHoursMins rentalBookingData.finalDuration) (showRedOrBlackColor ((rentalBookingData.finalDuration / 60) > rentalBookingData.baseDuration))
+            RideDistance -> mkRentalTextConfig rentalRowDetails.rideDistance rentalRowDetails.rideDistanceInfo (" / " <> show rentalBookingData.baseDistance <> "km") (show rentalBookingData.finalDistance <> " km") (showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance))
+            RideStartedAt -> mkRentalTextConfig rentalRowDetails.rideStartedAt "" rentalBookingData.rideStartedAt "" Color.black600
+            RideEndedAt -> mkRentalTextConfig rentalRowDetails.rideEndedAt "" rentalBookingData.rideEndedAt "" Color.black600
+            EstimatedFare -> mkRentalTextConfig rentalRowDetails.estimatedFare "" ("₹" <> show rentalBookingData.estimatedFare) "" Color.black600
+            ExtraTimePrice -> mkRentalTextConfig rentalRowDetails.extraTimePrice "" ("₹" <> show (rentalBookingData.finalFare - rentalBookingData.estimatedFare)) "" Color.black600
+            TotalFare -> mkRentalTextConfig rentalRowDetails.totalFare "" ("₹" <> show rentalBookingData.finalFare) "" Color.black600
             
-      mkRentalTextConfig :: String -> String -> String -> String -> RentalTextConfig
-      mkRentalTextConfig title' estimatedValue' actualValue' color' = { title: title', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}
+      mkRentalTextConfig :: String -> String -> String -> String -> String -> RentalTextConfig
+      mkRentalTextConfig title' subTitle' estimatedValue' actualValue' color' = { title: title', subTitle: subTitle', estimatedValue: estimatedValue', actualValue: actualValue', color: color'}
+
       showRedOrBlackColor :: Boolean -> String
       showRedOrBlackColor isRed =
         if isRed then Color.red else Color.black900

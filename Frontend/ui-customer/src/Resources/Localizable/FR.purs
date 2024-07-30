@@ -1017,3 +1017,7 @@ getFR stringKey =
         AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "La climatisation n'est pas disponible pour ce trajet"
         AC_NOT_WORKING_DESC -> "Annulation car je veux un trajet avec climatisation"
         ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN -> "Les estimations sont expirées. Récupération à nouveau, veuillez patienter un moment et vérifier à nouveau"
+        CHARGEABLE -> "Facturable"
+        BOOKED -> "Réservé"
+        PLACE_A_CALL -> "Passer un appel"
+        YOU_CAN_WRITE_TO_US_AT -> "Vous pouvez nous écrire à"

@@ -45,6 +45,7 @@ import Styles.Colors as Color
 import Debug (spy)
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import Components.CommonComponentConfig as CommonComponentConfig
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput
 screen initialState =
@@ -60,29 +61,36 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $ linearLayout
-  [ height MATCH_PARENT
+  Anim.screenAnimation $
+ relativeLayout
+ [  height MATCH_PARENT
   , width MATCH_PARENT
-  , orientation VERTICAL
-  , background Color.white900
-  , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-  , onBackPressed push $ const BackPressed
-  , afterRender push $ const AfterRender
-  ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
-  , scrollView
-    [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  ]$[linearLayout
+    [ height MATCH_PARENT
     , width MATCH_PARENT
-    ][ linearLayout
+    , orientation VERTICAL
+    , background Color.white900
+    , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+    , onBackPressed push $ const BackPressed
+    , afterRender push $ const AfterRender
+    ][ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+    , scrollView
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , orientation VERTICAL
-      , padding $ PaddingVertical 16 16
-      , gravity CENTER_VERTICAL
-      ][tripDetailsLayout state push
-      , reportIssueView state push
+      ][ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , padding $ PaddingVertical 16 16
+        , gravity CENTER_VERTICAL
+        ][tripDetailsLayout state push
+        , reportIssueView state push
+        ]
       ]
-    ]
-  ]
+    ] 
+ ]<> (if state.props.isContactSupportPopUp then [PopUpModal.view (push <<< ContactSupportPopUpAction) (CommonComponentConfig.contactSupportPopUpConfig state.data.config)] else [])
+
 
 tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tripDetailsLayout state push =

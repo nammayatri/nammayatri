@@ -87,6 +87,7 @@ confirmLostAndFoundConfig state = let
     }
     in popUpConfig'
 
+
 sourceToDestinationConfig :: ST.TripDetailsScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
   sourceToDestinationConfig' = SourceToDestination.config
