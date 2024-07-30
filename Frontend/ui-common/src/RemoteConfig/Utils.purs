@@ -175,6 +175,7 @@ tipConfigData city variant = do
         "TAXI_PLUS" -> config.taxiPlus
         "BIKE" -> config.bike
         "BOOK_ANY" -> config.bookAny
+        "SUV_PLUS" -> config.suv
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig

@@ -28,7 +28,8 @@ type TipVehicleConfig = {
   autoRickshaw :: TipConfig,
   taxi :: TipConfig,
   taxiPlus :: TipConfig,
-  bike :: TipConfig
+  bike :: TipConfig,
+  suvPlus :: TipConfig
 }
 
 

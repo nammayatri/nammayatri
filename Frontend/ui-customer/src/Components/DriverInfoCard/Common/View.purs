@@ -199,8 +199,12 @@ driverDetailsView config uid nid =
     ]
   where getVehicleType = case getMerchant FunctionCall of
                           YATRISATHI -> case config.vehicleVariant of
-                                          "TAXI" -> getEN NON_AC_TAXI
-                                          "SUV"  -> getEN AC_SUV
+                                          "TAXI" -> "Non-AC Mini"
+                                          "SUV"  -> "XL Cab"
+                                          "SUV_PLUS" -> "XL Plus"
+                                          "SEDAN" -> "Sedan"
+                                          "HATCHBACK" -> "AC Mini"
+                                          "BIKE" -> "Bike Taxi"
                                           _      -> getEN AC_CAB
                           _          -> case config.vehicleVariant of
                                         "TAXI_PLUS" -> (getEN AC_TAXI)
@@ -266,6 +270,7 @@ getVehicleImage variant vehicleDetail city = do
                           "TAXI" -> "ic_white_taxi"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
                           "BIKE" -> "ny_ic_bike_concept"
+                          "SUV_PLUS" -> "ny_ic_suv_plus_concept"
                           _     -> "ny_ic_sedan_concept"
           _          -> case variant of
                           "TAXI"      -> "ny_ic_hatchback_concept"
@@ -276,6 +281,7 @@ getVehicleImage variant vehicleDetail city = do
                           "ECO"       -> "ny_ic_hatchback_concept"
                           "COMFY"     -> "ny_ic_sedan_concept"
                           "BIKE"      -> "ny_ic_bike_concept"
+                          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
                           _           -> "ny_ic_sedan_concept"              
     where 
       mkAutoImage :: City -> String

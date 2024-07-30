@@ -304,12 +304,14 @@ fetchVehicleVariant variant =
     "TAXI"          -> Just ST.TAXI 
     "TAXI_PLUS"     -> Just ST.TAXI_PLUS
     "BIKE"          -> Just ST.BIKE
+    "SUV_PLUS"      -> Just ST.SUV_PLUS
     _               -> Nothing
 
 getVehicleCapacity :: String -> String 
 getVehicleCapacity variant = 
   case fetchVehicleVariant variant of
     Just ST.SUV -> "6" 
+    Just ST.SUV_PLUS -> "6"
     Just ST.AUTO_RICKSHAW -> "3"
     Just ST.BIKE -> "1"
     _ -> "4"

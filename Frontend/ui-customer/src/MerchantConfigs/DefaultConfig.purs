@@ -175,7 +175,7 @@ config =
       }
   , estimateAndQuoteConfig : 
       { variantTypes : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["TAXI"]]
-      , variantOrder : ["BIKE", "HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "AUTO_RICKSHAW"]
+      , variantOrder : ["BIKE", "HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "SUV_PLUS", "AUTO_RICKSHAW"]
       , variantInfo : {
         hatchback : {
           name : "Hatchback",
@@ -216,6 +216,11 @@ config =
           name : "Bike",
           image : "ny_ic_bike_right_side,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_bike_right_side.png",
           leftViewImage : "ny_ic_bike_side,"
+        },
+        suvPlus : {
+          name: "XL Plus",
+          image: "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
+          leftViewImage: "ny_ic_suv_plus_left_side,"
         }
       }
       , enableOnlyAuto : false

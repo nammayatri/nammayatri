@@ -741,6 +741,8 @@
       "ny_ic_auto_side_view" : true,
       "ny_ic_auto_side" : true,
       "ys_ic_asansol_map" : true,
-      "ny_ic_black_yellow_auto1" : true
+      "ny_ic_black_yellow_auto1" : true,
+      "ny_ic_suv_plus_side" : true,
+      "ny_ic_suv_plus_left_side" : true
    }
 }
