@@ -127,6 +127,7 @@ library
     , http-client-tls
     , http-conduit
     , http-types
+    , json-logic-hs
     , lens
     , lens-aeson
     , mobility-core
@@ -246,6 +247,7 @@ executable yudhishthira-exe
     , http-client-tls
     , http-conduit
     , http-types
+    , json-logic-hs
     , lens
     , lens-aeson
     , mobility-core

@@ -52,6 +52,7 @@
           streamly.source = "0.8.3";
           unicode-data.source = "0.3.1";
           namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
+          json-logic-hs.source = inputs.json-logic-hs;
         };
         settings = {
           alchemist.custom = cacConfig;
