@@ -15,6 +15,7 @@ castVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.Variant
 castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVariant) of
   (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
   (Just "CAB", Just "SUV") -> Just VehVar.SUV
+  (Just "CAB", Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
   (Just "CAB", Just "HATCHBACK") -> Just VehVar.HATCHBACK
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
   (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
