@@ -372,6 +372,7 @@ rentalPreferenceView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
+    , visibility $ MP.boolToVisibility $ filterRentalAndIntercityVariants state && state.props.canSwitchToRental
     ][serviceTierItem state push item state.props.canSwitchToRental false (-1)]
   where 
     item :: ST.RidePreference
@@ -382,7 +383,7 @@ intercityPreferenceView push state = do
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , visibility $ MP.boolToVisibility $ (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory && isJust state.props.canSwitchToInterCity
+    , visibility $ MP.boolToVisibility $ filterRentalAndIntercityVariants state && isJust state.props.canSwitchToInterCity
     ][serviceTierItem state push item (fromMaybe false state.props.canSwitchToInterCity) false (-1)]
   where 
     item :: ST.RidePreference
@@ -644,3 +645,14 @@ rateCardBannerView push state =
         bgColor = if peakTime then Color.green900 else Color.blue800
         cornerRad = if peakTime then 8.0 else 24.0
         txt = if peakTime then "↑  Peak" else CP.getCurrency CS.appConfig
+
+-- Temporary fix : until backend is able to move canSwitchToRental and canSwitchToInterCity from transporterConfig level to variant level
+filterRentalAndIntercityVariants :: ST.BookingOptionsScreenState -> Boolean 
+filterRentalAndIntercityVariants _state =
+  case RC.getCategoryFromVariant $ getValueToLocalStore VEHICLE_VARIANT of
+    Just ST.CarCategory -> true
+    Just ST.BikeCategory -> false
+    Just ST.AutoCategory -> false
+    Just ST.AmbulanceCategory -> false
+    Just ST.UnKnown -> false
+    Nothing -> false

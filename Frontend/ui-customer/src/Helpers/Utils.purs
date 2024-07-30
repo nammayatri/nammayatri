@@ -677,6 +677,7 @@ getVehicleVariantImage variant viewType =
                                       Kolkata -> variantConfig.bookAny.leftViewImage
                                       _ -> variantConfig.bookAny.leftViewImage
           "BIKE"          -> variantConfig.bike.leftViewImage
+          "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_left_side"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -703,6 +704,7 @@ getVehicleVariantImage variant viewType =
                                       Delhi -> variantConfig.bookAny.image
                                       _ -> variantConfig.bookAny.image
           "BIKE"          -> variantConfig.bike.image
+          "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_side"
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -724,6 +726,7 @@ getTitleConfig vehicleVariant =
         "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
         "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
+        "SUV_PLUS" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800
         _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
   where mkReturnObj text' color' = 
           {
@@ -792,7 +795,7 @@ getCancellationImage vehicleVariant distance =
     "AUTO_RICKSHAW" -> getAutoRickshawNearImage
     "BIKE" -> "ny_ic_driver_near_bike"
     "AMBULANCE" -> "ny_ic_driver_near_ambulance"
-    _ -> "ny_ic_driver_near"
+    _ -> "ny_ic_driver_started"
   else case vehicleVariant of
     "AUTO_RICKSHAW" -> getAutoRickshawStartedImage
     "BIKE" -> "ny_ic_driver_started_bike"
@@ -1106,6 +1109,7 @@ getCitySpecificMarker city variant currentStage =
         "SUV"           -> "ny_ic_suv_nav_on_map"
         "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
         "BIKE"          -> if currentStage == Just RideStarted then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
+        "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
         _               -> "ny_ic_vehicle_nav_on_map"
 
 mkDestMarker :: TrackingType -> FareProductType -> String

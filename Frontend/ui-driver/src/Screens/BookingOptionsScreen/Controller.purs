@@ -163,6 +163,7 @@ getVehicleCapacity vehicleType = case vehicleType of
   "AMBULANCE_AC" -> "Ambulance AC" <> " · " <> "4 " <> getString PEOPLE
   "AMBULANCE_AC_OXY" -> "Ambulance AC Oxy" <> " · " <> "4 " <> getString PEOPLE
   "AMBULANCE_VENTILATOR" -> "Ambulance Ventilator" <> " · " <> "4 " <> getString PEOPLE
+  "SUV_PLUS" -> "AC, " <> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
   _ -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
 
 dummyVehicleP :: VehicleP

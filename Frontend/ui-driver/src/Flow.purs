@@ -1768,7 +1768,7 @@ bookingOptionsFlow = do
            , vehicleType = HU.getVehicleMapping defaultRide.serviceTierType
            , vehicleName = defaultRide.name
            , ridePreferences = ridePreferences'
-           , defaultRidePreference = defaultRide 
+           , defaultRidePreference = defaultRide
           }, 
      props {
              canSwitchToRental = canSwitchToRental',
