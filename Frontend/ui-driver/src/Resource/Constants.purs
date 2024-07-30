@@ -244,7 +244,6 @@ getCategoryFromVariant variant = case variant of
   "AMBULANCE_AC" -> Just ST.AmbulanceCategory 
   "AMBULANCE_AC_OXY" -> Just ST.AmbulanceCategory
   "AMBULANCE_VENTILATOR" -> Just ST.AmbulanceCategory
-
   _ -> Just ST.CarCategory
 
 rideMoreEarnMorePopupStartTime :: String

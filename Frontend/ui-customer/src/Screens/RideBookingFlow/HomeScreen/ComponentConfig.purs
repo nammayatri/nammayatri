@@ -996,6 +996,7 @@ getVehicleTitle vehicle =
       "SEDAN" -> (getString SEDAN)
       "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
       "BIKE" -> "Bike Taxi"
+      "SUV_PLUS" -> "XL Plus"
       _ -> ""
   )
     <> " - "

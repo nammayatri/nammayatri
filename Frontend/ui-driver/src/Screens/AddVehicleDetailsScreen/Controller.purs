@@ -325,7 +325,8 @@ eval (SelectVehicleTypeModalAction (SelectVehicleTypeModal.OnSelect item)) state
                         Ambulance_Taxi_Oxy -> "Ambulance_Taxi_Oxy"
                         Ambulance_AC -> "Ambulance_AC"
                         Ambulance_AC_Oxy -> "Ambulance_AC_Oxy"
-                        Ambulance_Ventilator -> "Ambulance_Ventilator")
+                        Ambulance_Ventilator -> "Ambulance_Ventilator"
+                        Suv_Plus  -> "SUV_PLUS")
       }
     }
 

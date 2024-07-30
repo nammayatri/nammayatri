@@ -667,6 +667,10 @@
       "widget_close_gradient" : true,
       "zone_curve" : true,
       "ny_ic_location_permission_logo" : true,
-      "ys_ic_driver_message" : true
+      "ys_ic_driver_message" : true,
+      "ny_ic_suv_plus_side" : true,
+      "ny_ic_suv_plus_left_side" : true,
+      "ny_ic_suv_plus_concept" : true,
+      "ny_ic_suv_plus_nav_on_map" : true
    }
 }

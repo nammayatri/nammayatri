@@ -295,6 +295,7 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "AMBULANCE_AC" -> []
                                                 "AMBULANCE_AC_OXY" -> []
                                                 "AMBULANCE_VENTILATOR" -> []
+                                                "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
@@ -305,6 +306,7 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                         "AMBULANCE_AC" -> []
                                         "AMBULANCE_AC_OXY" -> []
                                         "AMBULANCE_VENTILATOR" -> []
+                                        "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
                                         _       -> []
 
 
@@ -336,6 +338,7 @@ getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "AMBULANCE_AC" -> []
                                                 "AMBULANCE_AC_OXY" -> []
                                                 "AMBULANCE_VENTILATOR" -> []
+                                                "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
                                                 _       -> []
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
@@ -346,6 +349,7 @@ getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                         "AMBULANCE_AC" -> []
                                         "AMBULANCE_AC_OXY" -> []
                                         "AMBULANCE_VENTILATOR" -> []
+                                        "SUV_PLUS" -> ["SUV", "SEDAN", "HATCHBACK"]
                                         _       -> []
   
 getVehicleType :: String -> String
@@ -363,6 +367,7 @@ getVehicleType vehicleType =
     "AMBULANCE_AC" -> getString AC <> "\x00B7" <> getString NO_OXYGEN
     "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
     "AMBULANCE_VENTILATOR" -> getString VENTILATOR
+    "SUV_PLUS" -> "XL Plus" -- getString XL_PLUS
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -560,6 +565,7 @@ getCategorizedVariant variant = case variant of
                 "AMBULANCE_AC" -> "Ambulance_AC" 
                 "AMBULANCE_AC_OXY" -> "Ambulance_AC_Oxy"
                 "AMBULANCE_VENTILATOR" -> "Ambulance_Ventilator"
+                "SUV_PLUS" -> "XL Plus"
                 _ -> var
   Nothing -> ""
 
@@ -594,34 +600,36 @@ getVehicleVariantImage variant =
   let url = getAssetLink FunctionCall
       commonUrl = getCommonAssetLink FunctionCall
   in case variant of
-                        "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-                        "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-                        "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
-                        "SUV_TIER"  -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
-                        "HATCHBACK" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
-                        "HATCHBACK_TIER" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
-                        "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
-                        "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
-                        "TAXI"      -> "ic_taxi," <> commonUrl <> "ic_taxi.png"
-                        "PREMIUM"   -> "ic_cab_premium" <> commonUrl <> "ic_cab_premium.png"
-                        "TAXI_PLUS" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-                        "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
-                        "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-                        "AUTO_RICKSHAW" -> 
-                          case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
-                            "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-                            "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-                            "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-                            "Asansol"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
-                            _           -> fetchImage FF_ASSET "ic_vehicle_front"
-                        "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-                        "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-                        "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-                        _ -> fetchImage FF_ASSET "ic_vehicle_front"
+      "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+      "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+      "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
+      "SUV_TIER"  -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
+      "HATCHBACK" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+      "HATCHBACK_TIER" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+      "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
+      "INTERCITY" -> "ic_intercity," <> commonUrl <> "ic_intercity.png"
+      "TAXI"      -> "ic_taxi," <> commonUrl <> "ic_taxi.png"
+      "PREMIUM"   -> "ic_cab_premium" <> commonUrl <> "ic_cab_premium.png"
+      "TAXI_PLUS" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+      "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
+      "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
+      "AUTO_RICKSHAW" -> 
+        case (getValueFromCache (show DRIVER_LOCATION) getKeyInSharedPrefKeys) of
+          "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+          "Chennai"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+          "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+          "Asansol"   -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
+          _           -> fetchImage FF_ASSET "ic_vehicle_front"
+      "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+      "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+      "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+      "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+      "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+      "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+      "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
+      "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
+      "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
+      _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 getVariantRideType :: String -> String
 getVariantRideType variant =
@@ -1006,6 +1014,7 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+  SA.SUV_PLUS_TIER -> "SUV_PLUS"
 
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =
