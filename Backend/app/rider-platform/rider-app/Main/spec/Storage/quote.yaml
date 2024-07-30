@@ -16,6 +16,7 @@ imports:
   parseBaseUrl: Kernel.Prelude
   TripTerms: Domain.Types.TripTerms
   SearchRequest: Domain.Types.SearchRequest
+  QuoteBreakup: Domain.Types.QuoteBreakup
   FareProductType: Domain.Types.FarePolicy.FareProductType
   Currency: Kernel.Types.Common
   showBaseUrl: Kernel.Prelude
@@ -90,6 +91,7 @@ Quote:
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
     tollChargesInfo: Maybe TollChargesInfo
+    quoteBreakupList : "[QuoteBreakup]"
     createdAt : UTCTime
     updatedAt : UTCTime
     validTill : UTCTime
@@ -120,6 +122,7 @@ Quote:
       tollChargesInfo:
         tollCharges : Maybe HighPrecMoney
         tollNames : Maybe [Text]
+      quoteBreakupList: {}
 
   beamType:
     estimatedFare : HighPrecMoney
@@ -140,6 +143,7 @@ Quote:
     providerUrl: parseBaseUrl|MI
     tripTerms: getTripTerms|M
     tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
+    quoteBreakupList: Storage.Queries.QuoteBreakup.findAllByQuoteIdT id|EM
     quoteDetails: (Storage.Queries.Transformers.Quote.getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)|EM
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
     merchantOperatingCityId: (backfillMOCId merchantOperatingCityId merchantId)|EM

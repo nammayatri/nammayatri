@@ -24,6 +24,7 @@ module Domain.Action.Beckn.OnSearch
     OneWaySpecialZoneQuoteDetails (..),
     InterCityQuoteDetails (..),
     RentalQuoteDetails (..),
+    QuoteBreakupInfo (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
     NightShiftInfo (..),
@@ -38,8 +39,10 @@ import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -143,6 +146,11 @@ data EstimateBreakupInfo = EstimateBreakupInfo
     price :: BreakupPriceInfo
   }
 
+data QuoteBreakupInfo = QuoteBreakupInfo
+  { title :: Text,
+    price :: BreakupPriceInfo
+  }
+
 newtype BreakupPriceInfo = BreakupPriceInfo
   { value :: Price
   }
@@ -167,7 +175,8 @@ data QuoteInfo = QuoteInfo
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
-    specialLocationName :: Maybe Text
+    specialLocationName :: Maybe Text,
+    quoteBreakupList :: [QuoteBreakupInfo]
   }
 
 data QuoteDetails
@@ -369,6 +378,7 @@ buildQuote ::
 buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
+  quoteBreakupList' <- buildQuoteBreakUp quoteBreakupList uid searchRequest.merchantId searchRequest.merchantOperatingCityId
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
       pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails searchRequest.distanceUnit oneWayDetails
@@ -395,6 +405,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         clientConfigVersion = searchRequest.clientConfigVersion,
         backendConfigVersion = searchRequest.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+        quoteBreakupList = quoteBreakupList',
         tollChargesInfo =
           tollChargesInfo <&> \tollChargesInfo' ->
             DQuote.TollChargesInfo
@@ -489,3 +500,28 @@ mkEstimatePrice ::
   BreakupPriceInfo ->
   m DEstimate.EstimateBreakupPrice
 mkEstimatePrice BreakupPriceInfo {value} = pure DEstimate.EstimateBreakupPrice {value}
+
+buildQuoteBreakUp ::
+  MonadFlow m =>
+  [QuoteBreakupInfo] ->
+  Id DQuote.Quote ->
+  Id DMerchant.Merchant ->
+  Id DMerchantOperatingCity.MerchantOperatingCity ->
+  m [DQuoteBreakup.QuoteBreakup]
+buildQuoteBreakUp quotesItems quoteId merchantId merchantOperatingCityId =
+  quotesItems
+    `for` \quoteItem -> do
+      id <- generateGUID
+      now <- getCurrentTime
+      pure
+        DQuoteBreakup.QuoteBreakup
+          { id = id,
+            quoteId = quoteId.getId,
+            title = quoteItem.title,
+            price = quoteItem.price.value,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
