@@ -27,6 +27,7 @@ import Domain.Types.Person
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Kernel.External.Payment.Stripe.Types as Payment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
@@ -39,6 +40,7 @@ data RiderJobType
   | CallPoliceApi
   | CheckExotelCallStatusAndNotifyBPP
   | OtherJobTypes
+  | CapturePaymentIntent
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -95,6 +97,17 @@ data CheckExotelCallStatusAndNotifyBPPJobData = CheckExotelCallStatusAndNotifyBP
 instance JobInfoProcessor 'CheckExotelCallStatusAndNotifyBPP
 
 type instance JobContent 'CheckExotelCallStatusAndNotifyBPP = CheckExotelCallStatusAndNotifyBPPJobData
+
+data CapturePaymentIntentJobData = CapturePaymentIntentJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOpCityId :: Id DMOC.MerchantOperatingCity,
+    paymentIntentId :: Payment.PaymentIntentId
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CapturePaymentIntent
+
+type instance JobContent 'CapturePaymentIntent = CapturePaymentIntentJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,

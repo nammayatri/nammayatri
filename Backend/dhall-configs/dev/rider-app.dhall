@@ -184,6 +184,7 @@ let RiderJobType =
       | CallPoliceApi
       | CheckExotelCallStatusAndNotifyBPP
       | OtherJobTypes
+      | CapturePaymentIntent
       >
 
 let jobInfoMapx =
@@ -197,6 +198,7 @@ let jobInfoMapx =
         , mapValue = False
         }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
+      , { mapKey = RiderJobType.CapturePaymentIntent, mapValue = False }
       ]
 
 let cacConfig =

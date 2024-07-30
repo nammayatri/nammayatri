@@ -294,6 +294,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         ..
       }
 
+--
 rideAssignedReqHandler ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     HasField "storeRidesTimeLimit" r Int,
@@ -361,6 +362,7 @@ rideAssignedReqHandler req = do
       ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount
       let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
       let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams
+      --
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
@@ -458,6 +460,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
           logInfo "Merchant not configured to send dashboard sms"
           pure ()
 
+--
 rideCompletedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,

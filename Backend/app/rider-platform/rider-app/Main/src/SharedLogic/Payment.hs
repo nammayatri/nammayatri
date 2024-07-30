@@ -47,6 +47,7 @@ makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentR
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
   DPayment.createPaymentIntentService commonMerchantId commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
 
+-- Capture call that I have to do in the job
 chargePaymentIntent ::
   ( MonadFlow m,
     EncFlow m r,

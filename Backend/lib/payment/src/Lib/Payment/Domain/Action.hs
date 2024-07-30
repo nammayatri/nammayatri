@@ -266,6 +266,7 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
             updatedAt = now
           }
 
+--
 chargePaymentIntentService ::
   forall m r c.
   ( EncFlow m r,

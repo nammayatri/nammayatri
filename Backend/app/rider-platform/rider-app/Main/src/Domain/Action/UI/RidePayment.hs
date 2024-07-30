@@ -151,6 +151,7 @@ deletePaymentMethodsDelete (mbPersonId, _) paymentMethodId = do
   Payment.deleteCard person.merchantId person.merchantOperatingCityId paymentMethodId
   return Success
 
+--
 postPaymentAddTip ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
