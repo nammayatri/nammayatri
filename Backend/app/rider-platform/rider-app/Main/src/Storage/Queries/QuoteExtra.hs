@@ -15,6 +15,7 @@ import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.OrphanInstances.Quote ()
+import qualified Storage.Queries.QuoteBreakup as QQB
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
 import qualified Storage.Queries.TripTerms as QTT
@@ -36,6 +37,7 @@ createQuote' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Quote -> m ()
 createQuote' quote = do
   traverse_ QTT.create (quote.tripTerms)
   _ <- createDetails (quote.quoteDetails)
+  QQB.createMany quote.quoteBreakupList
   createQuote quote
 
 createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Quote] -> m ()

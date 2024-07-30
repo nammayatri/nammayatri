@@ -11,6 +11,7 @@ import qualified Domain.Types.DriverOffer
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.QuoteBreakup
 import qualified Domain.Types.RentalDetails
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SpecialZoneQuote
@@ -44,6 +45,7 @@ data Quote = Quote
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     providerId :: Kernel.Prelude.Text,
     providerUrl :: Kernel.Types.Common.BaseUrl,
+    quoteBreakupList :: [Domain.Types.QuoteBreakup.QuoteBreakup],
     quoteDetails :: Domain.Types.Quote.QuoteDetails,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -58,7 +60,7 @@ data Quote = Quote
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.VehicleServiceTier.VehicleServiceTierType
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   { distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters,
@@ -90,4 +92,4 @@ data QuoteDetails
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   deriving (Generic, Show)
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))

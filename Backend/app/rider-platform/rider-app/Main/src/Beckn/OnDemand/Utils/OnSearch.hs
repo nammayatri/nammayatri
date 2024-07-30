@@ -143,6 +143,12 @@ getTotalFareRange item currency = do
     getPriceField :: (Spec.Price -> Maybe Text) -> (Spec.Price -> Maybe Text) -> Spec.Price -> Maybe Text
     getPriceField f1 f2 price = f1 price <|> f2 price
 
+buildQuoteBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.QuoteBreakupInfo]
+buildQuoteBreakupList item currency = do
+  let tagListRateCard = getTagListRateCardFromItem item
+      breakups = maybe [] (map (buildQuoteBreakUpItem currency)) tagListRateCard
+  return (catMaybes breakups)
+
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> Currency -> m [OnSearch.EstimateBreakupInfo]
 buildEstimateBreakupList item currency = do
   let tagListRateCard = getTagListRateCardFromItem item
@@ -167,6 +173,18 @@ buildEstimateBreakUpItem currency tag = do
   (title, value) <- getDetailsFromTag tag currency
   pure
     OnSearch.EstimateBreakupInfo
+      { title = title,
+        price = OnSearch.BreakupPriceInfo {..}
+      }
+
+buildQuoteBreakUpItem ::
+  Currency ->
+  Spec.Tag ->
+  Maybe OnSearch.QuoteBreakupInfo
+buildQuoteBreakUpItem currency tag = do
+  (title, value) <- getDetailsFromTag tag currency
+  pure
+    OnSearch.QuoteBreakupInfo
       { title = title,
         price = OnSearch.BreakupPriceInfo {..}
       }
