@@ -240,3 +240,14 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_status_c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cached_devices_os_for_search_request text[]  default '{}';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_window integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_calculation_threshold integer ;

@@ -55,6 +55,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     cancellationDistDiff :: Kernel.Prelude.Int,
     cancellationFee :: Kernel.Types.Common.HighPrecMoney,
     cancellationFeeDisputeLimit :: Kernel.Prelude.Int,
+    cancellationRateCalculationThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cancellationRateWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationTimeDiff :: Kernel.Prelude.NominalDiffTime,
     checkImageExtractionForDashboard :: Kernel.Prelude.Bool,
     coinConversionRate :: Kernel.Types.Common.HighPrecMoney,
