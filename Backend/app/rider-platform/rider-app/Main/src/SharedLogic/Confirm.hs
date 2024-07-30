@@ -162,7 +162,6 @@ confirm DConfirmReq {..} = do
   void $ QRideB.createBooking booking
   void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails)}
   void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
-  QPFS.clearCache searchRequest.riderId
   return $
     DConfirmRes
       { booking,
