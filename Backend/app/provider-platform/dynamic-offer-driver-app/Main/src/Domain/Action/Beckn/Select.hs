@@ -24,6 +24,7 @@ import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import Kernel.Prelude
@@ -50,7 +51,9 @@ data DSelectReq = DSelectReq
     autoAssignEnabled :: Bool,
     customerExtraFee :: Maybe HighPrecMoney,
     customerPhoneNum :: Maybe Text,
-    isAdvancedBookingEnabled :: Bool
+    isAdvancedBookingEnabled :: Bool,
+    isMultipleOrNoDeviceIdExist :: Maybe Bool,
+    toUpdateDeviceIdInfo :: Bool
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
@@ -62,6 +65,9 @@ handler merchant sReq searchReq estimates = do
       (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
       when isNewRider $ QRD.create riderDetails
       QSR.updateRiderId searchReq.id riderDetails.id
+      when sReq.toUpdateDeviceIdInfo do
+        let mbFlag = mbGetPayoutFlag sReq.isMultipleOrNoDeviceIdExist
+        when (riderDetails.payoutFlagReason /= mbFlag) $ QRD.updateFlagReasonAndIsDeviceIdExists mbFlag (Just $ isJust sReq.isMultipleOrNoDeviceIdExist) riderDetails.id
     Nothing -> do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
   when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
@@ -85,6 +91,8 @@ handler merchant sReq searchReq estimates = do
             isRepeatSearch = False
           }
   initiateDriverSearchBatch driverSearchBatchInput
+  where
+    mbGetPayoutFlag isMultipleOrNoDeviceIdExist = maybe Nothing (\val -> if val then (Just DRD.MultipleDeviceIdExists) else Nothing) isMultipleOrNoDeviceIdExist
 
 validateRequest :: Id DM.Merchant -> DSelectReq -> Flow (DM.Merchant, DSR.SearchRequest, [DEst.Estimate])
 validateRequest merchantId sReq = do

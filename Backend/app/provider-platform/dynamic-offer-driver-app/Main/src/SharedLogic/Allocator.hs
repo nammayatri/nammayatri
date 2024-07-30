@@ -219,7 +219,8 @@ data DriverReferralPayoutJobData = DriverReferralPayoutJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     toScheduleNextPayout :: Bool,
-    statusForRetry :: DS.PayoutStatus
+    statusForRetry :: DS.PayoutStatus,
+    schedulePayoutForDay :: Maybe Integer
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

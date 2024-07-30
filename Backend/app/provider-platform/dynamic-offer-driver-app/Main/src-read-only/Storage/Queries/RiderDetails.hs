@@ -54,12 +54,24 @@ updateFirstRideIdAndFlagReason firstRideId payoutFlagReason id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.firstRideId firstRideId, Se.Set Beam.payoutFlagReason payoutFlagReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateFlagReasonAndIsDeviceIdExists ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateFlagReasonAndIsDeviceIdExists payoutFlagReason isDeviceIdExists id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.payoutFlagReason payoutFlagReason, Se.Set Beam.isDeviceIdExists isDeviceIdExists, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateHasTakenValidRide ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateHasTakenValidRide hasTakenValidRide hasTakenValidRideAt id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.hasTakenValidRide hasTakenValidRide, Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateIsDeviceIdExists :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateIsDeviceIdExists isDeviceIdExists id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isDeviceIdExists isDeviceIdExists, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateNightSafetyChecks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateNightSafetyChecks nightSafetyChecks id = do
@@ -83,6 +95,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.firstRideId firstRideId,
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt,
+      Se.Set Beam.isDeviceIdExists isDeviceIdExists,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.mobileCountryCode mobileCountryCode,
       Se.Set Beam.mobileNumberEncrypted (mobileNumber & unEncrypted . encrypted),
