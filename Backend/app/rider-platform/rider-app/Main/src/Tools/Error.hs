@@ -604,6 +604,7 @@ data SafetyError
   | CallSidNullError
   | CallRecordNotFoundError Text
   | RideIdEmptyInCallRecord Text
+  | PoliceCallNotAllowed Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SafetyError
@@ -614,6 +615,7 @@ instance IsBaseError SafetyError where
     CallSidNullError -> Just "CallSid not found in IVR response from Exotel."
     CallRecordNotFoundError sid -> Just $ "Call Record not found in DB against callSid : " <> show sid
     RideIdEmptyInCallRecord sid -> Just $ "RideId is empty in Call Record against callSid : " <> show sid
+    PoliceCallNotAllowed personId -> Just $ "Police call not allowed by personId : " <> show personId
 
 instance IsHTTPError SafetyError where
   toErrorCode = \case
@@ -621,10 +623,12 @@ instance IsHTTPError SafetyError where
     CallSidNullError -> "CALL_SID_NULL_ERROR"
     CallRecordNotFoundError _ -> "CALL_RECORD_NOT_FOUND_ERROR"
     RideIdEmptyInCallRecord _ -> "RIDE_ID_EMPTY_IN_CALL_RECORD"
+    PoliceCallNotAllowed _ -> "POLICE_CALL_NOT_ALLOWED"
   toHttpCode = \case
     IncidentReportServiceUnavailable _ -> E400
     CallSidNullError -> E500
     CallRecordNotFoundError _ -> E500
     RideIdEmptyInCallRecord _ -> E500
+    PoliceCallNotAllowed _ -> E400
 
 instance IsAPIError SafetyError

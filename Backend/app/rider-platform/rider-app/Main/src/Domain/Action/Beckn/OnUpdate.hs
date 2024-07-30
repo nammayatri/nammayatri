@@ -411,15 +411,17 @@ onUpdate = \case
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
     riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-    if riderConfig.incidentReportSupport
-      then do
-        logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
-        maxShards <- asks (.maxShards)
-        let scheduleAfter = riderConfig.ivrTriggerDelay
-            safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
-        logDebug $ "Exotel Safety alert scheduleAfter : " <> show scheduleAfter
-        createJobIn @_ @'SafetyIVR scheduleAfter maxShards (safetyIvrJobData :: SafetyIVRJobData)
-      else logError $ "Incident Report Service not available for merchantOperatingCityId : " <> show merchantOperatingCityId
+    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+    when person.informPoliceSos $ do
+      if riderConfig.incidentReportSupport
+        then do
+          logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
+          maxShards <- asks (.maxShards)
+          let scheduleAfter = riderConfig.ivrTriggerDelay
+              safetyIvrJobData = SafetyIVRJobData {rideId = ride.id, personId = booking.riderId}
+          logDebug $ "Exotel Safety alert scheduleAfter : " <> show scheduleAfter
+          createJobIn @_ @'SafetyIVR scheduleAfter maxShards (safetyIvrJobData :: SafetyIVRJobData)
+        else logError $ "Incident Report Service not available for merchantOperatingCityId : " <> show merchantOperatingCityId
     Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
     QRB.updateStop booking Nothing

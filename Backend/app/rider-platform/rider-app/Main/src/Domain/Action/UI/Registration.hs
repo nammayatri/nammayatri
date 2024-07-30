@@ -440,7 +440,8 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         customerPaymentId = Nothing,
         defaultPaymentMethodId = Nothing,
         enableOtpLessRide = req.enableOtpLessRide,
-        totalRidesCount = Nothing
+        totalRidesCount = Nothing,
+        informPoliceSos = False
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing

@@ -98,6 +98,7 @@ Person:
     defaultPaymentMethodId: Maybe PaymentMethodId
     enableOtpLessRide : Maybe Bool
     deviceId : Maybe Text
+    informPoliceSos : Bool
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
@@ -137,7 +138,7 @@ Person:
     clientOsVersion: Maybe Text
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
-
+    informPoliceSos: Maybe Bool
 
   fromTType:
     merchantOperatingCityId: Kernel.Prelude.fst updateMerchantOpIdAndCity|E
@@ -152,7 +153,7 @@ Person:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
-
+    informPoliceSos : fromMaybe False informPoliceSos|E
 
   toTType:
     blockedAt: (Data.Time.utcToLocalTime Data.Time.utc <$> blockedAt)|E
@@ -171,6 +172,7 @@ Person:
     clientOsType:  (clientDevice <&> (.deviceType))|E
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    informPoliceSos: Just informPoliceSos|E
 
   constraints:
     id: PrimaryKey

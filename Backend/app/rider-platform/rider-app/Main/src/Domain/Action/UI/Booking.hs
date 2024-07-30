@@ -40,7 +40,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, pack)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong)
@@ -83,9 +83,10 @@ newtype FavouriteBookingListRes = FavouriteBookingListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
-bookingStatus bookingId _ = do
+bookingStatus bookingId (personId, _merchantId) = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
+  fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
   logInfo $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
   SRB.buildBookingAPIEntity booking booking.riderId
@@ -256,3 +257,14 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
         updatedAt = now,
         ..
       }
+
+emergencyContactSOSCache :: SRB.Booking -> Id Person.Person -> Flow ()
+emergencyContactSOSCache booking personId = do
+  logDebug "Creating cache for emergency contact SOS"
+  ride <- runInReplica $ QR.findActiveByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
+  now <- getCurrentTime
+  let hashKey = makeEmergencyContactSOSCacheKey ride.id
+  Hedis.hSetExp hashKey personId.getId now 86400 -- exp is 24 hours currently
+
+makeEmergencyContactSOSCacheKey :: Id DTR.Ride -> Text
+makeEmergencyContactSOSCacheKey rideId = "emergencyContactSOS:" <> rideId.getId

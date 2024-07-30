@@ -5,23 +5,27 @@ module Domain.Action.UI.FollowRide where
 
 import API.Types.UI.FollowRide
 import Data.OpenApi (ToSchema)
-import Data.Text (unwords)
+import Data.Text (unpack, unwords)
 import Data.Time hiding (secondsToNominalDiffTime)
+import Data.Time.Format
+import qualified Domain.Action.UI.Booking as DAB
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as PDEN
 import Domain.Action.UI.Profile as DAP
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonDefaultEmergencyNumber as PDEN
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import Environment
 import qualified Environment
-import EulerHS.Prelude hiding (elem, id, unwords)
+import EulerHS.Prelude hiding (elem, id, unpack, unwords)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude hiding (mapM_, unwords)
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -36,6 +40,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as Booking
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as PDEN
+import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 import Tools.Error
 import Tools.Notifications
@@ -99,3 +104,11 @@ updateFollowDetails :: Person.Person -> PDEN.PersonDefaultEmergencyNumberAPIEnti
 updateFollowDetails contactPersonEntity PDEN.PersonDefaultEmergencyNumberAPIEntity {..} = do
   void $ CQFollowRide.updateFollowRideList contactPersonEntity.id personId True
   QPerson.updateFollowsRide True contactPersonEntity.id
+
+getFollowRideECStatus :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow EmergencyContactsStatusRes
+getFollowRideECStatus (mbPersonId, _merchantId) rideId = do
+  _personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  let hashKey = DAB.makeEmergencyContactSOSCacheKey ride.id
+  keyValues <- Kernel.Prelude.map (\(personIdText, utcTime) -> ContactsDetail (Id personIdText) utcTime) <$> Hedis.hGetAll hashKey
+  return $ EmergencyContactsStatusRes keyValues

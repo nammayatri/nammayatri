@@ -97,3 +97,8 @@ ALTER TABLE atlas_app.person ADD COLUMN device_id text ;
 
 ALTER TABLE atlas_app.person ADD COLUMN client_model_name text ;
 ALTER TABLE atlas_app.person ADD COLUMN client_manufacturer text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN inform_police_sos boolean ;
