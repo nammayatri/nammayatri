@@ -239,6 +239,7 @@ castEventFunctionForCoins e = case e of
   DCT.TrainingCompleted -> Common.TrainingCompleted
   DCT.TwoRidesCompleted -> Common.TwoRidesCompleted
   DCT.FiveRidesCompleted -> Common.FiveRidesCompleted
+  DCT.TenRidesCompleted -> Common.TenRidesCompleted
   DCT.BulkUploadFunctionV2 msg -> Common.BulkUploadFunctionV2 (castCoinMessage msg)
 
 castCoinMessageReverse :: Common.CoinMessage -> DCT.CoinMessage
@@ -262,4 +263,5 @@ castEventFunctionForCoinsReverse e = case e of
   Common.TrainingCompleted -> DCT.TrainingCompleted
   Common.TwoRidesCompleted -> DCT.TwoRidesCompleted
   Common.FiveRidesCompleted -> DCT.FiveRidesCompleted
+  Common.TenRidesCompleted -> DCT.TenRidesCompleted
   Common.BulkUploadFunctionV2 msg -> DCT.BulkUploadFunctionV2 (castCoinMessageReverse msg)
