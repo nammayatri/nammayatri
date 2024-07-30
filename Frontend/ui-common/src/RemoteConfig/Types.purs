@@ -49,6 +49,12 @@ type RemoteConfig a
     , tirunelveli :: Maybe a
     , salem :: Maybe a
     , trichy :: Maybe a 
+    , davanagere :: Maybe a
+    , shivamogga :: Maybe a
+    , hubli :: Maybe a
+    , mangalore :: Maybe a
+    , gulbarga :: Maybe a
+    , udupi :: Maybe a
     , config :: Maybe Config
     }
 
