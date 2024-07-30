@@ -216,7 +216,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , isVehicleSupported    : Nothing
     , canSwitchToRental     : false
     , checkIfACWorking    : Nothing
-    , canSwitchToIntercity   : Nothing
+    , canSwitchToInterCity   : Nothing
 }
 
 organizationInfo :: OrganizationInfo

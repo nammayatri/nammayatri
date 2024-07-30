@@ -1409,6 +1409,25 @@ data STR = LETS_GET_STARTED
         | CONVERT_YOUR_COINS_TO_DISCOUNT
         | CONVERT_YOUR_COINS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION
         | CONVERT_NOW
+        | MORE_RIDES
+        | SORT_BY 
+        | ACCEPT 
+        | PASS 
+        | TERM_1A
+        | TERM_2A
+        | TERM_3A
+        | TERM_1B
+        | TERM_2B
+        | TERM_3B
+        | EXCLUDED_CHARGES
+        | TOLLS 
+        | STATE_PERMIT 
+        | EXCLUDED_FOOTER 
+        | INCLUDED_CHARGES 
+        | INC_1
+        | INC_2A
+        | INC_2B 
+        | PICKUP_DROP 
         | TOLL_CHARGES_INCLUDED
         | PLEASE_DO_NOT_DEMAND_EXTRA 
         | FINAL_FARE_EXCLUDES_TOLL 
@@ -1506,3 +1525,8 @@ data STR = LETS_GET_STARTED
         | NO_ACTIVE_REFERRAL_ON_DATE
         | PAYMENT_IN_PROGRESS
         | REFRESH_PAYMENT
+        | CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE
+        | RIDE_REQUESTS
+        | SCHEDULED_RIDE_ACCEPTED
+        | YOU_CAN_ACCESS_SCHEDULED_RIDES
+        | FROM_YOUR_HOMESCREEN

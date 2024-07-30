@@ -435,3 +435,12 @@ lightGray = "#A7A7A7"
 
 turquoiseBlue :: Color
 turquoiseBlue = "#42B8BA"
+
+lightGrey1 :: Color
+lightGrey1 = "#F3F3F3"
+
+lightGreyBlue2 :: Color
+lightGreyBlue2 = "#6C7393"
+
+mayaBlue :: Color
+mayaBlue  = "#80B2FF"

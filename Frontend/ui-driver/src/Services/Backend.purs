@@ -562,7 +562,7 @@ mkUpdateDriverInfoReq dummy
     , vehicleName: Nothing
     , availableUpiApps: Nothing
     , canSwitchToRental: Nothing
-    , canSwitchToIntercity: Nothing
+    , canSwitchToInterCity: Nothing
     }
 
 
@@ -1596,3 +1596,27 @@ payoutRegistration dummy = do
     withAPIResult (EP.registerPayout dummy) unwrapResponse $ callAPI headers (PayoutRegisterReq dummy)
     where
         unwrapResponse (x) = x
+
+rideBooking limit offset from to  tripCategory = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getScheduledBookingList limit offset from to  tripCategory) unwrapResponse $ callAPI headers (ScheduledBookingListRequest limit offset  from to  tripCategory)
+    where
+        unwrapResponse (x) = x
+
+rideBookingBT :: String -> String -> String -> String -> String -> FlowBT String ScheduledBookingListResponse
+rideBookingBT limit offset  from to  tripCategory= do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getScheduledBookingList limit offset from to  tripCategory) identity errorHandler (lift $ lift $ callAPI headers (ScheduledBookingListRequest limit offset from to tripCategory))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+scheduleBookingAcceptBT :: String -> FlowBT String ScheduleBookingAcceptRes
+scheduleBookingAcceptBT bookingId = do
+  headers <- getHeaders' "" false
+  withAPIResultBT (EP.scheduleBookingAccept bookingId) identity errorHandler (lift $ lift $ callAPI headers (ScheduleBookingAcceptReq bookingId))
+  where
+    errorHandler (ErrorPayload errorPayload) =  do
+      void $ lift $ lift $ toggleLoader false
+      void $ pure $ toast $ "Can't Accept The Ride \n Something Went Wrong"
+      BackT $ pure GoBack

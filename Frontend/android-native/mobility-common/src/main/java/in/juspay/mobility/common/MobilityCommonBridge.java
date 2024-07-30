@@ -2201,6 +2201,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 CircleRippleEffect circleRippleEffect = new CircleRippleEffect(i,
                         options.clone()
                                 .factor(i)
+                                .fillColor(options.getFillColor())
                                 .radius((i) * options.getRadius()));
                 circleRippleEffect.draw(googleMap, point);
                 circleRipples.put(prefix + "_" + i, circleRippleEffect);

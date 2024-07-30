@@ -93,7 +93,7 @@ import RemoteConfig as RC
 import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor, getHomeStageFromString)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse , ScheduleBooking(..) , BookingAPIEntity(..))
 import Services.Accessor (_lat, _lon, _area)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
@@ -127,6 +127,7 @@ import Timers as TF
 import Data.Ord (abs)
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
+import Screens.RideSummaryScreen.ScreenData as  RSD
 
 instance showAction :: Show Action where
   show _ = ""
@@ -300,8 +301,12 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | GoToRideReqScreen ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
                     | CustomerReferralTrackerScreen ST.HomeScreenState
+                    | GoToRideSummary ST.HomeScreenState
+                    | GoToRideSummaryScreen  ST.HomeScreenState 
+
 
 data Action = NoAction
             | BackPressed
@@ -429,11 +434,17 @@ data Action = NoAction
             | RideStartRemainingTime Int String String
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
+            | RideRequestsList
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
             | ReferralEarnedAC PopUpModal.Action
+            | GetRideCount Int
+            | RideSummary
+            | UpCommingRideDetails (Maybe RidesInfo)
+            | RideDetail
+            | BannerClick
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1486,7 +1497,18 @@ eval (SwitchBookingStage stage) state = do
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
 
-eval _ state = continue state
+eval RideRequestsList state = exit $ GoToRideReqScreen state 
+
+eval (GetRideCount resp) state  = continue state {data {scheduledRideListResponse = resp}}
+
+
+eval (UpCommingRideDetails  resp) state = do
+   let scheduledRide = activeRideDetail state <$> resp
+   continue state {data {upcomingRide = scheduledRide} , props {checkUpcommingRide = false, bannerVisibility = true , pillShimmerVisibility = false}}
+
+eval BannerClick state  =  exit $ GoToRideSummaryScreen state
+
+eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do
@@ -1556,6 +1578,7 @@ activeRideDetail state (RidesInfo ride) =
               "INPROGRESS" -> INPROGRESS
               "COMPLETED" -> COMPLETED
               "CANCELLED" -> CANCELLED
+              "UPCOMING"  -> UPCOMING
               _ -> COMPLETED,
   distance : (toNumber ride.estimatedDistance),
   duration : state.data.activeRide.duration,

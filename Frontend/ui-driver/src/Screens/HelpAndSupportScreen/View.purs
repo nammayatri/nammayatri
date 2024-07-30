@@ -24,7 +24,7 @@ import Effect (Effect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void, show, not, when)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout ,frameLayout , id)
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
@@ -54,6 +54,11 @@ import Components.PopUpModal as PopUpModal
 import Debug
 import Data.String as DS
 import Mobility.Prelude (boolToVisibility)
+import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Engineering.Helpers.Commons as EHC
+import JBridge as JB
+import Data.Function.Uncurried (runFn1)
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -111,6 +116,7 @@ view push state =
                , orientation VERTICAL
                ] [ testRideRequestView state push
                  , reportAnIssueHeader state push (getString REPORT_AN_ISSUE)
+                --  , googleMap state push
                  , recentRideDetails state push
                  , reportAnIssueHeader state push (getString MORE_OPTIONS)
                  , allOtherTopics state push
@@ -119,6 +125,7 @@ view push state =
        ]
    ,  if (state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL) then issueListModal push state else dummyTextView
    , if state.props.enableDummyPopup then testRideConfirmation push state else linearLayout[][]
+
    ])
 
 
@@ -397,5 +404,53 @@ dummyTextView =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   ]
+
+--  -------------------------------------
+
+-- googleMap :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+-- googleMap state push  =
+--     frameLayout
+--         [ width MATCH_PARENT
+--         , height $ V 200
+--         , orientation VERTICAL
+--         , margin $ MarginHorizontal 10 10 
+--         , cornerRadius 10.0
+--         --  ,onClick push $ const $ Update
+--         ]
+--           [linearLayout
+--             [ height MATCH_PARENT
+--             , width MATCH_PARENT
+--             , id (EHC.getNewIDWithTag "DriverSavedLoc1")
+--             , afterRender
+--                 ( \action -> do
+--                     _ <- (JB.showMap (EHC.getNewIDWithTag "DriverSavedLoc1") true "satellite" (19.0) 0.0 0.0 push ShowMap)
+                    
+--                     pure unit
+--                 )
+--                 (const AfterRender)
+--             ][]
+--              , mapPillView state push
+--           ]
+
+
+-- mapPillView :: ST.HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
+-- mapPillView state push = 
+--         linearLayout[
+--           height $ V  34
+--          ,width $ V 158
+--          ,background Color.green900
+--          , gravity CENTER
+--          , padding $ Padding 4 4 4 4 
+--          ,cornerRadii  (Corners 16.0 true false true false)
+--         ] [ 
+--           textView $ [
+          
+--               text "Pickup : 300m away"
+--             , color $ Color.white900
+            
+       
+--           ]<> FontStyle.body1 LanguageStyle
+          
+--         ]
 
 

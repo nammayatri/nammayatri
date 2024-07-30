@@ -107,6 +107,7 @@ public class Utils {
         double strokeWidth = config.optDouble("strokeWidth", defOptions.getStrokeWidth());
         double maxStrokeWidth = config.optDouble("maxStrokeWidth", defOptions.getMaxStrokeWidth());
         String fromStrokeColor = config.optString("fromStrokeColor", defOptions.getFromStrokeColor());
+        String fillColor = config.optString("fillColor", "#000000");
         String toStrokeColor = config.optString("toStrokeColor", fromStrokeColor);
         defOptions.radius((float) radius)
                 .delay(delay)
@@ -117,6 +118,7 @@ public class Utils {
                 .strokeWidth((float) strokeWidth)
                 .maxStrokeWidth((float) maxStrokeWidth)
                 .fromStrokeColor(fromStrokeColor)
+                .fillColor(fillColor)
                 .toStrokeColor(toStrokeColor);
         return defOptions;
     }
