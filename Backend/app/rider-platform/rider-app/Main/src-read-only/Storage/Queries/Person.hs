@@ -159,6 +159,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.identifier identifier,
       Se.Set Beam.identifierType identifierType,
+      Se.Set Beam.informPoliceSos (Just informPoliceSos),
       Se.Set Beam.isNew isNew,
       Se.Set Beam.isValidRating isValidRating,
       Se.Set Beam.language language,

@@ -378,7 +378,8 @@ updateDefaultEmergencyNumbers personId merchantId req = do
           shareTripWithEmergencyContacts = Nothing,
           hasCompletedSafetySetup = Nothing,
           nightSafetyChecks = Nothing,
-          shareTripWithEmergencyContactOption = if enableTripShare then Just Person.ALWAYS_SHARE else Nothing
+          shareTripWithEmergencyContactOption = if enableTripShare then Just Person.ALWAYS_SHARE else Nothing,
+          informPoliceSosFlag = Nothing
         }
 
 sendEmergencyContactAddedMessage :: Id Person.Person -> [DPDEN.PersonDefaultEmergencyNumber] -> [DPDEN.PersonDefaultEmergencyNumber] -> Flow ()
@@ -426,7 +427,8 @@ data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
     shareTripWithEmergencyContacts :: Maybe Bool,
     shareTripWithEmergencyContactOption :: Maybe Person.RideShareOptions,
     nightSafetyChecks :: Maybe Bool,
-    hasCompletedSafetySetup :: Maybe Bool
+    hasCompletedSafetySetup :: Maybe Bool,
+    informPoliceSosFlag :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -452,6 +454,7 @@ updateEmergencySettings personId req = do
       shareTripOptions
       req.nightSafetyChecks
       safetySetupCompleted
+      req.informPoliceSosFlag
   pure APISuccess.Success
 
 data EmergencySettingsRes = EmergencySettingsRes
@@ -463,7 +466,8 @@ data EmergencySettingsRes = EmergencySettingsRes
     hasCompletedSafetySetup :: Bool,
     defaultEmergencyNumbers :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity],
     enablePoliceSupport :: Bool,
-    localPoliceNumber :: Maybe Text
+    localPoliceNumber :: Maybe Text,
+    informPoliceSos :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -483,5 +487,6 @@ getEmergencySettings personId = do
         defaultEmergencyNumbers = DPDEN.makePersonDefaultEmergencyNumberAPIEntity False <$> decPersonENList,
         enablePoliceSupport = riderConfig.enableLocalPoliceSupport,
         localPoliceNumber = riderConfig.localPoliceNumber,
-        hasCompletedMockSafetyDrill = fromMaybe False person.hasCompletedMockSafetyDrill
+        hasCompletedMockSafetyDrill = fromMaybe False person.hasCompletedMockSafetyDrill,
+        informPoliceSos = person.informPoliceSos
       }

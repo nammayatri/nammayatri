@@ -56,6 +56,7 @@ data PersonT f = PersonT
     id :: B.C f Kernel.Prelude.Text,
     identifier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     identifierType :: B.C f Domain.Types.Person.IdentifierType,
+    informPoliceSos :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isNew :: B.C f Kernel.Prelude.Bool,
     isValidRating :: B.C f Kernel.Prelude.Bool,
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
