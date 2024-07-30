@@ -17,7 +17,6 @@ module Domain.Action.Dashboard.Driver
     driverAadhaarInfo,
     listDrivers,
     driverActivity,
-    enableDriver,
     disableDriver,
     updateACUsageRestriction,
     blockDriverWithReason,
@@ -25,24 +24,14 @@ module Domain.Action.Dashboard.Driver
     blockReasonList,
     unblockDriver,
     driverLocation,
-    driverInfo,
     deleteDriver,
-    unlinkVehicle,
     unlinkDL,
     unlinkAadhaar,
-    endRCAssociation,
     updatePhoneNumber,
-    addVehicle,
     updateDriverName,
     clearOnRideStuckDrivers,
-    getDriverDue,
-    collectCash,
-    collectCashV2,
-    exemptCashV2,
-    exemptCash,
     driverAadhaarInfoByPhone,
     updateByPhoneNumber,
-    setRCStatus,
     deleteRC,
     getDriverHomeLocation,
     updateDriverHomeLocation,
@@ -69,6 +58,7 @@ module Domain.Action.Dashboard.Driver
     castVehicleVariantDashboard, -- TODO move to common
     notifyYatriRentalEventsToDriver, -- TODO move to common
     runVerifyRCFlow, -- TODO move to common
+    appendPlusInMobileCountryCode, -- TODO move to common
   )
 where
 
@@ -77,7 +67,6 @@ import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map as M
@@ -99,7 +88,6 @@ import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.IdfyVerification as IV
-import Domain.Types.Image (Image)
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
@@ -111,7 +99,6 @@ import qualified Domain.Types.Ride as SRide
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Vehicle as DVeh
 import Domain.Types.VehicleRegistrationCertificate
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
@@ -143,20 +130,16 @@ import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQGHC
 import Storage.CachedQueries.DriverBlockReason as DBR
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
-import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPlan as QDP
-import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Message as MQuery
 import qualified Storage.Queries.MessageTranslation as MTQuery
@@ -172,7 +155,6 @@ import Tools.Error
 import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
-import Utils.Common.Cac.KeyNameConstants
 
 -- FIXME: not tested yet because of no onboarding test data
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverDocumentsInfoRes
@@ -301,56 +283,6 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
       }
 
 ---------------------------------------------------------------------
-getDriverDue :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Text -> Flow [Common.DriverOutstandingBalanceResp] -- add mig and totalFee
-getDriverDue merchantShortId _ mbMobileCountryCode phone = do
-  let mobileCountryCode = fromMaybe "+91" mbMobileCountryCode
-  merchant <- findMerchantByShortId merchantShortId
-  mobileNumber <- getDbHash phone
-  driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumber merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
-  driverFees <- findPendingFeesByDriverIdAndServiceName (cast driver.id) YATRI_SUBSCRIPTION
-  driverFeeByInvoices <- case driverFees of
-    [] -> pure []
-    driverFee : _ -> SLDriverFee.groupDriverFeeByInvoices driverFee.currency driverFees
-  return $ map (mkPaymentDueResp driver.id) driverFeeByInvoices
-  where
-    mkPaymentDueResp driverId SLDriverFee.DriverFeeByInvoice {..} = do
-      let platformFee_ = mkPlatformFee platformFee
-          status_ = castStatus status
-          driverFeeId = cast invoiceId
-          driverId_ = cast driverId
-      Common.DriverOutstandingBalanceResp
-        { govtCharges = round govtCharges,
-          govtChargesWithCurrency = PriceAPIEntity govtCharges currency,
-          platformFee = platformFee_,
-          status = status_,
-          driverId = driverId_,
-          totalFee = roundToIntegral totalFee,
-          totalEarnings = roundToIntegral totalEarnings,
-          totalFeeWithCurrency = PriceAPIEntity totalFee currency,
-          totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
-          ..
-        }
-
-    mkPlatformFee SLDriverFee.PlatformFee {..} =
-      Common.PlatformFee
-        { feeWithCurrency = PriceAPIEntity fee currency,
-          cgstWithCurrency = PriceAPIEntity cgst currency,
-          sgstWithCurrency = PriceAPIEntity sgst currency,
-          ..
-        }
-
-    castStatus status = case status of -- only PENDING and OVERDUE possible
-      ONGOING -> Common.ONGOING
-      PAYMENT_PENDING -> Common.PAYMENT_PENDING
-      PAYMENT_OVERDUE -> Common.PAYMENT_OVERDUE
-      CLEARED -> Common.CLEARED
-      EXEMPTED -> Common.EXEMPTED
-      COLLECTED_CASH -> Common.COLLECTED_CASH
-      INACTIVE -> Common.INACTIVE
-      CLEARED_BY_YATRI_COINS -> Common.CLEARED_BY_YATRI_COINS
-      MANUAL_REVIEW_NEEDED -> Common.MANUAL_REVIEW_NEEDED
-
----------------------------------------------------------------------
 driverAadhaarInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes
 driverAadhaarInfo merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
@@ -378,32 +310,6 @@ driverActivity :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverActiv
 driverActivity merchantShortId _ = do
   merchant <- findMerchantByShortId merchantShortId
   Common.mkDriverActivityRes <$> B.runInReplica (QDriverInfo.countDrivers merchant.id)
-
----------------------------------------------------------------------
-enableDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-enableDriver merchantShortId opCity reqDriverId = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
-  let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <-
-    QPerson.findById personId
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
-
-  -- merchant access checking
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-
-  mVehicle <- QVehicle.findById personId
-  linkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
-
-  when (isNothing mVehicle && null linkedRCs) $
-    throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
-
-  enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
-  logTagInfo "dashboard -> enableDriver : " (show personId)
-  fork "sending dashboard sms - onboarding" $ do
-    Sms.sendDashboardSms merchant.id merchantOpCityId Sms.ONBOARDING Nothing personId Nothing 0
-  pure Success
 
 ---------------------------------------------------------------------
 disableDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
@@ -506,84 +412,10 @@ convertToCommon res =
       blockTimeInHours = res.blockTimeInHours
     }
 
----------------------------------------------------------------------
-collectCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
-collectCash mId city driver requestorId = recordPayment False mId city driver requestorId YATRI_SUBSCRIPTION
-
-collectCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Flow APISuccess
-collectCashV2 mId city driver requestorId serviceName = recordPayment False mId city driver requestorId (mapServiceName serviceName)
-
----------------------------------------------------------------------
-exemptCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
-exemptCash mId city driver requestorId = recordPayment True mId city driver requestorId YATRI_SUBSCRIPTION
-
-exemptCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Flow APISuccess
-exemptCashV2 mId city driver requestorId serviceName = recordPayment True mId city driver requestorId (mapServiceName serviceName)
-
 mapServiceName :: Common.ServiceNames -> ServiceNames
 mapServiceName common = case common of
   Common.YATRI_SUBSCRIPTION -> YATRI_SUBSCRIPTION
   Common.YATRI_RENTAL -> YATRI_RENTAL
-
----------------------------------------------------------------------
-paymentStatus :: Bool -> DriverFeeStatus
-paymentStatus isExempted
-  | isExempted = EXEMPTED
-  | otherwise = COLLECTED_CASH
-
-recordPayment :: Bool -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> ServiceNames -> Flow APISuccess
-recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceName = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
-  let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
-
-  -- merchant access checking
-  let merchantId = driver.merchantId
-  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  driverFees <- findPendingFeesByDriverIdAndServiceName driverId serviceName
-  let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  QDriverInfo.updatePendingPayment False driverId
-  QDriverInfo.updateSubscription True driverId
-  mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
-  invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
-  mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) (concat invoices)
-  unless isExempted $ do
-    mapM_
-      ( \dFee -> do
-          invoice <- mkInvoice dFee
-          QINV.create invoice
-      )
-      driverFees
-  fork "sending dashboard sms - collected cash" $ do
-    Sms.sendDashboardSms merchantId merchantOpCityId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
-  pure Success
-  where
-    mkInvoice driverFee = do
-      id <- generateGUID
-      shortId <- generateShortId
-      now <- getCurrentTime
-      return $
-        INV.Invoice
-          { id = Id id,
-            invoiceShortId = shortId.getShortId,
-            driverFeeId = driverFee.id,
-            invoiceStatus = INV.SUCCESS,
-            driverId = driverFee.driverId,
-            maxMandateAmount = Nothing,
-            paymentMode = INV.CASH_COLLECTED_INVOICE,
-            bankErrorCode = Nothing,
-            bankErrorMessage = Nothing,
-            bankErrorUpdatedAt = Nothing,
-            lastStatusCheckedAt = Nothing,
-            serviceName = driverFee.serviceName,
-            merchantOperatingCityId = driverFee.merchantOperatingCityId,
-            updatedAt = now,
-            createdAt = now
-          }
 
 ---------------------------------------------------------------------
 unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
@@ -641,161 +473,6 @@ mobileIndianCode = "+91"
 appendPlusInMobileCountryCode :: Maybe Text -> Maybe Text
 appendPlusInMobileCountryCode = fmap (\code -> if "+" `T.isPrefixOf` code then code else "+" <> code)
 
-driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
-driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber mbEmail fleetOwnerId mbFleet = do
-  when mbFleet $ do
-    when (isNothing mbVehicleNumber) $ throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number"
-    vehicleInfo <- RCQuery.findLastVehicleRCFleet' (fromMaybe " " mbVehicleNumber) fleetOwnerId
-    when (isNothing vehicleInfo) $ throwError $ InvalidRequest "Fleet Owner does not have a vehicle linked with this vehicle number"
-  when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
-    throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail) of
-    (Just mobileNumber, Nothing, Nothing, Nothing, Nothing) -> do
-      mobileNumberDbHash <- getDbHash mobileNumber
-      let mobileCountryCode = fromMaybe mobileIndianCode (appendPlusInMobileCountryCode mbMobileCountryCode)
-      B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing Nothing
-          >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
-    (Nothing, Just vehicleNumber, Nothing, Nothing, Nothing) -> do
-      B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing (Just vehicleNumber) Nothing Nothing Nothing
-          >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
-    (Nothing, Nothing, Just driverLicenseNumber, Nothing, Nothing) -> do
-      dlNumberHash <- getDbHash driverLicenseNumber
-      B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing (Just dlNumberHash) Nothing Nothing
-          >>= fromMaybeM (InvalidRequest "License does not exist.")
-    (Nothing, Nothing, Nothing, Just rcNumber, Nothing) -> do
-      rcNumberHash <- getDbHash rcNumber
-      B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing (Just rcNumberHash) Nothing
-          >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
-    (Nothing, Nothing, Nothing, Nothing, Just email) -> do
-      B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing Nothing (Just email)
-          >>= fromMaybeM (InvalidRequest "Email does not exist.")
-    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\", \"Email\" is required"
-  let driverId = driverWithRidesCount.person.id
-  mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
-  rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
-  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
-
-buildDriverInfoRes ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
-  QPerson.DriverWithRidesCount ->
-  Maybe DriverLicense ->
-  [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
-  m Common.DriverInfoRes
-buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory = do
-  mobileNumber <- traverse decrypt person.mobileNumber
-  let email = person.email
-  driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
-  vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
-  unencryptedMobileNumber <- mapM decrypt person.mobileNumber
-  unencryptedAlternateMobileNumber <- mapM decrypt person.alternateMobileNumber
-  availableMerchants <- case unencryptedMobileNumber of
-    Just mbNumber -> do
-      let mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
-      mobileNumberHash <- getDbHash mbNumber
-      availablePersonWithNumber <- QPerson.findAllMerchantIdByPhoneNo mobileCountryCode mobileNumberHash
-      let availableMerchantsId = map (.merchantId) availablePersonWithNumber
-      availableMerchantsShortId <- CQM.findAllShortIdById availableMerchantsId
-      pure $ map getShortId availableMerchantsShortId
-    Nothing -> pure []
-  merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
-  driverStats <- runInReplica $ QDriverStats.findById person.id >>= fromMaybeM DriverInfoNotFound
-  selectedServiceTiers <-
-    maybe
-      (pure [])
-      ( \v ->
-          v.selectedServiceTiers `forM` \serviceTierType -> do
-            let mbServiceTier = find (\vst -> vst.serviceTierType == serviceTierType) cityVehicleServiceTiers
-            return $ maybe (show serviceTierType) (.name) mbServiceTier
-      )
-      vehicle
-  let serviceTierACThresholds =
-        map
-          (\DVST.VehicleServiceTier {..} -> airConditionedThreshold)
-          (filter (\v -> maybe False (\veh -> veh.variant `elem` v.allowedVehicleVariant) vehicle) cityVehicleServiceTiers)
-  let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
-  let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
-  pure
-    Common.DriverInfoRes
-      { driverId = cast @DP.Person @Common.Driver person.id,
-        firstName = person.firstName,
-        middleName = person.middleName,
-        lastName = person.lastName,
-        numberOfRides = fromMaybe 0 ridesCount,
-        mobileNumber,
-        mobileCountryCode = person.mobileCountryCode,
-        bundleVersion = person.clientBundleVersion,
-        clientVersion = person.clientSdkVersion,
-        enabled = info.enabled,
-        blocked = info.blocked,
-        blockedReason = info.blockedReason,
-        verified = info.verified,
-        subscribed = info.subscribed,
-        onboardingDate = info.lastEnabledOn,
-        canDowngradeToSedan = info.canDowngradeToSedan,
-        canDowngradeToHatchback = info.canDowngradeToHatchback,
-        canDowngradeToTaxi = info.canDowngradeToTaxi,
-        canSwitchToRental = info.canSwitchToRental,
-        canSwitchToInterCity = info.canSwitchToInterCity,
-        vehicleNumber = vehicle <&> (.registrationNo),
-        selectedServiceTiers,
-        driverLicenseDetails,
-        vehicleRegistrationDetails,
-        rating = driverStats.rating,
-        alternateNumber = unencryptedAlternateMobileNumber,
-        availableMerchants = availableMerchants,
-        merchantOperatingCity = merchantOperatingCity <&> (.city),
-        blockStateModifier = info.blockStateModifier,
-        currentAcOffReportCount = maybe 0 round info.airConditionScore,
-        totalAcRestrictionUnblockCount = info.acRestrictionLiftCount,
-        lastACStatusCheckedAt = info.lastACStatusCheckedAt,
-        currentACStatus = isACAllowedForDriver && isVehicleACWorking,
-        blockedDueToRiderComplains = not isACAllowedForDriver,
-        driverTag = person.driverTag,
-        email
-      }
-
-buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
-buildDriverLicenseAPIEntity DriverLicense {..} = do
-  licenseNumber' <- decrypt licenseNumber
-  pure
-    Common.DriverLicenseAPIEntity
-      { driverLicenseId = cast @DriverLicense @Common.DriverLicense id,
-        documentImageId1 = cast @Image @Common.Image documentImageId1,
-        documentImageId2 = (cast @Image @Common.Image) <$> documentImageId2,
-        licenseNumber = licenseNumber',
-        verificationStatus = castVerificationStatus verificationStatus,
-        ..
-      }
-
-buildRCAssociationAPIEntity ::
-  EncFlow m r =>
-  (DriverRCAssociation, VehicleRegistrationCertificate) ->
-  m Common.DriverRCAssociationAPIEntity
-buildRCAssociationAPIEntity (DriverRCAssociation {..}, vehicleRC) = do
-  details <- buildVehicleRCAPIEntity vehicleRC
-  pure Common.DriverRCAssociationAPIEntity {..}
-
-buildVehicleRCAPIEntity :: EncFlow m r => VehicleRegistrationCertificate -> m Common.VehicleRegistrationCertificateAPIEntity
-buildVehicleRCAPIEntity VehicleRegistrationCertificate {..} = do
-  certificateNumber' <- decrypt certificateNumber
-  pure
-    Common.VehicleRegistrationCertificateAPIEntity
-      { registrationCertificateId = cast @VehicleRegistrationCertificate @Common.VehicleRegistrationCertificate id,
-        documentImageId = cast @Image @Common.Image documentImageId,
-        certificateNumber = certificateNumber',
-        verificationStatus = castVerificationStatus verificationStatus,
-        vehicleVariant = castVehicleVariantDashboard vehicleVariant,
-        ..
-      }
-
 castVerificationStatus :: Documents.VerificationStatus -> Common.VerificationStatus
 castVerificationStatus = \case
   Documents.PENDING -> Common.PENDING
@@ -807,26 +484,6 @@ castVerificationStatus = \case
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
 deleteDriver merchantShortId _ = DeleteDriver.deleteDriver merchantShortId . cast
-
----------------------------------------------------------------------
-unlinkVehicle :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-unlinkVehicle merchantShortId opCity reqDriverId = do
-  merchant <- findMerchantByShortId merchantShortId
-
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
-  let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <-
-    QPerson.findById personId
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  -- merchant access checking
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-
-  DomainRC.deactivateCurrentRC personId
-  QVehicle.deleteById personId
-  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
-  logTagInfo "dashboard -> unlinkVehicle : " (show personId)
-  pure Success
 
 ---------------------------------------------------------------------
 updatePhoneNumber :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
@@ -862,90 +519,6 @@ updatePhoneNumber merchantShortId opCity reqDriverId req = do
   pure Success
 
 ---------------------------------------------------------------------
-addVehicle :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AddVehicleReq -> Flow APISuccess
-addVehicle merchantShortId opCity reqDriverId req = do
-  runRequestValidation Common.validateAddVehicleReq req
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <-
-    QPerson.findById personId
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
-
-  -- merchant access checking
-  let merchantId = driver.merchantId
-  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-
-  mbLinkedVehicle <- QVehicle.findById personId
-  whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
-
-  allLinkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
-  unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
-
-  let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
-  QPerson.updatePersonRec personId updDriver
-
-  -- Create RC for vehicle before verifying it
-  now <- getCurrentTime
-  mbRC <- RCQuery.findLastVehicleRCWrapper req.registrationNo
-  whenJust mbRC $ \rc -> do
-    mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId rc.id now
-    when (isNothing mbAssoc) $ do
-      driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId rc.id (convertTextToUTC (Just "2099-12-12"))
-      QRCAssociation.create driverRCAssoc
-    throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
-
-  let createRCInput = createRCInputFromVehicle req
-  mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput
-  case mbNewRC of
-    Just newRC -> do
-      when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
-      RCQuery.upsert newRC
-      mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
-      when (isNothing mbAssoc) $ do
-        driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id (convertTextToUTC (Just "2099-12-12"))
-        QRCAssociation.create driverRCAssoc
-
-      fork "Parallely verifying RC for add Vehicle: " $ runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-      driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
-      QVehicle.create vehicle
-      when (vehicle.variant == DVeh.SUV) $
-        QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
-      logTagInfo "dashboard -> addVehicle : " (show personId)
-    Nothing -> throwError $ InvalidRequest "Registration Number is empty"
-  pure Success
-
-createRCInputFromVehicle :: Common.AddVehicleReq -> CreateRCInput
-createRCInputFromVehicle req@Common.AddVehicleReq {..} =
-  CreateRCInput
-    { registrationNumber = Just registrationNo,
-      fitnessUpto = Nothing,
-      fleetOwnerId = Nothing,
-      vehicleCategory = Nothing,
-      airConditioned,
-      oxygen,
-      ventilator,
-      documentImageId = "",
-      vehicleClass = Just vehicleClass,
-      vehicleClassCategory = Nothing,
-      insuranceValidity = Nothing,
-      seatingCapacity = capacity,
-      permitValidityUpto = Nothing,
-      pucValidityUpto = Nothing,
-      manufacturer = Just make,
-      manufacturerModel = Just model,
-      bodyType = Nothing,
-      fuelType = energyType,
-      mYManufacturing = mYManufacturing,
-      color = Just colour,
-      dateOfRegistration = req.dateOfRegistration,
-      vehicleModelYear = req.vehicleModelYear
-    }
-
 runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Flow ()
 runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = do
   let vehicleCategory = case req.vehicleCategory of
@@ -1064,42 +637,6 @@ unlinkAadhaar merchantShortId opCity driverId = do
   pure Success
 
 ---------------------------------------------------------------------
-endRCAssociation :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-endRCAssociation merchantShortId opCity reqDriverId = do
-  -- API should be deprecated
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
-  let personId = cast @Common.Driver @DP.Person reqDriverId
-
-  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- merchant access checking
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-
-  associations <- QRCAssociation.findAllLinkedByDriverId personId
-  mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
-  let mVehicleRC = listToMaybe (catMaybes mVehicleRCs)
-
-  case mVehicleRC of
-    Just vehicleRC -> do
-      rcNo <- decrypt vehicleRC.certificateNumber
-      void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
-    Nothing -> throwError (InvalidRequest "No linked RC  to driver")
-
-  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
-  logTagInfo "dashboard -> endRCAssociation : " (show personId)
-  pure Success
-
-setRCStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
-setRCStatus merchantShortId opCity reqDriverId Common.RCStatusReq {..} = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  -- merchant access checking
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {..})
-
 deleteRC :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DeleteRCReq -> Flow APISuccess
 deleteRC merchantShortId opCity reqDriverId Common.DeleteRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
