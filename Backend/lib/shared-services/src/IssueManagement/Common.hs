@@ -262,4 +262,31 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be KaptureConfig
 
 instance FromBackendRow Postgres KaptureConfig
 
+data CxAgentDetails = CxAgentDetails
+  { agentName :: Text,
+    agentMobileNumber :: Text
+  }
+  deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
+
+instance HasSqlValueSyntax be Value => HasSqlValueSyntax be CxAgentDetails where
+  sqlValueSyntax = sqlValueSyntax . toJSON
+
+instance FromField CxAgentDetails where
+  fromField = fromFieldEnum
+
+instance FromField [CxAgentDetails] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [CxAgentDetails] where
+  sqlValueSyntax batchList =
+    let x = (show <$> batchList :: [Text])
+     in sqlValueSyntax (V.fromList x)
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [CxAgentDetails]
+
+instance FromBackendRow Postgres [CxAgentDetails]
+
+instance {-# OVERLAPPING #-} ToSQLObject CxAgentDetails where
+  convertToSQLObject = SQLObjectValue . show
+
 $(mkHttpInstancesForEnum ''IssueReportType)
