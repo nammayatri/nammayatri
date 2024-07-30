@@ -13,7 +13,7 @@ RiderDetails:
 
   types:
     PayoutFlagReason:
-        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,DeviceIdDoesNotExist"
+        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists"
 
   fields:
     id : Id RiderDetails
@@ -34,6 +34,7 @@ RiderDetails:
     nightSafetyChecks : Bool
     firstRideId: Maybe Text
     payoutFlagReason: Maybe PayoutFlagReason
+    isDeviceIdExists: Maybe Bool
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -100,6 +101,16 @@ RiderDetails:
     updateFirstRideIdAndFlagReason:
       kvFunction: updateOneWithKV
       params: [firstRideId, payoutFlagReason]
+      where: id
+
+    updateFlagReasonAndIsDeviceIdExists:
+      kvFunction: updateOneWithKV
+      params: [payoutFlagReason,isDeviceIdExists]
+      where: id
+
+    updateIsDeviceIdExists:
+      kvFunction: updateOneWithKV
+      params: [isDeviceIdExists]
       where: id
 
   sqlType:

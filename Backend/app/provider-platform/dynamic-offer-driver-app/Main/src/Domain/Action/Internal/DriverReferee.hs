@@ -77,10 +77,12 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchOpCityId (Just (DriverId (cast driverReferralLinkage.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
   updateReferralStats driverReferralLinkage.driverId transporterConfig merchOpCityId
   let isDeviceIdChecksRequired = fromMaybe False transporterConfig.isDeviceIdChecksRequired
-  let flagReason = if isDeviceIdChecksRequired then Nothing else if isMultipleDeviceIdExist_ then Just DRD.MultipleDeviceIdExists else if (isNothing isMultipleDeviceIdExist) then Just DRD.DeviceIdDoesNotExist else Nothing
+  let flagReason = if isDeviceIdChecksRequired then Nothing else if isMultipleDeviceIdExist_ then Just DRD.MultipleDeviceIdExists else Nothing
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   _ <- case mbRiderDetails of
-    Just _ -> QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
+    Just rd -> do
+      QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
+      QRD.updateIsDeviceIdExists (Just $ isJust isMultipleDeviceIdExist) rd.id
     Nothing -> do
       riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency flagReason
       QRD.create riderDetails
@@ -110,7 +112,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             disputeChancesUsed = 0,
             firstRideId = Nothing,
             payoutFlagReason = flagReason,
-            currency
+            currency,
+            isDeviceIdExists = Just $ isJust isMultipleDeviceIdExist
           }
 
     updateReferralStats driverId transporterConfig merchOpCityId = do

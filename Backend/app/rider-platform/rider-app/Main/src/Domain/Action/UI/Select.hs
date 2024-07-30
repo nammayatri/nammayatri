@@ -104,7 +104,9 @@ data DSelectRes = DSelectRes
     autoAssignEnabled :: Bool,
     phoneNumber :: Maybe Text,
     isValueAddNP :: Bool,
-    isAdvancedBookingEnabled :: Bool
+    isAdvancedBookingEnabled :: Bool,
+    isMultipleOrNoDeviceIdExist :: Maybe Bool,
+    toUpdateDeviceIdInfo :: Bool
   }
 
 newtype DSelectResultRes = DSelectResultRes
@@ -162,7 +164,8 @@ select2 personId estimateId req@DSelectReq {..} = do
   unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")
   let remainingEstimateBppIds = remainingEstimates <&> (.bppEstimateId)
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
-  phoneNumber <- bool (pure Nothing) getPhoneNo isValueAddNP
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
@@ -185,6 +188,18 @@ select2 personId estimateId req@DSelectReq {..} = do
   QPFS.clearCache searchRequest.riderId
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0
+  isMultipleOrNoDeviceIdExist <-
+    maybe
+      (return Nothing)
+      ( \deviceId -> do
+          if toUpdateDeviceIdInfo
+            then do
+              personsWithSameDeviceId <- QP.findAllByDeviceId (Just deviceId)
+              return $ Just (length personsWithSameDeviceId > 1)
+            else return Nothing
+      )
+      person.deviceId
   pure
     DSelectRes
       { providerId = estimate.providerId,
@@ -194,8 +209,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         ..
       }
   where
-    getPhoneNo = do
-      person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    getPhoneNo person = do
       mapM decrypt person.mobileNumber
 
 --DEPRECATED

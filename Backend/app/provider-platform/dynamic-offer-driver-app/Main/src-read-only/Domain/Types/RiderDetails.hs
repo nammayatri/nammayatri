@@ -23,6 +23,7 @@ data RiderDetailsE e = RiderDetails
     hasTakenValidRide :: Kernel.Prelude.Bool,
     hasTakenValidRideAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails,
+    isDeviceIdExists :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     mobileCountryCode :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
@@ -54,6 +55,7 @@ instance EncryptedItem RiderDetails where
           hasTakenValidRide = hasTakenValidRide entity,
           hasTakenValidRideAt = hasTakenValidRideAt entity,
           id = id entity,
+          isDeviceIdExists = isDeviceIdExists entity,
           merchantId = merchantId entity,
           mobileCountryCode = mobileCountryCode entity,
           mobileNumber = mobileNumber_,
@@ -77,6 +79,7 @@ instance EncryptedItem RiderDetails where
             hasTakenValidRide = hasTakenValidRide entity,
             hasTakenValidRideAt = hasTakenValidRideAt entity,
             id = id entity,
+            isDeviceIdExists = isDeviceIdExists entity,
             merchantId = merchantId entity,
             mobileCountryCode = mobileCountryCode entity,
             mobileNumber = mobileNumber_,
@@ -102,7 +105,6 @@ data PayoutFlagReason
   | MinPickupDistanceInvalid
   | CustomerExistAsDriver
   | MultipleDeviceIdExists
-  | DeviceIdDoesNotExist
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFlagReason)

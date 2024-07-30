@@ -49,6 +49,7 @@ data TagGroup
   | RATING_TAGS
   | FORWARD_BATCHING_REQUEST_INFO
   | VEHICLE_INFO
+  | DEVICE_ID_INFO
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -220,4 +221,6 @@ data Tag
   | -- rating tags
     RIDER_PHONE_NUMBER
   | SHOULD_FAVOURITE_DRIVER
+  | DEVICE_ID_FLAG
+  | TO_UPDATE_DEVICE_ID
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
