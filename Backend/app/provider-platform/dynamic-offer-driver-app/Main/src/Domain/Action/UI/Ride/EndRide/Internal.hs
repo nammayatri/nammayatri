@@ -160,7 +160,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   sendReferralFCM ride booking mbRiderDetails thresholdConfig
   updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
-  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride}
+  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
   when (thresholdConfig.canAddCancellationFee && customerCancellationDues > 0.0) $ do
@@ -252,6 +252,8 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
                     totalEarnings = 0.0,
                     numRides = 0,
                     totalDistance = 0,
+                    tollCharges = 0.0,
+                    bonusEarnings = 0.0,
                     merchantLocalDate = utctDay localTime,
                     currency = ride.currency,
                     distanceUnit = ride.distanceUnit,

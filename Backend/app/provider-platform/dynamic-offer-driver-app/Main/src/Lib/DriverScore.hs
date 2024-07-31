@@ -20,6 +20,8 @@ where
 import Data.Time (utctDay)
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverStats as DS
+import Domain.Types.FareParameters
+import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
@@ -91,7 +93,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
 eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
   -- mbDriverStats <- DSQ.findById (cast driverId) -- always be just because stats will be created at OnNewRideAssigned
-  updateDailyStats driverId merchantOpCityId ride
+  updateDailyStats driverId merchantOpCityId ride fareParameter
   whenJust mbDriverStats $ \driverStats -> do
     (incrementTotalEarningsBy, incrementBonusEarningsBy, incrementLateNightTripsCountBy, overallPickupCharges) <- do
       if isNotBackFilled driverStats
@@ -114,7 +116,7 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
           mbBooking <- B.runInReplica $ BQ.findById ride.bookingId
           -- mbBooking <- BQ.findById ride.bookingId
           let incrementBonusEarningsBy = fromMaybe 0.0 $ (\booking -> Just $ fromMaybe 0.0 booking.fareParams.driverSelectedFare + fromMaybe 0.0 booking.fareParams.customerExtraFee) =<< mbBooking
-          incrementLateNightTripsCountBy <- isLateNightRide ride
+          incrementLateNightTripsCountBy <- isLateNightRide fareParameter
           pure (fromMaybe 0.0 ride.fare, incrementBonusEarningsBy, incrementLateNightTripsCountBy, 10)
     -- Esq.runNoTransaction $ do
     DSQ.incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast driverId) incrementTotalEarningsBy (incrementBonusEarningsBy + overallPickupCharges) incrementLateNightTripsCountBy
@@ -122,18 +124,21 @@ eventPayloadHandler merchantOpCityId DST.OnRideCompletion {..} = do
     isNotBackFilled :: DS.DriverStats -> Bool
     isNotBackFilled driverStats = driverStats.totalEarnings == 0.0 && driverStats.bonusEarned == 0.0 && driverStats.lateNightTrips == 0
 
-    isLateNightRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DR.Ride -> m Int
-    isLateNightRide rd = do
-      case rd.fareParametersId of
-        Just fareParamId -> do
-          mbFareParam <- B.runInReplica $ FPQ.findById fareParamId
-          -- mbFareParam <- FPQ.findById fareParamId
-          pure . maybe 0 (const 1) $ (.nightShiftCharge) =<< mbFareParam
-        Nothing -> pure 0
+    isLateNightRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe FareParameters -> m Int
+    isLateNightRide mbFareParam = pure . maybe 0 (const 1) $ (.nightShiftCharge) =<< mbFareParam
 
-updateDailyStats :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> DR.Ride -> m ()
-updateDailyStats driverId merchantOpCityId ride = do
+updateDailyStats :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> DR.Ride -> Maybe FareParameters -> m ()
+updateDailyStats driverId merchantOpCityId ride fareParameter = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let deadKmFares =
+        ( \x -> case fareParametersDetails x of
+            ProgressiveDetails det -> Just ((deadKmFare :: Fare.FParamsProgressiveDetails -> HighPrecMoney) det)
+            SlabDetails _ -> Nothing
+            RentalDetails det -> Just ((deadKmFare :: Fare.FParamsRentalDetails -> HighPrecMoney) det)
+            InterCityDetails det -> Just (pickupCharge det)
+            AmbulanceDetails _ -> Nothing
+        )
+          =<< fareParameter
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   ds <- SQDS.findByDriverIdAndDate driverId (utctDay localTime)
   case ds of
@@ -156,6 +161,8 @@ updateDailyStats driverId merchantOpCityId ride = do
                 payoutStatus = DDS.Verifying,
                 payoutOrderId = Nothing,
                 payoutOrderStatus = Nothing,
+                tollCharges = fromMaybe 0.0 ride.tollCharges,
+                bonusEarnings = fromMaybe 0.0 (fareParameter >>= (.driverSelectedFare)) + fromMaybe 0.0 (fareParameter >>= (.customerExtraFee)) + fromMaybe 0.0 deadKmFares,
                 createdAt = now,
                 updatedAt = now
               }
@@ -165,7 +172,9 @@ updateDailyStats driverId merchantOpCityId ride = do
           numRides = dailyStats.numRides + 1
           totalDistance = dailyStats.totalDistance + fromMaybe 0 ride.chargeableDistance
           merchantLocalDate = utctDay localTime
-      SQDS.updateByDriverId totalEarnings numRides totalDistance driverId merchantLocalDate
+          tollCharges = dailyStats.tollCharges + fromMaybe 0.0 ride.tollCharges
+          bonusEarnings = dailyStats.bonusEarnings + fromMaybe 0.0 (fareParameter >>= (.driverSelectedFare)) + fromMaybe 0.0 (fareParameter >>= (.customerExtraFee)) + fromMaybe 0.0 deadKmFares
+      SQDS.updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings driverId merchantLocalDate
 
 createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Currency -> DistanceUnit -> Id DP.Person -> m DS.DriverStats
 createDriverStat currency distanceUnit driverId = do

@@ -19,6 +19,7 @@ module Lib.DriverScore.Types
 where
 
 import Data.Time
+import Domain.Types.FareParameters
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
@@ -64,6 +65,7 @@ data DriverRideRequest
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,
         driverId :: Id DP.Person,
-        ride :: DR.Ride
+        ride :: DR.Ride,
+        fareParameter :: Maybe FareParameters
       }
   deriving (Show)
