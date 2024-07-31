@@ -1269,7 +1269,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
         , width MATCH_PARENT
         , gravity CENTER
         , orientation HORIZONTAL
-        , visibility $ boolToVisibility (isActivePlan && coinDiscountUpto /= "")
+        , visibility $ MP.boolToVisibility (isActivePlan && coinDiscountUpto /= "")
         , background Color.blue600
         , cornerRadii $ (Corners 8.0 false false true true)
         , padding $ Padding 2 4 2 4
