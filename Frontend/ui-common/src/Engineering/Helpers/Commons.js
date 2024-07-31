@@ -621,3 +621,9 @@ export const jBridgeMethodExists = function (method) {
   }
   return false;
 }
+
+export const getDateMinusNDays = function (dateStr, days) {
+  const date = new Date(dateStr + "Z");
+  date.setDate(date.getDate() - days);
+  return date.toISOString().split("T")[0] + "T00:00:00";
+}

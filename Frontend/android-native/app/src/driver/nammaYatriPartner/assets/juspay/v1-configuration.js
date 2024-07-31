@@ -1439,12 +1439,13 @@ window.getMerchantConfig = function () {
     "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/shorts/dU3XxAisGjo",
     "twoRideCoinEvent" : true,
     "fiveRideCoinEvent" : true,
-    "eightRideCoinEvent" : true,
+    "eightRideCoinEvent" : false,
+    "tenRideCoinEvent" : true,
     "prupleRideCoinEvent" : true,
     "driverToCustomerRefCoinEvent" : true,
     "coinConversionPopupLottie" : "https://assets.moving.tech/beckn/nammayatri/driver/lottie/ny_coin_conversion_v2.json",
     "driverToCustomerRefPopupEndDate" : "2024-08-01T00:00:00",
-    "monsoonOfferDate" : "2024-08-01T00:00:00"
+    "monsoonOfferDate" : "2024-09-01T00:00:00"
   }
   , "dashboard" : {
         "enable" : true,
