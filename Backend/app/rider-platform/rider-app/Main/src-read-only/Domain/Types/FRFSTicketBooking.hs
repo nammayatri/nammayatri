@@ -38,6 +38,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
+    payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     price :: Kernel.Types.Common.Price,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

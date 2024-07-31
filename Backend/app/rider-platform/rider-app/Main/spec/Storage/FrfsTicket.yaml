@@ -183,6 +183,7 @@ FRFSTicketBooking:
     partnerOrgId: Maybe (Id PartnerOrganization)
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    payerVpa: Maybe Text
 
   default:
     customerCancelled: "false"
@@ -280,6 +281,8 @@ FRFSTicketBooking:
       params: [customerCancelled, updatedAt]
       where: id
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
 # Make use of FareBreakup to store the fare breakup of a ticket
 
 # Get transaction_id from Payment Transaction table
