@@ -344,7 +344,8 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         mbDefaultServiceTierName = rideDetails.defaultServiceTierName,
         rideCity = Just $ show city.city,
         merchantOperatingCityId = Just ride.merchantOperatingCityId.getId,
-        rideCreatedAt = ride.createdAt
+        rideCreatedAt = ride.createdAt,
+        rideStatus = mkCommonRideStatus ride.status
       }
 
 -- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
@@ -418,6 +419,14 @@ mkBookingStatus ride now = do
     DRide.INPROGRESS -> Common.ONGOING_6HRS
     DRide.COMPLETED -> Common.COMPLETED
     DRide.CANCELLED -> Common.CANCELLED
+
+mkCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
+mkCommonRideStatus rs = case rs of
+  DRide.UPCOMING -> Common.RIDE_UPCOMING
+  DRide.NEW -> Common.RIDE_NEW
+  DRide.INPROGRESS -> Common.RIDE_INPROGRESS
+  DRide.COMPLETED -> Common.RIDE_COMPLETED
+  DRide.CANCELLED -> Common.RIDE_CANCELLED
 
 ---------------------------------------------------------------------
 rideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideSyncRes

@@ -213,6 +213,7 @@ types:
     - rideCity: Maybe Text
     - merchantOperatingCityId: Maybe Text
     - rideCreatedAt: UTCTime
+    - rideStatus: RideStatus
   LocationAPIEntity:
     - lat: Double
     - lon: Double

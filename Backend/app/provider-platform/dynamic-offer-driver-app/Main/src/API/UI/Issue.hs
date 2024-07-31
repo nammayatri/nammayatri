@@ -65,7 +65,10 @@ driverIssueHandle =
       updateTicket = castUpdateTicket,
       findMerchantConfig = buildMerchantConfig,
       mbReportACIssue = Nothing,
-      mbReportIssue = Nothing
+      mbReportIssue = Nothing,
+      mbFindLatestBookingByPersonId = Nothing,
+      mbFindRideByBookingId = Nothing,
+      mbSyncRide = Nothing
     }
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
@@ -86,12 +89,12 @@ castPersonById driverId = do
         }
 
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
-castRideById rideId _ = do
+castRideById rideId merchantId = do
   ride <- runInReplica $ QR.findById (cast rideId)
   return $ fmap castRide ride
   where
     castRide ride =
-      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing
+      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (maybe merchantId cast ride.merchantId)
 
 castMOCityById :: Id Common.MerchantOperatingCity -> Flow (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
@@ -143,7 +146,8 @@ castRideInfo merchantId merchantOpCityId rideId = do
           computedPrice = toHighPrecMoney <$> res.actualFare,
           fareBreakup = [],
           rideCreatedAt = res.rideCreatedAt,
-          rideStartTime = res.rideStartTime
+          rideStartTime = res.rideStartTime,
+          rideStatus = castRideStatus res.rideStatus
         }
 
     castBookingStatus :: DRide.BookingStatus -> Common.BookingStatus
@@ -154,6 +158,14 @@ castRideInfo merchantId merchantOpCityId rideId = do
       DRide.ONGOING_6HRS -> Common.ONGOING_6HRS
       DRide.COMPLETED -> Common.COMPLETED
       DRide.CANCELLED -> Common.CANCELLED
+
+    castRideStatus :: DRide.RideStatus -> Common.RideStatus
+    castRideStatus = \case
+      DRide.RIDE_UPCOMING -> Common.R_UPCOMING
+      DRide.RIDE_NEW -> Common.R_NEW
+      DRide.RIDE_INPROGRESS -> Common.R_INPROGRESS
+      DRide.RIDE_COMPLETED -> Common.R_COMPLETED
+      DRide.RIDE_CANCELLED -> Common.R_CANCELLED
 
     castLocationAPIEntity ent =
       Common.LocationAPIEntity

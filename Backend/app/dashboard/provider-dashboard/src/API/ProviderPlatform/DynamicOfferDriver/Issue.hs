@@ -196,7 +196,7 @@ ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAP
   transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.ticketStatusCallBack) req
 
-createIssueCategory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateIssueCategoryReq -> FlowHandler APISuccess
+createIssueCategory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateIssueCategoryReq -> FlowHandler Common.CreateIssueCategoryRes
 createIssueCategory merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.CreateIssueCategoryEndpoint apiTokenInfo (Just req)
@@ -208,7 +208,7 @@ updateIssueCategory merchantShortId opCity apiTokenInfo issueCategoryId req = wi
   transaction <- buildTransaction Common.UpdateIssueCategoryEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.updateIssueCategory) issueCategoryId req
 
-createIssueOption :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueCategory -> Id IssueMessage -> Common.CreateIssueOptionReq -> FlowHandler APISuccess
+createIssueOption :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueCategory -> Id IssueMessage -> Common.CreateIssueOptionReq -> FlowHandler Common.CreateIssueOptionRes
 createIssueOption merchantShortId opCity apiTokenInfo issueCategoryId issueMessageId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.CreateIssueOptionEndpoint apiTokenInfo (Just req)
@@ -220,7 +220,7 @@ updateIssueOption merchantShortId opCity apiTokenInfo issueOptionId req = withFl
   transaction <- buildTransaction Common.UpdateIssueOptionEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.updateIssueOption) issueOptionId req
 
-upsertIssueMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertIssueMessageReq -> FlowHandler APISuccess
+upsertIssueMessage :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertIssueMessageReq -> FlowHandler Common.UpsertIssueMessageRes
 upsertIssueMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UpsertIssueMessageEndpoint apiTokenInfo (Just req)
