@@ -2773,7 +2773,17 @@ type UpdateRouteSrcDestConfig = {
   destination :: String
 }
 
-data CoinEarnedPopupType = RIDE_MORE_EARN_COIN | TWO_MORE_RIDES | ONE_MORE_RIDE | TWO_RIDE_COMPLETED | FIVE_RIDE_COMPLETED | EIGHT_RIDE_COMPLETED | REFER_AND_EARN_COIN | CONVERT_COINS_TO_CASH | NO_COIN_POPUP
+data CoinEarnedPopupType = 
+    RIDE_MORE_EARN_COIN 
+  | TWO_MORE_RIDES 
+  | ONE_MORE_RIDE 
+  | TWO_RIDE_COMPLETED 
+  | FIVE_RIDE_COMPLETED 
+  | EIGHT_RIDE_COMPLETED
+  | TEN_RIDE_COMPLETED 
+  | REFER_AND_EARN_COIN 
+  | CONVERT_COINS_TO_CASH 
+  | NO_COIN_POPUP
 
 derive instance genericCoinEarnedPopupType :: Generic CoinEarnedPopupType _
 instance showCoinEarnedPopupType :: Show CoinEarnedPopupType where show = genericShow
@@ -2787,7 +2797,8 @@ type CoinEarnedPopupTypeShown = {
   fiveRideCompleted :: String,
   eightRideCompleted :: String,
   referAndEarnCoin :: String,
-  convertCoinsToCash :: String
+  convertCoinsToCash :: String,
+  tenRideCompleted :: String
 }
 
 type RateCardScreenState = {
