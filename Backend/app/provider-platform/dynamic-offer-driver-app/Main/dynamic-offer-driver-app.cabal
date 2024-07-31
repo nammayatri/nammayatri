@@ -150,6 +150,7 @@ library
       Domain.Action.Dashboard.Management.Message
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.Subscription
       Domain.Action.Dashboard.Overlay
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
