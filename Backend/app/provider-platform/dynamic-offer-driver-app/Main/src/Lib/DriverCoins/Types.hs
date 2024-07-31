@@ -34,6 +34,7 @@ data DriverCoinsFunctionType
   | TwoRidesCompleted
   | FiveRidesCompleted
   | TenRidesCompleted
+  | RidesCompleted Int
   | EightPlusRidesInOneDay
   | PurpleRideCompleted
   | LeaderBoardTopFiveHundred
