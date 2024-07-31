@@ -97,6 +97,7 @@ data BookingAPIEntity = BookingAPIEntity
     isAirConditioned :: Maybe Bool,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
+    isScheduled :: Bool,
     isAlreadyFav :: Maybe Bool,
     favCount :: Maybe Int,
     cancellationReason :: Maybe BookingCancellationReasonAPIEntity
@@ -248,6 +249,7 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       serviceTierShortDesc = booking.serviceTierShortDesc,
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
       driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
+      isScheduled = booking.isScheduled,
       cancellationReason = mbCancellationReason,
       isAlreadyFav = activeRide >>= (.isAlreadyFav),
       favCount = activeRide >>= (.favCount)
