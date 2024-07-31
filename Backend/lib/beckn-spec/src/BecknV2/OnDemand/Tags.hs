@@ -402,6 +402,7 @@ data BecknTag
   | -- rating tags
     RIDER_PHONE_NUMBER
   | SHOULD_FAVOURITE_DRIVER
+  | MEDIA_FILE_PATH
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where

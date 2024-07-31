@@ -9,3 +9,8 @@ ALTER TABLE atlas_app.rating ADD COLUMN rider_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.rating ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.rating ADD COLUMN was_offered_assistance boolean ;
 ALTER TABLE atlas_app.rating ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rating ADD COLUMN media_id character varying(36) ;
