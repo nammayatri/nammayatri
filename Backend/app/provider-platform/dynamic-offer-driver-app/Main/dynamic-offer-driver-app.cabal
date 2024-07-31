@@ -582,6 +582,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.Dashboard.Management.Driver
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride

@@ -176,6 +176,7 @@ let defaultImports =
           , "Servant"
           , "Data.OpenApi (ToSchema)"
           , "Servant.Client"
+          , "Kernel.Utils.Common"
           ]
         , _qualifiedImports =
           [ "Kernel.Prelude"
@@ -194,6 +195,7 @@ let defaultImports =
           , "Servant"
           , "Tools.Auth"
           , "Data.OpenApi (ToSchema)"
+          , "Kernel.Utils.Common"
           ]
         , _qualifiedImports =
           [ "Kernel.Prelude"
@@ -215,6 +217,7 @@ let defaultImports =
           [ "Kernel.Prelude"
           , "Tools.Beam.UtilsTH"
           , "Kernel.External.Encryption"
+          , "Kernel.Utils.Common"
           ]
         , _qualifiedImports = [ "Database.Beam as B" ]
         , _packageImports = [] : List PackageImport

@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.ProviderPlatform.Driver
   ( module Dashboard.ProviderPlatform.Driver,
@@ -20,6 +21,7 @@ module Dashboard.ProviderPlatform.Driver
   )
 where
 
+import API.Types.ProviderPlatform.Management.Driver as Reexport
 import Dashboard.Common as Reexport
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import Data.Aeson
@@ -78,6 +80,7 @@ data DriverEndpoint
   | UpdateDriverTagEndPoint
   | UpdateFleetOwnerEndPoint
   | SendFleetJoiningOtpEndPoint
+  | PostDriverSyncDocAadharPanEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "DriverEndpoint"
@@ -1381,4 +1384,8 @@ data LinkRCWithDriverForFleetReq = LinkRCWithDriverForFleetReq
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance HideSecrets LinkRCWithDriverForFleetReq where
+  hideSecrets = identity
+
+----------------------------- Driver OnboardingV2 (AADHAAR, PAN, PROFILE PIC) -------------------------------------------
+instance HideSecrets AadharPanSyncReq where
   hideSecrets = identity

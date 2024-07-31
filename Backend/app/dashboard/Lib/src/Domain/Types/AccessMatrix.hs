@@ -255,6 +255,8 @@ data UserActionType
   | VERIFY_FLEET_JOINING_OTP
   | LIST_DRIVER_RIDES
   | LINK_RC_WITH_DRIVER
+  | PAN_AADHAAR_SELFIE_DETAILS
+  | SYNC_DOC_AADHAR_PAN
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

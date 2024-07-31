@@ -79,17 +79,22 @@ module Domain.Action.Dashboard.Driver
     updateFleetOwnerInfo,
     getFleetOwnerInfo,
     linkRCWithDriverForFleet,
+    getDriverPanAadharSelfieDetails,
+    postDriverSyncDocAadharPan,
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management.Driver as PMD
 import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as DC
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import Data.Coerce
+import Data.List (sortOn)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map as M
+import Data.Ord
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.Dashboard.Merchant as DashboardMerchant
@@ -102,6 +107,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverHomeLocation as DDHL
@@ -114,6 +120,7 @@ import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Image (Image)
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
@@ -174,6 +181,7 @@ import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as DPC
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
@@ -181,6 +189,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
+import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Message as MQuery
 import qualified Storage.Queries.MessageTranslation as MTQuery
@@ -2323,3 +2332,82 @@ linkRCWithDriverForFleet merchantShortId opCity fleetOwnerId req = do
     driverRCAssoc <- makeRCAssociation driver.merchantId driver.merchantOperatingCityId driver.id rc.id (convertTextToUTC (Just "2099-12-12"))
     QRCAssociation.create driverRCAssoc
   return Success
+
+getDriverPanAadharSelfieDetails :: (ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow PMD.PanAadharSelfieDetailsResp)
+getDriverPanAadharSelfieDetails merchantShortId _opCity countryCode mobileNumber = do
+  merchant <- findMerchantByShortId merchantShortId
+  hashedMobileNumber <- getDbHash mobileNumber
+  let formattedCountryCode = "+" <> countryCode
+  person <- QPerson.findByMobileNumberAndMerchantAndRole formattedCountryCode hashedMobileNumber merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound ("Person with number :" <> show mobileNumber <> " not found"))
+  images <- QImage.findByPersonIdAndImageTypes person.id [DomainDVC.AadhaarCard, DomainDVC.PanCard, DomainDVC.ProfilePhoto]
+  let sortedImages = sortOn (Down . (.updatedAt)) images
+  let (profileImage, (aadhaarImage, panImage)) = sortedImages & (find ((== DomainDVC.ProfilePhoto) . (.imageType)) &&& find ((== DomainDVC.AadhaarCard) . (.imageType)) &&& find ((== DomainDVC.PanCard) . (.imageType)))
+  return $ makePanAadharSelfieDetailsResp person profileImage aadhaarImage panImage
+  where
+    makePanAadharSelfieDetailsResp person profileImage aadhaarImage panImage =
+      PMD.PanAadharSelfieDetailsResp
+        { aadhaarDetails = makeAadhaarDetails <$> aadhaarImage,
+          panDetails = makePanDetails <$> panImage,
+          personId = getId person.id,
+          personName = person.firstName <> " " <> fromMaybe "" person.middleName <> " " <> fromMaybe "" person.lastName,
+          selfieDetails = makeSelfieDetails <$> profileImage
+        }
+
+    makeAadhaarDetails DImage.Image {..} =
+      PMD.AadhaarDetails
+        { aadhaarStatus = T.pack . show <$> verificationStatus,
+          aadhaarStatusTime = updatedAt,
+          aadhaarTransactionId = workflowTransactionId
+        }
+
+    makePanDetails DImage.Image {..} =
+      PMD.PanDetails
+        { panStatus = T.pack . show <$> verificationStatus,
+          panStatusTime = updatedAt,
+          panTransactionId = workflowTransactionId
+        }
+
+    makeSelfieDetails DImage.Image {..} =
+      PMD.SelfieDetails
+        { latestStatus = T.pack . show <$> verificationStatus,
+          latestStatusTime = updatedAt,
+          latestTransactionId = workflowTransactionId
+        }
+
+postDriverSyncDocAadharPan :: (ShortId DM.Merchant -> Context.City -> PMD.AadharPanSyncReq -> Flow APISuccess)
+postDriverSyncDocAadharPan merchantShortId _opCity PMD.AadharPanSyncReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+  hashedMobileNumber <- getDbHash phoneNo
+  person <- QPerson.findByMobileNumberAndMerchantAndRole ("+" <> countryCode) hashedMobileNumber merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound ("Person with number :" <> show phoneNo <> " not found"))
+  images <- QImage.findRecentLatestByPersonIdAndImagesType person.id (convertDocTypeToDVCDocType documentType)
+  case documentType of
+    PMD.Aadhaar -> do
+      imgs <- extract2 images
+      aadhaarDetails <- B.runInReplica $ QAadhaarCard.findByPrimaryKey person.id
+      case aadhaarDetails of
+        Nothing -> void $ mapM (maybe (return ()) (QImage.deleteById . (.id))) imgs
+        Just aadhaar -> do
+          if uncurry (&&) $ ((aadhaar.aadhaarFrontImageId `elem`) &&& (aadhaar.aadhaarBackImageId `elem`)) [img <&> (.id) | img <- imgs]
+            then throwError DocumentAlreadyInSync
+            else void $ mapM (maybe (return ()) (QImage.deleteById . (.id))) imgs
+    PMD.Pan -> do
+      image <- fromMaybeM UnsyncedImageNotFound (listToMaybe images)
+      when (isNothing image.workflowTransactionId) $ throwError NotValidatedUisngFrontendSDK
+      when (length images > 1) $ throwError (InternalError "More than one Image found for document type PAN which is not possible using frontend sdk flow!!!!!!!!!")
+
+      panDetails <- B.runInReplica $ QPanCard.findByDriverId person.id
+      case panDetails of
+        Nothing -> QImage.deleteById image.id
+        Just pan -> do
+          if pan.documentImageId1 /= image.id
+            then do
+              QImage.deleteById image.id
+            else throwError DocumentAlreadyInSync
+  return Success
+  where
+    convertDocTypeToDVCDocType PMD.Aadhaar = DomainDVC.AadhaarCard
+    convertDocTypeToDVCDocType PMD.Pan = DomainDVC.PanCard
+
+    extract2 (x : y : []) = return [Just x, Just y]
+    extract2 (x : []) = return [Just x, Nothing]
+    extract2 _ = throwError (InternalError "No Image found for document type Aadhaar!!!!!!!!!")

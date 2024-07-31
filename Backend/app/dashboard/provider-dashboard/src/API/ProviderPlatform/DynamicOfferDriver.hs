@@ -22,6 +22,7 @@ module API.ProviderPlatform.DynamicOfferDriver
   )
 where
 
+import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Driver as DriverDSL
 import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant as MerchantDSL
 import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Revenue as RevenueDSL
 import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Ride as RideDSL
@@ -78,6 +79,7 @@ type API' =
     :<|> MerchantDSL.API
     :<|> RevenueDSL.API
     :<|> RideDSL.API
+    :<|> DriverDSL.API
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -99,6 +101,7 @@ handler merchantId = do
     :<|> MerchantDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city
+    :<|> DriverDSL.handler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI_PARTNER" -> City.Bangalore
@@ -124,6 +127,7 @@ handlerV2 merchantId city =
     :<|> MerchantDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city
+    :<|> DriverDSL.handler merchantId city
 
 handlerV3 :: FlowServer CacAPI
 handlerV3 = CacAuth.handler
