@@ -143,7 +143,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
-  message <-
+  buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
         { userName = SLP.getName person,
@@ -154,7 +154,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
     when (shouldSendSms person) $ do
       void $ QPDEN.updateShareRideForAll personId True
       enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
-      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
+      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers
   return $
     SosRes
       { sosId = sosId

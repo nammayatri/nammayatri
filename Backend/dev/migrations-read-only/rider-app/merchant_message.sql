@@ -10,3 +10,8 @@ ALTER TABLE atlas_app.merchant_message ADD COLUMN message_key character varying(
 ALTER TABLE atlas_app.merchant_message ADD COLUMN template_id character varying(255) ;
 ALTER TABLE atlas_app.merchant_message ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.merchant_message ADD PRIMARY KEY ( merchant_operating_city_id, message_key);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_message ADD COLUMN sender_header text ;

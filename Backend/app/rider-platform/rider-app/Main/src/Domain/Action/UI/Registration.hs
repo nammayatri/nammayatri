@@ -258,20 +258,19 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
       when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
         let otpHash = smsCfg.credConfig.otpHash
-            sender = smsCfg.sender
         case otpChannel of
           SMS -> do
             countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
             mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
             let phoneNumber = countryCode <> mobileNumber
             withLogTag ("personId_" <> getId person.id) $ do
-              message <-
+              buildSmsReq <-
                 MessageBuilder.buildSendOTPMessage merchantOperatingCityId $
                   MessageBuilder.BuildSendOTPMessageReq
                     { otp = otpCode,
                       hash = otpHash
                     }
-              Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender)
+              Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
                 >>= Sms.checkSmsResult
           WHATSAPP -> do
             countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for WHATSAPP OTP channel")
@@ -638,7 +637,6 @@ resend tokenId = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   let otpCode = authValueHash
   let otpHash = smsCfg.credConfig.otpHash
-      sender = smsCfg.sender
   otpChannel <- getPersonOTPChannel person.id
   case otpChannel of
     SMS -> do
@@ -646,13 +644,13 @@ resend tokenId = do
       countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
-        message <-
+        buildSmsReq <-
           MessageBuilder.buildSendOTPMessage merchantOperatingCityId $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
               }
-        Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender)
+        Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
           >>= Sms.checkSmsResult
     WHATSAPP -> do
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")

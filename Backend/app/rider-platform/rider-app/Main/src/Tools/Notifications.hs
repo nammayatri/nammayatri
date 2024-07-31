@@ -866,16 +866,14 @@ notifyRideStartToEmergencyContacts booking ride = do
               ]
       notifyPerson booking.merchantId booking.merchantOperatingCityId person.id notificationData
     sendSMS emergencyContact name trackLink = do
-      smsCfg <- asks (.smsCfg)
-      let sender = smsCfg.sender
-      message <-
+      buildSmsReq <-
         MessageBuilder.buildFollowRideStartedMessage booking.merchantOperatingCityId $
           MessageBuilder.BuildFollowRideMessageReq
             { userName = fromMaybe "" name,
               rideLink = trackLink
             }
       void $
-        Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (Sms.SendSMSReq message emergencyContact.mobileNumber sender)
+        Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq emergencyContact.mobileNumber)
           >>= Sms.checkSmsResult
 
 checkTimeConstraintForFollowRide :: DRC.RiderConfig -> UTCTime -> Bool
