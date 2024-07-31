@@ -7,6 +7,8 @@ import qualified API.Types.UI.DriverProfileQuestions
 import qualified AWS.S3 as S3
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
+import Data.Time.Calendar (diffDays)
+import Data.Time.Clock (utctDay)
 import qualified Domain.Types.DriverProfileQuestions as DTDPQ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -22,6 +24,7 @@ import Kernel.Utils.Common as KUC
 import Servant
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
+import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
 import Tools.Error
@@ -36,33 +39,67 @@ postDriverProfileQues ::
     API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq ->
     Flow APISuccess
   )
-postDriverProfileQues (mbPersonId, _, merchantOpCityId) API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq {..} =
+postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq {..} =
   do
-    B.runInReplica (mbPersonId & fromMaybeM (PersonNotFound "No person found"))
+    mbPersonId & fromMaybeM (PersonNotFound "No person found")
     >>= \driverId ->
-      getCurrentTime
-        >>= \now ->
-          DPQ.upsert
-            ( DTDPQ.DriverProfileQuestions
-                { updatedAt = now,
-                  createdAt = now,
-                  driverId = driverId,
-                  hometown = hometown,
-                  merchantOperatingCityId = merchantOpCityId,
-                  pledges = pledges,
-                  aspirations = toMaybe aspirations,
-                  drivingSince = drivingSince,
-                  imageIds = toMaybe imageIds,
-                  vehicleTags = toMaybe vehicleTags,
-                  aboutMe = generateAboutMe
-                }
-            )
-            >> pure Success
+      QP.findById driverId >>= fromMaybeM (PersonNotFound "No person found")
+        >>= \person ->
+          QDS.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound "No person found")
+            >>= \driverStats ->
+              getCurrentTime
+                >>= \now ->
+                  DPQ.upsert
+                    ( DTDPQ.DriverProfileQuestions
+                        { updatedAt = now,
+                          createdAt = now,
+                          driverId = driverId,
+                          hometown = hometown,
+                          merchantOperatingCityId = merchantOpCityId,
+                          pledges = pledges,
+                          aspirations = toMaybe aspirations,
+                          drivingSince = drivingSince,
+                          imageIds = toMaybe imageIds,
+                          vehicleTags = toMaybe vehicleTags,
+                          aboutMe = generateAboutMe person driverStats now req
+                        }
+                    )
+                    >> pure Success
   where
     toMaybe xs = guard (not (null xs)) >> Just xs
 
     -- Generate with LLM or create a template text here
-    generateAboutMe = Just "Sample text goes here"
+    generateAboutMe person driverStats now req' = Just ((hometownDetails req'.hometown) <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> "months. " <> (writeDriverStats driverStats) <> (genAspirations req'.aspirations))
+
+    hometownDetails mHometown = case mHometown of
+      Just hometown' -> ("Hailing from " <> hometown' <> ", ")
+      Nothing -> ""
+
+    withNY now createdAt = T.pack $ show $ (diffDays (utctDay createdAt) (utctDay now)) `div` 30
+
+    writeDriverStats driverStats = ratingStat driverStats <> cancellationStat driverStats
+
+    ratingStat driverStats =
+      let avgRating = divideMaybe driverStats.totalRatingScore driverStats.totalRatings
+       in if avgRating > Just 4.82
+            then ("I have an average rating of " <> (T.pack $ show $ avgRating) <> " and is among the top 10 percentile. ")
+            else ""
+
+    cancellationStat driverStats =
+      let cancRate = divideMaybe driverStats.ridesCancelled driverStats.totalRidesAssigned
+       in if cancRate < Just 0.04
+            then (if (ratingStat driverStats == "") then "" else "Also, ") <> "I have a very low cancellation rate of " <> (T.pack $ show cancRate) <> " that ranks among top 10 percentile. "
+            else ""
+
+    genAspirations aspirations' = "I aspire to " <> (T.intercalate ", " aspirations')
+
+    divideMaybe :: Maybe Int -> Maybe Int -> Maybe Double
+    divideMaybe mNum mDenom = do
+      num <- mNum
+      denom <- mDenom
+      if denom == 0
+        then Nothing
+        else Just (fromIntegral num / fromIntegral denom)
 
 getDriverProfileQues ::
   ( ( Maybe (Id SP.Person),
