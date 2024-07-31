@@ -349,10 +349,11 @@ rideSearchBT payload = do
         handleError errorPayload = do
             let errResp = errorPayload.response
                 codeMessage = decodeError errResp.errorMessage "errorCode"
+                errorMessage = decodeError errResp.errorMessage "errorMessage"
                 message = if errorPayload.code == 400 && codeMessage == "RIDE_NOT_SERVICEABLE" 
                             then getString RIDE_NOT_SERVICEABLE 
                             else if errorPayload.code == 400 
-                            then codeMessage
+                            then errorMessage
                             else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
             pure $ toast message
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
