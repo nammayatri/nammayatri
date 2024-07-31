@@ -22,8 +22,8 @@ import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
-import Prelude (($) ,negate)
-import Data.Array (head)
+import Prelude (($) ,negate, (>))
+import Data.Array (head, length)
 import Prelude(negate)
 import Foreign.Object (empty)
 import ConfigProvider
@@ -523,7 +523,8 @@ initData = let
                     }
             , crossBtnEnabled : false
                 }]  
-  , selectedIndex : -1                  
+  , selectedIndex : -1 
+  , addStopsEnabled : false --length inputView > 2                 
   }
 }
 
@@ -663,6 +664,7 @@ dummyAddress =
   , "ward"      : Nothing
   , "placeId"   : Nothing
   }
+
 dummyQuoteAPIEntity :: QuoteAPIEntity
 dummyQuoteAPIEntity = QuoteAPIEntity {
   agencyNumber : Nothing,

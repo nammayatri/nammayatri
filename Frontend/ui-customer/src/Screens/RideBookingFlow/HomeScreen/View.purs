@@ -3043,7 +3043,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) || hasCurrentLocAndPrevDropLoc /= state.data.previousRideDrop then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
+                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon []
                 routeResponseAdvanced <- do
                   case state.data.routeCacheForAdvancedBooking, mbPreviousDropLat, mbPreviousDropLon, routeResponse of
                     Nothing , Just previousDropLat, Just previousDropLon, Right (GetRouteResp routeResp) -> do
@@ -3053,7 +3053,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                           lastPointInRoute = Arr.last normalRoutePoints.points
                           previousDropLat' = maybe previousDropLat (\resp -> resp.lat) lastPointInRoute
                           previousDropLon' = maybe previousDropLon (\resp -> resp.lng) lastPointInRoute
-                      let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
+                      let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng []
                       Just <$> getRoute routeState routeReq
                     Just advRoute, Just previousDropLat, Just previousDropLon, _ -> pure $ Just (Right (GetRouteResp ([advRoute])))
                     _, _, _, _ -> pure $ Just (Right (GetRouteResp []))
@@ -4783,7 +4783,7 @@ createRouteHelper routeState startLat startLon endLat endLon mbRoute = do
     case mbRoute of
       Just routeCalculated  -> pure $ Just routeCalculated
       Nothing -> do
-        routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon
+        routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon []
         case routeResp of 
           Right (GetRouteResp resp) -> do 
             case (head resp) of 

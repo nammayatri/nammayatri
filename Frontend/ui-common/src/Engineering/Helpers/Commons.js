@@ -46,10 +46,12 @@ export const getNewIDWithTag = function(tag){
 }
 
 export const callAPI = function () {
+  console.log("Request callAPI->", JSON.parse(arguments[2]))
   return window.JBridge.callAPI(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6] )
 }
 
 export const callAPIWithOptions = function () {
+  console.log("Request callAPIwithOptions->", JSON.parse(arguments[2]))
   if (typeof window.JBridge.callAPIWithOptions == "function") {
     return window.JBridge.callAPIWithOptions(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6], arguments[7]);
   } else {

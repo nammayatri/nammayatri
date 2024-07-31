@@ -23,7 +23,7 @@ import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), Feed
 import ConfigProvider as CP
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe)
+import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe, tail, init, drop, mapWithIndex)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
@@ -44,7 +44,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>))
+import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>), (-))
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
 import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..), AutoCompleteReqType(..))
@@ -70,6 +70,7 @@ import LocalStorage.Cache (removeValueFromCache)
 import Helpers.API (callApiBT)
 import Screens.Types (FareProductType(..)) as FPT
 import Services.API (ServiceabilityType(..)) as ServiceabilityType
+import Components.InputView.Controller 
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -360,26 +361,106 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
+-- makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
+-- makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
+--     let appConfig = CP.getAppConfig CP.appConfig
+--     in  SearchReq 
+--         { "contents" : OneWaySearchRequest 
+--             ( OneWaySearchReq
+--                 { "startTime" : Just startTime
+--                 , "destination" : SearchReqLocation 
+--                     { "gps" : LatLong 
+--                         { "lat" : dlat 
+--                         , "lon" : dlong
+--                         }
+--                     , "address" : validateLocationAddress dlat dlong (LocationAddress desAdd)
+--                     }
+--                 , "origin" : SearchReqLocation 
+--                     { "gps" : LatLong 
+--                         { "lat" : slat 
+--                         , "lon" : slong
+--                         }
+--                     , "address" : validateLocationAddress slat slong (LocationAddress srcAdd)
+--                     }
+--                 , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+--                 , "isSourceManuallyMoved" : Just sourceManuallyMoved
+--                 , "isDestinationManuallyMoved" : Just destManuallyMoved
+--                 , "sessionToken" : Just sessionToken
+--                 , "isSpecialLocation" : Just isSpecialLocation
+--                 }
+--             )
+--         , "fareProductType" : "ONE_WAY"
+--         }
+--     where 
+--         validateLocationAddress :: Number -> Number -> LocationAddress -> LocationAddress
+--         validateLocationAddress lat long address = 
+--             let addressValidated = validateAddressHelper address
+--             in 
+--                 if addressValidated
+--                     then address 
+--                     else fallbackAndFetchAgain lat long
+
+--         validateAddressHelper :: LocationAddress -> Boolean
+--         validateAddressHelper (LocationAddress address) = 
+--             or
+--                 [ isNonEmpty address.area
+--                 , isNonEmpty address.state
+--                 , isNonEmpty address.country
+--                 , isNonEmpty address.building
+--                 , isNonEmpty address.door
+--                 , isNonEmpty address.street
+--                 , isNonEmpty address.city
+--                 , isNonEmpty address.areaCode
+--                 , isNonEmpty address.ward
+--                 , isNonEmpty address.placeId
+--                 ]
+        
+--         fallbackAndFetchAgain :: Number -> Number -> LocationAddress
+--         fallbackAndFetchAgain lat long = 
+--             let addressFetched = runFn2 JB.getLocationNameV2 lat long
+--             in 
+--                 if addressFetched /= "NO_LOCATION_FOUND" then
+--                     LocationAddress $ Constants.encodeAddress addressFetched [] Nothing lat long
+--                 else do
+--                     let calNearbyLocation = MP.calculateNearbyLocation lat long
+--                         nearbyAddressFetched = runFn2 JB.getLocationNameV2 lat long
+--                     if nearbyAddressFetched /= "NO_LOCATION_FOUND" then
+--                         LocationAddress $ Constants.encodeAddress nearbyAddressFetched [] Nothing lat long
+--                     else
+--                         LocationAddress $ Constants.encodeAddress (getValueToLocalStore CUSTOMER_LOCATION) [] Nothing lat long
+
+--         isNonEmpty :: Maybe String -> Boolean
+--         isNonEmpty = maybe false (\s -> not $ DS.null s)
+
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> Array InputView -> SearchReq
+makeRideSearchReq sourceLat sourceLong destLat destLong sourceAddress destAddress startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation inputView = 
     let appConfig = CP.getAppConfig CP.appConfig
+        stops = if length inputView > 2 then take ((length inputView) - 2) (drop 1 inputView) else []
+        _ = spy "stops in makeRideSearchReq" inputView
     in  SearchReq 
         { "contents" : OneWaySearchRequest 
             ( OneWaySearchReq
                 { "startTime" : Just startTime
                 , "destination" : SearchReqLocation 
                     { "gps" : LatLong 
-                        { "lat" : dlat 
-                        , "lon" : dlong
+                        { "lat" : destLat
+                        , "lon" : destLong
                         }
-                    , "address" : validateLocationAddress dlat dlong (LocationAddress desAdd)
+                    , "address" : validateLocationAddress destLat destLong (LocationAddress destAddress)
                     }
+                , "stops" :Just $ (map (\stop -> SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : stop.placeLat 
+                        , "lon" : stop.placeLong
+                        }
+                    , "address" : validateLocationAddress (stop.placeLat) (stop.placeLong) (LocationAddress (stop.placeAddress))
+                    })) stops
                 , "origin" : SearchReqLocation 
                     { "gps" : LatLong 
-                        { "lat" : slat 
-                        , "lon" : slong
+                        { "lat" : sourceLat
+                        , "lon" : sourceLong
                         }
-                    , "address" : validateLocationAddress slat slong (LocationAddress srcAdd)
+                    , "address" : validateLocationAddress sourceLat sourceLong (LocationAddress sourceAddress)
                     }
                 , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
                 , "isSourceManuallyMoved" : Just sourceManuallyMoved
@@ -692,20 +773,29 @@ getRouteBT routeState body = do
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
-makeGetRouteReq :: Number -> Number -> Number -> Number -> GetRouteReq
-makeGetRouteReq slat slng dlat dlng = GetRouteReq {
-    "waypoints": [
-      LatLong {
-          "lon": slng,
-          "lat": slat
-      },
-      LatLong{
-          "lon": dlng,
-          "lat": dlat
-      }],
-    "mode": Just "CAR",
-    "calcPoints": true
-}
+-- makeGetRouteReq :: Number -> Number -> Number -> Number -> GetRouteReq
+-- makeGetRouteReq slat slng dlat dlng = GetRouteReq {
+--     "waypoints": [
+--       LatLong {
+--           "lon": slng,
+--           "lat": slat
+--       },
+--       LatLong{
+--           "lon": dlng,
+--           "lat": dlat
+--       }],
+--     "mode": Just "CAR",
+--     "calcPoints": true
+-- }
+
+makeGetRouteReq :: Number -> Number -> Number -> Number ->  Array InputView -> GetRouteReq
+makeGetRouteReq srcLat srcLng destLat destLng stops = 
+  let waypoints =[ LatLong { lon: srcLng, lat: srcLat }] <> (map (\stop -> LatLong { lon: stop.placeLong, lat: stop.placeLat}) stops)  <> [LatLong { lon: destLng, lat: destLat }]
+  in GetRouteReq {
+      "waypoints": waypoints,
+      "mode": Just "CAR",
+      "calcPoints": true
+  }
 
 walkCoordinate :: Number -> Number -> Number -> Number -> Locations
 walkCoordinate srcLat srcLon destLat destLong = {
@@ -815,19 +905,48 @@ sendIssueBT req = do
             BackT $ pure GoBack
 
 ----------------------------------------------------------------------------------------------
-drawMapRoute :: Number -> Number -> Number -> Number -> JB.MarkerConfig -> JB.MarkerConfig -> String -> Maybe Route -> String -> MapRouteConfig -> FlowBT String (Maybe Route)
-drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig routeType existingRoute routeAPIType specialLocation = do
+-- drawMapRoute :: Number -> Number -> Number -> Number -> JB.MarkerConfig -> JB.MarkerConfig -> String -> Maybe Route -> String -> MapRouteConfig -> FlowBT String (Maybe Route)
+-- drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig routeType existingRoute routeAPIType specialLocation = do
+--     void $ pure $ removeAllPolylines ""
+--     case existingRoute of
+--         Just (Route route) -> do
+--             let (Snapped points) = route.points
+--             case points of
+--                 [] -> do
+--                     (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
+--                     callDrawRoute ((routeResponse) !! 0)
+--                 _  -> callDrawRoute existingRoute
+--         Nothing -> do
+--             (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
+--             _ <- pure $ printLog "drawRouteResponse" routeResponse
+--             let ios = (os == "IOS")
+--             let route = ((routeResponse) !! 0)
+--             callDrawRoute route
+--     where
+--         callDrawRoute :: Maybe Route -> FlowBT String (Maybe Route)
+--         callDrawRoute route = do 
+--             case route of
+--                 Just (Route routes) -> do
+--                     let routeConfig = JB.mkRouteConfig (walkCoordinates routes.points) sourceMarkerConfig destMarkerConfig{anchorV = 1.0} Nothing routeType "LineString" true JB.DEFAULT specialLocation
+--                     lift $ lift $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
+--                     pure route
+                    
+--                 Nothing -> pure route
+
+drawMapRoute :: Number -> Number -> Number -> Number -> JB.MarkerConfig -> JB.MarkerConfig -> String -> Maybe Route -> String -> MapRouteConfig -> Array InputView -> FlowBT String (Maybe Route)
+drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig routeType existingRoute routeAPIType specialLocation stops = do
     void $ pure $ removeAllPolylines ""
+    void $ pure $ spy "inside drawMapRoute" stops
     case existingRoute of
         Just (Route route) -> do
             let (Snapped points) = route.points
             case points of
                 [] -> do
-                    (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
+                    (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng stops)
                     callDrawRoute ((routeResponse) !! 0)
                 _  -> callDrawRoute existingRoute
         Nothing -> do
-            (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
+            (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng stops)
             _ <- pure $ printLog "drawRouteResponse" routeResponse
             let ios = (os == "IOS")
             let route = ((routeResponse) !! 0)
@@ -837,7 +956,8 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
         callDrawRoute route = do 
             case route of
                 Just (Route routes) -> do
-                    let routeConfig = JB.mkRouteConfig (walkCoordinates routes.points) sourceMarkerConfig destMarkerConfig{anchorV = 1.0} Nothing routeType "LineString" true JB.DEFAULT specialLocation
+                    let stopsMarkers = mapWithIndex (\idx stop -> JB.defaultMarkerConfig {markerId = "ny_ic_stop_marker_" <> show idx, pointerIcon = "ny_ic_stop_marker", position {lat = stop.placeLat, lng = stop.placeLong}}) stops
+                    let routeConfig = JB.mkRouteConfig (walkCoordinates routes.points) sourceMarkerConfig destMarkerConfig{anchorV = 1.0} (Just stopsMarkers) routeType "LineString" true JB.DEFAULT specialLocation
                     lift $ lift $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                     pure route
                     

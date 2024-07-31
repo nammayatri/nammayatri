@@ -942,6 +942,7 @@ type HomeScreenStateProps =
   , isSharedLocationFlow :: Boolean
   , inputView :: Array InputView
   , selectedIndex :: Int
+  , addStopsEnabled :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1621,6 +1622,16 @@ type CurrentLocationDetailsWithDistance =  {
   , distance :: Number
 }
 
+-- newtype FlowStatusData = FlowStatusData {
+--     source :: Location
+--   , destination :: Location
+--   , sourceAddress :: Address
+--   , destinationAddress :: Address
+--   , sourceLabelIcon :: Maybe String
+--   , destLabelIcon :: Maybe String
+--   , sourceGeoJson :: Maybe String
+--   , sourceGates :: Maybe (Array Location)
+-- }
 newtype FlowStatusData = FlowStatusData {
     source :: Location
   , destination :: Location
@@ -1630,7 +1641,9 @@ newtype FlowStatusData = FlowStatusData {
   , destLabelIcon :: Maybe String
   , sourceGeoJson :: Maybe String
   , sourceGates :: Maybe (Array Location)
+  , stops :: Maybe (Array Location)  -- Added stops field
 }
+
 
 derive instance genericFlowStatusData :: Generic FlowStatusData _
 instance showFlowStatusData :: Show FlowStatusData where show = genericShow

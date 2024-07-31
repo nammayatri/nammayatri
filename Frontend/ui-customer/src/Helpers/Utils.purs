@@ -1095,7 +1095,8 @@ bufferTimePerKm estimatedDistance = 3 * estimatedDistance
 
 type Markers = {
     srcMarker :: String,
-    destMarker :: String
+    destMarker :: String,
+    stopMarker :: String
 }
 
 data TrackingType = RIDE_TRACKING | DRIVER_TRACKING | ADVANCED_RIDE_TRACKING
@@ -1103,7 +1104,8 @@ data TrackingType = RIDE_TRACKING | DRIVER_TRACKING | ADVANCED_RIDE_TRACKING
 getRouteMarkers :: String -> City -> TrackingType -> FareProductType -> Markers
 getRouteMarkers variant city trackingType fareProductType = 
   { srcMarker : mkSrcMarker city variant,
-    destMarker : mkDestMarker trackingType fareProductType
+    destMarker : mkDestMarker trackingType fareProductType,
+    stopMarker : "ny_ic_stop_marker"
   }
 
 mkSrcMarker :: City -> String -> String
@@ -1132,10 +1134,16 @@ getAutoImage city = case city of
     _ | elem city [Chennai, Vellore, Hosur, Madurai, Thanjavur, Tirunelveli, Salem, Trichy] -> "ny_ic_black_yellow_auto"
     _         -> "ic_auto_nav_on_map"
 
+-- normalRoute ::String -> Markers
+-- normalRoute _ = {
+--     srcMarker : "ny_ic_src_marker",
+--     destMarker : "ny_ic_dest_marker"
+-- }
 normalRoute ::String -> Markers
 normalRoute _ = {
     srcMarker : "ny_ic_src_marker",
-    destMarker : "ny_ic_dest_marker"
+    destMarker : "ny_ic_dest_marker",
+    stopMarker : "ny_ic_stop_marker"
 }
 
 getLanguageBasedCityName :: String -> String

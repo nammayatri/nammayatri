@@ -3032,32 +3032,41 @@ locationSelected2 item addToRecents state isEditDestination = do
   _ <- pure $ hideKeyboardOnNavigation true
   let favClick = if item.postfixImageUrl == "ny_ic_fav_red,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_fav_red.png" then "true" else "false"
   -- Retrieve the ID corresponding to the selected index
+      
   let selectedId = case find (\inputField -> inputField.index == index) state.props.inputView of
                    Just inputField -> inputField.inputTextConfig.id
                    Nothing -> ""
-  let updatedInputView = (mapWithIndex 
-                          (\idx inputField ->
-                              if idx == index then
-                                let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_user_place_select" $ [ { key: "Place", value: unsafeToForeign item.title }
-                                                                                                                                        , { key: "Favourite", value: unsafeToForeign favClick }]
-                                    placeSelectType = if item.tag /= "" then ST.FAVOURITE else ST.SEARCH
-                                    updatedField = inputField { place = item.title
-                                                              , placeAddress = encodeAddress (item.title <> ", " <> item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)
-                                                              , placeId = item.placeId
-                                                              , placeLat = fromMaybe 0.0 item.lat
-                                                              , placeLong = fromMaybe 0.0 item.lon
-                                                              -- , updateText = true
-                                                              -- , rideSearchProps{placeSelectType = placeSelectType }
-                                                              }
-                                in updatedField
-                              else inputField
-                          ) state.props.inputView)
 
-  let newState = state { props = state.props { inputView = updatedInputView } }
+  let newState = 
+        if spy "index" $ index == 0 
+          then state { props { sourceLat = fromMaybe 0.0 item.lat, sourceLong = fromMaybe 0.0 item.lon}, data {source = item.title, sourceAddress = encodeAddress (item.title <> ", " <> item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) }}
+          else if spy "index" $ index == ((length state.props.inputView) - 1) 
+            then state { props { destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}, data {destination = item.title, destinationAddress = encodeAddress (item.title <> ", " <> item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) }}
+            else state
+  let updatedInputView = (mapWithIndex 
+                        (\idx inputField ->
+                            if idx == index then
+                              let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_user_place_select" $ [ { key: "Place", value: unsafeToForeign item.title }
+                                                                                                                                      , { key: "Favourite", value: unsafeToForeign favClick }]
+                                  placeSelectType = if item.tag /= "" then ST.FAVOURITE else ST.SEARCH
+                                  updatedField = inputField { place = item.title
+                                                            , placeAddress = encodeAddress (item.title <> ", " <> item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)
+                                                            , placeId = item.placeId
+                                                            , placeLat = fromMaybe 0.0 item.lat
+                                                            , placeLong = fromMaybe 0.0 item.lon
+                                                            -- , updateText = true
+                                                            -- , rideSearchProps{placeSelectType = placeSelectType }
+                                                            }
+                              in updatedField
+                            else inputField
+                        ) newState.props.inputView)
+  let updatedState = newState{props{inputView = updatedInputView, isSource = Just (index == 0) }}
   let _ = spy "UPDATED INPUT VIEW AFTER LOCATION SELECTED" updatedInputView
   let _ = spy "SelectedId in locationSelected2" selectedId
+  let _ = spy "full state" state
+  let _ = spy "updatedState" updatedState
   -- _ <- pure $ setText (spy "edit loc id"(getNewIDWithTag selectedId)) item.title 
-  updateAndExit state $ LocationSelected2 item addToRecents newState index
+  updateAndExit state $ LocationSelected2 item addToRecents updatedState index
  
   -- if isEditDestination then
   -- continueWithCmd state [

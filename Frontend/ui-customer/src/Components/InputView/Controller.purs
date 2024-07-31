@@ -175,3 +175,55 @@ separatorConfig =
   , color : Color.black500
   , margin : MarginVertical 2 2
   }
+
+defaultInputView :: InputView
+defaultInputView = 
+  {  padding : Padding 0 0 0 0
+  , height : V 0
+  , gravity : CENTER
+  , canClearText : false
+  , isEditable : false 
+  , isClickable : false
+  , prefixImage : dummyImageConfig  
+  , stroke : ""
+  , imageSeparator : separatorConfig 
+  , clearTextIcon : dummyImageConfig
+  , fontStyle : []
+  , placeAddress : dummyAddress
+  , place : ""
+  , placeId : Nothing
+  , placeLat : 0.0
+  , placeLong : 0.0
+  , index : 0
+  , inputTextViewContainerMargin : Margin 0 0 0 0 
+  , inputTextConfig : {
+    textValue : ""
+  , isFocussed : false
+  , imageName : ""
+  , margin : Margin 0 0 0 0
+  , placeHolder : ""
+  , id : ""
+  , hint : ""
+  , cornerRadius : 0.0
+  , textColor : Color.blueGrey
+  , prefixImageVisibility : GONE
+  , prefixImageConfig : dummyImageConfig     
+  , postfixImageConfig :dummyImageConfig
+  , swapImageConfig : dummyImageConfig
+  }
+  , crossBtnEnabled : false
+  }
+
+dummyAddress :: Address
+dummyAddress = 
+  { "area"      : Nothing
+  , "state"     : Nothing
+  , "country"   : Nothing
+  , "building"  : Nothing
+  , "door"      : Nothing
+  , "street"    : Nothing
+  , "city"      : Nothing
+  , "areaCode"  : Nothing
+  , "ward"      : Nothing
+  , "placeId"   : Nothing
+  }

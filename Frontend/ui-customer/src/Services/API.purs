@@ -475,7 +475,8 @@ newtype OneWaySearchReq = OneWaySearchReq {
   isDestinationManuallyMoved :: Maybe Boolean,
   sessionToken :: Maybe String,
   isSpecialLocation :: Maybe Boolean,
-  startTime :: Maybe String
+  startTime :: Maybe String,
+  stops :: Maybe (Array SearchReqLocation)
 }
 
 newtype SearchReqLocation = SearchReqLocation {

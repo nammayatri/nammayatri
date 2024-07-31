@@ -599,8 +599,10 @@ export const openUrlInMailApp = function (str) {
 
 export const showMarkerImpl = function (showMarkerConfig) {
   if (window.JBridge.showMarker) {
+    console.log ("printing inside showMarker", showMarkerConfig);
     window.JBridge.showMarker(JSON.stringify(showMarkerConfig));
   } else {
+    console.log ("printing inside showMarker");
     window.JBridge.upsertMarker(showMarkerConfig.markerConfig.pointerIcon, showMarkerConfig.lat, showMarkerConfig.lng, showMarkerConfig.markerSize, showMarkerConfig.anchorV, showMarkerConfig.anchorV1);
   }
 }
