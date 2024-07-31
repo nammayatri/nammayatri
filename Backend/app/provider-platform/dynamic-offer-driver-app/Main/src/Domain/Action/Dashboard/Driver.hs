@@ -13,11 +13,7 @@
 -}
 
 module Domain.Action.Dashboard.Driver
-  ( getDriverHomeLocation,
-    updateDriverHomeLocation,
-    incrementDriverGoToCount,
-    getDriverGoHomeInfo,
-    getPaymentHistoryEntityDetails,
+  ( getPaymentHistoryEntityDetails,
     getPaymentHistory,
     updateSubscriptionDriverFeeAndInvoice,
     sendSmsToDriver,
@@ -34,7 +30,6 @@ module Domain.Action.Dashboard.Driver
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverGoHome as Common
 import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
@@ -42,12 +37,9 @@ import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.Dashboard.Management.Merchant as DashboardMerchant
-import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
-import Domain.Action.UI.DriverGoHomeRequest (CachedGoHomeRequest (..))
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.DriverFee
-import qualified Domain.Types.DriverHomeLocation as DDHL
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
@@ -75,13 +67,10 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as CTC
-import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQGHC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Message as MQuery
@@ -296,57 +285,6 @@ data InvoiceInfoToUpdateAfterParse = InvoiceInfoToUpdateAfterParse
     driverFeeId :: Maybe (Id DriverFee),
     invoiceStatus :: Maybe INV.InvoiceStatus
   }
-
----------------------------------------------------------------------
-getDriverHomeLocation :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.GetHomeLocationsRes
-getDriverHomeLocation merchantShortId opCity driverId = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  dghLocs <- DDriver.getHomeLocations (cast driverId, cast merchant.id, merchantOpCityId)
-  return (buildDriverHomeLocationAPIEntity <$> dghLocs.locations)
-  where
-    buildDriverHomeLocationAPIEntity dghLocs =
-      Common.DriverHomeLocationAPIEntity
-        { id = cast dghLocs.id,
-          address = dghLocs.address,
-          lat = dghLocs.lat,
-          lon = dghLocs.lon,
-          tag = dghLocs.tag
-        }
-
-updateDriverHomeLocation :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> Flow APISuccess
-updateDriverHomeLocation _ _ _ req = do
-  QDHL.updateHomeLocationById (cast req.id) buildDriverHomeLocationEntity
-  return Success
-  where
-    buildDriverHomeLocationEntity =
-      DDHL.UpdateDriverHomeLocation
-        { address = req.address,
-          lat = req.lat,
-          lon = req.lon,
-          tag = req.tag
-        }
-
-incrementDriverGoToCount :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess
-incrementDriverGoToCount merchantShortId opCity driverId = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  CQDGR.increaseDriverGoHomeRequestCount merchantOpCityId (cast driverId)
-  return Success
-
-getDriverGoHomeInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.CachedGoHomeRequestInfoRes
-getDriverGoHomeInfo merchantShortId opCity driverId = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  ghInfo <- CQGHC.getDriverGoHomeRequestInfo (cast driverId) merchantOpCityId Nothing
-  return (buildCachedGoHomeRequestInfoRes ghInfo)
-  where
-    buildCachedGoHomeRequestInfoRes CachedGoHomeRequest {..} =
-      Common.CachedGoHomeRequestInfoRes
-        { status = show <$> status,
-          driverGoHomeRequestId = cast <$> driverGoHomeRequestId,
-          ..
-        }
 
 ---------------------------------------------------------------------
 data SendSmsReq = SendSmsReq
