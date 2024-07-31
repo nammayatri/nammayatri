@@ -20,6 +20,7 @@ Feedback:
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
 
   sqlType:
     badge: character varying (255)

@@ -24,13 +24,13 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "DriverProfileQues" :> ReqBody '[JSON] API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq
+  ( TokenAuth :> "DriverProfileQues" :> ReqBody ('[JSON]) API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "DriverProfileQues"
-      :> Get '[JSON] API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
+      :> Get ('[JSON]) API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
 
 handler :: Environment.FlowServer API

@@ -9,20 +9,21 @@ DriverProfileQuestions:
   fields:
     driverId : Id Person
     hometown : Maybe Text
-    expertAt : "[Text]"
     pledges : "[Text]"
-    whyNY : "[Text]"
-    aspirations : "[Text]"
+    aspirations : "Maybe [Text]"
+    vehicleTags : "Maybe [Text]"
     createdAt : UTCTime
     updatedAt : UTCTime
-    merchantId : Id Merchant
+    drivingSince : Maybe Int
+    aboutMe: "Maybe Text"
+    imageIds: "Maybe [Text]"
     merchantOperatingCityId : Id MerchantOperatingCity
 
   default:
-    expertAt: "'{}'"
+    imageIds: "'{}'"
     pledges: "'{}'"
-    whyNY: "'{}'"
     aspirations: "'{}'"
+    vehicleTags: "'{}'"
 
   constraints:
     driverId : PrimaryKey

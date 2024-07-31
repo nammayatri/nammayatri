@@ -10,21 +10,24 @@ import Servant
 import Tools.Auth
 
 data DriverProfileQuesReq = DriverProfileQuesReq
-  { aspirations :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    expertAt :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+  { aspirations :: [Kernel.Prelude.Text],
+    drivingSince :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     hometown :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    pledges :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    whyNY :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
+    imageIds :: [Kernel.Prelude.Text],
+    pledges :: [Kernel.Prelude.Text],
+    vehicleTags :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverProfileQuesRes = DriverProfileQuesRes
   { aspirations :: [Kernel.Prelude.Text],
-    expertAt :: [Kernel.Prelude.Text],
+    drivingSince :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     hometown :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    otherImages :: [Kernel.Prelude.Text],
     pledges :: [Kernel.Prelude.Text],
-    whyNY :: [Kernel.Prelude.Text]
+    profileImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleTags :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -52,6 +52,7 @@ import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.SearchTry as DTST
 import Environment
 import EulerHS.Prelude hiding (id, state)
+import qualified IssueManagement.Common.UI.Issue as Common
 import Kernel.External.Maps (LatLong)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
@@ -136,6 +137,9 @@ type API =
                       :> TokenAuth
                       :> MandatoryQueryParam "day" Day
                       :> Get '[JSON] DDriver.DriverStatsRes
+                    :<|> "images"
+                      :> TokenAuth
+                      :> Common.IssueUploadAPI
                     :<|> "photo"
                       :> ( TokenAuth
                              :> ReqBody '[JSON] DDriver.DriverPhotoUploadReq
@@ -241,6 +245,7 @@ handler =
              :<|> getInformationV2
              :<|> updateDriver
              :<|> getStats
+             :<|> driverProfileImagesUpload
              :<|> uploadDriverPhoto
              :<|> fetchDriverPhoto
          )
@@ -322,6 +327,9 @@ fetchDriverPhoto ids = withFlowHandlerAPI . DDriver.fetchDriverPhoto ids
 
 uploadDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverPhotoUploadReq -> FlowHandler APISuccess
 uploadDriverPhoto req = withFlowHandlerAPI . DDriver.driverPhotoUpload req
+
+driverProfileImagesUpload :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
+driverProfileImagesUpload ids = withFlowHandlerAPI . DDriver.driverProfileImagesUpload ids
 
 validate :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
 validate alternateNumber = withFlowHandlerAPI . DDriver.validate alternateNumber

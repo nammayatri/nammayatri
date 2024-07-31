@@ -267,6 +267,43 @@ createMediaEntry url fileType = do
             createdAt = now
           }
 
+issueMediaUpload' ::
+  ( BeamFlow m r,
+    MonadTime m,
+    MonadReader r m,
+    HasField "s3Env" r (S3.S3Env m),
+    EsqDBReplicaFlow m r
+  ) =>
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
+  ServiceHandle m ->
+  Common.IssueMediaUploadReq ->
+  Text ->
+  Text ->
+  m Common.IssueMediaUploadRes
+issueMediaUpload' (personId, merchantId, merchantOperatingCityId) issueHandle Common.IssueMediaUploadReq {..} domain identifier = do
+  contentType <- validateContentType
+  config <- issueHandle.findMerchantConfig merchantId merchantOperatingCityId (Just personId)
+  fileSize <- L.runIO $ withFile file ReadMode hFileSize
+  when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
+    throwError $ FileSizeExceededError (show fileSize)
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
+  filePath <- S3.createFilePath (domain <> "/") identifier fileType contentType
+  let fileUrl =
+        config.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" domain
+          & T.replace "<FILE_PATH>" filePath
+  _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
+  createMediaEntry fileUrl fileType
+  where
+    validateContentType = do
+      case fileType of
+        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
+        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        S3.Image | reqContentType == "image/png" -> pure "png"
+        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        _ -> throwError $ FileFormatNotSupported reqContentType
+
 issueMediaUpload ::
   ( BeamFlow m r,
     MonadTime m,
