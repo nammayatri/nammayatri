@@ -136,12 +136,12 @@ library
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
       Domain.Action.Dashboard.Driver
-      Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.Registration
       Domain.Action.Dashboard.Management.Booking
       Domain.Action.Dashboard.Management.Driver
+      Domain.Action.Dashboard.Management.Driver.Notification
       Domain.Action.Dashboard.Management.DriverCoins
       Domain.Action.Dashboard.Management.DriverGoHome
       Domain.Action.Dashboard.Management.DriverReferral

@@ -93,7 +93,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, diffDays, fromGregorian)
 import Domain.Action.Beckn.Search
-import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
+import Domain.Action.Dashboard.Management.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
