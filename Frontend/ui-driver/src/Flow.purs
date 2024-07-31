@@ -2565,9 +2565,16 @@ homeScreenFlow = do
         "RIDE_REQUESTED"    -> do
           void $ updateStage $ HomeScreenStage RideRequested
           homeScreenFlow
-        "TRIP_STARTED" -> do 
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = not (homeScreen.data.activeRide.tripType == ST.Rental)}})
-          homeScreenFlow
+        "TRIP_STARTED" -> do
+          if state.props.currentStage /= RideStarted then do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ activeRide{status = INPROGRESS}}})
+            void $ updateStage $ HomeScreenStage RideStarted
+            void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
+            void $ pure $ setValueToLocalStore TRIP_STATUS "started"
+            currentRideFlow Nothing Nothing
+          else do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = not (homeScreen.data.activeRide.tripType == ST.Rental)}})
+            homeScreenFlow
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
