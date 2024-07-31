@@ -2246,9 +2246,16 @@ type NammaSafetyScreenProps =  {
   checkPastRide :: Boolean,
   reportPastRide :: Boolean,
   appName :: String,
-  isOffUs :: Boolean
+  isOffUs :: Boolean,
+  triggerSiren :: Boolean,
+  isAudioRecordingActive :: Boolean,
+  audioRecordingStatus :: RecordingState,
+  recordingTimerId :: String,
+  recordingTimer :: String,
+  recordedAudioUrl :: Maybe String,
+  showMenu :: Boolean
 }
-data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
+data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED | RECORDED
 
 derive instance genericRecordingState :: Generic RecordingState _
 instance eqRecordingState :: Eq RecordingState where eq = genericEq

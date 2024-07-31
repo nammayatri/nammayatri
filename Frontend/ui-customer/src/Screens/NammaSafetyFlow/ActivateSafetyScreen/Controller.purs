@@ -36,6 +36,9 @@ import Services.Config (getSupportNumber)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 import Components.SourceToDestination as SourceToDestination
 import Common.Resources.Constants as Constants
+import Components.Safety.SosButtonAndDescription as SosButtonAndDescription
+import Components.Safety.SafetyActionTileView as SafetyActionTileView
+import Components.OptionsMenu as OptionsMenu
 
 instance showAction :: Show Action where
   show _ = ""
@@ -61,7 +64,6 @@ data Action
   | UpdateEmergencySettings GetEmergencySettingsRes
   | DisableShimmer
   | CountDown Int String String
-  | TriggerSosCountdown
   | StartTestDrill PrimaryButtonController.Action
   | GoToSafetySettings
   | ContactAction ContactCircle.Action
@@ -69,13 +71,18 @@ data Action
   | UpdateSosId Sos
   | GoToActiveSos
   | CallPolice
-  | ShowPoliceView
   | ShowSafetyIssueView
   | SelectedCurrentLocation Number Number String
   | GoToEducationView
   | CallSupport
   | SourceToDestinationAC SourceToDestination.Action
   | AlertSafetyTeam
+  | SosButtonAndDescriptionAction SosButtonAndDescription.Action
+  | RecordAudio SafetyActionTileView.Action
+  | ShowPoliceView SafetyActionTileView.Action
+  | CallSafetyTeam SafetyActionTileView.Action
+  | ToggleSiren SafetyActionTileView.Action
+  | OptionsMenuAction OptionsMenu.Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -130,9 +137,11 @@ eval (SafetyHeaderAction (Header.LearnMoreClicked)) state = do
   _ <- pure $ clearTimerWithId state.props.timerId
   exit $ GoToEducationScreen state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "", confirmTestDrill = false } }
 
+eval (SafetyHeaderAction (Header.OptionsMenuToggle)) state = continue state{props{showMenu = not state.props.showMenu}}
+
 eval (CancelSosTrigger PrimaryButtonController.OnClick) state = do
   _ <- pure $ clearTimerWithId state.props.timerId
-  exit $ GoBack state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
+  continue state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
 
 eval BackPressed state =
   if state.props.showCallPolice then
@@ -154,17 +163,6 @@ eval (StartTestDrill PrimaryButtonController.OnClick) state =
         }
       }
 
-eval (CountDown seconds status timerID) state = do
-  _ <- pure $ printLog "timer" $ show seconds
-  if status == "EXPIRED" then do
-    _ <- pure $ clearTimerWithId state.props.timerId
-    let
-      newState = state { props { timerId = "" } }
-    updateAndExit newState $ CreateSos newState false
-  else
-    continue $ state { props { timerValue = seconds, timerId = timerID } }
-
-eval TriggerSosCountdown state = continue state { props { triggeringSos = true } }
 
 eval AlertSafetyTeam state = exit $ CreateSos state false
 
@@ -210,7 +208,7 @@ eval (UpdateSosId (Sos sos)) state = do
   else do
     continue state
 
-eval ShowPoliceView state = continue state { props { showCallPolice = true } }
+eval (ShowPoliceView SafetyActionTileView.OnClick) state = continue state { props { showCallPolice = true } }
 
 eval CallPolice state = do
   void $ pure $ JB.showDialer Constants.policeNumber false
@@ -227,5 +225,31 @@ eval GoToEducationView state = do
 eval CallSupport state = do
   void $ pure $ JB.showDialer (getSupportNumber "") false
   continue state
+
+eval (SosButtonAndDescriptionAction SosButtonAndDescription.TriggerSosCountdown) state = continue state { props { triggeringSos = true } }
+
+eval (SosButtonAndDescriptionAction SosButtonAndDescription.AddContacts) state = continueWithCmd state [ pure AddContacts ]
+
+eval (SosButtonAndDescriptionAction (SosButtonAndDescription.CountDown seconds status timerID)) state = do
+  _ <- pure $ printLog "timer" $ show seconds
+  if status == "EXPIRED" then do
+    _ <- pure $ clearTimerWithId state.props.timerId
+    let
+      newState = state { props { timerId = "" } }
+    updateAndExit newState $ CreateSos newState false
+  else
+    continue $ state { props { timerValue = seconds, timerId = timerID } }
+
+eval (ToggleSiren SafetyActionTileView.OnClick) state = continue state { props { triggerSiren = not state.props.triggerSiren } }
+
+eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{showMenu = false}}
+
+eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
+  let newState = state{props{showMenu = false}}
+  case item of
+    "report_safety_issue" -> exit $ GoToIssueScreen state
+    "start_test_drill" -> continueWithCmd newState [pure $ GoToTestDrill]
+    "learn_about_safety" -> continueWithCmd newState [pure $ GoToEducationView]
+    _ -> continue newState
 
 eval _ state = update state

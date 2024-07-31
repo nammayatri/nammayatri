@@ -214,8 +214,8 @@ updateEmergencySettings dummy = (getBaseUrl "48") <> "/profile/updateEmergencySe
 updateSafeRide :: String -> String
 updateSafeRide sosId = (getBaseUrl "49") <> "/sos/markRideAsSafe/" <> sosId
 
-updateSosVideo :: String -> String
-updateSosVideo sosId = (getBaseUrl "50") <> "/sos/" <> sosId <> "/addVideo"
+updateSosMedia :: String -> String
+updateSosMedia sosId = (getBaseUrl "50") <> "/sos/" <> sosId <> "/upload"
 
 getSosDetails :: String -> String
 getSosDetails rideId = (getBaseUrl "51") <> "/sos/getDetails/" <> rideId

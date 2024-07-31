@@ -1,8 +1,8 @@
 module Screens.NammaSafetyFlow.Components.SafetyUtils where
 
-import Prelude (map, (<>), (==))
+import Prelude (map, (<>), (==), ($))
 import Screens.Types (NewContacts, NammaSafetyScreenState(..))
-import Data.Array (filter, length, uncons)
+import Data.Array (filter, length, uncons, find)
 import Data.Maybe (Maybe(..))
 
 getDefaultPriorityList :: Array NewContacts -> Array NewContacts
@@ -22,3 +22,7 @@ getVehicleDetails state =
   case state.data.lastRideDetails of
     Nothing -> state.data.vehicleDetails
     Just rideDetails -> rideDetails.vehicleNumber
+
+getPrimaryContact :: NammaSafetyScreenState -> Maybe NewContacts
+getPrimaryContact state = 
+  find (\contact -> contact.priority == 0) $ getDefaultPriorityList state.data.emergencyContactsList

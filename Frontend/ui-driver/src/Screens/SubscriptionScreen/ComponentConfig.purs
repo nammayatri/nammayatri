@@ -404,13 +404,13 @@ optionsMenuConfig state =
   in
   OptionsMenuConfig.config {
   menuItems = [
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_settings_unfilled", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : optionsMenuItems.managePlan},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_calendar_black", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport},
-    {image : "ny_ic_message_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey", textdata : getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE"), action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_help_circle_transparent", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs},
-    {image : "ny_ic_settings_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY}],
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_settings_unfilled", textdata : getString MANAGE_PLAN, action : "manage_plan", isVisible : optionsMenuItems.managePlan, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_calendar_black", textdata : getString PAYMENT_HISTORY, action : "payment_history", isVisible : optionsMenuItems.paymentHistory, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CALL_SUPPORT, action : "call_support", isVisible :  optionsMenuItems.callSupport, color : Color.black800},
+    {image : "ny_ic_message_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_message_unfilled.png", textdata : getString CHAT_FOR_HELP, action : "chat_for_help", isVisible : optionsMenuItems.chatSupport, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_loc_grey", textdata : getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE"), action : "find_help_centre", isVisible : optionsMenuItems.kioskLocation, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_help_circle_transparent", textdata : getString VIEW_FAQs, action : "view_faq", isVisible : optionsMenuItems.viewFaqs, color : Color.black800},
+    {image : "ny_ic_settings_unfilled,https://assets.moving.tech/beckn/nammayatri/driver/images/ny_ic_settings_unfilled.png", textdata : getString VIEW_AUTOPAY_DETAILS, action : "view_autopay_details", isVisible : optionsMenuItems.viewAutopayDetails && state.data.myPlanData.autoPayStatus == ACTIVE_AUTOPAY, color : Color.black800}],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.white900,
   gravity = RIGHT,

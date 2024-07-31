@@ -83,6 +83,13 @@ initData = let
       , reportPastRide : false
       , appName : fromMaybe config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
       , isOffUs : false
+      , triggerSiren : false
+      , isAudioRecordingActive : false
+      , audioRecordingStatus : NOT_RECORDING
+      , recordingTimer : "00 : 00"
+      , recordingTimerId : ""
+      , recordedAudioUrl : Nothing
+      , showMenu : false
       }
   }
 

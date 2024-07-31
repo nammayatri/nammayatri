@@ -24,7 +24,7 @@ import Mobility.Prelude (boolToVisibility)
 import Prelude (map, not, ($), (<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..), IndividualRideCardState)
+import Screens.Types (NammaSafetyScreenState, SafetySetupStage(..), IndividualRideCardState, RecordingState(..))
 import Services.API (RideShareOptions(..))
 import Styles.Colors as Color
 import Components.SourceToDestination as SourceToDestination
@@ -35,6 +35,8 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(..))
+import JBridge as JB
+import Components.OptionsMenu as OptionsMenuConfig
 
 startNSOnboardingButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startNSOnboardingButtonConfig state =
@@ -93,7 +95,7 @@ dismissSoSButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 dismissSoSButtonConfig state =
   PrimaryButton.config
     { textConfig { text = getString CANCEL_, color = Color.black900 }
-    , margin = Margin 16 24 16 24
+    , margin = Margin 16 0 16 16
     , stroke = "1," <> Color.white900
     , background = Color.white900
     , id = "SafetyScreenDismissSosButton"
@@ -191,7 +193,7 @@ shareTripPopupConfig :: NammaSafetyScreenState -> PopupWithCheckboxController.Co
 shareTripPopupConfig state =
   PopupWithCheckboxController.config
     { title = getString SHARE_TRIP_NOTIFICATONS
-    , secondaryButtonText = getString SAVE
+    -- , secondaryButtonText = getString SAVE --check
     , checkboxList = checkBoxData state
     , primaryButtonConfig = shareTripPopupBtnConfig state
     }
@@ -309,3 +311,39 @@ sourceToDestinationConfig ride = SourceToDestination.config {
       }
     , overrideSeparatorCount = 2
     }
+
+shareAudioButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
+shareAudioButtonConfig state =
+  PrimaryButton.config
+    { textConfig
+      { text = getString SHARE_WITH_SAFETY_TEAM
+      , accessibilityHint = "Share Recorded Audio Button"
+      , color = Color.blue800
+      }
+    , background = Color.transparent
+    , margin = Margin 16 16 16 24
+    , id = "SafetyScreenShareAudioButton"
+    , enableLoader = JB.getBtnLoader "SafetyScreenShareAudioButton"
+    , enableRipple = true
+    , visibility = boolToVisibility $ state.props.audioRecordingStatus == RECORDED 
+    }
+
+optionsMenuConfig :: NammaSafetyScreenState -> OptionsMenuConfig.Config
+optionsMenuConfig state = OptionsMenuConfig.config {
+  menuItems = [
+    {image : fetchImage FF_ASSET "ny_ic_phone_unfilled", textdata : getString REPORT_SAFETY_ISSUE, action : "report_safety_issue", isVisible : true, color : Color.white900},
+    {image : fetchImage FF_ASSET "ny_ic_language", textdata : getString START_TEST_DRILL, action : "start_test_drill", isVisible : true, color : Color.white900},
+    {image : fetchImage FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString LEARN_ABOUT_NAMMA_SAFETY, action : "learn_about_safety", isVisible : true, color : Color.white900}
+  ],
+  backgroundColor = Color.blackLessTrans,
+  menuBackgroundColor = Color.black900,
+  gravity = RIGHT,
+  menuExpanded = true,
+  width = WRAP_CONTENT,
+  marginRight = 16,
+  itemHeight = V 50,
+  itemPadding = Padding 16 16 16 16,
+  cornerRadius = 4.0,
+  enableAnim = true,
+  showStroke = false
+}

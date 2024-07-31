@@ -219,6 +219,7 @@ screen initialState =
       , ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "." 
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
+            void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState -- revert
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
@@ -1092,7 +1093,7 @@ sosView push state =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
-    , visibility $ boolToVisibility $ state.props.currentStage == RideStarted && state.data.config.feature.enableSafetyFlow
+    , visibility $ boolToVisibility $ Arr.elem state.props.currentStage [RideAccepted, RideStarted] && state.data.config.feature.enableSafetyFlow
     , margin $ MarginRight 16
     ]
     [ linearLayout
@@ -1111,6 +1112,7 @@ sosView push state =
               , color Color.white900
               , margin $ MarginVertical 5 3
               , gravity CENTER
+              , visibility GONE
               ]
             <> FontStyle.body17 TypoGraphy
         ]
@@ -1118,7 +1120,7 @@ sosView push state =
         [ height WRAP_CONTENT
         , width $ WRAP_CONTENT
         , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
-        , background Color.white900
+        , background if state.props.currentStage == RideAccepted && onUsRide then Color.blue900 else Color.white900
         , cornerRadius 20.0
         , onClick push $ const (if onUsRide then OpenEmergencyHelp else OpenOffUsSOS)
         -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
@@ -1136,7 +1138,7 @@ sosView push state =
       , width WRAP_CONTENT
       , gravity CENTER
       , visibility vis
-      , accessibilityHint $ "Safety Center Button"
+      , accessibilityHint $ "Emergency Button"
       , accessibility ENABLE
       ]
       [ imageView
@@ -1149,13 +1151,18 @@ sosView push state =
           -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
           ]
       , textView
-          $ [ text $ getString SAFETY_CENTER
-            , color if onUsRide then Color.blue900 else Color.black800
+          $ [ text $ getString EMERGENCY
+            , color emergencyTextColor
             , margin $ MarginBottom 1
             , accessibility DISABLE
             ]
           <> FontStyle.body6 TypoGraphy
       ]
+  emergencyTextColor = case (not onUsRide), state.props.currentStage of
+                        true, _ -> Color.black800
+                        false, RideStarted -> Color.white900
+                        false, RideStarted -> Color.white900
+                        _,_ -> Color.white900 
 
 liveStatsDashboardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 liveStatsDashboardView push state =

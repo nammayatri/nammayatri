@@ -2109,16 +2109,27 @@ shareRideConfig state =
     config = PopupWithCheckboxController.config
 
     appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-
+    contactList = fromMaybe [] state.data.contactList
     shareRideConfig' =
       config
         { title = getString SHARE_RIDE
-        , description = getString $ SHARE_RIDE_DESCRIPTION appName
-        , secondaryButtonText = getString SHARE_LINK
-        , secondaryButtonImage = HU.fetchImage HU.FF_ASSET "ny_ic_share"
-        , secondaryButtonVisibliity = true
-        , contactList = fromMaybe [] state.data.contactList
+        , description = getString if DA.null contactList && state.data.settingSideBar.hasCompletedSafetySetup then TRACKING_NO_SETUP else AUTOMATIC_LIVE_TRACKING_DESC
+        , primaryOptionTitle = getString AUTOMATIC_LIVE_TRACKING
+        -- , secondaryButtonText = getString SHARE_LINK
+        -- , secondaryButtonImage = HU.fetchImage HU.FF_ASSET "ny_ic_share"
+        -- , secondaryButtonVisibliity = true
+        , contactList = contactList
         , primaryButtonConfig = shareRideButtonConfig state
+        , secondaryOption {
+            buttonConfig = shareLinkButtonConfig state,
+            title = getString MANUAL_LIVE_TRACKING,
+            description = getString MANUAL_LIVE_TRACKING_DESC,
+            visibility = true,
+            background = Color.blue600,
+            padding = Padding 12 12 12 12,
+            margin = Margin 16 16 16 16
+          }
+        , primaryOptionBackground = Color.blue600
         }
   in
     shareRideConfig'
@@ -2138,6 +2149,17 @@ shareRideButtonConfig state =
     }
   where
   numberOfSelectedContacts = DA.length $ DA.filter (\contact -> contact.isSelected) $ fromMaybe [] state.data.contactList
+
+shareLinkButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+shareLinkButtonConfig state =
+  PrimaryButton.config
+    { textConfig
+      { text = getString SHARE_LINK
+      , accessibilityHint = "Share Ride Link Button"
+      }
+    , id = "ShareRideLinkButton"
+    , margin = MarginTop 20
+    }
 
 referralPopUpConfig :: ST.HomeScreenState -> ST.ReferralComponentState
 referralPopUpConfig state =

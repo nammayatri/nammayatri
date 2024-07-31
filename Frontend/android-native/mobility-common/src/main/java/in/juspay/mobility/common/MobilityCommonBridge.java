@@ -4562,6 +4562,8 @@ public class MobilityCommonBridge extends HyperBridge {
             outputStream.writeBytes("--" + boundary + "\r\n" + "--");
 
             int responseCode = connection.getResponseCode();
+            System.out.println("responseCode" + responseCode);
+            System.out.println("responseCode" + connection.getResponseMessage());
             String res = "";
             if (responseCode == 200) {
                 StringBuilder s_buffer = new StringBuilder();

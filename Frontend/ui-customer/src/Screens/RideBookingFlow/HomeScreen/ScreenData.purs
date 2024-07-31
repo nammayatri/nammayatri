@@ -320,7 +320,7 @@ initData = let
     , autoScroll : true
     , enableChatWidget : false
     , sosBannerType : Nothing
-    , showShareRide : false
+    , showShareRide : true
     , followsRide: false
     , showBookingPreference : false
     , isChatWithEMEnabled: false

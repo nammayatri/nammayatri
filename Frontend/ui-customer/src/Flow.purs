@@ -2055,7 +2055,8 @@ homeScreenFlow = do
                     }
                   }
             )
-      case (triggerSos || showtestDrill) of
+      case true of
+      -- case (triggerSos || showtestDrill) of
         true -> do
           let
             isRideCompleted = state.props.currentStage == RideCompleted
