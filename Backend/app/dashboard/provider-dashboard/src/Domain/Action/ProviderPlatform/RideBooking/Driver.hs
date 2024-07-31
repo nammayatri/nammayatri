@@ -1,5 +1,16 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
 
 module Domain.Action.ProviderPlatform.RideBooking.Driver
   ( getDriverPaymentDue,
@@ -16,33 +27,20 @@ module Domain.Action.ProviderPlatform.RideBooking.Driver
   )
 where
 
-import qualified API.Types.ProviderPlatform.RideBooking.Driver
-import qualified Dashboard.Common
-import qualified Dashboard.Common.Driver
-import qualified Dashboard.ProviderPlatform.Fleet.Driver
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
-import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Role as DRole
-import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
-import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
-import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
-import qualified ProviderPlatformClient.DynamicOfferDriver.RideBooking
 import qualified ProviderPlatformClient.DynamicOfferDriver.RideBooking as Client
-import qualified SharedLogic.Transaction
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
