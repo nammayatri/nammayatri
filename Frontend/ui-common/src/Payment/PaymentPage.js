@@ -25,7 +25,8 @@ function getInitiatPayload () {
   const innerPayload = Object.assign({},window.__payload.payload);
   const initiatePayload = Object.assign({},window.__payload);
   innerPayload["action"] = "initiate";
-  innerPayload["merchantId"] = "nammayatri";
+  innerPayload["merchantId"] = "nammayatriBAP";
+  innerPayload["clientId"] = "nammayatriBAP";
   initiatePayload["payload"] = innerPayload;
   initiatePayload["service"] = "in.juspay.hyperpay";
   return initiatePayload;
