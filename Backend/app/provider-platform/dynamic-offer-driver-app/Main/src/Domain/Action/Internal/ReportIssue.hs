@@ -42,6 +42,7 @@ reportIssue rideId issueType apiKey = do
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId
       incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.driverId
     ICommon.DRIVER_TOLL_RELATED_ISSUE -> handleTollRelatedIssue ride
+    ICommon.SYNC_BOOKING -> pure ()
   return Success
 
 handleTollRelatedIssue :: Ride -> Flow ()

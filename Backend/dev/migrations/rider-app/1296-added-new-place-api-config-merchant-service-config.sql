@@ -10,6 +10,7 @@ UPDATE atlas_app.merchant_service_config
 SET config_json = jsonb_set(
     config_json::jsonb,
     '{useNewPlaces}',
-    json('true')::jsonb
-)::json
+    to_jsonb(true),
+    true
+)
 WHERE service_name = 'Maps_Google';

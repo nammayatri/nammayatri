@@ -17,7 +17,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RiderConfigT f = RiderConfigT
-  { appUrl :: B.C f Kernel.Prelude.Text,
+  { allowBlockedUserLogin :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    appUrl :: B.C f Kernel.Prelude.Text,
     autoUnblockSafetyCenterAfterDays :: B.C f Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Kilometers),
     bookingSyncStatusCallSecondsDiffThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

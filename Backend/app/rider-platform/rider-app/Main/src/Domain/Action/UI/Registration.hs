@@ -252,7 +252,8 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
   regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM
-  if not person.blocked
+  riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+  if (fromMaybe False riderConfig.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
@@ -284,7 +285,6 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
               when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
           EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
             receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
-            riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"

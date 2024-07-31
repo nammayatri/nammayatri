@@ -6,6 +6,7 @@ import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as DR
 import Environment
 import EulerHS.Prelude hiding (elem, id)
 import IssueManagement.API.UI.Issue as IA
@@ -32,9 +33,11 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person as CQPerson
+import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
+import qualified Storage.Queries.RideExtra as QRE
 import Tools.Auth
 import Tools.Error
 import Tools.Ticket as TT
@@ -69,7 +72,10 @@ customerIssueHandle =
       updateTicket = castUpdateTicket,
       findMerchantConfig = buildMerchantConfig,
       mbReportACIssue = Just reportACIssue,
-      mbReportIssue = Just reportIssue
+      mbReportIssue = Just reportIssue,
+      mbFindLatestBookingByPersonId = Just findLatestBookingByRiderId,
+      mbFindRideByBookingId = Just findRideByBookingId,
+      mbSyncRide = Just syncRide
     }
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
@@ -91,13 +97,23 @@ castPersonById personId = do
 
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
 castRideById rideId merchantId = do
-  ride <- runInReplica $ QR.findById (cast rideId)
-  merchantOpCityId <- case (.merchantOperatingCityId) =<< ride of
+  mbRide <- runInReplica $ QR.findById (cast rideId)
+  traverse (mkRide merchantId) mbRide
+
+mkRide :: Id Common.Merchant -> DR.Ride -> Flow Common.Ride
+mkRide merchantId ride = do
+  merchantOpCityId <- case ride.merchantOperatingCityId of
     Just moCityId -> return moCityId
-    Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (fromMaybe (cast merchantId) ((.merchantId) =<< ride))
-  return $ fmap (castRide merchantOpCityId) ride
-  where
-    castRide moCityId ride = Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast moCityId) ride.createdAt (Just ride.bppRideId.getId)
+    Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (fromMaybe (cast merchantId) ride.merchantId)
+  pure $
+    Common.Ride
+      { id = cast ride.id,
+        shortId = ShortId ride.shortId.getShortId,
+        merchantOperatingCityId = cast merchantOpCityId,
+        counterPartyRideId = Just ride.bppRideId.getId,
+        createdAt = ride.createdAt,
+        merchantId = maybe merchantId cast ride.merchantId
+      }
 
 castMOCityById :: Id Common.MerchantOperatingCity -> Flow (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
@@ -145,7 +161,8 @@ castRideInfo merchantId _ rideId = do
           computedPrice = res.computedPrice,
           fareBreakup = transformFareBreakup <$> res.fareBreakup,
           rideCreatedAt = res.rideCreatedAt,
-          rideStartTime = res.rideStartTime
+          rideStartTime = res.rideStartTime,
+          rideStatus = castRideStatus res.rideStatus
         }
 
     castLocationAPIEntity ent =
@@ -174,6 +191,14 @@ castRideInfo merchantId _ rideId = do
       DRR.BOOKING -> Common.BOOKING
       DRR.RIDE -> Common.RIDE
       DRR.INITIAL_BOOKING -> Common.INITIAL_BOOKING
+
+    castRideStatus :: DRR.RideStatus -> Common.RideStatus
+    castRideStatus = \case
+      DRR.UPCOMING_RIDE -> Common.R_UPCOMING
+      DRR.NEW -> Common.R_NEW
+      DRR.INPROGRESS -> Common.R_INPROGRESS
+      DRR.COMPLETED -> Common.R_COMPLETED
+      DRR.CANCELLED -> Common.R_CANCELLED
 
     makeRideInfoCacheKey :: Text
     makeRideInfoCacheKey = "CachedQueries:RideInfo:RideId-" <> show rideId.getId
@@ -213,6 +238,23 @@ buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
         counterPartyApiKey = merchant.driverOfferApiKey,
         sensitiveWords = riderConfig.sensitiveWords
       }
+
+findLatestBookingByRiderId :: Id Common.Person -> Flow (Maybe Common.Booking)
+findLatestBookingByRiderId personId = do
+  mbLatestBooking <- QBE.findLatestByRiderId (cast personId)
+  return $ castBooking <$> mbLatestBooking
+  where
+    castBooking booking = Common.Booking (cast booking.id)
+
+findRideByBookingId :: Id Common.Booking -> Id Common.Merchant -> Flow (Maybe Common.Ride)
+findRideByBookingId bookingId merchantId = do
+  mbRide <- QRE.findActiveByRBId (cast bookingId)
+  traverse (mkRide merchantId) mbRide
+
+syncRide :: Id Common.Merchant -> Id Common.Ride -> Flow ()
+syncRide merchantId rideId = do
+  merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  void $ DRide.rideSync merchant (cast rideId)
 
 issueReportCustomerList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueReportListRes
 issueReportCustomerList (personId, merchantId) language = withFlowHandlerAPI $ do

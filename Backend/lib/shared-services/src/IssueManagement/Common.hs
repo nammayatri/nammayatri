@@ -1,4 +1,3 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
@@ -7,6 +6,7 @@
  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -49,7 +49,8 @@ data Ride = Ride
     shortId :: ShortId Ride,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     createdAt :: UTCTime,
-    counterPartyRideId :: Maybe Text
+    counterPartyRideId :: Maybe Text,
+    merchantId :: Id Merchant
   }
 
 data MerchantOperatingCity = MerchantOperatingCity
@@ -98,6 +99,10 @@ data Driver
 
 data User
 
+newtype Booking = Booking
+  { id :: Id Booking
+  }
+
 data LocationAPIEntity = LocationAPIEntity
   { lat :: Double,
     lon :: Double,
@@ -110,6 +115,27 @@ data LocationAPIEntity = LocationAPIEntity
     area :: Maybe Text
   }
   deriving (Generic, ToJSON)
+
+data RideStatus = R_NEW | R_INPROGRESS | R_COMPLETED | R_CANCELLED | R_UPCOMING
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance HasSqlValueSyntax be Value => HasSqlValueSyntax be RideStatus where
+  sqlValueSyntax = sqlValueSyntax . toJSON
+
+instance FromField RideStatus where
+  fromField = fromFieldEnum
+
+instance FromField [RideStatus] where
+  fromField f mbValue = V.toList <$> fromField f mbValue
+
+instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [RideStatus] where
+  sqlValueSyntax batchList =
+    let x = (show <$> batchList :: [Text])
+     in sqlValueSyntax (V.fromList x)
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be [RideStatus]
+
+instance FromBackendRow Postgres [RideStatus]
 
 data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED
   deriving stock (Show, Read, Generic)
@@ -137,6 +163,7 @@ data RideInfoRes = RideInfoRes
     vehicleServiceTier :: Maybe Text,
     actualFare :: Maybe Money,
     bookingStatus :: Maybe BookingStatus,
+    rideStatus :: RideStatus,
     merchantOperatingCityId :: Maybe Text,
     estimatedDistance :: Maybe HighPrecMeters,
     chargeableDistance :: Maybe HighPrecMeters,
@@ -228,7 +255,7 @@ data MerchantConfig = MerchantConfig
 allLanguages :: [Language]
 allLanguages = [minBound .. maxBound]
 
-data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE
+data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKING
   deriving stock (Eq, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -259,6 +286,13 @@ instance HasSqlValueSyntax be Value => HasSqlValueSyntax be KaptureConfig where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be KaptureConfig
 
 instance FromBackendRow Postgres KaptureConfig
+
+data Translation = Translation
+  { language :: Language,
+    translation :: Text
+  }
+  deriving stock (Eq, Show, Generic, Read, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CxAgentDetails = CxAgentDetails
   { agentName :: Text,

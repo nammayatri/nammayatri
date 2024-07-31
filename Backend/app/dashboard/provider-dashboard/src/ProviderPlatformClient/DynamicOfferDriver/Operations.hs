@@ -93,11 +93,11 @@ data IssueAPIs = IssueAPIs
     issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
     issueFetchMedia :: Text -> Euler.EulerClient Text,
     ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess,
-    createIssueCategory :: Issue.CreateIssueCategoryReq -> Euler.EulerClient APISuccess,
+    createIssueCategory :: Issue.CreateIssueCategoryReq -> Euler.EulerClient Issue.CreateIssueCategoryRes,
     updateIssueCategory :: Id IssueCategory -> Issue.UpdateIssueCategoryReq -> Euler.EulerClient APISuccess,
-    createIssueOption :: Id IssueCategory -> Id IssueMessage -> Issue.CreateIssueOptionReq -> Euler.EulerClient APISuccess,
+    createIssueOption :: Id IssueCategory -> Id IssueMessage -> Issue.CreateIssueOptionReq -> Euler.EulerClient Issue.CreateIssueOptionRes,
     updateIssueOption :: Id IssueOption -> Issue.UpdateIssueOptionReq -> Euler.EulerClient APISuccess,
-    upsertIssueMessage :: (LBS.ByteString, Issue.UpsertIssueMessageReq) -> Euler.EulerClient APISuccess
+    upsertIssueMessage :: (LBS.ByteString, Issue.UpsertIssueMessageReq) -> Euler.EulerClient Issue.UpsertIssueMessageRes
   }
 
 data SubscriptionAPIs = SubscriptionAPIs

@@ -18,7 +18,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
-  { appUrl :: Kernel.Prelude.Text,
+  { allowBlockedUserLogin :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    appUrl :: Kernel.Prelude.Text,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

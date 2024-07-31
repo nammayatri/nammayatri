@@ -16,6 +16,7 @@ data IssueOption = IssueOption
     priority :: Int,
     issueMessageId :: Maybe Text,
     restrictedVariants :: [Common.VehicleVariant],
+    restrictedRideStatuses :: [Common.RideStatus],
     showOnlyWhenUserBlocked :: Bool,
     label :: Maybe Text,
     merchantId :: Id Common.Merchant,

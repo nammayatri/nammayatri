@@ -20,6 +20,7 @@ data IssueCategory = IssueCategory
     isActive :: Bool,
     isRideRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus],
     label :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

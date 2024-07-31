@@ -18,6 +18,7 @@ module IssueManagement.Storage.Beam.Issue.IssueCategory where
 
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as IC
 import IssueManagement.Tools.UtilsTH hiding (label)
 
@@ -31,6 +32,7 @@ data IssueCategoryT f = IssueCategoryT
     categoryType :: B.C f IC.CategoryType,
     isRideRequired :: B.C f Bool,
     maxAllowedRideAge :: B.C f (Maybe Seconds),
+    allowedRideStatuses :: B.C f (Maybe [Common.RideStatus]),
     label :: B.C f (Maybe Text),
     isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
