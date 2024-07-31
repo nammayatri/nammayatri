@@ -26,6 +26,7 @@ data IssueConfig = IssueConfig
 
 data MessageTransformationConfig = MessageTransformationConfig
   { merchantName :: Maybe Text,
+    merchantNameWTranslations :: Maybe [Common.Translation],
     supportEmail :: Maybe Text
   }
   deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, ToSchema)
