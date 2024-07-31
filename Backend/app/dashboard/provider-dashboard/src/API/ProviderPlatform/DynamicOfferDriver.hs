@@ -40,6 +40,7 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as 
 import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Maps as Maps
 import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
+import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
 import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscription
 import qualified API.ProviderPlatform.DynamicOfferDriver.Volunteer as Volunteer
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -66,6 +67,7 @@ type CacAPI =
 
 type API' =
   Driver.API
+    :<|> Ride.API
     :<|> Subscription.API
     :<|> DriverRegistration.API
     :<|> Issue.API
@@ -81,6 +83,7 @@ handler :: FlowServer API
 handler merchantId = do
   let city = getCity merchantId.getShortId
   Driver.handler merchantId city
+    :<|> Ride.handler merchantId city
     :<|> Subscription.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
     :<|> Issue.handler merchantId city
@@ -100,6 +103,7 @@ handler merchantId = do
 handlerV2 :: FlowServer APIV2
 handlerV2 merchantId city =
   Driver.handler merchantId city
+    :<|> Ride.handler merchantId city
     :<|> Subscription.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
     :<|> Issue.handler merchantId city
