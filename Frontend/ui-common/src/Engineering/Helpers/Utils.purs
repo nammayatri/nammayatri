@@ -340,7 +340,7 @@ cityCodeMap =
   , Tuple "std:0836" "hubli"
   , Tuple "std:0824" "mangalore"
   , Tuple "std:08472" "gulbarga"
-  , Tuple "std:0820" "udupi"
+  , Tuple "std:08200" "udupi"
   ]
 
 getCityFromCode :: String -> String
