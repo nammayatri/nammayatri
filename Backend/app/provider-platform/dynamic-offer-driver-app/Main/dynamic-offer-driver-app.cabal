@@ -135,7 +135,7 @@ library
       Domain.Action.Beckn.Status
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
-      Domain.Action.Dashboard.Driver
+      Domain.Action.Dashboard.Common
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.Registration

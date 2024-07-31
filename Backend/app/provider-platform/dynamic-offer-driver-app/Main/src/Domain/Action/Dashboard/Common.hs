@@ -12,15 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.Dashboard.Driver
-  ( castVehicleVariant, -- TODO move to common
-    mobileIndianCode, -- TODO move to common
-    mapServiceName, -- TODO move to common
-    castVerificationStatus, -- TODO move to common
-    castVehicleVariantDashboard, -- TODO move to common
-    notifyYatriRentalEventsToDriver, -- TODO move to common
-    runVerifyRCFlow, -- TODO move to common
-    appendPlusInMobileCountryCode, -- TODO move to common
+module Domain.Action.Dashboard.Common
+  ( castVehicleVariant,
+    mobileIndianCode,
+    mapServiceName,
+    castVerificationStatus,
+    castVehicleVariantDashboard,
+    notifyYatriRentalEventsToDriver,
+    runVerifyRCFlow,
+    appendPlusInMobileCountryCode,
   )
 where
 

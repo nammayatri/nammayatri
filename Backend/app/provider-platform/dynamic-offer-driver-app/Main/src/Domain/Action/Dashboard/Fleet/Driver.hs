@@ -40,7 +40,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as DC
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
-import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Management.DriverRegistration as DReg
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
@@ -112,7 +112,7 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId m
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash reqDriverPhoneNo
-  let mobileCountryCode = fromMaybe DDriver.mobileIndianCode mbMobileCountryCode
+  let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
   driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
@@ -124,7 +124,7 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo fleetOwnerId m
     Just fleetDriver -> do
       unless fleetDriver.isActive $ throwError (InvalidRequest "Driver is not active with this fleet, add this driver to the fleet before adding a vehicle with them")
   Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-  void $ DDriver.runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True
+  void $ DCommon.runVerifyRCFlow driver.id merchant merchantOpCityId opCity req True
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
 
@@ -193,7 +193,7 @@ convertToVehicleAPIEntity VehicleRegistrationCertificate {..} = do
   certificateNumber' <- decrypt certificateNumber
   pure
     Common.VehicleAPIEntity
-      { variant = DDriver.castVehicleVariantDashboard vehicleVariant,
+      { variant = DCommon.castVehicleVariantDashboard vehicleVariant,
         model = vehicleModel,
         color = vehicleColor,
         registrationNo = certificateNumber'
@@ -279,7 +279,7 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
       QDP.updatesubscriptionServiceRelatedDataInDriverPlan driverId (DDPlan.RentedVehicleNumber vehicleNo) serviceName
       QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName toToggle driverId serviceName
       fork "notify rental event" $ do
-        DDriver.notifyYatriRentalEventsToDriver vehicleNo WHATSAPP_VEHICLE_LINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
+        DCommon.notifyYatriRentalEventsToDriver vehicleNo WHATSAPP_VEHICLE_LINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
     else do
       let vehicleLinkedWithDPlan = case driverPlan <&> (.subscriptionServiceRelatedData) of
             Just (DDPlan.RentedVehicleNumber vNo) -> Just vNo
@@ -291,7 +291,7 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
             Just dp -> SEVT.trackServiceUsageChargeToggle dp Nothing
             Nothing -> pure ()
         fork "notify rental event" $ do
-          DDriver.notifyYatriRentalEventsToDriver vehicleNo WHATSAPP_VEHICLE_UNLINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
+          DCommon.notifyYatriRentalEventsToDriver vehicleNo WHATSAPP_VEHICLE_UNLINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
   where
     getPlanId :: Maybe (Id Plan) -> Flow (Id Plan)
     getPlanId mbPlanId = do
@@ -407,7 +407,7 @@ getDriverFleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbL
           totalEarning = totalEarning,
           vehicleNo = Just rcNo,
           status = Nothing,
-          vehicleType = DDriver.castVehicleVariantDashboard rc.vehicleVariant,
+          vehicleType = DCommon.castVehicleVariantDashboard rc.vehicleVariant,
           totalDuration = totalDuration,
           distanceTravelled = fromIntegral distanceTravelled / 1000.0,
           driverPhoneNo = Nothing,
@@ -552,7 +552,7 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
             driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
             decryptedVehicleRC <- decrypt vrca.certificateNumber
             rcAssociation <- QRCAssociation.findLinkedByRCIdAndDriverId driverId vrca.id now
-            let vehicleType = DDriver.castVehicleVariantDashboard vrca.vehicleVariant
+            let vehicleType = DCommon.castVehicleVariantDashboard vrca.vehicleVariant
             (completedRides, earning) <- case mbStatus of
               Just True -> do
                 rides <- CQRide.totalRidesByFleetOwnerPerVehicleAndDriver (Just fleetOwnerId) decryptedVehicleRC driverId from to
@@ -640,7 +640,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
           mbDl <- B.runInReplica $ QDriverLicense.findByDriverId driver.id
           case mbDl of
             Just dl -> do
-              let dlStatus = DDriver.castVerificationStatus dl.verificationStatus
+              let dlStatus = DCommon.castVerificationStatus dl.verificationStatus
               pure dlStatus
             Nothing -> pure Common.PENDING
         (completedRides, earning) <- case mbStats of
@@ -673,7 +673,7 @@ getDriverFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbIsActive 
     getVehicleDetails :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => VehicleRegistrationCertificate -> m (Maybe Text, Maybe Common.Variant)
     getVehicleDetails vrc = do
       decryptedVehicleRC <- decrypt vrc.certificateNumber
-      let vehicleType = DDriver.castVehicleVariantDashboard vrc.vehicleVariant
+      let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
       pure (Just decryptedVehicleRC, vehicleType)
 
 ---------------------------------------------------------------------
@@ -718,12 +718,12 @@ getDriverFleetVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
             case latestAssociation of
               Just latestAssoc -> getFleetDriverInfo latestAssoc.driverId False
               Nothing -> pure (Nothing, Nothing, Nothing, Nothing) -------- when vehicle is unAssigned
-        let vehicleType = DDriver.castVehicleVariantDashboard vrc.vehicleVariant
+        let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
         let isDriverActive = isJust driverName -- Check if there is a current active driver
         let isRcAssociated = isJust rcActiveAssociation
         let verificationDocs =
               Common.VerificationDocsStatus
-                { vehicleRegistrationCertificate = Just $ DDriver.castVerificationStatus vrc.verificationStatus,
+                { vehicleRegistrationCertificate = Just $ DCommon.castVerificationStatus vrc.verificationStatus,
                   vehiclePermit = Nothing, ------ currently we are not verifying these docs therefore
                   vehicleInsurance = Nothing,
                   vehicleFitness = Nothing,
@@ -776,7 +776,7 @@ postDriverFleetVehicleDriverRCstatus merchantShortId opCity reqDriverId fleetOwn
   unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   Redis.set (DomainRC.makeFleetOwnerKey req.rcNo) fleetOwnerId
   _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
-  let mbSerivceName = DDriver.mapServiceName <$> req.serviceName
+  let mbSerivceName = DCommon.mapServiceName <$> req.serviceName
   case mbSerivceName of
     Just YATRI_RENTAL -> do
       void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) YATRI_RENTAL (Id <$> req.planToAssociate) req.isActivate req.rcNo
@@ -922,7 +922,7 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   phoneNumberHash <- getDbHash req.driverMobileNumber
-  let mobileCountryCode = fromMaybe DDriver.mobileIndianCode req.driverMobileCountryCode
+  let mobileCountryCode = fromMaybe DCommon.mobileIndianCode req.driverMobileCountryCode
   driver <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound req.driverMobileNumber)
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)

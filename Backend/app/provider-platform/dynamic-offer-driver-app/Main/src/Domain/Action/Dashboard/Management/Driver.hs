@@ -52,7 +52,7 @@ import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
-import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Management.Driver.Notification as DDN
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
@@ -606,7 +606,7 @@ getDriverGetOperatingCity merchantShortId _ mbMobileCountryCode mbMobileNumber m
       return $ Common.GetOperatingCityResp {operatingCity = city.city}
     (_, Just mobileNumber) -> do
       mobileNumberHash <- getDbHash mobileNumber
-      driver <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe "+91" (DDriver.appendPlusInMobileCountryCode mbMobileCountryCode)) mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
+      driver <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe "+91" (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)) mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
       let operatingCityId = driver.merchantOperatingCityId
       city <- CQMOC.findById operatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId)
       return $ Common.GetOperatingCityResp {operatingCity = city.city}
@@ -622,7 +622,7 @@ postDriverPauseOrResumeServiceCharges merchantShortId opCity driverId req = do
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  let serviceName = DDriver.mapServiceName req.serviceName
+  let serviceName = DCommon.mapServiceName req.serviceName
   driverPlan <- QDP.findByDriverIdWithServiceName personId serviceName
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let mbEnableServiceUsageCharge = driverPlan <&> (.enableServiceUsageCharge)
@@ -634,7 +634,7 @@ postDriverPauseOrResumeServiceCharges merchantShortId opCity driverId req = do
         Nothing -> pure ()
     when (serviceName == YATRI_RENTAL) $ do
       fork "notify rental event" $ do
-        DDriver.notifyYatriRentalEventsToDriver req.vehicleId (getMkeyForEvent req.serviceChargeEligibility) personId transporterConfig (show <$> req.reason) WHATSAPP
+        DCommon.notifyYatriRentalEventsToDriver req.vehicleId (getMkeyForEvent req.serviceChargeEligibility) personId transporterConfig (show <$> req.reason) WHATSAPP
   pure Success
   where
     getMkeyForEvent serviceChargeEligiblity = if serviceChargeEligiblity then YATRI_RENTAL_RESUME else YATRI_RENTAL_PAUSE
@@ -643,7 +643,7 @@ postDriverPauseOrResumeServiceCharges merchantShortId opCity driverId req = do
 postDriverUpdateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateRCInvalidStatusReq -> Flow APISuccess
 postDriverUpdateRCInvalidStatus _merchantShortId _opCity _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
-  let variant = DDriver.castVehicleVariant req.vehicleVariant
+  let variant = DCommon.castVehicleVariant req.vehicleVariant
   RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing (Just True)
   pure Success
 
@@ -652,7 +652,7 @@ postDriverUpdateVehicleVariant :: ShortId DM.Merchant -> Context.City -> Id Comm
 postDriverUpdateVehicleVariant _ _ _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
   rcNumber <- decrypt vehicleRC.certificateNumber
-  let variant = DDriver.castVehicleVariant req.vehicleVariant
+  let variant = DCommon.castVehicleVariant req.vehicleVariant
   mVehicle <- QVehicle.findByRegistrationNo rcNumber
   RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing Nothing
   whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier variant vehicle
@@ -681,7 +681,7 @@ postDriverBulkReviewRCVariant _ _ req = do
   where
     processRCReq rcReq = do
       vehicleRC <- RCQuery.findById (Id rcReq.rcId) >>= fromMaybeM (VehicleNotFound rcReq.rcId)
-      let mbVariant = DDriver.castVehicleVariant <$> rcReq.vehicleVariant
+      let mbVariant = DCommon.castVehicleVariant <$> rcReq.vehicleVariant
       rcNumber <- decrypt vehicleRC.certificateNumber
       mVehicle <- QVehicle.findByRegistrationNo rcNumber
       RCQuery.updateVehicleVariant vehicleRC.id mbVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
@@ -725,7 +725,7 @@ postDriverClearFee _merchantShortId _opCity driverId req = do
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  let serviceName = DDriver.mapServiceName req.serviceName
+  let serviceName = DCommon.mapServiceName req.serviceName
   let feeType = castCommonFeeTypeToDomainFeeType req.feeType
   let currency = fromMaybe INR req.currency
       gstPercentages = (,) <$> req.sgstPercentage <*> req.cgstPercentage

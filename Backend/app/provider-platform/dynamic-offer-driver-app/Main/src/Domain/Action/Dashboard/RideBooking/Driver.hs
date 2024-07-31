@@ -29,7 +29,7 @@ where
 
 import qualified Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
-import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.DriverFee
 import Domain.Types.DriverLicense
@@ -233,7 +233,7 @@ postDriverV2CollectCash ::
   Text ->
   Common.ServiceNames ->
   Flow APISuccess
-postDriverV2CollectCash mId city driver requestorId serviceName = recordPayment False mId city driver requestorId (DDriver.mapServiceName serviceName)
+postDriverV2CollectCash mId city driver requestorId serviceName = recordPayment False mId city driver requestorId (DCommon.mapServiceName serviceName)
 
 ---------------------------------------------------------------------
 postDriverExemptCash ::
@@ -252,7 +252,7 @@ postDriverV2ExemptCash ::
   Text ->
   Common.ServiceNames ->
   Flow APISuccess
-postDriverV2ExemptCash mId city driver requestorId serviceName = recordPayment True mId city driver requestorId (DDriver.mapServiceName serviceName)
+postDriverV2ExemptCash mId city driver requestorId serviceName = recordPayment True mId city driver requestorId (DCommon.mapServiceName serviceName)
 
 ---------------------------------------------------------------------
 getDriverInfo ::
@@ -279,7 +279,7 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber, mbEmail) of
     (Just mobileNumber, Nothing, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
-      let mobileCountryCode = fromMaybe DDriver.mobileIndianCode (DDriver.appendPlusInMobileCountryCode mbMobileCountryCode)
+      let mobileCountryCode = fromMaybe DCommon.mobileIndianCode (DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
       B.runInReplica $
         QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
@@ -396,7 +396,7 @@ buildDriverLicenseAPIEntity DriverLicense {..} = do
         documentImageId1 = cast @Image @Common.Image documentImageId1,
         documentImageId2 = (cast @Image @Common.Image) <$> documentImageId2,
         licenseNumber = licenseNumber',
-        verificationStatus = DDriver.castVerificationStatus verificationStatus,
+        verificationStatus = DCommon.castVerificationStatus verificationStatus,
         ..
       }
 
@@ -416,8 +416,8 @@ buildVehicleRCAPIEntity VehicleRegistrationCertificate {..} = do
       { registrationCertificateId = cast @VehicleRegistrationCertificate @Common.VehicleRegistrationCertificate id,
         documentImageId = cast @Image @Common.Image documentImageId,
         certificateNumber = certificateNumber',
-        verificationStatus = DDriver.castVerificationStatus verificationStatus,
-        vehicleVariant = DDriver.castVehicleVariantDashboard vehicleVariant,
+        verificationStatus = DCommon.castVerificationStatus verificationStatus,
+        vehicleVariant = DCommon.castVehicleVariantDashboard vehicleVariant,
         ..
       }
 
@@ -528,7 +528,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
         driverRCAssoc <- makeRCAssociation merchant.id merchantOpCityId personId newRC.id (convertTextToUTC (Just "2099-12-12"))
         QRCAssociation.create driverRCAssoc
 
-      fork "Parallely verifying RC for add Vehicle: " $ DDriver.runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
+      fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False -- run RC verification details
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
       driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now

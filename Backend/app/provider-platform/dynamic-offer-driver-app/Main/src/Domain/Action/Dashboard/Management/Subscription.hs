@@ -27,7 +27,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver 
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
-import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as Driver
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
@@ -113,7 +113,7 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceNam
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   now <- getCurrentTime
-  let serviceName = DDriver.mapServiceName serviceName'
+  let serviceName = DCommon.mapServiceName serviceName'
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
