@@ -232,7 +232,8 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
             }
         mkRentalAPIDetails RentalBookingDetails {..} =
           RentalBookingAPIDetails
-            { stopLocation = SLoc.makeLocationAPIEntity <$> stopLocation
+            { stopLocation = SLoc.makeLocationAPIEntity <$> stopLocation,
+              ..
             }
         mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
           OneWaySpecialZoneBookingAPIDetails
@@ -245,7 +246,8 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
           InterCityBookingAPIDetails
             { toLocation = SLoc.makeLocationAPIEntity toLocation,
               estimatedDistance = distanceToHighPrecMeters distance,
-              estimatedDistanceWithUnit = distance
+              estimatedDistanceWithUnit = distance,
+              ..
             }
 
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
