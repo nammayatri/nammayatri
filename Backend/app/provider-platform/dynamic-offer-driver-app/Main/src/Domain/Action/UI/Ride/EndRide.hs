@@ -337,52 +337,53 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
           pure (chargeableDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
         _ -> do
-          if (DTC.isOdometerReadingsRequired booking.tripCategory)
-            then do
-              case mbOdometer of
-                Just odometer -> do
-                  unless (odometer.value >= maybe 0 (.value) rideOld.startOdometerReading) $ throwError InvalidEndOdometerReading
-                  let odometerCalculatedDistance = Meters $ round (odometer.value - maybe 0 (.value) rideOld.startOdometerReading) * 1000
-                  (recalcDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance handle booking rideOld odometerCalculatedDistance thresholdConfig
-                  pure (recalcDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
-                Nothing -> throwError $ OdometerReadingRequired (show booking.tripCategory)
-            else do
-              -- here we update the current ride, so below we fetch the updated version
-              pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
-              whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
-                rectificationMapsConfig <-
+          withFallback (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing, rideOld, Nothing, Nothing) $ do
+            if (DTC.isOdometerReadingsRequired booking.tripCategory)
+              then do
+                case mbOdometer of
+                  Just odometer -> do
+                    unless (odometer.value >= maybe 0 (.value) rideOld.startOdometerReading) $ throwError InvalidEndOdometerReading
+                    let odometerCalculatedDistance = Meters $ round (odometer.value - maybe 0 (.value) rideOld.startOdometerReading) * 1000
+                    (recalcDistance, finalFare, mbUpdatedFareParams) <- recalculateFareForDistance handle booking rideOld odometerCalculatedDistance thresholdConfig
+                    pure (recalcDistance, finalFare, mbUpdatedFareParams, rideOld, Nothing, Nothing)
+                  Nothing -> throwError $ OdometerReadingRequired (show booking.tripCategory)
+              else do
+                -- here we update the current ride, so below we fetch the updated version
+                pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
+                whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
+                  rectificationMapsConfig <-
+                    if shouldRectifyDistantPointsSnapToRoadFailure
+                      then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
+                      else pure Nothing
+                  withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames pickupDropOutsideOfThreshold
+
+                updRide <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+
+                distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
+
+                when distanceCalculationFailed $ do
+                  logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
+
+                let (tollCharges, tollNames, tollConfidence) = do
+                      let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
+                          driverDeviationToTollRoute = fromMaybe False updRide.driverDeviatedToTollRoute
+                      if (isJust updRide.tollCharges && driverDeviationToTollRoute && distanceCalculationFailure)
+                        then (updRide.tollCharges, updRide.tollNames, Just Neutral)
+                        else
+                          if (isJust updRide.estimatedTollCharges || isJust updRide.tollCharges) && distanceCalculationFailure
+                            then (Nothing, Nothing, Just Unsure)
+                            else (updRide.tollCharges, updRide.tollNames, Just Sure)
+
+                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence}
+
+                (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
-                    then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
-                    else pure Nothing
-                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames pickupDropOutsideOfThreshold
-
-              updRide <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-
-              distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
-
-              when distanceCalculationFailed $ do
-                logWarning $ "Failed to calculate distance for this ride: " <> rideId.getId
-
-              let (tollCharges, tollNames, tollConfidence) = do
-                    let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
-                        driverDeviationToTollRoute = fromMaybe False updRide.driverDeviatedToTollRoute
-                    if (isJust updRide.tollCharges && driverDeviationToTollRoute && distanceCalculationFailure)
-                      then (updRide.tollCharges, updRide.tollNames, Just Neutral)
-                      else
-                        if (isJust updRide.estimatedTollCharges || isJust updRide.tollCharges) && distanceCalculationFailure
-                          then (Nothing, Nothing, Just Unsure)
-                          else (updRide.tollCharges, updRide.tollNames, Just Sure)
-
-              let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence}
-
-              (chargeableDistance, finalFare, mbUpdatedFareParams) <-
-                if shouldRectifyDistantPointsSnapToRoadFailure
-                  then recalculateFareForDistance handle booking ride (max (roundToIntegral ride.traveledDistance) (fromMaybe 0 booking.estimatedDistance)) thresholdConfig
-                  else
-                    if distanceCalculationFailed
-                      then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
-                      else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig
-              pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
+                    then recalculateFareForDistance handle booking ride (max (roundToIntegral ride.traveledDistance) (fromMaybe 0 booking.estimatedDistance)) thresholdConfig
+                    else
+                      if distanceCalculationFailed
+                        then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
+                        else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig
+                pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
     let updRide =
           ride{tripEndTime = Just now,
@@ -434,6 +435,15 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
           mode = Nothing,
           calcPoints = True
         }
+
+    withFallback defaultVal action = do
+      res <- try @_ @SomeException action
+      case res of
+        Left someException ->
+          case fromException someException of
+            Just NoFareProduct -> return defaultVal
+            _ -> throwError $ InternalError (Text.pack $ displayException someException)
+        Right resp -> return resp
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresholdConfig = do
