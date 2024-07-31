@@ -42,6 +42,7 @@ getEventName state event bulkUploadTitle = case event of
   API.DriverReferral -> getString DRIVER_REFERRAL
   API.TwoRidesCompleted -> state.data.config.coinsConfig.twoRidesCompletedThresholdForCoins <> getString RIDES_IN_A_DAY
   API.FiveRidesCompleted -> state.data.config.coinsConfig.fiveRidesCompletedThresholdForCoins <> getString RIDES_IN_A_DAY
+  API.TenRidesCompleted -> state.data.config.coinsConfig.tenRidesCompletedThresholdForCoins <> getString RIDES_IN_A_DAY
   API.EightPlusRidesInOneDay -> state.data.config.coinsConfig.numOfRideThresholdForCoins <> getString RIDES_IN_A_DAY
   API.PurpleRideCompleted -> getString PURPLE_RIDE_COMPLETED
   API.LeaderBoardTopFiveHundred -> getString TOP <> " " <> state.data.config.coinsConfig.leaderBoardThresholdForCoins <> " " <> getString IN_WEEKLY_LEADERBOARD
@@ -86,6 +87,10 @@ checkPopupShowToday popupType appConfig hsState = do
     ST.FIVE_RIDE_COMPLETED ->
       if isPopupShownToday coinPopupInfo.fiveRideCompleted && checkCoinIsEnabled && appConfig.coinsConfig.fiveRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan appConfig.coinsConfig.monsoonOfferDate)
         then ST.FIVE_RIDE_COMPLETED
+        else ST.NO_COIN_POPUP
+    ST.TEN_RIDE_COMPLETED ->
+      if isPopupShownToday coinPopupInfo.tenRideCompleted && checkCoinIsEnabled && appConfig.coinsConfig.tenRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan appConfig.coinsConfig.monsoonOfferDate)
+        then ST.TEN_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
     ST.TWO_RIDE_COMPLETED ->
       if isPopupShownToday coinPopupInfo.twoRideCompleted && checkCoinIsEnabled && appConfig.coinsConfig.twoRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan appConfig.coinsConfig.monsoonOfferDate)
