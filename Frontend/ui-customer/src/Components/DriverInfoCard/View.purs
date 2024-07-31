@@ -1503,6 +1503,7 @@ getTripDetails state = {
   , fareProductType : state.data.fareProductType
   , enableEditDestination : state.data.config.feature.enableEditDestination
   , editingDestinationLoc : EditingDestination
+  , isSpecialZone : state.data.isSpecialZone
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String

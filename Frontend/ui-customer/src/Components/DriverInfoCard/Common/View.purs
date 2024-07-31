@@ -387,7 +387,7 @@ sourceDestinationView push config =
                 , cornerRadius if os == "IOS" then 16.0 else 32.0
                 , stroke $ "1," <> Color.grey900
                 , padding $ Padding 12 8 12 8
-                , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE)
+                , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isSpecialZone
                 , onClick push $ const config.editingDestinationLoc
                 , rippleColor Color.rippleShade
               ] <> FontStyle.body1 TypoGraphy

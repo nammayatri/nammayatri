@@ -35,5 +35,6 @@ type TripDetails a
   , enablePaddingBottom :: Boolean
   , fareProductType :: FareProductType
   , enableEditDestination :: Boolean
+  , isSpecialZone :: Boolean
   , editingDestinationLoc :: a
     }
