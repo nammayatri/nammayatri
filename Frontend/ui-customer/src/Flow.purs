@@ -5847,6 +5847,7 @@ updateRideScheduledTime _ = do
 enterRentalRideSearchFlow :: String -> FlowBT String Unit
 enterRentalRideSearchFlow bookingId = do
   (GlobalState globalState) <- getState
+  setValueToLocalStore CONFIRM_QUOTES_POLLING "false"
   updateLocalStage ConfirmingQuotes
   setValueToLocalNativeStore CONFIRM_QUOTES_START_TIME $ getCurrentUTC ""
   void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
@@ -5959,7 +5960,7 @@ fcmHandler notification state = do
               currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
 
               currentMap = getSuggestionsMapFromLocal FunctionCall
-            if (state.data.fareProductType /= FPT.RENTAL) then do
+            if (state.data.fareProductType /= FPT.RENTAL && currTrip.destination /= "") then do
               let
                 updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig false
               void $ pure $ setSuggestionsMap updatedMap

@@ -412,6 +412,7 @@ getMessageNotificationViewConfig state =
   , user :{ userName : name
     , receiver : name
     }
+  , isSpecialZone : false
   }
 
 bottomSheetView ::

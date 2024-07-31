@@ -880,7 +880,7 @@ isMockLocationConfig state =
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = let
-  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.props.isSpecialZone
   waitTimeConfig = textConfig isQuotes  
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
@@ -1099,7 +1099,7 @@ messagingViewConfig state =
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
 getDefaultPeekHeight state =
-  let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+  let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.props.isSpecialZone
       height = case state.props.currentStage == ST.RideAccepted of
         true -> if isQuotes then 285 else 381
         false -> if isQuotes then 377 else 368
