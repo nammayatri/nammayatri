@@ -81,6 +81,7 @@
           driver-offer-allocator.custom = cacConfig;
           beckn-test.custom = cacConfig;
           rider-dashboard.custom = cacConfig;
+          yudhishthira-exe.custom = cacConfig;
 
 
           namma-dsl.libraryProfiling = false;

@@ -18,7 +18,7 @@ let outputPath =
       , _domainType = outputPrefixReadOnly ++ "Domain/Types"
       , _servantApi = outputPrefixReadOnly ++ "API/Action"
       , _servantApiDashboard = ""
-      , _sql = [ { _1 = migrationPath, _2 = "atlas_driver_offer_bpp" } ]
+      , _sql = [ { _1 = migrationPath, _2 = "yudhishthira" } ]
       , _purescriptFrontend = ""
       }
 

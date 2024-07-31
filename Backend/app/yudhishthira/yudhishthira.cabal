@@ -142,6 +142,7 @@ library
     , record-hasfield
     , resource-pool
     , scheduler
+    , scientific
     , sequelize
     , servant
     , servant-client
@@ -262,6 +263,7 @@ executable yudhishthira-exe
     , record-hasfield
     , resource-pool
     , scheduler
+    , scientific
     , sequelize
     , servant
     , servant-client

@@ -59,6 +59,7 @@
           rider-dashboard-exe.disabled = true;
           search-result-aggregator-exe.disabled = true;
           special-zone-exe.disabled = true;
+          yudhishthira-exe.disabled = true;
 
           load-test-init = {
             imports = [ common ];
