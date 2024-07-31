@@ -29,7 +29,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
-import Domain.Action.Dashboard.Driver (castVehicleVariant)
+import Domain.Action.Dashboard.Common (castVehicleVariant)
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image

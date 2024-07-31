@@ -15,23 +15,17 @@
 module Domain.Action.Dashboard.Fleet.Registration where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
 import Data.OpenApi (ToSchema)
-import qualified Domain.Action.Dashboard.Management.DriverRegistration as DReg
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
-import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -43,13 +37,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import qualified SharedLogic.DriverOnboarding as DomainRC
-import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -240,65 +231,3 @@ validateInitiateLoginReq FleetOwnerLoginReq {..} =
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
-
-sendFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Common.AuthReq -> Flow Common.AuthRes
-sendFleetJoiningOtp merchantShortId opCity fleetOwnerName req = do
-  merchant <- findMerchantByShortId merchantShortId
-  smsCfg <- asks (.smsCfg)
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  mobileNumberHash <- getDbHash req.mobileNumber
-  mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER
-  case mbPerson of
-    Nothing -> DReg.auth merchantShortId opCity req -------------- to onboard a driver that is not the part of the fleet
-    Just person -> do
-      let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-          phoneNumber = req.mobileCountryCode <> req.mobileNumber
-      otpCode <- maybe generateOTPCode return useFakeOtpM
-      withLogTag ("personId_" <> getId person.id) $ do
-        (mbSender, message) <-
-          MessageBuilder.buildFleetJoiningMessage merchantOpCityId $
-            MessageBuilder.BuildFleetJoiningMessageReq
-              { otp = otpCode,
-                fleetOwnerName = fleetOwnerName
-              }
-        let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
-          >>= Sms.checkSmsResult
-        let key = makeFleetDriverOtpKey phoneNumber
-        Redis.setExp key otpCode 3600
-      pure $ Common.AuthRes {authId = "ALREADY_USING_APPLICATION", attempts = 0}
-
-verifyFleetJoiningOtp :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Common.VerifyFleetJoiningOtpReq -> Flow APISuccess
-verifyFleetJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId req = do
-  merchant <- findMerchantByShortId merchantShortId
-  mobileNumberHash <- getDbHash req.mobileNumber
-  person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
-  case mbAuthId of
-    Just authId -> do
-      smsCfg <- asks (.smsCfg)
-      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-      fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (InvalidRequest "Fleet Owner not found")
-      deviceToken <- fromMaybeM (InvalidRequest "Device Token not found") $ req.deviceToken
-      void $ DReg.verify authId True fleetOwnerId Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
-      let phoneNumber = req.mobileCountryCode <> req.mobileNumber
-      withLogTag ("personId_" <> getId person.id) $ do
-        (mbSender, message) <-
-          MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
-            MessageBuilder.BuildDownloadAppMessageReq
-              { fleetOwnerName = fleetOwner.firstName
-              }
-        let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
-          >>= Sms.checkSmsResult
-    Nothing -> do
-      let key = makeFleetDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
-      otp <- Redis.get key >>= fromMaybeM (InvalidRequest "OTP not found")
-      when (otp /= req.otp) $ throwError (InvalidRequest "Invalid OTP")
-      checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
-      when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
-      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId (DomainRC.convertTextToUTC (Just "2099-12-12"))
-      QFDV.create assoc
-  pure Success
-
-makeFleetDriverOtpKey :: Text -> Text
-makeFleetDriverOtpKey phoneNo = "Fleet:Driver:PhoneNo" <> phoneNo
