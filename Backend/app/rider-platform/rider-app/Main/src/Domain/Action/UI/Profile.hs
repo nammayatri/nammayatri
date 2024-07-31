@@ -390,7 +390,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
       newList = DPDEN.makePersonDefaultEmergencyNumberAPIEntity False <$> decNew
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  message <-
+  buildSmsReq <-
     MessageBuilder.buildAddedAsEmergencyContactMessage person.merchantOperatingCityId $
       MessageBuilder.BuildAddedAsEmergencyContactMessageReq
         { userName = SLP.getName person,
@@ -398,7 +398,7 @@ sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
         }
   let filterNewContacts personDEN = return $ not $ personDEN.mobileNumber `elem` oldList
   newlyAddedContacts <- filterM filterNewContacts newList
-  SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just message) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts
+  SPDEN.notifyEmergencyContacts person (notificationMessage person) "Emergency Contact Added" Notification.EMERGENCY_CONTACT_ADDED (Just buildSmsReq) riderConfig.enableEmergencyContactAddedMessage newlyAddedContacts
   where
     notificationMessage person = SLP.getName person <> " has added you as the emergency contact."
 

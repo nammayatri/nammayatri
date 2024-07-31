@@ -151,17 +151,15 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
           then do
             customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
             mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-            smsCfg <- asks (.smsCfg)
             let countryCode = fromMaybe "+91" customer.mobileCountryCode
             let phoneNumber = countryCode <> mobileNumber
-                sender = smsCfg.sender
-            message <-
+            buildSmsReq <-
               MessageBuilder.buildSendBookingOTPMessage merchantOperatingCityId $
                 MessageBuilder.BuildSendBookingOTPMessageReq
                   { otp = show otp,
                     amount = show (booking.estimatedTotalFare.amountInt)
                   }
-            Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+            Sms.sendSMS booking.merchantId merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
           else do
             logInfo "Merchant not configured to send dashboard sms"
   case booking.bookingDetails of
