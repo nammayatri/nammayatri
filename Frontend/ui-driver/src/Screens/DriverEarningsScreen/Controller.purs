@@ -694,14 +694,15 @@ tableData state =
   in 
     ([ { key: getString TASK_COMPLETED, value: getString YATRI_COINS_STR }
     ]) <> (if (coinConfig.driverToCustomerRefCoinEvent) then [{ key: getString CUSTOMER_REFERRAL, value: coinConfig.customerReferralCoins }] else [])
-    <> (if (coinConfig.prupleRideCoinEvent) then [{ key: getString PURPLE_RIDE, value: coinConfig.purpleRideCoins }] else [])
     <> (if (coinConfig.rideCompletedCoinEvent) then [{ key: getString RIDE_COMPLETED, value: coinConfig.rideCompletedCoins }] else [])
     <> (if (coinConfig.twoRideCoinEvent) then [{ key: getString RIDES_IN_A_DAY_PREFIX <> coinConfig.twoRidesCompletedThresholdForCoins <> getString RIDES_IN_A_DAY_SUFFIX, value: coinConfig.twoPlusRidesCoins }] else [])
     <> (if (coinConfig.fiveRideCoinEvent) then [{ key: getString RIDES_IN_A_DAY_PREFIX <> coinConfig.fiveRidesCompletedThresholdForCoins <> getString RIDES_IN_A_DAY_SUFFIX, value: coinConfig.fivePlusRidesCoins }] else [])
     <> (if (coinConfig.eightRideCoinEvent) then [{ key: getString RIDES_IN_A_DAY_PREFIX <> coinConfig.numOfRideThresholdForCoins <> getString RIDES_IN_A_DAY_SUFFIX, value: coinConfig.eightPlusRidesCoins }] else [])
+    <> (if (coinConfig.tenRideCoinEvent) then [{ key: getString RIDES_IN_A_DAY_PREFIX <> (coinConfig.tenRidesCompletedThresholdForCoins <> "+") <> getString RIDES_IN_A_DAY_SUFFIX, value: coinConfig.tenPlusRidesCoins }] else [])
     <> (if (coinConfig.bookingCancelCoinEvent) then [{ key: getString RIDE_CANCELLATION, value: coinConfig.rideCancellationCoins }] else [])
     <> (if (coinConfig.fiveStarCoinEvent) then [{ key: getString GOOD_RATING_BY_CUSTOMER, value: coinConfig.fiveStarRatingCoins }] else [])
     <> (if (coinConfig.oneTwoStarCoinEvent) then [{ key: getString BAD_RATING_BY_CUSTOMER, value: coinConfig.oneOrTwoStarRatingCoins }] else [])
+    <> (if (coinConfig.prupleRideCoinEvent) then [{ key: getString PURPLE_RIDE, value: coinConfig.purpleRideCoins }] else [])
 
 dummyRideHistoryItem :: RidesInfo
 dummyRideHistoryItem = RidesInfo {

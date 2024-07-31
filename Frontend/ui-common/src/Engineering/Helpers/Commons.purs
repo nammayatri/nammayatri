@@ -116,6 +116,7 @@ foreign import getUTCAfterNSecondsImpl :: Fn2 String Int String
 foreign import getUTCAfterNHoursImpl :: Fn2 String Int String
 foreign import compareUTCDateImpl :: Fn2 String String Int
 foreign import jBridgeMethodExists :: String -> Boolean
+foreign import getDateMinusNDays :: Fn2 String Int String
 
 
 os :: String
