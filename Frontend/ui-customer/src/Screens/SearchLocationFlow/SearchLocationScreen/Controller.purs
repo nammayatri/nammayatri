@@ -324,7 +324,7 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
     getAddress location = MB.maybe "" (\loc -> loc.address) location
 
 eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do 
-  if state.props.isAutoComplete then -- so that selecting from favourites doesn't trigger autocomplete
+  if state.props.isAutoComplete && state.data.fromScreen /= getScreen METRO_TICKET_BOOKING_SCREEN then -- so that selecting from favourites doesn't trigger autocomplete
     autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
     else continue state
 
@@ -344,12 +344,6 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
         pure NoAction
       ]
   
-eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
-  let canClearText = STR.length value > 2
-  continueWithCmd state {props { canClearText = canClearText, isAutoComplete = canClearText}} [ do 
-    void $ pure $ updateInputString value 
-    pure NoAction
-  ]
   
 
 -- eval (UpdateLocAndLatLong recentSearches lat lng) state = do 
