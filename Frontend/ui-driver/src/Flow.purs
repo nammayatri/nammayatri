@@ -2821,7 +2821,7 @@ categoryTransformer categories language = map (\(Category catObj) ->
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
 clearPendingDuesFlow showLoader = do
   void $ lift $ lift $ toggleLoader showLoader
-  liftFlowBT $ initiatePaymentPage
+  liftFlowBT $ initiatePaymentPage Nothing
   clearduesResp' <- lift $ lift $ Remote.cleardues ""
   case clearduesResp' of
     Right (ClearDuesResp clearduesResp) -> do
@@ -2867,7 +2867,7 @@ clearPendingDuesFlow showLoader = do
 
 nyPaymentFlow :: PlanCardConfig -> String -> FlowBT String Unit
 nyPaymentFlow planCardConfig fromScreen = do
-  liftFlowBT $ initiatePaymentPage
+  liftFlowBT $ initiatePaymentPage Nothing
   response <- lift $ lift $ Remote.subscribePlan planCardConfig.id
   case response of
     Right (SubscribePlanResp listResp) -> do
@@ -2970,7 +2970,7 @@ paymentHistoryFlow = do
 
 ysPaymentFlow :: FlowBT String Unit
 ysPaymentFlow = do
-  liftFlowBT $ initiatePaymentPage
+  liftFlowBT $ initiatePaymentPage Nothing
   (GlobalState state) <- getState
   let homeScreenState = state.homeScreen
   response <- lift $ lift $ Remote.createPaymentOrder homeScreenState.data.paymentState.invoiceId
@@ -3061,7 +3061,7 @@ ackScreenFlow postRunflow = do
 
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
-  liftFlowBT $ runEffectFn1 initiatePP unit
+  liftFlowBT $ runEffectFn1 initiatePP {clientId : "", merchantId : ""}
 
   reelsResp <- lift $ lift $ Remote.getReelsVideo "reels_data" $ HU.getLanguageTwoLetters $ Just (getLanguageLocale languageKey)
   let reelsRespData = case reelsResp of
@@ -3721,7 +3721,7 @@ benefitsScreenFlow = do
 
 customerReferralTrackerFlow :: FlowBT String Unit 
 customerReferralTrackerFlow = do 
-  liftFlowBT $ runEffectFn1 initiatePP unit
+  liftFlowBT $ runEffectFn1 initiatePP {clientId : "", merchantId : ""} 
   (GlobalState globalState) <- getState
   appConfig <- getAppConfigFlowBT Constants.appConfig
   logField_ <- lift $ lift $ getLogFields
@@ -3753,7 +3753,7 @@ addUPIFlow :: CRST.CustomerReferralTrackerScreenState -> FlowBT String Unit
 addUPIFlow state = do 
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
   void $ lift $ lift $ toggleLoader true
-  liftFlowBT $ initiatePaymentPage
+  liftFlowBT $ initiatePaymentPage Nothing
   response <- lift $ lift $ Remote.payoutRegistration "dummy"
   case response of
     Right (API.PayoutRegisterRes payoutRegisterRes) -> do
