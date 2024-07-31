@@ -21,11 +21,17 @@ function ppInitiateStatus() {
   return false;
 }
 
-function getInitiatPayload () {
+function getInitiatPayload (config) {
   const innerPayload = Object.assign({},window.__payload.payload);
   const initiatePayload = Object.assign({},window.__payload);
   innerPayload["action"] = "initiate";
-  innerPayload["merchantId"] = "nammayatri";
+  if (config.merchantId == "") {
+    innerPayload["merchantId"] = "nammayatri";
+  }
+  else innerPayload["merchantId"] = config.merchantId;
+  if (config.clientId != "") {
+    innerPayload["clientId"] = config.clientId;
+  }
   initiatePayload["payload"] = innerPayload;
   initiatePayload["service"] = "in.juspay.hyperpay";
   return initiatePayload;
@@ -58,21 +64,21 @@ export const  killPP = function (services) {
   });
 }
 
-export const initiatePP = function () {
+export const initiatePP = function (config) {
   if (ppInitiateStatus()) {
     window.isPPInitiated = true;
     return;
   }
   try {
     if (JBridge.initiatePP) {
-      JBridge.initiatePP(JSON.stringify(getInitiatPayload()));
+      JBridge.initiatePP(JSON.stringify(getInitiatPayload(config)));
     }
   } catch (err) {
     console.error("Hyperpay initiate Request not sent : ", err);
   }
 }
 
-export const initiatePPSingleInstance = function () {
+export const initiatePPSingleInstance = function (config) {
   if (!JBridge.initiatePP) {
     if (JOS) {
       try {
@@ -84,7 +90,7 @@ export const initiatePPSingleInstance = function () {
             }
           }
         }
-        JOS.startApp("in.juspay.hyperpay")(getInitiatPayload())(cb)();
+        JOS.startApp("in.juspay.hyperpay")(getInitiatPayload(config))(cb)();
       } catch (err) {
         console.error("Hyperpay initiate Request not sent : ", err);
       }

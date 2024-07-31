@@ -4106,7 +4106,7 @@ metroTicketBookingFlow = do
 
 metroTicketPaymentFlow :: CreateOrderRes -> String -> FlowBT String Unit
 metroTicketPaymentFlow (CreateOrderRes orderResp) bookingId = do
-  liftFlowBT $ initiatePaymentPage
+  liftFlowBT $ initiatePaymentPage $ Just {clientId : "nammayatriBAP", merchantId : "nammayatriBAP"}
   let
     (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
 
@@ -4219,7 +4219,7 @@ ticketListFlow = do
 --     _ -> zooTicketBookingFlow
 ticketPaymentFlow :: TicketBookingScreenData -> FlowBT String Unit
 ticketPaymentFlow screenData = do
-  liftFlowBT $ initiatePaymentPage
+  liftFlowBT $ initiatePaymentPage Nothing
   let
     ticketPlaceID = maybe "" (\(TicketPlaceResp ticketPlaceResp) -> ticketPlaceResp.id) screenData.placeInfo
   (CreateOrderRes orderResp) <- Remote.bookTicketsBT (Remote.mkBookingTicketReq screenData) ticketPlaceID
