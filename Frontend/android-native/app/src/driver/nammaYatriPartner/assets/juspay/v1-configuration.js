@@ -1387,7 +1387,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Udupi",
         "mapImage" : "ny_ic_udupi_map",
-        "cityCode" : "std:0820",
+        "cityCode" : "std:08200",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : true,
         "advancedRidePopUpYoutubeLink" : "" ,
