@@ -56,7 +56,6 @@ import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -396,16 +395,14 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
             Just endOtp' -> do
               customer <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
               mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-              smsCfg <- asks (.smsCfg)
               let countryCode = fromMaybe "+91" customer.mobileCountryCode
               let phoneNumber = countryCode <> mobileNumber
-                  sender = smsCfg.sender
-              message <-
+              buildSmsReq <-
                 MessageBuilder.buildSendRideEndOTPMessage merchantOperatingCityId $
                   MessageBuilder.BuildSendRideEndOTPMessageReq
                     { otp = show endOtp'
                     }
-              Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+              Sms.sendSMS booking.merchantId merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
             _ -> pure ()
         else do
           logInfo "Merchant not configured to send dashboard sms"

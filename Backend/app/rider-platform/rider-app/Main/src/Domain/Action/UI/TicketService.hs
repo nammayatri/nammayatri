@@ -817,16 +817,14 @@ postTicketServiceCancel (_mbPersonId, merchantId) req = do
 
     _sendSms :: Domain.Types.Person.Person -> Text -> Environment.Flow ()
     _sendSms person categoryName = do
-      smsCfg <- asks (.smsCfg)
       mobileNumber <- mapM decrypt person.mobileNumber
       let countryCode = fromMaybe "+91" person.mobileCountryCode
           merchantOperatingCityId = person.merchantOperatingCityId
-          sender = smsCfg.sender
       case mobileNumber of
         Just mNumber -> do
           let phoneNumber = countryCode <> mNumber
-          message <- MessageBuilder.buildTicketBookingCancelled merchantOperatingCityId $ MessageBuilder.BuildTicketBookingCancelledMessageReq {personName = fromMaybe "" person.firstName, categoryName = categoryName}
-          Sms.sendSMS person.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender)
+          buildSmsReq <- MessageBuilder.buildTicketBookingCancelled merchantOperatingCityId $ MessageBuilder.BuildTicketBookingCancelledMessageReq {personName = fromMaybe "" person.firstName, categoryName = categoryName}
+          Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
             >>= Sms.checkSmsResult
         _ -> logDebug $ "Could n't send Ticket Booking Cancellation SMS : " <> person.id.getId
 

@@ -121,7 +121,6 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.fulfillmentId = fulfillmentId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAirConditioned = isAirConditioned,
-        Beam.isBookingUpdated = Just isBookingUpdated,
         Beam.isDashboardRequest = isDashboardRequest,
         Beam.isScheduled = Just isScheduled,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
