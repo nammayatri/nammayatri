@@ -160,6 +160,13 @@ handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance
           pure validRideTaken
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
+    DCT.RidesCompleted a -> do
+      validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
+      runActionWhenValidConditions
+        [ pure (validRideCount == a),
+          pure validRideTaken
+        ]
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins
     DCT.PurpleRideCompleted ->
       runActionWhenValidConditions
         [ pure isDisabled,
