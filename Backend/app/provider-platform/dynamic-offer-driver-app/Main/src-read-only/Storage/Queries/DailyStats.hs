@@ -32,14 +32,16 @@ findByDriverIdAndDate driverId merchantLocalDate = do findOneWithKV [Se.And [Se.
 
 updateByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
-updateByDriverId totalEarnings numRides totalDistance driverId merchantLocalDate = do
+  (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> m ())
+updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings driverId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),
       Se.Set Beam.numRides numRides,
       Se.Set Beam.totalDistance totalDistance,
+      Se.Set Beam.tollCharges (Kernel.Prelude.Just tollCharges),
+      Se.Set Beam.bonusEarnings (Kernel.Prelude.Just bonusEarnings),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
@@ -84,6 +86,7 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.activatedValidRides (Kernel.Prelude.Just activatedValidRides),
+      Se.Set Beam.bonusEarnings (Kernel.Prelude.Just bonusEarnings),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
@@ -94,6 +97,7 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.payoutStatus (Kernel.Prelude.Just payoutStatus),
       Se.Set Beam.referralCounts (Kernel.Prelude.Just referralCounts),
       Se.Set Beam.referralEarnings (Kernel.Prelude.Just referralEarnings),
+      Se.Set Beam.tollCharges (Kernel.Prelude.Just tollCharges),
       Se.Set Beam.totalDistance totalDistance,
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),

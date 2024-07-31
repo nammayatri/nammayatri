@@ -16,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 
 data DailyStats = DailyStats
   { activatedValidRides :: Kernel.Prelude.Int,
+    bonusEarnings :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -27,6 +28,7 @@ data DailyStats = DailyStats
     payoutStatus :: Domain.Types.DailyStats.PayoutStatus,
     referralCounts :: Kernel.Prelude.Int,
     referralEarnings :: Kernel.Types.Common.HighPrecMoney,
+    tollCharges :: Kernel.Types.Common.HighPrecMoney,
     totalDistance :: Kernel.Types.Common.Meters,
     totalEarnings :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,

@@ -29,6 +29,8 @@ DailyStats:
     payoutStatus: PayoutStatus
     payoutOrderId: Maybe Text
     payoutOrderStatus: Maybe PayoutOrderStatus
+    tollCharges: HighPrecMoney
+    bonusEarnings: HighPrecMoney
 
   beamType:
     distanceUnit: Maybe DistanceUnit
@@ -36,6 +38,8 @@ DailyStats:
     referralCounts: Maybe Int
     payoutStatus: Maybe PayoutStatus
     referralEarnings: Maybe HighPrecMoney
+    tollCharges: Maybe HighPrecMoney
+    bonusEarnings: Maybe HighPrecMoney
 
   beamFields:
     totalEarnings:
@@ -52,6 +56,8 @@ DailyStats:
     activatedValidRides:  Kernel.Prelude.fromMaybe 0|I
     referralCounts: Kernel.Prelude.fromMaybe 0|I
     payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying|I
+    tollCharges: Kernel.Prelude.fromMaybe 0|I
+    bonusEarnings: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
@@ -63,6 +69,8 @@ DailyStats:
     activatedValidRides:  Kernel.Prelude.Just|I
     referralCounts: Kernel.Prelude.Just|I
     payoutStatus: Kernel.Prelude.Just|I
+    tollCharges: Kernel.Prelude.Just|I
+    bonusEarnings: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -79,7 +87,7 @@ DailyStats:
 
     updateByDriverId:
       kvFunction: updateOneWithKV
-      params: [totalEarnings, numRides, totalDistance]
+      params: [totalEarnings, numRides, totalDistance, tollCharges, bonusEarnings]
       where:
         and: [driverId, merchantLocalDate]
 

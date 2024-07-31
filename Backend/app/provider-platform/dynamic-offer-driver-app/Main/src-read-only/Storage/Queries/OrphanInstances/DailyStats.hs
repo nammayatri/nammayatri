@@ -21,6 +21,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
       Just
         Domain.Types.DailyStats.DailyStats
           { activatedValidRides = Kernel.Prelude.fromMaybe 0 activatedValidRides,
+            bonusEarnings = Kernel.Prelude.fromMaybe 0 bonusEarnings,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverId = Kernel.Types.Id.Id driverId,
@@ -32,6 +33,7 @@ instance FromTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
             payoutStatus = Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying payoutStatus,
             referralCounts = Kernel.Prelude.fromMaybe 0 referralCounts,
             referralEarnings = getHighPrecMoney referralEarnings,
+            tollCharges = Kernel.Prelude.fromMaybe 0 tollCharges,
             totalDistance = totalDistance,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
             createdAt = createdAt,
@@ -42,6 +44,7 @@ instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
   toTType' (Domain.Types.DailyStats.DailyStats {..}) = do
     Beam.DailyStatsT
       { Beam.activatedValidRides = Kernel.Prelude.Just activatedValidRides,
+        Beam.bonusEarnings = Kernel.Prelude.Just bonusEarnings,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverId = Kernel.Types.Id.getId driverId,
@@ -53,6 +56,7 @@ instance ToTType' Beam.DailyStats Domain.Types.DailyStats.DailyStats where
         Beam.payoutStatus = Kernel.Prelude.Just payoutStatus,
         Beam.referralCounts = Kernel.Prelude.Just referralCounts,
         Beam.referralEarnings = Kernel.Prelude.Just referralEarnings,
+        Beam.tollCharges = Kernel.Prelude.Just tollCharges,
         Beam.totalDistance = totalDistance,
         Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
         Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,

@@ -140,7 +140,6 @@ import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Prelude as Prelude
-import qualified GHC.List as GHCL
 import GHC.Records.Extra
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
@@ -210,6 +209,7 @@ import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.DailyStats as SQDS
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverFeeExtra as QDFE
@@ -219,7 +219,6 @@ import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
@@ -764,7 +763,7 @@ buildDriverEntityRes (person, driverInfo, driverStats) = do
                   (fromMaybe 0 driverInfo.airConditionScore) <= acThreshold
                     && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
         return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem)
-  let isVehicleSupported = maybe False (\d -> d `elem` supportedServiceTiers) mbDefaultServiceTier
+  let isVehicleSupported = maybe False (`elem` supportedServiceTiers) mbDefaultServiceTier
   onRideFlag <-
     if driverInfo.onRide
       then
@@ -1275,28 +1274,15 @@ getStats ::
   m DriverStatsRes
 getStats (driverId, _, merchantOpCityId) date = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  rides <- runInReplica $ QRide.getRidesForDate driverId date transporterConfig.timeDiffFromUtc
-  let fareParamId = mapMaybe (.fareParametersId) rides
-  fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
+  driverDailyStats <- runInReplica $ SQDS.findByDriverIdAndDate driverId date
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   validRideCountOfDriver <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
 
-  let (driverSelFares, customerExtFees) = (mapMaybe (.driverSelectedFare) fareParameters, mapMaybe (.customerExtraFee) fareParameters)
-      deadKmFares =
-        mapMaybe
-          ( \x -> case fareParametersDetails x of
-              ProgressiveDetails det -> Just ((deadKmFare :: Fare.FParamsProgressiveDetails -> HighPrecMoney) det)
-              SlabDetails _ -> Nothing
-              RentalDetails det -> Just ((deadKmFare :: Fare.FParamsRentalDetails -> HighPrecMoney) det)
-              InterCityDetails det -> Just (pickupCharge det)
-              AmbulanceDetails _ -> Nothing
-          )
-          fareParameters
-  let bonusEarning = GHCL.sum driverSelFares + GHCL.sum customerExtFees + GHCL.sum deadKmFares
-  let totalEarningsOfDay = sum (mapMaybe (.fare) rides)
-      totalDistanceTravelledInKilometers = sum (mapMaybe (.chargeableDistance) rides) `div` 1000
-      totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - (sum (mapMaybe (.tollCharges) rides) :: HighPrecMoney)
+  let totalEarningsOfDay = maybe 0.0 (.totalEarnings) driverDailyStats
+      totalDistanceTravelledInKilometers = maybe 0 (.totalDistance) driverDailyStats `div` 1000
+      totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - maybe 0.0 (.tollCharges) driverDailyStats
+      bonusEarning = maybe 0.0 (.bonusEarnings) driverDailyStats
       totalEarningsOfDayPerKm =
         if totalDistanceTravelledInKilometers.getMeters == 0
           then HighPrecMoney 0.0
@@ -1304,7 +1290,7 @@ getStats (driverId, _, merchantOpCityId) date = do
   return $
     DriverStatsRes
       { coinBalance = coinBalance_,
-        totalRidesOfDay = length rides,
+        totalRidesOfDay = maybe 0 (.numRides) driverDailyStats,
         totalEarningsOfDay = roundToIntegral totalEarningsOfDay,
         totalEarningsOfDayWithCurrency = PriceAPIEntity totalEarningsOfDay currency,
         totalValidRidesOfDay = validRideCountOfDriver,

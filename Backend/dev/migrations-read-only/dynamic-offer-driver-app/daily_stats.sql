@@ -38,3 +38,13 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN payout_status text ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN payout_order_status text ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN payout_order_id text ;
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN activated_valid_rides integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN toll_charges double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN bounus_earnings double precision ;
