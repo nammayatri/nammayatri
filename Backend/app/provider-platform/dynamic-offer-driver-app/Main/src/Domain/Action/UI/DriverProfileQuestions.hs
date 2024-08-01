@@ -75,7 +75,7 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
       Just hometown' -> ("Hailing from " <> hometown' <> ", ")
       Nothing -> ""
 
-    withNY now createdAt = T.pack $ show $ (diffDays (utctDay createdAt) (utctDay now)) `div` 30
+    withNY now createdAt = T.pack $ show $ (diffDays (utctDay now) (utctDay createdAt)) `div` 30
 
     writeDriverStats driverStats = ratingStat driverStats <> cancellationStat driverStats
 
@@ -87,11 +87,11 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
 
     cancellationStat driverStats =
       let cancRate = divideMaybe driverStats.ridesCancelled driverStats.totalRidesAssigned
-       in if cancRate < Just 0.04
+       in if (cancRate < Just 0.04 && isJust cancRate)
             then (if (ratingStat driverStats == "") then "" else "Also, ") <> "I have a very low cancellation rate of " <> (T.pack $ show cancRate) <> " that ranks among top 10 percentile. "
             else ""
 
-    genAspirations aspirations' = "I aspire to " <> (T.intercalate ", " aspirations')
+    genAspirations aspirations' = "I aspire to " <> T.toLower (T.intercalate ", " aspirations')
 
     divideMaybe :: Maybe Int -> Maybe Int -> Maybe Double
     divideMaybe mNum mDenom = do

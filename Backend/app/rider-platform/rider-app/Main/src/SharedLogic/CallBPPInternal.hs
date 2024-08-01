@@ -375,7 +375,7 @@ data DriverProfileRes = DriverProfileRes
     pledges :: [Text],
     driverStats :: DriverStatSummary,
     languages :: [Text],
-    aspiration :: [Text],
+    aspirations :: [Text],
     vehicleNum :: Text,
     vechicleVariant :: Text,
     vehicleTags :: [Text],

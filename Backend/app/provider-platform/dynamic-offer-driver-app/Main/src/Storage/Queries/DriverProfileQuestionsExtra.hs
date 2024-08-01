@@ -31,9 +31,9 @@ upsert a@DriverProfileQuestions {..} = do
             <> [Se.Set Beam.pledges pledges | notNull pledges]
             <> [Se.Set Beam.aspirations aspirations | isJust aspirations]
             <> [Se.Set Beam.drivingSince drivingSince]
-            <> [Se.Set Beam.hometown hometown]
             <> [Se.Set Beam.imageIds imageIds]
             <> [Se.Set Beam.vehicleTags vehicleTags]
+            <> [Se.Set Beam.aboutMe aboutMe]
         )
         [Se.Is Beam.driverId $ Se.Eq a.driverId.getId]
     else createWithKV a
