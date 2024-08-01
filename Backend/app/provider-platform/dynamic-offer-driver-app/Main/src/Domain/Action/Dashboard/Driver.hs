@@ -1904,7 +1904,7 @@ fleetVehicleEarning _merchantShortId _ fleetOwnerId mbVehicleNumber mbLimit mbOf
   listOfAllRc <- getListOfVehicles mbVehicleNumber fleetOwnerId mbLimit mbOffset Nothing merchant.id
   res <- forM listOfAllRc $ \rc -> do
     rcNo <- decrypt rc.certificateNumber
-    (totalEarning, distanceTravelled, totalRides, duration, cancelledRides) <- CQRide.fleetStatsByVehicle fleetOwnerId rcNo from to
+    (totalEarning, distanceTravelled, totalRides, cancelledRides, duration) <- CQRide.fleetStatsByVehicle fleetOwnerId rcNo from to
     let totalDuration = calculateTimeDifference duration
     pure $
       Common.FleetEarningRes

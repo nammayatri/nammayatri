@@ -134,7 +134,7 @@ handlePendingRequests tokenInfo adminApproval pendingFlagReqList = do
       suspectListForNotification <- mapM (\suspect -> addOrUpdateSuspect suspect merchant.shortId.getShortId Domain.Types.Suspect.Flagged) pendingFlagReqList
       let notificationMetadataForOthers = encodeToText suspectListForNotification
       adminReceiverIds <- DS.getRecieverIdListByAcessType DASHBOARD_ADMIN
-      merchantAdminReceiverIds <- DS.getMerchantAdminReceiverIdList
+      merchantAdminReceiverIds <- DS.getMerchantAdminReceiverIdList merchant.id
       DS.sendNotification tokenInfo merchant notificationMetadataForMerchantUsers (length pendingFlagReqList) Domain.Types.Notification.FLAG_REQUEST_APPROVED merchantUsersReceiversIdList
       DS.sendNotification tokenInfo merchant notificationMetadataForOthers (length pendingFlagReqList) Domain.Types.Notification.PARTNER_FLAGGED_SUSPECT (adminReceiverIds <> merchantAdminReceiverIds)
       sendingWebhookToPartners merchant.shortId.getShortId pendingFlagReqList
