@@ -43,5 +43,8 @@ data ServiceTierType
   | SUV_PLUS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
+offUsVariants :: [ServiceTierType]
+offUsVariants = [AUTO_RICKSHAW, SEDAN, HATCHBACK, SUV]
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierType)
 $(mkHttpInstancesForEnum ''ServiceTierType)
