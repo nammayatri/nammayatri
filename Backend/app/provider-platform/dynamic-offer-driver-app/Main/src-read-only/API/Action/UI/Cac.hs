@@ -22,17 +22,24 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "driver" :> "getUiConfigs" :> MandatoryQueryParam "toss" Kernel.Prelude.Int :> Get '[JSON] Data.Aeson.Object)
+type API =
+  ( TokenAuth :> "driver" :> "getUiConfigs" :> QueryParam "toss" Kernel.Prelude.Int :> QueryParam "tenant" Kernel.Prelude.Text :> ReqBody '[JSON] Data.Aeson.Object
+      :> Post
+           '[JSON]
+           Data.Aeson.Object
+  )
 
 handler :: Environment.FlowServer API
-handler = getDriverGetUiConfigs
+handler = postDriverGetUiConfigs
 
-getDriverGetUiConfigs ::
+postDriverGetUiConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Data.Aeson.Object ->
     Environment.FlowHandler Data.Aeson.Object
   )
-getDriverGetUiConfigs a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Cac.getDriverGetUiConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverGetUiConfigs a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Cac.postDriverGetUiConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

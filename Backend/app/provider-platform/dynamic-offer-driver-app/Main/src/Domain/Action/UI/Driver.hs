@@ -86,6 +86,7 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
 import qualified Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
+import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Digest.Pure.MD5 as MD5
 import Data.Either.Extra (eitherToMaybe)
 import Data.List (intersect, nub, (\\))
@@ -568,14 +569,16 @@ getInformationV2 ::
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
   UpdateProfileInfoPoints ->
   m DriverInformationRes
-getInformationV2 (personId, merchantId, merchantOpCityId) mbToss req = do
+getInformationV2 (personId, merchantId, merchantOpCityId) toss tenant' context req = do
   whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
     QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
   whenJust req.isInteroperable $ \isInteroperable ->
     QDriverInformation.updateIsInteroperable isInteroperable personId
-  getInformation (personId, merchantId, merchantOpCityId) mbToss
+  getInformation (personId, merchantId, merchantOpCityId) toss tenant' context
 
 getInformation ::
   ( CacheFlow m r,
@@ -587,8 +590,10 @@ getInformation ::
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
   m DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) mbToss = do
+getInformation (personId, merchantId, merchantOpCityId) toss tnant' context = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -601,7 +606,8 @@ getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
-  frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId mbToss else return $ Just DAKM.empty
+  let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
+  frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId toss tnant' context' else return $ Just DAKM.empty
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   merchant <-
     CQM.findById merchantId
@@ -623,7 +629,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
     let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
     let planBasedChecks = transporterConfig.isPlanMandatory && isNothing autoPayStatus && freeTrialDaysLeft <= 0 && not transporterConfig.allowDefaultPlanAllocation && isEnableForVariant
     when (isNothing mbVehicle) $ throwError (DriverWithoutVehicle personId.getId)
-    when (planBasedChecks) $ throwError (NoPlanSelected personId.getId)
+    when planBasedChecks $ throwError (NoPlanSelected personId.getId)
     when merchant.onlinePayment $ do
       driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
       unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
