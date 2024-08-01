@@ -488,7 +488,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   fork "updating total rides count" $ SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
-  driverPhoneNumber <- mapM decrypt ride.driverPhoneNumber >>= fromMaybeM (RideFieldNotPresent "driverPhoneNumber")
+  mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
+  let driverPhoneNumber = fromMaybe driverMobileNumber mbDriverPhoneNumber
   mbAdvRide <- QRide.findLatestByDriverPhoneNumber driverPhoneNumber
   mbMerchant <- CQM.findById booking.merchantId
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id

@@ -277,8 +277,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
 
     getNumberBasedOnType numberType ride =
       case numberType of
-        PrimaryNumber ->
-          maybe (throwError $ RideFieldNotPresent "driverPhoneNumber") pure ride.driverPhoneNumber
+        PrimaryNumber -> return $ fromMaybe ride.driverMobileNumber ride.driverPhoneNumber
         AlternateNumber ->
           maybe (throwError $ RideFieldNotPresent "driverAlternateNumber") pure ride.driverAlternateNumber
 
