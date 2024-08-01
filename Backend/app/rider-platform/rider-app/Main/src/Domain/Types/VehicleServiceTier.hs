@@ -23,7 +23,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data VehicleServiceTierType = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | ECO | COMFY | PREMIUM | BIKE | PREMIUM_SEDAN | BLACK | BLACK_XL | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
+data VehicleServiceTierType = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | ECO | COMFY | PREMIUM | BIKE | PREMIUM_SEDAN | BLACK | BLACK_XL | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_BIKE
   deriving
     ( Show,
       Eq,
@@ -63,6 +63,7 @@ castServiceTierToVariant AMBULANCE_AC = VehicleVariant.AMBULANCE_AC
 castServiceTierToVariant AMBULANCE_AC_OXY = VehicleVariant.AMBULANCE_AC_OXY
 castServiceTierToVariant AMBULANCE_VENTILATOR = VehicleVariant.AMBULANCE_VENTILATOR
 castServiceTierToVariant SUV_PLUS = VehicleVariant.SUV_PLUS
+castServiceTierToVariant DELIVERY_BIKE = VehicleVariant.BIKE
 
 castVariantToServiceTier :: VehicleVariant.VehicleVariant -> VehicleServiceTierType
 castVariantToServiceTier VehicleVariant.SEDAN = SEDAN
@@ -102,3 +103,4 @@ castServiceTierToCategory AMBULANCE_AC = BecknConfig.AMBULANCE
 castServiceTierToCategory AMBULANCE_AC_OXY = BecknConfig.AMBULANCE
 castServiceTierToCategory AMBULANCE_VENTILATOR = BecknConfig.AMBULANCE
 castServiceTierToCategory SUV_PLUS = BecknConfig.CAB
+castServiceTierToCategory DELIVERY_BIKE = BecknConfig.MOTORCYCLE

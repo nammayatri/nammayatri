@@ -942,6 +942,7 @@ mapServiceTierToCategory serviceTier =
     DVST.AMBULANCE_AC_OXY -> AMBULANCE
     DVST.AMBULANCE_VENTILATOR -> AMBULANCE
     DVST.SUV_PLUS -> CAB
+    DVST.DELIVERY_BIKE -> MOTORCYCLE
 
 mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =
