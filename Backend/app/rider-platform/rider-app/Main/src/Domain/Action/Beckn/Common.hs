@@ -333,8 +333,14 @@ rideAssignedReqHandler req = do
       mbRide <- QRide.findByBPPRideId bppRideId
       case mbRide of
         Just ride -> do
-          QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
           QERIDE.updateStatus ride.id DRide.NEW
+          unless isInitiatedByCronJob $ do
+            Notify.notifyOnRideAssigned booking ride
+            when req.isDriverBirthDay $ do
+              Notify.notifyDriverBirthDay booking.riderId driverName
+          withLongRetry $ CallBPP.callTrack booking ride
+          notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
+          notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
         Nothing -> do
           assignRideUpdate req mbMerchant booking DRide.UPCOMING now
     else do

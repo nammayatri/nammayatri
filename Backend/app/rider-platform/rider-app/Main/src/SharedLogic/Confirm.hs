@@ -197,8 +197,8 @@ confirm DConfirmReq {..} = do
     checkOverlap estimatedDistance estimatedDuration curBookingStartTime currBookingToLocation merchant booking = do
       destToScheduledPickup <- calculateDistanceToScheduledPickup currBookingToLocation booking
       let estimatedDistanceInKm' = destToScheduledPickup + estimatedDistance
-      let estimatedDistanceInKm = estimatedDistanceInKm' `div` 1000
-          estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration) curBookingStartTime
+          estimatedDistanceInKm = estimatedDistanceInKm' `div` 1000
+          estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration + merchant.scheduleRideBufferTime) curBookingStartTime
           estRideEndTimeByDist = addUTCTime (intToNominalDiffTime (estimatedDistanceInKm * 3 * 60) + merchant.scheduleRideBufferTime) curBookingStartTime -- TODO: need to make avg speed at rider side configurable : current 3min/km
       return $ max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
 
