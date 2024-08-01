@@ -310,13 +310,7 @@ ticketStatusCallBack req issueHandle identifier = do
   case transformedStatus of
     RESOLVED -> do
       issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
-      merchantOpCityId <-
-        maybe
-          ( issueHandle.findPersonById issueReport.personId
-              >>= fromMaybeM (PersonNotFound issueReport.personId.getId) <&> (.merchantOperatingCityId)
-          )
-          return
-          issueReport.merchantOperatingCityId
+      defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId issueHandle identifier
       issueConfig <- CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
       mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
       let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages

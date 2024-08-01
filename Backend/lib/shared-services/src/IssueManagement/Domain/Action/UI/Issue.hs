@@ -722,6 +722,7 @@ getConfigValue issueConfig mbRideInfoRes key = do
       tipAdded = maybe 0.0 (.amount.amount) (getFareFromArray "CUSTOMER_SELECTED_FARE" fareBreakup)
       driverAdditions = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_SELECTED_FARE" fareBreakup)
    in case key of
+        "MERCHANT" -> "{#MERCHANT#}"
         "SUPPORT_MAIL" -> fromMaybe "" ((.supportEmail) =<< issueConfig.messageTransformationConfig)
         "ESTIMATED_DISTANCE" -> show estimatedDistance
         "FINAL_DISTANCE" -> show chargeableDistance
