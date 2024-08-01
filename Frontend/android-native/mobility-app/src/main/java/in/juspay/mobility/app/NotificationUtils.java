@@ -159,6 +159,7 @@ public class NotificationUtils {
             SharedPreferences sharedPref = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
 
+            boolean incVol = sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true");
             String notificationType = data.getString("notification_type");
             String notificationIdString = "null", expTime = "null";
 
@@ -352,7 +353,7 @@ public class NotificationUtils {
                                     lastRideReq = new Bundle();
                                     lastRideReq.putAll(sheetData);
                                     lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-                                    startMediaPlayer(context, R.raw.allocation_request, true);
+                                    startMediaPlayer(context, R.raw.allocation_request, incVol);
                                     RideRequestUtils.createRideRequestNotification(context);
                                 } catch (Exception e) {
                                     Exception exception = new Exception("Error in onCreate ride req activity " + e);
@@ -448,6 +449,7 @@ public class NotificationUtils {
             bitmap = getBitmapfromUrl(imageUrl);
         }
         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        boolean incVol = sharedPref.getString("AUTO_INCREASE_VOL", "true").equals("true");
         String disabilityName = sharedPref.getString("DISABILITY_NAME", "");
         final PackageManager pm = context.getPackageManager();
         Intent intent = pm.getLaunchIntentForPackage(context.getPackageName());
@@ -574,7 +576,7 @@ public class NotificationUtils {
             else
                 Utils.logEvent("ride_cancelled", context);
             if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")) {
-                startMediaPlayer(context, R.raw.ride_cancelled_media, true);
+                startMediaPlayer(context, R.raw.ride_cancelled_media, incVol);
             } else {
                 int cancellationSound = R.raw.cancel_notification_sound;
                 if (disabilityName.equals("BLIND_LOW_VISION"))
@@ -598,7 +600,7 @@ public class NotificationUtils {
             if(key.equals("USER") && disabilityName.equals("BLIND_LOW_VISION")) {
                 audio = R.raw.ride_assigned_talkback;
             }
-            startMediaPlayer(context, audio, !key.equals("USER"));
+            startMediaPlayer(context, audio, key.equals("DRIVER") && incVol );
         }
         notificationId++;
         if(MyFirebaseMessagingService.NotificationTypes.NEW_STOP_ADDED.equals(notificationType) || MyFirebaseMessagingService.NotificationTypes.EDIT_STOP.equals(notificationType) ){
