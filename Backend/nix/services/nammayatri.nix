@@ -68,6 +68,7 @@ in
         "special-zone-exe"
         "safety-dashboard-exe"
         "yudhishthira-exe"
+        "kaal-chakra-exe"
       ];
 
       haskellProcessFor = name:

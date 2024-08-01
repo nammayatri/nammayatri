@@ -82,6 +82,7 @@
           beckn-test.custom = cacConfig;
           rider-dashboard.custom = cacConfig;
           yudhishthira-exe.custom = cacConfig;
+          kaal-chakra-exe.custom = cacConfig;
 
 
           namma-dsl.libraryProfiling = false;

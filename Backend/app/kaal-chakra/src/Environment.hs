@@ -29,6 +29,7 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Flow
 import Kernel.Utils.App (lookupDeploymentVersion)
@@ -37,16 +38,19 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Lib.Scheduler (SchedulerType)
 import Lib.Scheduler.Environment
+import Lib.Yudhishthira.Types
+import Passetto.Client
 import System.Environment (lookupEnv)
 
 data HandlerCfg = HandlerCfg
   { schedulerConfig :: SchedulerConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     clickhouseCfg :: ClickhouseCfg,
+    loggerConfigApp :: LoggerConfig,
     kvConfigUpdateFrequency :: Int,
     migrationPath :: [FilePath],
     autoMigrate :: Bool,
-    jobInfoMapx :: JobInfoMap,
+    jobInfoMapx :: M.Map Chakra Bool,
     cacheConfig :: CacheConfig,
     httpClientOptions :: HttpClientOptions,
     encTools :: EncTools,
@@ -78,7 +82,10 @@ data HandlerEnv = HandlerEnv
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    serviceClickhouseEnv :: ClickhouseEnv
+    serviceClickhouseEnv :: ClickhouseEnv,
+    passettoContext :: PassettoContext,
+    cacConfig :: CacConfig,
+    kafkaProducerForART :: Maybe KafkaProducerTools
   }
   deriving (Generic)
 
@@ -87,10 +94,13 @@ buildHandlerEnv HandlerCfg {..} = do
   let SchedulerConfig {..} = schedulerConfig
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
   version <- lookupDeploymentVersion
-  loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  loggerEnv <- prepareLoggerEnv loggerConfigApp hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   serviceClickhouseEnv <- createConn clickhouseCfg
+  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  let kafkaProducerForART = Just kafkaProducerTools
   hedisEnv <- connectHedis hedisCfg ("kaal-chakra:" <>)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("doa:n_c:" <>)
   let requestId = Nothing

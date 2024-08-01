@@ -18,6 +18,7 @@ import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
+import Jobs.Daily
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import qualified Kernel.Beam.Types as KBT
@@ -35,7 +36,7 @@ import Lib.Yudhishthira.Types
 import Storage.Beam.SystemConfigs ()
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle Chakra
-allocatorHandle _flowRt env =
+allocatorHandle flowRt env =
   SchedulerHandle
     { getTasksById = QAllJ.getTasksById,
       getReadyTasks = QAllJ.getReadyTasks $ Just env.maxShards,
@@ -48,7 +49,7 @@ allocatorHandle _flowRt env =
       reScheduleOnError = QAllJ.reScheduleOnError,
       jobHandlers =
         emptyJobHandlerList
-        -- & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
     }
 
 runKaalChakra ::
@@ -58,7 +59,7 @@ runKaalChakra configModifier = do
   handlerCfg <- configModifier <$> readDhallConfigDefault "kaal-chakra"
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
-  let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.schedulerConfig.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.loggerConfigApp
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt

@@ -28,6 +28,7 @@ library
   exposed-modules:
       App
       Environment
+      Jobs.Daily
       Storage.Beam.SystemConfigs
   other-modules:
       Paths_kaal_chakra
