@@ -166,7 +166,7 @@ callStatusCallback req = do
   callStatus <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
   let interfaceStatus = exotelStatusToInterfaceStatus req.status
   let dCallStatus = Just $ handleCallStatus interfaceStatus
-  sendFCMToDriverOnCallFailure dCallStatus (Just req.customField.rideId) callStatus.merchantId
+  fork "sendFCMToDriverOnCallFailure" $ sendFCMToDriverOnCallFailure dCallStatus (Just req.customField.rideId) callStatus.merchantId
   QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) interfaceStatus dCallStatus callStatusId
   return Ack
 
@@ -176,7 +176,7 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
   let dCallStatus = Just $ handleCallStatus newCallStatus
-  sendFCMToDriverOnCallFailure dCallStatus callStatus.rideId callStatus.merchantId
+  fork "sendFCMToDriverOnCallFailure" $ sendFCMToDriverOnCallFailure dCallStatus callStatus.rideId callStatus.merchantId
   _ <- case recordingUrl_ of
     Just recordUrl -> do
       if recordUrl == ""
