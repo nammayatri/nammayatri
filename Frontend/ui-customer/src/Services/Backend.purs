@@ -387,6 +387,7 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , "sessionToken" : Just sessionToken
                 , "isSpecialLocation" : Just isSpecialLocation
                 , "quotesUnifiedFlow" : Just true
+                , "rideRequestAndRideOtpUnifiedFlow" : Just true 
                 }
             )
         , "fareProductType" : "ONE_WAY"
@@ -1421,7 +1422,8 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                                                   "startTime" : startTime,
                                                   "estimatedRentalDistance" : estimatedRentalDistance,
                                                   "estimatedRentalDuration" : estimatedRentalDuration,
-                                                  "quotesUnifiedFlow" : Just true
+                                                  "quotesUnifiedFlow" : Just true,
+                                                  "rideRequestAndRideOtpUnifiedFlow": Just true
                                                  }),
                     "fareProductType" : "RENTAL"
                    }
