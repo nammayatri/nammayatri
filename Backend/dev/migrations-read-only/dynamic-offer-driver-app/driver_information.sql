@@ -113,3 +113,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_interoperabl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_registration_order_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_downgrade_to_delivery boolean  default false;

@@ -810,6 +810,7 @@ TransporterConfig:
     createDocumentRequired: Maybe Bool
     schedulePayoutForDay : Maybe Integer
     isDeviceIdChecksRequired: Maybe Bool
+    canDowngradeToDelivery: Maybe Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1113,6 +1114,7 @@ TransporterConfig:
     minPickupDistanceThresholdForReferralPayout: "10"
     maxPayoutReferralForADay: "5"
     exotelStatusCheckSchedulerDelay: "120"
+    canDowngradeToDelivery: "false"
 
   excludedDefaultQueries:
     - findByPrimaryKey

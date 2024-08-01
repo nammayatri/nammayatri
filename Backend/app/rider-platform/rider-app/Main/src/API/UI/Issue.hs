@@ -187,6 +187,7 @@ castRideInfo merchantId _ rideId = do
       DRR.BLACK -> Common.BLACK
       DRR.BLACK_XL -> Common.BLACK_XL
       DRR.BIKE -> Common.BIKE
+      DRR.DELIVERY_TWOWHEELER -> Common.DELIVERY_TWOWHEELER
       DRR.AMBULANCE_TAXI -> Common.AMBULANCE_TAXI
       DRR.AMBULANCE_TAXI_OXY -> Common.AMBULANCE_TAXI_OXY
       DRR.AMBULANCE_AC -> Common.AMBULANCE_AC

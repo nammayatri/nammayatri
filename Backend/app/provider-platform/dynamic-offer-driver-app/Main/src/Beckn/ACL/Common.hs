@@ -42,6 +42,7 @@ castVariant Variant.PREMIUM_SEDAN = Common.PREMIUM_SEDAN
 castVariant Variant.BLACK = Common.BLACK
 castVariant Variant.BLACK_XL = Common.BLACK_XL
 castVariant Variant.BIKE = Common.BIKE
+castVariant Variant.DELIVERY_TWOWHEELER = Common.DELIVERY_TWOWHEELER
 castVariant Variant.AMBULANCE_TAXI = Common.AMBULANCE_TAXI
 castVariant Variant.AMBULANCE_TAXI_OXY = Common.AMBULANCE_TAXI_OXY
 castVariant Variant.AMBULANCE_AC = Common.AMBULANCE_AC

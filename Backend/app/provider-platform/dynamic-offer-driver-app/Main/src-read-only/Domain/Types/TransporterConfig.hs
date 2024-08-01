@@ -43,6 +43,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     bookAnyVehicleDowngradeLevel :: Kernel.Prelude.Int,
     cacheOfferListByDriverId :: Kernel.Prelude.Bool,
     canAddCancellationFee :: Kernel.Prelude.Bool,
+    canDowngradeToDelivery :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canDowngradeToHatchback :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,
     canDowngradeToTaxi :: Kernel.Prelude.Bool,

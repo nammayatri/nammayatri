@@ -224,6 +224,7 @@ castVariant Variant.AMBULANCE_AC = (show Enums.AMBULANCE, "AMBULANCE_AC")
 castVariant Variant.AMBULANCE_AC_OXY = (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
 castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
 castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
+castVariant Variant.DELIVERY_TWOWHEELER = (show Enums.MOTORCYCLE, "DELIVERY_TWOWHEELER")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
@@ -903,6 +904,7 @@ mapServiceTierToCategory serviceTier =
     DVST.BLACK_XL -> CAB
     DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
     DVST.BIKE -> MOTORCYCLE
+    DVST.DELIVERY_TWOWHEELER -> MOTORCYCLE
     DVST.AMBULANCE_TAXI -> AMBULANCE
     DVST.AMBULANCE_TAXI_OXY -> AMBULANCE
     DVST.AMBULANCE_AC -> AMBULANCE
@@ -1313,6 +1315,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                 Variant.HATCHBACK -> avgSpeed.hatchback.getKilometers
                 Variant.AUTO_RICKSHAW -> avgSpeed.autorickshaw.getKilometers
                 Variant.BIKE -> avgSpeed.bike.getKilometers
+                Variant.DELIVERY_TWOWHEELER -> avgSpeed.bike.getKilometers
                 Variant.TAXI -> avgSpeed.taxi.getKilometers
                 Variant.TAXI_PLUS -> avgSpeed.ambulance.getKilometers
                 Variant.PREMIUM_SEDAN -> avgSpeed.premiumsedan.getKilometers

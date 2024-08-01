@@ -25,6 +25,7 @@ data DriverInformationT f = DriverInformationT
     blockStateModifier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blocked :: B.C f Kernel.Prelude.Bool,
     blockedReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    canDowngradeToDelivery :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canDowngradeToHatchback :: B.C f Kernel.Prelude.Bool,
     canDowngradeToSedan :: B.C f Kernel.Prelude.Bool,
     canDowngradeToTaxi :: B.C f Kernel.Prelude.Bool,

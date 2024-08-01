@@ -105,8 +105,8 @@ updateDriverDowngradeForSuv canDowngradeToHatchback canDowngradeToTaxi driverId 
 
 updateDriverInformation ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps driverId = do
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps canDowngradeToDelivery driverId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
@@ -115,6 +115,7 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
       Se.Set Beam.availableUpiApps availableUpiApps,
+      Se.Set Beam.canDowngradeToDelivery canDowngradeToDelivery,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
@@ -150,11 +151,6 @@ updateLatestScheduledBookingAndPickup latestScheduledBooking latestScheduledPick
 updateOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateOnRide onRide driverId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.onRide onRide, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updatePayoutRegistrationOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updatePayoutRegistrationOrderId payoutRegistrationOrderId driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
 updateOnRideAndLatestScheduledBookingAndPickup ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
@@ -168,6 +164,11 @@ updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking lat
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updatePayoutRegistrationOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutRegistrationOrderId payoutRegistrationOrderId driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutVpa payoutVpa driverId = do
@@ -218,6 +219,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.blockStateModifier blockStateModifier,
       Se.Set Beam.blocked blocked,
       Se.Set Beam.blockedReason blockedReason,
+      Se.Set Beam.canDowngradeToDelivery canDowngradeToDelivery,
       Se.Set Beam.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
       Se.Set Beam.canDowngradeToTaxi canDowngradeToTaxi,

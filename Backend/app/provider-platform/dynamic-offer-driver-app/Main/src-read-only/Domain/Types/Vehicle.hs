@@ -64,6 +64,7 @@ data Variant
   | AMBULANCE_AC_OXY
   | AMBULANCE_VENTILATOR
   | SUV_PLUS
+  | DELIVERY_TWOWHEELER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data VehicleAPIEntity = VehicleAPIEntity

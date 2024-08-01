@@ -40,6 +40,7 @@ data TransporterConfigT f = TransporterConfigT
     bookAnyVehicleDowngradeLevel :: B.C f Kernel.Prelude.Int,
     cacheOfferListByDriverId :: B.C f Kernel.Prelude.Bool,
     canAddCancellationFee :: B.C f Kernel.Prelude.Bool,
+    canDowngradeToDelivery :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canDowngradeToHatchback :: B.C f Kernel.Prelude.Bool,
     canDowngradeToSedan :: B.C f Kernel.Prelude.Bool,
     canDowngradeToTaxi :: B.C f Kernel.Prelude.Bool,

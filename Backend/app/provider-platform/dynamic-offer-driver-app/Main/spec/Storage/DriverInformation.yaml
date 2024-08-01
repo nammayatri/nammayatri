@@ -81,6 +81,7 @@ DriverInformation:
     payoutRegistrationOrderId: Maybe Text
     latestScheduledPickup: Maybe LatLong
     latestScheduledBooking : Maybe UTCTime
+    canDowngradeToDelivery: Maybe Bool
 
   default:
     active: "false"
@@ -101,6 +102,8 @@ DriverInformation:
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
     isInteroperable : "false"
+    canDowngradeToDelivery: "false"
+
   constraints:
     driverId: PrimaryKey
 
@@ -167,7 +170,7 @@ DriverInformation:
       where: driverId
     updateDriverInformation: #check
       kvFunction: updateOneWithKV
-      params: [canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, availableUpiApps]
+      params: [canDowngradeToSedan, canDowngradeToHatchback, canDowngradeToTaxi, canSwitchToRental, canSwitchToInterCity, availableUpiApps, canDowngradeToDelivery]
       where: driverId
     updateRentalAndInterCitySwitch:
       kvFunction: updateOneWithKV
