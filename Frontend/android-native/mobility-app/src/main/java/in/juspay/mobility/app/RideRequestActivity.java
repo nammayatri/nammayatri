@@ -99,9 +99,7 @@ public class RideRequestActivity extends AppCompatActivity {
             String durationToPickup = rideRequestBundle.getString("durationToPickup");
             DecimalFormat df = new DecimalFormat();
             df.setMaximumFractionDigits(2);
-            @SuppressLint("SimpleDateFormat") final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-            simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-            String getCurrTime = simpleDateFormat.format(new Date());
+            String getCurrTime = RideRequestUtils.getCurrentUTC();
             int calculatedTime = RideRequestUtils.calculateExpireTimer(searchRequestValidTill, getCurrTime);
             if (sheetArrayList.isEmpty()) {
                 startTimer();
@@ -166,7 +164,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
                     offeredPrice,
-                    rideRequestBundle.getDouble("parkingCharge")
+                    rideRequestBundle.getDouble("parkingCharge"),
+                    getCurrTime
                     );
             sheetArrayList.add(sheetModel);
             sheetAdapter.updateSheetList(sheetArrayList);
@@ -322,7 +321,7 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
-                    Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), model.getNotificationSource(), true, RideRequestActivity.this, sheetArrayList.indexOf(model));
+                    Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model, true, RideRequestActivity.this, sheetArrayList.indexOf(model));
                     if (isApiSuccess) {
                         mainLooper.post(executor::shutdown);
                         startLoader(model.getSearchRequestId());
@@ -337,7 +336,7 @@ public class RideRequestActivity extends AppCompatActivity {
                         removeCard(position);
                         return;
                     }
-                    new Thread(() -> RideRequestUtils.driverRespondApi(model.getSearchRequestId(), model.getOfferedPrice(), model.getNotificationSource(), false, RideRequestActivity.this, sheetArrayList.indexOf(model))).start();
+                    new Thread(() -> RideRequestUtils.driverRespondApi(model, false, RideRequestActivity.this, sheetArrayList.indexOf(model))).start();
                     holder.rejectButton.setClickable(false);
                     mainLooper.post(() -> {
                         removeCard(position);

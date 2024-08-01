@@ -58,14 +58,17 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
@@ -88,7 +91,10 @@ public class RideRequestUtils {
     private static final String KOCHI = "kochi";
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
-    public static Boolean driverRespondApi(String searchRequestId, double offeredPrice, String notificationSource, boolean isAccept, Context context, int slotNumber) {
+    public static Boolean driverRespondApi(SheetModel model, boolean isAccept, Context context, int slotNumber) {
+        String searchRequestId = model.getSearchRequestId();
+        double offeredPrice = model.getOfferedPrice();
+        String notificationSource = model.getNotificationSource();
         Handler mainLooper = new Handler(Looper.getMainLooper());
         StringBuilder result = new StringBuilder();
         SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -117,6 +123,8 @@ public class RideRequestUtils {
             }
             payload.put(context.getResources().getString(R.string.SEARCH_REQUEST_ID), searchRequestId);
             payload.put("notificationSource", notificationSource);
+            payload.put("renderedAt", model.getRenderedAt());
+            payload.put("respondedAt", RideRequestUtils.getCurrentUTC());
             if (isAccept) payload.put("response", "Accept");
             else payload.put("response", "Reject");
             payload.put("slotNumber", slotNumber);
@@ -769,5 +777,11 @@ public class RideRequestUtils {
                 model.setButtonIncreasePriceClickable(true);
             }
         });
+    }
+
+    public static String getCurrentUTC(){
+        final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
+        f.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return f.format(new Date());
     }
 }
