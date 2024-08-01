@@ -1923,11 +1923,11 @@
     "json-logic-hs": {
       "flake": false,
       "locked": {
-        "lastModified": 1722333708,
-        "narHash": "sha256-7NuGGF0lJ5QIOPOlppxubYcPB/2HZhEuDoHMI8X1sqo=",
+        "lastModified": 1722512122,
+        "narHash": "sha256-MvHXNO0xR7+pLJ723hP3hx+nU41CIjAjGSwkPpM+oos=",
         "owner": "nammayatri",
         "repo": "json-logic-hs",
-        "rev": "d3bfe281434d3117396cb99359f27d7f469d8b1f",
+        "rev": "d736f56d9bc7ea9793269f999332efe73ed7abb7",
         "type": "github"
       },
       "original": {
@@ -2149,11 +2149,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1722629200,
-        "narHash": "sha256-wycGBCHD57RkXKXBU8Mdtxb+71OnBpPvQ3yXejQshuE=",
+        "lastModified": 1722608116,
+        "narHash": "sha256-Eq+aS/PwUAz9n6Piwc0X/4ywiwZwexG054VzybVylys=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "5226db7faa7a1cf8091939a2911dc84d73501705",
+        "rev": "81c9a154e8275759c9ccab3ccadf8293c69341be",
         "type": "github"
       },
       "original": {

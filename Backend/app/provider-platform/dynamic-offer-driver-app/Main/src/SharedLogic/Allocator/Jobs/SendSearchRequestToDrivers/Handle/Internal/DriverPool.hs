@@ -22,10 +22,12 @@ where
 
 import qualified Control.Monad as CM
 import Control.Monad.Extra (partitionM)
+import Data.Aeson as A
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as Map
+import qualified Data.String.Conversions as CS
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -41,6 +43,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
+import qualified JsonLogic as JL
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -59,6 +62,7 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.AppDynamicLogic as DAL
 import Tools.Maps as Maps
 import Utils.Common.Cac.KeyNameConstants
 
@@ -341,7 +345,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType of
-            Tagged -> makeTaggedDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
+            Tagged -> makeTaggedDriverPool mOCityId onlyNewDrivers batchSize' isOnRidePool
             Intelligent -> makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
             Random -> makeRandomDriverPool onlyNewDrivers batchSize'
 
@@ -490,6 +494,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCountWithServiceTier
+              Tagged -> pure $ take fillSize allNearbyDrivers -- TODO : Pooling change
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
           batches <- previouslyAttemptedDrivers searchTry.id consideOnRideDrivers
@@ -551,12 +556,23 @@ makeTaggedDriverPool ::
   ) =>
   Id MerchantOperatingCity ->
   [DriverPoolWithActualDistResult] ->
-  DriverIntelligentPoolConfig ->
-  TransporterConfig ->
   Int ->
   Bool ->
   m [DriverPoolWithActualDistResult]
-makeTaggedDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = onlyNewDrivers
+makeTaggedDriverPool mOCityId onlyNewDrivers batchSize isOnRidePool = do
+  allLogics <- DAL.findByMerchantOpCityAndDomain (Just mOCityId) "POOLING"
+  res <-
+    foldlM
+      ( \acc logics -> do
+          case A.fromJSON $ JL.jsonLogic logics.logic . A.Object $ "drivers" .= A.toJSON acc <> "needOnRideDrivers" .= isOnRidePool of
+            A.Success res -> pure res
+            A.Error err -> do
+              logError $ "failed to run this logic" <> CS.cs (A.encode logics.logic) <> " with error: " <> show err
+              pure $ if null acc then onlyNewDrivers else acc
+      )
+      []
+      allLogics
+  pure $ take batchSize res
 
 sortWithDriverScore ::
   ( CacheFlow m r,

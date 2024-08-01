@@ -1,0 +1,35 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Text: Data.Text
+
+AppDynamicLogic:
+  tableName: app_dynamic_logic
+
+  fields:
+    name: Text
+    description: Text
+    domain: Text
+    logic: Data.Aeson.Value
+    order: Int
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    domain: PrimaryKey
+
+  queries:
+    findByMerchantOpCityAndDomain:
+      kvFunction: findAllWithKV
+      orderBy: order
+      where:
+        and: [merchantOperatingCityId, domain]
+
+  beamType:
+    logic: Text
+
+  toTType:
+    logic: (Data.String.Conversions.cs . Data.Aeson.encode)|I
+
+  fromTType:
+    logic: (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)|I
+
+  excludedFields: [merchantId]

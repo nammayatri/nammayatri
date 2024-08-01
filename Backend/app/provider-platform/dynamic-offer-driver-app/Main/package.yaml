@@ -125,6 +125,7 @@ dependencies:
   - http-conduit
   - split
   - hashable
+  - json-logic-hs
 
 ghc-options:
   - -fwrite-ide-info
