@@ -3008,7 +3008,7 @@ quoteListFlow flowType estimatedQuotes state = do
     void $ pure $ hideKeyboardOnNavigation true
     void $ pure $ updateLocalStage SearchLocationModel
     void $ pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    continue state { props {currentStage = SearchLocationModel}} 
+    continue state { props {currentStage = SearchLocationModel, intercity = false}} 
   where
     updateStateWithQuotes :: FPT.FareProductType -> HomeScreenState -> Array ChooseVehicleController.Config -> ChooseVehicleController.Config -> HomeScreenState
     updateStateWithQuotes flowType state quoteList defaultQuote = state 
@@ -3019,6 +3019,7 @@ quoteListFlow flowType estimatedQuotes state = do
         , fareProductType = flowType
         , specialZoneSelectedQuote = if flowType == FPT.ONE_WAY_SPECIAL_ZONE then Just defaultQuote.id else Nothing
         , specialZoneSelectedVariant = if flowType == FPT.ONE_WAY_SPECIAL_ZONE then Just defaultQuote.vehicleVariant else Nothing
+        , intercity = false
         }
       , props 
         { currentStage = SettingPrice
@@ -3084,6 +3085,7 @@ estimatesListFlow estimates state count = do
         --   }
         , selectedEstimatesObject = defaultQuote
         , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
+        , intercity = false
         , iopState { 
           showPrefButton = state.data.currentCityConfig.iopConfig.enable && (not (null topProviderEstimates)) && (not newState.props.isRepeatRide)
           , providerPrefInfo = state.data.iopState.providerPrefInfo
