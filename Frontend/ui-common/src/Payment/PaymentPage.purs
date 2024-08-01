@@ -39,9 +39,9 @@ type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
 foreign import checkPPInitiateStatus :: EffectFn1 (Unit -> Effect Unit) Unit
 foreign import consumeBP :: EffectFn1 Unit Unit
 foreign import startPP :: MicroAPPInvokeSignature
-foreign import initiatePP :: EffectFn1 InitiateConfig Unit
+foreign import initiatePP :: EffectFn1 Unit Unit
 foreign import getAvailableUpiApps :: EffectFn1 ((Array UpiApps) -> Effect Unit) Unit
-foreign import initiatePPSingleInstance :: EffectFn1 InitiateConfig Unit
+foreign import initiatePPSingleInstance :: EffectFn1 Unit Unit
 
 type UpiApps
   = { supportsPay :: Boolean
@@ -110,13 +110,7 @@ getPaymentPageLangKey key = case key of
 paymentPageUI :: forall st. PaymentPagePayload -> FlowBT String st String-- FlowBT String String
 paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
 
-initiatePaymentPage :: Maybe InitiateConfig -> Effect Unit
-initiatePaymentPage mbConfig = do
-  runEffectFn1 initiatePP config
-  runEffectFn1 initiatePPSingleInstance config
-  where
-    config = case mbConfig of
-      Just cfg -> cfg
-      Nothing -> { clientId: "", merchantId: "" }
-
-type InitiateConfig = { clientId :: String, merchantId :: String }
+initiatePaymentPage :: Effect Unit
+initiatePaymentPage = do
+  runEffectFn1 initiatePP unit
+  runEffectFn1 initiatePPSingleInstance unit
