@@ -19,10 +19,15 @@ import Servant
 import SharedLogic.Cac
 import Tools.Auth
 
-getDriverGetUiConfigs :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Int -> Environment.Flow Data.Aeson.Object
-getDriverGetUiConfigs (_, _, merchantOpCityId) toss = do
+postDriverGetUiConfigs ::
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Data.Aeson.Object ->
+  Environment.Flow Data.Aeson.Object
+postDriverGetUiConfigs (_, _, merchantOpCityId) toss tenant context = do
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   if useCACConfig
-    then getFrontendConfigs merchantOpCityId (Just toss) <&> fromMaybe Data.Aeson.KeyMap.empty
+    then getFrontendConfigs merchantOpCityId toss tenant context <&> fromMaybe Data.Aeson.KeyMap.empty
     else return Data.Aeson.KeyMap.empty

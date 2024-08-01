@@ -23,6 +23,7 @@ import qualified Client.Main as CM
 import qualified Control.Concurrent as CC
 import Data.Aeson
 import qualified Data.Bifunctor as DBF
+import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Text as Text
 import qualified EulerHS.Language as L
 import qualified EulerHS.Types as T
@@ -70,6 +71,12 @@ getConfigFromCac context' tenant toss prefix = do
   let context = fmap (DBF.first KP.show) context'
   config <- liftIO $ CM.getConfigFromCAC context tenant toss (KP.show prefix)
   fromJSONHelper config (getTableName prefix)
+
+getConfigFromCacAsString :: (CacheFlow m r, EsqDBFlow m r, FromJSON a, ToJSON a) => Data.Aeson.Object -> String -> Int -> m (Maybe a)
+getConfigFromCacAsString context' tenant toss = do
+  let context = BSL.unpack (encode context')
+  config <- liftIO $ CM.evalExperimentAsString tenant context toss
+  pure $ decode (BSL.pack config)
 
 ---------------------------------------------------- Common Cac Application Usage functions ------------------------------------------------------------
 
