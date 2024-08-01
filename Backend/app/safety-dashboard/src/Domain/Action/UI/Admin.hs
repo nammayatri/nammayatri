@@ -84,7 +84,7 @@ postChangeSuspectFlag tokenInfo req = do
     mapM_ (\voterId -> updateAllWithVoteIdAndFlaggedStatus voterId req.flaggedStatus) voterIdList
     merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
     adminIdList <- DS.getRecieverIdListByAcessType DASHBOARD_ADMIN
-    merchantAdminIdList <- DS.getMerchantAdminReceiverIdList
+    merchantAdminIdList <- DS.getMerchantAdminReceiverIdList merchant.id
     DS.sendNotification tokenInfo merchant (encodeToText updatedSuspectList) (length updatedSuspectList) Domain.Types.Notification.ADMIN_CHANGE_SUSPECT_STATUS (adminIdList <> merchantAdminIdList)
     DS.updateSuspectStatusHistoryBySuspect tokenInfo merchant.shortId.getShortId updatedSuspectList (Just Domain.Types.SuspectFlagRequest.Approved)
     webhookBody <- buildAdminSuspectWebhookBody merchant.shortId.getShortId updatedSuspectList
@@ -109,7 +109,7 @@ postAdminUploadSuspectBulk tokenInfo mbFlaggedStatus req = do
         suspectList <- mapM (\suspect -> SAF.addOrUpdateSuspect suspect merchant.shortId.getShortId (fromMaybe Domain.Types.Suspect.Flagged mbFlaggedStatus)) suspectFlagRequest
         let notificationMetadata = encodeToText $ suspectList
         adminIdList <- DS.getRecieverIdListByAcessType DASHBOARD_ADMIN
-        merchantAdminIdList <- DS.getMerchantAdminReceiverIdList
+        merchantAdminIdList <- DS.getMerchantAdminReceiverIdList merchant.id
         personRole <- QRole.findById person.roleId >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
         let notificationType = selectNotificationType personRole.name (fromMaybe Domain.Types.Suspect.Flagged mbFlaggedStatus)
         DS.sendNotification tokenInfo merchant notificationMetadata (length suspectList) notificationType (adminIdList <> merchantAdminIdList)
