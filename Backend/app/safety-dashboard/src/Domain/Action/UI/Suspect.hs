@@ -171,13 +171,13 @@ getRecieverIdListByAcessType acessName = do
   receiversList <- QP.findAllByRoleAndReciveNotification role.id
   return $ map (\receiver -> receiver.id) receiversList
 
-getMerchantAdminReceiverIdList :: Environment.Flow [Id Domain.Types.Person.Person]
-getMerchantAdminReceiverIdList = do
+getMerchantAdminReceiverIdList :: Id Merchant.Merchant -> Environment.Flow [Id Domain.Types.Person.Person]
+getMerchantAdminReceiverIdList merchanId = do
   portalConfig <- PC.findByConfigName "SEND_MERCHANT_NOTIFICATION"
   let notifyMerchant = case portalConfig of
         Just config -> read (T.unpack config.value) :: Bool
         Nothing -> False
-  if notifyMerchant then getRecieverIdListByAcessType MERCHANT_ADMIN else return []
+  if notifyMerchant then getRecieverIdListByAcessType MERCHANT_ADMIN else getAllMerchantAdminIdList merchanId
 
 getAllMerchantAdminIdList :: Id Merchant.Merchant -> Environment.Flow [Id Domain.Types.Person.Person]
 getAllMerchantAdminIdList merchantId = do
