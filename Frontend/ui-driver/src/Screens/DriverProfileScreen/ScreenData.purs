@@ -133,7 +133,9 @@ initData =
     enableGoto : false,
     isRideActive : false,
     canSwitchToRental : false,
-    canSwitchToIntercity : Nothing
+    canSwitchToIntercity : Nothing,
+    startAnim : false,
+    resetAnim : false
    }
 }
 

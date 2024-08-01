@@ -17,12 +17,12 @@ module Animation where
 
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth)
-import Prelude (Unit, negate, unit, ($), (/))
+import Prelude (Unit, negate, unit, ($), (/), (<>), (>))
 import PrestoDOM (PrestoDOM)
 import PrestoDOM.Animation (Interpolator, toRotation)
 import PrestoDOM.Animation as PrestoAnim
 import Common.Animation.Config
-
+import Debug
 
 animateTime :: Int
 animateTime = 150
@@ -442,3 +442,13 @@ translateInXWithPosition fromX duration =
     , PrestoAnim.interpolator $ PrestoAnim.EaseInOut
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
+
+translateInXWithPositioBoth :: Int -> Int -> Int -> Int -> Boolean -> PrestoAnim.Animation
+translateInXWithPositioBoth fromX toX duration delay =
+  PrestoAnim.Animation
+   ([ PrestoAnim.duration duration
+    , PrestoAnim.fromX fromX
+    , PrestoAnim.toX toX
+    , PrestoAnim.interpolator $ PrestoAnim.EaseInOut
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ] <> spy "translateInXWithPositioBoth" (if delay > 0 then [PrestoAnim.delay delay, PrestoAnim.fillMode PrestoAnim.Both] else []))

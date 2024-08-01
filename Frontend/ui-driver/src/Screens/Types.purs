@@ -477,7 +477,9 @@ type DriverProfileScreenProps = {
   enableGoto :: Boolean,
   isRideActive :: Boolean,
   canSwitchToRental :: Boolean,
-  canSwitchToIntercity :: Maybe Boolean
+  canSwitchToIntercity :: Maybe Boolean,
+  startAnim :: Boolean,
+  resetAnim :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 

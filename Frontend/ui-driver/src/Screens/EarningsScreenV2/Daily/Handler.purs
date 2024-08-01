@@ -8,6 +8,7 @@ import Types.App
 import Presto.Core.Types.Language.Flow
 import Screens.EarningsScreen.Daily.Controller
 import Types.ModifyScreenState
+import Effect.Aff (Milliseconds(..))
 
 earningScreenDailyV2 :: Flow GlobalState FlowState
 earningScreenDailyV2 = do
@@ -35,4 +36,4 @@ earningScreenDailyV2 = do
     DateUpdated updatedState -> do 
       void $ modifyScreenStateFlow $ EarningsScreenV2 (\_ -> updatedState)
       earningScreenDailyV2
-    _ -> pure $ EarningsV2Daily
+    _ -> pure $ (EarningsV2Daily false)

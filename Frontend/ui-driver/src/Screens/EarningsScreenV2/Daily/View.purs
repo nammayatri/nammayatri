@@ -51,7 +51,7 @@ import Screens.EarningsScreen.Common.Utils
 screen :: State -> Screen Action State ScreenOutput
 screen initialState =
   { initialState
-  , view: view
+  , view
   , name: "EarningsScreenV2Daily"
   , globalEvents: [ (\push -> fetchRideSummary push initialState) ]
   , eval: (\action state -> eval (spy "EarningsScreenDaily action" action) (spy "EarningsScreenDaily state" state))
@@ -59,42 +59,61 @@ screen initialState =
 
 fetchRideSummary :: (Action -> Effect Unit) -> State -> Effect (Effect Unit)
 fetchRideSummary push state = do
-  fiber <- launchAff $ flowRunner defaultGlobalState $ do
-    let isToday = state.data.currentDate == "Today"
-        currentDate = DS.replaceAll (DS.Pattern "/") (DS.Replacement "-") (if isToday then getCurrentDate else state.data.currentDate)
-        mbExisting = if isToday then Nothing else getRideData currentDate
-    case mbExisting of
-      Nothing -> do
-          listControl <- fork $ do 
-            eiResp <- Remote.getRideHistoryReq "100" "0" "false" "null" currentDate
-            case eiResp of
-              Right (GetRidesHistoryResp rideHistoryResponse) -> do
-                EHC.liftFlow $ push $ UpdateRideHistory rideHistoryResponse.list state.data.currentDate
-                pure $ Just $ (GetRidesHistoryResp rideHistoryResponse)
-              Left err -> do 
-                void $ pure $ spy "Error GetRidesHistoryResp" err
-                pure $ Nothing
-          handleSummary currentDate (Just listControl)
-      Just existing -> do
-        EHC.liftFlow $ push $ UpdateRideHistory (if existing.noRidesTaken then [] else existing.list) state.data.currentDate
-        if existing.noSummaryFound then handleSummary currentDate Nothing else EHC.liftFlow $ push $ UpdateRideData $ if (existing.noRidesTaken) then [] else [fromRideDataToRidesSummary existing]
-        pure unit
-  pure $ (launchAff_ $ killFiber (error "Failed to Cancel") fiber)
+  fiber <-
+    launchAff $ flowRunner defaultGlobalState
+      $ do
+          let
+            isToday = state.data.currentDate == "Today"
 
+            currentDate = DS.replaceAll (DS.Pattern "/") (DS.Replacement "-") (if isToday then getCurrentDate else state.data.currentDate)
+
+            mbExisting = if isToday then Nothing else getRideData currentDate
+          case mbExisting of
+            Nothing -> do
+              listControl <-
+                fork
+                  $ do
+                      eiResp <- Remote.getRideHistoryReq "100" "0" "false" "null" currentDate
+                      case eiResp of
+                        Right (GetRidesHistoryResp rideHistoryResponse) -> do
+                          EHC.liftFlow $ push $ UpdateRideHistory rideHistoryResponse.list state.data.currentDate
+                          pure $ Just $ (GetRidesHistoryResp rideHistoryResponse)
+                        Left err -> do
+                          void $ pure $ spy "Error GetRidesHistoryResp" err
+                          pure $ Nothing
+              handleSummary currentDate (Just listControl)
+            Just existing -> do
+              case existing.noListFetched of
+                true -> do
+                  void $ fork
+                    $ do
+                        eiResp <- Remote.getRideHistoryReq "100" "0" "false" "null" currentDate
+                        case eiResp of
+                          Right (GetRidesHistoryResp rideHistoryResponse) -> do
+                            EHC.liftFlow $ push $ UpdateRideHistory rideHistoryResponse.list state.data.currentDate
+                            EHC.liftFlow $ updateRideDatas [] rideHistoryResponse.list currentDate false
+                            pure $ Just $ (GetRidesHistoryResp rideHistoryResponse)
+                          Left err -> do
+                            void $ pure $ spy "Error GetRidesHistoryResp" err
+                            pure $ Nothing
+                false -> EHC.liftFlow $ push $ UpdateRideHistory (if existing.noRidesTaken then [] else existing.list) state.data.currentDate
+              if existing.noSummaryFound then handleSummary currentDate Nothing else EHC.liftFlow $ push $ UpdateRideData $ if (existing.noRidesTaken) then [] else [ fromRideDataToRidesSummary existing ]
+              pure unit
+  pure $ (launchAff_ $ killFiber (error "Failed to Cancel") fiber)
   where
-    handleSummary currentDate mbListControl = do
-      resp <-  API.callApi (GetRidesSummaryListReq [currentDate])
-      case resp of
-        Right (GetRidesSummaryListResp rideSummaryResp) -> do
-          EHC.liftFlow $ push $ UpdateRideData rideSummaryResp.list
-          case mbListControl of
-            Nothing -> pure unit
-            Just listControl -> do 
-              mbResp <- await listControl
-              case mbResp of
-                Just (GetRidesHistoryResp rideHistoryResponse) -> EHC.liftFlow $ updateRideDatas rideSummaryResp.list rideHistoryResponse.list currentDate
-                Nothing -> EHC.liftFlow $ updateRideDatas rideSummaryResp.list [] currentDate
-        Left err -> void $ pure $ spy "Error GetRidesSummaryListResp" err
+  handleSummary currentDate mbListControl = do
+    resp <- API.callApi (GetRidesSummaryListReq [ currentDate ])
+    case resp of
+      Right (GetRidesSummaryListResp rideSummaryResp) -> do
+        EHC.liftFlow $ push $ UpdateRideData rideSummaryResp.list
+        case mbListControl of
+          Nothing -> pure unit
+          Just listControl -> do
+            mbResp <- await listControl
+            case mbResp of
+              Just (GetRidesHistoryResp rideHistoryResponse) -> EHC.liftFlow $ updateRideDatas rideSummaryResp.list rideHistoryResponse.list currentDate false
+              Nothing -> EHC.liftFlow $ updateRideDatas rideSummaryResp.list [] currentDate true
+      Left err -> void $ pure $ spy "Error GetRidesSummaryListResp" err
 
 view :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -104,12 +123,18 @@ view push state =
     , background Color.white900
     , afterRender push $ const AfterRender
     , onBackPressed push (const BackClick)
-    ] $
-    [ defaultLayout push state
-    , rideDistanceInfoPopUp push state
-    ] <> if state.data.calendarState.calendarPopup then [  PrestoAnim.animationSet
-    [ Anim.fadeIn (state.data.calendarState.calendarPopup)
-    ] $ Calendar.view (push <<< CalendarAC) (calendarConfig state)] else []
+    ]
+    $ [ defaultLayout push state
+      -- , rideDistanceInfoPopUp push state
+      ]
+    <> if state.data.calendarState.calendarPopup then
+        [ PrestoAnim.animationSet
+            [ Anim.fadeIn (state.data.calendarState.calendarPopup)
+            ]
+            $ Calendar.view (push <<< CalendarAC) (calendarConfig state)
+        ]
+      else
+        []
 
 headerLayout :: forall w. (Action -> Effect Unit) -> State -> Layout w
 headerLayout state push =
@@ -151,36 +176,43 @@ defaultLayout push state =
     ]
     [ headerLayout push state
     , relativeLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      ][ linearLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          ][scrollView
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          , scrollBarY false
-          ][linearLayout
-          [ orientation VERTICAL
-          , width MATCH_PARENT
-          , height MATCH_PARENT
-          ][ case state.data.selectedDate of
-              Nothing -> earnignsTopView push state true (dummyRideSummaryType state.data.currentDate)
-              Just val -> earnignsTopView push state false val
-          , earningsInfoView push state
-          , case state.data.selectedDateRides of 
-              Nothing -> rideHistoryView push state true []
-              Just item -> rideHistoryView push state false item
-          ]]
-          ]
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , weight 1.0
+        ]
+        [ linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            ]
+            [ scrollView
+                [ width MATCH_PARENT
+                , height MATCH_PARENT
+                , scrollBarY false
+                ]
+                [ linearLayout
+                    [ orientation VERTICAL
+                    , width MATCH_PARENT
+                    , height MATCH_PARENT
+                    ]
+                    [ case state.data.selectedDate of
+                        Nothing -> earnignsTopView push state true (dummyRideSummaryType state.data.currentDate)
+                        Just val -> earnignsTopView push state false val
+                    , earningsInfoView push state
+                    , case state.data.selectedDateRides of
+                        Nothing -> rideHistoryView push state true []
+                        Just item -> rideHistoryView push state false item
+                    ]
+                ]
+            ]
         , linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , margin $ Margin 16 16 16 0]
-          [ tabLayout push ChangeTab TAB_DAILY 
-          ]
-      ]
-    ,  BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN state.data.config.bottomNavConfig)
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , margin $ Margin 16 16 16 0
+            ]
+            [ tabLayout push ChangeTab TAB_DAILY state.props.isFromWeekly state.props.isResetAnim
+            ]
+        ]
+    , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN state.data.config.bottomNavConfig)
     ]
 
 earnignsTopView :: forall w. (Action -> Effect Unit) -> State -> Boolean -> RidesSummaryType -> Layout w
@@ -195,8 +227,21 @@ earnignsTopView push state showShimmer item =
     [ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , visibility INVISIBLE]
-        [ tabLayout push ChangeTab TAB_DAILY
+        , visibility INVISIBLE
+        ]
+        [ linearLayout
+          ( [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , cornerRadius 14.0
+            , gravity CENTER
+            ]
+          )
+          [ textView
+              $ [ text $ "Hello Dummy string"
+                , margin $ MarginVertical 6 6
+                ]
+              <> FontStyle.tags TypoGraphy
+          ]
         ]
     , linearLayout
         [ height WRAP_CONTENT
@@ -209,14 +254,18 @@ earnignsTopView push state showShimmer item =
             , height MATCH_PARENT
             , gravity CENTER
             , padding $ PaddingVertical 16 16
-            , onClick (\_ -> do 
-                    let date = getDate DECREMENT
+            , onClick
+                ( \_ -> do
+                    let
+                      date = getDate DECREMENT
                     push $ UpdateDate date
-                    runEffectFn3 debounceCallBackWithId "DailyStats" (getDateCallback date) 1000) $ const NoAction
+                    runEffectFn3 debounceCallBackWithId "DailyStats" (getDateCallback date) 1000
+                )
+                $ const NoAction
             ]
             [ imageView
-                [ height $ V 16
-                , width $ V 16
+                [ height $ V 24
+                , width $ V 24
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
                 ]
             ]
@@ -227,13 +276,14 @@ earnignsTopView push state showShimmer item =
             , gravity CENTER
             ]
             [ dateSelectionView push state showShimmer item
-            , if showShimmer then 
-                sfl (getHeightFromPercent 4) (getWidthFromPercent 30)  "#66FFFFFF"
-                else textView
-                $ [ text item.earningsWithCurrency
-                  , color Color.black800
-                  ]
-                <> FontStyle.priceFont TypoGraphy
+            , if showShimmer then
+                sfl (getHeightFromPercent 4) (getWidthFromPercent 30) "#66FFFFFF"
+              else
+                textView
+                  $ [ text item.earningsWithCurrency
+                    , color Color.black800
+                    ]
+                  <> FontStyle.priceFont TypoGraphy
             -- , textView -- TODO enable after getting tips
             --     $ [ text "$72 in Tips Included"
             --       , margin $ MarginTop 14
@@ -246,27 +296,34 @@ earnignsTopView push state showShimmer item =
             , weight 1.0
             , gravity CENTER
             , padding $ PaddingVertical 16 16
-            , onClick (\action -> if state.props.forwardBtnAlpha == 1.0 then do 
-              let date = getDate INCREMENT
-              push $ UpdateDate date
-              runEffectFn3 debounceCallBackWithId "DailyStats" (getDateCallback date) 1000 else pure unit) $ const NoAction
+            , onClick
+                ( \action ->
+                    if state.props.forwardBtnAlpha == 1.0 then do
+                      let
+                        date = getDate INCREMENT
+                      push $ UpdateDate date
+                      runEffectFn3 debounceCallBackWithId "DailyStats" (getDateCallback date) 1000
+                    else
+                      pure unit
+                )
+                $ const NoAction
             , alpha state.props.forwardBtnAlpha
             ]
             [ imageView
-                [ height $ V 16
-                , width $ V 16
+                [ height $ V 24
+                , width $ V 24
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
                 ]
             ]
         ]
-    , ridesStatsView push state showShimmer item 
+    , ridesStatsView push state showShimmer item
     ]
   where
-    getDate incrementType = case incrementType of
-              INCREMENT -> runFn2 getDateFromDate (getDateFromCurrentDate state.data.currentDate) 1
-              DECREMENT -> runFn2 getDateFromDate (getDateFromCurrentDate state.data.currentDate) (-1)
-    getDateCallback updatedDate = push $ ChangeDate updatedDate
-  
+  getDate incrementType = case incrementType of
+    INCREMENT -> runFn2 getDateFromDate (getDateFromCurrentDate state.data.currentDate) 1
+    DECREMENT -> runFn2 getDateFromDate (getDateFromCurrentDate state.data.currentDate) (-1)
+
+  getDateCallback updatedDate = push $ ChangeDate updatedDate
 
 dateSelectionView :: forall w. (Action -> Effect Unit) -> State -> Boolean -> RidesSummaryType -> Layout w
 dateSelectionView push state showShimmer item =
@@ -334,12 +391,14 @@ ridesStatsView push state showShimmer item =
                                     , margin $ MarginTop 4
                                     ]
                                   <> FontStyle.tags TypoGraphy
-                              , if showShimmer then sfl (getHeightFromPercent 1) (getWidthFromPercent 10) Color.grey900
-                                  else textView
-                                  $ [ text item.value
-                                    , color Color.black800
-                                    ]
-                                  <> FontStyle.tags TypoGraphy
+                              , if showShimmer then
+                                  sfl (getHeightFromPercent 1) (getWidthFromPercent 10) Color.grey900
+                                else
+                                  textView
+                                    $ [ text item.value
+                                      , color Color.black800
+                                      ]
+                                    <> FontStyle.tags TypoGraphy
                               ]
                           ]
                     ]
@@ -410,7 +469,7 @@ earningsInfoView push state =
 
 rideHistoryView :: forall w. (Action -> Effect Unit) -> State -> Boolean -> Array RideComponent -> Layout w
 rideHistoryView push state showShimmer datas =
-    linearLayout
+  linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
@@ -422,11 +481,13 @@ rideHistoryView push state showShimmer datas =
           ]
         <> FontStyle.subHeading1 TypoGraphy
     , relativeLayout
-      [width MATCH_PARENT
-    , height WRAP_CONTENT][  
-            PrestoAnim.animationSet
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        ]
+        [ PrestoAnim.animationSet
             [ Anim.fadeOut $ not showShimmer
-            ] $ linearLayout
+            ]
+            $ linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , orientation VERTICAL
@@ -435,42 +496,46 @@ rideHistoryView push state showShimmer datas =
                 , enableAnimateOnGone true
                 ]
                 ( mapWithIndex
-                    ( \idx item -> shimmerRideComponent (idx + 1) item)
+                    (\idx item -> shimmerRideComponent (idx + 1) item)
                     listDatas
                 )
-          , if showShimmer then linearLayout[][] 
-                else if datas == [] then
-                  linearLayout[
-                    width MATCH_PARENT
-                  , height WRAP_CONTENT
-                  , orientation VERTICAL
-                  , stroke $ "1," <> Color.grey900
-                  , gravity CENTER
-                  , cornerRadius 10.0
-                  , margin $ MarginTop 12
-                  , padding $ Padding 16 32 16 32
-                  ][  textView $
-                      [ height WRAP_CONTENT
-                      , width WRAP_CONTENT
-                      , text $ getString NO_RIDES
-                      ] <> FontStyle.subHeading1 TypoGraphy
-                    , textView $
-                      [ height WRAP_CONTENT
-                      , width WRAP_CONTENT
-                      , text $ getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_PREFIX <> " " <> (if (state.data.currentDate == getCurrentDate) then "Today" else DS.replaceAll (DS.Pattern "-") (DS.Replacement "/") state.data.currentDate)  <> " " <> getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_SUFFIX
-                      ] <> FontStyle.paragraphText TypoGraphy
-                  ] 
-                  else
-                    linearLayout
-                      [ width MATCH_PARENT
-                      , height WRAP_CONTENT
-                      , orientation VERTICAL
-                      , margin $ MarginTop 12
-                      ]
-                      ( mapWithIndex
-                          ( \idx item -> rideComponent (idx + 1) item)
-                          datas
-                      )
+        , if showShimmer then
+            linearLayout [] []
+          else if datas == [] then
+            linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , stroke $ "1," <> Color.grey900
+              , gravity CENTER
+              , cornerRadius 10.0
+              , margin $ MarginTop 12
+              , padding $ Padding 16 32 16 32
+              ]
+              [ textView
+                  $ [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , text $ getString NO_RIDES
+                    ]
+                  <> FontStyle.subHeading1 TypoGraphy
+              , textView
+                  $ [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , text $ getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_PREFIX <> " " <> (if (state.data.currentDate == getCurrentDate) then "Today" else DS.replaceAll (DS.Pattern "-") (DS.Replacement "/") state.data.currentDate) <> " " <> getString YOU_DID_NOT_TAKE_ANY_RIDES_ON_SUFFIX
+                    ]
+                  <> FontStyle.paragraphText TypoGraphy
+              ]
+          else
+            linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , margin $ MarginTop 12
+              ]
+              ( mapWithIndex
+                  (\idx item -> rideComponent (idx + 1) item)
+                  datas
+              )
         ]
     ]
 

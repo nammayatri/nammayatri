@@ -23,7 +23,7 @@ import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2(..), Fn3, runFn3, Fn1, Fn4, runFn2, Fn5)
 import Data.Generic.Rep (class Generic)
-import Data.Int (toNumber)
+import Data.Int (toNumber, ceil)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
@@ -822,7 +822,7 @@ getWidthFromPercentWithOffset offset percent =
 getWidthFromPercent :: Int -> Int
 getWidthFromPercent percent =
   let scrWidth = (screenWidth unit)
-    in ((scrWidth / 100) * percent)
+    in ceil $ (((toNumber scrWidth) / 100.0) * (toNumber percent))
 
 fromMetersToKm :: Int -> String
 fromMetersToKm distanceInMeters

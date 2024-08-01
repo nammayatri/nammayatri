@@ -82,6 +82,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Data.FoldableWithIndex (foldlWithIndex)
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -615,41 +616,91 @@ getRcNumDetails config = do
 
 --------------------------------------------------- TAB VIEW -----------------------------------------------------
 tabView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-tabView state push =
+tabView state push = 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , cornerRadius 24.0
     , margin $ MarginHorizontal 16 16
+    ]
+    [ tabLayout push (ChangeScreen (if state.props.screenType == ST.DRIVER_DETAILS then ST.VEHICLE_DETAILS else ST.DRIVER_DETAILS)) state.props.screenType tabList state.props.startAnim state.props.resetAnim
+    ]
+
+tabLayout :: forall action a. (action -> Effect Unit) -> action -> ST.DriverProfileScreenType -> Array ({string :: STR, type :: ST.DriverProfileScreenType}) -> Boolean -> Boolean -> PrestoDOM (Effect Unit) a
+tabLayout push action tabType tabList startAnim resetAnim =
+  let selectedIdx = foldlWithIndex (\idx acc item -> if item.type == tabType then idx else acc) 0 tabList
+      backgroundWidth = (JB.getWidthFromPercent 50) - 16
+  in
+  relativeLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_VERTICAL
+  ][ linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
     , background Color.white900
-    , padding $ Padding 6 6 6 6
-    , gravity CENTER
+    , padding $ Padding 4 4 4 4
+    , cornerRadius 16.0
+    ][ textView
+        $ [ text $ "Hello Dummy"
+          , color Color.white900
+          , margin $ MarginVertical 6 6
+          ]
+        <> FontStyle.tags TypoGraphy
+      ]
+  , PrestoAnim.animationSet 
+    [ Anim.translateInXWithPositioBoth (if selectedIdx == 0 then backgroundWidth else 0) (if selectedIdx == 0 then 0 else backgroundWidth - 8) 250 0 $ (startAnim || resetAnim)
+    ] $ linearLayout
+      [ width $ V $ backgroundWidth
+      , height WRAP_CONTENT
+      , background $ Color.black900
+      , cornerRadius 14.0
+      , gravity CENTER
+      , margin $ Margin 4 4 4 4
+      ][ textView
+                    $ [ text $ "Hello Dummy"
+                      , color Color.black900
+                      , margin $ MarginVertical 6 6
+                      ]
+                    <> FontStyle.tags TypoGraphy]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 4 4 4 4
+    , cornerRadius 16.0
     ]
-    [ textView
-        [ height WRAP_CONTENT
-        , weight 1.0
-        , background if state.props.screenType == ST.DRIVER_DETAILS then Color.black900 else Color.white900
-        , text (getString DRIVER_DETAILS)
-        , cornerRadius 18.0
-        , padding $ PaddingVertical 6 6
-        , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
-        , fontStyle $ FontStyle.medium LanguageStyle
-        , gravity CENTER
-        , color if state.props.screenType == ST.DRIVER_DETAILS then Color.white900 else Color.black900
-        ]
-    , textView
-        [ height WRAP_CONTENT
-        , weight 1.0
-        , gravity CENTER
-        , cornerRadius 18.0
-        , onClick push $ const $ ChangeScreen ST.VEHICLE_DETAILS
-        , padding $ PaddingVertical 6 6
-        , text (getString VEHICLE_DETAILS)
-        , fontStyle $ FontStyle.medium LanguageStyle
-        , background if state.props.screenType == ST.VEHICLE_DETAILS then Color.black900 else Color.white900
-        , color if state.props.screenType == ST.VEHICLE_DETAILS then Color.white900 else Color.black900
-        ]
-    ]
+    ( map
+        ( \item ->
+            let
+              isSelected = item.type == tabType
+            in
+              linearLayout
+                ( [ width $ V $ backgroundWidth
+                  , height WRAP_CONTENT
+                  , cornerRadius 14.0
+                  , gravity CENTER
+                  ]
+                    <> if not isSelected then [ onClick push $ const action ] else []
+                )
+                [ textView
+                    $ [ text $ getString item.string
+                      , color if isSelected then Color.white900 else Color.black700
+                      , margin $ MarginVertical 6 6
+                      ]
+                    <> FontStyle.tags TypoGraphy
+                ]
+        )
+        tabList
+    )
+  ]
+
+tabList =
+  [ { string: DRIVER_DETAILS
+    , "type": ST.DRIVER_DETAILS
+    }
+  , { string: VEHICLE_DETAILS
+    , "type": ST.VEHICLE_DETAILS
+    }
+  ]
 
 ------------------------------------------ TAB IMAGE VIEW ---------------------------------------------------------
 tabImageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -661,24 +712,26 @@ tabImageView state push =
       "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
+    startPosition = (JB.getWidthFromPercent 25) + 22
+    endPosition = (JB.getWidthFromPercent 50) - 44
   in
-    linearLayout
+    relativeLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , gravity CENTER_HORIZONTAL
       , padding $ PaddingVertical 32 32
       , orientation HORIZONTAL
+      , clickable true
       ]
       [ PrestoAnim.animationSet
-          [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) { fromX = -44, toX = 44 }
-          , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.VEHICLE_DETAILS)) { fromX = 44, toX = -44 }
+          [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) { fromX = 0, toX = endPosition }
+          , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.VEHICLE_DETAILS)) { fromX = endPosition, toX = 30 }
           ]
           $ linearLayout
               [ height $ V 88
               , width $ V 88
               , cornerRadius 44.0
-              , margin $ MarginRight 10
-              , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
+              , margin $ MarginLeft (if state.props.screenType == ST.DRIVER_DETAILS then 0 else 30)
+              , onClick (\action -> if EHC.os == "IOS" then pure unit else push action) $ const $ ChangeScreen ST.DRIVER_DETAILS
               , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
               ]
               [ ( if state.data.profileImg == Nothing then
@@ -698,16 +751,16 @@ tabImageView state push =
                 )
               ]
       , PrestoAnim.animationSet
-          [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) { fromX = 44, toX = -44 }
-          , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.DRIVER_DETAILS)) { fromX = -44, toX = 44 }
+          [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) { fromX = startPosition + endPosition, toX = endPosition }
+          , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.DRIVER_DETAILS)) { fromX = endPosition , toX = startPosition + endPosition }
           ]
           $ linearLayout
               [ height $ V 88
               , width $ V 88
               , cornerRadius 44.0
               , background Color.white900
-              , onClick push $ const $ ChangeScreen ST.VEHICLE_DETAILS
               , gravity CENTER
+              , onClick (\action -> if EHC.os == "IOS" then pure unit else push action) $ const $ ChangeScreen ST.VEHICLE_DETAILS
               , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
               ]
               [ imageView
@@ -716,7 +769,29 @@ tabImageView state push =
                   , width $ V 68
                   ]
               ]
-      ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        ][ linearLayout
+            [ height $ V if state.props.screenType == ST.DRIVER_DETAILS then 88 else 44
+            , width $ V if state.props.screenType == ST.DRIVER_DETAILS then 88 else 44
+            , cornerRadius 44.0
+            , margin $ MarginHorizontal (if state.props.screenType == ST.DRIVER_DETAILS then endPosition else 30 + 22) (endPosition - startPosition + (22))
+            , onClick (\action -> if EHC.os == "ANDROID" then pure unit else push action) $ const $ ChangeScreen ST.DRIVER_DETAILS
+            , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
+            ]
+            [ ]
+          , linearLayout
+            [ height $ V if state.props.screenType == ST.VEHICLE_DETAILS then 88 else 44
+            , width $ V if state.props.screenType == ST.VEHICLE_DETAILS then 88 else 44
+            , onClick (\action -> if EHC.os == "ANDROID" then pure unit else push action) $ const $ ChangeScreen ST.VEHICLE_DETAILS
+            , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
+            ]
+            []
+            ]
+        ]
   where
   getVehicleCategory :: Array ST.DriverVehicleDetails -> ST.VehicleCategory
   getVehicleCategory vehicles =

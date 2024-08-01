@@ -28,14 +28,53 @@ import Helpers.Utils
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import JBridge (getWidthFromPercent, getHeightFromPercent)
+import PrestoDOM.Types.DomAttributes (__IS_ANDROID)
+import Data.FoldableWithIndex
+import Debug
 
-tabLayout :: forall action a. (action -> Effect Unit) -> action -> EarningsTab -> Layout a
-tabLayout push action tabType =
-  linearLayout
+
+tabLayout :: forall action a. (action -> Effect Unit) -> action -> EarningsTab -> Boolean -> Boolean -> Layout a
+tabLayout push action tabType startAnim resetAnim =
+  let selectedIdx = foldlWithIndex (\idx acc item -> if item.type == tabType then idx else acc) 0 tabList
+      backgroundWidth = (getWidthFromPercent 50) - 16
+  in
+  relativeLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_VERTICAL
+  ][ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , background Color.white900
     , padding $ Padding 4 4 4 4
+    , cornerRadius 16.0
+    ][ textView
+        $ [ text $ "Hello Dummy"
+          , color Color.white900
+          , margin $ MarginVertical 6 6
+          ]
+        <> FontStyle.tags TypoGraphy
+      ]
+  , PrestoAnim.animationSet 
+    [ Anim.translateInXWithPositioBoth (if selectedIdx == 0 then backgroundWidth else 0) (if selectedIdx == 0 then 0 else backgroundWidth - 8) 250 0 $ startAnim
+    , Anim.translateInXWithPositioBoth (if selectedIdx == 0 then 0 else backgroundWidth) (if selectedIdx == 0 then backgroundWidth - 8 else 0) 250 150 $ resetAnim
+    ] $ linearLayout
+      [ width $ V $ backgroundWidth
+      , height WRAP_CONTENT
+      , background $ Color.black900
+      , cornerRadius 14.0
+      , gravity CENTER
+      , margin $ Margin 4 4 4 4
+      ][ textView
+                    $ [ text $ "Hello Dummy"
+                      , color Color.black900
+                      , margin $ MarginVertical 6 6
+                      ]
+                    <> FontStyle.tags TypoGraphy]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 4 4 4 4
     , cornerRadius 16.0
     ]
     ( map
@@ -44,9 +83,8 @@ tabLayout push action tabType =
               isSelected = item.type == tabType
             in
               linearLayout
-                ( [ weight 1.0
+                ( [ width $ V $ backgroundWidth
                   , height WRAP_CONTENT
-                  , background $ if isSelected then Color.black900 else Color.white900
                   , cornerRadius 14.0
                   , gravity CENTER
                   ]
@@ -62,6 +100,7 @@ tabLayout push action tabType =
         )
         tabList
     )
+  ]
 
 rideComponent :: forall a. Int -> RideComponent -> Layout a
 rideComponent idx item =

@@ -4082,7 +4082,9 @@ confirmQuestionFlow state = let moduleId = maybe "" (\selModule -> selModule ^. 
 flowRouter :: TA.FlowState -> FlowBT String Unit
 flowRouter flowState = 
   (case flowState of
-    TA.EarningsV2Daily -> lift $ lift $ UI.earningScreenDailyV2
+    TA.EarningsV2Daily isFromWeekly -> do
+      void $ modifyScreenState $ EarningsScreenV2 (\state -> state{props{isFromWeekly = isFromWeekly}})
+      lift $ lift $ UI.earningScreenDailyV2
     TA.EarningsV2Weekly -> lift $ lift $ UI.earningScreenWeeklyV2
     TA.EarningsV2RideHistory -> lift $ lift $ UI.earningsHistoryFlow ESD.Ride
     TA.HomeScreen -> homeScreenFlow >>= (\_ -> pure TA.HomeScreen)
@@ -4100,7 +4102,7 @@ driverEarningsFlow = do
   let earningScreenState = globalState.driverEarningsScreen
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
   if  getMerchant FunctionCall == BRIDGE -- TODO: Enable after earnigns is completed.
-    then flowRouter TA.EarningsV2Daily
+    then flowRouter (TA.EarningsV2Daily false)
     else do
       uiAction <- UI.driverEarningsScreen
       case uiAction of

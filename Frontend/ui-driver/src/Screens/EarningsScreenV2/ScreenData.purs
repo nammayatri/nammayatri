@@ -47,6 +47,9 @@ type Props
     , isCurrentWeek :: Boolean
     , forwardBtnAlpha :: Number
     , totalWeeklyEarningsdata :: TotalWeeklyEarningsData
+    , startBarAnim :: Boolean
+    , isFromWeekly :: Boolean
+    , isResetAnim :: Boolean
     }
 
 type CalendarState = { 
@@ -63,6 +66,38 @@ type TotalWeeklyEarningsData = {
   totalEarningsWithCurrency :: Common.Price,
   totalRides :: Int,
   totalDistanceTravelledWithUnit :: Common.Distance 
+}
+
+type RidesSummaryType = {
+    earningsWithCurrency :: String,
+    rideDate :: String,
+    noOfRides :: String,
+    rideDistanceWithUnit :: String
+  }
+
+type WeeklyEarning = { 
+    earnings :: Int
+  , earningsWithCurrency :: Price
+  , rideDistance :: Int
+  , rideDistanceWithUnit :: Distance
+  , rideDate :: String
+  , noOfRides :: Int
+  , percentLength :: Number
+  }
+type ListProps = {
+  serviceTier :: PropValue
+, rideDate :: PropValue
+, rideTime :: PropValue
+, rideFare :: PropValue
+, vehicleImage :: PropValue
+, tagVisibilityPenality :: PropValue
+, tagTextPenality :: PropValue
+, tagVisibilityCancellation :: PropValue
+, tagTextCancellation :: PropValue
+, tagVisibilityTips :: PropValue
+, tagTextTips :: PropValue
+, vehicleImageVisibility :: PropValue
+, rideFareColor :: PropValue
 }
 
 initialState :: State
@@ -92,12 +127,15 @@ initialState =
       , rideDistanceInfoPopUp: false
       , selectedBarIndex: 0
       , currentWeekMaxEarning: 1500
-      , currWeekData: dummyEarnings
+      , currWeekData: []
       , fromDate: ""
       , toDate: ""
       , isCurrentWeek : false
+      , startBarAnim: true 
       , forwardBtnAlpha: 1.0
       , totalWeeklyEarningsdata : dummyTotalWeeklyEarnings
+      , isFromWeekly : false
+      , isResetAnim: false
       }
   }
 
@@ -112,22 +150,6 @@ dummyTotalWeeklyEarnings = {
   , totalDistanceTravelledWithUnit : dummyRideDistanceWithUnit
   }
 
-type RidesSummaryType = {
-    earningsWithCurrency :: String,
-    rideDate :: String,
-    noOfRides :: String,
-    rideDistanceWithUnit :: String
-  }
-
-type WeeklyEarning = { 
-    earnings :: Int
-  , earningsWithCurrency :: Price
-  , rideDistance :: Int
-  , rideDistanceWithUnit :: Distance
-  , rideDate :: String
-  , noOfRides :: Int
-  , percentLength :: Number
-  }
 
 dummyEarnings =
   [ { earnings: 1500
@@ -204,21 +226,6 @@ dummyEarningsWithCurrency = {amount: 100.0, currency: INR}
 dummyRideDistanceWithUnit :: Distance
 dummyRideDistanceWithUnit = Distance {value: 0.0, unit: Kilometer}
 
-type ListProps = {
-  serviceTier :: PropValue
-, rideDate :: PropValue
-, rideTime :: PropValue
-, rideFare :: PropValue
-, vehicleImage :: PropValue
-, tagVisibilityPenality :: PropValue
-, tagTextPenality :: PropValue
-, tagVisibilityCancellation :: PropValue
-, tagTextCancellation :: PropValue
-, tagVisibilityTips :: PropValue
-, tagTextTips :: PropValue
-, vehicleImageVisibility :: PropValue
-, rideFareColor :: PropValue
-}
 
 dummyProps :: Array ListProps
 dummyProps = [{

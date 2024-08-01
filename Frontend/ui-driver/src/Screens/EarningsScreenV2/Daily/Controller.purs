@@ -68,7 +68,7 @@ eval ToggleInfoView state = continue state { props { showInfoView = not state.pr
 
 eval RemovePopup state = continue state { props { showInfoView = not state.props.showInfoView } }
 
-eval ChangeTab state = exit $ GoToWeekly state
+eval ChangeTab state = updateAndExit state{props{isFromWeekly = false, isResetAnim = true}} $ GoToWeekly state
 
 eval (UpdateRideData items) state = do
   let
@@ -116,7 +116,7 @@ eval (CalendarAC (CalendarController.PrimaryButtonActionController (PrimaryButto
               Just val -> convertUTCtoISC val.utcDate "YYYY-MM-DD"
           }
         }
-  exit $ DateUpdated newState{props{forwardBtnAlpha = if newState.data.currentDate == formateDate getCurrentDate then 0.4 else 1.0}}
+  exit $ DateUpdated newState{data{selectedDateRides = Nothing, selectedDate = Nothing}, props {forwardBtnAlpha = if newState.data.currentDate == getCurrentDate then 0.4 else 1.0}}
 
 eval (CalendarAC (CalendarController.PrimaryButtonCancelActionController (PrimaryButtonController.OnClick))) state = do
   continue state { data { calendarState { calendarPopup = false } } }

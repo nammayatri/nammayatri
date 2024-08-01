@@ -16,8 +16,11 @@ import Services.API (RidesSummary(..))
 import Debug
 import Storage
 import JBridge as JB
+import Helpers.Utils (incrementValueOfLocalStoreKey, dummyPriceForCity, getcurrentdate)
 import Screens.EarningsScreen.Common.Utils
 import Screens.EarningsScreen.Common.Types (RideData)
+import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
+import Effect.Unsafe (unsafePerformEffect)
 
 data ScreenOutput
   = NextScreen State
@@ -25,6 +28,12 @@ data ScreenOutput
   | GoToDaily State
   | UpdatedWeeklyEarnings State
   | GoToRideHistoryScreen State
+  | GoToHomeScreen State
+  | GoToRidesScreen State
+  | GoToProfileScreen State
+  | GoToNotifications State
+  | GoToReferralScreen State
+  | SubscriptionScreen State
   | GoToPayoutHistory State
 
 data Action
@@ -37,6 +46,7 @@ data Action
   | UpdateRideSummary (Array WeeklyEarning) Int String Boolean TotalWeeklyEarningsData
   | GetWeeklyEarnings Boolean
   | OptionClickedFromList Int
+  | BottomNavBarAction BottomNavBar.Action
 
 instance showAction :: Show Action where
   show _ = ""
@@ -46,7 +56,7 @@ instance loggableAction :: Loggable Action where
 
 eval :: Action -> State -> Eval Action ScreenOutput State
 
-eval (UpdateRideSummary currentWeekData currWeekMaxEarning fromDate isCurrentWeek totalWeeklyEarningsdata) state = continue state { props { currWeekData = currentWeekData, currentWeekMaxEarning = currWeekMaxEarning, fromDate = fromDate, toDate = EHC.getFutureDate fromDate 6, isCurrentWeek = isCurrentWeek, totalWeeklyEarningsdata = totalWeeklyEarningsdata}}
+eval (UpdateRideSummary currentWeekData currWeekMaxEarning fromDate isCurrentWeek totalWeeklyEarningsdata) state = continue state { props { startBarAnim = true, currWeekData = currentWeekData, currentWeekMaxEarning = currWeekMaxEarning, fromDate = fromDate, toDate = EHC.getFutureDate fromDate 6, isCurrentWeek = isCurrentWeek, totalWeeklyEarningsdata = totalWeeklyEarningsdata}}
 
 eval NextClick state = exit $ NextScreen state
 
@@ -57,12 +67,12 @@ eval ToggleInfoView state = continue state { props { rideDistanceInfoPopUp = not
 eval ShowAdjustments state = continue state { data { prevAdjustmentRotation = state.data.adjustmentRotation, adjustmentRotation = if state.data.adjustmentRotation == 0.0 then 180.0 else 0.0 } }
 
 eval (GetWeeklyEarnings leftButtonClicked) state = do
-  if leftButtonClicked then updateAndExit state $ UpdatedWeeklyEarnings state {props {fromDate = EHC.getPastDate state.props.fromDate 7, toDate = EHC.getPastDate state.props.toDate 7, isCurrentWeek = false}}
+  if leftButtonClicked then updateAndExit state{props{startBarAnim = false}} $ UpdatedWeeklyEarnings state {props {fromDate = EHC.getPastDate state.props.fromDate 7, toDate = EHC.getPastDate state.props.toDate 7, isCurrentWeek = false, startBarAnim = false}}
     else do
       let fromDate = EHC.getFutureDate state.props.fromDate 7
           toDate = EHC.getFutureDate state.props.toDate 7
           isCurrentWeek = EHC.withinDateRange fromDate toDate (HU.getcurrentdate "")
-      updateAndExit state $ UpdatedWeeklyEarnings state {props {fromDate = fromDate, toDate = toDate, isCurrentWeek = isCurrentWeek}}
+      updateAndExit state{props{startBarAnim = false}} $ UpdatedWeeklyEarnings state {props {fromDate = fromDate, toDate = toDate, isCurrentWeek = isCurrentWeek, startBarAnim = false}}
 
 eval (OptionClickedFromList index) state = do
   case index of
@@ -70,6 +80,29 @@ eval (OptionClickedFromList index) state = do
     1 -> updateAndExit state $ GoToPayoutHistory state
     _ -> continue state
 
+eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
+  pure $ JB.hideKeyboardOnNavigation true
+  case item of
+    "Home" -> exit $ GoToHomeScreen state
+    "Rides" -> exit $ GoToRidesScreen state
+    "Profile" -> exit $ GoToProfileScreen state
+    "Rankings" -> do
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
+      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+      exit $ GoToReferralScreen state
+    "Alert" -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ GoToNotifications state
+    "Join" -> do
+      let
+        driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
+      _ <- pure $ JB.cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      _ <- pure $ JB.metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      let
+        _ = unsafePerformEffect $ JB.firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      exit $ SubscriptionScreen state
+    _ -> continue state
 
 eval _ state = update state
 

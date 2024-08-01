@@ -212,6 +212,7 @@ data Action = BackPressed
             | AfterRender
             | HideLiveDashboard String
             | ChangeScreen DriverProfileScreenType
+            | UpdateAnimState DriverProfileScreenType
             | GenericHeaderAC GenericHeaderController.Action
             | ManageVehicleHeaderAC GenericHeaderController.Action
             | PrimaryEditTextAC PrimaryEditTextController.Action
@@ -408,7 +409,9 @@ eval (ChangeScreen screenType) state = do
     _ -> do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_profile_settings_click"
       pure unit
-  continue state{props{ screenType = screenType }}
+  continueWithCmd state{props{ screenType = screenType, resetAnim = screenType == ST.VEHICLE_DETAILS, startAnim = screenType == ST.DRIVER_DETAILS}} [pure $ UpdateAnimState screenType]
+
+eval (UpdateAnimState screenType) state = continue state{props{resetAnim = screenType == ST.VEHICLE_DETAILS, startAnim = screenType == ST.DRIVER_DETAILS}}
 
 eval OpenSettings state = continue state{props{openSettings = true}}
 

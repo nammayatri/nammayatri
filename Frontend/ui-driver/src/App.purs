@@ -564,7 +564,7 @@ data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD
 data CAMERA_SCREEN_OUTPUT = OPEN_CAMERA
 
 
-data FlowState = EarningsV2Daily
+data FlowState = EarningsV2Daily Boolean
   | EarningsV2Weekly
   | EarningsV2RideHistory
   | EarningsV2PayoutHistory

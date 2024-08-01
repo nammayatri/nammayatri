@@ -57,5 +57,6 @@ type RideData = {
   rideDistanceWithUnit :: Distance,
   list :: Array RidesInfo,
   noSummaryFound :: Boolean,
+  noListFetched :: Boolean,
   noRidesTaken :: Boolean
 }
