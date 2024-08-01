@@ -32,6 +32,7 @@ defaultSearchReq =
         isReallocationEnabled = Nothing,
         isDestinationManuallyMoved = Nothing,
         quotesUnifiedFlow = Nothing,
+        rideRequestAndRideOtpUnifiedFlow = Nothing,
         sessionToken = Nothing
       }
 
@@ -92,6 +93,7 @@ searchReqFromUpdatesList updList =
               startTime = Nothing,
               isDestinationManuallyMoved = Nothing,
               quotesUnifiedFlow = Nothing,
+              rideRequestAndRideOtpUnifiedFlow = Nothing,
               sessionToken = Nothing
             }
    in (origin, destination, req)
@@ -109,6 +111,7 @@ mkSearchReqFromLocations origin destination =
               isReallocationEnabled = Nothing,
               isDestinationManuallyMoved = Nothing,
               quotesUnifiedFlow = Nothing,
+              rideRequestAndRideOtpUnifiedFlow = Nothing,
               sessionToken = Nothing
             }
    in (origin, destination, req)
