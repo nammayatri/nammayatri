@@ -260,11 +260,15 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
 
 emergencyContactSOSCache :: SRB.Booking -> Id Person.Person -> Flow ()
 emergencyContactSOSCache booking personId = do
-  logDebug "Creating cache for emergency contact SOS"
-  ride <- runInReplica $ QR.findActiveByRBId booking.id >>= fromMaybeM (RideNotFound booking.id.getId)
   now <- getCurrentTime
-  let hashKey = makeEmergencyContactSOSCacheKey ride.id
-  Hedis.hSetExp hashKey personId.getId now 86400 -- exp is 24 hours currently
+  when (booking.riderId /= personId) $ do
+    mbRide <- runInReplica $ QR.findActiveByRBId booking.id
+    case mbRide of
+      Just ride -> do
+        logDebug "Creating cache for emergency contact SOS"
+        let hashKey = makeEmergencyContactSOSCacheKey (ride.id)
+        Hedis.hSetExp hashKey (personId.getId) now 86400 -- expiration is set to 24 hours
+      Nothing -> logDebug "No active ride found, skipping SOS cache creation."
 
 makeEmergencyContactSOSCacheKey :: Id DTR.Ride -> Text
 makeEmergencyContactSOSCacheKey rideId = "emergencyContactSOS:" <> rideId.getId
