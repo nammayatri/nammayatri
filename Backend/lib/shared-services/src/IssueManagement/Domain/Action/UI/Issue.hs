@@ -58,6 +58,18 @@ data ServiceHandle m = ServiceHandle
     mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess)
   }
 
+-- Temporary Solution for backward Comaptibility (Remove after 1 successfull release)
+getDefaultMerchantOperatingCityId :: BeamFlow m r => ServiceHandle m -> Identifier -> m (Id MerchantOperatingCity)
+getDefaultMerchantOperatingCityId issueHandle identifier =
+  ( issueHandle.findMOCityByMerchantShortIdAndCity shortId Context.Bangalore
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> shortId.getShortId <> "-city-" <> show Context.Bangalore)
+  )
+    <&> (.id)
+  where
+    shortId = case identifier of
+      DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
+      CUSTOMER -> ShortId "NAMMA_YATRI"
+
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
 getLanguage personId mbLanguage issueHandle = do
   extractLanguage <-
@@ -84,9 +96,7 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
     categoriesWithTranslations <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage merchantOpCityId language identifier
     case categoriesWithTranslations of
       [] -> do
-        defaultMerchantOpCityId <-
-          issueHandle.findMOCityByMerchantShortIdAndCity shortId Context.Bangalore
-            >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> shortId.getShortId <> "-city-" <> show Context.Bangalore) <&> (.id)
+        defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId issueHandle identifier
         CQIC.findAllActiveByMerchantOpCityIdAndLanguage defaultMerchantOpCityId language identifier
       _ -> return categoriesWithTranslations
   pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
@@ -102,10 +112,6 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
           isRideRequired = issueCategory.isRideRequired,
           maxAllowedRideAge = issueCategory.maxAllowedRideAge
         }
-
-    shortId = case identifier of
-      DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
-      CUSTOMER -> ShortId "NAMMA_YATRI"
 
 getIssueOption ::
   ( BeamFlow m r,
@@ -129,9 +135,10 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
       now <- utctimeToSeconds <$> getCurrentTime
       unless (utctimeToSeconds rideInfo.rideCreatedAt > (now - maxAllowedRideAge)) $ throwError $ InvalidRequest "Invalid ride selected."
     _ -> return ()
-  let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
+  let _adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
   language <- getLanguage personId mbLanguage issueHandle
-  issueConfig <- CQI.findByMerchantOpCityId adjMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
+  defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId issueHandle identifier
+  issueConfig <- CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
   issueMessageTranslationList <- case issueOptionId of
     Nothing -> CQIM.findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier
     Just optionId -> CQIM.findAllActiveByOptionIdAndLanguage optionId language identifier
@@ -193,7 +200,8 @@ issueReportList ::
 issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReports <- QIR.findAllByPerson personId
-  issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+  defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId issueHandle identifier
+  issueConfig <- CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
   now <- getCurrentTime
   issues <- mapM (processIssueReport issueConfig now language issueHandle) issueReports
   return $ Common.IssueReportListRes {issues}
@@ -325,7 +333,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   let mediaFileUrls = map (.url) uploadedMediaFiles
       mocId = maybe person.merchantOperatingCityId (.merchantOperatingCityId) mbRide
   language <- getLanguage personId mbLanguage issueHandle
-  issueConfig <- CQI.findByMerchantOpCityId mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
+  defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId issueHandle identifier
+  issueConfig <- CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
   let shouldCreateTicket = isNothing createTicket || fromJust createTicket
       onCreateIssueMsgs = if shouldCreateTicket then issueConfig.onCreateIssueMsgs else []
   issueMessageTranslationList <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) onCreateIssueMsgs
@@ -464,10 +473,11 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
   mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
   mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId merchantOpCityId) issueReport.rideId
-  let adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
+  let _adjMerchantOpCityId = maybe merchantOpCityId Id ((.merchantOperatingCityId) =<< mbRideInfoRes)
+  defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId issueHandle identifier
   issueConfig <-
-    CQI.findByMerchantOpCityId adjMerchantOpCityId identifier
-      >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
+    CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier
+      >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
   (issueCategory, _) <- CQIC.findByIdAndLanguage issueReport.categoryId language identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
   mbIssueOption <- (join <$>) $
     forM issueReport.optionId $ \justIssueOption -> do
@@ -549,7 +559,8 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
     REOPENED -> do
       QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
       updateTicketStatus issueReport TIT.CRS merchantId merchantOpCityId issueHandle "Ticket reopened"
-      issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
+      defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId issueHandle identifier
+      issueConfig <- CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
       issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
       let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) issueConfig mbRideInfoRes
       now <- getCurrentTime
@@ -711,7 +722,6 @@ getConfigValue issueConfig mbRideInfoRes key = do
       tipAdded = maybe 0.0 (.amount.amount) (getFareFromArray "CUSTOMER_SELECTED_FARE" fareBreakup)
       driverAdditions = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_SELECTED_FARE" fareBreakup)
    in case key of
-        "MERCHANT" -> fromMaybe "" ((.merchantName) =<< issueConfig.messageTransformationConfig)
         "SUPPORT_MAIL" -> fromMaybe "" ((.supportEmail) =<< issueConfig.messageTransformationConfig)
         "ESTIMATED_DISTANCE" -> show estimatedDistance
         "FINAL_DISTANCE" -> show chargeableDistance

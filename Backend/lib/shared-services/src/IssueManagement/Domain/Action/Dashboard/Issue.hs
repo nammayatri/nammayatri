@@ -52,6 +52,18 @@ data ServiceHandle m = ServiceHandle
     mbSendUnattendedTicketAlert :: Maybe (Text -> m ())
   }
 
+-- Temporary Solution for backward Comaptibility (Remove after 1 successfull release)
+getDefaultMerchantOperatingCityId :: BeamFlow m r => ServiceHandle m -> Identifier -> m (Id MerchantOperatingCity)
+getDefaultMerchantOperatingCityId issueHandle identifier =
+  ( issueHandle.findByMerchantShortIdAndCity shortId Context.Bangalore
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> shortId.getShortId <> "-city-" <> show Context.Bangalore)
+  )
+    <&> (.id)
+  where
+    shortId = case identifier of
+      DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
+      CUSTOMER -> ShortId "NAMMA_YATRI"
+
 checkMerchantCityAccess :: BeamFlow m r => ShortId Merchant -> Context.City -> DIR.IssueReport -> Maybe Person -> ServiceHandle m -> m MerchantOperatingCity
 checkMerchantCityAccess merchantShortId opCity issueReport mbPerson issueHandle = do
   merchantOperatingCity <-
@@ -161,19 +173,20 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
       Just iReportShortId -> B.runInReplica $ QIR.findByShortId iReportShortId >>= fromMaybeM (IssueReportDoesNotExist iReportShortId.getShortId)
       Nothing -> throwError (InvalidRequest "Either issueReportId or issueReportShortId is required")
   person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
-  merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
-  mkIssueInfoRes person issueReport merchantOpCity.id
+  void $ checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
+  mkIssueInfoRes person issueReport issueHandle
   where
-    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> Id MerchantOperatingCity -> m Common.IssueInfoRes
-    mkIssueInfoRes person issueReport merchantOpCityId = do
+    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> ServiceHandle m -> m Common.IssueInfoRes
+    mkIssueInfoRes person issueReport iHandle = do
       personDetail <- Just <$> mkPersonDetail person
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
       comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
       category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
       option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
+      defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId iHandle identifier
       issueConfig <-
-        CQI.findByMerchantOpCityId merchantOpCityId identifier
-          >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
+        CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier
+          >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
       issueChats <- case identifier of
         DRIVER -> return Nothing
         CUSTOMER -> Just <$> UIR.recreateIssueChats issueReport issueConfig Nothing ENGLISH identifier
@@ -304,7 +317,7 @@ ticketStatusCallBack req issueHandle identifier = do
           )
           return
           issueReport.merchantOperatingCityId
-      issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
+      issueConfig <- CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
       mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
       let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
       now <- getCurrentTime
