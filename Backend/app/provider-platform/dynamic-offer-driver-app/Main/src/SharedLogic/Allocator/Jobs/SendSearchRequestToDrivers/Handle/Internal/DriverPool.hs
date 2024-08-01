@@ -341,6 +341,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType of
+            Tagged -> makeTaggedDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
             Intelligent -> makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
             Random -> makeRandomDriverPool onlyNewDrivers batchSize'
 
@@ -542,6 +543,20 @@ previouslyAttemptedDrivers searchTryId consideOnRideDrivers = do
         logWarning "Unexpected empty driver pool batch."
         return []
       a -> return a
+
+makeTaggedDriverPool ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Id MerchantOperatingCity ->
+  [DriverPoolWithActualDistResult] ->
+  DriverIntelligentPoolConfig ->
+  TransporterConfig ->
+  Int ->
+  Bool ->
+  m [DriverPoolWithActualDistResult]
+makeTaggedDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = onlyNewDrivers
 
 sortWithDriverScore ::
   ( CacheFlow m r,
