@@ -368,7 +368,7 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
         driverPoolNotOnRide
           <> map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {..}) driverPoolCurrentlyOnRide
   logDebug $ "Search handler: driver pool " <> show driverPool
-  let onlyFPWithDrivers = filter (\fp -> isScheduled || (skipDriverPoolCheck fp.tripCategory) || (isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool))) farePolicies
+  let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` DVST.offUsVariants)) farePolicies
   return (driverPool, onlyFPWithDrivers)
 
 skipDriverPoolCheck :: DTC.TripCategory -> Bool
