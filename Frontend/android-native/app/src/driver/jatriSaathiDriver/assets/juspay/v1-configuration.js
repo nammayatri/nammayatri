@@ -456,9 +456,9 @@ window.getMerchantConfig = function () {
       },
       "showEarningSection" : true,
       "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
       },
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : {
@@ -526,9 +526,9 @@ window.getMerchantConfig = function () {
       },
       "showEarningSection" : true,
       "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
       },
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : {

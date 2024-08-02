@@ -365,7 +365,10 @@ tripDetailsView state =
     ]
   where
     getProperVehicleModelName :: String -> String
-    getProperVehicleModelName vehicleModel = if vehicleModel == "Unkown" then "Bike Taxi" else vehicleModel
+    getProperVehicleModelName vehicleModel = 
+      if vehicleModel == "Unkown" -- Fallback case when vehicle mapping fails during vehicle onboarding 
+        then fromMaybe "" $ state.data.selectedItem.serviceTierName 
+        else vehicleModel
 
 ------------------- separator -------------------
 separatorView ::  forall w . PrestoDOM (Effect Unit) w

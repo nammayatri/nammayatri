@@ -726,7 +726,7 @@ getTitleConfig vehicleVariant =
         "SUV" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800 
         "AUTO_RICKSHAW" -> mkReturnObj ((getString AUTO_RICKSHAW)) Color.green600
         "BIKE" -> mkReturnObj ("Bike Taxi") Color.green600
-        "SUV_PLUS" -> mkReturnObj ((getString AC_SUV )<> " " <> (getString TAXI)) Color.blue800
+        "SUV_PLUS" -> mkReturnObj ("XL Plus") Color.blue800
         _ -> mkReturnObj ((getString AC) <> " " <> (getString TAXI)) Color.blue800 
   where mkReturnObj text' color' = 
           {
