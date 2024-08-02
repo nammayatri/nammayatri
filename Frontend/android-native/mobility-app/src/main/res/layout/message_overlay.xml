@@ -137,7 +137,7 @@
                                         <TextView
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
-                                            android:lines="2"
+                                            android:lines="3"
                                             android:ellipsize="end"
                                             android:text="New Drop"
                                             android:id="@+id/new_drop"/>
