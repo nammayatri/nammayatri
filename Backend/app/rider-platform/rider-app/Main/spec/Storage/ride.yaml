@@ -52,7 +52,6 @@ Ride:
     status: RideStatus
     driverName: Text
     driverRating: Maybe Centesimal
-    driverMobileNumber: Text
     driverPhoneNumber: Maybe (EncryptedHashedField e Text)
     driverAlternateNumber: Maybe (EncryptedHashedField e Text)
     driverMobileCountryCode: Maybe Text

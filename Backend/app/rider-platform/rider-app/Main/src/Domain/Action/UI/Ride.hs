@@ -195,6 +195,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   let tag = customerDisability <&> (.tag)
   decRider <- decrypt rider
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled rider
+  rideApiEntity <- makeRideAPIEntity ride
   return $
     GetRideStatusResp
       { fromLocation = makeLocationAPIEntity booking.fromLocation,
@@ -205,7 +206,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.InterCityDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.AmbulanceDetails details -> Just $ makeLocationAPIEntity details.toLocation,
-        ride = makeRideAPIEntity ride,
+        ride = rideApiEntity,
         customer = UPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled,
         driverPosition = mbPos <&> (.currPoint)
       }

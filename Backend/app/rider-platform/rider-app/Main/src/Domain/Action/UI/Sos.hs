@@ -188,8 +188,8 @@ createTicketForNewSos person ride riderConfig trackLink req = do
       return sosDetails.id
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
-      let rideInfo = SIVR.buildRideInfo ride person phoneNumber
-          kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+      rideInfo <- SIVR.buildRideInfo ride person phoneNumber
+      let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       ticketId <- do
         if riderConfig.enableSupportForSafety
           then do
@@ -291,8 +291,8 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
     Right _ -> do
       ride <- QRide.findById sosDetails.rideId >>= fromMaybeM (RideDoesNotExist sosDetails.rideId.getId)
       phoneNumber <- mapM decrypt person.mobileNumber
-      let rideInfo = SIVR.buildRideInfo ride person phoneNumber
-          trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+      rideInfo <- SIVR.buildRideInfo ride person phoneNumber
+      let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
           kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       when riderConfig.enableSupportForSafety $
         void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue))

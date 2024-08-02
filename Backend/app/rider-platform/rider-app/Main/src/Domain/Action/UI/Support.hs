@@ -130,6 +130,7 @@ safetyCheckSupport (personId, merchantId) req = do
       void $ QRide.updateSafetyJourneyStatus ride.id Ride.Safe
   return Success
   where
+    ticketReq :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Ride.Ride -> Person.Person -> Maybe Text -> Text -> Text -> Text -> m Ticket.CreateTicketReq
     ticketReq ride person phoneNumber description disposition queue = do
       rideDesc <- mkRideInfo (Just ride) person phoneNumber
       pure $
@@ -168,7 +169,7 @@ buildDBIssue (Id customerId) SendIssueReq {..} merchantId = do
         merchantId = Just merchantId
       }
 
-mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq
+mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq
 mkTicket issue person phoneNumber disposition queue = do
   rideDesc <- mkRideInfo Nothing person Nothing
   pure $
@@ -187,9 +188,10 @@ mkTicket issue person phoneNumber disposition queue = do
         rideDescription = Just rideDesc
       }
 
-mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo
+mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo
 mkRideInfo mbRide person mbPhoneNumber = do
   now <- getCurrentTime
+  driverPhNo <- maybe (pure Nothing) (traverse decrypt . (.driverPhoneNumber)) mbRide
   pure $
     Ticket.RideInfo
       { rideShortId = maybe "" (.shortId.getShortId) mbRide,
@@ -197,7 +199,7 @@ mkRideInfo mbRide person mbPhoneNumber = do
         customerName = Just $ SLP.getName person,
         customerPhoneNo = mbPhoneNumber,
         driverName = (.driverName) <$> mbRide,
-        driverPhoneNo = (.driverMobileNumber) <$> mbRide,
+        driverPhoneNo = driverPhNo,
         vehicleNo = maybe "" (.vehicleNumber) mbRide,
         vehicleCategory = show . (.vehicleVariant) <$> mbRide,
         vehicleServiceTier = show . (.vehicleServiceTierType) <$> mbRide,

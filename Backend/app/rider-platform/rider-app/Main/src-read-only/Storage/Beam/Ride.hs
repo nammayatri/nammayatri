@@ -46,7 +46,6 @@ data RideT f = RideT
     driverArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverImage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverMobileCountryCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    driverMobileNumber :: B.C f Kernel.Prelude.Text,
     driverName :: B.C f Kernel.Prelude.Text,
     driverNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
