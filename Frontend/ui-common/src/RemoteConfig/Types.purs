@@ -48,7 +48,8 @@ type RemoteConfig a
     , thanjavur :: Maybe a
     , tirunelveli :: Maybe a
     , salem :: Maybe a
-    , trichy :: Maybe a 
+    , trichy :: Maybe a
+    , ysCities :: Maybe a
     , config :: Maybe Config
     }
 
