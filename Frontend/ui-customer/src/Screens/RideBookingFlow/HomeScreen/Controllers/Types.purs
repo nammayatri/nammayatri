@@ -43,6 +43,8 @@ import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes, SelectListRes)
 import Common.Types.App as CTP
 
+import RemoteConfig as RemoteConfig
+
 
 
 data ScreenOutput = LogoutUser
@@ -325,6 +327,7 @@ data Action = NoAction
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
   | TollChargeIncludedPopUpAction PopUpModal.Action
+  | ServicesOnClick RemoteConfig.Service
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

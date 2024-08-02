@@ -94,7 +94,7 @@ import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
 import Data.Int
-
+import RemoteConfig as RemoteConfig
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -2435,3 +2435,24 @@ scheduledRideExistsPopUpConfig state =
 
   formatDateInHHMM :: String -> String
   formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+
+nammaServices :: LazyCheck -> Array RemoteConfig.Service
+nammaServices dummy = 
+  let enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+      allServices = getAllServices FunctionCall
+  in DA.foldl (\acc x -> do 
+                          let mbService = DA.find(\service -> (show service.type == x)) allServices
+                          case mbService of 
+                            Just value -> acc <> [value]
+                            Nothing -> acc
+              ) [] enabledServices
+
+getAllServices :: LazyCheck -> Array RemoteConfig.Service
+getAllServices dummy = 
+  [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT}
+  , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT}
+  , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR}
+  , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR}
+  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY}
+  , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS}
+  ]
