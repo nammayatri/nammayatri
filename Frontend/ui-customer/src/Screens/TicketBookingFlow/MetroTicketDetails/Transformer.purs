@@ -57,42 +57,28 @@ metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus
 --- Metro Route Transformer Logic Start------------------
 
 metroRouteTrasformer ::  Array FRFSStationAPI -> Array MetroRoute
-metroRouteTrasformer stations =  
+metroRouteTrasformer stations =
   foldl (\ acc (FRFSStationAPI station) -> acc <> (getNextInterMediates (FRFSStationAPI station) stations)) [] stations
 
 
-getNextInterMediates :: FRFSStationAPI -> Array FRFSStationAPI -> Array MetroRoute 
-getNextInterMediates (FRFSStationAPI station) stations = 
-  case station.stationType of 
-    Just stationType -> 
-      case stationType of 
-        "INTERMEDIATE" -> []
-        "START" -> [{
-            name : station.name
-          , line : GreenLine
-          , stops : getStops (FRFSStationAPI station) stations
-          , listExpanded : false
-          }]
-        "END" -> [{
-            name : station.name
-          , line : RedLine
-          , stops : getStops (FRFSStationAPI station) stations
-          , listExpanded : false
-          }]
-        _ -> [{
-            name : station.name
-          , line : case station.color of
-              Just color -> 
-                case color of 
-                  "Green" -> GreenLine
-                  "Blue" -> BlueLine
-                  "Red" -> RedLine
-                  _ -> NoColorLine
-              Nothing -> NoColorLine
-          , stops : getStops (FRFSStationAPI station) stations
-          , listExpanded : false
-          }]
-    Nothing -> []
+getNextInterMediates :: FRFSStationAPI -> Array FRFSStationAPI -> Array MetroRoute
+getNextInterMediates (FRFSStationAPI station) stations =
+  let
+    defaultRoute = {
+      name: station.name,
+      line: case station.color of
+        Just "Green" -> GreenLine
+        Just "Blue" -> BlueLine
+        Just "Red" -> RedLine
+        _ -> NoColorLine,
+      stops: getStops (FRFSStationAPI station) stations,
+      listExpanded: false
+    }
+  in
+    case station.stationType of
+      Just "INTERMEDIATE" -> []
+      Just _ -> [defaultRoute]
+      Nothing -> [defaultRoute]
 
 getStops :: FRFSStationAPI -> Array FRFSStationAPI -> Array MetroStop 
 getStops (FRFSStationAPI station) stations = 
