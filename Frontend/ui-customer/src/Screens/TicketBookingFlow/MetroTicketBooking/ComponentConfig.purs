@@ -74,7 +74,7 @@ updateButtonConfig state = let
     eventDiscountAmount = fromMaybe 0 state.data.eventDiscountAmount
     (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
     priceWithoutDiscount = ((metroBookingConfigResp.discount * price) / 100) + price
-    discountText = if price /= priceWithoutDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> (show priceWithoutDiscount) <> " </strike>" <> " ") else ""
+    discountText = if price /= priceWithoutDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show priceWithoutDiscount)  <> " </span>" <> " </strike>" <> " ") else ""
     cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
     updateButtonConfig' = config 
         { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection) then ((getString PAY) <> discountText <> " ₹" <> (show price) <> cashbackText) else (getString GET_FARE)}
