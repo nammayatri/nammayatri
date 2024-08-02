@@ -4,6 +4,8 @@ import MerchantConfig.Types
 import Common.DefaultConfig
 import Engineering.Helpers.Commons as EHC
 import Prelude ((/=))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Common.Types.App (LazyCheck(..))
 
 config :: AppConfig 
 config =
@@ -810,6 +812,85 @@ config =
 
 defaultCityConfig :: CityConfig
 defaultCityConfig =
+  case (getMerchant FunctionCall) of
+    YATRISATHI -> ysDefaultCityConfig
+    _ -> defCityConfig
+  where
+    defCityConfig :: CityConfig
+    defCityConfig = 
+      { cityName : "",
+        cityCode : "",
+        iopConfig : {
+                enable : false,
+                autoSelectTime : 8
+              },
+        estimateAndQuoteConfig : {
+              showInfoIcon : true},
+        geoCodeConfig :
+          { radius : 100000
+          , strictBounds : false
+          },
+        enableCabs : false,
+        featureConfig : {
+          enableCabBanner : false
+        },
+        referral : {
+          domain : "https://nammayatri.in",
+          customerAppId : "in.juspay.nammayatri"
+        },
+        appLogo : "",
+        dashboardUrl : "",
+        appLogoLight : "",
+        enableAcViews : false,
+        enableRentals : false,
+        enableIntercity : true, 
+        waitingChargeConfig : {
+          auto : {
+            freeMinutes : 3.0
+          , perMinCharges : 1.5
+          },
+          cabs : {
+            freeMinutes : 5.0
+          , perMinCharges : 1.5
+          },
+          bike : {
+            freeMinutes : 3.0
+          , perMinCharges : 2.0
+          }
+        },
+        rentalWaitingChargeConfig : {
+          auto : {
+            freeMinutes : 3.0
+          , perMinCharges : 1.0
+          },
+          cabs : {
+            freeMinutes : 3.0
+          , perMinCharges : 1.0
+          },
+          bike : {
+            freeMinutes : 3.0
+          , perMinCharges : 2.0
+          }
+        },
+        intercityWaitingChargeConfig :{
+          auto : {
+            freeMinutes : 3.0
+          , perMinCharges : 1.0
+          } ,
+          cabs : {
+            freeMinutes : 5.0
+          , perMinCharges : 1.0
+          } ,
+          bike : {
+            freeMinutes : 3.0
+          , perMinCharges : 2.0
+          }
+        },
+        enableWaitingConfig : false
+      }
+
+ysDefaultCityConfig :: CityConfig
+ysDefaultCityConfig =
   { cityName : "",
     cityCode : "",
     iopConfig : {
@@ -817,33 +898,34 @@ defaultCityConfig =
             autoSelectTime : 8
           },
     estimateAndQuoteConfig : {
-          showInfoIcon : true},
+          showInfoIcon : true
+    },
     geoCodeConfig :
       { radius : 100000
       , strictBounds : false
       },
-    enableCabs : false,
+    enableCabs : true,
     featureConfig : {
-      enableCabBanner : false
+      enableCabBanner : true
     },
     referral : {
-      domain : "https://nammayatri.in",
-      customerAppId : "in.juspay.nammayatri"
+      domain : "https://www.yatrisathi.in",
+      customerAppId : "in.juspay.jatrisaathi"
     },
     appLogo : "",
     dashboardUrl : "",
     appLogoLight : "",
-    enableAcViews : false,
-    enableRentals : false,
-    enableIntercity : false, 
+    enableAcViews : true,
+    enableRentals : true,
+    enableIntercity : true, 
     waitingChargeConfig : {
       auto : {
-        freeMinutes : 3.0
+        freeMinutes : 5.0
       , perMinCharges : 1.5
       },
       cabs : {
-        freeMinutes : 5.0
-      , perMinCharges : 1.5
+        freeMinutes : 3.0
+      , perMinCharges : 2.0
       },
       bike : {
         freeMinutes : 3.0

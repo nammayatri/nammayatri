@@ -770,8 +770,6 @@ config =
     startTime : "21:00:00"
   , endTime : "06:00:00"
   }
-  , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
-  , showProfileAadhaarPan : true
   , clientName : ""
   , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , showProfileAadhaarPan : false

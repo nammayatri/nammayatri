@@ -197,19 +197,7 @@ driverDetailsView config uid nid =
             ]
         ]
     ]
-  where getVehicleType = case getMerchant FunctionCall of
-                          YATRISATHI -> case config.vehicleVariant of
-                                          "TAXI" -> "Non-AC Mini"
-                                          "SUV"  -> "XL Cab"
-                                          "SUV_PLUS" -> "XL Plus"
-                                          "SEDAN" -> "Sedan"
-                                          "HATCHBACK" -> "AC Mini"
-                                          "BIKE" -> "Bike Taxi"
-                                          _      -> getEN AC_CAB
-                          _          -> case config.vehicleVariant of
-                                        "TAXI_PLUS" -> (getEN AC_TAXI)
-                                        "TAXI" -> (getEN NON_AC_TAXI)
-                                        _ -> ""
+    where
         vehicleMargin = do 
           let width = (runFn1 getLayoutBounds $ getNewIDWithTag nid).width
           if width > 125 then ((width - 125)/2) else 0
@@ -266,12 +254,12 @@ getVehicleImage variant vehicleDetail city = do
       else 
         case (getMerchant FunctionCall) of
           YATRISATHI -> case variant of
-                          "SUV" -> "ny_ic_suv_concept"
-                          "TAXI" -> "ic_white_taxi"
+                          "SUV"       -> "ny_ic_suv_concept"
+                          "TAXI"      -> "ic_white_taxi"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
-                          "BIKE" -> "ny_ic_bike_concept"
-                          "SUV_PLUS" -> "ny_ic_suv_plus_concept"
-                          _     -> "ny_ic_sedan_concept"
+                          "BIKE"      -> "ny_ic_bike_concept"
+                          "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
+                          _           -> "ny_ic_sedan_concept"
           _          -> case variant of
                           "TAXI"      -> "ny_ic_hatchback_concept"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"

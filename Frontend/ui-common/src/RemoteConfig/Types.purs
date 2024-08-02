@@ -55,6 +55,7 @@ type RemoteConfig a
     , mangalore :: Maybe a
     , gulbarga :: Maybe a
     , udupi :: Maybe a
+    , ysCities :: Maybe a
     , config :: Maybe Config
     }
 

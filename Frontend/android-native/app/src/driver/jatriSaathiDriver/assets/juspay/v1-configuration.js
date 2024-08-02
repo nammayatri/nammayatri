@@ -458,9 +458,9 @@ window.getMerchantConfig = function () {
       },
       "showEarningSection" : true,
       "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
       },
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : {
@@ -492,6 +492,7 @@ window.getMerchantConfig = function () {
           "perMinCharges" : 2.0
         }
       },
+      "gstPercentage" :  "18",
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"
@@ -528,9 +529,9 @@ window.getMerchantConfig = function () {
       },
       "showEarningSection" : true,
       "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
       },
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : {

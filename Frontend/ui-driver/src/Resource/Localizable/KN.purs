@@ -1552,7 +1552,6 @@ getKN stringKey =
         MANAGE_VEHICLE -> " ವಾಹನಗಳನ್ನು ನಿರ್ವಹಿಸಿ"
         AMBULANCE_IS_NOT_SUPPORTED_YET -> "ಆಂಬುಲೆನ್ಸ್ ಇನ್ನೂ ಬೆಂಬಲಿಸಲಾಗಿಲ್ಲ"
         WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE -> "ನಿಮ್ಮ ನಗರದಲ್ಲಿ ಆಂಬುಲೆನ್ಸ್ ಬೆಂಬಲ ಲಭ್ಯವಾಗುತ್ತದೆ ಎಂದು ನಮ್ಮೆಲ್ಲರೂ ನಿಮಗೆ ಅಧಿಸೂಚಿಸುತ್ತೇವೆ"
-        YOU_GOT_10_COINS -> "ನೀವು 10 ನಾಣ್ಯಗಳನ್ನು ಪಡೆದಿದ್ದೀರಿ"        
         CANNOT_DETECT_PAN_CARD -> "PAN ಕಾರ್ಡ್ ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."
         CANNOT_DETECT_AADHAAR -> "ಆಧಾರ್ ಕಾರ್ಡ್ ಅನ್ನು ಪತ್ತೆಹಚ್ಚಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."
         DOCUMENT_ALREADY_VALIDATED -> "ಡಾಕ್ಯುಮೆಂಟ್ ಈಗಾಗಲೇ ಮೌಲ್ಯೀಕರಿಸಲಾಗಿದೆ."

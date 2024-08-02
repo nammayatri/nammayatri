@@ -566,12 +566,12 @@ titleAndETA push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  ][ if rideNotStarted state then specialZoneHeader $ STO.getValueToLocalStore STO.SELECTED_VARIANT
+  ][ if rideNotStarted state then specialZoneHeader state $ STO.getValueToLocalStore STO.SELECTED_VARIANT 
      else distanceView push state
   ]
 
-specialZoneHeader :: forall w. String -> PrestoDOM ( Effect Unit) w
-specialZoneHeader vehicleVariant =
+specialZoneHeader :: forall w. DriverInfoCardState -> String -> PrestoDOM ( Effect Unit) w
+specialZoneHeader state vehicleVariant =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -579,7 +579,7 @@ specialZoneHeader vehicleVariant =
   , padding $ PaddingHorizontal 16 16
   , margin $ MarginTop 6
   , accessibility ENABLE
-  , accessibilityHint $ "Board the first" <> (getTitleConfig vehicleVariant).text <> (getEN $ TAXI_FROM_ZONE "TAXI_FROM_ZONE")
+  , accessibilityHint $ "Board the first" <> (fromMaybe (getTitleConfig vehicleVariant).text state.data.serviceTierName) <> (getEN $ TAXI_FROM_ZONE "TAXI_FROM_ZONE")
   , accessibility DISABLE_DESCENDANT
   ][  linearLayout
       [ height WRAP_CONTENT

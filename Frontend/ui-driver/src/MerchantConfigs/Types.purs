@@ -46,9 +46,7 @@ type AppConfigDriver a =
     clientName :: String,
     rateCardScreen :: RateCardScreenConfig,
     rcLimit :: Int,
-    acExplanation :: Boolean,
-    appUpdatePopupUrl :: String,
-    showProfileAadhaarPan :: Boolean
+    acExplanation :: Boolean
     | a
   } 
 
