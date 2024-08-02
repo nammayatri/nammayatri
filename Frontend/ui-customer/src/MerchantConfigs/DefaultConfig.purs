@@ -344,7 +344,7 @@ config =
       isServiceablePopupFullScreen : false,
       pickUpViewColor : "#303440",
       header : {
-        menuButtonBackground : "#00FFFFFF",
+        menuButtonBackground : "#FFFFFF",
         showLogo : true,
         titleColor : "#1D1D1D",
         showSeparator : false
@@ -645,7 +645,7 @@ config =
                 customerAppId = "in.mobility.manayatri"
               },
             dashboardUrl = "https://www.manayatri.in/open?source=in-app",
-            appLogoLight = "ny_ic_logo_light_my,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_logo_light_my.png",
+            appLogoLight = "ny_ic_logo_dark_my,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_logo_dark_my.png",
             appLogo = "ic_namma_yatri_logo,https://assets.moving.tech/beckn/nammayatri/user/images/ic_namma_yatri_logo.png",
             waitingChargeConfig {
               auto {
