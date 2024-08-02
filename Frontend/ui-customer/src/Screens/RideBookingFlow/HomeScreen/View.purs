@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.View where
 
-import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
+import Accessor (_lat, _lon, _selectedQuotes, _fareProductType, _contents, _otpCode)
 import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha , translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
 import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
@@ -224,7 +224,7 @@ screen initialState =
                 if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then do
                   void $ waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction
                 else 
-                  when (initialState.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) $ do
+                  when (initialState.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || initialState.props.isSpecialZone) $ do
                       let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
                       void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -568,7 +568,7 @@ cancelSearchPopUp push state =
 rideInfoView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideInfoView push state = 
   let isClickable = os == "IOS"
-      isWidgetVisible = ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE ))&& (isQuotes state.data.currentSearchResultType) && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
+      isWidgetVisible = ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE )) && (isQuotes state.data.currentSearchResultType) && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
       disableChatWidget = (not (os == "IOS" || state.props.enableChatWidget)) && ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE))) && (isQuotes state.data.currentSearchResultType) && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions
   in 
   linearLayout
@@ -2335,7 +2335,11 @@ rideTrackingView push state =
                             [ height WRAP_CONTENT
                             , width MATCH_PARENT
                             ]
-                            [ if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
+                            [ 
+                              if state.props.currentStage == RideAccepted && (any (_ == state.data.rideType) [RideType.RENTAL_RIDE, RideType.INTERCITY]) && state.props.isSpecialZone then
+                                let driverInfoCardState = driverInfoCardViewState state
+                                in DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardState { data { isSpecialZone = true } }
+                              else if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
                                 DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
                               else
                                 emptyTextView state
@@ -2352,6 +2356,7 @@ getMessageNotificationViewConfig state = {
   , enableChatWidget : state.props.enableChatWidget
   , isNotificationExpanded :state.props.isNotificationExpanded
   , currentSearchResultType : state.data.currentSearchResultType
+  , isSpecialZone : state.props.isSpecialZone
   , config : state.data.config
   , showNotificationBanner : (state.props.currentStage == RideStarted && state.data.rideType /= RideType.RENTAL_RIDE)
   , lastMessage : state.data.lastMessage
@@ -2651,7 +2656,7 @@ otpAndWaitView push state =
       ] <> FontStyle.body22 TypoGraphy
     , otpView push state
     ]
-  ] <> if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || state.data.driverInfoCardState.driverArrived) then 
+  ] <> if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || (state.props.isSpecialZone && state.props.currentStage == RideAccepted) || state.data.driverInfoCardState.driverArrived) then 
         [(PrestoAnim.animationSet [ fadeIn true ] $ 
         linearLayout
         [ width WRAP_CONTENT
@@ -2668,8 +2673,8 @@ otpAndWaitView push state =
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , accessibility ENABLE
-          , accessibilityHint $ (if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) then "O T P Expiry Info" else "Wait time info : ") <> "Button : Select to learn more about " <> if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) then "O T P Expiry Time" else "wait time"   
-          , text $ if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) then getString EXPIRES_IN else getString WAIT_TIME
+          , accessibilityHint $ (if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)) then "O T P Expiry Info" else "Wait time info : ") <> "Button : Select to learn more about " <> if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)) then "O T P Expiry Time" else "wait time"   
+          , text $ if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)) then getString EXPIRES_IN else getString WAIT_TIME
           , color Color.black700
           , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
           ] <> FontStyle.body22 TypoGraphy
@@ -2743,7 +2748,7 @@ waitTimeView push state =
   ]
 
 waitTimeHint :: HomeScreenState -> String
-waitTimeHint state = (if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) then "O T P Expires in : " else "Wait Time : ") <> case DS.split (DS.Pattern ":") state.data.driverInfoCardState.waitingTime of
+waitTimeHint state = (if (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)) then "O T P Expires in : " else "Wait Time : ") <> case DS.split (DS.Pattern ":") state.data.driverInfoCardState.waitingTime of
                         [minutes, seconds] -> do 
                           let min = DS.trim $ minutes
                           let sec = DS.trim $ seconds
@@ -3073,7 +3078,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                     else pure unit
                   Nothing -> pure unit
         Left err -> pure unit
-    if (state.props.isSpecialZone && state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) && (isLocalStageOn RideAccepted) then do
+    if (state.props.isSpecialZone && state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng zoomLevel "ZOOM"
@@ -3169,9 +3174,11 @@ confirmRide action count duration push state = do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
             fareProductType = (resp.bookingDetails) ^. _fareProductType
-            status = if any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"] then "CONFIRMED" else "TRIP_ASSIGNED"
-            willRideListNull = any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"]
-        if  status == resp.status && (willRideListNull || not (null resp.rideList)) then do
+            otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
+            isSpecialZoneRide = any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails"] || isJust otpCode
+            status = if isSpecialZoneRide then "CONFIRMED" else "TRIP_ASSIGNED"
+            
+        if  status == resp.status && (isSpecialZoneRide || not (null resp.rideList)) then do
             doAff do liftEffect $ push $ action response
             pure unit
         else do
@@ -3192,14 +3199,17 @@ rentalAndIntercityConfirmRide :: forall action. (RideBookingRes -> action) -> ac
 rentalAndIntercityConfirmRide action checkFlowStatusAction count duration push state = do -- TODO-codex : refactor current confirm Ride on the basis of fareProductType for Rental, Intercity and SpecialZone
   if (count /= 0) && (isLocalStageOn ConfirmingQuotes) && (state.props.bookingId /= "")then do
     resp <- rideBooking (state.props.bookingId)
-    _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
+    _ <- pure $ printLog "response to rental And Intercity Confirm Ride ride:- " (state.props.searchId)
     case resp of
       Right response -> do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
             fareProductType = (resp.bookingDetails) ^. _fareProductType
-            status = if any ( _ == fareProductType) ["RENTAL", "INTER_CITY"] then "TRIP_ASSIGNED" else "CONFIRMED"
-        if status == resp.status && not (null resp.rideList) then do
+            otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
+            isSpecialZoneRide = any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails"] || isJust otpCode
+            status = if isSpecialZoneRide then "CONFIRMED" else "TRIP_ASSIGNED"
+            
+        if status == resp.status && (isSpecialZoneRide || not (null resp.rideList)) then do
             doAff do liftEffect $ push $ action response
             pure unit
         else if resp.status == "CANCELLED" then do

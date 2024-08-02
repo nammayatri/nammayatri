@@ -572,7 +572,7 @@ homeScreenFlow = do
       let state = globalState.homeScreen
       liftFlowBT $  logEventWithTwoParams logField_ "ny_user_source_and_destination" "ny_user_enter_source" (take 99 (state.data.source)) "ny_user_enter_destination" (take 99 (state.data.destination))
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq state.props.sourceLat state.props.sourceLong) ORIGIN
-      if (not sourceServiceabilityResp.serviceable || (state.data.rideType == Common.INTERCITY && isJust sourceServiceabilityResp.specialLocation)) then do
+      if (not sourceServiceabilityResp.serviceable) then do
           -- updateLocalStage SearchLocationModel
           -- setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
           -- modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen ,rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false, city = getCityNameFromCode sourceServiceabilityResp.city }})
@@ -592,14 +592,6 @@ homeScreenFlow = do
           _ = spy (fromMaybe "" sourceServiceabilityRespDest.currentCity) (fromMaybe "1" sourceServiceabilityResp.currentCity)
           isIntercity = any (_ == "*") [(fromMaybe "" sourceServiceabilityResp.currentCity), (fromMaybe "" sourceServiceabilityRespDest.currentCity)]
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{rideType = if isIntercity then Common.INTERCITY else Common.NORMAL_RIDE}})
-      when (isJust sourceServiceabilityResp.specialLocation && (fromMaybe "1" sourceServiceabilityResp.currentCity) /= (fromMaybe "" sourceServiceabilityRespDest.currentCity)) do
-        -- updateLocalStage SearchLocationModel
-        -- setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
-
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{props{showIntercityUnserviceablePopUp = true}})
-        -- modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{props{focussedTextField = Just SearchLocPickup, locUnserviceable = true}, data{locationList = globalState.globalProps.cachedSearches}})
-        homeScreenFlow
-        -- searchLocationFlow
       let _ = spy "safadsf" state.data.startTimeUTC
           _ = spy "sdgsagd" isIntercity
       when (state.data.startTimeUTC /= "" && not isIntercity) do
@@ -1070,7 +1062,7 @@ homeScreenFlow = do
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
-                                        if (state.data.rideType /= RENTAL_RIDE) then do
+                                        if (state.data.rideType /= RENTAL_RIDE && currTrip.destination /= "") then do
                                           let updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig
                                           void $ pure $ setSuggestionsMap updatedMap
                                         else pure unit
@@ -4170,8 +4162,8 @@ rentalScreenFlow = do
       let _ = spy "Inside DoRentalSearch" state
       let dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.dropLoc
           pickupLoc = state.data.pickUpLoc
-      (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) ORIGIN
-      if (isJust sourceServiceabilityResp.specialLocation) then do
+      (ServiceabilityRes serviceabilityRes) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) ORIGIN
+      if (not serviceabilityRes.serviceable) then do
         -- void $ pure $ toast $ "Rental Booking Not Allowed from this location" -- TODO-codex : Translations
         modifyScreenState $ RentalScreenStateType (\_ -> state {data {currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true, showPopUpModal = true}})
         rentalScreenFlow 

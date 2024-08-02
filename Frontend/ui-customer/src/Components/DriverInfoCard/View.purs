@@ -84,7 +84,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -209,7 +209,7 @@ navigateView push state =
   , accessibility ENABLE
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
-  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails && state.props.currentStage == RideAccepted
+  , visibility $ boolToVisibility $ (state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails || (state.props.isSpecialZone && state.props.currentStage == RideAccepted))  && state.props.currentStage == RideAccepted
   , onClick push $ const $ OnNavigateToZone
   ][ imageView
      [ width $ V 20
@@ -231,7 +231,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ state.props.currentSearchResultType /= QUOTES OneWaySpecialZoneAPIDetails
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType /= QUOTES OneWaySpecialZoneAPIDetails && not (state.props.isSpecialZone && state.props.currentStage == RideAccepted)
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -935,6 +935,7 @@ getDriverDetails state = {
   , registrationNumber : state.data.registrationNumber
   , config : state.data.config
   , rideStarted : state.props.currentStage == RideStarted
+  , isSpecialZone : state.data.isSpecialZone
 }
 
 getTripDetails :: DriverInfoCardState -> TripDetails Action
@@ -1102,3 +1103,4 @@ separatorView visibility' =
       , height MATCH_PARENT
       ][]
     ]
+

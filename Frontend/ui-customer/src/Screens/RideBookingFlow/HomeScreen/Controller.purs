@@ -93,7 +93,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), NewContacts(..), City(..))
-import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
+import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), RideBookingDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes(..), PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), RideAPIEntity(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -1131,11 +1131,12 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
       stopLocationDetails = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^._stopLocation)
       otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
       (RideAPIEntity rideList) = (fromMaybe dummyRideAPIEntity (head resp.rideList))
-      searchResultType = if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails
+      searchResultType = if (fareProductType == "OneWaySpecialZoneAPIDetails") then CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails
                                 else if fareProductType == "INTER_CITY" then CTP.QUOTES CTP.INTER_CITY
                                 else if (fareProductType == "RENTAL") then CTP.QUOTES CTP.RENTAL 
+                                else if (otpCode /= Nothing) then CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails
                                 else CTP.ESTIMATES
-      otp =if (((fareProductType == "RENTAL") || (fareProductType == "INTER_CITY")) && state.props.currentStage == RideStarted) then fromMaybe "" rideList.endOtp else if (searchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
+      otp =if (((fareProductType == "RENTAL") || (fareProductType == "INTER_CITY")) && state.props.currentStage == RideStarted) then fromMaybe "" rideList.endOtp else if (searchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || isJust otpCode) then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
       newState = state{data{driverInfoCardState 
                               { otp = otp, 
                                 rentalData {
@@ -2491,7 +2492,10 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
         else continue state
 
 eval (GetRideConfirmation (RideBookingRes response)) state = do
-  let currentStage =  
+  let (RideBookingAPIDetails bookingDetails) = response.bookingDetails
+      (RideBookingDetails contents) = bookingDetails.contents
+      otpCode = contents.otpCode
+      currentStage =  
         case head response.rideList of
           Just rideList -> 
             case rideList ^. _status of
@@ -2501,8 +2505,7 @@ eval (GetRideConfirmation (RideBookingRes response)) state = do
               "CANCELLED" -> HomeScreen
               _ -> RideAccepted
           Nothing -> RideAccepted
-      (RideBookingAPIDetails bookingDetails) = response.bookingDetails
-      isSpecialZoneOtpRide = bookingDetails.fareProductType == "OneWaySpecialZoneAPIDetails"
+      isSpecialZoneOtpRide = bookingDetails.fareProductType == "OneWaySpecialZoneAPIDetails" || isJust otpCode
       bookingStatus = response.status
       rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" response.rideScheduledTime else ""
       newState = state {  props { currentStage = currentStage
@@ -2510,7 +2513,7 @@ eval (GetRideConfirmation (RideBookingRes response)) state = do
                                 , bookingId = response.id
                                 , isInApp = true
                                 , isSpecialZone = isSpecialZoneOtpRide }
-                        , data { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails)
+                        , data { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || isJust otpCode)
                                 , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                                     rideScheduledAtUTC : rideScheduledAt
                                   , bookingId : response.id

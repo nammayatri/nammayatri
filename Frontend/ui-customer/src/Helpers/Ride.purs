@@ -59,20 +59,21 @@ checkRideStatus rideAssigned = do
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
             bookingStatus = resp.status
-            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && fareProductType == "OneWaySpecialZoneAPIDetails") then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
-            fareProductType = ((resp.bookingDetails) ^. _fareProductType)
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
+            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && (fareProductType == "OneWaySpecialZoneAPIDetails" || isJust otpCode)) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
+            fareProductType = ((resp.bookingDetails) ^. _fareProductType)
             rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
-            searchResultType =  if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then Common.QUOTES Common.OneWaySpecialZoneAPIDetails
+            searchResultType =  if (fareProductType == "OneWaySpecialZoneAPIDetails") then Common.QUOTES Common.OneWaySpecialZoneAPIDetails
                                 else if fareProductType == "INTER_CITY" then Common.QUOTES Common.INTER_CITY
                                 else if (fareProductType == "RENTAL") then Common.QUOTES Common.RENTAL
+                                else if otpCode /= Nothing then Common.QUOTES Common.OneWaySpecialZoneAPIDetails
                                 else Common.ESTIMATES
             dropLocation = if (fareProductType == "RENTAL") then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
             newState = 
               state
                 { data
-                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (searchResultType /= Common.ESTIMATES)
+                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (searchResultType /= Common.ESTIMATES || isJust otpCode)
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))

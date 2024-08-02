@@ -17,7 +17,8 @@ type DriverDetailsType
   , registrationNumber :: String
   , config :: AppConfig
   , rideStarted :: Boolean
-    }
+  , isSpecialZone :: Boolean
+  }
 
 type TripDetails a
   = { rideStarted :: Boolean

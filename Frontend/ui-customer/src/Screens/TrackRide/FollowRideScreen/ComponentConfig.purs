@@ -101,6 +101,7 @@ getDriverDetails state =
     , registrationNumber: ride.registrationNumber
     , config: state.data.config
     , rideStarted: true
+    , isSpecialZone : false
     }
 
 

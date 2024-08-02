@@ -26,4 +26,5 @@ type MessageNotificationView a = {
 , messageExpiryAction :: (Int ->  String ->  String -> a)
 , chatSuggestions :: Array String
 , messages :: Array ChatComponentConfig
+, isSpecialZone :: Boolean
 }
