@@ -115,7 +115,7 @@ initData =
               , navigation: EmergencyActions []
               }
             , { title: getString SAFETY_DRILL
-              , prefixImage: "ny_ic_safety_drill"
+              , prefixImage: "ny_ic_safety_drill_steps"
               , prefixImageCompleted: "ny_ic_safety_drill_completed"
               , stepNumber: "4"
               , isCompleted: false -- safetyDrillCompleted

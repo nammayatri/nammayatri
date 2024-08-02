@@ -295,7 +295,7 @@ eval (UpdateFollowers (FollowRideRes resp)) state = do
   let followers = map (\(Followers follower) -> follower) resp
   continue state{
     data{
-      followers = Just followers
+      followers = if null followers then Nothing else Just followers
     }
   }
 
@@ -2864,6 +2864,20 @@ eval (ShakeActionCallback count) state = do
   else continue state
 
 eval (UpdateShakePermission isAllowed) state = continue state{props{isShakeEnabled = isAllowed}}
+eval (ServicesOnClick service) state = do 
+  void $ pure $ performHapticFeedback unit
+  case service.type of 
+    RC.RENTAL -> exit $ GoToRentalsFlow state { data {rentalsInfo = Nothing } }
+    RC.INTERCITY ->
+      if state.data.currentCityConfig.enableIntercity then do 
+        void $ pure $ updateLocalStage SearchLocationModel 
+        continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
+        else do
+          void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
+          continue state
+    RC.INSTANT -> continueWithCmd state [ pure $ WhereToClick]
+    RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow state
+    _ -> continue state
 
 eval _ state = update state
 
