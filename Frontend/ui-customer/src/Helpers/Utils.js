@@ -89,6 +89,8 @@ export const getNextDate = function (unit) {
   const dd = String(currentDate.getDate()).padStart(2, "0");
   const mm = String(currentDate.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = currentDate.getFullYear();
+  if(unit === "yyyy-mm-dd")
+    return yyyy + "-" + mm + "-" + dd;
   return dd + "/" + mm + "/" + yyyy;
 }
 
