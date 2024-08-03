@@ -125,7 +125,6 @@ data OneWaySearchReq = OneWaySearchReq
     startTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
-    rideRequestAndRideOtpUnifiedFlow :: Maybe Bool,
     sessionToken :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -139,7 +138,6 @@ data RentalSearchReq = RentalSearchReq
     estimatedRentalDistance :: Meters,
     estimatedRentalDuration :: Seconds,
     quotesUnifiedFlow :: Maybe Bool,
-    rideRequestAndRideOtpUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -155,7 +153,6 @@ data InterCitySearchReq = InterCitySearchReq
     returnTime :: Maybe UTCTime,
     sessionToken :: Maybe Text,
     quotesUnifiedFlow :: Maybe Bool,
-    rideRequestAndRideOtpUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -194,8 +191,7 @@ data SearchDetails = SearchDetails
     startTime :: UTCTime,
     returnTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool,
-    quotesUnifiedFlow :: Maybe Bool,
-    rideRequestAndRideOtpUnifiedFlow :: Maybe Bool
+    quotesUnifiedFlow :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -262,7 +258,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   let SearchDetails {..} = extractSearchDetails now req
   validateStartAndReturnTime now startTime returnTime
 
-  let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow || isJust rideRequestAndRideOtpUnifiedFlow -- Don't get confused with both this later flags, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
+  let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with both this later flags, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
