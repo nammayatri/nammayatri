@@ -103,7 +103,7 @@ makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchReque
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge =
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
-      driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
+      driverDefaultStepFee = (specialZoneExtraTip >>= \tip -> if tip > 0 then Just tip else Nothing) <|> nearbyReq.driverDefaultStepFee
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,

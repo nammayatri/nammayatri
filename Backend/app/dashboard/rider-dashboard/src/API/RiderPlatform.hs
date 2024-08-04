@@ -22,6 +22,7 @@ where
 
 import qualified API.Action.RiderPlatform.Management.Booking as ManagementBookingDSL
 import qualified API.Action.RiderPlatform.Management.Merchant as ManagementMerchantDSL
+import qualified API.Action.RiderPlatform.RideBooking.Invoice as RideBookingInvoiceDSL
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.HotSpot as HotSpot
 import qualified API.RiderPlatform.Issue as Issue
@@ -56,6 +57,7 @@ type API' =
     :<|> Tickets.API
     :<|> HotSpot.API
     :<|> ManagementAPI
+    :<|> RideBookingAPI
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -69,6 +71,7 @@ handler merchantId = do
     :<|> Tickets.handler merchantId city
     :<|> HotSpot.handler merchantId city
     :<|> managementHandler merchantId city
+    :<|> rideBookingHandler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI" -> City.Bangalore
@@ -86,6 +89,7 @@ handlerV2 merchantId city =
     :<|> Tickets.handler merchantId city
     :<|> HotSpot.handler merchantId city
     :<|> managementHandler merchantId city
+    :<|> rideBookingHandler merchantId city
 
 type ManagementAPI =
   ManagementBookingDSL.API
@@ -95,3 +99,10 @@ managementHandler :: ShortId DMerchant.Merchant -> City.City -> FlowServer Manag
 managementHandler merchantId city =
   ManagementBookingDSL.handler merchantId city
     :<|> ManagementMerchantDSL.handler merchantId city
+
+type RideBookingAPI =
+  RideBookingInvoiceDSL.API
+
+rideBookingHandler :: ShortId DMerchant.Merchant -> City.City -> FlowServer RideBookingAPI
+rideBookingHandler merchantId city =
+  RideBookingInvoiceDSL.handler merchantId city

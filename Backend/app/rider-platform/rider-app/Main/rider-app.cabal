@@ -155,6 +155,7 @@ library
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.Invoice
       Domain.Action.Dashboard.IssueList
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Ride
@@ -387,6 +388,7 @@ library
       Tools.Whatsapp
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Merchant
+      API.Action.Dashboard.RideBooking.Invoice
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
