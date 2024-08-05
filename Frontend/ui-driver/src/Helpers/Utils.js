@@ -556,8 +556,7 @@ export const renderSlider = function (cb) {
   }
 }
 
-  // This can be used in future for activityResultListeners
-  // window.activityResultListeners[requestCode] = function (reqCode, bundle) {
-  //   cb(reqCode)(bundle)(); 
-  // };
-}
+// This can be used in future for activityResultListeners
+// window.activityResultListeners[requestCode] = function (reqCode, bundle) {
+//   cb(reqCode)(bundle)(); 
+// };
