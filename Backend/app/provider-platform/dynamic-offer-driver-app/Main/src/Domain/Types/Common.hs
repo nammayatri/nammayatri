@@ -282,6 +282,7 @@ isDynamicOfferTrip :: TripCategory -> Bool
 isDynamicOfferTrip (OneWay OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip (CrossCity OneWayOnDemandDynamicOffer _) = True
 isDynamicOfferTrip (InterCity OneWayOnDemandDynamicOffer _) = True
+isDynamicOfferTrip (Ambulance OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip _ = False
 
 isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
