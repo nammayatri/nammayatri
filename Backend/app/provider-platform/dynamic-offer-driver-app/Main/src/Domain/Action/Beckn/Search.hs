@@ -594,7 +594,7 @@ validateRequest :: Id DM.Merchant -> DSearchReq -> Flow ValidatedDSearchReq
 validateRequest merchantId sReq = do
   isValueAddNP <- CQVAN.isValueAddNP sReq.bapId
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  unless merchant.enabled $ throwError AgencyDisabled
+  unless merchant.enabled $ throwError (AgencyDisabled merchantId.getId)
   -- This checks for origin serviceability too
   NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant sReq.pickupLocation
   let bapCity = nearestOperatingCity.city
