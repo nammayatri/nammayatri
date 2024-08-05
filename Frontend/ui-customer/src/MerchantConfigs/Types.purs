@@ -390,7 +390,9 @@ type VariantConfig = {
   autoRickshaw :: VariantInfo,
   taxi :: VariantInfo,
   taxiPlus :: VariantInfo,
-  bookAny :: VariantInfo
+  bookAny :: VariantInfo,
+  bike :: VariantInfo,
+  suvPlus :: VariantInfo
 }
 
 type VariantInfo = {
@@ -466,7 +468,8 @@ type AcPopupConfig = {
 
 type WaitingChargeConfig = {
   auto :: WaitingCharge,
-  cabs :: WaitingCharge
+  cabs :: WaitingCharge,
+  bike :: WaitingCharge
 }
 
 type WaitingCharge = {

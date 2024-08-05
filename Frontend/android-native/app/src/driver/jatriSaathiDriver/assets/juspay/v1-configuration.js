@@ -214,6 +214,8 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "acExplanation" : false
+    , "rcLimit" : 3
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
     , "navigationAppConfig" : {
@@ -221,7 +223,7 @@ window.getMerchantConfig = function () {
       , "packageName" : "com.google.android.apps.maps"
     }
     , "subscriptionConfig" : {
-      "enableBlocking" : true,
+      "enableBlocking" : false,
       "completePaymentPopup" : false,
       "supportNumber" : "08069724949",
       "enableSubscriptionPopups" : true,
@@ -250,6 +252,9 @@ window.getMerchantConfig = function () {
     } 
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "autoPayBanner" : false
+    , "rideActionModelConfig" : {
+      "showVehicleVariant" : false
+    }
     , "referralType" : "QRScreen"
     , "profile" :
         { "bookingOptionMenuForTaxi" : true
@@ -320,8 +325,13 @@ window.getMerchantConfig = function () {
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
+  , "rateCardScreen" :{
+    "showYoutubeVideo" : false,
+    "showRateCard" : true,
+    "showTollCharges" : false
+  }
   , "waitTimeConfig" : {
-    "enableWaitTime" : false
+    "enableWaitTime" : true
   }
   , "coinsConfig" : {
     "minCoinSliderValue" : 200,
@@ -347,19 +357,21 @@ window.getMerchantConfig = function () {
       "cityName" : "Kolkata",
       "mapImage" : "ys_ic_kolkata_map",
       "cityCode" : "std:033",
+      "enableRentals" : true,
+      "enableIntercity" : true,
       "showSubscriptions" : true,
-      "enableAdvancedBooking" : false,
+      "enableAdvancedBooking" : true,
       "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 22.5354064,
       "cityLong" : 88.2649516,
-      "supportNumber" : "",
+      "supportNumber" : "08069724949",
       "languageKey" : "BN_IN",
       "showDriverReferral" : true,
       "showCustomerReferral" : true,
       "uploadRCandDL" : true, 
-      "enableYatriCoins" : true,
-      "vehicleNSImg" : "",
+      "enableYatriCoins" : false,
+      "vehicleNSImg" : "ny_ic_ambulance_image",
       "showEarningSection" : true,
       "registration" : {
           "supportWAN" : "918088065549",
@@ -367,9 +379,9 @@ window.getMerchantConfig = function () {
           "whatsappSupport" : false
       },
       "variantSubscriptionConfig" : {
-        "enableVariantBasedSubscription" : false,
-        "variantList" : [],
-        "enableCabsSubscriptionView" : false,
+        "enableVariantBasedSubscription" : true,
+        "variantList" : ["CarCategory"],
+        "enableCabsSubscriptionView" : true,
         "staticViewPlans" : []
       },
       "referral" : {
@@ -380,16 +392,16 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : {
            "cab" : {
-             "freeSeconds" : 300,
-             "perMinCharges" : 1.0
+             "freeSeconds" : 180,
+             "perMinCharges" : 2.0
            },
            "auto" : {
              "freeSeconds" : 180,
              "perMinCharges" : 1.50
            },
            "bike" : {
-             "freeSeconds" : 300,
-             "perMinCharges" : 1.0
+             "freeSeconds" : 180,
+             "perMinCharges" : 2.0
            }
          },
       "rentalWaitingChargesConfig" : {
@@ -418,19 +430,21 @@ window.getMerchantConfig = function () {
       "cityName" : "Siliguri",
       "mapImage" : "ys_ic_siliguri_map",
       "cityCode" : "std:0353",
-      "showSubscriptions" : true,
+      "showSubscriptions" : false,
       "enableAdvancedBooking" : false,
       "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 26.708845,
       "cityLong" : 88.434362,
-      "supportNumber" : "",
+      "supportNumber" : "08069724949",
       "languageKey" : "BN_IN",
       "showDriverReferral" : true,
       "showCustomerReferral" : true,
       "uploadRCandDL" : true,
-      "enableYatriCoins" : true,
+      "enableYatriCoins" : false,
       "vehicleNSImg" : "",
+      "enableRentals" : true,
+      "enableIntercity" : true,
       "registration" : {
           "supportWAN" : "918618963188",
           "callSupport" : true,
@@ -444,9 +458,80 @@ window.getMerchantConfig = function () {
       },
       "showEarningSection" : true,
       "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 2.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.50
+        },
+        "bike" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "rentalWaitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 2.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "bike" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        }
+      },
+      "gstPercentage" :  "18",
+      "assets" :{
+        "auto_image" : "ny_ic_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      },
+      "enableHvSdk": true 
+    },
+    {
+      "cityName" : "Asansol",
+      "mapImage" : "ys_ic_asansol_map",
+      "cityCode" : "std:0353",
+      "showSubscriptions" : false,
+      "enableAdvancedBooking" : false,
+      "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+      "cityLat" : 26.708845,
+      "cityLong" : 88.434362,
+      "supportNumber" : "08069724949",
+      "languageKey" : "BN_IN",
+      "showDriverReferral" : true,
+      "showCustomerReferral" : true,
+      "uploadRCandDL" : true,
+      "enableYatriCoins" : false,
+      "vehicleNSImg" : "ny_ic_location_unserviceable",
+      "registration" : {
+          "supportWAN" : "918618963188",
+          "callSupport" : true,
+          "whatsappSupport" : true
+      },
+      "variantSubscriptionConfig" : {
+        "enableVariantBasedSubscription" : false,
+        "variantList" : [],
+        "enableCabsSubscriptionView" : false,
+        "staticViewPlans" : []
+      },
+      "showEarningSection" : true,
+      "referral" : {
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
       },
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : {
@@ -493,3 +578,9 @@ let defRateCardConfig = {
     "showLearnMore" : false,
     "learnMoreVideoLink" : ""
   }
+
+let staticSubscriptionConfig = [
+  {"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
+  {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
+]

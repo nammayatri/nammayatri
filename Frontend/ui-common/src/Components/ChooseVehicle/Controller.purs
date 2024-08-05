@@ -5,7 +5,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (Margin(..))
 import Data.Maybe (Maybe(..))
 import Common.Types.App (RateCardType(..), FareList)
@@ -35,7 +35,7 @@ type Config
     , minPrice :: Maybe Int
     , basePrice :: Int
     , showInfo :: Boolean
-    , searchResultType :: SearchType
+    , searchResultType :: SearchResultType
     , isBookingOption :: Boolean
     , pickUpCharges :: Number 
     , tollCharge :: Number
@@ -67,15 +67,24 @@ type Config
     , showStroke :: Boolean
     , hasTollCharges :: Boolean
     , hasParkingCharges :: Boolean
+    , specialLocationTag :: Maybe String
     }
 
-data SearchType = QUOTES | ESTIMATES
+data SearchResultType = QUOTES FareProductType | ESTIMATES
 
-derive instance genericSearchType :: Generic SearchType _
-instance eqSearchType :: Eq SearchType where eq = genericEq
-instance showSearchType :: Show SearchType where show = genericShow
-instance encodeSearchType :: Encode SearchType where encode = defaultEnumEncode
-instance decodeSearchType :: Decode SearchType where decode = defaultEnumDecode
+derive instance genericSearchResultType :: Generic SearchResultType _
+instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
+instance showSearchResultType :: Show SearchResultType where show = genericShow
+
+data FareProductType =  ONE_WAY
+                      | INTER_CITY
+                      | RENTAL
+                      | DRIVER_OFFER
+                      | OneWaySpecialZoneAPIDetails
+
+derive instance genericFareProductType :: Generic FareProductType _
+instance showFareProductType :: Show FareProductType where show = genericShow
+instance eqFareProductType :: Eq FareProductType where eq = genericEq
 
 
 config :: Config
@@ -95,7 +104,7 @@ config =
   , minPrice : Nothing
   , basePrice : 0 
   , showInfo : false
-  , searchResultType : QUOTES
+  , searchResultType : ESTIMATES
   , isBookingOption : false
   , pickUpCharges : 0.0
   , layoutMargin : MarginHorizontal 0 0
@@ -127,4 +136,5 @@ config =
   , showStroke : true
   , hasTollCharges : false 
   , hasParkingCharges : false
+  , specialLocationTag : Nothing
   }

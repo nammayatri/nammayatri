@@ -23,7 +23,7 @@ import Data.Maybe as Mb
 initData :: ST.MetroTicketBookingScreenState
 initData = {
   data: {
-    ticketType : ST.ONE_WAY_TRIP
+    ticketType : ST.ONE_WAY_TICKET
   , ticketCount : 1
   , srcLoc : ""
   , destLoc : ""

@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:visibility="gone"
+    android:visibility="visible"
     android:id="@+id/relative_layout"
     android:background="@android:color/transparent"
     xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -40,7 +40,7 @@
                         android:background="#30E55454"
                         android:gravity="center"
                         android:id="@+id/thirdPartyTag"
-                        android:visibility="gone"
+                        android:visibility="visible"
                         android:paddingLeft="6dp">
 
                         <ImageView
@@ -64,7 +64,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="@color/grey900"
-                        android:visibility="gone"
+                        android:visibility="visible"
                         android:id="@+id/tags_block"
                         android:padding="10dp">
                         <HorizontalScrollView
@@ -82,7 +82,7 @@
                                     android:orientation="horizontal"
                                     android:gravity="center_vertical"
                                     android:paddingHorizontal="3dp"
-                                    android:visibility="gone"
+                                    android:visibility="visible"
                                     android:id="@+id/spZoneTag"
                                     android:layout_marginEnd="10dp"
                                     android:layout_height="wrap_content">
@@ -99,7 +99,7 @@
                                         android:fontFamily="@font/plus_jakartasans_semibold"
                                         android:paddingHorizontal="2dp"
                                         android:paddingVertical="6dp"
-                                        android:visibility="gone"
+                                        android:visibility="visible"
                                         android:text="₹10"
                                         android:lineHeight="20dp"
                                         android:textColor="@color/white"
@@ -124,7 +124,7 @@
                                     android:orientation="horizontal"
                                     android:gravity="center_vertical"
                                     android:paddingHorizontal="3dp"
-                                    android:visibility="gone"
+                                    android:visibility="visible"
                                     android:id="@+id/customerTipTag"
                                     android:layout_marginEnd="10dp"
                                     android:layout_height="wrap_content">
@@ -156,7 +156,7 @@
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal"
                                     android:paddingHorizontal="8dp"
-                                    android:visibility="gone">
+                                    android:visibility="visible">
 
                                     <ImageView
                                         android:id="@+id/rentalRideTypeImage"
@@ -187,7 +187,7 @@
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal"
                                     android:paddingHorizontal="8dp"
-                                    android:visibility="gone">
+                                    android:visibility="visible">
 
                                     <ImageView
                                         android:id="@+id/intercityRideTypeImage"
@@ -215,7 +215,7 @@
                                     android:orientation="horizontal"
                                     android:gravity="center_vertical"
                                     android:paddingHorizontal="3dp"
-                                    android:visibility="gone"
+                                    android:visibility="visible"
                                     android:id="@+id/testRequestTag"
                                     android:layout_marginEnd="10dp"
                                     android:layout_height="wrap_content">
@@ -247,7 +247,7 @@
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal"
                                     android:paddingHorizontal="8dp"
-                                    android:visibility="gone">
+                                    android:visibility="visible">
 
                                     <ImageView
                                         android:id="@+id/rideTypeImage"
@@ -275,7 +275,7 @@
                                     android:background="@drawable/ic_accessibility_tag"
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal"
-                                    android:visibility="gone">
+                                    android:visibility="visible">
 
                                     <ImageView
                                         android:layout_width="16dp"
@@ -382,7 +382,7 @@
                                             android:text="•"
                                             android:id="@+id/durationToPickupImage"
                                             android:textSize="24dp"
-                                            android:visibility="gone"
+                                            android:visibility="visible"
                                             android:textColor="#A7A7A7"
                                             android:layout_marginHorizontal="4dp"/>
 
@@ -393,7 +393,7 @@
                                             android:lineHeight="28dp"
                                             android:id="@+id/durationToPickup"
                                             android:text="20 min"
-                                            android:visibility="gone"
+                                            android:visibility="visible"
                                             android:textColor="@color/Black800"
                                             android:textFontWeight="600"
                                             android:textSize="24dp"/>
@@ -409,7 +409,7 @@
                                     <LinearLayout
                                         android:id="@+id/rideStartDateTimeTag"
                                         android:layout_width="wrap_content"
-                                        android:visibility="gone"
+                                        android:visibility="visible"
                                         android:layout_height="wrap_content">
 
                                         <TextView
@@ -473,6 +473,7 @@
                                                         app:cardBackgroundColor="@color/blue800"
                                                         android:theme="@style/Theme.MaterialComponents.Light"
                                                         app:cardCornerRadius="28dp"
+                                                        android:visibility="visible"
                                                         android:layout_marginRight="6dp"
                                                         app:contentPadding="5dp"
                                                         app:cardElevation="0dp">
@@ -511,7 +512,7 @@
                                                         android:theme="@style/Theme.MaterialComponents.Light"
                                                         app:cardCornerRadius="28dp"
                                                         android:layout_marginRight="6dp"
-                                                        android:visibility="gone"
+                                                        android:visibility="visible"
                                                         app:contentPadding="5dp"
                                                         app:cardElevation="0dp">
 
@@ -538,6 +539,25 @@
                                                                 android:fontFamily="@font/dmsans_bold"
                                                                 android:text="Non-AC"/>
                                                         </LinearLayout>
+
+                                                    </com.google.android.material.card.MaterialCardView>
+                                                            <com.google.android.material.card.MaterialCardView
+                                                        android:id="@+id/ventilator"
+                                                        android:layout_width="wrap_content"
+                                                        android:layout_height="wrap_content"
+                                                        android:layout_gravity="center"
+                                                        app:cardBackgroundColor="@color/blue800"
+                                                        android:theme="@style/Theme.MaterialComponents.Light"
+                                                        app:cardCornerRadius="28dp"
+                                                        android:visibility="visible"
+                                                        android:layout_marginRight="6dp"
+                                                        app:contentPadding="5dp"
+                                                        app:cardElevation="0dp">
+
+                                                        <ImageView
+                                                            android:layout_width="16dp"
+                                                            android:layout_height="16dp"
+                                                            android:src="@drawable/ny_ic_ventilator" />
 
                                                     </com.google.android.material.card.MaterialCardView>
 
@@ -569,7 +589,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="match_parent"
                                     android:orientation="horizontal"
-                                    android:visibility="gone">
+                                    android:visibility="visible">
 
                                     <LinearLayout
                                         android:layout_width="1dp"
@@ -675,7 +695,7 @@
                                         android:textSize="14dp"
                                         android:fontFamily="@font/plus_jakartasans_medium"
                                         android:textStyle="bold"
-                                        android:visibility="gone"
+                                        android:visibility="visible"
                                         />
                                     <LinearLayout
                                         android:id="@+id/rentalDurationDistanceTag"
@@ -685,7 +705,7 @@
                                         android:gravity="center_vertical"
                                         android:orientation="horizontal"
                                         android:layout_marginTop="12dp"
-                                        android:visibility="gone"
+                                        android:visibility="visible"
                                         >
                                         <TextView
                                             android:id="@+id/rideDuration"
@@ -723,7 +743,7 @@
                                     android:layout_width="40dp"
                                     android:layout_height="match_parent"
                                     android:id="@+id/assetZonePickup"
-                                    android:visibility="gone"
+                                    android:visibility="visible"
                                     android:src="@drawable/ic_metro_shape"/>
                             </LinearLayout>
 
@@ -762,7 +782,7 @@
                                     android:lineHeight="20dp"
                                     android:textColor="#2C2F3A"
                                     android:textSize="16dp"
-                                    android:visibility="gone"
+                                    android:visibility="visible"
                                     android:layout_marginLeft="8dp"/>
 
                             </LinearLayout>
@@ -814,14 +834,14 @@
                                         android:textSize="14dp"
                                         android:fontFamily="@font/plus_jakartasans_medium"
                                         android:textStyle="bold"
-                                        android:visibility="gone"
+                                        android:visibility="visible"
                                         />
                                 </LinearLayout>
                                 <ImageView
                                     android:layout_width="40dp"
                                     android:layout_height="match_parent"
                                     android:id="@+id/assetZoneDrop"
-                                    android:visibility="gone"
+                                    android:visibility="visible"
                                     android:src="@drawable/ic_metro_shape"/>
 
                             </LinearLayout>
@@ -1110,7 +1130,7 @@
             android:layout_width="65dp"
             android:layout_height="65dp"
             android:layout_centerHorizontal="true"
-            android:visibility="gone"
+            android:visibility="visible"
             app:cardCornerRadius="45dp">
 
             <ProgressBar

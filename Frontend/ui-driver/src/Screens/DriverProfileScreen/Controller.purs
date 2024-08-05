@@ -372,7 +372,7 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus,
                                       goHomeActive = driverGoHomeInfo.status == Just "ACTIVE"
                                       },
-                    props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToIntercity = driverProfileResp.canSwitchToIntercity}}
+                    props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity}}
 
 eval (RegStatusResponse  (SA.DriverRegistrationStatusResp regStatusResp)) state =
   let driverVehicleData = mkDriverVehicleDetails
@@ -417,7 +417,11 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
 
 eval (ManageVehicleHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continue state{props{manageVehicleVisibility = false}}
 
-eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = if state.data.fromHomeScreen then exit $ GoBack state else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}}
+eval (DriverGenericHeaderAC(GenericHeaderController.PrefixImgOnClick )) state = 
+  if state.data.fromHomeScreen then do
+    void $ pure $ hideKeyboardOnNavigation true
+    exit $ GoBack state 
+  else continue state {props{showGenderView=false, alternateNumberView=false},data{driverEditAlternateMobile = Nothing}} 
 
 
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do

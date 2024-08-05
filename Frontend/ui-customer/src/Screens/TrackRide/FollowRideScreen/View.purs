@@ -56,7 +56,7 @@ import Presto.Core.Types.Language.Flow (Flow, getState, modifyState)
 import Helpers.Pooling(delay)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), SearchResultType(..), Stage(..))
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), Stage(..))
 import Styles.Colors as Color
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -72,6 +72,7 @@ import Components.MessagingView.Common.Types (MessageNotificationView)
 import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
 import Foreign (unsafeToForeign)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon)
+import Screens.Types as ST
 
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput
@@ -411,6 +412,7 @@ getMessageNotificationViewConfig state =
   , user :{ userName : name
     , receiver : name
     }
+  , isSpecialZone : false
   }
 
 bottomSheetView ::
@@ -820,7 +822,7 @@ driverLocationTracking push action duration id routeState = do
 
       destination = ride.destination
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType (Just RideStarted)
 
       sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
 
@@ -883,7 +885,7 @@ driverLocationTracking push action duration id routeState = do
 
       dstLon = ride.destinationLng
 
-      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING ride.fareProductType Nothing
 
       sourceSpecialTagIcon = zoneLabelIcon state.data.zoneType.sourceTag
 
