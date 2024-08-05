@@ -43,6 +43,7 @@ import Debug(spy)
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Aff (launchAff)
+import Effect.Uncurried(runEffectFn1, runEffectFn2)
 import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop, flowRunner, getNewIDWithTag, getCurrentUTC, convertUTCtoISC) as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -62,7 +63,7 @@ import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
 import Helpers.CommonView (emptyTextView)
 import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker, storeCallBackCustomer)
-import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker)
+import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker, handleLocateOnMapCallback)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -106,9 +107,10 @@ searchLocationScreen initialState globalProps =
     globalEventsFunc push = do
       void $ storeCallBackCustomer push NotificationListener "SearchLocationScreen"
       case initialState.props.searchLocStage of 
-        LocateOnMapStage -> storeCallBackLocateOnMap push LocFromMap 
-        ConfirmLocationStage -> do 
-          storeCallBackLocateOnMap push LocFromMap
+        LocateOnMapStage -> do
+          void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocFromMap key lat lon) (handleLocateOnMapCallback "SearchLocationScreen")
+        ConfirmLocationStage -> do
+          void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocFromMap key lat lon) (handleLocateOnMapCallback "SearchLocationScreen")
         ChooseYourRide -> do
           void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
           when (DA.null initialState.data.quotesList) $ do

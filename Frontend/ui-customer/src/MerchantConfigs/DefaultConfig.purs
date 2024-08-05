@@ -243,6 +243,7 @@ config =
     enableSafetyFlow : true, 
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
+    enableEditPickupLocation : false,
     enableCustomerSupportForSafety : false,
     enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2",
     enableAcPopup : false,
@@ -279,7 +280,8 @@ config =
               , showHotSpotsWithinRadius : 150.0
               , enableHotSpot : EHC.jBridgeMethodExists "locateOnMapV2"
               , updateHotSpotOutSideRange : 200.0
-              }
+              },
+            editPickUpThreshold : 100.0
           }
       , labelTextSize : 30
       , animationDuration : 500

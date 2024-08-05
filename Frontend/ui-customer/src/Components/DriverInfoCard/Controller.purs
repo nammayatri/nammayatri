@@ -55,7 +55,7 @@ data Action = NoAction
             | RentalInfo
             | ShowEndOTP
             | ShowDirections Number Number
-            | EditingDestination
+            | EditingLocation LocationType
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -130,3 +130,5 @@ type DriverInfoCardData =
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
   }
+
+data LocationType = SOURCE | DESTINATION

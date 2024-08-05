@@ -2179,7 +2179,6 @@ currentRideFlow activeRideResp isActiveRide = do
           (not (null activeRideResponse.list)) ?
             activeRidePatch (GetRidesHistoryResp activeRideResponse) allState onBoardingSubscriptionViewCount
             $ noActiveRidePatch allState onBoardingSubscriptionViewCount
-    
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
@@ -2654,6 +2653,9 @@ homeScreenFlow = do
         "TRIP_STARTED" -> do 
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = not (homeScreen.data.activeRide.tripType == ST.Rental)}})
           homeScreenFlow
+        "EDIT_LOCATION" -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {route = []}})
+          baseAppFlow false Nothing Nothing
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
@@ -2710,7 +2712,7 @@ homeScreenFlow = do
           Left _ -> pure unit
       homeScreenFlow
     UPDATE_ROUTE state -> do
-      void $ pure $ JB.exitLocateOnMap ""
+      void $ pure $ JB.exitLocateOnMap ""   
       let srcDestConfig = getSrcDestConfig state
           srcLat = srcDestConfig.srcLat
           srcLon = srcDestConfig.srcLon
@@ -2774,7 +2776,7 @@ homeScreenFlow = do
             let normalRoute = JB.mkRouteConfig coor srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT (mapRouteConfig "" "" false getPolylineAnimationConfig) 
             liftFlowBT $ drawRoute [normalRoute] (getNewIDWithTag "DriverTrackingHomeScreenMap")
             pure unit
-          Nothing -> pure unit                
+          Nothing -> pure unit            
       homeScreenFlow
     UPDATE_STAGE stage -> do
       void $ updateStage $ HomeScreenStage stage
@@ -4208,7 +4210,6 @@ getSrcDestConfig state =
       source : state.data.activeRide.source,
       destination : fromMaybe "" state.data.activeRide.destination
   }
-
 
 getHvErrorMsg :: Maybe String -> String
 getHvErrorMsg errorCode = 
