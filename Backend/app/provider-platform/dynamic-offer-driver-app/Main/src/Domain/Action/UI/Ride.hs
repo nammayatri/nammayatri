@@ -45,6 +45,7 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
+import Domain.Types.FareParameters
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -219,8 +220,44 @@ data OTPRideReq = OTPRideReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-newtype DriverRideListRes = DriverRideListRes
-  { list :: [DriverRideRes]
+data DriverRideListRes = DriverRideListRes
+  { list :: [DriverRideRes],
+    fareBreakupSummary :: Maybe FareBreakupSummaryRes
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data FareBreakupSummaryRes = FareBreakupSummaryRes
+  { fareBreakupList :: [FareBreakupListItem],
+    summary :: FareBreakupSummary
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data FareBreakupListItem = FareBreakupListItem
+  { rideId :: Id DRide.Ride,
+    fareBreakup :: FareParameters
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data FareBreakupSummary = FareBreakupSummary
+  { totalDriverSelectedFare :: HighPrecMoney,
+    customerExtraFee :: HighPrecMoney,
+    serviceCharge :: HighPrecMoney,
+    parkingCharge :: HighPrecMoney,
+    govtCharges :: HighPrecMoney,
+    baseFare :: HighPrecMoney,
+    waitingCharge :: HighPrecMoney,
+    rideExtraTimeFare :: HighPrecMoney,
+    nightShiftCharge :: HighPrecMoney,
+    fareParametersDetails :: FareParametersDetailsRes
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data FareParametersDetailsRes = FareParametersDetailsRes
+  { progressiveDetails :: FParamsProgressiveDetails,
+    slabDetails :: FParamsSlabDetails,
+    rentalDetails :: FParamsRentalDetails,
+    interCityDetails :: FParamsInterCityDetails,
+    ambulanceDetails :: FParamsAmbulanceDetails
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -240,7 +277,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFlee
       then runInReplica $ QRide.getActiveBookingAndRideByDriverId driverId
       else runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
-  driverRideLis <- forM rides $ \(ride, booking) -> do
+  rideListAPIItermediateRes <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideRating <- runInReplica $ QR.findRatingForRide ride.id
     driverNumber <- RD.getDriverNumber rideDetail
@@ -249,13 +286,18 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFlee
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
     let goHomeReqId = ride.driverGoHomeRequestId
     mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP
-  filteredRides <- case mbFleetOwnerId of
+  filteredRes <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
       unless (isJust isFleetDriver) $ throwError (InvalidRequest "Driver is not the  part of this fleet")
-      return $ filter (\ride -> ride.fleetOwnerId == (Just fleetOwnerId)) driverRideLis
-    Nothing -> return driverRideLis
-  pure . DriverRideListRes $ sortOn (Down . (.bookingType)) filteredRides
+      return $ filter (\(ride, _fareBreakup) -> ride.fleetOwnerId == (Just fleetOwnerId)) rideListAPIItermediateRes
+    Nothing -> return rideListAPIItermediateRes
+  fareBreakupSummary <- mkFareBreakupSummary $ map snd filteredRes
+  pure $
+    DriverRideListRes
+      { list = sortOn (Down . (.bookingType)) (map fst filteredRes),
+        ..
+      }
 
 mkDriverRideRes ::
   ( EncFlow m r,
@@ -271,7 +313,7 @@ mkDriverRideRes ::
   Maybe (Id DDGR.DriverGoHomeRequest) ->
   Maybe DI.DriverInformation ->
   Bool ->
-  m DriverRideRes
+  m (DriverRideRes, FareBreakupListItem)
 mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
@@ -283,81 +325,86 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   return $
-    DriverRideRes
-      { id = ride.id,
-        shortRideId = ride.shortId,
-        status = ride.status,
-        fromLocation = DLoc.makeLocationAPIEntity booking.fromLocation,
-        toLocation = DLoc.makeLocationAPIEntity <$> booking.toLocation,
-        driverName = rideDetails.driverName,
-        driverNumber,
-        vehicleNumber = rideDetails.vehicleNumber,
-        vehicleColor = fromMaybe initial rideDetails.vehicleColor,
-        vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
-        vehicleModel = fromMaybe initial rideDetails.vehicleModel,
-        computedFare = roundToIntegral <$> ride.fare,
-        computedFareWithCurrency = flip PriceAPIEntity ride.currency <$> ride.fare,
-        estimatedDuration = booking.estimatedDuration,
-        actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
-        estimatedBaseFare = roundToIntegral estimatedBaseFare,
-        estimatedBaseFareWithCurrency = PriceAPIEntity estimatedBaseFare ride.currency,
-        estimatedDistance = booking.estimatedDistance,
-        estimatedDistanceWithUnit = convertMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
-        driverSelectedFare = roundToIntegral $ fromMaybe 0.0 fareParams.driverSelectedFare,
-        driverSelectedFareWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0.0 fareParams.driverSelectedFare,
-        actualRideDistance = ride.traveledDistance,
-        actualRideDistanceWithUnit = convertHighPrecMetersToDistance ride.distanceUnit ride.traveledDistance,
-        createdAt = ride.createdAt,
-        updatedAt = ride.updatedAt,
-        riderName = booking.riderName,
-        pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
-        tripStartTime = ride.tripStartTime,
-        tripEndTime = ride.tripEndTime,
-        specialLocationTag = booking.specialLocationTag,
-        rideRating = rideRating <&> (.ratingValue),
-        chargeableDistance = ride.chargeableDistance,
-        chargeableDistanceWithUnit = convertMetersToDistance ride.distanceUnit <$> ride.chargeableDistance,
-        exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
-        customerExtraFee = roundToIntegral <$> fareParams.customerExtraFee,
-        customerExtraFeeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.customerExtraFee,
-        bapName = bapMetadata <&> (.name),
-        bapLogo = bapMetadata >>= (.logoUrl),
-        disabilityTag = booking.disabilityTag,
-        requestedVehicleVariant = castServiceTierToVariant booking.vehicleServiceTier,
-        isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
-        vehicleServiceTier = booking.vehicleServiceTier,
-        vehicleServiceTierName = booking.vehicleServiceTierName,
-        vehicleCapacity = booking.vehicleServiceTierSeatingCapacity,
-        isVehicleAirConditioned = booking.isAirConditioned,
-        driverGoHomeRequestId = goHomeReqId,
-        payerVpa = driverInfo >>= (.payerVpa),
-        autoPayStatus = driverInfo >>= (.autoPayStatus),
-        isFreeRide = ride.isFreeRide,
-        customerCancellationDues = fromMaybe 0 fareParams.customerCancellationDues,
-        estimatedTollCharges = fareParams.tollCharges,
-        parkingCharge = fareParams.parkingCharge,
-        tollCharges = ride.tollCharges,
-        tollConfidence = ride.tollConfidence,
-        customerCancellationDuesWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0 fareParams.customerCancellationDues,
-        estimatedTollChargesWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.tollCharges,
-        parkingChargeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.parkingCharge,
-        tollChargesWithCurrency = flip PriceAPIEntity ride.currency <$> ride.tollCharges,
-        startOdometerReading = ride.startOdometerReading,
-        endOdometerReading = ride.endOdometerReading,
-        stopLocationId = booking.stopLocationId,
-        tripCategory = booking.tripCategory,
-        returnTime = booking.returnTime,
-        vehicleAge = rideDetails.vehicleAge,
-        roundTrip = fromMaybe False booking.roundTrip,
-        nextStopLocation = nextStopLocation,
-        lastStopLocation = lastStopLocation,
-        tripScheduledAt = booking.startTime,
-        bookingType = if ride.status == DRide.NEW && ride.isAdvanceBooking && maybe False (.hasAdvanceBooking) driverInfo then ADVANCED else CURRENT,
-        isValueAddNP,
-        enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates,
-        fleetOwnerId = rideDetails.fleetOwnerId,
-        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide
-      }
+    ( DriverRideRes
+        { id = ride.id,
+          shortRideId = ride.shortId,
+          status = ride.status,
+          fromLocation = DLoc.makeLocationAPIEntity booking.fromLocation,
+          toLocation = DLoc.makeLocationAPIEntity <$> booking.toLocation,
+          driverName = rideDetails.driverName,
+          driverNumber,
+          vehicleNumber = rideDetails.vehicleNumber,
+          vehicleColor = fromMaybe initial rideDetails.vehicleColor,
+          vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
+          vehicleModel = fromMaybe initial rideDetails.vehicleModel,
+          computedFare = roundToIntegral <$> ride.fare,
+          computedFareWithCurrency = flip PriceAPIEntity ride.currency <$> ride.fare,
+          estimatedDuration = booking.estimatedDuration,
+          actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
+          estimatedBaseFare = roundToIntegral estimatedBaseFare,
+          estimatedBaseFareWithCurrency = PriceAPIEntity estimatedBaseFare ride.currency,
+          estimatedDistance = booking.estimatedDistance,
+          estimatedDistanceWithUnit = convertMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
+          driverSelectedFare = roundToIntegral $ fromMaybe 0.0 fareParams.driverSelectedFare,
+          driverSelectedFareWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0.0 fareParams.driverSelectedFare,
+          actualRideDistance = ride.traveledDistance,
+          actualRideDistanceWithUnit = convertHighPrecMetersToDistance ride.distanceUnit ride.traveledDistance,
+          createdAt = ride.createdAt,
+          updatedAt = ride.updatedAt,
+          riderName = booking.riderName,
+          pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
+          tripStartTime = ride.tripStartTime,
+          tripEndTime = ride.tripEndTime,
+          specialLocationTag = booking.specialLocationTag,
+          rideRating = rideRating <&> (.ratingValue),
+          chargeableDistance = ride.chargeableDistance,
+          chargeableDistanceWithUnit = convertMetersToDistance ride.distanceUnit <$> ride.chargeableDistance,
+          exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
+          customerExtraFee = roundToIntegral <$> fareParams.customerExtraFee,
+          customerExtraFeeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.customerExtraFee,
+          bapName = bapMetadata <&> (.name),
+          bapLogo = bapMetadata >>= (.logoUrl),
+          disabilityTag = booking.disabilityTag,
+          requestedVehicleVariant = castServiceTierToVariant booking.vehicleServiceTier,
+          isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
+          vehicleServiceTier = booking.vehicleServiceTier,
+          vehicleServiceTierName = booking.vehicleServiceTierName,
+          vehicleCapacity = booking.vehicleServiceTierSeatingCapacity,
+          isVehicleAirConditioned = booking.isAirConditioned,
+          driverGoHomeRequestId = goHomeReqId,
+          payerVpa = driverInfo >>= (.payerVpa),
+          autoPayStatus = driverInfo >>= (.autoPayStatus),
+          isFreeRide = ride.isFreeRide,
+          customerCancellationDues = fromMaybe 0 fareParams.customerCancellationDues,
+          estimatedTollCharges = fareParams.tollCharges,
+          parkingCharge = fareParams.parkingCharge,
+          tollCharges = ride.tollCharges,
+          tollConfidence = ride.tollConfidence,
+          customerCancellationDuesWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0 fareParams.customerCancellationDues,
+          estimatedTollChargesWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.tollCharges,
+          parkingChargeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.parkingCharge,
+          tollChargesWithCurrency = flip PriceAPIEntity ride.currency <$> ride.tollCharges,
+          startOdometerReading = ride.startOdometerReading,
+          endOdometerReading = ride.endOdometerReading,
+          stopLocationId = booking.stopLocationId,
+          tripCategory = booking.tripCategory,
+          returnTime = booking.returnTime,
+          vehicleAge = rideDetails.vehicleAge,
+          roundTrip = fromMaybe False booking.roundTrip,
+          nextStopLocation = nextStopLocation,
+          lastStopLocation = lastStopLocation,
+          tripScheduledAt = booking.startTime,
+          bookingType = if ride.status == DRide.NEW && ride.isAdvanceBooking && maybe False (.hasAdvanceBooking) driverInfo then ADVANCED else CURRENT,
+          isValueAddNP,
+          enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates,
+          fleetOwnerId = rideDetails.fleetOwnerId,
+          enableOtpLessRide = fromMaybe False ride.enableOtpLessRide
+        },
+      FareBreakupListItem
+        { rideId = ride.id,
+          fareBreakup = fareParams
+        }
+    )
 
 calculateLocations ::
   ( CacheFlow m r,
@@ -417,7 +464,9 @@ otpRideCreate driver otpCode booking clientId = do
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP
+  res <- mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP
+  return $ fst res -- one more O(n) operation is added in otpRideCreate
+  -- will it slow down the API or will it be fine to add this ? @Nikith
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
@@ -496,3 +545,95 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
                 url = fileUrl,
                 createdAt = now
               }
+
+mkFareBreakupSummary ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  [FareBreakupListItem] ->
+  m (Maybe FareBreakupSummaryRes)
+mkFareBreakupSummary fareBreakupListItems = do
+  let fareBreakups = map (.fareBreakup) fareBreakupListItems
+  fareParametersDetails <- mkFareParameterDetails fareBreakups
+  let finalSummary =
+        FareBreakupSummary
+          { totalDriverSelectedFare = sum (mapMaybe (.driverSelectedFare) fareBreakups),
+            customerExtraFee = sum (mapMaybe (.customerExtraFee) fareBreakups),
+            serviceCharge = sum (mapMaybe (.serviceCharge) fareBreakups),
+            parkingCharge = sum (mapMaybe (.parkingCharge) fareBreakups),
+            govtCharges = sum (mapMaybe (.govtCharges) fareBreakups),
+            baseFare = sum (map (.baseFare) fareBreakups),
+            waitingCharge = sum (mapMaybe (.waitingCharge) fareBreakups),
+            rideExtraTimeFare = sum (mapMaybe (.rideExtraTimeFare) fareBreakups),
+            nightShiftCharge = sum (mapMaybe (.nightShiftCharge) fareBreakups),
+            fareParametersDetails
+          }
+  return $
+    Just $
+      FareBreakupSummaryRes
+        { fareBreakupList = fareBreakupListItems,
+          summary = finalSummary
+        }
+
+mkFareParameterDetails ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  [FareParameters] ->
+  m FareParametersDetailsRes
+mkFareParameterDetails fareParams = do
+  let progressiveDetailList = map (.fareParametersDetails) $ filter (\eFParam -> getFareParametersType eFParam == Progressive) fareParams
+      slabDetailList = map (.fareParametersDetails) $ filter (\eFParam -> getFareParametersType eFParam == Slab) fareParams
+      rentalDetailList = map (.fareParametersDetails) $ filter (\eFParam -> getFareParametersType eFParam == Rental) fareParams
+      interCityDetailList = fmap (.fareParametersDetails) $ filter (\eFParam -> getFareParametersType eFParam == InterCity) fareParams
+      ambulanceDetailList = map (.fareParametersDetails) $ filter (\eFParam -> getFareParametersType eFParam == Ambulance) fareParams
+
+  let progressiveDetails =
+        FParamsProgressiveDetails
+          { deadKmFare = sum (map (\(ProgressiveDetails pd) -> pd.deadKmFare) progressiveDetailList),
+            extraKmFare = Just $ sum (mapMaybe (\(ProgressiveDetails pd) -> pd.extraKmFare) progressiveDetailList),
+            rideDurationFare = Just $ sum (mapMaybe (\(ProgressiveDetails pd) -> pd.rideDurationFare) progressiveDetailList),
+            currency = INR -- currently not required ?
+          }
+
+  let slabDetails =
+        FParamsSlabDetails
+          { platformFee = Just $ sum (mapMaybe (\(SlabDetails sd) -> sd.platformFee) slabDetailList),
+            sgst = Just $ sum (mapMaybe (\(SlabDetails sd) -> sd.sgst) slabDetailList),
+            cgst = Just $ sum (mapMaybe (\(SlabDetails sd) -> sd.cgst) slabDetailList),
+            currency = INR -- currently not required ?
+          }
+
+  let rentalDetails =
+        FParamsRentalDetails
+          { timeBasedFare = sum (map (\(RentalDetails rd) -> rd.timeBasedFare) rentalDetailList),
+            distBasedFare = sum (map (\(RentalDetails rd) -> rd.distBasedFare) rentalDetailList),
+            currency = INR, -- currently not required ?
+            extraDistance = sum (map (\(RentalDetails rd) -> rd.extraDistance) rentalDetailList),
+            distanceUnit = Meter, -- current not required ?
+            extraDuration = sum (map (\(RentalDetails rd) -> rd.extraDuration) rentalDetailList), -- current not required ?
+            deadKmFare = sum (map (\(RentalDetails rd) -> rd.deadKmFare) rentalDetailList)
+          }
+
+  let interCityDetails =
+        FParamsInterCityDetails
+          { timeFare = sum (map (\(RentalDetails rd) -> rd.timeBasedFare) rentalDetailList),
+            distanceFare = 0.0,
+            pickupCharge = 0.0,
+            currency = INR,
+            extraDistanceFare = 0.0,
+            extraTimeFare = 0.0
+          }
+
+  let ambulanceDetails =
+        FParamsAmbulanceDetails
+          { platformFee = Nothing,
+            sgst = Nothing,
+            cgst = Nothing,
+            distBasedFare = 0.0,
+            currency = INR
+          }
+
+  return FareParametersDetailsRes {..}
