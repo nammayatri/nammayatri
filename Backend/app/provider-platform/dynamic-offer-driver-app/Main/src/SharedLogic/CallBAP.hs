@@ -33,6 +33,7 @@ module SharedLogic.CallBAP
     sendSafetyAlertToBAP,
     sendPhoneCallRequestUpdateToBAP,
     mkTxnIdKey,
+    sendOnConfirmToBAP,
   )
 where
 
@@ -41,6 +42,7 @@ import qualified Beckn.ACL.OnCancel as ACL
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
+import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
@@ -266,7 +268,7 @@ buildBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
-sendRideAssignedUpdateToBAP ::
+rideAssignedCommon ::
   ( MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
@@ -285,8 +287,8 @@ sendRideAssignedUpdateToBAP ::
   SRide.Ride ->
   DP.Person ->
   DVeh.Vehicle ->
-  m ()
-sendRideAssignedUpdateToBAP booking ride driver veh = do
+  m DOU.OnUpdateBuildReq
+rideAssignedCommon booking ride driver veh = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   let estimateId = booking.estimateId <&> getId
   merchant <-
@@ -333,12 +335,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
         mDriverBankAccount <- runInReplica $ QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
-  retryConfig <- asks (.shortDurationRetryCfg)
-  let rideAssignedBuildReq = (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
-  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
-  let generatedMsg = A.encode rideAssignedMsgV2
-  logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-  void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
+  pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
@@ -381,7 +378,105 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
       let specialDrivers = transporterConfig.specialDrivers
       if null specialDrivers
         then return False
-        else return $ (getId driverId) `elem` specialDrivers
+        else return $ getId driverId `elem` specialDrivers
+
+buildOnConfirmMessage ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "s3Env" r (S3.S3Env m),
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  m Spec.ConfirmReqMessage
+buildOnConfirmMessage booking ride driver veh = do
+  rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
+  becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+  farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  onConfirmMessage <- TFOU.mkOnUpdateMessageV2 rideAssignedBuildReq farePolicy becknConfig
+  let generatedMsg = A.encode onConfirmMessage
+  logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
+  pure . fromJust $ onConfirmMessage
+
+sendOnConfirmToBAP ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "s3Env" r (S3.S3Env m),
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  DM.Merchant ->
+  Spec.Context ->
+  m ()
+sendOnConfirmToBAP booking ride driver veh transporter context = do
+  transactionId <- Utils.getTransactionId context
+  let bppId = context.contextBppId
+      txnId = Just transactionId
+  bapId <- Utils.getContextBapId context
+  callbackUrl <- Utils.getContextBapUri context
+  bppUri <- Utils.getContextBppUri context
+  msgId <- Utils.getMessageId context
+  city <- Utils.getContextCity context
+  country <- Utils.getContextCountry context
+  context' <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
+  let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
+  becknConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
+  onConfirmMessage <- buildOnConfirmMessage booking ride driver veh
+  void $ callOnConfirmV2 transporter context' onConfirmMessage becknConfig
+
+sendRideAssignedUpdateToBAP ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "s3Env" r (S3.S3Env m),
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  m ()
+sendRideAssignedUpdateToBAP booking ride driver veh = do
+  merchant <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  retryConfig <- asks (.shortDurationRetryCfg)
+  rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
+  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
+  let generatedMsg = A.encode rideAssignedMsgV2
+  logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
+  void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
 
 sendRideStartedUpdateToBAP ::
   ( CacheFlow m r,
