@@ -33,27 +33,3 @@ ALTER TABLE atlas_driver_offer_bpp.driver_profile_questions ALTER COLUMN expert_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_profile_questions ADD COLUMN image_ids text[]  default '{}';
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-

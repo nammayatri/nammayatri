@@ -92,51 +92,42 @@ knowYourFavDriver driverId apiKey =
     >>= getDriverProfile
 
 getDriver :: Id DP.Person -> Maybe Text -> Flow DP.Person
-getDriver driverId apiKey =
-  QPerson.findById driverId >>= fromMaybeM (PersonNotFound (driverId.getId))
-    >>= \person ->
-      QM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound (person.merchantId.getId))
-        >>= \merchant ->
-          if Just (merchant.internalApiKey) == apiKey
-            then pure person
-            else throwError (AuthBlocked "Invalid BPP internal api key")
+getDriver driverId apiKey = do
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound (driverId.getId))
+  QM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound (person.merchantId.getId))
+    >>= \merchant ->
+      if Just (merchant.internalApiKey) == apiKey
+        then pure person
+        else throwError (AuthBlocked "Invalid BPP internal api key")
 
 getDriverProfile :: DP.Person -> Flow DriverProfileRes
-getDriverProfile person =
-  DPQ.findByPersonId person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-    >>= \driverProfile ->
-      B.runInReplica $
-        QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-          >>= \driverStats ->
-            QVeh.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
-              >>= \vehicle ->
-                SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED >>= mapM (\driverModule -> QLmsModule.findById driverModule.moduleId)
-                  >>= \modules ->
-                    getImages (maybe [] (Id <$>) driverProfile.imageIds)
-                      >>= \images ->
-                        ImageQuery.findByPersonIdImageTypeAndValidationStatus (person.id) DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) >>= pure . Just)
-                          >>= \profileImage ->
-                            getTopFeedBackForDriver person.id
-                              >>= \topFeedbacks ->
-                                pure $
-                                  DriverProfileRes
-                                    { certificates = map show $ mapMaybe (fmap (.category)) modules,
-                                      homeTown = Nothing,
-                                      driverName = person.firstName,
-                                      onboardedAt = person.createdAt,
-                                      pledges = driverProfile.pledges,
-                                      languages = fromMaybe [] ((map getLanguages) <$> person.languagesSpoken),
-                                      aboutMe = driverProfile.aboutMe,
-                                      drivingSince = driverProfile.drivingSince,
-                                      driverStats = getDriverStatsSummary driverStats,
-                                      aspirations = fromMaybe [] driverProfile.aspirations,
-                                      vehicleNum = vehicle.registrationNo,
-                                      vechicleVariant = vehicle.variant,
-                                      vehicleTags = fromMaybe [] driverProfile.vehicleTags,
-                                      images = images,
-                                      profileImage = profileImage,
-                                      topReviews = topFeedbacks
-                                    }
+getDriverProfile person = do
+  driverProfile <- DPQ.findByPersonId person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+  driverStats <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+  vehicle <- QVeh.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
+  modules <- SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED >>= mapM (\driverModule -> QLmsModule.findById driverModule.moduleId)
+  images <- getImages (maybe [] (Id <$>) driverProfile.imageIds)
+  profileImage <- ImageQuery.findByPersonIdImageTypeAndValidationStatus (person.id) DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
+  topFeedbacks <- getTopFeedBackForDriver person.id
+  pure $
+    DriverProfileRes
+      { certificates = map show $ mapMaybe (fmap (.category)) modules,
+        homeTown = Nothing,
+        driverName = person.firstName,
+        onboardedAt = person.createdAt,
+        pledges = driverProfile.pledges,
+        languages = fromMaybe [] ((map getLanguages) <$> person.languagesSpoken),
+        aboutMe = driverProfile.aboutMe,
+        drivingSince = driverProfile.drivingSince,
+        driverStats = getDriverStatsSummary driverStats,
+        aspirations = fromMaybe [] driverProfile.aspirations,
+        vehicleNum = vehicle.registrationNo,
+        vechicleVariant = vehicle.variant,
+        vehicleTags = fromMaybe [] driverProfile.vehicleTags,
+        images = images,
+        profileImage = profileImage,
+        topReviews = topFeedbacks
+      }
   where
     nonZero Nothing = 1
     nonZero (Just a)
@@ -159,11 +150,9 @@ getDriverProfile person =
 
     getTopFeedBackForDriver driverId = do
       ratings <- QRating.findTopRatingsForDriver driverId (Just 5)
-      QFeedback.findFeedbackFromRatings (ratings <&> (.rideId))
-        >>= constructPartialRatings ratings
-        >>= \partialRatings ->
-          constructRemRatings ratings
-            >>= \remRatings -> pure $ partialRatings <> remRatings
+      partialRatings <- QFeedback.findFeedbackFromRatings (ratings <&> (.rideId)) >>= constructPartialRatings ratings
+      remRatings <- constructRemRatings ratings
+      pure $ partialRatings <> remRatings
 
     constructPartialRatings ratings feedbacks =
       pure $ foldl (goFeedbacks feedbacks) [] ratings
@@ -188,8 +177,7 @@ getDriverProfile person =
       "ML_IN" -> "Malayalam"
       lang -> lang
 
-    constructRemRatings prevRatings =
-      QFeedback.findOtherFeedbacks ((.rideId) <$> prevRatings) (Just 5)
-        >>= \feedbacks ->
-          mapM (QRating.findRatingForRideIfPositive) ((.rideId) <$> feedbacks) >>= pure . catMaybes
-            >>= \ratings -> pure $ foldl (goFeedbacks feedbacks) [] ratings
+    constructRemRatings prevRatings = do
+      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> prevRatings) (Just 5)
+      ratings <- (mapM QRating.findRatingForRideIfPositive ((.rideId) <$> feedbacks)) <&> catMaybes
+      pure $ foldl (goFeedbacks feedbacks) [] ratings
