@@ -17,11 +17,10 @@ module Types.App where
 
 import Services.API
 
-import Common.Types.App (CategoryListType)
+-- import Common.Types.App (CategoryListType)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
-import Data.Maybe (Maybe(..))
 import Foreign (Foreign)
 import Foreign.Object (Object(..), empty)
 import Language.Types (STR(..))
@@ -56,10 +55,6 @@ import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBoo
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState) 
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
-import Foreign.Object ( Object(..), empty)
-import Services.API (BookingStatus(..))
-import Foreign (Foreign)
-import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
@@ -68,22 +63,10 @@ import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDet
 import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScreenData
 import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
 import Screens.TicketBookingFlow.MetroTicketStatus.ScreenData as MetroTicketStatusScreenData
-import Services.API
 import Screens.RentalBookingFlow.RentalScreen.ScreenData as RentalScreenData
 import Screens.RideBookingFlow.PickupInstructionsScreen.ScreenData as PickupInstructionsScreenData
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
-import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
-import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScreenData
-import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDetailsScreenData
-import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
-import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
-import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType)
-import Services.API (BookingStatus(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -215,8 +198,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_EMERGENCY_CONTACTS
                         | GO_TO_MY_TICKETS
                         | GO_TO_MY_PROFILE Boolean
-                        | LOCATION_SELECTED LocationListItemState Boolean
-                        | LOCATION_SELECTED2 LocationListItemState Boolean Int
+                        -- | LOCATION_SELECTED LocationListItemState Boolean
+                        | LOCATION_SELECTED2 LocationListItemState Boolean
                         | EDIT_LOCATION_SELECTED LocationListItemState Boolean
                         | EDIT_DESTINATION_SOFT HomeScreenState
                         | HOME_SCREEN

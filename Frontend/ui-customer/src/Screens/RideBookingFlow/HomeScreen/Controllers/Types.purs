@@ -63,8 +63,8 @@ data ScreenOutput = LogoutUser
   | GetSelectList HomeScreenState
   | RideConfirmed HomeScreenState
   | SelectEstimate HomeScreenState
-  | LocationSelected LocationListItemState Boolean HomeScreenState
-  | LocationSelected2 LocationListItemState Boolean HomeScreenState Int
+  -- | LocationSelected LocationListItemState Boolean HomeScreenState
+  | LocationSelected2 LocationListItemState Boolean HomeScreenState 
   | EditDestLocationSelected LocationListItemState Boolean HomeScreenState
   | EditDestinationSoft HomeScreenState
   | SearchPlace String HomeScreenState

@@ -956,8 +956,10 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
         callDrawRoute route = do 
             case route of
                 Just (Route routes) -> do
-                    let stopsMarkers = mapWithIndex (\idx stop -> JB.defaultMarkerConfig {markerId = "ny_ic_stop_marker_" <> show idx, pointerIcon = "ny_ic_stop_marker", position {lat = stop.placeLat, lng = stop.placeLong}}) stops
+                    let stopsMarkers = mapWithIndex (\idx stop -> JB.defaultMarkerConfig {markerId = "ny_ic_stop_marker_" <> show idx, pointerIcon = "ny_ic_stop_marker", position {lat = stop.placeLat, lng = stop.placeLong}, useDestPoints = false}) stops
+                    let _ = spy "stopsMarkers config" stopsMarkers
                     let routeConfig = JB.mkRouteConfig (walkCoordinates routes.points) sourceMarkerConfig destMarkerConfig{anchorV = 1.0} (Just stopsMarkers) routeType "LineString" true JB.DEFAULT specialLocation
+                    let _ = spy "routeConfig flow" routeConfig
                     lift $ lift $ liftFlow $ drawRoute [routeConfig] (getNewIDWithTag "CustomerHomeScreen")
                     pure route
                     

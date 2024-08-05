@@ -755,12 +755,12 @@ bottomBtnsView state push =
                       , alpha 0.25
                       , layoutGravity "center"
                       , margin $ if os == "IOS" then MarginVertical 7 7 else MarginVertical 0 0
-                      , visibility if length (if (state.isSource == Just true && not isMapSearchLocation) then srcBtnData state else destBtnData state) - 1 == idx then GONE else VISIBLE
+                      , visibility if length (if (state.isSource == Just true && not isMapSearchLocation && length state.inputViewConfig.inputView < 3) then srcBtnData state else destBtnData state) - 1 == idx then GONE else VISIBLE
                       ]
                       []
                   ]
             )
-            $ spy "array vals" $ if (state.isSource == Just true && not isMapSearchLocation) then srcBtnData state else destBtnData state
+            $ spy "array vals" $ if (state.isSource == Just true && not isMapSearchLocation && length state.inputViewConfig.inputView < 3) then srcBtnData state else destBtnData state
         )]
 
 srcBtnData :: SearchLocationModelState -> Array { text :: String, imageUrl :: String, action :: Action, buttonType :: String, backgroundColor :: String, textColor :: String, borderRadius :: Number, padding :: Padding, height :: Length, width :: Length, margin :: Margin, visibility :: Boolean}

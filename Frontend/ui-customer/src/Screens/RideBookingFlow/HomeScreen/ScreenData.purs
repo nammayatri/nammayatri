@@ -523,8 +523,9 @@ initData = let
                     }
             , crossBtnEnabled : false
                 }]  
-  , selectedIndex : -1 
-  , addStopsEnabled : false --length inputView > 2                 
+  , selectedIndex : 1-- -1 
+  , addStopsEnabled : false --length inputView > 2  
+  , isConfirmJourneyEnabled : false               
   }
 }
 

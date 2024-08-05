@@ -158,11 +158,12 @@ mapInputViewConfig state =
       , canClearText : false
       , isEditable : false
       , isClickable : true
-      , prefixImage : InputView.dummyImageConfig{ 
-          imageName = item.imageName,
-          height = V 15,
-          width = V 15 ,
-          padding = Padding 0 0 0 0 }
+      , prefixImage : InputView.dummyImageConfig
+      -- { 
+      --     imageName = item.imageName,
+      --     height = V 15,
+      --     width = V 15 ,
+      --     padding = Padding 0 0 0 0 }
       , clearTextIcon : InputView.dummyImageConfig{ 
           imageName = "ny_ic_close_circle",
           height = V 15,
@@ -191,32 +192,42 @@ mapInputViewConfig state =
       in
       [ { textValue : if isSelectPackageStage then pickUpText else formatDate "DD" <> " " <> formatDate "MMMM" <> " " <> formatDate "YYYY" <> ", " <> formatDate "HH" <> ":" <> formatDate "mm"
         , isFocussed : false
-        , imageName : "ny_ic_green_circle"
-        , margin : Margin 0 12 0 5--MarginTop 0
+        , imageName : ""--"ny_ic_green_circle"
+        , margin :  Margin 0 12 0 5 -- MarginTop 0 
         , placeHolder : ""
         , id : if isSelectPackageStage then "PickUpLoc" else "DateAndTime"
         , cornerRadius : 4.0
-        , prefixImageVisibility : boolToVisibility $ not isSelectPackageStage
+        , prefixImageVisibility : VISIBLE--boolToVisibility $ not isSelectPackageStage
         , prefixImageConfig :  InputView.dummyImageConfig{
             height = V 12,  -- 24
             width = V 12,   -- 24
-            padding = Padding 0 0 0 0,
-            imageName = "ny_ic_clock_unfilled_white"
+            padding = Padding 0 0 10 0,
+            imageName = "ny_ic_green_circle",
+            layoutWidth = V 16,
+            layoutHeight = V 16
           }
         , postfixImageConfig : InputView.dummyImageConfig
         , swapImageConfig : InputView.dummyImageConfig
         , textColor : if isSelectPackageStage then Color.black600 else Color.white900
         , hint : ""
-        } ,
+        } 
+        ,
         { textValue : if isSelectPackageStage then dropLocText else " " <> show state.data.rentalBookingData.baseDuration <> " hr · " <> show state.data.rentalBookingData.baseDistance <> " km"
         , isFocussed : false
-        , imageName : "ny_ic_blue_circle"
-        , margin : Margin 0 12 0 5 --MarginVertical 12 8
+        , imageName : ""
+        , margin : Margin 0 54 0 5 -- MarginVertical 12 8 --
         , placeHolder : ""
         , id : if isSelectPackageStage then "FirstStop" else "RentalPackage"
         , cornerRadius : 4.0
-        , prefixImageVisibility : GONE 
-        , prefixImageConfig : InputView.dummyImageConfig
+        , prefixImageVisibility : VISIBLE
+        , prefixImageConfig : InputView.dummyImageConfig{
+            height = V 12,  -- 24
+            width = V 12,   -- 24
+            padding = Padding 0 0 10 0,
+            imageName = "ny_ic_blue_circle",
+            layoutWidth = V 16,
+            layoutHeight = V 16
+        }
         , postfixImageConfig : InputView.dummyImageConfig
         , swapImageConfig : InputView.dummyImageConfig
         , textColor : if isSelectPackageStage then Color.black700 else Color.white900

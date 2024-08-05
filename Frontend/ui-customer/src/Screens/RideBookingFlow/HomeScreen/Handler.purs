@@ -65,12 +65,12 @@ homeScreen = do
     GoToFavourites updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_FAVOURITES_ )
-    LocationSelected selectedItem addToRecents updatedState -> do
+    -- LocationSelected selectedItem addToRecents updatedState -> do
+    --       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+    --       App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED selectedItem addToRecents)
+    LocationSelected2 selectedItem addToRecents updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED selectedItem addToRecents)
-    LocationSelected2 selectedItem addToRecents updatedState index -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED2 selectedItem addToRecents index)
+          App.BackT $ App.BackPoint <$> (pure $ LOCATION_SELECTED2 selectedItem addToRecents)
     EditDestLocationSelected selectedItem addToRecents updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ EDIT_LOCATION_SELECTED selectedItem addToRecents)

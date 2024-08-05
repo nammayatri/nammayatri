@@ -103,7 +103,7 @@ rentalPolicyExplainerView push state =
 getRentalScreenView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 getRentalScreenView push state = 
   linearLayout
-  [ height MATCH_PARENT
+  [ height MATCH_PARENT 
   , width MATCH_PARENT
   ]
   [ if state.data.currentStage == RENTAL_SELECT_PACKAGE then rentalPackageSelectionView push state else emptyTextView
@@ -120,9 +120,9 @@ rentalPackageSelectionView push state =
     [ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT 
-      , background Color.black900 
+      , background Color.black900
       , padding $ PaddingTop EHC.safeMarginTop
-      ][InputView.view (push <<< InputViewAC) $ mapInputViewConfig state]
+      ][InputView.view (push <<< InputViewAC) $ (spy "printing config -> " (mapInputViewConfig state))]
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT

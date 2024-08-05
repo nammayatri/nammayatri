@@ -49,7 +49,7 @@ view push state =
         , padding $ PaddingVertical 16 16
         , gravity CENTER_VERTICAL
         ][  if not state.headerVisibility then backPressView state push else emptyTextView
-          , if state.imageLayoutVisibility == VISIBLE then inputImageView push state else emptyTextView
+          -- , if state.imageLayoutVisibility == VISIBLE then inputImageView push state else emptyTextView
           , inputLayoutViews push state]
         ]
 backPressView :: forall w. InputViewConfig -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -193,7 +193,35 @@ dateTimePickerButton config push =
 nonEditableTextView :: forall w. (Action -> Effect Unit ) -> InputView -> InputViewConfig -> Int -> PrestoDOM (Effect Unit) w
 nonEditableTextView push config config' index = let
   strokeValue = ((if config.inputTextConfig.isFocussed then "1," else "0,") <> Color.yellow900)
+  marginTop = 48 * index
   in 
+    linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , margin $ MarginTop marginTop
+  ][linearLayout[
+      height WRAP_CONTENT
+    , weight 1.0
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+  ]
+  [
+  frameLayout[
+      height WRAP_CONTENT
+    , width MATCH_PARENT 
+    ][
+  linearLayout 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ MarginTop 15
+    ][ prefixDotImageView push config (length config'.inputView)
+  , linearLayout 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ][
   linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -201,7 +229,7 @@ nonEditableTextView push config config' index = let
     , gravity config.gravity
     , padding $ config.padding 
     , background Color.squidInkBlue
-    , margin $ config.inputTextConfig.margin
+    -- , margin $ config.inputTextConfig.margin
     , cornerRadius $ config.inputTextConfig.cornerRadius 
     , clickable $ config.isClickable 
     , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true config.index true
@@ -209,20 +237,24 @@ nonEditableTextView push config config' index = let
     , stroke $ strokeValue 
     -- , background Color.red900
     ]
-    [  imageView
-        [ imageWithFallback $ config.inputTextConfig.prefixImageConfig.imageName
-        , height $ config.inputTextConfig.prefixImageConfig.height
-        , width $ config.inputTextConfig.prefixImageConfig.width
-        , visibility $ config.inputTextConfig.prefixImageVisibility
-        ]
-      , textView $ 
+    [  
+      -- imageView
+      --   [ imageWithFallback $ config.inputTextConfig.prefixImageConfig.imageName
+      --   , height $ config.inputTextConfig.prefixImageConfig.height
+      --   , width $ config.inputTextConfig.prefixImageConfig.width
+      --   , visibility $ config.inputTextConfig.prefixImageVisibility
+      --   ],
+       textView $ 
           [ text $ if config.inputTextConfig.textValue == "" then config.inputTextConfig.placeHolder else config.inputTextConfig.textValue
           , color config.inputTextConfig.textColor
               , height WRAP_CONTENT
               , maxLines 1
               , ellipsize true
-          ] <> config.fontStyle
-     ]
+          ] <> config.fontStyle]]]
+  ]]
+  , postfixImageView push config (length config'.inputView)
+  ]
+
 inputTextField :: forall w. (Action -> Effect Unit ) -> InputView -> InputViewConfig -> Int -> PrestoDOM (Effect Unit) w
 inputTextField push config config' index =
   let _ = spy  "InputView -> " config.index
@@ -417,7 +449,6 @@ prefixDotImageView push config len =
     , orientation VERTICAL
     , gravity CENTER_VERTICAL
     , layoutGravity "center_vertical"
-    -- , margin  $ MarginTop 10
     ][
       imageView
         [ height $ V 12

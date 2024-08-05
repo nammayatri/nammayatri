@@ -943,6 +943,7 @@ type HomeScreenStateProps =
   , inputView :: Array InputView
   , selectedIndex :: Int
   , addStopsEnabled :: Boolean
+  , isConfirmJourneyEnabled :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
