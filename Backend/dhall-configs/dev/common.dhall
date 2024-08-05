@@ -11,7 +11,7 @@ let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
 let googleRouteConfig =
       { computeAlternativeRoutes = False
       , routePreference = "TRAFFIC_AWARE_OPTIMAL"
-      , url = "https://roads.googleapis.com/v1/snapToRoads"
+      , url = "https://routes.googleapis.com/"
       }
 
 let googleCfg =
@@ -19,6 +19,8 @@ let googleCfg =
       , googleRoadsUrl = "https://roads.googleapis.com/"
       , googleKey = sec.googleKey
       , useAdvancedDirections = True
+      , googlePlaceNewUrl = "https://places.googleapis.com/v1/"
+      , useNewPlaces = True
       , googleRouteConfig
       }
 
@@ -27,6 +29,8 @@ let mockGoogleCfg =
       , googleRoadsUrl = "http://localhost:8019/"
       , googleKey = "mock-google-key"
       , useAdvancedDirections = True
+      , googlePlaceNewUrl = "http://localhost:8019/"
+      , useNewPlaces = True
       , googleRouteConfig
       }
 

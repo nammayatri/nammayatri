@@ -23,6 +23,8 @@ data GoogleCfgUnencrypted = GoogleCfgUnencrypted
     googleRoadsUrl :: BaseUrl,
     googleKey :: Text,
     useAdvancedDirections :: Bool,
-    googleRouteConfig :: GoogleMaps.GoogleRouteConfig
+    googleRouteConfig :: GoogleMaps.GoogleRouteConfig,
+    googlePlaceNewUrl :: BaseUrl,
+    useNewPlaces :: Bool
   }
   deriving (Generic, FromDhall)
