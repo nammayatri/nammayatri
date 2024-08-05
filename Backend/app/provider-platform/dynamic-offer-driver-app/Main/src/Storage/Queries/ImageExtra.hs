@@ -111,3 +111,29 @@ updateVerificationStatusAndFailureReason ::
 updateVerificationStatusAndFailureReason verificationStatus failureReason (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.failureReason (Just failureReason), Se.Set BeamI.updatedAt _now] [Se.Is BeamI.id $ Se.Eq id]
+
+findByPersonIdAndImageTypes ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (Kernel.Types.Id.Id Person -> [DocumentType] -> m [DImage.Image])
+findByPersonIdAndImageTypes personId imageTypes = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is BeamI.imageType $ Se.In imageTypes
+        ]
+    ]
+
+findRecentLatestByPersonIdAndImagesType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m [DImage.Image]
+findRecentLatestByPersonIdAndImagesType driverId imgType = do
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamI.personId $ Se.Eq driverId.getId,
+          Se.Is BeamI.imageType $ Se.Eq imgType
+        ]
+    ]
+    Nothing
+    >>= \case
+      [] -> return []
+      images -> do
+        let latestImg = DL.maximumBy (compare `on` (.createdAt)) images
+        return $ filter ((== latestImg.workflowTransactionId) . (.workflowTransactionId)) images

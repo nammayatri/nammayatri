@@ -125,7 +125,7 @@ listItemErrHandler = pure . FailItem . show @Text @SomeException
 addMultipartBoundary :: LBS.ByteString -> ((LBS.ByteString, req) -> res) -> (req -> res)
 addMultipartBoundary boundary clientFn reqBody = clientFn (boundary, reqBody)
 
-data PersonIdsCsvRow = PersonIdsCsvRow
+newtype PersonIdsCsvRow = PersonIdsCsvRow
   { personId :: Text
   }
 

@@ -1158,6 +1158,9 @@ data DriverOnboardingError
   | DriverBankAccountNotFound Text
   | DriverChargesDisabled Text
   | DocumentAlreadyLinkedToAnotherDriver Text
+  | UnsyncedImageNotFound
+  | DocumentAlreadyInSync
+  | NotValidatedUisngFrontendSDK
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1203,6 +1206,9 @@ instance IsBaseError DriverOnboardingError where
     DriverBankAccountNotFound id_ -> Just $ "Driver Bank Account not found for driverId \"" <> id_ <> "\"."
     DriverChargesDisabled id_ -> Just $ "Bank account is not verified for driverId \"" <> id_ <> "\"."
     DocumentAlreadyLinkedToAnotherDriver docName -> Just $ "Document Already linked to another driver " <> docName
+    UnsyncedImageNotFound -> Just "Unsynced image not found"
+    DocumentAlreadyInSync -> Just "Document already in sync"
+    NotValidatedUisngFrontendSDK -> Just "Document not validated using frontend SDK"
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1247,6 +1253,9 @@ instance IsHTTPError DriverOnboardingError where
     DriverBankAccountNotFound _ -> "DRIVER_BANK_ACCOUNT_NOT_FOUND"
     DriverChargesDisabled _ -> "DRIVER_CHARGES_DISABLED"
     DocumentAlreadyLinkedToAnotherDriver _ -> "DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER"
+    UnsyncedImageNotFound -> "UNSYNCED_IMAGE_NOT_FOUND"
+    DocumentAlreadyInSync -> "DOCUMENT_ALREADY_IN_SYNC"
+    NotValidatedUisngFrontendSDK -> "DOCUMENT_NOT_VALIDATED_USING_FRONTEND_SDK"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1289,6 +1298,9 @@ instance IsHTTPError DriverOnboardingError where
     DriverBankAccountNotFound _ -> E400
     DriverChargesDisabled _ -> E400
     DocumentAlreadyLinkedToAnotherDriver _ -> E400
+    UnsyncedImageNotFound -> E400
+    DocumentAlreadyInSync -> E400
+    NotValidatedUisngFrontendSDK -> E400
 
 instance IsAPIError DriverOnboardingError
 

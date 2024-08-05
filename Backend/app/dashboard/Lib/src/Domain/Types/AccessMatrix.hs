@@ -257,6 +257,8 @@ data UserActionType
   | LIST_DRIVER_RIDES
   | LINK_RC_WITH_DRIVER
   | CLEAR_FEE
+  | PAN_AADHAAR_SELFIE_DETAILS
+  | SYNC_DOC_AADHAR_PAN
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
