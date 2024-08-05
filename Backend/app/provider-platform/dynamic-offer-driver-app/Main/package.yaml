@@ -127,6 +127,7 @@ dependencies:
   - hashable
   - json-logic-hs
   - yudhishthira
+  - network-uri
 
 ghc-options:
   - -fwrite-ide-info

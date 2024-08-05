@@ -170,21 +170,13 @@ parseRideAssignedEvent order msgId txnId = do
       isAlreadyFav = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
       favCount = fromMaybe 0 $ castToInt $ getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
   let mbFareBreakupsQuotationBreakup = order.orderQuote >>= (.quotationBreakup)
-  fareBreakups <- (traverse mkDFareBreakup) `mapM` mbFareBreakupsQuotationBreakup
+  fareBreakups <- traverse mkDFareBreakup `mapM` mbFareBreakupsQuotationBreakup
   bookingDetails <- parseBookingDetails order msgId
   return
     Common.RideAssignedReq
       { bookingDetails = bookingDetails{driverAlternatePhoneNumber = driverAlternateNumber},
         transactionId = txnId,
-        isDriverBirthDay,
-        isFreeRide,
-        vehicleAge,
-        driverAccountId,
-        previousRideEndPos,
-        fareBreakups,
-        driverTrackingUrl,
-        isAlreadyFav,
-        favCount
+        ..
       }
   where
     castToInt :: Maybe Text -> Maybe Int

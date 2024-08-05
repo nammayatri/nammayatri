@@ -1109,6 +1109,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               return pullList
             Reject -> do
               QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource sReqFD.id
+              DP.removeSearchReqIdFromMap merchantId driverId searchTry.id
               unlockRedisQuoteKeys
               pure []
         DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id driverFCMPulledList

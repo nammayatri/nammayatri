@@ -249,6 +249,14 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
+  mfuPattern <- fromMaybeM (MerchantDoesNotExist ("BuildRide merchant:" <> booking.merchantId.getId)) (fmap DMerchant.mediaFileUrlPattern mbMerchant)
+  let fileUrl =
+        fmap
+          ( mfuPattern
+              & Text.replace "<DOMAIN>" "driver/photo"
+              & Text.replace "<FILE_PATH>"
+          )
+          driverImage
   return
     DRide.Ride
       { id = guid,
@@ -292,6 +300,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         isAlreadyFav = Just isAlreadyFav,
         favCount = Just favCount,
         safetyJourneyStatus = Nothing,
+        driverImage = fileUrl,
         ..
       }
 

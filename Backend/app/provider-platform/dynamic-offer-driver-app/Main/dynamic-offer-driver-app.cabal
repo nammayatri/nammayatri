@@ -1102,6 +1102,7 @@ library
     , lens-aeson
     , location-updates
     , mobility-core
+    , network-uri
     , openapi3
     , passetto-client
     , payment
@@ -1228,6 +1229,7 @@ executable dynamic-offer-driver-app-exe
     , lens
     , lens-aeson
     , mobility-core
+    , network-uri
     , openapi3
     , passetto-client
     , persistent
