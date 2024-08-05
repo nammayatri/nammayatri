@@ -21,9 +21,11 @@ module Domain.Action.UI.Ride
     getDriverLoc,
     getRideStatus,
     editLocation,
+    getDriverPhoto,
   )
 where
 
+import AWS.S3 as S3
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Data.HashMap.Strict as HM
@@ -45,6 +47,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
+import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
@@ -172,6 +175,9 @@ getDriverLoc rideId = do
     driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
     driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
     driverReaching = "Ride:GetDriverLoc:DriverReaching " <> rideId.getId
+
+getDriverPhoto :: Text -> Flow Text
+getDriverPhoto filePath = S3.get $ Text.unpack filePath
 
 getRideStatus ::
   ( CacheFlow m r,

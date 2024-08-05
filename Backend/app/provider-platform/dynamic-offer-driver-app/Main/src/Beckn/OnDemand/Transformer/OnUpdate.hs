@@ -14,6 +14,7 @@
 
 module Beckn.OnDemand.Transformer.OnUpdate
   ( buildOnUpdateReqV2,
+    mkOnUpdateMessageV2,
   )
 where
 

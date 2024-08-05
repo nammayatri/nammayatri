@@ -51,16 +51,28 @@ type API =
                   :> ReqBody '[JSON] DRide.EditLocationReq
                   :> Post '[JSON] DRide.EditLocationResp
               )
+           :<|> "driver"
+             :> "photo"
+             :> TokenAuth
+             :> MandatoryQueryParam "filePath" Text
+             :> Get '[JSON] Text
        )
 
 handler :: FlowServer API
-handler rideId =
-  getDriverLoc rideId
-    :<|> getRideStatus rideId
-    :<|> editLocation rideId
+handler =
+  rideRelatedApis
+    :<|> getDriverPhoto
+  where
+    rideRelatedApis rideId =
+      getDriverLoc rideId
+        :<|> getRideStatus rideId
+        :<|> editLocation rideId
 
 getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetDriverLocResp
 getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId
+
+getDriverPhoto :: (Id SPerson.Person, Id Merchant.Merchant) -> Text -> FlowHandler Text
+getDriverPhoto (personId, _) filePath = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverPhoto filePath
 
 getRideStatus :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetRideStatusResp
 getRideStatus rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId
