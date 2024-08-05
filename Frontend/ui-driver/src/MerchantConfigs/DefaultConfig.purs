@@ -755,7 +755,7 @@ config =
   , endTime : "06:00:00"
   }
   , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
-  , showProfileAadhaarPan : true
+  , showProfileAadhaarPan : false
 }
 
 registrationConfig :: CTC.RegistrationConfig
