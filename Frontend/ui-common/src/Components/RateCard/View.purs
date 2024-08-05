@@ -43,7 +43,7 @@ import Mobility.Prelude (boolToVisibility)
 import Debug (spy)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
-view push config = 
+view push config =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -59,7 +59,8 @@ view push config =
      , background Color.white900
      , cornerRadius 16.0
      , onClick push $ const NoAction
-     ][linearLayout
+     ]
+     [  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , background if config.isNightShift then Color.black900 else Color.blue600
@@ -87,6 +88,7 @@ view push config =
         [ width MATCH_PARENT
         , height $ if config.currentRateCardType == PaymentFareBreakup then WRAP_CONTENT 
                    else if config.currentRateCardType == RentalRateCard then V 400
+                   else if (config.showDetails && (DA.length config.fareInfoDescription == 2)) then V 300 -- In YS With no Driver Additions and Toll Charges
                    else if config.showDetails then V 350 else V 250 -- check in IOS (Added to handle glitch)
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if (DA.any (_ == config.currentRateCardType) [ PaymentFareBreakup, DefaultRateCard]) then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $

@@ -1364,3 +1364,7 @@ getTA stringKey =
     RENTAL_BOOKING -> "வாடகை பதிவு"
     INTERCITY_BOOKING -> "இன்டர்சிட்டி பதிவு"
     BOOKING -> "பதிவு"
+    CLEAN_BIKE -> "சுத்தமான பைக்"
+    UNCOMFORTABLE_BIKE -> "அமைதியற்ற பைக்"
+    DRIVER_AVAILABLE -> "ஓட்டுநர் கிடைக்கின்றார்"
+    DRIVERS_AVAILABLE -> "ஓட்டுநர்கள் கிடைக்கின்றனர்"

@@ -10,6 +10,7 @@ import Foreign.Object (empty)
 import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..))
 import Common.Types.App as CT
 import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types as ST
 
 initData :: FollowRideScreenState
 initData =

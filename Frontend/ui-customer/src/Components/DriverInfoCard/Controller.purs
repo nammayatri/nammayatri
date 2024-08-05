@@ -25,10 +25,10 @@ import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
 import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..))
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), FareProductType(..))
 import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
 import MerchantConfig.Types
+import Screens.Types as ST
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action

@@ -36,7 +36,8 @@ type Config = {
     backgroundColor :: String,
     padding :: Padding,
     gravity :: Gravity,
-    infoImageConfig :: ImageConfig
+    infoImageConfig :: ImageConfig,
+    subTitle :: TextConfig
 }
 
 type ImageConfig = {
@@ -122,6 +123,17 @@ config = {
       accessibilityHint : ""
     }
   , infoImageConfig : dummyImageConfig
+  , subTitle  : {
+      text : "",
+      color : Color.black700,
+      padding : Padding 16 16 0 0,
+      margin : Margin 0 0 0 0,
+      visibility : GONE,
+      textStyle : FontStyle.SubHeading1,
+      height : WRAP_CONTENT,
+      width : WRAP_CONTENT,
+      accessibilityHint : ""
+    }
 }
 
 dummyImageConfig :: ImageConfig

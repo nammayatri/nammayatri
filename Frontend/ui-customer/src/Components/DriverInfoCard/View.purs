@@ -61,7 +61,7 @@ import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Localizable.EN (getEN)
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..), City(..), NavigationMode(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..), City(..), NavigationMode(..))
 import Storage (KeyStore(..))
 import Storage ( getValueToLocalStore, KeyStore(..)) as STO
 import Styles.Colors as Color
@@ -89,10 +89,13 @@ import Screens.Types (FareProductType(..)) as FPT
 import Data.String as STR
 import JBridge as JB
 import Animation as Anim
+import Screens.Types as ST
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
   let enableShareRide = state.data.config.feature.enableShareRide && (not $ rideNotStarted state)
+      _ = spy "DriverInfoCardView enableShareRide" enableShareRide
+      _ = spy "DriverInfoCardView rideNotStarted" $ show $ not $ rideNotStarted state
       enableSupport = state.data.config.feature.enableSupport && (Array.any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
   in
   PrestoAnim.animationSet
@@ -191,7 +194,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+  , visibility $ boolToVisibility $ isSpecialZone state
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -257,36 +260,36 @@ sizedBox height' width' =
 shareRideButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 shareRideButton push state = 
   linearLayout
-  [ height $ WRAP_CONTENT
-  , width $ MATCH_PARENT
-  , gravity RIGHT
-  , orientation VERTICAL
-  , clickable $ state.data.providerType == ONUS
-  , accessibility DISABLE
-  , clipChildren false
-  ][ linearLayout
-     [ width $ V 40
-     , height $ V 40
-     , gravity CENTER
-     , background Color.white900
-     , stroke $ "1,"<> Color.grey900
-     , cornerRadius if os == "IOS" then 20.0 else 32.0
-     , clickable $ state.data.providerType == ONUS
-     , accessibilityHint "Share Ride : Button : Select to share ride details"
-     , accessibility ENABLE
-     , onClick push $ const ShareRide
-     , margin $ Margin 8 8 8 8
-     , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-     , rippleColor Color.rippleShade
-     ][ imageView
-       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
-       , height $ V 16
-       , width $ V 16
-       , accessibility DISABLE
-       , alpha if state.data.providerType == ONUS then 1.0 else 0.5
-       ]
-     ]
-  ]
+    [ height $ WRAP_CONTENT
+    , width $ MATCH_PARENT
+    , gravity RIGHT
+    , orientation VERTICAL
+    , clickable $ state.data.providerType == ONUS
+    , accessibility DISABLE
+    , clipChildren false
+    ][ linearLayout
+      [ width $ V 40
+      , height $ V 40
+      , gravity CENTER
+      , background Color.white900
+      , stroke $ "1,"<> Color.grey900
+      , cornerRadius if os == "IOS" then 20.0 else 32.0
+      , clickable $ state.data.providerType == ONUS
+      , accessibilityHint "Share Ride : Button : Select to share ride details"
+      , accessibility ENABLE
+      , onClick push $ const ShareRide
+      , margin $ Margin 8 8 8 8
+      , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+      , rippleColor Color.rippleShade
+      ][ imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
+        , height $ V 16
+        , width $ V 16
+        , accessibility DISABLE
+        , alpha if state.data.providerType == ONUS then 1.0 else 0.5
+        ]
+      ]
+    ]
 
 contactSupport :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 contactSupport push state =
@@ -363,9 +366,9 @@ otpAndWaitView push state =
         , otpView push state
         ]
       -- , trackRideView push state -- TODO :: may use in future
-     ] <> if (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE|| state.data.driverArrived) then 
+     ] <> if (isSpecialZone state|| state.data.driverArrived) then 
            [(PrestoAnim.animationSet [ fadeIn true ] $ 
-           let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+           let isQuotes = isSpecialZone state
            in
            linearLayout
            [ width WRAP_CONTENT
@@ -395,7 +398,7 @@ otpAndWaitView push state =
                , accessibility DISABLE
                , margin $ MarginRight 4
                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-               , visibility $ boolToVisibility $ state.props.isRateCardAvailable || state.data.fareProductType == FPT.RENTAL 
+               , visibility $ boolToVisibility $ state.props.isRateCardAvailable || state.data.fareProductType == FPT.RENTAL
                ]
            , waitTimeView push state
            ])]
@@ -461,7 +464,7 @@ waitTimeView push state =
   ]
 
 waitTimeHint :: DriverInfoCardState -> String
-waitTimeHint state = (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
+waitTimeHint state = (if isSpecialZone state then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
                         [minutes, seconds] -> do 
                           let min = STR.trim $ minutes
                           let sec = STR.trim $ seconds
@@ -475,7 +478,7 @@ colorForWaitTime state =
   case waitTime of
     [minutes, _] -> 
       let mins = fromMaybe 0 (fromString (STR.trim minutes))
-          threshold = if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then mins < 5 else mins > 2
+          threshold = if isSpecialZone state then mins < 5 else mins > 2
       in
       if threshold then Color.carnation100 else Color.grey700 
     _ -> Color.grey700
@@ -560,12 +563,12 @@ titleAndETA push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  ][ if rideNotStarted state then specialZoneHeader $ STO.getValueToLocalStore STO.SELECTED_VARIANT
+  ][ if rideNotStarted state then specialZoneHeader state $ STO.getValueToLocalStore STO.SELECTED_VARIANT 
      else distanceView push state
   ]
 
-specialZoneHeader :: forall w. String -> PrestoDOM ( Effect Unit) w
-specialZoneHeader vehicleVariant =
+specialZoneHeader :: forall w. DriverInfoCardState -> String -> PrestoDOM ( Effect Unit) w
+specialZoneHeader state vehicleVariant =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -573,7 +576,7 @@ specialZoneHeader vehicleVariant =
   , padding $ PaddingHorizontal 16 16
   , margin $ MarginTop 6
   , accessibility ENABLE
-  , accessibilityHint $ "Board the first" <> (getTitleConfig vehicleVariant).text <> (getEN $ TAXI_FROM_ZONE "TAXI_FROM_ZONE")
+  , accessibilityHint $ "Board the first" <> (fromMaybe (getTitleConfig vehicleVariant).text state.data.serviceTierName) <> (getEN $ TAXI_FROM_ZONE "TAXI_FROM_ZONE")
   , accessibility DISABLE_DESCENDANT
   ][  linearLayout
       [ height WRAP_CONTENT
@@ -586,7 +589,7 @@ specialZoneHeader vehicleVariant =
           , width WRAP_CONTENT
           ] <> FontStyle.h2 TypoGraphy
         , textView $
-          [ text $ (getTitleConfig vehicleVariant).text <> " "
+          [ text $ (fromMaybe (getTitleConfig vehicleVariant).text state.data.serviceTierName) <> " "
           , color $ (getTitleConfig vehicleVariant).color
           , height WRAP_CONTENT
           , visibility if ((getLanguageLocale languageKey)  == "ML_IN") then GONE else VISIBLE
@@ -598,7 +601,7 @@ specialZoneHeader vehicleVariant =
       , width MATCH_PARENT
       , orientation HORIZONTAL ]
       [ textView $
-          [ text $ (getTitleConfig vehicleVariant).text <> " "
+          [ text $ (fromMaybe (getTitleConfig vehicleVariant).text state.data.serviceTierName) <> " "
           , color $ (getTitleConfig vehicleVariant).color
           , height WRAP_CONTENT
           , visibility if ((getLanguageLocale languageKey) == "ML_IN") then VISIBLE else GONE
@@ -626,8 +629,8 @@ navigateView push state =
   , accessibility ENABLE
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
-  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE && rideNotStarted state
-  , onClick push $ const $ OnNavigate WALK state.data.sourceLat state.data.sourceLng
+  , visibility $ boolToVisibility $ isSpecialZone state && rideNotStarted state
+  , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
   ][ imageView
      [ width $ V 20
      , height $ V 20
@@ -654,7 +657,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ not $  state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE 
+  , visibility $ boolToVisibility $ not $  isSpecialZone state 
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -1075,6 +1078,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , gravity CENTER_VERTICAL
           , padding $ Padding 0 5 20 5
           , onClick push $ const RateCardInfo
+          , clickable state.props.isRateCardAvailable 
           ][ textView $
              [ text title
              , color Color.black700
@@ -1503,6 +1507,7 @@ getDriverDetails state = {
   , providerType : state.data.providerType
   , showAcView : state.data.cityConfig.enableAcViews
   , fareProductType : state.data.fareProductType
+  , isSpecialZone : state.data.isSpecialZone
 }
 
 endOTPAnimConfig :: DriverInfoCardState -> AnimConfig.AnimConfig
@@ -1534,6 +1539,7 @@ getTripDetails state = {
   , fareProductType : state.data.fareProductType
   , enableEditDestination : state.data.config.feature.enableEditDestination
   , editingDestinationLoc : EditingDestination
+  , isSpecialZone : state.data.isSpecialZone
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
@@ -1547,6 +1553,7 @@ rideNotStarted :: DriverInfoCardState -> Boolean
 rideNotStarted state = 
   let lastStage = if state.props.isChatWithEMEnabled then RideStarted else RideAccepted
   in Array.any (_ == state.props.currentStage) [RideAccepted, ChatWithDriver] && (lastStage == RideAccepted || state.props.stageBeforeChatScreen == RideAccepted)
+
 rentalDetailsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 rentalDetailsView push state =
   let rentalData = state.data.rentalData
@@ -1723,3 +1730,6 @@ rideInfoPill state rideData =
         ]
       
     ]
+
+isSpecialZone :: DriverInfoCardState -> Boolean
+isSpecialZone state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)

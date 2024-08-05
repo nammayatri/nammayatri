@@ -123,6 +123,12 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "rcLimit" : 3
+    , "acExplanation" : true
+    , "rateCardScreen" :{
+        "showYoutubeVideo" : false,
+        "showRateCard" : true
+      }
     , "showGenderBanner" : true
     , "defaultLanguage" : "EN_US"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
@@ -141,8 +147,6 @@ window.getMerchantConfig = function () {
             "offerBannerDeadline" : "January 15-*$*-ಜನವರಿ 15-*$*-15 जनवरी-*$*-ஜனவரி 15",
             "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
           },
-          "lowDuesLimit" : 25.0,
-          "maxDuesLimit" : 100.0,
           "highDueWarningLimit" : 75.0,
           "moveDriverToOfflineInHighDueDaily" : true,
           "enableSubscriptionPopups" : true,

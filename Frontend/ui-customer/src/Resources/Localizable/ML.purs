@@ -1329,8 +1329,6 @@ getML stringKey =
         PARKING_CHARGES_DESC -> "പാർക്കിംഗ് നിരക്കുകൾ പിക്കപ്പ് ലൊക്കേഷനിൽ ഡ്രൈവറോട് ഈടാക്കുന്ന ഫീസിനെ ആശ്രയിച്ചിരിക്കുന്നു"
         TOLL_CHARGES_INCLUDED_IN_FAIR -> "ടോൾ നിരക്കുകൾ നിരക്കുകളിൽ ഉൾപ്പെടുത്തിയിട്ടുണ്ട്"
         PLEASE_DO_NOT_PAY_EXTRA_TO_DRIVER -> "ദയവായി ഡ്രൈവറിന് അധിക നിരക്ക് നൽകരുത്"
-        
-
         VELLORE -> "വെല്ലൂർ"
         HOSUR -> "ഹോസൂർ"
         MADURAI -> "മാതുര"
@@ -1349,3 +1347,7 @@ getML stringKey =
         RENTAL_BOOKING -> "വാടക ബുക്കിംഗ്"
         INTERCITY_BOOKING -> "ഇന്റർസിറ്റി ബുക്കിംഗ്"
         BOOKING -> "ബുക്കിംഗ്"
+        CLEAN_BIKE -> "വൃത്തിയാക്കിയ ബൈക്ക്"
+        UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"
+        DRIVER_AVAILABLE -> "ഡ്രൈവർ ലഭ്യമാണ്"
+        DRIVERS_AVAILABLE -> "ഡ്രൈവർമാർ ലഭ്യമാണ്"

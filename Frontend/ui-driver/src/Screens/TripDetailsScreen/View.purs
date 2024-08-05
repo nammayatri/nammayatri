@@ -250,7 +250,7 @@ tripDetailsView state =
               ] <> FontStyle.body1 TypoGraphy
             ]
           , textView $
-            [ text state.data.vehicleModel
+            [ text if state.data.vehicleModel == "Unkown" || state.data.vehicleModel == "" then HU.getVehicleType state.data.vehicleServiceTier else state.data.vehicleModel
             , color Color.black700
             ] <> FontStyle.body3 TypoGraphy
         ]
@@ -507,7 +507,7 @@ reportIssueView state push =
 -------------------------- issueReportedView -----------------------
 
 issueReportedView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-issueReportedView state push = 
+issueReportedView state _push = 
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT

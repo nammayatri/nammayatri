@@ -141,6 +141,12 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
+    , "acExplanation" : true
+    , "rcLimit" : 3
+    , "rateCardScreen" :{
+        "showYoutubeVideo" : false,
+        "showRateCard" : true
+      }
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
@@ -169,8 +175,6 @@ window.getMerchantConfig = function () {
         "offerBannerDeadline" : "January 15-*$*-ಜನವರಿ 15-*$*-15 जनवरी-*$*-ஜனவரி 15",
         "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
       },
-      "lowDuesLimit" : 25.0,
-      "maxDuesLimit" : 100.0,
       "highDueWarningLimit" : 75.0,
       "moveDriverToOfflineInHighDueDaily" : true,
       "enableSubscriptionPopups" : true,
@@ -1211,7 +1215,7 @@ let defRentalWaitingChargesConfig = {
     },
     "bike" : {
       "freeSeconds" : 180,
-      "perMinCharges" : 1.0
+      "perMinCharges" : 2.0
     }
   }
 

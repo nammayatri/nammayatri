@@ -253,7 +253,7 @@ quotesView state push =
 
 findingRidesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 findingRidesView state push =
-  let lottieRawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
+  let lottieRawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else if getValueToLocalStore SELECTED_VARIANT == "BIKE" then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_bike.json" else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
   in
     linearLayout
     [ height MATCH_PARENT
@@ -584,32 +584,6 @@ quoteListView state push =
         , orientation VERTICAL
         ](map (\item ->
             QuoteListItem.view (push <<< QuoteListItemActionController) item{appConfig = state.appConfig}) state.quoteListModel)
-    ]
-
----------------------------- primaryButtonView ---------------------------------
-primaryButtonView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-primaryButtonView state push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , weight 1.0
-    , alignParentBottom "true,-1"
-    , background Color.white900 -- TODO : change to white900 once shadow is fixed
-    -- --, visibility GONE-- $ checkVisibility state
-    , padding (Padding 0 16 0 30)
-    ][ homeOrTryAgain state push ]
-
----------------------------- homeOrTryAgainView ---------------------------------
-homeOrTryAgain :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-homeOrTryAgain state push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation HORIZONTAL
-    , visibility $ boolToVisibility $ state.selectedQuote == Nothing && (null state.quoteListModel) && isLocalStageOn QuoteList
-    ][ PrimaryButton.view (push <<< HomeButtonActionController) (homeButtonConfig state)
-     , PrimaryButton.view (push <<< TryAgainButtonActionController) (tryAgainButtonConfig state)
     ]
 
 -- buttonView :: forall w. QuoteListModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

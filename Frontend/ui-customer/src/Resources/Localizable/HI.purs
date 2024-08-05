@@ -1345,3 +1345,7 @@ getHI stringKey =
         RENTAL_BOOKING -> "रेंटल बुकिंग"
         INTERCITY_BOOKING -> "इंटरसिटी बुकिंग"
         BOOKING -> "बुकिंग"
+        CLEAN_BIKE -> "साफ बाइक"
+        UNCOMFORTABLE_BIKE -> "असहज बाइक"
+        DRIVER_AVAILABLE -> "चालक उपलब्ध"
+        DRIVERS_AVAILABLE -> "चालक उपलब्ध हैं"

@@ -79,6 +79,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Data.Array (filter)
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -421,6 +422,8 @@ manageVehicleItem state vehicle push =
       "ny_ic_sedan"
     else if category == ST.BikeCategory then
       "ny_ic_bike_side"
+    else if category == ST.AmbulanceCategory then
+      "ny_ic_ambulance_side"
     else
       "ny_ic_silhouette"
 
@@ -485,6 +488,9 @@ profileView push state =
         , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
         ]
 
+getVerifiedVehicleCount :: Array ST.DriverVehicleDetails -> Int
+getVerifiedVehicleCount vehicles = length $ filter (\item -> item.isVerified == true) vehicles
+  
 verifiedVehiclesView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 verifiedVehiclesView state push =
   linearLayout
@@ -655,7 +661,9 @@ tabImageView state push =
     vc = getVehicleCategory state
     driverImage = case (fromMaybe "UNKNOWN" state.data.driverGender) of
       "MALE" | vc == ST.AutoCategory -> "ny_ic_new_avatar_profile"
-      "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
+      "MALE" | vc == ST.CarCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.BikeCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.AmbulanceCategory -> "ny_ic_new_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
   in
@@ -735,6 +743,7 @@ tabImageView state push =
       ST.AutoCategory -> cityConfig.assets.auto_image
       ST.CarCategory -> "ny_ic_sedan"
       ST.BikeCategory -> "ny_ic_bike_side"
+      ST.AmbulanceCategory -> "ny_ic_ambulance_side"
       _ -> "ny_ic_silhouette"
 
   getAutoImage :: CityConfig -> String
@@ -874,7 +883,7 @@ addRcView state push =
         , background Color.grey900
         ]
         []
-    , PrimaryButton.view (push <<< AddRcButtonAC) (addRCButtonConfig state)
+    , if (getVerifiedVehicleCount state.data.vehicleDetails < state.data.config.rcLimit) then PrimaryButton.view (push <<< AddRcButtonAC) (addRCButtonConfig state) else dummyTextView
     , PrimaryButton.view (push <<< ManageVehicleButtonAC) (addRCButtonConfigs state)
     ]
 
@@ -1368,7 +1377,7 @@ profileOptionsLayout state push =
   where
   visibilityCondition optionItem = case optionItem.menuOptions of
     GO_TO_LOCATIONS -> state.props.enableGoto
-    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption
+    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]) -- Temporary Fix until Ambulance Ride Flow is complete
     LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
     _ -> true
 
@@ -1507,7 +1516,7 @@ vehicleListItem state push vehicle =
         , orientation HORIZONTAL
         , background Color.blue600
         , cornerRadius 8.0
-        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified
+        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory == ST.AmbulanceCategory || vehicle.userSelectedVehicleCategory == ST.BikeCategory)
         , padding $ Padding 16 8 16 8
         , margin $ MarginTop 16
         , onClick push $ const $ OptionClick DRIVER_BOOKING_OPTIONS
@@ -1538,6 +1547,8 @@ vehicleListItem state push vehicle =
       "ny_ic_sedan"
     else if category == ST.BikeCategory then
       "ny_ic_bike_side"
+    else if category == ST.AmbulanceCategory then
+      "ny_ic_ambulance_side"
     else
       "ny_ic_silhouette"
 
