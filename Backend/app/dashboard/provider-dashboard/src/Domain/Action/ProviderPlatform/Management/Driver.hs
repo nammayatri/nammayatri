@@ -43,6 +43,8 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverBulkReviewRCVariant,
     postDriverUpdateDriverTag,
     postDriverClearFee,
+    getDriverPanAadharSelfieDetails,
+    postDriverSyncDocAadharPan,
   )
 where
 
@@ -272,3 +274,15 @@ postDriverPersonNumbers merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction (Common.PostDriverPersonNumbersEndpoint) apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callDriverOfferBPPOperations checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverPersonNumbers)) req)
+
+getDriverPanAadharSelfieDetails :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Text -> Environment.Flow Common.PanAadharSelfieDetailsResp)
+getDriverPanAadharSelfieDetails merchantShortId opCity apiTokenInfo countryCode phoneNo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverPanAadharSelfieDetails) countryCode phoneNo
+
+postDriverSyncDocAadharPan :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AadharPanSyncReq -> Environment.Flow APISuccess)
+postDriverSyncDocAadharPan merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostDriverSyncDocAadharPanEndpoint apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverSyncDocAadharPan) req

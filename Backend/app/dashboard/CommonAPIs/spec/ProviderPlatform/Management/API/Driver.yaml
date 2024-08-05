@@ -22,6 +22,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   PersonIdsReq: Dashboard.Common
   PersonRes: Dashboard.Common
+  MandatoryQueryParam: Kernel.Utils.Common
 
 module: Driver
 
@@ -290,6 +291,24 @@ apis:
         type: ClearDriverFeeReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /panAadharSelfieDetails
+      mandatoryQuery:
+        phoneNo: Text
+        countryCode: Text
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS
+      response:
+        type: PanAadharSelfieDetailsResp
+  - POST:
+      endpoint: /syncDocAadharPan
+      request:
+        type: AadharPanSyncReq
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SYNC_DOC_AADHAR_PAN
+      response:
+        type: APISuccess
+
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -416,3 +435,29 @@ types:
   DriverFeeType:
     - enum: "PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT"
     - derive: "Read, Kernel.Prelude.ToParamSchema"
+  PanAadharSelfieDetailsResp:
+    - personName: Text
+    - personId: Text
+    - selfieDetails: Maybe SelfieDetails
+    - aadhaarDetails: Maybe AadhaarDetails
+    - panDetails: Maybe PanDetails
+  SelfieDetails:
+    - latestStatus: Maybe Text
+    - latestStatusTime: UTCTime
+    - latestTransactionId: Maybe Text
+  AadhaarDetails:
+    - aadhaarStatus: Maybe Text
+    - aadhaarStatusTime: UTCTime
+    - aadhaarTransactionId: Maybe Text
+  PanDetails:
+    - panStatus: Maybe Text
+    - panStatusTime: UTCTime
+    - panTransactionId: Maybe Text
+  SyncDocType:
+    - enum: "Aadhaar, Pan"
+  AadharPanSyncReq:
+    - phoneNo: Text
+    - countryCode: Text
+    - documentType: SyncDocType
+    - derive: "'HideSecrets"
+
