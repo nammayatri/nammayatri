@@ -42,7 +42,12 @@ type AppConfigDriver a =
     chooseCity :: ChooseCityScreenConfig,
     safetyRide :: SafetyRideConfig,
     appUpdatePopupUrl :: String,
-    showProfileAadhaarPan :: Boolean
+    showProfileAadhaarPan :: Boolean,
+    clientName :: String,
+    rateCardScreen :: RateCardScreenConfig,
+    rcLimit :: Int,
+    acExplanation :: Boolean,
+    showMonthlyLeaderBoard :: Boolean
     | a
   } 
 
@@ -74,8 +79,6 @@ type SubscriptionConfig =  {
   onBoardingSubscription :: Boolean,
   showLaterButtonforTimeRange :: Boolean,
   offerBannerConfig :: SubscriptionOfferBannerConfig,
-  lowDuesLimit :: Number,
-  maxDuesLimit :: Number,
   highDueWarningLimit :: Number,
   moveDriverToOfflineInHighDueDaily :: Boolean,
   enableSubscriptionPopups :: Boolean,
@@ -269,4 +272,10 @@ type ChooseCityScreenConfig = {
 type SafetyRideConfig = {
   startTime :: String
 , endTime :: String
+}
+type RateCardScreenConfig = {
+  showYoutubeVideo :: Boolean,
+  showRateCard :: Boolean,
+  showTollCharges :: Boolean,
+  showDriverAdditions :: Boolean
 }

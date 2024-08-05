@@ -1758,10 +1758,12 @@ newtype PopupReturn = PopupReturn {
 
 gotoCounterStrings :: GoToPopUpType -> PopupReturn
 gotoCounterStrings popupType = 
+  let vehicleVarient  = (getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys)
+  in 
   case popupType of 
     MORE_GOTO_RIDES -> PopupReturn { primaryText : getString MORE_GOTO_RIDE_COMING
                               , secondaryText : getString MORE_GOTO_RIDE_COMING_DESC
-                              , imageURL : getImage "ny_ic_goto_more_rides" ",https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_goto_more_rides.png"
+                              , imageURL : if vehicleVarient == "BIKE" then "ny_ic_goto_bike" else getImage "ny_ic_goto_more_rides" ",https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_goto_more_rides.png"
                               , buttonText : getString OKAY
                               }
     REDUCED 0 -> PopupReturn { primaryText : getString GOTO_REDUCED_TO_ZERO
@@ -1781,7 +1783,7 @@ gotoCounterStrings popupType =
                               }
     REACHED_HOME -> PopupReturn { primaryText : getString GOTO_LOC_REACHED
                               , secondaryText : getString YOU_ARE_ALMOST_AT_LOCATION
-                              , imageURL : getImage "ny_ic_goto_arrived" ",https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_goto_arrived.png"
+                              , imageURL : if vehicleVarient == "BIKE" then "ny_ic_goto_bike_arrived" else getImage "ny_ic_goto_arrived" ",https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_goto_arrived.png"
                               , buttonText : getString OK_GOT_IT
                               }
     NO_POPUP_VIEW -> PopupReturn { primaryText : "" , secondaryText : "" , imageURL : "" , buttonText : "" }
@@ -2365,6 +2367,7 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     optionButtonOrientation = "HORIZONTAL",
     buttonLayoutMargin = MarginBottom 10,
     dismissPopup = true,
+    isVisible = not (state.data.linkedVehicleCategory `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]), -- Temporary Fix until Ambulance Ride Flow is completed from BE
     margin = MarginHorizontal 25 25, 
     primaryText {
       text = getString IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING,

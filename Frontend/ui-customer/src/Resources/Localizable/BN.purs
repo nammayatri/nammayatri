@@ -1346,3 +1346,7 @@ getBN stringKey =
         RENTAL_BOOKING -> "রেন্টাল বুকিং"
         INTERCITY_BOOKING -> "আন্তঃনগর বুকিং"
         BOOKING -> "বুকিং"
+        CLEAN_BIKE -> "পরিষ্কার বাইক"
+        UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"
+        DRIVER_AVAILABLE -> "ড্রাইভার উপলব্ধ"
+        DRIVERS_AVAILABLE -> "ড্রাইভারগণ উপলব্ধ"

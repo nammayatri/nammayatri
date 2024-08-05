@@ -448,9 +448,9 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , maskedDeviceToken     :: Maybe String
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
-    , canSwitchToRental     :: Boolean
+    , canSwitchToRental     :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
-    , canSwitchToIntercity  :: Maybe Boolean
+    , canSwitchToInterCity  :: Maybe Boolean
     }
 
 
@@ -724,7 +724,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -737,6 +737,13 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode HATCHBACK = standardEncode {}
  standardEncode AUTO_VARIANT = standardEncode {}
  standardEncode BIKE = standardEncode {}
+ standardEncode AMBULANCE_TAXI = standardEncode {}
+ standardEncode AMBULANCE_TAXI_OXY = standardEncode {}
+ standardEncode AMBULANCE_AC = standardEncode {}
+ standardEncode AMBULANCE_AC_OXY = standardEncode {}
+ standardEncode AMBULANCE_VENTILATOR = standardEncode {}
+ standardEncode SUV_PLUS = standardEncode {}
+
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING
 
@@ -837,7 +844,7 @@ newtype UpdateDriverInfoReq
   , vehicleName :: Maybe String
   , availableUpiApps :: Maybe String
   , canSwitchToRental :: Maybe Boolean
-  , canSwitchToIntercity :: Maybe Boolean
+  , canSwitchToInterCity :: Maybe Boolean
   }
 
 newtype UpdateDriverInfoResp = UpdateDriverInfoResp GetDriverInfoResp
@@ -985,7 +992,9 @@ newtype DriverRCReq = DriverRCReq {
   imageId :: String,
   dateOfRegistration :: Maybe String,
   vehicleCategory :: Maybe String,
-  airConditioned :: Maybe Boolean
+  airConditioned :: Maybe Boolean,
+  ventilator :: Maybe Boolean,
+  oxygen :: Maybe Boolean
 }
 
 
@@ -3465,7 +3474,8 @@ instance standardReferredDriversReq :: StandardEncode ReferredDriversReq where s
 
 newtype DetectCityReq = DetectCityReq {
   lat :: Number,
-  lon :: Number
+  lon :: Number,
+  merchantId :: String
 }
 
 newtype DetectCityResp = DetectCityResp {
@@ -4161,7 +4171,8 @@ data OnboardingDocsReq = OnboardingDocsReq String
 newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
   cabs :: Maybe (Array OnboardingDoc),
-  bikes :: Maybe (Array OnboardingDoc)
+  bikes :: Maybe (Array OnboardingDoc),
+  ambulances :: Maybe (Array OnboardingDoc)
 }
 
 newtype OnboardingDoc = OnboardingDoc {
@@ -4211,6 +4222,7 @@ data ServiceTierType
   | RENTALS
   | INTERCITY
   | BIKE_TIER
+  | SUV_PLUS_TIER
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4271,6 +4283,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "RENTALS"      -> except $ Right RENTALS
                   "INTERCITY"    -> except $ Right INTERCITY
                   "BIKE"         -> except $ Right BIKE_TIER
+                  "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4288,6 +4301,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode BIKE_TIER = standardEncode "BIKE"
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
+    standardEncode SUV_PLUS_TIER = standardEncode "SUV_PLUS"
 
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
 instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow

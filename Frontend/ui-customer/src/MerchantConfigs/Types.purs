@@ -153,6 +153,7 @@ type SearchLocationConfig = {
   separatorColor :: String,
   editTextColor :: String,
   showAdditionalChargesText :: Boolean,
+  showDriverAdditions :: Boolean,
   lottieHeight :: Int,
   lottieWidth :: Int,
   primaryButtonHeight :: Int
@@ -390,7 +391,9 @@ type VariantConfig = {
   autoRickshaw :: VariantInfo,
   taxi :: VariantInfo,
   taxiPlus :: VariantInfo,
-  bookAny :: VariantInfo
+  bookAny :: VariantInfo,
+  bike :: VariantInfo,
+  suvPlus :: VariantInfo
 }
 
 type VariantInfo = {
@@ -466,7 +469,8 @@ type AcPopupConfig = {
 
 type WaitingChargeConfig = {
   auto :: WaitingCharge,
-  cabs :: WaitingCharge
+  cabs :: WaitingCharge,
+  bike :: WaitingCharge
 }
 
 type WaitingCharge = {

@@ -243,10 +243,9 @@ leaderBoard push state =
       , background Color.grey800
       , cornerRadius 30.0
       , gravity CENTER
-      ][ leaderBoardTab (getStringEnToHi DAILY) ST.Daily push state
+      ]([ leaderBoardTab (getStringEnToHi DAILY) ST.Daily push state
        , leaderBoardTab (getStringEnToHi WEEKLY) ST.Weekly push state
-       , leaderBoardTab (getStringEnToHi MONTHLY) ST.Monthly push state
-       ]
+       ] <> if state.data.config.showMonthlyLeaderBoard then [leaderBoardTab (getStringEnToHi MONTHLY) ST.Monthly push state] else [])
     , dateAndTime push state
     , relativeLayout
       [ width MATCH_PARENT

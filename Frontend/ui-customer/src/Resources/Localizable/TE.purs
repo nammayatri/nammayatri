@@ -1342,7 +1342,6 @@ getTE stringKey =
     PARKING_CHARGES_DESC -> "పార్కింగ్ ఛార్జీలు పికప్ లొకేషన్ వద్ద డ్రైవర్‌కి విధించే రుసుముపై ఆధారపడి ఉంటాయి"
     TOLL_CHARGES_INCLUDED_IN_FAIR -> "టోల్ ఛార్జీలు ఫేర్ లో చేర్చబడింది"
     PLEASE_DO_NOT_PAY_EXTRA_TO_DRIVER -> "దయచేసి డ్రైవర్‌కు అదనపు ధరను చెల్లించండి"
-
     VELLORE -> "వెల్లూరు"
     HOSUR -> "హోసూరు"
     MADURAI -> "మదురై"
@@ -1361,3 +1360,7 @@ getTE stringKey =
     RENTAL_BOOKING -> "అద్దె బుకింగ్"
     INTERCITY_BOOKING -> "ఇంటర్‌సిటీ బుకింగ్"
     BOOKING -> "బుకింగ్"
+    CLEAN_BIKE -> "స్వచ్ఛంగా బైక్"
+    UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"
+    DRIVER_AVAILABLE -> "డ్రైవర్ అందుబాటులో ఉన్నాడు"
+    DRIVERS_AVAILABLE -> "డ్రైవర్లు అందుబాటులో ఉన్నారు"

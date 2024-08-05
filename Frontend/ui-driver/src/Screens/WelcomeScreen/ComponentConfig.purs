@@ -7,9 +7,10 @@ import Components.PrimaryButton as PrimaryButton
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.Types (WelcomeScreenState)
+import Helpers.Utils as HU
 
 carouselData :: WelcomeScreenState -> Common.CarouselModal
-carouselData state =
+carouselData _state =
   { gravity: "CENTER"
   , carouselData:
       map
@@ -35,14 +36,14 @@ carouselData state =
                 }
             }
         )
-        [ { image: "https://assets.moving.tech/beckn/common/driver/images/ny_img_welcome_first.png", title: getString DIRECT_PAYMENT_NO_COMMISSIONS, description: getString CUSTOMER_PAYS_DIRECTLY, gravity: 17, imageHeight: 260 }
-        , { image: "https://assets.moving.tech/beckn/common/driver/images/ny_img_welcome_second.png", title: getString HUNDRED_PERCENT_FARE_GOES_TO_YOU, description: getString FARE_SHOWN_IS_FARE_YOU_GET, gravity: 17, imageHeight: 260 }
-        , { image: "https://assets.moving.tech/beckn/common/driver/images/ny_img_welcome_third.png", title: getString BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION, description: getString OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT, gravity: 17, imageHeight: 260 }
+        [ { image: (HU.getAssetLink Common.FunctionCall) <> "ny_img_welcome_first" <> ".png", title: getString DIRECT_PAYMENT_NO_COMMISSIONS, description: getString CUSTOMER_PAYS_DIRECTLY, gravity: 17, imageHeight: 260 }
+        , { image: (HU.getAssetLink Common.FunctionCall) <> "ny_img_welcome_second" <> ".png", title: getString HUNDRED_PERCENT_FARE_GOES_TO_YOU, description: getString FARE_SHOWN_IS_FARE_YOU_GET, gravity: 17, imageHeight: 260 }
+        , { image: (HU.getAssetLink Common.FunctionCall) <> "ny_img_welcome_third" <> ".png", title: getString BE_A_PART_OF_OPEN_MOBILITY_REVOLUTION, description: getString OUR_DATA_AND_PRODUCT_ARE_TRANSPARENT, gravity: 17, imageHeight: 260 }
         ]
   }
 
 primaryButtonConfig :: WelcomeScreenState -> PrimaryButton.Config
-primaryButtonConfig state = let 
+primaryButtonConfig _state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig { text = getString GET_STARTED }

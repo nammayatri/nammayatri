@@ -47,7 +47,7 @@ import Services.API as API
 import Constants as CS
 import Data.Int as DI
 import Data.Array as DA
-import Debug
+import Debug (spy)
 
 screen :: ST.RateCardScreenState -> Screen Action ST.RateCardScreenState ScreenOutput
 screen initialState =
@@ -447,7 +447,7 @@ rateCardView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RateCard.view (push <<< RateCardAction) (BOP.rateCardConfig state.data.rateCard) ]
+        [ RateCard.view (push <<< RateCardAction) (BOP.rateCardConfig state.data.rateCard state.data.config.rateCardScreen.showTollCharges state.data.config.rateCardScreen.showDriverAdditions) ]
 
 primaryButtonConfig :: ST.RateCardScreenState -> PrimaryButton.Config 
 primaryButtonConfig state = let 

@@ -113,6 +113,7 @@ public class RideRequestActivity extends AppCompatActivity {
             double destLng = rideRequestBundle.getDouble("destLng");
             boolean downgradeEnabled = rideRequestBundle.getBoolean("downgradeEnabled", false);
             int airConditioned = rideRequestBundle.getInt("airConditioned", -1);
+            int ventilator = rideRequestBundle.getInt("ventilator", -1);
             String vehicleServiceTier = rideRequestBundle.getString("vehicleServiceTier", null);
             String rideStartTime = rideRequestBundle.getString("rideStartTime");
             String rideStartDate = rideRequestBundle.getString("rideStartDate");
@@ -154,6 +155,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getInt("driverDefaultStepFee"),
                     downgradeEnabled,
                     airConditioned,
+                    ventilator,
                     vehicleServiceTier,
                     rideRequestBundle.getString("rideProductType"),
                     rideDuration,
@@ -257,15 +259,7 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
             holder.tollTag.setVisibility(model.getTollCharges() > 0? View.VISIBLE : View.GONE);
-
-            if( service.equals("yatrisathiprovider") && !model.getDurationToPickup().isEmpty()){
-                holder.durationToPickup.setVisibility(View.VISIBLE);
-                holder.durationToPickupImage.setVisibility(View.VISIBLE);
-                holder.durationToPickup.setText(model.getDurationToPickup() + " min");
-            } else {
-                holder.durationToPickup.setVisibility(View.GONE);
-                holder.durationToPickupImage.setVisibility(View.GONE);
-            }
+            RideRequestUtils.handleDurationToPickup(holder, model, mainLooper, RideRequestActivity.this);
             holder.sourceArea.setText(model.getSourceArea());
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());

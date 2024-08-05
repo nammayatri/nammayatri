@@ -21,7 +21,7 @@ import JBridge (getLayoutBounds, getHeightFromPercent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, bind, not, show, bind, negate, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), map, (/=), (<), (<>))
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout, alpha)
 import PrestoDOM.Properties (cornerRadii)
 import Data.Tuple (Tuple(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -47,6 +47,7 @@ import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
 import RemoteConfig as RC
 import Storage as ST
+import Components.ChooseVehicle.Controller as CCC
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -92,7 +93,7 @@ view push config =
       let variantBasedList = filterVariantAndEstimate config.quoteList
           topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
           currentPeekHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList 
-      in if currentPeekHeight == 0 then 470 else currentPeekHeight
+      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0)
 
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state = 
@@ -104,15 +105,22 @@ addTipView push state =
   , padding $ Padding 20 12 20 12
   , margin $ MarginTop 16
   , gravity CENTER
-  , clickable true
+  , clickable $ not isOneWaySpecialZoneRide
+  , alpha $ if (not isOneWaySpecialZoneRide) then 1.0 else 0.5
   , afterRender push $ const $ NoAction
-  , onClick push $ const $ if state.tipViewProps.stage == DEFAULT then AddTip else NoAction 
+  , onClick push $ const $ if state.tipViewProps.stage == DEFAULT && (not isOneWaySpecialZoneRide) then AddTip else NoAction 
   , visibility $ boolToVisibility state.enableTips
   ] $ (case state.tipViewProps.stage of 
           DEFAULT -> [defaultTipView push state]
           TIP_AMOUNT_SELECTED -> [selectTipView push state]
           RETRY_SEARCH_WITH_TIP -> [tipSelectedView push state]
           _ -> [defaultTipView push state])
+  where
+    isOneWaySpecialZoneRide = selectedEstimate.searchResultType == ChooseVehicle.QUOTES ChooseVehicle.OneWaySpecialZoneAPIDetails
+
+    selectedEstimate = case state.quoteList !! state.activeIndex of
+                        Just selectedItem -> selectedItem
+                        Nothing -> ChooseVehicle.config
 
 bottomLayoutView :: forall w. (Action -> Effect Unit) -> Config -> Visibility -> String -> PrestoDOM (Effect Unit) w 
 bottomLayoutView push config visibility' id' = 
@@ -394,7 +402,7 @@ chooseYourRideView push config =
     anims = if EHC.os == "IOS" then [fadeIn true] else [translateYAnimFromTop $ Animation.chooseRideAnimConfig]
     tagConfig = HS.specialZoneTagConfig config.zoneType
     showTag = any (_ == config.zoneType) [SPECIAL_PICKUP, METRO]
-    selectedVehicle = fromMaybe ChooseVehicle.config $ config.quoteList !! config.activeIndex 
+    nearByDrivers = fromMaybe 0 config.nearByDrivers
       
   in
   PrestoAnim.animationSet anims $
@@ -407,7 +415,7 @@ chooseYourRideView push config =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , gravity RIGHT
-      , margin $ MarginRight 15
+      , margin $ Margin 0 0 15 8
       , visibility $ boolToVisibility $ isJust config.nearByDrivers && estimateConfig.showNearByDrivers 
       , disableClickFeedback true
       ][ textView
@@ -415,7 +423,7 @@ chooseYourRideView push config =
          , height WRAP_CONTENT
          , gravity RIGHT
          , stroke $ "1," <> Color.grey900
-         , text $ show (fromMaybe 0 config.nearByDrivers) <> " " <> (getString CABS_AVAILABLE)
+        , text $ show nearByDrivers <> " " <> if nearByDrivers > 1 then (getString DRIVERS_AVAILABLE) else getString DRIVER_AVAILABLE
          , padding (Padding 10 5 10 5)
          , color Color.blue900
          , background Color.white900
@@ -668,7 +676,7 @@ quoteListView push config =
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
-                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = (item.searchResultType == CCC.ESTIMATES), capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
                         ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
@@ -773,7 +781,12 @@ getScrollViewHeight config len =
        height = if quoteHeight == 0 then 84 else quoteHeight
        rideHeaderLayout = HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout").height
        rideHeaderHeight = if rideHeaderLayout == 0 then 81 else rideHeaderLayout
-  in (if len >= 4 then (if EHC.os == "IOS" then ((getHeightFromPercent 73) - rideHeaderHeight) else ((length (filterVariantAndEstimate config.quoteList)) + 2)* height) else (len+3) * height) --((getHeightFromPercent (if EHC.os == "IOS" then 73 else 85)) - rideHeaderHeight)
+  in  if len >= 4 then 
+        if EHC.os == "IOS" then 
+          (getHeightFromPercent 73) - rideHeaderHeight
+        else 
+          min ((getHeightFromPercent 85) - rideHeaderHeight) (((length (filterVariantAndEstimate config.quoteList)) + 2)* height) 
+      else (len+3) * height --((getHeightFromPercent (if EHC.os == "IOS" then 73 else 85)) - rideHeaderHeight)
 
 primaryButtonRequestRideConfig :: Config -> String -> PrimaryButton.Config
 primaryButtonRequestRideConfig config id' = PrimaryButton.config
