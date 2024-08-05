@@ -12,11 +12,11 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FeedbackT f = FeedbackT
-  { badge :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    driverId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    rideId :: B.C f Kernel.Prelude.Text
+  { badge :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    driverId :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    rideId :: (B.C f Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -26,6 +26,6 @@ instance B.Table FeedbackT where
 
 type Feedback = FeedbackT Identity
 
-$(enableKVPG ''FeedbackT ['id] [])
+$(enableKVPG (''FeedbackT) [('id)] [])
 
-$(mkTableInstances ''FeedbackT "feedback")
+$(mkTableInstances (''FeedbackT) "feedback")

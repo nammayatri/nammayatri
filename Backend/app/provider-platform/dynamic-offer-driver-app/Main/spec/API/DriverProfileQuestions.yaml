@@ -5,16 +5,19 @@ module: DriverProfileQuestions
 types:
   DriverProfileQuesRes:
     hometown : Maybe Text
-    expertAt : "[Text]"
     pledges : "[Text]"
-    whyNY : "[Text]"
+    drivingSince : "Maybe Int"
     aspirations : "[Text]"
+    vehicleTags : "[Text]"
+    profileImage: "Maybe Text"
+    otherImages: "[Text]"
   DriverProfileQuesReq:
-    aspirations : "Maybe [Text]"
-    expertAt : "Maybe [Text]"
+    aspirations : "[Text]"
+    drivingSince : "Maybe Int"
     hometown : Maybe Text
-    pledges : "Maybe [Text]"
-    whyNY : "Maybe [Text]"
+    pledges : "[Text]"
+    vehicleTags : "[Text]"
+    imageIds: "[Text]"
 apis:
   # POST /DriverProfileQues
   - POST:

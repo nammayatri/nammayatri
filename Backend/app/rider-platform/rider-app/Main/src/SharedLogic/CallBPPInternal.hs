@@ -349,18 +349,39 @@ reportIssue apiKey internalUrl bppRideId issueReportType = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportIssueClient bppRideId issueReportType (Just apiKey)) "ReportIssue" reportIssueApi
 
+data DriverReview = DriverReview
+  { review :: Maybe Text,
+    feedBackPills :: [Text],
+    rating :: Int,
+    tripDate :: UTCTime
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverStatSummary = DriverStatSummary
+  { avgRating :: Maybe Centesimal,
+    numTrips :: Int,
+    cancellationRate :: Int,
+    likedByRidersNum :: Int
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
 data DriverProfileRes = DriverProfileRes
   { certificates :: [Text],
+    homeTown :: Maybe Text,
     driverName :: Text,
-    likedByRidersNum :: Int,
-    trips :: Int,
-    approvalRate :: Maybe Centesimal,
-    cancellation :: Int,
+    aboutMe :: Maybe Text,
+    drivingSince :: Maybe Int,
     onboardedAt :: UTCTime,
     pledges :: [Text],
-    expertAt :: [Text],
-    whyNY :: [Text],
-    languages :: [Text]
+    driverStats :: DriverStatSummary,
+    languages :: [Text],
+    aspirations :: [Text],
+    vehicleNum :: Text,
+    vechicleVariant :: Text,
+    vehicleTags :: [Text],
+    images :: [Text],
+    profileImage :: Maybe Text,
+    topReviews :: [DriverReview]
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

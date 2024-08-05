@@ -4,21 +4,32 @@
 module Domain.Action.UI.DriverProfileQuestions where
 
 import qualified API.Types.UI.DriverProfileQuestions
+import qualified AWS.S3 as S3
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
+import Data.Time.Calendar (diffDays)
+import Data.Time.Clock (utctDay)
 import qualified Domain.Types.DriverProfileQuestions as DTDPQ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common as KUC
 import Servant
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
+import qualified Storage.Queries.DriverStats as QDS
+import qualified Storage.Queries.Person as QP
 import Tools.Auth
+import Tools.Error
+
+data ImageType = JPG | PNG | UNKNOWN deriving (Generic, Show, Eq)
 
 postDriverProfileQues ::
   ( ( Maybe (Id SP.Person),
@@ -28,23 +39,63 @@ postDriverProfileQues ::
     API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq ->
     Flow APISuccess
   )
-postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq {..} = do
-  driverId <- B.runInReplica $ mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  now <- getCurrentTime
-  DPQ.upsert $
-    DTDPQ.DriverProfileQuestions
-      { aspirations = fromMaybe [] aspirations,
-        createdAt = now,
-        updatedAt = now,
-        driverId = driverId,
-        expertAt = fromMaybe [] expertAt,
-        hometown = hometown,
-        merchantId = merchantId,
-        merchantOperatingCityId = merchantOpCityId,
-        pledges = fromMaybe [] pledges,
-        whyNY = fromMaybe [] whyNY
-      }
-  pure Success
+postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq {..} =
+  do
+    driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
+    person <- QP.findById driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
+    driverStats <- QDS.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
+    now <- getCurrentTime
+    DPQ.upsert
+      ( DTDPQ.DriverProfileQuestions
+          { updatedAt = now,
+            createdAt = now,
+            driverId = driverId,
+            hometown = hometown,
+            merchantOperatingCityId = merchantOpCityId,
+            pledges = pledges,
+            aspirations = toMaybe aspirations,
+            drivingSince = drivingSince,
+            imageIds = toMaybe imageIds,
+            vehicleTags = toMaybe vehicleTags,
+            aboutMe = generateAboutMe person driverStats now req
+          }
+      )
+      >> pure Success
+  where
+    toMaybe xs = guard (not (null xs)) >> Just xs
+
+    -- Generate with LLM or create a template text here
+    generateAboutMe person driverStats now req' = Just (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> "months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations)
+
+    hometownDetails mHometown = case mHometown of
+      Just hometown' -> "Hailing from " <> hometown' <> ", "
+      Nothing -> ""
+
+    withNY now createdAt = T.pack $ show $ diffDays (utctDay now) (utctDay createdAt) `div` 30
+
+    writeDriverStats driverStats = ratingStat driverStats <> cancellationStat driverStats
+
+    ratingStat driverStats =
+      let avgRating = divideMaybe driverStats.totalRatingScore driverStats.totalRatings
+       in if avgRating > Just 4.82
+            then ("I have an average rating of " <> T.pack (show $ avgRating) <> " and is among the top 10 percentile. ")
+            else ""
+
+    cancellationStat driverStats =
+      let cancRate = divideMaybe driverStats.ridesCancelled driverStats.totalRidesAssigned
+       in if (cancRate < Just 0.04 && isJust cancRate)
+            then (if ratingStat driverStats == "" then "" else "Also, ") <> "I have a very low cancellation rate of " <> (T.pack $ show cancRate) <> " that ranks among top 10 percentile. "
+            else ""
+
+    genAspirations aspirations' = "I aspire to " <> T.toLower (T.intercalate ", " aspirations')
+
+    divideMaybe :: Maybe Int -> Maybe Int -> Maybe Double
+    divideMaybe mNum mDenom = do
+      num <- mNum
+      denom <- mDenom
+      if denom == 0
+        then Nothing
+        else Just (fromIntegral num / fromIntegral denom)
 
 getDriverProfileQues ::
   ( ( Maybe (Id SP.Person),
@@ -53,26 +104,35 @@ getDriverProfileQues ::
     ) ->
     Flow API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
-getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) = do
-  driverId <- B.runInReplica $ mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  mbRes <- DPQ.findByPersonId driverId
-  let defaultProfile =
-        API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
-          { aspirations = [],
-            expertAt = [],
-            hometown = Nothing,
-            pledges = [],
-            whyNY = []
-          }
-  case mbRes of
-    Just res ->
-      pure $
-        API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
-          { aspirations = res.aspirations,
-            expertAt = res.expertAt,
-            hometown = res.hometown,
-            pledges = res.pledges,
-            whyNY = res.whyNY
-          }
-    Nothing ->
-      pure defaultProfile
+getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) =
+  mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
+    >>= DPQ.findByPersonId
+    >>= \case
+      Just res ->
+        getImages (maybe [] (Id <$>) res.imageIds)
+          >>= \images ->
+            pure $
+              API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
+                { aspirations = fromMaybe [] res.vehicleTags,
+                  hometown = res.hometown,
+                  pledges = res.pledges,
+                  drivingSince = res.drivingSince,
+                  vehicleTags = fromMaybe [] res.vehicleTags,
+                  otherImages = images, -- fromMaybe [] res.images
+                  profileImage = Nothing
+                }
+      Nothing ->
+        pure $
+          API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
+            { aspirations = [],
+              hometown = Nothing,
+              pledges = [],
+              drivingSince = Nothing,
+              vehicleTags = [],
+              otherImages = [],
+              profileImage = Nothing
+            }
+  where
+    getImages imageIds =
+      mapM (QMF.findById) imageIds <&> catMaybes <&> ((.url) <$>)
+        >>= mapM (S3.get . T.unpack)

@@ -56,6 +56,7 @@ module Domain.Action.UI.Driver
     offerQuoteLockKey,
     getStats,
     driverPhotoUpload,
+    driverProfileImagesUpload,
     validate,
     verifyAuth,
     resendOtp,
@@ -78,6 +79,7 @@ module Domain.Action.UI.Driver
 where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DOVT
+import API.UI.Issue (driverIssueHandle)
 import AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
@@ -141,6 +143,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Prelude as Prelude
 import GHC.Records.Extra
+import qualified IssueManagement.Common.UI.Issue as Issue
+import qualified IssueManagement.Domain.Action.UI.Issue as Issue
 import qualified IssueManagement.Domain.Types.MediaFile as Domain
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
@@ -1302,6 +1306,10 @@ getStats (driverId, _, merchantOpCityId) date = do
 
 driverPhotoUploadHitsCountKey :: Id SP.Person -> Text
 driverPhotoUploadHitsCountKey driverId = "BPP:ProfilePhoto:verify:" <> getId driverId <> ":hitsCount"
+
+driverProfileImagesUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Issue.IssueMediaUploadReq -> Flow Issue.IssueMediaUploadRes
+driverProfileImagesUpload (driverId, merchantId, merchantOpCityId) Issue.IssueMediaUploadReq {..} = do
+  Issue.issueMediaUpload' (cast driverId, cast merchantId, cast merchantOpCityId) driverIssueHandle Issue.IssueMediaUploadReq {..} "driver-profile-images" ("driverId-" <> getId driverId)
 
 driverPhotoUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverPhotoUploadReq -> Flow APISuccess
 driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq {..} = do

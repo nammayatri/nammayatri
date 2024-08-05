@@ -3,6 +3,7 @@
 
 module Storage.Queries.DriverProfileQuestionsExtra where
 
+import Data.List.Extra
 import Domain.Types.DriverProfileQuestions
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -27,10 +28,12 @@ upsert a@DriverProfileQuestions {..} = do
       updateOneWithKV
         ( [Se.Set Beam.updatedAt now]
             <> [Se.Set Beam.hometown hometown | isJust hometown]
-            <> [Se.Set Beam.expertAt expertAt | not (null expertAt)]
-            <> [Se.Set Beam.pledges pledges | not (null pledges)]
-            <> [Se.Set Beam.whyNY whyNY | not (null whyNY)]
-            <> [Se.Set Beam.aspirations aspirations | not (null aspirations)]
+            <> [Se.Set Beam.pledges pledges | notNull pledges]
+            <> [Se.Set Beam.aspirations aspirations | isJust aspirations]
+            <> [Se.Set Beam.drivingSince drivingSince]
+            <> [Se.Set Beam.imageIds imageIds]
+            <> [Se.Set Beam.vehicleTags vehicleTags]
+            <> [Se.Set Beam.aboutMe aboutMe]
         )
         [Se.Is Beam.driverId $ Se.Eq a.driverId.getId]
     else createWithKV a

@@ -32,14 +32,15 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverProfileQuestions.DriverProfileQuestions {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.aspirations aspirations,
+    [ Se.Set Beam.aboutMe aboutMe,
+      Se.Set Beam.aspirations aspirations,
       Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.expertAt expertAt,
+      Se.Set Beam.drivingSince drivingSince,
       Se.Set Beam.hometown hometown,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.imageIds imageIds,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.pledges pledges,
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.whyNY whyNY
+      Se.Set Beam.vehicleTags vehicleTags
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
