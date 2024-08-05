@@ -110,4 +110,5 @@ getBookingStatus status =
     "PENDING" -> (API.Pending)
     "FAILED" -> API.Failed
     "BOOKED" -> API.Booked 
+    "CANCELLED" -> API.Cancelled
     _ -> API.Pending

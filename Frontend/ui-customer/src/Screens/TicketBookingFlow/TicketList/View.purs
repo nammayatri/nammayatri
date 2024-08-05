@@ -264,6 +264,7 @@ ticketsListView state push =
   , padding $ PaddingHorizontal 16 16
   ][ if DA.null state.props.ticketBookingList.booked then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.booked "Booked Tickets"
   ,  if DA.null state.props.ticketBookingList.pendingBooking then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.pendingBooking "Pending Payment"
+  ,  if DA.null state.props.ticketBookingList.cancelled then linearLayout[height $ V 0][] else ticketsCardListView state push state.props.ticketBookingList.cancelled "Cancelled Tickets"
   , emptyTicketsView state push
   ]
 
@@ -407,12 +408,14 @@ getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of
   Pending -> "ny_ic_transaction_pending"
   Booked -> "ny_ic_white_tick"
   Failed -> "ny_ic_payment_failed"
+  Cancelled -> "ny_ic_cancelled"
 
 getTicketStatusBackgroundColor :: BookingStatus -> {bgColor :: String, statusText :: String }
 getTicketStatusBackgroundColor status = case status of 
   Pending -> { bgColor : Color.yellow900, statusText : "Pending" }
   Booked ->  { bgColor : Color.green900, statusText : "Booked" }
   Failed ->  { bgColor : Color.red900, statusText : "Cancelled" }
+  Cancelled ->  { bgColor : Color.red900, statusText : "Cancelled" }
 
 getShareButtonIcon :: String -> String
 getShareButtonIcon ticketServiceName = case ticketServiceName of

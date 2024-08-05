@@ -207,6 +207,9 @@ myRideListTransformerProp listRes =
                     Nothing -> if isJust ride.vehicleServiceTierType then split (Pattern ",") (getVehicleVariantImage (fromMaybe "" ride.vehicleServiceTierType) RIGHT_VIEW) else ["",""]
         imageName = fromMaybe "" $ imageInfo !!0
         imageUrl = fromMaybe "" $ imageInfo !!1
+        _ = spy "imageInfo" imageInfo
+        _ = spy "imageName" imageName
+        _ = spy "imageUrl" imageUrl
     in
       {
         date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC rideStartTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC rideStartTime "Do MMM") )),
@@ -246,7 +249,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     timeVal = (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "HH:mm:ss")
     nightChargesVal = (withinTimeRange "22:00:00" "5:00:00" timeVal)
-    updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
+    updatedFareList = getFaresList ride.fareBreakup baseDistanceVal (rideApiDetails.fareProductType == "OneWaySpecialZoneAPIDetails")
     specialTags = getSpecialTag ride.specialLocationTag
     cityStr = getValueToLocalStore CUSTOMER_LOCATION
     city = getCityFromString cityStr
@@ -261,9 +264,12 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     rideType = getFareProductType rideApiDetails.fareProductType
     autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
     cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+    bikeWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.bike else cityConfig.waitingChargeConfig.bike
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
           autoWaitingCharges
+      else if rideDetails.vehicleVariant == "BIKE" then 
+          bikeWaitingCharges
       else 
          cabsWaitingCharges
      in {
@@ -301,7 +307,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , extraDistance : getKmMeter $  (\a -> if a < 0 then - a else a) ((fromMaybe 0 (rideDetails.chargeableRideDistance)) - (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
   , referenceString : (if (nightChargesVal && (getMerchant CTP.FunctionCall) /= YATRI) then "1.5" <> (getEN $ DAYTIME_CHARGES_APPLICABLE_AT_NIGHT nightChargeFrom nightChargeTill) else "")
                         <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
-                        <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) then "\n\n" <> if cityConfig.enableWaitingConfig  then   ( (getVarString WAITING_CHARGE_DESCRIPTION [show waitingCharges.freeMinutes, show waitingCharges.perMinCharges] ) ) else (getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE) else "")
+                        <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList && (rideApiDetails.fareProductType == "OneWaySpecialZoneAPIDetails")) then "\n\n" <> if cityConfig.enableWaitingConfig  then   ( (getVarString WAITING_CHARGE_DESCRIPTION [show waitingCharges.freeMinutes, show waitingCharges.perMinCharges] ) ) else (getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
                         <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
                         <> (if (isHaveFare "TOLL_CHARGES" updatedFareList) then "\n\n" <> "⁺" <>  (getString TOLL_CHARGES_DESC) else "")
@@ -321,7 +327,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , showDestination : if (decodeAddress $ Booking destination) == "" then "gone" else "visible" 
   , rideScheduledTime : fromMaybe "" ride.rideScheduledTime
   , totalTime : show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min"
-  , vehicleModel : rideDetails.vehicleModel
+  , vehicleModel : if rideDetails.vehicleModel == "" && rideDetails.vehicleVariant == "BIKE" then "Bike Taxi" else rideDetails.vehicleModel
   , rideStartTimeUTC : fromMaybe "" ride.rideStartTime
   , providerName : ride.agencyName
   , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP

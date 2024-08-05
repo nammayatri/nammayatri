@@ -133,10 +133,10 @@ myRideListTransform state listRes =
         ( \(RideBookingRes ride) ->
             let
               (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !! 0))
-
+              (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
               baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
 
-              updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
+              updatedFareList = getFaresList ride.fareBreakup baseDistanceVal (bookingDetails.fareProductType == "OneWaySpecialZoneAPIDetails")
 
               config = getAppConfig appConfig
             in

@@ -36,7 +36,7 @@ import DecodeUtil (parseJSON)
 
 type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 
-data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike
+data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_Taxi_Oxy | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Ventilator | SUV_PLUS
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 
 newtype Place = Place {
@@ -66,7 +66,12 @@ instance showVehicalTypes :: Show VehicalTypes where
     show (SUV ) = "SUV"
     show (Auto ) = "Auto"
     show (Bike ) = "Bike"
-
+    show (Ambulance_AC ) = "Ambulance_AC"
+    show (Ambulance_AC_Oxy ) = "Ambulance_AC_Oxy"
+    show (Ambulance_Taxi ) = "Ambulance_Taxi"
+    show (Ambulance_Taxi_Oxy ) = "Ambulance_Taxi_Oxy"
+    show (Ambulance_Ventilator ) = "Ambulance_Ventilator"
+    show (SUV_PLUS) = "SUV_PLUS"
 
 
 data NotificationType = REGISTRATION_APPROVED | SEARCH_CALLBACK | CONFIRM_CALLBACK

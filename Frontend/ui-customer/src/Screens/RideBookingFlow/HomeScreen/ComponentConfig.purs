@@ -94,6 +94,7 @@ import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
 import Data.Int
+import Components.CommonComponentConfig as CommonComponentConfig
 
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -880,7 +881,7 @@ isMockLocationConfig state =
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = let
-  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.props.isSpecialZone
   waitTimeConfig = textConfig isQuotes  
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
@@ -962,14 +963,15 @@ rateCardConfig state =
         , otherOptions = otherOptions $ not DA.null state.data.rateCard.driverAdditions
         , fareInfoDescription = state.data.rateCard.fareInfoDescription
         , additionalStrings = [
-          {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
+          -- {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
-          {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
+          {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)}
+        ] <> if state.data.config.searchLocationConfig.showAdditionalChargesText then [
           {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
           {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
-          {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)},
-          {key : "PARKING_CHARGE", val : (getString PARKING_CHARGE)},
-          {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
+          {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)}] else [] 
+          <> [ {key : "PARKING_CHARGES", val : (getString PARKING_CHARGE)},
+               {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
           <> if state.data.rateCard.serviceTierName == Just "Auto" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else [] 
         }
   in
@@ -977,12 +979,14 @@ rateCardConfig state =
   where
   otherOptions :: Boolean -> Array FareList
   otherOptions showAdditions =
-    ( if showAdditions then
-        [ { key: "DRIVER_ADDITIONS", val: (getString DRIVER_ADDITIONS) } ]
-      else
+    (-- if showAdditions then
+      --   [ { key: "DRIVER_ADDITIONS", val: (getString DRIVER_ADDITIONS) } ]
+      -- else
         []
     )
-      <> if state.data.rateCard.serviceTierName /= Just "Auto" then [ { key: "TOLL_OR_PARKING_CHARGES", val: getString TOLL_OR_PARKING_CHARGES } ] else []
+      <> (if state.data.config.searchLocationConfig.showAdditionalChargesText then 
+              [{key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }]
+          else [])
 
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
@@ -991,6 +995,8 @@ getVehicleTitle vehicle =
       "SUV" -> (getString SUV)
       "SEDAN" -> (getString SEDAN)
       "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
+      "BIKE" -> "Bike Taxi"
+      "SUV_PLUS" -> "XL Plus"
       _ -> ""
   )
     <> " - "
@@ -1032,7 +1038,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
-                                  , isRateCardAvailable : isJust state.data.rateCardCache
+                                  , isRateCardAvailable : (spy "rateCardCache" (isJust state.data.rateCardCache)) &&  (state.data.fareProductType /= FPT.INTER_CITY) && (state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE)
                                   , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL
                                   , rideDurationTimer : state.props.rideDurationTimer
                                   , rideDurationTimerId : state.props.rideDurationTimerId
@@ -1093,14 +1099,12 @@ messagingViewConfig state =
     messagingViewConfig'
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
-getDefaultPeekHeight state = do
-  let
-    isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
-
-    height = case state.props.currentStage == ST.RideAccepted of
-      true -> if isQuotes then 285 else 381
-      false -> if isQuotes then 377 else 368
-  height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
+getDefaultPeekHeight state =
+  let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.props.isSpecialZone
+      height = case state.props.currentStage == ST.RideAccepted of
+        true -> if isQuotes then 285 else 381
+        false -> if isQuotes then 377 else 368
+  in height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
 metersToKm :: Int -> Boolean -> String
 metersToKm distance towardsDrop =
@@ -1503,16 +1507,15 @@ chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
 chooseYourRideConfig state =
   let
     tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-
+    _ = spy "chooseYourRideConfig TipConfig" tipConfig
     city = getValueToLocalStore CUSTOMER_LOCATION
-
     isIntercity = state.data.fareProductType == FPT.INTER_CITY
   in
     ChooseYourRide.config
       { rideDistance = state.data.rideDistance
       , rideDuration = state.data.rideDuration
       , activeIndex = state.data.selectedEstimatesObject.index
-      , quoteList = if (DA.any (_ == state.data.fareProductType) [ FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY ]) then state.data.quoteList else state.data.specialZoneQuoteList
+      , quoteList = if isIntercity then state.data.quoteList else state.data.specialZoneQuoteList
       , nearByDrivers = state.data.nearByDrivers
       , showPreferences = state.data.showPreferences
       , bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city == Bangalore
@@ -1716,7 +1719,7 @@ chooseVehicleConfig state = let
     , id = selectedEstimates.id
     , maxPrice = selectedEstimates.maxPrice
     , basePrice = selectedEstimates.basePrice
-    , showInfo = selectedEstimates.showInfo
+    , showInfo = state.data.fareProductType == FPT.ONE_WAY && selectedEstimates.showInfo
     , searchResultType = selectedEstimates.searchResultType
     , isBookingOption = false
     , pickUpCharges = selectedEstimates.pickUpCharges 
@@ -1753,7 +1756,9 @@ rideCompletedCardConfig state =
 
   in RideCompletedCard.config {
         isDriver = false,
-        customerIssue = getCustomerIssueConfig
+        customerIssue = getCustomerIssueConfig,
+        showContactSupportPopUp = state.props.isContactSupportPopUp,
+        contactSupportPopUpConfig = CommonComponentConfig.contactSupportPopUpConfig state.data.config
 
       , topCard {
           title =  getString RIDE_COMPLETED,
@@ -1897,7 +1902,7 @@ feedbackPillDataWithRating3 state =
     , { id: "8", text: getString RASH_DRIVING }
     ]
   , [ { id: "8", text: getString DRIVER_CHARGED_MORE }
-    , { id: "11", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB }
+    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "3", text: getString TRIP_GOT_DELAYED }
     , { id: "3", text: getString FELT_UNSAFE }
@@ -1910,7 +1915,7 @@ feedbackPillDataWithRating4 state =
     , { id: "9", text: getString EXPERT_DRIVING }
     ]
   , [ { id: "9", text: getString ASKED_FOR_EXTRA_FARE }
-    , { id: "11", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else getString UNCOMFORTABLE_CAB }
+    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "4", text: getString TRIP_GOT_DELAYED }
     , { id: "4", text: getString SAFE_RIDE }
@@ -1922,7 +1927,7 @@ feedbackPillDataWithRating5 state =
   [ [ { id: "10", text: getString POLITE_DRIVER }
     , { id: "5", text: getString EXPERT_DRIVING }
     ]
-  , [ { id: "12", text: if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else getString CLEAN_CAB }
+  , [ {id : "12", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if state.data.vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB}
     , { id: "10", text: getString ON_TIME }
     ]
   , [ { id: "10", text: getString SKILLED_NAVIGATOR }
@@ -2064,8 +2069,8 @@ locationTagBarConfig state =
             , id: item.id
             }
         )
-        ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
-          , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
+        ( [ -- { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
+            { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
           ]
             <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
         )

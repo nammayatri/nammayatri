@@ -377,7 +377,7 @@ locUnserviceablePopUpConfig state = let
       margin = MarginTop 16
       },
     secondaryText { 
-      text = if state.props.isSpecialZone then ("Locations within special zone are not eligible for intercity rides") else getString ONLY_LOCATION_WITHIN_CITY_LIMITS , -- TODO-mercy : Add Translation
+      text = if state.props.isSpecialZone then getString SPECIAL_ZONE_RENTAL_INELIGIBLE else getString ONLY_LOCATION_WITHIN_CITY_LIMITS ,
       margin = MarginTop 4
       },
     option1 {

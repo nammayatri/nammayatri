@@ -42,7 +42,11 @@ type AppConfigDriver a =
     chooseCity :: ChooseCityScreenConfig,
     safetyRide :: SafetyRideConfig,
     appUpdatePopupUrl :: String,
-    showProfileAadhaarPan :: Boolean
+    showProfileAadhaarPan :: Boolean,
+    clientName :: String,
+    rateCardScreen :: RateCardScreenConfig,
+    rcLimit :: Int,
+    acExplanation :: Boolean
     | a
   } 
 
@@ -269,4 +273,9 @@ type ChooseCityScreenConfig = {
 type SafetyRideConfig = {
   startTime :: String
 , endTime :: String
+}
+type RateCardScreenConfig = {
+  showYoutubeVideo :: Boolean,
+  showRateCard :: Boolean,
+  showTollCharges :: Boolean
 }

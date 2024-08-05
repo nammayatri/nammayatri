@@ -160,16 +160,17 @@ eval :: Action -> RegistrationScreenState -> Eval Action ScreenOutput Registrati
 eval AfterRender state = continue state
 
 eval BackPressed state = do
-  if state.props.enterReferralCodeModal then continue state { props = state.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
-  else if state.props.menuOptions then continue state { props { menuOptions = false}}
-  else if state.props.logoutModalView then continue state { props { logoutModalView = false}}
-  else if state.data.vehicleTypeMismatch then continue state { data { vehicleTypeMismatch = false}}
-  else if state.props.confirmChangeVehicle then continue state { props { confirmChangeVehicle = false}}
-  else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
-  else if state.props.manageVehicle then exit $ GoToHomeScreen state
+  let newState = state {props {dontAllowHvRelaunch = false}}
+  if newState.props.enterReferralCodeModal then continue newState { props = newState.props {enterOtpFocusIndex = 0, enterReferralCodeModal = false}, data {referralCode = ""} }
+  else if newState.props.menuOptions then continue newState { props { menuOptions = false}}
+  else if newState.props.logoutModalView then continue newState { props { logoutModalView = false}}
+  else if newState.data.vehicleTypeMismatch then continue newState { data { vehicleTypeMismatch = false}}
+  else if newState.props.confirmChangeVehicle then continue newState { props { confirmChangeVehicle = false}}
+  else if newState.props.contactSupportModal == ST.SHOW then continue newState { props { contactSupportModal = ST.ANIMATING}}
+  else if newState.props.manageVehicle then exit $ GoToHomeScreen newState
   else do
       void $ pure $ JB.minimizeApp ""
-      continue state 
+      continue newState 
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
@@ -179,9 +180,9 @@ eval (RegistrationAction step ) state = do
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit $ GoToOnboardSubscription state
-          PROFILE_PHOTO -> if state.props.dontAllowHvRelaunch then update state else if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallHV hvFlowIds.selfie_flow_id ""] else exit $ DocCapture state item
-          AADHAAR_CARD -> if state.props.dontAllowHvRelaunch then update state else if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallWorkFlow hvFlowIds.aadhaar_flow_id] else exit $ DocCapture state item
-          PAN_CARD  -> if state.props.dontAllowHvRelaunch then update state else if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallWorkFlow hvFlowIds.pan_flow_id] else exit $ DocCapture state item
+          PROFILE_PHOTO -> if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallHV hvFlowIds.selfie_flow_id ""] else exit $ DocCapture state item
+          AADHAAR_CARD -> if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallWorkFlow hvFlowIds.aadhaar_flow_id] else exit $ DocCapture state item
+          PAN_CARD  -> if state.data.cityConfig.enableHvSdk then continueWithCmd state [ pure $ CallWorkFlow hvFlowIds.pan_flow_id] else exit $ DocCapture state item
           VEHICLE_PERMIT  -> exit $ DocCapture state item
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item

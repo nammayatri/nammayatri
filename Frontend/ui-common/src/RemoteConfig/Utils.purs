@@ -24,6 +24,8 @@ import Data.Array (elem, filter, uncons)
 import Data.Array as DA
 import Data.Function.Uncurried (runFn3, runFn2)
 import DecodeUtil (getAnyFromWindow)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Common.Types.App (LazyCheck(..))
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -63,6 +65,7 @@ defaultRemoteConfig defaultValue =
   , mangalore : Just defaultValue
   , gulbarga : Just defaultValue
   , udupi : Just defaultValue
+  , ysCities : Just defaultValue
   , config: Nothing
   }
 
@@ -157,7 +160,9 @@ getCityBasedConfig config city = case city of
   "mangalore" -> fromMaybe config.default config.mangalore
   "gulbarga" -> fromMaybe config.default config.gulbarga
   "udupi" -> fromMaybe config.default config.udupi
-  _ -> config.default
+  _ -> case (getMerchant FunctionCall) of
+        YATRISATHI -> fromMaybe config.default config.ysCities
+        _ -> config.default
 
 tipConfigData :: String -> String -> Array Int
 tipConfigData city variant = do
@@ -185,7 +190,9 @@ tipConfigData city variant = do
         "AUTO_RICKSHAW" -> config.autoRickshaw
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
+        "BIKE" -> config.bike
         "BOOK_ANY" -> config.bookAny
+        "SUV_PLUS" -> config.suv
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -196,6 +203,7 @@ defaultTipsConfig =
   , autoRickshaw: Nothing
   , taxi: Nothing
   , taxiPlus: Nothing
+  , bike : Nothing
   , bookAny: Nothing
   , default: Nothing
   }

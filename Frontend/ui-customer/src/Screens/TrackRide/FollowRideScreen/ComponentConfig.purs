@@ -23,6 +23,7 @@ import Data.Array as DA
 import LocalStorage.Cache (getValueFromCache)
 import Storage
 import Engineering.Helpers.Suggestions
+import Screens.Types as ST
 
 primaryButtonConfig :: FollowRideScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -109,6 +110,7 @@ getDriverDetails state =
     , serviceTierName : ride.serviceTierName
     , providerType : Common.ONUS
     , showAcView : false
+    , isSpecialZone : false
     }
 
 
@@ -126,6 +128,7 @@ getTripDetails state color =
     , fareProductType : ride.fareProductType
     , enableEditDestination : false
     , editingDestinationLoc : NoAction
+    , isSpecialZone : false
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

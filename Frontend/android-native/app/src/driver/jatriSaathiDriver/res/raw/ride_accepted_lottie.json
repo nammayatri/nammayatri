@@ -1,0 +1,4253 @@
+{
+  "v": "4.8.0",
+  "ip": 0,
+  "op": 104,
+  "fr": 30,
+  "w": 328,
+  "h": 310,
+  "nm": "A",
+  "assets": [
+      {
+          "h": 5,
+          "w": 5,
+          "id": "image_0",
+          "p": "data:image/webp;base64,UklGRmgAAABXRUJQVlA4WAoAAAAQAAAABAAABAAAQUxQSBoAAAAACBgaGAcYGhoaGBoaGhoaGBoaGhgHGBoYB1ZQOCAoAAAAUAEAnQEqBQAFAAFAJiUAToAuoAD++f9+CHJ4ZEQ1JsUldVEpkd/AAA==",
+          "u": "",
+          "e": 1
+      },
+      {
+          "h": 5,
+          "w": 5,
+          "id": "image_1",
+          "p": "data:image/webp;base64,UklGRmAAAABXRUJQVlA4WAoAAAAQAAAABAAABAAAQUxQSBoAAAAAKHiAeCB4gICAeICAgICAeICAgHggeIB4IFZQOCAgAAAAcAEAnQEqBQAFAAFAJiWcAnQBQAAA/vl9rZO9GrlAAAA=",
+          "u": "",
+          "e": 1
+      },
+      {
+          "h": 5,
+          "w": 5,
+          "id": "image_2",
+          "p": "data:image/webp;base64,UklGRmAAAABXRUJQVlA4WAoAAAAQAAAABAAABAAAQUxQSBoAAAAAQMDMwDPAzMzMwMzMzMzMwMzMzMAzwMzAM1ZQOCAgAAAAcAEAnQEqBQAFAAFAJiWUAnQBQAAA/vl9rbLRS3sAAAA=",
+          "u": "",
+          "e": 1
+      },
+      {
+          "h": 116,
+          "w": 100,
+          "id": "image_3",
+          "p": "data:image/webp;base64,UklGRmAIAABXRUJQVlA4WAoAAAAQAAAAYwAAcwAAQUxQSGEDAAABoANtmyJb+bCYxh0adxg8HdxhcIfGIZu6MTK4w+DpoJFNFZEzuMPgDoM7NO58wdntmf/vTqmKiAmAeG5yFkh9y4Zt8jJPeqxz0gWPPvroo+cdkKi8JPk65/98QXpcywnfMmkxHad9d4WUZJ5Tv50QM3D6doVktJT8Za9E5BTePQ2d1BdJsBQ/JQWl3P0p6OWeT4Ch/HMJyBU8O4Ut254zfVflCioFT4xzPUf62ko1Cq4d4zynbIxMp+CYMNtxYl9E1puQzHP6SoIau4DMU7KOi9kc4ynr4qrmdBT2dqqlVOUUb6baT4eb1cpxyZjsDEOFK010nooaM3MNG050vYYbMbvSsOVEz8rtuizi+0xuP8S3CuW3Csg1bDjNSQoQaDSsNM1tcu+GoFWw5DSfyV0blMs1mPRQiv+yQhA6KW/HrLDoziefePoLOYdw44UcRl77E3UuwthMpkb4Cs9TqxlViVQIX+ptqnVjMgr6AiNvot5mhOkX9H6SxmDkxlTcjahJsjdw/RhfW4y+WxPDcpLsDQDYsu1n+a7KMeVPsZiBZGOglLG0JBtoXUxVF1KQbKBXVRlgPOmgeFDkTUBHOmhuFDnML+kdVFs9DvOt9xl011oai0DnM+guqLM0iHpQkiPqnErLOVvFUWmpZqz/DH++/8wtEvcMZ35577LKCi3FgvU5/2JlGJRkC64IuEhb9qOKAYAtvwxYRxu2/VFDBVMz9H3oX/Z3uQ7oyb8C3osgp/S3FVBzZAQ1e6H9AMvwb2PoWcs1I9jps+yc0ArI/Zhan2OVyXjXc7TT1zCHF/mLExp9nkAnMmUD9Rk7oNL1o9VXsgYyuRuDCuhvWQDwQv6M7wN+zRChpwHQytz3OEP3QoQZewAoJX68h8E9YjydzQIr8NaPnP/3e0NjotiBbgGGyb5nYG8RbZ3NqCcLrRDx0phZiPUZEmikKqSxFxlypNFSsjZIZC0w5EjmIHC7TcaaFG1sItCIkI1NAyoZ8o48CXBC5HuHpwC5FyK/qbP4YHspkkOdxQZTy5H0TREXUHgFJH1TmJhgWhULW2fiAfJBCcm2tNEAlddCehcPTOW1kC4ewFReC11EgHG9Em9iApDVXgNdZACKepAr4wNgXdNP1zfOIp15WXWdD/FdV5U5/h8WAFZQOCDYBAAAUBkAnQEqZAB0AD5tMpNGpCMhoSgZLPCADYlBDlYy2TYEUNJPynExn4sH+qLbR+YDzj/RlvHHoV9Kr/fa4nIrtuYP7lJKuO6p8yfPPoVKD/c01c3bwVCLbG+6UrELcNAzuPNwkBeIAToU82ZsidaP3eT3tIMhfCMKxpRzofDXmLmFPpsRXs7hKuds9B4im/ionUE4BN/mwS63eBK22Zt/yLYmOJFdwbptygnfuvY3ly2o6cWrKB6Mr7wvrnH/2xw5Miey+D9//8LgL31sYuW0JHcVAAD+3wnm5Kb+CUPyttPL5pGY6Jx1t6zBY5Ckwqk4nSUCedBcci/x65ZydmTlDDVz7oMpNVN/Yka0lPIWUpA1YyvyDo0vOf/Cn//7qv//dO///3M/QVQb01pSowDz/ugt183tlMQdBKaBI8GrczFDCcvoMzg53KFYpFZXRvnY6/wGNs0HXqt9Tw9289+LPR4oov7WswR+xafuatvRLg43ej+QqTvsoRJqIERbZR0SYwa1tFXZVAhbcYvL8JTsXUWgdXLf/0aTjrWBG4xpm9K7icPnBip1vvDTQM7iVbh9OT6JQpQR65pmee3b0gLDocD/T5ss5wq9VXIfW6NAjdJeakeIOzfCc4WrBGGDf/x46sGj+HV9fBdxyu7FvxxO3iHzI1TJLjeII2t1u43EPuFyNPax+KZNb208xxnqIfmMDy7WN3KrrSHhYBAKcCsRJQAm4MqkDPAYJii0v3GrJMkBthvmpqJr2q7C5Cj1+s/RxqVE/Tw7z0oX3DDfJTMyvAn1DrFiQLUuH3SpYFAyedus3xQou8NQc4PqMbqYntQInKEjc0HH0kc/onRf7ywL8cFlW3cjIvN1EdyT///9jPNkdL0OIodOyQVnWFTZ2tznIxjOFXUqZSw+bVw+jU637IZQgDqu5rP6tM65dAbvnYOyhdLwgjGqN0K5lRtvqeemLCxfNbhpQ8X81oXp484aIspigleyTNdaufOqqaJ3ep92rQP4F0OmXZhykqrCZF6qlPajtB4HA5I2cJ80gfEWnVS5DiBPObwmux/g7nBDsH3SY5NM7PebKBj+LFNnOzMS5Y12ixioeZz8zG7Gqc0RETotDNVzDLbrGVK6gLU/w7RFn+knos7h54s/ro7RQqP22unE17rRWAAlOnaBp9jxsKplP5UsYfzwF5O8v4fuO8AZwBjbKpDs71nfpZme7RREdx3rPoKmBPo6Uiq8TFJlMqwoEZxnU1+qPsH4W8o30VdSTyCA/HeTDij27veI9E62j1FbvYwiJe+iiBshbUnglg3T1cCLMXUhcBR4Kyp++fXS2kjeV8X/j/PMF+j++0NuUGOFnL3JHRP1Ugt1znsF+wgBQwdmCBx3lllv/1CdP7uRjokZ0OSp2KrLpbaSqI63yy7+i1QkJePI7WLPT+//7TD/+zyf/+0GD9zo+33qNkdIfMj+0EQO25hbfvXH/rTofydfUGKbnnzuImVEptaLBw3Jks0zaLeqXRMqgCXV//f0AQjZGEN8FB7yVKXzLk3QkB6rD3iYA7GDd09KxrlW+LNMG+e8PlARzSxm5MMytsrwkrAPb///lAz1FHL3k5op8EyrTf//6HQbHcFcOxrSSwsKWJ9Qn58QZGYpz8aSDcbV9cAAAAAAAA==",
+          "u": "",
+          "e": 1
+      },
+      {
+          "id": "comp_0",
+          "layers": [
+              {
+                  "ind": 1,
+                  "ty": 0,
+                  "nm": "C",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 1,
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 30,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "t": 35,
+                                  "s": [
+                                      100
+                                  ]
+                              }
+                          ]
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": 0.33,
+                                      "y": 1
+                                  },
+                                  "o": {
+                                      "x": 0.16,
+                                      "y": 0
+                                  },
+                                  "t": 53,
+                                  "s": [
+                                      163.904,
+                                      175.084,
+                                      0
+                                  ],
+                                  "ti": [
+                                      -0.016,
+                                      -4.453,
+                                      0
+                                  ],
+                                  "to": [
+                                      0.016,
+                                      4.453,
+                                      0
+                                  ]
+                              },
+                              {
+                                  "t": 58,
+                                  "s": [
+                                      164.001,
+                                      201,
+                                      0
+                                  ]
+                              }
+                          ],
+                          "a": 1
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              18,
+                              36,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833,
+                                          0.833,
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.905,
+                                          0.905,
+                                          -9.417
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.17,
+                                          0.17,
+                                          0.17
+                                      ],
+                                      "y": [
+                                          0,
+                                          0,
+                                          0
+                                      ]
+                                  },
+                                  "t": 30,
+                                  "s": [
+                                      0,
+                                      0,
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.568,
+                                          0.568,
+                                          0.568
+                                      ],
+                                      "y": [
+                                          0.879,
+                                          0.879,
+                                          2.207
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.215,
+                                          0.215,
+                                          0.215
+                                      ],
+                                      "y": [
+                                          0,
+                                          0,
+                                          0
+                                      ]
+                                  },
+                                  "t": 35,
+                                  "s": [
+                                      110,
+                                      110,
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.843,
+                                          0.843,
+                                          0.843
+                                      ],
+                                      "y": [
+                                          1,
+                                          1,
+                                          1
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.316,
+                                          0.316,
+                                          0.316
+                                      ],
+                                      "y": [
+                                          -2.295,
+                                          -2.295,
+                                          -2.295
+                                      ]
+                                  },
+                                  "t": 40,
+                                  "s": [
+                                      100,
+                                      100,
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833,
+                                          0.833,
+                                          0.833
+                                      ],
+                                      "y": [
+                                          1,
+                                          1,
+                                          1
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167,
+                                          0.167,
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0,
+                                          0,
+                                          0
+                                      ]
+                                  },
+                                  "t": 53,
+                                  "s": [
+                                      100,
+                                      100,
+                                      100
+                                  ]
+                              },
+                              {
+                                  "t": 58,
+                                  "s": [
+                                      260,
+                                      260,
+                                      100
+                                  ]
+                              }
+                          ],
+                          "a": 1
+                      }
+                  },
+                  "ip": 0,
+                  "op": 120,
+                  "st": 0,
+                  "refId": "comp_1",
+                  "h": 36,
+                  "w": 36
+              },
+              {
+                  "ind": 2,
+                  "ty": 0,
+                  "nm": "C",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 1,
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 35,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 43,
+                                  "s": [
+                                      50
+                                  ]
+                              },
+                              {
+                                  "t": 58,
+                                  "s": [
+                                      0
+                                  ]
+                              }
+                          ]
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              164,
+                              155,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              400,
+                              400,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "a": 0,
+                          "k": [
+                              26,
+                              26,
+                              100
+                          ]
+                      }
+                  },
+                  "cl": "ai",
+                  "ip": 35,
+                  "op": 125,
+                  "st": -40,
+                  "refId": "comp_2",
+                  "h": 800,
+                  "w": 800
+              },
+              {
+                  "ind": 3,
+                  "ty": 0,
+                  "nm": "C",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 1,
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 35,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 43,
+                                  "s": [
+                                      50
+                                  ]
+                              },
+                              {
+                                  "t": 58,
+                                  "s": [
+                                      0
+                                  ]
+                              }
+                          ]
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              164,
+                              155,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              400,
+                              400,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "a": 0,
+                          "k": [
+                              26,
+                              26,
+                              100
+                          ]
+                      }
+                  },
+                  "cl": "ai",
+                  "ip": 0,
+                  "op": 36,
+                  "st": -40,
+                  "refId": "comp_2",
+                  "h": 800,
+                  "w": 800
+              },
+              {
+                  "ind": 4,
+                  "ty": 4,
+                  "nm": "b",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 0,
+                          "k": 100
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              164,
+                              155,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              294.387,
+                              294.387,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "a": 0,
+                          "k": [
+                              26,
+                              26,
+                              100
+                          ]
+                      }
+                  },
+                  "shapes": [
+                      {
+                          "ty": "gr",
+                          "nm": "G",
+                          "bm": 0,
+                          "it": [
+                              {
+                                  "ty": "sh",
+                                  "nm": "P",
+                                  "ind": 0,
+                                  "ks": {
+                                      "k": {
+                                          "i": [
+                                              [
+                                                  0,
+                                                  -162.447
+                                              ],
+                                              [
+                                                  162.447,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  162.447
+                                              ],
+                                              [
+                                                  -162.448,
+                                                  0
+                                              ]
+                                          ],
+                                          "o": [
+                                              [
+                                                  0,
+                                                  162.447
+                                              ],
+                                              [
+                                                  -162.448,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -162.447
+                                              ],
+                                              [
+                                                  162.447,
+                                                  0
+                                              ]
+                                          ],
+                                          "v": [
+                                              [
+                                                  294.137,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  294.137
+                                              ],
+                                              [
+                                                  -294.137,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -294.137
+                                              ]
+                                          ],
+                                          "c": true
+                                      },
+                                      "a": 0
+                                  }
+                              },
+                              {
+                                  "ty": "fl",
+                                  "nm": "F",
+                                  "bm": 0,
+                                  "c": {
+                                      "a": 0,
+                                      "k": [
+                                          0.956862804936,
+                                          0.956862804936,
+                                          0.964705942191,
+                                          1
+                                      ]
+                                  },
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": 1
+                              },
+                              {
+                                  "ty": "tr",
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "p": {
+                                      "a": 0,
+                                      "k": [
+                                          294.387,
+                                          294.387
+                                      ]
+                                  },
+                                  "a": {
+                                      "a": 0,
+                                      "k": [
+                                          0,
+                                          0
+                                      ]
+                                  },
+                                  "s": {
+                                      "a": 0,
+                                      "k": [
+                                          100,
+                                          100
+                                      ]
+                                  },
+                                  "nm": "T",
+                                  "sk": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "sa": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              }
+                          ]
+                      }
+                  ],
+                  "ip": 0,
+                  "op": 240.24,
+                  "st": 0,
+                  "ef": [
+                      {
+                          "ty": 21,
+                          "ix": 1,
+                          "nm": "F",
+                          "ef": [
+                              {
+                                  "ix": 1,
+                                  "nm": "F",
+                                  "ty": 10,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 2,
+                                  "nm": "A",
+                                  "ty": 7,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 3,
+                                  "nm": "C",
+                                  "ty": 2,
+                                  "v": {
+                                      "a": 0,
+                                      "k": [
+                                          0.956862747669,
+                                          0.956862747669,
+                                          0.964705884457,
+                                          1
+                                      ]
+                                  }
+                              },
+                              {
+                                  "ix": 4,
+                                  "nm": "I",
+                                  "ty": 7,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 5,
+                                  "nm": "H",
+                                  "ty": 0,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 6,
+                                  "nm": "V",
+                                  "ty": 0,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 7,
+                                  "nm": "O",
+                                  "ty": 0,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 1
+                                  }
+                              }
+                          ],
+                          "en": 1
+                      }
+                  ]
+              }
+          ]
+      },
+      {
+          "id": "comp_1",
+          "layers": [
+              {
+                  "ind": 1,
+                  "ty": 4,
+                  "nm": "L",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 0,
+                          "k": 100
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              17.999,
+                              18,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              18.25,
+                              18.25,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "a": 0,
+                          "k": [
+                              100,
+                              100,
+                              100
+                          ]
+                      }
+                  },
+                  "shapes": [
+                      {
+                          "ty": "gr",
+                          "nm": "G",
+                          "bm": 0,
+                          "it": [
+                              {
+                                  "ty": "sh",
+                                  "nm": "P",
+                                  "ind": 0,
+                                  "ks": {
+                                      "k": {
+                                          "i": [
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  0.378,
+                                                  0.403
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  -0.806,
+                                                  0.756
+                                              ],
+                                              [
+                                                  -0.755,
+                                                  -0.806
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  -0.833,
+                                                  -0.727
+                                              ],
+                                              [
+                                                  0.727,
+                                                  -0.831
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  0.565,
+                                                  -0.01
+                                              ]
+                                          ],
+                                          "o": [
+                                              [
+                                                  -0.552,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  -0.755,
+                                                  -0.805
+                                              ],
+                                              [
+                                                  0.806,
+                                                  -0.755
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  0.728,
+                                                  -0.831
+                                              ],
+                                              [
+                                                  0.831,
+                                                  0.727
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ],
+                                              [
+                                                  -0.372,
+                                                  0.425
+                                              ],
+                                              [
+                                                  0,
+                                                  0
+                                              ]
+                                          ],
+                                          "v": [
+                                              [
+                                                  -3.009,
+                                                  8.116
+                                              ],
+                                              [
+                                                  -4.468,
+                                                  7.484
+                                              ],
+                                              [
+                                                  -8.968,
+                                                  2.684
+                                              ],
+                                              [
+                                                  -8.877,
+                                                  -0.143
+                                              ],
+                                              [
+                                                  -6.05,
+                                                  -0.051
+                                              ],
+                                              [
+                                                  -3.06,
+                                                  3.137
+                                              ],
+                                              [
+                                                  5.986,
+                                                  -7.201
+                                              ],
+                                              [
+                                                  8.808,
+                                                  -7.389
+                                              ],
+                                              [
+                                                  8.996,
+                                                  -4.567
+                                              ],
+                                              [
+                                                  -1.504,
+                                                  7.433
+                                              ],
+                                              [
+                                                  -2.975,
+                                                  8.116
+                                              ]
+                                          ],
+                                          "c": true
+                                      },
+                                      "a": 0
+                                  }
+                              },
+                              {
+                                  "ty": "fl",
+                                  "nm": "F",
+                                  "bm": 0,
+                                  "c": {
+                                      "a": 0,
+                                      "k": [
+                                          0.898039275525,
+                                          0.90588241278,
+                                          0.921568687289,
+                                          1
+                                      ]
+                                  },
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": 1
+                              },
+                              {
+                                  "ty": "tr",
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "p": {
+                                      "a": 0,
+                                      "k": [
+                                          17.76,
+                                          18.134
+                                      ]
+                                  },
+                                  "a": {
+                                      "a": 0,
+                                      "k": [
+                                          0,
+                                          0
+                                      ]
+                                  },
+                                  "s": {
+                                      "k": [
+                                          {
+                                              "i": {
+                                                  "x": [
+                                                      0.833,
+                                                      0.833
+                                                  ],
+                                                  "y": [
+                                                      0.833,
+                                                      0.833
+                                                  ]
+                                              },
+                                              "o": {
+                                                  "x": [
+                                                      0.167,
+                                                      0.167
+                                                  ],
+                                                  "y": [
+                                                      0.167,
+                                                      0.167
+                                                  ]
+                                              },
+                                              "t": 53,
+                                              "s": [
+                                                  100,
+                                                  100
+                                              ]
+                                          },
+                                          {
+                                              "t": 58,
+                                              "s": [
+                                                  60,
+                                                  60
+                                              ]
+                                          }
+                                      ],
+                                      "a": 1
+                                  },
+                                  "nm": "T",
+                                  "sk": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "sa": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              }
+                          ]
+                      },
+                      {
+                          "ty": "gr",
+                          "nm": "G",
+                          "bm": 0,
+                          "it": [
+                              {
+                                  "ty": "sh",
+                                  "nm": "P",
+                                  "ind": 0,
+                                  "ks": {
+                                      "k": {
+                                          "i": [
+                                              [
+                                                  8.271,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -8.271
+                                              ],
+                                              [
+                                                  -8.271,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  8.271
+                                              ]
+                                          ],
+                                          "o": [
+                                              [
+                                                  -8.271,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  8.271
+                                              ],
+                                              [
+                                                  8.271,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -8.271
+                                              ]
+                                          ],
+                                          "v": [
+                                              [
+                                                  0,
+                                                  -15
+                                              ],
+                                              [
+                                                  -15,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  15
+                                              ],
+                                              [
+                                                  15,
+                                                  0
+                                              ]
+                                          ],
+                                          "c": true
+                                      },
+                                      "a": 0
+                                  }
+                              },
+                              {
+                                  "ty": "sh",
+                                  "nm": "P",
+                                  "ind": 1,
+                                  "ks": {
+                                      "k": {
+                                          "i": [
+                                              [
+                                                  9.925,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  9.925
+                                              ],
+                                              [
+                                                  -9.925,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -9.925
+                                              ]
+                                          ],
+                                          "o": [
+                                              [
+                                                  -9.925,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -9.925
+                                              ],
+                                              [
+                                                  9.925,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  9.925
+                                              ]
+                                          ],
+                                          "v": [
+                                              [
+                                                  0,
+                                                  18
+                                              ],
+                                              [
+                                                  -18,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -18
+                                              ],
+                                              [
+                                                  18,
+                                                  0
+                                              ]
+                                          ],
+                                          "c": true
+                                      },
+                                      "a": 0
+                                  }
+                              },
+                              {
+                                  "ty": "mm",
+                                  "nm": "M",
+                                  "mm": 1
+                              },
+                              {
+                                  "ty": "fl",
+                                  "nm": "F",
+                                  "bm": 0,
+                                  "c": {
+                                      "a": 0,
+                                      "k": [
+                                          0.956862804936,
+                                          0.956862804936,
+                                          0.964705942191,
+                                          1
+                                      ]
+                                  },
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": 1
+                              },
+                              {
+                                  "ty": "tr",
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "p": {
+                                      "a": 0,
+                                      "k": [
+                                          18.25,
+                                          18.25
+                                      ]
+                                  },
+                                  "a": {
+                                      "a": 0,
+                                      "k": [
+                                          0,
+                                          0
+                                      ]
+                                  },
+                                  "s": {
+                                      "a": 0,
+                                      "k": [
+                                          100,
+                                          100
+                                      ]
+                                  },
+                                  "nm": "T",
+                                  "sk": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "sa": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              }
+                          ]
+                      },
+                      {
+                          "ty": "gr",
+                          "nm": "G",
+                          "bm": 0,
+                          "it": [
+                              {
+                                  "ty": "sh",
+                                  "nm": "P",
+                                  "ind": 0,
+                                  "ks": {
+                                      "k": {
+                                          "i": [
+                                              [
+                                                  0,
+                                                  -9.113
+                                              ],
+                                              [
+                                                  -9.112,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  9.113
+                                              ],
+                                              [
+                                                  9.113,
+                                                  0
+                                              ]
+                                          ],
+                                          "o": [
+                                              [
+                                                  0,
+                                                  9.113
+                                              ],
+                                              [
+                                                  9.113,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -9.113
+                                              ],
+                                              [
+                                                  -9.112,
+                                                  0
+                                              ]
+                                          ],
+                                          "v": [
+                                              [
+                                                  -16.499,
+                                                  0
+                                              ],
+                                              [
+                                                  -0.001,
+                                                  16.5
+                                              ],
+                                              [
+                                                  16.499,
+                                                  0
+                                              ],
+                                              [
+                                                  -0.001,
+                                                  -16.5
+                                              ]
+                                          ],
+                                          "c": true
+                                      },
+                                      "a": 0
+                                  }
+                              },
+                              {
+                                  "ty": "fl",
+                                  "nm": "F",
+                                  "bm": 0,
+                                  "c": {
+                                      "a": 0,
+                                      "k": [
+                                          0.325490196078,
+                                          0.733333333333,
+                                          0.435294147566,
+                                          1
+                                      ]
+                                  },
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": 1
+                              },
+                              {
+                                  "ty": "tr",
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "p": {
+                                      "a": 0,
+                                      "k": [
+                                          18.25,
+                                          18.25
+                                      ]
+                                  },
+                                  "a": {
+                                      "a": 0,
+                                      "k": [
+                                          0,
+                                          0
+                                      ]
+                                  },
+                                  "s": {
+                                      "a": 0,
+                                      "k": [
+                                          100,
+                                          100
+                                      ]
+                                  },
+                                  "nm": "T",
+                                  "sk": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "sa": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              }
+                          ]
+                      }
+                  ],
+                  "ip": 0,
+                  "op": 120,
+                  "st": 0
+              }
+          ]
+      },
+      {
+          "id": "comp_2",
+          "layers": [
+              {
+                  "ind": 1,
+                  "ty": 2,
+                  "nm": "L",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 1,
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 37.538,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 41.291,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 45.045,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 56.306,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 60.06,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 63.814,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 75.075,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 78.829,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 82.583,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 93.844,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 97.598,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 101.351,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 112.613,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 116.366,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 120.12,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 131.381,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 135.135,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 138.889,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 150.15,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 153.904,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 157.658,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 168.919,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 172.673,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 176.426,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 187.688,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 191.441,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 195.195,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 206.456,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 210.21,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 213.964,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 225.225,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 228.979,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 232.733,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 243.994,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 247.748,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "t": 251.502,
+                                  "s": [
+                                      100
+                                  ]
+                              }
+                          ]
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              567.461,
+                              348.55,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              2.5,
+                              2.5,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "a": 0,
+                          "k": [
+                              490,
+                              490,
+                              100
+                          ]
+                      }
+                  },
+                  "ip": 30.03,
+                  "op": 255.255,
+                  "st": 15.015015015015,
+                  "refId": "image_0"
+              },
+              {
+                  "ind": 2,
+                  "ty": 2,
+                  "nm": "L",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 1,
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 33.784,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 37.538,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 41.291,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 52.553,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 56.306,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 60.06,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 71.321,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 75.075,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 78.829,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 90.09,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 93.844,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 97.598,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 108.859,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 112.613,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 116.366,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 127.628,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 131.381,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 135.135,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 146.396,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 150.15,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 153.904,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 165.165,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 168.919,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 172.673,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 183.934,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 187.688,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 191.441,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 202.703,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 206.456,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 210.21,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 221.471,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 225.225,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 228.979,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 240.24,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 243.994,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "t": 247.748,
+                                  "s": [
+                                      100
+                                  ]
+                              }
+                          ]
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              528.261,
+                              348.55,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              2.5,
+                              2.5,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "a": 0,
+                          "k": [
+                              490,
+                              490,
+                              100
+                          ]
+                      }
+                  },
+                  "ip": 30.03,
+                  "op": 247.748,
+                  "st": 7.50750750750751,
+                  "refId": "image_1"
+              },
+              {
+                  "ind": 3,
+                  "ty": 2,
+                  "nm": "L",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 1,
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 30.03,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 33.784,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 37.538,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 48.799,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 52.553,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 56.306,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 67.568,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 71.321,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 75.075,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 86.336,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 90.09,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 93.844,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 105.105,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 108.859,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 112.613,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 123.874,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 127.628,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 131.381,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 142.643,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 146.396,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 150.15,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 161.411,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 165.165,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 168.919,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 180.18,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 183.934,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 187.688,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 198.949,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 202.703,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 206.456,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 217.718,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 221.471,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 225.225,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 236.486,
+                                  "s": [
+                                      100
+                                  ]
+                              },
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 240.24,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "t": 243.994,
+                                  "s": [
+                                      100
+                                  ]
+                              }
+                          ]
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              489.061,
+                              348.55,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              2.5,
+                              2.5,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "a": 0,
+                          "k": [
+                              490,
+                              490,
+                              100
+                          ]
+                      }
+                  },
+                  "ip": 30.03,
+                  "op": 240.24,
+                  "st": 0,
+                  "refId": "image_2"
+              },
+              {
+                  "ind": 4,
+                  "ty": 2,
+                  "nm": "L",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 0,
+                          "k": 100
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              264.191,
+                              386.928,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              49.838,
+                              57.886,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "a": 0,
+                          "k": [
+                              490,
+                              490,
+                              100
+                          ]
+                      }
+                  },
+                  "ip": 15.015,
+                  "op": 240.24,
+                  "st": 0,
+                  "parent": 5,
+                  "refId": "image_3"
+              },
+              {
+                  "ind": 5,
+                  "ty": 4,
+                  "nm": "L",
+                  "sr": 1,
+                  "ks": {
+                      "o": {
+                          "a": 1,
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0.833
+                                      ],
+                                      "y": [
+                                          0.833
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.167
+                                      ],
+                                      "y": [
+                                          0.167
+                                      ]
+                                  },
+                                  "t": 15.015,
+                                  "s": [
+                                      0
+                                  ]
+                              },
+                              {
+                                  "t": 30.03,
+                                  "s": [
+                                      100
+                                  ]
+                              }
+                          ]
+                      },
+                      "r": {
+                          "a": 0,
+                          "k": 0
+                      },
+                      "p": {
+                          "a": 0,
+                          "k": [
+                              400.113,
+                              694.613,
+                              0
+                          ]
+                      },
+                      "a": {
+                          "a": 0,
+                          "k": [
+                              294.5,
+                              589,
+                              0
+                          ]
+                      },
+                      "s": {
+                          "k": [
+                              {
+                                  "i": {
+                                      "x": [
+                                          0,
+                                          0,
+                                          0.667
+                                      ],
+                                      "y": [
+                                          1.059,
+                                          1.059,
+                                          1
+                                      ]
+                                  },
+                                  "o": {
+                                      "x": [
+                                          0.621,
+                                          0.621,
+                                          0.333
+                                      ],
+                                      "y": [
+                                          -0.002,
+                                          -0.002,
+                                          0
+                                      ]
+                                  },
+                                  "t": 15.015,
+                                  "s": [
+                                      0,
+                                      0,
+                                      100
+                                  ]
+                              },
+                              {
+                                  "t": 30.03,
+                                  "s": [
+                                      100,
+                                      100,
+                                      100
+                                  ]
+                              }
+                          ],
+                          "a": 1
+                      }
+                  },
+                  "shapes": [
+                      {
+                          "ty": "gr",
+                          "nm": "G",
+                          "bm": 0,
+                          "it": [
+                              {
+                                  "ty": "sh",
+                                  "nm": "P",
+                                  "ind": 0,
+                                  "ks": {
+                                      "k": {
+                                          "i": [
+                                              [
+                                                  0,
+                                                  -162.447
+                                              ],
+                                              [
+                                                  162.447,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  162.447
+                                              ],
+                                              [
+                                                  -162.448,
+                                                  0
+                                              ]
+                                          ],
+                                          "o": [
+                                              [
+                                                  0,
+                                                  162.447
+                                              ],
+                                              [
+                                                  -162.448,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -162.447
+                                              ],
+                                              [
+                                                  162.447,
+                                                  0
+                                              ]
+                                          ],
+                                          "v": [
+                                              [
+                                                  294.137,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  294.137
+                                              ],
+                                              [
+                                                  -294.137,
+                                                  0
+                                              ],
+                                              [
+                                                  0,
+                                                  -294.137
+                                              ]
+                                          ],
+                                          "c": true
+                                      },
+                                      "a": 0
+                                  }
+                              },
+                              {
+                                  "ty": "fl",
+                                  "nm": "F",
+                                  "bm": 0,
+                                  "c": {
+                                      "a": 0,
+                                      "k": [
+                                          0.898039275525,
+                                          0.90588241278,
+                                          0.921568687289,
+                                          1
+                                      ]
+                                  },
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": 1
+                              },
+                              {
+                                  "ty": "tr",
+                                  "o": {
+                                      "a": 0,
+                                      "k": 100
+                                  },
+                                  "r": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "p": {
+                                      "a": 0,
+                                      "k": [
+                                          294.387,
+                                          294.387
+                                      ]
+                                  },
+                                  "a": {
+                                      "a": 0,
+                                      "k": [
+                                          0,
+                                          0
+                                      ]
+                                  },
+                                  "s": {
+                                      "a": 0,
+                                      "k": [
+                                          100,
+                                          100
+                                      ]
+                                  },
+                                  "nm": "T",
+                                  "sk": {
+                                      "a": 0,
+                                      "k": 0
+                                  },
+                                  "sa": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              }
+                          ]
+                      }
+                  ],
+                  "ip": 0,
+                  "op": 240.24,
+                  "st": 0,
+                  "ef": [
+                      {
+                          "ty": 21,
+                          "ix": 1,
+                          "nm": "F",
+                          "ef": [
+                              {
+                                  "ix": 1,
+                                  "nm": "F",
+                                  "ty": 10,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 2,
+                                  "nm": "A",
+                                  "ty": 7,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 3,
+                                  "nm": "C",
+                                  "ty": 2,
+                                  "v": {
+                                      "a": 0,
+                                      "k": [
+                                          0.898039281368,
+                                          0.905882418156,
+                                          0.92156869173,
+                                          1
+                                      ]
+                                  }
+                              },
+                              {
+                                  "ix": 4,
+                                  "nm": "I",
+                                  "ty": 7,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 5,
+                                  "nm": "H",
+                                  "ty": 0,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 6,
+                                  "nm": "V",
+                                  "ty": 0,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 0
+                                  }
+                              },
+                              {
+                                  "ix": 7,
+                                  "nm": "O",
+                                  "ty": 0,
+                                  "v": {
+                                      "a": 0,
+                                      "k": 1
+                                  }
+                              }
+                          ],
+                          "en": 1
+                      }
+                  ]
+              }
+          ]
+      }
+  ],
+  "layers": [
+      {
+          "ind": 1,
+          "ty": 0,
+          "nm": "A",
+          "sr": 1,
+          "ks": {
+              "o": {
+                  "a": 0,
+                  "k": 100
+              },
+              "r": {
+                  "a": 0,
+                  "k": 0
+              },
+              "p": {
+                  "a": 0,
+                  "k": [
+                      164,
+                      155,
+                      0
+                  ]
+              },
+              "a": {
+                  "a": 0,
+                  "k": [
+                      164,
+                      155,
+                      0
+                  ]
+              },
+              "s": {
+                  "a": 0,
+                  "k": [
+                      76,
+                      76,
+                      100
+                  ]
+              }
+          },
+          "ip": 0,
+          "op": 120,
+          "st": 0,
+          "refId": "comp_0",
+          "h": 310,
+          "w": 328
+      }
+  ],
+  "markers": []
+}

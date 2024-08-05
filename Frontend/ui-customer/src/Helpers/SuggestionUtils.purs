@@ -52,6 +52,8 @@ import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import RemoteConfig (FamousDestination(..), getFamousDestinations)
 import Screens.HomeScreen.ScreenData (dummyAddress)
 import RemoteConfig as RC
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Debug
 
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
@@ -365,7 +367,7 @@ transformSuggestion locationsToExclude destination = let
     in if shouldInclude then Just destination else Nothing
 
 correctServiceTierName :: Maybe String -> Maybe String
-correctServiceTierName serviceTierName = 
+correctServiceTierName serviceTierName =
   case serviceTierName of
     Just "SUV" -> Just "SUV"
     Just "SEDAN" -> Just "Sedan"
@@ -486,6 +488,8 @@ getVariant serviceTier variant =
     Just "AC Mini" -> Just "HATCHBACK"
     Just "XL Cab" -> Just "SUV"
     Just "Non-AC Mini" -> Just "TAXI"
+    Just "Bike Taxi" -> Just "BIKE"
+    Just "XL Plus" -> Just "SUV_PLUS"
     _ -> variant
 
 fetchFamousDestinations :: LazyCheck -> Array LocationListItemState

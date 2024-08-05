@@ -109,7 +109,8 @@ getBookingStatus status =
   case (toUpper status )of 
     "PENDING" -> (API.Pending)
     "FAILED" -> API.Failed
-    "BOOKED" -> API.Booked 
+    "BOOKED" -> API.Booked
+    "CANCELLED" -> API.Cancelled
     _ -> API.Pending
 
 transformRespToStateDatav2 :: Boolean -> API.TicketServiceResp -> TicketBookingScreenState -> String -> TicketServiceData

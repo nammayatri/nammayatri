@@ -14,7 +14,8 @@ import Effect (Effect)
 import Foreign.Class (class Encode)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Foreign.Generic (decodeJSON, encodeJSON)
-
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Common.Types.App (LazyCheck(..))
 
 type TipConfig = {
   customerTipArray :: Array String,
@@ -27,7 +28,9 @@ type TipVehicleConfig = {
   hatchback :: TipConfig,
   autoRickshaw :: TipConfig,
   taxi :: TipConfig,
-  taxiPlus :: TipConfig
+  taxiPlus :: TipConfig,
+  bike :: TipConfig,
+  suvPlus :: TipConfig
 }
 
 
@@ -39,7 +42,9 @@ getTipConfig variant = do
     Hyderabad -> hyderabadConfig variant
     Chennai   -> chennaiConfig variant
     Delhi     -> delhiConfig variant
-    _         -> defaultTipConfig variant
+    _         -> case (getMerchant FunctionCall) of 
+                  YATRISATHI -> yatriSathiConfig variant
+                  _ -> defaultTipConfig variant
 
 mkTipConfig :: Array Int -> TipConfig
 mkTipConfig customerTipArrayWithValues = {
@@ -96,7 +101,15 @@ defaultTipConfig variant =
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
     "TAXI" -> mkTipConfig []
     "TAXI_PLUS" -> mkTipConfig []
+    "BIKE" -> mkTipConfig []
     _ -> mkTipConfig []
+
+yatriSathiConfig :: String -> TipConfig
+yatriSathiConfig variant = 
+  case variant of
+    "BIKE" -> mkTipConfig [0, 10, 20, 30]
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    _ -> mkTipConfig [0, 20, 30, 50]
 
 getTipViewProps :: TipViewProps -> String -> TipViewProps
 getTipViewProps tipViewProps vehicleVariant = do

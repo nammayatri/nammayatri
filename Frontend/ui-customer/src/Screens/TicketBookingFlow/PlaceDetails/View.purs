@@ -9,7 +9,7 @@ import Domain.Payments as PP
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
-import Data.Array (foldr, length, uncons, cons, take, drop, find, elem, mapWithIndex, filter, null, sortBy, groupBy)
+import Data.Array (foldr, length, uncons, cons, take, drop, find, elem, mapWithIndex, filter, null, sortBy, groupBy, (:))
 import Data.Foldable (or)
 import Data.String (Pattern(..), Replacement(..), replace)
 import Data.String as DS
@@ -21,8 +21,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (incrOrDecrTimeFrom, getCurrentDatev2, getMinutesBetweenTwoUTChhmmss, fetchImage, FetchImageFrom(..), decodeError, convertUTCToISTAnd12HourFormat, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
 import JBridge as JB
-import Prelude (not, Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (&&), (<<<), (+), (<>), (==), map, show, (||), show, (-), (>), (>>=), mod, negate, (<=), (>=), (<))
-import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id, imageUrl, maxLines, ellipsize, lineHeight, fillViewport)
+import Prelude (not, Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (&&), (<<<), (+), (<>), (==), map, show, (||), show, (-), (>), (>>=), mod, negate, (<=), (>=), (<),(>>>),(<$>))
+import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id, imageUrl, maxLines, ellipsize, lineHeight, fillViewport, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TicketBookingFlow.PlaceDetails.Controller (Action(..), ScreenOutput, eval, getLimitOfDaysAccToPlaceType)
 import Screens.Types as ST
@@ -146,6 +146,7 @@ view push state =
   serviceClosedView = if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (placeClosed state.data.placeInfo) then (headerBannerView push state ("Booking closed currently. Opens after " <> getOpeningTiming state.data.placeInfo))
                       else if (state.props.currentStage == ST.ChooseTicketStage) && (allowFutureBooking state.data.servicesInfo) && (placeClosedToday state.data.placeInfo state.data.dateOfVisit) then (headerBannerView push state ("Services closed for today. Tickets are available next day onwards"))
                       else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (shouldHurry  state.data.placeInfo) then (headerBannerView push state ("Hurry! Booking closes at " <> getClosingTiming state.data.placeInfo))
+                      else if (state.props.currentStage == ST.ChooseTicketStage) && (checkIfSameDayBookingNotAllowedForToday state) then (headerBannerView push state ("Same-day booking is not allowed. Please select a future date for ticket booking."))
                       else linearLayout [height $ V 0][]
 
   shouldHurry mbPlaceInfo =
@@ -595,7 +596,7 @@ chooseTicketsView state push =
             , padding $ Padding 20 15 20 15
             , onClick (\action -> do
                       _ <- push action
-                      JB.datePicker "" push $ DatePicker "DATE_OF_VISIT"
+                      JB.datePicker (if isSameDayBookingAllowed state.data.placeInfo then "" else "MINIMUM_NEXT_DATE") push $ DatePicker "DATE_OF_VISIT"
                 ) (const NoAction)
             ][  imageView
                 [ height $ V 22 
@@ -620,6 +621,7 @@ chooseTicketsView state push =
         ]
       , if length filteredServiceDatav2 == 0 then (noDataView state push "No services available for selected date")
         else if (checkIfServiceClosedForToday filteredServiceDatav2) then (noDataView state push "Services closed for today. Tickets are available next day onwards") -- refactor this 
+        else if checkIfSameDayBookingNotAllowedForToday state then (noDataView state push "Same-day booking is not allowed. Please select a future date for ticket booking.")
         else (linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -647,20 +649,25 @@ chooseTicketsView state push =
             , color Color.blue900
             , onClick (\action -> do
                     _<- push action
-                    _ <- JB.openUrlInApp $ getTermsAndConditionsUrl state.data.placeInfo
+                    _ <- JB.openUrlInApp $ getTermsAndConditionsUrlV2 state.data.placeInfo
                     pure unit
                     ) (const NoAction)
             ] <> FontStyle.body1 TypoGraphy
         ]
       , termsAndConditionsView (getTermsAndConditions state.data.placeInfo) true
   ]
-  where 
+  where
     checkIfDateOfTripVisible services = foldl (\acc service -> acc || service.allowFutureBooking) false services 
     getTermsAndConditions placeInfo = maybe [] (\(TicketPlaceResp x ) -> x.termsAndConditions) placeInfo
+    getTermsAndConditionsUrlV2 placeInfo = maybe "" (\(TicketPlaceResp x ) -> case x.termsAndConditionsUrl of
+      Just url -> url
+      Nothing -> getTermsAndConditionsUrl placeInfo) placeInfo
+
     getTermsAndConditionsUrl placeInfo = maybe "" (\(TicketPlaceResp x ) -> case x.name of
                                                                               "Alipore Zoo" -> "https://docs.google.com/document/d/1Aa5PRGaTTZM4HDdmvU_7_59B58wCQ0-bRezbsu-Inqw"
                                                                               "Kolkata Heritage River Cruise" -> "https://docs.google.com/document/d/1pOirWof7bnNDoYBFgyKknddKPoKE-7SZK6eFPncAmyQ/edit#heading=h.nq90u3fvhtgz"
                                                                               "Millenium Park Shipping Jetty" -> "https://docs.google.com/document/d/1pOirWof7bnNDoYBFgyKknddKPoKE-7SZK6eFPncAmyQ/edit#heading=h.nq90u3fvhtgz"
+                                                                              "Nicco Park" -> "https://assets.moving.tech/beckn/jatrisaathi/user/docs/T_&_C_Nicco_Park.pdf"
                                                                               _ -> ""
                                          ) placeInfo 
     getMessageForSelectedDate state = do
@@ -680,6 +687,8 @@ serviceInputView push state service =
 individualServiceView :: forall w. (Action -> Effect Unit) -> ST.TicketBookingScreenState -> ST.TicketServiceData -> PrestoDOM (Effect Unit) w
 individualServiceView push state service =
   let bookingClosedForService = (not state.props.validDate) || (not isValid service.serviceCategories)
+      listOfShortDesc = maybe [] extractListItems service.shortDesc
+      headingOfShortDesc =  service.shortDesc >>= extractHeading
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -704,17 +713,24 @@ individualServiceView push state service =
              [ text service.serviceName
              , color $ if bookingClosedForService then Color.black600 else Color.black800
              ] <> FontStyle.h2 TypoGraphy
-          ,  textView $
-             [ text $ fromMaybe "" service.shortDesc
-             , color $ if bookingClosedForService then Color.greyDark else Color.black800
-             , visibility $ maybe GONE (\x -> VISIBLE) service.shortDesc
-             ] <> FontStyle.body1 TypoGraphy
+          , textView $
+             [  text $ fromMaybe "" headingOfShortDesc
+              , padding $ PaddingVertical 4 4
+              , visibility $ maybe GONE (\x -> VISIBLE) headingOfShortDesc
+              , color $ if bookingClosedForService then Color.greyDark else Color.black800
+             ] <> FontStyle.body2 TypoGraphy
+          ,  linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , gravity CENTER_VERTICAL
+              ](map (shortDescListView push bookingClosedForService) listOfShortDesc)
           ,  if length service.serviceCategories == 1 then
                case service.serviceCategories DA.!! 0 of
                  Nothing -> linearLayout [height $ V 0][]
                  Just val -> textView $
                               [ text $ val.categoryName
-                              , color $ if bookingClosedForService then Color.greyDark else Color.black800
+                              , color $ if bookingClosedForService then Color.greyDark else Color.black700
                               , visibility $ if val.categoryName == "all" then GONE else VISIBLE
                               ] <> FontStyle.body1 TypoGraphy
              else linearLayout [height $ V 0][]
@@ -731,6 +747,66 @@ individualServiceView push state service =
   ] <> (if service.isExpanded && (not bookingClosedForService) then [individualServiceBHView push state service] else [] )--[individualTicketBHView push state valBH service] else [])
   where
     isValid serviceCategories = foldl (\acc serviceCategory -> acc || isServiceCatValid state service.expiry serviceCategory.validOpDay ) false serviceCategories
+    extractHeading :: String -> Maybe String
+    extractHeading html = do
+      startIndex <- DS.indexOf (Pattern "<h") html
+      endIndex <- DS.indexOf (Pattern "</h") html
+      let startContentIndex = startIndex + DS.length "<h >"
+      pure $ DS.take (endIndex - startContentIndex) (DS.drop startContentIndex html)
+
+    extractListItems :: String -> Array String
+    extractListItems html = DA.reverse $ extractListItemsHelper html []
+
+    extractListItemsHelper :: String -> Array String -> Array String
+    extractListItemsHelper html acc =
+      case DS.indexOf (Pattern "<li>") html of
+        Nothing -> acc
+        Just startIndex -> 
+          let 
+            afterOpenTag = DS.drop (startIndex + 4) html 
+          in
+            case DS.indexOf (Pattern "</li>") afterOpenTag of
+              Nothing -> acc
+              Just endIndex ->
+                let
+                  content = DS.take endIndex afterOpenTag
+                  trimmedContent = trim content
+                  remainingHtml = DS.drop (endIndex + 5) afterOpenTag
+                in
+                  extractListItemsHelper remainingHtml (trimmedContent : acc)
+
+    trim :: String -> String
+    trim = trimStart >>> trimEnd
+
+    trimStart :: String -> String
+    trimStart str = 
+      case DS.indexOf (Pattern " ") str of
+        Just 0 -> trimStart (DS.drop 1 str)
+        _ -> str
+
+    trimEnd :: String -> String
+    trimEnd str =
+      let len = DS.length str
+      in if len > 0 && (DS.take 1 (DS.drop (len - 1) str) == " ")
+        then trimEnd (DS.take (len - 1) str)
+        else str
+
+shortDescListView :: forall w. (Action -> Effect Unit) -> Boolean -> String -> PrestoDOM (Effect Unit) w
+shortDescListView push bookingClosedForService str =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 0 0 0 4
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+    ][
+      dotView (Color.black800) (MarginHorizontal 6 6) 5,
+      textView $ 
+      [ textFromHtml str
+      , color $ if bookingClosedForService then Color.greyDark else Color.black800
+      , visibility $ boolToVisibility $ not $ str == ""
+      ] <> FontStyle.body3 TypoGraphy
+    ]
 
 placeClosed :: Maybe TicketPlaceResp -> Boolean
 placeClosed mbPlaceInfo = case mbPlaceInfo of
@@ -979,12 +1055,14 @@ getTicketStatusImage status = fetchImage FF_COMMON_ASSET $ case status of
   Pending -> "ny_ic_transaction_pending"
   Booked -> "ny_ic_white_tick"
   Failed -> "ny_ic_payment_failed"
+  Cancelled -> "ny_ic_cancelled"
 
 getTicketStatusBackgroundColor :: BookingStatus -> {bgColor :: String, statusText :: String }
 getTicketStatusBackgroundColor status = case status of 
   Pending -> { bgColor : Color.yellow900, statusText : "Pending" }
   Booked ->  { bgColor : Color.green900, statusText : "Booked" }
   Failed ->  { bgColor : Color.red900, statusText : "Cancelled" }
+  Cancelled ->  { bgColor : Color.red900, statusText : "Cancelled" }
 
 getTicketBackgroundColor :: String -> String
 getTicketBackgroundColor ticketServiceName = case ticketServiceName of
@@ -1284,3 +1362,14 @@ getFilteredSlots slots state =
         let currentTime = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
         filter (\slot -> (convertUTCTimeToISTTimeinHHMMSS slot.slot) > currentTime) slots
       else slots
+
+checkIfSameDayBookingNotAllowedForToday :: ST.TicketBookingScreenState -> Boolean
+checkIfSameDayBookingNotAllowedForToday state = 
+      let isTodayDate = (getCurrentDatev2 "") == state.data.dateOfVisit
+          allowSameDayBooking = isSameDayBookingAllowed state.data.placeInfo
+      in
+        not allowSameDayBooking && isTodayDate
+
+isSameDayBookingAllowed placeInfo = case placeInfo of
+      Just (TicketPlaceResp placeInfo) -> fromMaybe true placeInfo.allowSameDayBooking
+      Nothing -> true

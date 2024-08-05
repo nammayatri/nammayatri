@@ -204,6 +204,7 @@ data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
 
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
+                        | UPDATE_PICKUP_NAME HomeScreenState Number Number
                         | REFRESH_HOME_SCREEN
                         | RETRY
                         | NO_OUTPUT
@@ -229,7 +230,6 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | FCM_NOTIFICATION String HomeScreenState
                         | SEARCH_LOCATION String HomeScreenState
                         | UPDATE_LOCATION_NAME HomeScreenState Number Number
-                        | UPDATE_PICKUP_NAME HomeScreenState Number Number
                         | GET_LOCATION_NAME HomeScreenState
                         | GO_TO_FAVOURITES_
                         | SUBMIT_RATING HomeScreenState
@@ -286,6 +286,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EDIT_LOCATION_DEST_SELECTED
                         | EDIT_DEST_BACKPRESSED
                         | EXIT_AND_ENTER_HOME_SCREEN
+                        | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

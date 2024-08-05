@@ -43,7 +43,10 @@ initData = {
       cityConfig : dummyCityConfig,
       vehicleCategory : Nothing,
       rcNumberPrefixList : [],
-      config : getAppConfig appConfig
+      config : getAppConfig appConfig,
+      airConditioned : Nothing,
+      ventilator : Nothing,
+      oxygen : Nothing
     },
     props: {
       rcAvailable : false,
@@ -78,6 +81,11 @@ initData = {
       confirmChangeVehicle : false,
       contactSupportModal : ST.HIDE,
       buttonIndex : Nothing,
-      acModal : false
+      acModal : false,
+      facilities : false,
+      showIssueOptions : true,
+      isvariant : "",
+      ambulanceModal : false,
+      agreeTermsModal : false
     }
 }
