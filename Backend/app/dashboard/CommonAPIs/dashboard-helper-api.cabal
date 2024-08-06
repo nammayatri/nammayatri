@@ -111,6 +111,7 @@ library
     , beckn-services
     , beckn-spec
     , bytestring
+    , cassava
     , deriving-aeson
     , esqueleto
     , euler-hs

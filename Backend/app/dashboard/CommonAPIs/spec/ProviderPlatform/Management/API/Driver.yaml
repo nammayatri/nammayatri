@@ -20,6 +20,8 @@ imports:
   City: Kernel.Types.Beckn.Context
   Currency: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
+  PersonIdsReq: Dashboard.Common
+  PersonRes: Dashboard.Common
 
 module: Driver
 
@@ -414,12 +416,3 @@ types:
   DriverFeeType:
     - enum: "PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT"
     - derive: "Read, Kernel.Prelude.ToParamSchema"
-  PersonIdsReq:
-    - recordType: NewType
-    - file: FilePath
-    - derive: "'HideSecrets"
-  PersonRes:
-    - id: Text
-    - mobileNumber: Maybe Text
-    - alternateMobileNumber: Maybe Text
-    - merchantOperatingCityId: Text

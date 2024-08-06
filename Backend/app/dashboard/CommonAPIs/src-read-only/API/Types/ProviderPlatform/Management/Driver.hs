@@ -142,22 +142,6 @@ data PauseOrResumeServiceChargesReq = PauseOrResumeServiceChargesReq
 instance Kernel.Types.HideSecrets.HideSecrets PauseOrResumeServiceChargesReq where
   hideSecrets = Kernel.Prelude.identity
 
-newtype PersonIdsReq = PersonIdsReq {file :: Kernel.Prelude.FilePath}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets PersonIdsReq where
-  hideSecrets = Kernel.Prelude.identity
-
-data PersonRes = PersonRes
-  { id :: Kernel.Prelude.Text,
-    mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    alternateMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    merchantOperatingCityId :: Kernel.Prelude.Text
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data RCDetails = RCDetails {vehicleClass :: Kernel.Prelude.Text, fitnessExpiry :: Kernel.Prelude.UTCTime, insuranceExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -226,12 +210,7 @@ type API = ("driver" :> (GetDriverDocumentsInfo :<|> PostDriverPersonNumbers :<|
 
 type GetDriverDocumentsInfo = ("documents" :> "info" :> Get '[JSON] Dashboard.Common.Driver.DriverDocumentsInfoRes)
 
-type PostDriverPersonNumbers =
-  ( "personNumbers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp API.Types.ProviderPlatform.Management.Driver.PersonIdsReq
-      :> Post
-           '[JSON]
-           [API.Types.ProviderPlatform.Management.Driver.PersonRes]
-  )
+type PostDriverPersonNumbers = ("personNumbers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.PersonIdsReq :> Post '[JSON] [Dashboard.Common.PersonRes])
 
 type GetDriverAadhaarInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "aadhaarInfo" :> Get '[JSON] API.Types.ProviderPlatform.Management.Driver.DriverAadhaarInfoRes)
 
@@ -419,11 +398,7 @@ type PostDriverClearFee =
 
 data DriverAPIs = DriverAPIs
   { getDriverDocumentsInfo :: EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverDocumentsInfoRes,
-    postDriverPersonNumbers ::
-      ( Data.ByteString.Lazy.ByteString,
-        API.Types.ProviderPlatform.Management.Driver.PersonIdsReq
-      ) ->
-      EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Driver.PersonRes],
+    postDriverPersonNumbers :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonIdsReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
     getDriverAadhaarInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Driver.DriverAadhaarInfoRes,
     getDriverAadhaarInfobyMobileNumber :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Driver.DriverAadhaarInfoByPhoneReq,
     getDriverList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Driver.DriverListRes,

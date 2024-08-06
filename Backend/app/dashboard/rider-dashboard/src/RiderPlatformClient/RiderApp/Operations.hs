@@ -74,7 +74,8 @@ data CustomerAPIs = CustomerAPIs
     customerInfo :: Id Customer.Customer -> Euler.EulerClient Customer.CustomerInfoRes,
     customerCancellationDuesSync :: Id Customer.Customer -> Customer.CustomerCancellationDuesSyncReq -> Euler.EulerClient APISuccess,
     getCancellationDuesDetails :: Id Customer.Customer -> Euler.EulerClient Customer.CancellationDuesDetailsRes,
-    updateSafetyCenterBlocking :: Id Customer.Customer -> Customer.UpdateSafetyCenterBlockingReq -> Euler.EulerClient APISuccess
+    updateSafetyCenterBlocking :: Id Customer.Customer -> Customer.UpdateSafetyCenterBlockingReq -> Euler.EulerClient APISuccess,
+    postCustomersPersonNumbers :: (LBS.ByteString, Customer.PersonIdsReq) -> Euler.EulerClient [Customer.PersonRes]
   }
 
 data RidesAPIs = RidesAPIs
@@ -153,7 +154,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> customerInfo
       :<|> customerCancellationDuesSync
       :<|> getCancellationDuesDetails
-      :<|> updateSafetyCenterBlocking =
+      :<|> updateSafetyCenterBlocking
+      :<|> postCustomersPersonNumbers =
         customersClient
 
     shareRideInfo

@@ -757,6 +757,7 @@ library
     , beckn-spec
     , bytestring
     , casing
+    , cassava
     , cereal
     , containers
     , cryptonite
@@ -805,6 +806,7 @@ library
     , singletons-th
     , special-zone
     , special-zone-a
+    , split
     , template-haskell
     , text
     , text-conversions
@@ -881,6 +883,7 @@ executable rider-app-exe
     , beckn-spec
     , bytestring
     , casing
+    , cassava
     , cereal
     , containers
     , cryptonite
@@ -923,6 +926,7 @@ executable rider-app-exe
     , servant-server
     , singletons
     , singletons-th
+    , split
     , template-haskell
     , text
     , text-conversions

@@ -22,6 +22,7 @@ where
 
 import Dashboard.Common as Reexport
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common (HighPrecMoney, PriceAPIEntity)
@@ -34,6 +35,7 @@ data CustomerEndpoint
   | UnblockCustomerEndpoint
   | CustomerCancellationDuesSyncEndpoint
   | UpdateSafetyCenterEndpoint
+  | PostCustomerPersonNumbersEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "CustomerEndpoint"
@@ -164,3 +166,8 @@ data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq
     resetCount :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+type PostCustomersPersonNumbersAPI =
+  ( "personNumbers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp PersonIdsReq
+      :> Post '[JSON] [PersonRes]
+  )
