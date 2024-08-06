@@ -253,6 +253,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     nightShiftCharge :: Maybe HighPrecMoney,
     customerCancellationDues :: Maybe HighPrecMoney,
     estimatedRideDuration :: Maybe Seconds,
+    rideDurationForFareCalc :: Maybe Minutes,
     nightShiftOverlapChecking :: Bool,
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
@@ -447,9 +448,9 @@ calculateFareParameters params = do
       let mbExtraDistance =
             (fromMaybe 0 params.actualDistance) - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
-          mbEstimatedRideDurationInMins = ceiling . (fromIntegral @_ @Double) . (`div` 60) . (.getSeconds) <$> params.estimatedRideDuration
+          mbRideDuration = params.rideDurationForFareCalc
           mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections <$> mbExtraDistance
-          (mbRideDurationFare, debugLogs) = maybe (Nothing, []) (processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections) mbEstimatedRideDurationInMins
+          (mbRideDurationFare, debugLogs) = maybe (Nothing, []) (processFPProgressiveDetailsPerMinuteFare perMinRateSections) mbRideDuration
       ( debugLogs,
         baseFare,
         nightShiftCharge,
@@ -477,23 +478,23 @@ calculateFareParameters params = do
                 + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - extraDistanceWithinSection)
         getPerExtraMRate perExtraKmRate = perExtraKmRate / 1000
 
-    processFPProgressiveDetailsPerRideDurationMinFare mbPerMinRateSections rideDurationInMins =
+    processFPProgressiveDetailsPerMinuteFare mbPerMinRateSections rideDuration =
       case mbPerMinRateSections of
         Nothing -> (Nothing, ["No per min rate sections configured"])
         Just perMinRateSections -> do
-          let sortedPerMinFareSections = NE.sortBy (comparing (.rideDurationInMin)) perMinRateSections
-              fpDebugLogStr = "Sorted per min rate sections: " +|| NE.toList sortedPerMinFareSections ||+ " for ride duration (in mins): " +|| rideDurationInMins ||+ ""
+          let sortedPerMinFareSections = NE.sortBy (comparing (.rideDuration)) perMinRateSections
+              fpDebugLogStr = "Sorted per min rate sections: " +|| NE.toList sortedPerMinFareSections ||+ " for ride duration (in mins): " +|| rideDuration ||+ ""
 
-          let rideDurationFare = HighPrecMoney $ processFPPDPerMinFare rideDurationInMins sortedPerMinFareSections
+          let rideDurationFare = HighPrecMoney $ processFPPDPerMinFare rideDuration sortedPerMinFareSections
               rideFareDebugLogStr = "Ride duration fare: " +|| rideDurationFare ||+ ""
 
           (Just rideDurationFare, [fpDebugLogStr, rideFareDebugLogStr])
       where
         {- Sections for e.g.: (0, 5], (5, 15], (15, 30] -}
-        processFPPDPerMinFare 0 _ = 0.0 :: Rational
+        processFPPDPerMinFare (0 :: Minutes) _ = 0.0 :: Rational
         processFPPDPerMinFare !remRideDuration (aSection :| []) = toRational remRideDuration * aSection.perMinRate.amount.getHighPrecMoney
         processFPPDPerMinFare !remRideDuration (aSection :| bSection : remSections) =
-          let sectionDuration = bSection.rideDurationInMin - aSection.rideDurationInMin
+          let sectionDuration = bSection.rideDuration - aSection.rideDuration
               rideDurationWithinSection = min sectionDuration remRideDuration
               remFare = processFPPDPerMinFare (remRideDuration - rideDurationWithinSection) (bSection :| remSections)
            in toRational rideDurationWithinSection * aSection.perMinRate.amount.getHighPrecMoney + remFare

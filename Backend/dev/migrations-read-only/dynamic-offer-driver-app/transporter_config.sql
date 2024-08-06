@@ -240,3 +240,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_status_c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cached_devices_os_for_search_request text[]  default '{}';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_duration_upwards_recompute_buffer_in_minutes bigint ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_duration_downwards_recompute_buffer_in_minutes bigint ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_duration_diff_threshold_in_minutes bigint ;

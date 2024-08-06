@@ -220,7 +220,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
                   customerCancellationDues = Nothing,
                   nightShiftOverlapChecking = isFixedNightCharge tripCategory,
                   estimatedDistance = mbDistance,
-                  estimatedRideDuration = minutesToSeconds <$> mbDuration,
+                  estimatedRideDuration = Nothing,
+                  rideDurationForFareCalc = mbDuration,
                   timeDiffFromUtc = transporterConfig <&> (.timeDiffFromUtc),
                   currency = INR, -- fix it later
                   distanceUnit,

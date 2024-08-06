@@ -814,6 +814,9 @@ TransporterConfig:
     schedulePayoutForDay : Maybe Integer
     isDeviceIdChecksRequired: Maybe Bool
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
+    rideDurationDiffThreshold: Maybe Minutes
+    rideDurationUpwardsRecomputeBuffer: Maybe Minutes
+    rideDurationDownwardsRecomputeBuffer: Maybe Minutes
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -857,6 +860,12 @@ TransporterConfig:
       fcmUrl: Text
       fcmServiceAccount: Text
       fcmTokenKeyPrefix: Text
+    rideDurationDiffThreshold:
+      rideDurationDiffThresholdInMinutes: Maybe Int
+    rideDurationUpwardsRecomputeBuffer:
+      rideDurationUpwardsRecomputeBufferInMinutes: Maybe Int
+    rideDurationDownwardsRecomputeBuffer:
+      rideDurationDownwardsRecomputeBufferInMinutes: Maybe Int
 
   toTType:
     currency: Just currency|E
@@ -899,6 +908,9 @@ TransporterConfig:
     scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)|E
+    rideDurationDiffThresholdInMinutes: rideDurationDiffThreshold <&> (.getMinutes)|E
+    rideDurationUpwardsRecomputeBufferInMinutes: rideDurationUpwardsRecomputeBuffer <&> (.getMinutes)|E
+    rideDurationDownwardsRecomputeBufferInMinutes: rideDurationDownwardsRecomputeBuffer <&> (.getMinutes)|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -948,7 +960,9 @@ TransporterConfig:
     scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E|E
     cachedDevicesOSForSearchRequest: maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest|E
-
+    rideDurationDiffThreshold: Kernel.Types.Common.Minutes <$> rideDurationDiffThresholdInMinutes|E
+    rideDurationUpwardsRecomputeBuffer: Kernel.Types.Common.Minutes <$> rideDurationUpwardsRecomputeBufferInMinutes|E
+    rideDurationDownwardsRecomputeBuffer: Kernel.Types.Common.Minutes <$> rideDurationDownwardsRecomputeBufferInMinutes|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -999,7 +1013,9 @@ TransporterConfig:
     arrivingPickupThreshold: double precision
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
-
+    rideDurationDiffThresholdInMinutes: bigint
+    rideDurationUpwardsRecomputeBufferInMinutes: bigint
+    rideDurationDownwardsRecomputeBufferInMinutes: bigint
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'

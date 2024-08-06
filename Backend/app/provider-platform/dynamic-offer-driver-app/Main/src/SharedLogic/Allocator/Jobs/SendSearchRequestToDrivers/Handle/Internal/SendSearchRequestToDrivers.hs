@@ -145,6 +145,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
               waitingTime = Nothing,
               actualRideDuration = Nothing,
               estimatedRideDuration = searchReq.estimatedDuration,
+              rideDurationForFareCalc = secondsToMinutesCeiling <$> searchReq.estimatedDuration,
               avgSpeedOfVehicle = transporterConfig.avgSpeedOfVehicle,
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,

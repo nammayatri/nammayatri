@@ -1210,6 +1210,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
               estimatedRideDuration = Nothing,
+              rideDurationForFareCalc = secondsToMinutesCeiling <$> searchReq.estimatedDuration,
               nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,
               estimatedDistance = Nothing,
               timeDiffFromUtc = Nothing,

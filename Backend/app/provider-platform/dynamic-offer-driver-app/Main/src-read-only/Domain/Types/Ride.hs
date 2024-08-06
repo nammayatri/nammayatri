@@ -31,6 +31,7 @@ data Ride = Ride
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    chargeableRideDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientDevice :: Kernel.Prelude.Maybe Kernel.Types.Version.Device,

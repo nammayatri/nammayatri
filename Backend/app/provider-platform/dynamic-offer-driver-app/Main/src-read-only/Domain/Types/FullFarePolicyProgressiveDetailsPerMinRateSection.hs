@@ -13,7 +13,7 @@ data FullFarePolicyProgressiveDetailsPerMinRateSection = FullFarePolicyProgressi
   { currency :: Kernel.Types.Common.Currency,
     farePolicyId :: Kernel.Prelude.Text,
     perMinRate :: Kernel.Types.Common.HighPrecMoney,
-    rideDurationInMin :: Kernel.Prelude.Int,
+    rideDuration :: Kernel.Types.Common.Minutes,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

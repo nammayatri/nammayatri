@@ -335,6 +335,7 @@ updateAll rideId ride = do
       Se.Set BeamR.fare $ roundToIntegral <$> ride.fare,
       Se.Set BeamR.fareAmount $ ride.fare,
       Se.Set BeamR.tripEndTime ride.tripEndTime,
+      Se.Set BeamR.chargeableRideDurationInMinutes (ride.chargeableRideDuration <&> (.getMinutes)),
       Se.Set BeamR.tripEndLat (ride.tripEndPos <&> (.lat)),
       Se.Set BeamR.tripEndLon (ride.tripEndPos <&> (.lon)),
       Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),

@@ -53,7 +53,7 @@ makeFullFPPDPerMinRateSection (farePolicyId, FPProgressiveDetailsPerMinRateSecti
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 data FPProgressiveDetailsPerMinRateSectionAPIEntity = FPProgressiveDetailsPerMinRateSectionAPIEntity
-  { rideDurationInMin :: Int,
+  { rideDuration :: Minutes,
     perMinRate :: PriceAPIEntity
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

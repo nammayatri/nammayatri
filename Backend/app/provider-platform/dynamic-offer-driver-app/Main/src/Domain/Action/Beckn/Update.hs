@@ -233,6 +233,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     nightShiftOverlapChecking = False,
                     estimatedDistance = Just estimatedDistance,
                     estimatedRideDuration = Nothing,
+                    rideDurationForFareCalc = Just $ secondsToMinutesCeiling duration,
                     timeDiffFromUtc = Nothing,
                     tollCharges = mbTollInfo <&> (\(tollCharges, _, _) -> tollCharges),
                     currency = booking.currency,

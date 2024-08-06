@@ -298,7 +298,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
           perExtraKmStepFareItems = mkPerExtraKmStepFareItem [] (toList perExtraKmFareSections) det.baseDistance.getMeters
 
-          perMinRateSections = List.sortBy (comparing (.rideDurationInMin)) $ maybe [] toList det.perMinRateSections
+          perMinRateSections = List.sortOn (.rideDuration) $ maybe [] toList det.perMinRateSections
           perMinStepFareItems = mkPerMinStepFareItem [] perMinRateSections
 
           baseDistanceCaption = show Tags.BASE_DISTANCE
@@ -333,13 +333,13 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
         mkPerMinStepFareItem perMinStepFareItems [] = perMinStepFareItems
         mkPerMinStepFareItem perMinStepFareItems [fp1] = do
-          let sectionStartDuration = fp1.rideDurationInMin
+          let sectionStartDuration = fp1.rideDuration.getMinutes
               perMinStepFareCaption = show $ Tags.PER_MINUTE_STEP_FARE sectionStartDuration Nothing
               perMinStepFareItem = mkBreakupItem perMinStepFareCaption (mkValue $ highPrecMoneyToText fp1.perMinRate.amount)
           perMinStepFareItems <> [perMinStepFareItem]
         mkPerMinStepFareItem perMinStepFareItems (fp1 : fp2 : fps) = do
-          let sectionStartDuration = fp1.rideDurationInMin
-              sectionEndDuration = fp2.rideDurationInMin
+          let sectionStartDuration = fp1.rideDuration.getMinutes
+              sectionEndDuration = fp2.rideDuration.getMinutes
               perMinStepFareCaption = show $ Tags.PER_MINUTE_STEP_FARE sectionStartDuration (Just sectionEndDuration)
               perMinStepFareItem = mkBreakupItem perMinStepFareCaption (mkValue $ highPrecMoneyToText fp1.perMinRate.amount)
           mkPerMinStepFareItem (perMinStepFareItems <> [perMinStepFareItem]) (fp2 : fps)

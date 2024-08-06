@@ -201,6 +201,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         driverArrivalTime = Nothing,
         tripStartTime = Nothing,
         tripEndTime = Nothing,
+        chargeableRideDuration = Nothing,
         tripStartPos = Nothing,
         tripEndPos = Nothing,
         rideEndedBy = Nothing,

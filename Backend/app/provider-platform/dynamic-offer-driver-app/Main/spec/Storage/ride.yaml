@@ -22,6 +22,7 @@ imports:
   Confidence: Kernel.Types.Confidence
   Variant: Domain.Types.Vehicle
   ServiceTierType: Domain.Types.ServiceTierType
+  Minutes: Kernel.Types.Common
 
 Ride:
   tableName: ride
@@ -56,6 +57,7 @@ Ride:
     driverArrivalTime: Maybe UTCTime
     tripStartTime: Maybe UTCTime
     tripEndTime: Maybe UTCTime
+    chargeableRideDuration: Maybe Minutes
     tripStartPos: Maybe LatLong
     tripEndPos: Maybe LatLong
     previousRideTripEndPos: Maybe LatLong
@@ -119,6 +121,7 @@ Ride:
     endOdometerReadingValue: double precision
     startOdometerReadingFileId: character varying(36)
     endOdometerReadingFileId: character varying(36)
+    chargeableRideDurationInMinutes: bigint
 
   default:
     traveledDistance: '0'
@@ -157,6 +160,8 @@ Ride:
       currency: Maybe Currency
     distanceUnit:
       distanceUnit : Maybe DistanceUnit
+    chargeableRideDuration:
+      chargeableRideDurationInMinutes: Maybe Int
 
   fromTType:
     toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -179,6 +184,7 @@ Ride:
     tripCategory: Storage.Queries.Transformers.Ride.getTripCategory bookingId |IM
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
+    chargeableRideDuration: Kernel.Types.Common.Minutes <$> chargeableRideDurationInMinutes|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -207,6 +213,7 @@ Ride:
     onlinePayment: Kernel.Prelude.Just|I
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    chargeableRideDurationInMinutes: chargeableRideDuration <&> (.getMinutes)|E
 
   beamType:
     trackingUrl: Text

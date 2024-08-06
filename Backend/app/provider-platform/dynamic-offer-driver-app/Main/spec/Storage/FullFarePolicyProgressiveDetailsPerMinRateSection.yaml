@@ -3,15 +3,26 @@ imports:
   MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
+  Minutes: Kernel.Types.Common
 
 FullFarePolicyProgressiveDetailsPerMinRateSection:
   tableName: fare_policy_progressive_details_per_min_rate_section
   derives: "Generic,Show,Eq,ToJSON,FromJSON"
   fields:
     farePolicyId: Text
-    rideDurationInMin: Int
+    rideDuration: Minutes
     perMinRate: HighPrecMoney
     currency: Currency
+
+  beamFields:
+    rideDuration:
+      rideDurationInMin: Int
+
+  fromTType:
+    rideDuration: Kernel.Types.Common.Minutes rideDurationInMin|E
+
+  toTType:
+    rideDurationInMin: rideDuration & (.getMinutes)|E
 
   default:
     currency: "'INR'"
@@ -36,3 +47,4 @@ FullFarePolicyProgressiveDetailsPerMinRateSection:
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
+
