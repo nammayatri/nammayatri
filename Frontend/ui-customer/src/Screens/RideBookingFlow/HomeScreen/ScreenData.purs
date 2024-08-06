@@ -376,6 +376,7 @@ initData = let
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
     , isSharedLocationFlow : false
+    , isOtpRideFlow : false
   }
 }
 

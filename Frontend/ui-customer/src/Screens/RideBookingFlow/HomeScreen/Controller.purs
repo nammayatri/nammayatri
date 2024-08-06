@@ -2137,6 +2137,7 @@ eval (GetRideConfirmation (RideBookingRes response)) state = do
                                 , bookingId = response.id
                                 , isInApp = true
                                 , isSpecialZone = isSpecialZoneOtpRide
+                                , isOtpRideFlow = isJust otpCode
                                 }
                         , data { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == ST.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState }
                         }

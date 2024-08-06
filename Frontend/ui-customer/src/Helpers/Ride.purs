@@ -138,6 +138,7 @@ checkRideStatus rideAssigned = do
                     homeScreen
                     { props
                       { isSpecialZone = true
+                      , isOtpRideFlow = true
                       , isInApp = true
                       }
                     , data
@@ -149,7 +150,7 @@ checkRideStatus rideAssigned = do
             Just (RideAPIEntity _) ->
               if isJust otpCode then do
                 setValueToLocalStore TRACKING_ENABLED "True"
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
+                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true, isOtpRideFlow = true }}) else
                 pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
