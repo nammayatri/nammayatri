@@ -30,6 +30,7 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
+import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 
 type API = OnConfirm.OnConfirmAPIV2
@@ -53,6 +54,10 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
             DOnConfirm.BookingConfirmed bookingConfirmedReq -> bookingConfirmedReq.bppBookingId
       Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
         validatedReq <- DOnConfirm.validateRequest onConfirmReq transactionId
+        merchantOperatingCityId <- case validatedReq of
+          DOnConfirm.ValidatedRideAssigned rideAssignedReq -> pure $ rideAssignedReq.booking.merchantOperatingCityId.getId
+          DOnConfirm.ValidatedBookingConfirmed bookingConfirmedReq -> pure $ bookingConfirmedReq.booking.merchantOperatingCityId.getId
+        Metrics.finishMetricsBap Metrics.CONFIRM "" transactionId merchantOperatingCityId
         fork "on confirm received pushing ondc logs" do
           booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
           void $ pushLogs "on_confirm" (toJSON reqV2) booking.merchantId.getId
