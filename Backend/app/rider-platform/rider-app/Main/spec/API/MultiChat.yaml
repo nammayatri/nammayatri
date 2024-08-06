@@ -1,0 +1,19 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+module: MultiChat
+types:
+  MultiChatReq :
+    chatPersonId : Id Person
+    body : Text
+    title: Text
+
+
+apis :
+  - POST :
+      endpoint : /multichat/message
+      auth : TokenAuth
+      request:
+        type: API.Types.UI.MultiChat.MultiChatReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

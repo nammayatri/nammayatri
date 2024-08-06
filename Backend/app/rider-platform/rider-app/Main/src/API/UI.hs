@@ -26,6 +26,7 @@ import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.MultiChat as MultiChat
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
@@ -111,6 +112,7 @@ type API =
            :<|> EstimateBP.API
            :<|> FavouriteDriver.API
            :<|> PartnerOrgFRFS.API
+           :<|> MultiChat.API
        )
 
 handler :: FlowServer API
@@ -159,3 +161,4 @@ handler =
     :<|> EstimateBP.handler
     :<|> FavouriteDriver.handler
     :<|> PartnerOrgFRFS.handler
+    :<|> MultiChat.handler
