@@ -16,6 +16,7 @@ module API.ProviderPlatform.DynamicOfferDriver.Subscription where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Subscription as SD
 import Dashboard.Common as Common
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as Driver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Payment as APayment
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan as DTPlan
 import Domain.Types.AccessMatrix
@@ -49,6 +50,8 @@ type API =
            :<|> SubscribePlanV2
            :<|> CurrentPlanV2
            :<|> PaymentStatus
+           :<|> DriverPaymentHistoryAPIV2
+           :<|> DriverPaymentHistoryEntityDetailsAPIV2
        )
 
 type ListPlan =
@@ -95,6 +98,14 @@ type CurrentPlanV2 =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'SUBSCRIPTION 'CURRENT_PLAN_V2
     :> SD.CurrentPlanV2
 
+type DriverPaymentHistoryAPIV2 =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'SUBSCRIPTION 'PAYMENT_HISTORY_V2
+    :> SD.DriverPaymentHistoryAPIV2
+
+type DriverPaymentHistoryEntityDetailsAPIV2 =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'SUBSCRIPTION 'PAYMENT_HISTORY_ENTITY_DETAILS_V2
+    :> SD.DriverPaymentHistoryEntityDetailsAPIV2
+
 buildTransaction ::
   ( MonadFlow m
   ) =>
@@ -118,6 +129,8 @@ handler merchantId city =
     :<|> planSubscribeV2 merchantId city
     :<|> currentPlanV2 merchantId city
     :<|> paymentStatus merchantId city
+    :<|> getPaymentHistoryV2 merchantId city
+    :<|> getPaymentHistoryEntityDetailsV2 merchantId city
 
 planList ::
   ShortId DMerchant.Merchant ->
@@ -218,6 +231,32 @@ currentPlanV2 :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id C
 currentPlanV2 merchantShortId opCity apiTokenInfo driverId serviceName = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.currentPlanV2) driverId serviceName
+
+getPaymentHistoryV2 ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Id Common.Driver ->
+  DPlan.ServiceNames ->
+  Maybe INV.InvoicePaymentMode ->
+  Maybe Int ->
+  Maybe Int ->
+  FlowHandler Driver.HistoryEntityV2
+getPaymentHistoryV2 merchantShortId opCity apiTokenInfo driverId serviceName invoicePaymentMode limit offset = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.getPaymentHistoryV2) driverId serviceName invoicePaymentMode limit offset
+
+getPaymentHistoryEntityDetailsV2 ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Id Common.Driver ->
+  DPlan.ServiceNames ->
+  Id INV.Invoice ->
+  FlowHandler Driver.HistoryEntryDetailsEntityV2
+getPaymentHistoryEntityDetailsV2 merchantShortId opCity apiTokenInfo driverId serviceName invoiceId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.getPaymentHistoryEntityDetailsV2) driverId serviceName invoiceId
 
 paymentStatus :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Id INV.Invoice -> FlowHandler APayment.PaymentStatusResp
 paymentStatus merchantShortId opCity apiTokenInfo driverId invoiceId = withFlowHandlerAPI' $ do

@@ -1630,10 +1630,10 @@ getPaymentHistoryEntityDetails ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
-  Id INV.Invoice ->
   ServiceNames ->
+  Id INV.Invoice ->
   Flow Driver.HistoryEntryDetailsEntityV2
-getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId serviceName = do
+getPaymentHistoryEntityDetails merchantShortId opCity driverId serviceName invoiceId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
