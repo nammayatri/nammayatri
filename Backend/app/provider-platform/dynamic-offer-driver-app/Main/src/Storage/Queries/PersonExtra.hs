@@ -479,6 +479,7 @@ updatePersonDetails person = do
       Se.Set BeamP.lastName $ person.lastName,
       Se.Set BeamP.mobileCountryCode $ person.mobileCountryCode,
       Se.Set BeamP.mobileNumberEncrypted $ person.mobileNumber <&> unEncrypted . (.encrypted),
+      Se.Set BeamP.email $ person.email,
       Se.Set BeamP.mobileNumberHash $ person.mobileNumber <&> (.hash),
       Se.Set BeamP.updatedAt now
     ]
