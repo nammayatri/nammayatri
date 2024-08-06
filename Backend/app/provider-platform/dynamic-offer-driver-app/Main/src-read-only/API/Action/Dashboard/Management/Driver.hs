@@ -28,7 +28,7 @@ handler merchantId city = getDriverDocumentsInfo merchantId city :<|> postDriver
 getDriverDocumentsInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler Dashboard.Common.Driver.DriverDocumentsInfoRes)
 getDriverDocumentsInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverDocumentsInfo a2 a1
 
-postDriverPersonNumbers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Driver.PersonIdsReq -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Driver.PersonRes])
+postDriverPersonNumbers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Dashboard.Common.PersonIdsReq -> Environment.FlowHandler [Dashboard.Common.PersonRes])
 postDriverPersonNumbers a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.postDriverPersonNumbers a3 a2 a1
 
 getDriverAadhaarInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.DriverAadhaarInfoRes)
