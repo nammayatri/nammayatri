@@ -5,7 +5,7 @@
         <attr name="stateNonPlayingColor" format="color" />
     </declare-styleable>
 
-    <declare-styleable name="CropImageView">
+    <declare-styleable name="ny_CropImageView">
         <attr name="cropGuidelines">
             <enum name="off" value="0"/>
             <enum name="onTouch" value="1"/>
