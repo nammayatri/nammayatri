@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Driver
   ( driverDocumentsInfo,
     driverAadhaarInfo,
+    getDriverPersonNumbers,
     listDrivers,
     driverActivity,
     enableDriver,
@@ -91,11 +92,16 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce
+import Data.Csv
 import Data.List.NonEmpty (nonEmpty)
+import Data.List.Split (chunksOf)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import qualified Data.Vector as V
 import qualified Domain.Action.Dashboard.Management.Merchant as DashboardMerchant
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
@@ -132,7 +138,7 @@ import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
@@ -2348,3 +2354,32 @@ postDriverClearFee _merchantShortId _opCity driverId req = do
     gstBreakup gstPercentages fee = case gstPercentages of
       Just (sgstPer, cgstPer) -> (fee * (1.0 - ((cgstPer + sgstPer) / 100.0)), Just $ (cgstPer * fee) / 100.0, Just $ (sgstPer * fee) / 100.0)
       _ -> (fee, Nothing, Nothing)
+
+data PersonIdsCsvRow = PersonIdsCsvRow
+  { personId :: Text
+  }
+
+instance FromNamedRecord PersonIdsCsvRow where
+  parseNamedRecord r = PersonIdsCsvRow <$> r .: "personId"
+
+getDriverPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
+getDriverPersonNumbers _ _ req = do
+  csvData <- readCsvAndGetPersonIds req.file
+  let chunks = chunksOf 100 csvData
+  decryptedNumbers <- forM chunks processChunk
+  return $ concat decryptedNumbers
+  where
+    readCsvAndGetPersonIds :: FilePath -> Flow [Text]
+    readCsvAndGetPersonIds csvFile = do
+      csvData <- liftIO $ BS.readFile csvFile
+      case decodeByName (LBS.fromStrict csvData) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ map personId $ V.toList v
+
+    processChunk :: [Text] -> Flow [Common.PersonRes]
+    processChunk chunk = do
+      persons <- QPerson.findAllByPersonIds chunk
+      decryptedPersons <- forM persons $ \p -> do
+        decPerson <- decrypt p
+        return $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber decPerson.alternateMobileNumber decPerson.merchantOperatingCityId.getId
+      return decryptedPersons
