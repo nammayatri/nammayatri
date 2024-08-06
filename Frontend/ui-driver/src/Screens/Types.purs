@@ -1892,6 +1892,40 @@ type DocumentDetailsScreenProps = {
 
 }
 
+type DriverCompleteProfileScreenState = {
+  data :: DriverCompleteProfileScreenData,
+  props :: DriverCompleteProfileScreenProps
+}
+
+type DriverCompleteProfileScreenData = {
+    pledge :: Array String
+  , vehicalOffer :: Array String
+  , languages :: Array String
+  , whyNy :: Array String
+  , homeTown :: Maybe String
+  , calendarState :: CalendarState
+  , drivingSince :: Maybe Int
+  , viewImageState :: ViewImageState
+  , addImagesState :: {
+    images :: Array Image,
+    stateChanged :: Boolean,
+    isLoading :: Boolean,
+    imageMediaIds :: Array String
+  }
+  , uploadedImagesIds :: Array String
+  , addedImages :: Array { image :: String, imageName :: String }
+}
+
+type DriverCompleteProfileScreenProps = {
+  showImageModel :: Boolean,
+  showViewImageModel :: Boolean
+}
+
+type ViewImageState = {
+   image :: String,
+   imageName :: Maybe String
+}
+
 type BookingOptionsScreenState = {
   data :: BookingOptionsScreenData,
   props :: BookingOptionsScreenProps

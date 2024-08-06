@@ -79,6 +79,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Mobility.Prelude (boolToVisibility)
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -472,6 +473,7 @@ profileView push state =
                     ]
                     [ tabView state push
                     , tabImageView state push
+                    , completedProfile state push 
                     , infoView state push
                     , verifiedVehiclesView state push
                     , pendingVehiclesVerificationList state push
@@ -484,6 +486,31 @@ profileView push state =
             ]
         , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
         ]
+
+completedProfile :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+completedProfile state push =
+  linearLayout[
+    height WRAP_CONTENT,
+    width MATCH_PARENT,
+    gravity CENTER,
+    margin $ MarginBottom 15,
+    visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS,
+    onClick push $ const CompleteProfile
+  ][
+    imageView
+      [ width $ V 11
+      , height $ V 11
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_pen_orange"
+      ]
+  , textView
+      $ [ text $ "Complete Profile"
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , color Color.orange900
+          , margin $ MarginLeft 5
+          ]
+      <> FontStyle.body34 TypoGraphy
+  ]
 
 verifiedVehiclesView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 verifiedVehiclesView state push =
@@ -663,7 +690,7 @@ tabImageView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER_HORIZONTAL
-      , padding $ PaddingVertical 32 32
+      , padding $ PaddingVertical 32 $ if state.props.screenType == ST.DRIVER_DETAILS then 12 else 32
       , background Color.blue600
       , orientation HORIZONTAL
       ]

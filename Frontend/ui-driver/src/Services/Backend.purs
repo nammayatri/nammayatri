@@ -492,6 +492,25 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
       "offeredFare" : offeredFare
     }
 
+makeDriverProfileReq :: Array String -> Array String -> Array String -> Maybe Int -> Array String -> GetUploadProfileReq
+makeDriverProfileReq pledge vehicalTags whyNy drivingSince imageId = GetUploadProfileReq {
+    pledges : pledge,
+    vehicleTags : vehicalTags,
+    languages : [],
+    aspirations : whyNy,
+    drivingSince : drivingSince,
+    hometown : Nothing,
+    imageIds : imageId
+}
+
+submitDriverProfile :: GetUploadProfileReq -> FlowBT String ApiSuccessResult
+submitDriverProfile body = do
+        headers <- getHeaders' "" true
+        withAPIResultBT (EP.submitDriverProfile "") identity errorHandler (lift $ lift $ callAPI headers (UploadProfileReq body))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
+
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 getRideHistoryReq :: String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse GetRidesHistoryResp)
 getRideHistoryReq limit offset onlyActive status day = do

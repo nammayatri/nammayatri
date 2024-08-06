@@ -200,6 +200,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | SubscriptionScreen
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
                     | GoToPendingVehicle DriverProfileScreenState String ST.VehicleCategory
+                    | GoToCompletingProfile DriverProfileScreenState
 
 data Action = BackPressed
             | NoAction
@@ -256,10 +257,13 @@ data Action = BackPressed
             | ShareQR PrimaryButtonController.Action
             | ManageVehicleButtonAC PrimaryButtonController.Action
             | PendingVehicle String ST.VehicleCategory
+            | CompleteProfile 
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
 eval AfterRender state = continue state
+
+eval CompleteProfile state = exit $ GoToCompletingProfile state
 
 eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = do
   case state.props.detailsUpdationType of
