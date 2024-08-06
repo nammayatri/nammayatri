@@ -184,7 +184,8 @@ data SearchRes = SearchRes
     shortestRouteInfo :: Maybe Maps.RouteInfo,
     isReallocationEnabled :: Maybe Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
-    taggings :: Maybe Beckn.Taggings
+    taggings :: Maybe Beckn.Taggings,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
 
 data SearchDetails = SearchDetails
@@ -287,6 +288,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
         ( MerchantOperatingCityNotFound $
             "merchantId: " <> merchant.id.getId <> " ,city: " <> show originCity
         )
+  let merchantOperatingCityId = merchantOperatingCity.id
   searchRequestId <- generateGUID
   (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, multipleRoutes) <-
     case req of

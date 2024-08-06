@@ -6,6 +6,7 @@ module Storage.Queries.BecknConfig where
 
 import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -39,6 +40,18 @@ findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do
         [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
           Se.Is Beam.domain $ Se.Eq domain,
           Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+        ]
+    ]
+
+findByMerchantIdDomainandMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.BecknConfig.BecknConfig])
+findByMerchantIdDomainandMerchantOperatingCityId merchantId domain merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
+          Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
         ]
     ]
 

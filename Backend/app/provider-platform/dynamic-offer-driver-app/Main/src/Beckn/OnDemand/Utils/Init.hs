@@ -20,7 +20,8 @@ castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVarian
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just VehVar.AUTO_RICKSHAW
   (Just "CAB", Just "TAXI") -> Just VehVar.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just VehVar.TAXI_PLUS
-  (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE
+  (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE -- becomes redundant, TODO : remove in next release
+  (Just "TWO_WHEERLER", Just "BIKE") -> Just VehVar.BIKE
   (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
   (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
   (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just VehVar.AMBULANCE_AC

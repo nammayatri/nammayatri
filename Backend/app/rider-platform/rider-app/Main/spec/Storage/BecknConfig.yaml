@@ -21,7 +21,7 @@ BecknConfig:
     vehicleCategory: VehicleCategory
     collectedBy: PaymentCollectedBy
     staticTermsUrl: Maybe BaseUrl
-    buyerFinderFee: Maybe Text
+    buyerFinderFee: Maybe Text # becomes redundant
     settlementWindow: Maybe Text
     searchTTLSec: Maybe Int
     selectTTLSec: Maybe Int
@@ -57,6 +57,10 @@ BecknConfig:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByMerchantIdDomainandMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, domain, merchantOperatingCityId]
 
   beamType:
     subscriberUrl: Text

@@ -29,6 +29,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
@@ -36,9 +37,13 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
+import Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BlackListOrg as QBlackList
+import qualified Storage.CachedQueries.VehicleConfig as CQVC
+import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Tools.Error
 
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
@@ -193,7 +198,7 @@ castVehicleVariant = \case
   VehVar.PREMIUM_SEDAN -> (show Enums.CAB, "PREMIUM_SEDAN")
   VehVar.BLACK -> (show Enums.CAB, "BLACK")
   VehVar.BLACK_XL -> (show Enums.CAB, "BLACK_XL")
-  VehVar.BIKE -> (show Enums.MOTORCYCLE, "BIKE")
+  VehVar.BIKE -> (show Enums.TWO_WHEELER, "BIKE") -- When parsing from beckn to domain, convert to MOTORCYCLE
   VehVar.AMBULANCE_TAXI -> (show Enums.AMBULANCE, "AMBULANCE_TAXI")
   VehVar.AMBULANCE_TAXI_OXY -> (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
   VehVar.AMBULANCE_AC -> (show Enums.AMBULANCE, "AMBULANCE_AC")
@@ -213,7 +218,8 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "BLACK") -> Just VehVar.BLACK
     (Just "CAB", Just "BLACK_XL") -> Just VehVar.BLACK_XL
     (Just "CAB", Just "PREMIUM_SEDAN") -> Just VehVar.PREMIUM_SEDAN
-    (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE
+    (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE -- becomes redundant, TODO : remove in next release
+    (Just "TWO_WHEELER", Just "BIKE") -> Just VehVar.BIKE
     (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
     (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
     (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just VehVar.AMBULANCE_AC
@@ -358,6 +364,15 @@ mapVariantToVehicle variant = do
     VehVar.AMBULANCE_VENTILATOR -> AMBULANCE
     VehVar.SUV_PLUS -> CAB
 
+mapTextToVehicle :: Text -> Maybe VehicleCategory
+mapTextToVehicle = \case
+  "AUTO_RICKSHAW" -> Just AUTO_RICKSHAW
+  "CAB" -> Just CAB
+  "TWO_WHEELER" -> Just MOTORCYCLE
+  "MOTORCYCLE" -> Just MOTORCYCLE
+  "AMBULANCE" -> Just AMBULANCE
+  _ -> Nothing
+
 getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
 getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)
 
@@ -377,3 +392,35 @@ decimalValueToPrice currency (DecimalValue.DecimalValue v) = do
       amount = HighPrecMoney v,
       currency
     }
+
+validateSubscriber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m ()
+validateSubscriber subscriberId merchantId merchantOperatingCityId = do
+  totalSubIds <- QWhiteList.countTotalSubscribers
+  void $
+    if totalSubIds == 0
+      then do
+        checkBlacklisted subscriberId
+      else do
+        checkWhitelisted merchantId merchantOperatingCityId subscriberId
+
+checkBlacklisted :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m ()
+checkBlacklisted subscriberId = do
+  whenM (isBlackListed subscriberId Domain.MOBILITY) . throwError . InvalidRequest $
+    "It is a Blacklisted subscriber " <> subscriberId
+
+isBlackListed :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Domain -> m Bool
+isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
+
+checkWhitelisted :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id MOC.MerchantOperatingCity -> Text -> m ()
+checkWhitelisted merchantId merchantOperatingCityId subscriberId = do
+  whenM (isNotWhiteListed subscriberId Domain.MOBILITY merchantId merchantOperatingCityId) . throwError . InvalidRequest $
+    "It is not a whitelisted subscriber " <> subscriberId
+
+isNotWhiteListed :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Domain -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m Bool
+isNotWhiteListed subscriberId domain merchantId merchantOperatingCityId = QWhiteList.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId (ShortId subscriberId) domain merchantId merchantOperatingCityId <&> isNothing
+
+getBlackListedVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BecknConfig -> Text -> m [VehicleCategory]
+getBlackListedVehicles becknConfigId subscriberId = do
+  vehicleConfigs <- CQVC.findAllByBecknConfigId becknConfigId
+  let blackListedVehicles = filter (\vc -> subscriberId `elem` vc.blackListedSubscribers) vehicleConfigs
+  pure $ mapMaybe (\blv -> mapTextToVehicle blv.category) blackListedVehicles

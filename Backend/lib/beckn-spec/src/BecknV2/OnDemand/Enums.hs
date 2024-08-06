@@ -32,6 +32,7 @@ data VehicleCategory
   | CAB
   | MOTORCYCLE
   | AMBULANCE
+  | TWO_WHEELER
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data FulfillmentType
