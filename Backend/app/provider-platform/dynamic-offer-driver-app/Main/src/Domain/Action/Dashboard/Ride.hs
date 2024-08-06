@@ -48,8 +48,10 @@ import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
+import qualified Kernel.External.Maps.Types as KEMT
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
+import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -240,7 +242,8 @@ rideInfo ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]
+    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig],
+    CH.HasClickhouseEnv CH.ATLAS_KAFKA m
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -279,6 +282,11 @@ rideInfo merchantId merchantOpCityId reqRideId = do
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
   now <- getCurrentTime
+  let firstDate = addUTCTime (intToNominalDiffTime (-300)) ride.createdAt
+      lastDate = addUTCTime (intToNominalDiffTime 300) ride.createdAt
+  driverEdaKafkaList <- CHDriverEda.findAllTuple firstDate lastDate ride.driverId (Just ride.id)
+  let driverEdaKafka = listToMaybe driverEdaKafkaList
+  let driverStartLocation = (\(lat, lon, _, _, _) -> KEMT.LatLong <$> lat <*> lon) =<< driverEdaKafka
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -293,7 +301,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
-        driverStartLocation = ride.tripStartPos,
+        driverStartLocation = driverStartLocation,
         driverCurrentLocation = getCoordinates <$> mDriverLocation,
         rideBookingTime = booking.createdAt,
         estimatedDriverArrivalTime = (\quote -> realToFrac quote.durationToPickup `addUTCTime` ride.createdAt) <$> mQuote,
