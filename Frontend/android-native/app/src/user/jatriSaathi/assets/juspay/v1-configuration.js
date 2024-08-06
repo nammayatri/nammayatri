@@ -66,7 +66,7 @@ window.getMerchantConfig = function () {
       , "description" : "Hey there!\n\n Download Yatri Sathi now! \n" + getAppLink(window.__OS)
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-    , "termsLink" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4"
+    , "termsLink" : "https://drive.google.com/file/d/1ALCfQeQiouaH3lzaVIozv8uCrxbbxvIR/view?usp=sharing"
     , "termsVersion" : 1.0
     , "privacyLink" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E"
     , "appData" : {
