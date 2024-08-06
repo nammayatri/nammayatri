@@ -329,7 +329,7 @@ getPaymentHistoryEntityDetailsV2 ::
   Id INV.Invoice ->
   FlowHandler Driver.HistoryEntryDetailsEntityV2
 getPaymentHistoryEntityDetailsV2 merchantShortId opCity driverId serviceName invoiceId = do
-  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId serviceName
+  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId serviceName invoiceId
 
 getPaymentHistoryEntityDetails ::
   ShortId DM.Merchant ->
@@ -338,7 +338,7 @@ getPaymentHistoryEntityDetails ::
   Id INV.Invoice ->
   FlowHandler Driver.HistoryEntryDetailsEntityV2
 getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId = do
-  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId DPlan.YATRI_SUBSCRIPTION
+  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId DPlan.YATRI_SUBSCRIPTION invoiceId
 
 updateDriverSubscriptionDriverFeeAndInvoiceUpdate ::
   ShortId DM.Merchant ->
