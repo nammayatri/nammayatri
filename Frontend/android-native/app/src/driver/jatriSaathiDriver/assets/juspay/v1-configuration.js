@@ -260,7 +260,7 @@ window.getMerchantConfig = function () {
         { "bookingOptionMenuForTaxi" : true
         }
     , "profileVerification" : {
-      "aadharVerificationRequired" : true
+      "aadharVerificationRequired" : false // HV Integration is done
     } 
     , "bottomNavConfig" : {
       "subscription" : 

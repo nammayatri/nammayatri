@@ -772,7 +772,7 @@ config =
   }
   , clientName : ""
   , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
-  , showProfileAadhaarPan : false
+  , showProfileAadhaarPan : true -- Only for backward compatibility and testing in PROD environment
 }
 
 registrationConfig :: CTC.RegistrationConfig
