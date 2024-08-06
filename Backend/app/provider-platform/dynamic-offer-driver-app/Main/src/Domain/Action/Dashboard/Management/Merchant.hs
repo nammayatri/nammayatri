@@ -1016,6 +1016,11 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     extraKmRateStartDistance :: Text,
     perExtraKmRate :: Text,
     peakTimings :: Text,
+    rideDurationSectionStart :: Text,
+    perMinuteAmount :: Text,
+    perDistanceUnitInsuranceCharge :: Text,
+    perDistanceUnitCardChargeMultiplier :: Text,
+    fixedCardCharge :: Text,
     peakDays :: Text,
     cancellationFarePolicyDescription :: Text,
     freeCancellationTimeSeconds :: Text,
@@ -1065,6 +1070,11 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "extra_km_rate_start_distance"
       <*> r .: "per_extra_km_rate"
       <*> r .: "peak_timings"
+      <*> r .: "ride_duration_section_start"
+      <*> r .: "per_minute_amount"
+      <*> r .: "per_distance_unit_insurance_charge"
+      <*> r .: "per_distance_unit_card_charge_multiplier"
+      <*> r .: "fixed_card_charge"
       <*> r .: "peak_days"
       <*> r .: "cancellation_fare_policy_description"
       <*> r .: "free_cancellation_time_seconds"
@@ -1254,13 +1264,12 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               return $ FarePolicy.ProgressiveNightShiftCharge nightShiftCharge
         return (freeWatingTime, waitingCharges, nightCharges)
 
-      -- TODO: Add support for insurance charge and card charges in csv file
-      let perDistanceUnitInsuranceCharge = Nothing
+      let perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney = readMaybeCSVField idx row.perDistanceUnitInsuranceCharge "Per Distance Unit Insurance Charge"
           cardCharge =
             Just
               FarePolicy.CardCharge
-                { perDistanceUnitMultiplier = Nothing,
-                  fixed = Nothing
+                { perDistanceUnitMultiplier = readMaybeCSVField idx row.perDistanceUnitCardChargeMultiplier "Per Distance Unit Card Charge Multiplier",
+                  fixed = readMaybeCSVField idx row.fixedCardCharge "Fixed Card Charge"
                 }
 
       cancellationFarePolicyId <- do
@@ -1309,8 +1318,13 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             startDistance :: Meters <- readCSVField idx row.extraKmRateStartDistance "Extra Km Rate Start Distance"
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
             let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate}]
-            -- TODO: Add support for per min rate sections in csv file
-            let perMinRateSections = Nothing
+
+            let mbRideDuration :: Maybe Minutes = readMaybeCSVField idx row.rideDurationSectionStart "Ride Duration Section Start"
+            perMinRateSections <-
+              forM mbRideDuration $ \rideDuration -> do
+                perMinuteAmount :: HighPrecMoney <- readCSVField idx row.perMinuteAmount "Per Minute Amount"
+                let perMinRate = mkPrice (Just currency) perMinuteAmount
+                pure $ NE.fromList [FarePolicy.FPProgressiveDetailsPerMinRateSection {rideDuration, perMinRate, createdAt = now, updatedAt = now}]
             return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = Just nightCharges, ..}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
 

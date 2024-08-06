@@ -28,3 +28,11 @@ FullFarePolicyProgressiveDetailsPerMinRateSection:
     findAllByFarePolicyId:
       kvFunction: findAllWithKV
       where: farePolicyId
+
+    deleteAllByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey

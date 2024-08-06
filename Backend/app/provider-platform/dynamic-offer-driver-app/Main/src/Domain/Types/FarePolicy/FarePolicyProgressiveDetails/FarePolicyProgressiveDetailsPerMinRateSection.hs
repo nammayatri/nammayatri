@@ -20,8 +20,10 @@ import Kernel.Prelude
 import Kernel.Types.Common
 
 data FPProgressiveDetailsPerMinRateSection = FPProgressiveDetailsPerMinRateSection
-  { rideDurationInMin :: Int,
-    perMinRate :: Price
+  { rideDuration :: Minutes,
+    perMinRate :: Price,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -33,9 +35,18 @@ makeFPProgressiveDetailsPerMinRateSection :: DFFPPDM.FullFarePolicyProgressiveDe
 makeFPProgressiveDetailsPerMinRateSection DFFPPDM.FullFarePolicyProgressiveDetailsPerMinRateSection {..} =
   let perMinRatePrice = mkPrice (Just currency) perMinRate
    in FPProgressiveDetailsPerMinRateSection
-        { rideDurationInMin = rideDurationInMin,
-          perMinRate = perMinRatePrice
+        { rideDuration = rideDuration,
+          perMinRate = perMinRatePrice,
+          ..
         }
+
+makeFullFPPDPerMinRateSection :: (Text, FPProgressiveDetailsPerMinRateSection) -> DFFPPDM.FullFarePolicyProgressiveDetailsPerMinRateSection
+makeFullFPPDPerMinRateSection (farePolicyId, FPProgressiveDetailsPerMinRateSection {..}) =
+  DFFPPDM.FullFarePolicyProgressiveDetailsPerMinRateSection
+    { perMinRate = perMinRate.amount,
+      currency = perMinRate.currency,
+      ..
+    }
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------

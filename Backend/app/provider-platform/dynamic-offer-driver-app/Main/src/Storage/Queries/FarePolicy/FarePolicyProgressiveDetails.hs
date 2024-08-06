@@ -26,25 +26,28 @@ import Sequelize as Se
 import Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as BeamFPPD
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QueriesFPPDP
-import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as QueriesFPMin
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as QFPPDPerMinute
 
 findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m (Maybe Domain.FullFarePolicyProgressiveDetails)
 findById' (KTI.Id farePolicyId') = findOneWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq farePolicyId']
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FullFarePolicyProgressiveDetails -> m ()
 create farePolicyProgressiveDetails = do
-  mapM_ QueriesFPPDP.create (map (fst farePolicyProgressiveDetails,) (NE.toList (snd farePolicyProgressiveDetails).perExtraKmRateSections))
+  mapM_ (QueriesFPPDP.create . (fst farePolicyProgressiveDetails,)) (NE.toList (snd farePolicyProgressiveDetails).perExtraKmRateSections)
+  let mbPerMinRateSections = snd farePolicyProgressiveDetails & (.perMinRateSections)
+  whenJust mbPerMinRateSections $ mapM_ (QFPPDPerMinute.create . (KTI.getId $ fst farePolicyProgressiveDetails,)) . NE.toList
   createWithKV farePolicyProgressiveDetails
 
 delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FarePolicy -> m ()
 delete farePolicyId = do
   QueriesFPPDP.deleteAll' farePolicyId
+  QFPPDPerMinute.deleteAll' farePolicyId.getId
   deleteWithKV [Se.Is BeamFPPD.farePolicyId $ Se.Eq (KTI.getId farePolicyId)]
 
 instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyProgressiveDetails where
   fromTType' farePolicyProgressiveDetails = do
     fullFPPDP <- QueriesFPPDP.findAll' (KTI.Id farePolicyProgressiveDetails.farePolicyId)
-    fullMinFP <- NE.nonEmpty <$> QueriesFPMin.findAll (KTI.Id farePolicyProgressiveDetails.farePolicyId)
+    fullMinFP <- NE.nonEmpty <$> QFPPDPerMinute.findAll (KTI.Id farePolicyProgressiveDetails.farePolicyId)
     fPPDP <- fromMaybeM (InternalError "FromLocation not found") (NE.nonEmpty fullFPPDP)
     pure . Just $ fromTTypeFarePolicyProgressiveDetails farePolicyProgressiveDetails fullMinFP fPPDP
 

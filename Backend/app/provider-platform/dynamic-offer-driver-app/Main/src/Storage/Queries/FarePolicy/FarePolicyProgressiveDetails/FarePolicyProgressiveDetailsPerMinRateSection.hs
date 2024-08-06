@@ -17,15 +17,22 @@ module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgres
 
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as Domain
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import qualified Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection as BeamFPPM
+import qualified Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection as QueriesFPPDPM
+
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Text, Domain.FPProgressiveDetailsPerMinRateSection) -> m ()
+create = createWithKV . Domain.makeFullFPPDPerMinRateSection
 
 findAll ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DFP.FarePolicy ->
   m [Domain.FPProgressiveDetailsPerMinRateSection]
 findAll (Id farePolicyId') = do
-  fullFP <- BeamFPPM.findAllByFarePolicyId farePolicyId'
+  fullFP <- QueriesFPPDPM.findAllByFarePolicyId farePolicyId'
   return $ Domain.makeFPProgressiveDetailsPerMinRateSection <$> fullFP
+
+deleteAll' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
+deleteAll' = QueriesFPPDPM.deleteAllByFarePolicyId
