@@ -58,7 +58,7 @@ onConfirm _ req = withFlowHandlerAPI $ do
       then do
         let onConfirmReq = fromJust dOnConfirmReq
         (merchant, booking) <- DOnConfirm.validateRequest onConfirmReq
-        Metrics.finishMetrics Metrics.CONFIRM merchant.name transaction_id booking.merchantOperatingCityId.getId
+        Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name transaction_id booking.merchantOperatingCityId.getId
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $
             DOnConfirm.onConfirm merchant booking onConfirmReq

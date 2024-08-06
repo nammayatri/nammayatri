@@ -45,7 +45,7 @@ onSearch _ req = withFlowHandlerAPI $ do
     onSearchReq <- ACL.buildOnSearchReq req
     Redis.whenWithLockRedis (onSearchLockKey message_id) 60 $ do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
-      Metrics.finishMetrics Metrics.SEARCH validatedDOnSearch.merchant.name transaction_id validatedDOnSearch.search.merchantOperatingCityId.getId
+      Metrics.finishMetrics Metrics.SEARCH_FRFS validatedDOnSearch.merchant.name transaction_id validatedDOnSearch.search.merchantOperatingCityId.getId
       fork "FRFS on_search processing" $ do
         Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
           DOnSearch.onSearch onSearchReq validatedDOnSearch

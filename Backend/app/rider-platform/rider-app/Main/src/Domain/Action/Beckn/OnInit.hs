@@ -34,6 +34,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import qualified Tools.Metrics as Metrics
 import Tools.Notifications
 
 data OnInitReq = OnInitReq
@@ -75,7 +76,7 @@ data OnInitRes = OnInitRes
   }
   deriving (Generic, Show)
 
-onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
+onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r, Metrics.HasBAPMetrics m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
 onInit req = do
   whenJust req.bppBookingId $ QRideB.updateBPPBookingId req.bookingId
   void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedFare req.paymentUrl -- TODO : 4th parameter is discounted fare (not implemented)
@@ -129,6 +130,7 @@ onInit req = do
             enableOtpLessRide = fromMaybe False decRider.enableOtpLessRide,
             ..
           }
+  Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
   pure (onInitRes, booking)
   where
     prependZero :: Text -> Text
