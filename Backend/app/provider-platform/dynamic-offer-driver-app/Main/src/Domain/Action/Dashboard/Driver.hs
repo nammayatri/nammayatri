@@ -2355,13 +2355,6 @@ postDriverClearFee _merchantShortId _opCity driverId req = do
       Just (sgstPer, cgstPer) -> (fee * (1.0 - ((cgstPer + sgstPer) / 100.0)), Just $ (cgstPer * fee) / 100.0, Just $ (sgstPer * fee) / 100.0)
       _ -> (fee, Nothing, Nothing)
 
-data PersonIdsCsvRow = PersonIdsCsvRow
-  { personId :: Text
-  }
-
-instance FromNamedRecord PersonIdsCsvRow where
-  parseNamedRecord r = PersonIdsCsvRow <$> r .: "personId"
-
 getDriverPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
 getDriverPersonNumbers _ _ req = do
   csvData <- readCsvAndGetPersonIds req.file
@@ -2374,7 +2367,7 @@ getDriverPersonNumbers _ _ req = do
       csvData <- liftIO $ BS.readFile csvFile
       case decodeByName (LBS.fromStrict csvData) of
         Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> pure $ map personId $ V.toList v
+        Right (_, v) -> pure $ map Common.personId $ V.toList v
 
     processChunk :: [Text] -> Flow [Common.PersonRes]
     processChunk chunk = do

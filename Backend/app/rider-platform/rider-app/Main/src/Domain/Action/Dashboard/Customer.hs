@@ -21,10 +21,16 @@ module Domain.Action.Dashboard.Customer
     customerCancellationDuesSync,
     getCancellationDuesDetails,
     updateSafetyCenterBlocking,
+    getCustomerPersonNumbers,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import Data.Csv
+import Data.List.Split (chunksOf)
+import qualified Data.Vector as V
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
@@ -219,3 +225,25 @@ updateSafetyCenterBlocking personId req = do
   return Success
   where
     blockingDate now count = if (count + 1) == 3 || count + 1 >= 6 then Just now else Nothing
+
+getCustomerPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
+getCustomerPersonNumbers _ _ req = do
+  csvData <- readCsvAndGetPersonIds req.file
+  let chunks = chunksOf 100 csvData
+  decryptedNumbers <- forM chunks processChunk
+  return $ concat decryptedNumbers
+  where
+    readCsvAndGetPersonIds :: FilePath -> Flow [Text]
+    readCsvAndGetPersonIds csvFile = do
+      csvData <- liftIO $ BS.readFile csvFile
+      case decodeByName (LBS.fromStrict csvData) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ map Common.personId $ V.toList v
+
+    processChunk :: [Text] -> Flow [Common.PersonRes]
+    processChunk chunk = do
+      persons <- QP.findAllByPersonIds chunk
+      decryptedPersons <- forM persons $ \p -> do
+        decPerson <- decrypt p
+        return $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber Nothing decPerson.merchantOperatingCityId.getId
+      return decryptedPersons
