@@ -158,7 +158,8 @@ postSocialUpdateProfile (mbPersonId, merchantId, _) req = do
           { SP.mobileCountryCode = req.mobileCountryCode <|> person.mobileCountryCode,
             SP.mobileNumber = encNewPhoneNumber,
             SP.firstName = fromMaybe person.firstName req.firstName,
-            SP.lastName = req.lastName <|> person.lastName
+            SP.lastName = req.lastName <|> person.lastName,
+            SP.email = Just req.email
           }
   PQ.updatePersonDetails updatedPerson
   pure Kernel.Types.APISuccess.Success
