@@ -74,6 +74,7 @@ dependencies:
   - persistent
   - persistent-postgresql
   - esqueleto
+  - cassava
   - template-haskell
   - wai
   - singletons

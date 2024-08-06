@@ -111,6 +111,8 @@ dependencies:
   - casing
   - postgresql-simple
   - random
+  - cassava
+  - split
   - raw-strings-qq
   - directory
   - filepath

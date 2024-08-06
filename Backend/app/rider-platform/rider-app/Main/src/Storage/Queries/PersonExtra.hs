@@ -29,6 +29,9 @@ import Storage.Queries.OrphanInstances.Person ()
 findByPId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findByPId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is BeamP.id $ Se.Eq id]
 
+findAllByPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Person]
+findAllByPersonIds ids = findAllWithDb [Se.Is BeamP.id $ Se.In ids]
+
 findByEmailAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Merchant -> Text -> m (Maybe Person)
 findByEmailAndMerchantId (Id merchantId) email_ = do
   emailDbHash <- getDbHash email_

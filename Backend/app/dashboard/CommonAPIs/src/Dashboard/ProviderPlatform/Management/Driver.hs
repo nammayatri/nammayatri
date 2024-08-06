@@ -22,9 +22,7 @@ where
 import API.Types.ProviderPlatform.Management.Driver as Reexport
 import Dashboard.Common as Reexport
 import Dashboard.Common.Driver as Reexport
-import qualified Data.Text as T
 import Kernel.Prelude
-import Kernel.ServantMultipart
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -49,12 +47,3 @@ validateUpdateDriverNameReq UpdateDriverNameReq {..} =
 
 instance HideSecrets ClearDriverFeeReq where
   hideSecrets = identity
-
-instance FromMultipart Tmp PersonIdsReq where
-  fromMultipart form = do
-    PersonIdsReq
-      <$> fmap fdPayload (lookupFile "file" form)
-
-instance ToMultipart Tmp PersonIdsReq where
-  toMultipart form =
-    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]

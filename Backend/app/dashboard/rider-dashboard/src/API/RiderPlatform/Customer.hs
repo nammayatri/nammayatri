@@ -52,6 +52,8 @@ type API =
              :> Common.GetCancellationDuesDetailsAPI
            :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'UPDATE_SAFETY_CENTER
              :> Common.UpdateSafetyCenterBlockingAPI
+           :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'PERSON_NUMBERS
+             :> Common.PostCustomersPersonNumbersAPI
        )
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
@@ -64,6 +66,7 @@ handler merchantId city =
     :<|> customerCancellationDuesSync merchantId city
     :<|> getCancellationDuesDetails merchantId city
     :<|> updateSafetyCenterBlocking merchantId city
+    :<|> postCustomersPersonNumbers merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -154,3 +157,10 @@ updateSafetyCenterBlocking merchantShortId opCity apiTokenInfo customerId req = 
   transaction <- buildTransaction Common.UpdateSafetyCenterEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderAppOperations checkedMerchantId opCity (.customers.updateSafetyCenterBlocking) customerId req
+
+postCustomersPersonNumbers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.PersonIdsReq -> FlowHandler [Common.PersonRes]
+postCustomersPersonNumbers merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostCustomerPersonNumbersEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRiderAppOperations checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.customers.postCustomersPersonNumbers)) req

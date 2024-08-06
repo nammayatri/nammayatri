@@ -22,8 +22,12 @@ where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Csv as Csv
 import Data.OpenApi
+import qualified Data.Text as T
 import Kernel.Prelude
+import Kernel.ServantMultipart
+import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
@@ -120,3 +124,35 @@ listItemErrHandler = pure . FailItem . show @Text @SomeException
 
 addMultipartBoundary :: LBS.ByteString -> ((LBS.ByteString, req) -> res) -> (req -> res)
 addMultipartBoundary boundary clientFn reqBody = clientFn (boundary, reqBody)
+
+data PersonIdsCsvRow = PersonIdsCsvRow
+  { personId :: Text
+  }
+
+instance Csv.FromNamedRecord PersonIdsCsvRow where
+  parseNamedRecord r = PersonIdsCsvRow <$> r Csv..: "personId"
+
+newtype PersonIdsReq = PersonIdsReq {file :: FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PersonIdsReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data PersonRes = PersonRes
+  { id :: Text,
+    mobileNumber :: Maybe Text,
+    alternateMobileNumber :: Maybe Text,
+    merchantOperatingCityId :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp PersonIdsReq where
+  fromMultipart form = do
+    PersonIdsReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp PersonIdsReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
