@@ -3,7 +3,7 @@
        xmlns:tools="http://schemas.android.com/tools">
 
     <ImageView
-        android:id="@+id/ImageView_image"
+        android:id="@+id/ny_ImageView_image"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:adjustViewBounds="true"
@@ -11,13 +11,13 @@
         tools:ignore="contentDescription"/>
 
     <in.juspay.mobility.common.cropImage.CropOverlayView
-        android:id="@+id/CropOverlayView"
+        android:id="@+id/ny_CropOverlayView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="invisible"/>
 
     <ProgressBar
-        android:id="@+id/CropProgressBar"
+        android:id="@+id/ny_CropProgressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"/>
