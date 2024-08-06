@@ -79,7 +79,8 @@ type DriverInfoCardProps =
     rideDurationTimerId :: String,
     endOTPShown :: Boolean,
     showEndOTP :: Boolean,
-    stageBeforeChatScreen :: Stage
+    stageBeforeChatScreen :: Stage,
+    isOtpRideFlow :: Boolean
   }
 
 type DriverInfoCardData =

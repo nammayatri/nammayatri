@@ -938,6 +938,7 @@ type HomeScreenStateProps =
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
   , isSharedLocationFlow :: Boolean
+  , isOtpRideFlow :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2590,7 +2591,7 @@ type RentalScreenProps = {
   , showPrimaryButton :: Boolean
   , showPopUpModal :: Boolean
   , showRentalPolicy :: Boolean
-  , isSpecialZone :: Boolean
+  , isOtpRideFlow :: Boolean
 }
 
 type DateTimeConfig = {

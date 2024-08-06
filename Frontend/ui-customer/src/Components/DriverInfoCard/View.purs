@@ -1471,7 +1471,7 @@ getDriverDetails state = {
   , providerType : state.data.providerType
   , showAcView : state.data.cityConfig.enableAcViews
   , fareProductType : state.data.fareProductType
-  , isSpecialZone : state.data.isSpecialZone
+  , isOtpRideFlow : state.props.isOtpRideFlow
 }
 
 endOTPAnimConfig :: DriverInfoCardState -> AnimConfig.AnimConfig
@@ -1503,7 +1503,7 @@ getTripDetails state = {
   , fareProductType : state.data.fareProductType
   , enableEditDestination : state.data.config.feature.enableEditDestination
   , editingDestinationLoc : EditingDestination
-  , isSpecialZone : state.data.isSpecialZone
+  , isOtpRideFlow : state.props.isOtpRideFlow
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
@@ -1696,4 +1696,4 @@ rideInfoPill state rideData =
     ]
 
 isSpecialZone :: DriverInfoCardState -> Boolean
-isSpecialZone state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)
+isSpecialZone state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || (state.props.isOtpRideFlow && state.props.currentStage == RideAccepted)

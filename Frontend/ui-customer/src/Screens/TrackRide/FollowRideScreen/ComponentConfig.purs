@@ -110,7 +110,7 @@ getDriverDetails state =
     , serviceTierName : ride.serviceTierName
     , providerType : Common.ONUS
     , showAcView : false
-    , isSpecialZone : false
+    , isOtpRideFlow : false
     }
 
 
@@ -128,7 +128,7 @@ getTripDetails state color =
     , fareProductType : ride.fareProductType
     , enableEditDestination : false
     , editingDestinationLoc : NoAction
-    , isSpecialZone : false
+    , isOtpRideFlow : false
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

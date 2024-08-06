@@ -71,6 +71,6 @@ initData =
     , showPrimaryButton : true
     , showPopUpModal : false
     , showRentalPolicy : false
-    , isSpecialZone : false
+    , isOtpRideFlow : false
     }
   }

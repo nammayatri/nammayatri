@@ -23,7 +23,7 @@ type DriverDetailsType
     , serviceTierName :: Maybe String
     , providerType :: CTP.ProviderType
     , showAcView :: Boolean
-    , isSpecialZone :: Boolean
+    , isOtpRideFlow :: Boolean
     }
 
 type TripDetails a
@@ -35,6 +35,6 @@ type TripDetails a
   , enablePaddingBottom :: Boolean
   , fareProductType :: FareProductType
   , enableEditDestination :: Boolean
-  , isSpecialZone :: Boolean
+  , isOtpRideFlow :: Boolean
   , editingDestinationLoc :: a
     }

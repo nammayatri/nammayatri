@@ -14,7 +14,7 @@ type MessageNotificationView a = {
 , enableChatWidget :: Boolean
 , isNotificationExpanded :: Boolean
 , fareProductType :: FareProductType
-, isSpecialZone :: Boolean
+, isOtpRideFlow :: Boolean
 , config :: AppConfig
 , rideStarted ::Boolean
 , lastMessage :: ChatComponent
