@@ -47,9 +47,9 @@ public class CropImageActivity extends AppCompatActivity
   @SuppressLint("NewApi")
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    setContentView(R.layout.crop_image_activity);
+    setContentView(R.layout.ny_crop_image_activity);
 
-    mCropImageView = findViewById(R.id.cropImageView);
+    mCropImageView = findViewById(R.id.ny_cropImageView);
 
     Bundle bundle = getIntent().getBundleExtra(CropImage.CROP_IMAGE_EXTRA_BUNDLE);
     mCropImageUri = bundle.getParcelable(CropImage.CROP_IMAGE_EXTRA_SOURCE);
@@ -81,7 +81,7 @@ public class CropImageActivity extends AppCompatActivity
       CharSequence title = mOptions != null &&
           mOptions.activityTitle != null && mOptions.activityTitle.length() > 0
               ? mOptions.activityTitle
-              : getResources().getString(R.string.crop_image_activity_title);
+              : getResources().getString(R.string.ny_crop_image_activity_title);
       actionBar.setTitle(title);
       actionBar.setDisplayHomeAsUpEnabled(true);
     }
@@ -103,28 +103,28 @@ public class CropImageActivity extends AppCompatActivity
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
-    getMenuInflater().inflate(R.menu.crop_image_menu, menu);
+    getMenuInflater().inflate(R.menu.ny_crop_image_menu, menu);
 
     if (!mOptions.allowRotation) {
-      menu.removeItem(R.id.crop_image_menu_rotate_left);
-      menu.removeItem(R.id.crop_image_menu_rotate_right);
+      menu.removeItem(R.id.ny_crop_image_menu_rotate_left);
+      menu.removeItem(R.id.ny_crop_image_menu_rotate_right);
     } else if (mOptions.allowCounterRotation) {
-      menu.findItem(R.id.crop_image_menu_rotate_left).setVisible(true);
+      menu.findItem(R.id.ny_crop_image_menu_rotate_left).setVisible(true);
     }
 
     if (!mOptions.allowFlipping) {
-      menu.removeItem(R.id.crop_image_menu_flip);
+      menu.removeItem(R.id.ny_crop_image_menu_flip);
     }
 
     if (mOptions.cropMenuCropButtonTitle != null) {
-      menu.findItem(R.id.crop_image_menu_crop).setTitle(mOptions.cropMenuCropButtonTitle);
+      menu.findItem(R.id.ny_crop_image_menu_crop).setTitle(mOptions.cropMenuCropButtonTitle);
     }
 
     Drawable cropIcon = null;
     try {
       if (mOptions.cropMenuCropButtonIcon != 0) {
         cropIcon = ContextCompat.getDrawable(this, mOptions.cropMenuCropButtonIcon);
-        menu.findItem(R.id.crop_image_menu_crop).setIcon(cropIcon);
+        menu.findItem(R.id.ny_crop_image_menu_crop).setIcon(cropIcon);
       }
     } catch (Exception e) {
       Log.w("AIC", "Failed to read menu crop drawable", e);
@@ -132,12 +132,12 @@ public class CropImageActivity extends AppCompatActivity
 
     if (mOptions.activityMenuIconColor != 0) {
       updateMenuItemIconColor(
-          menu, R.id.crop_image_menu_rotate_left, mOptions.activityMenuIconColor);
+          menu, R.id.ny_crop_image_menu_rotate_left, mOptions.activityMenuIconColor);
       updateMenuItemIconColor(
-          menu, R.id.crop_image_menu_rotate_right, mOptions.activityMenuIconColor);
-      updateMenuItemIconColor(menu, R.id.crop_image_menu_flip, mOptions.activityMenuIconColor);
+          menu, R.id.ny_crop_image_menu_rotate_right, mOptions.activityMenuIconColor);
+      updateMenuItemIconColor(menu, R.id.ny_crop_image_menu_flip, mOptions.activityMenuIconColor);
       if (cropIcon != null) {
-        updateMenuItemIconColor(menu, R.id.crop_image_menu_crop, mOptions.activityMenuIconColor);
+        updateMenuItemIconColor(menu, R.id.ny_crop_image_menu_crop, mOptions.activityMenuIconColor);
       }
     }
     return true;
@@ -145,23 +145,23 @@ public class CropImageActivity extends AppCompatActivity
 
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
-    if (item.getItemId() == R.id.crop_image_menu_crop) {
+    if (item.getItemId() == R.id.ny_crop_image_menu_crop) {
       cropImage();
       return true;
     }
-    if (item.getItemId() == R.id.crop_image_menu_rotate_left) {
+    if (item.getItemId() == R.id.ny_crop_image_menu_rotate_left) {
       rotateImage(-mOptions.rotationDegrees);
       return true;
     }
-    if (item.getItemId() == R.id.crop_image_menu_rotate_right) {
+    if (item.getItemId() == R.id.ny_crop_image_menu_rotate_right) {
       rotateImage(mOptions.rotationDegrees);
       return true;
     }
-    if (item.getItemId() == R.id.crop_image_menu_flip_horizontally) {
+    if (item.getItemId() == R.id.ny_crop_image_menu_flip_horizontally) {
       mCropImageView.flipImageHorizontally();
       return true;
     }
-    if (item.getItemId() == R.id.crop_image_menu_flip_vertically) {
+    if (item.getItemId() == R.id.ny_crop_image_menu_flip_vertically) {
       mCropImageView.flipImageVertically();
       return true;
     }
@@ -217,7 +217,7 @@ public class CropImageActivity extends AppCompatActivity
         // required permissions granted, start crop image activity
         mCropImageView.setImageUriAsync(mCropImageUri);
       } else {
-        Toast.makeText(this, R.string.crop_image_activity_no_permissions, Toast.LENGTH_LONG).show();
+        Toast.makeText(this, R.string.ny_crop_image_activity_no_permissions, Toast.LENGTH_LONG).show();
         setResultCancel();
       }
     }
