@@ -19,6 +19,7 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverList,
     getDriverActivity,
     postDriverDisable,
+    postDriverPersonNumbers,
     postDriverAcRestrictionUpdate,
     postDriverBlockWithReason,
     postDriverBlock,
@@ -143,3 +144,6 @@ postDriverUpdateDriverTag = DDriver.updateDriverTag
 
 postDriverClearFee :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ClearDriverFeeReq -> Flow APISuccess
 postDriverClearFee = DDriver.postDriverClearFee
+
+postDriverPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
+postDriverPersonNumbers = DDriver.getDriverPersonNumbers
