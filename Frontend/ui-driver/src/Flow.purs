@@ -293,7 +293,9 @@ checkRideAndInitiate event driverInfoResponse = do
   liftFlowBT $ markPerformance "CHECK_RIDE_AND_INITIATE_END"
   activeRide ?
     currentRideFlow mbRideListResponse (Just activeRide)
-    $ getDriverInfoFlow event mbRideListResponse driverInfoResponse true Nothing false
+    $ do
+      void $ updateStage $ HomeScreenStage HomeScreen
+      getDriverInfoFlow event mbRideListResponse driverInfoResponse true Nothing false
     where 
       checkAndDownloadMLModel :: Flow GlobalState Unit
       checkAndDownloadMLModel = do
