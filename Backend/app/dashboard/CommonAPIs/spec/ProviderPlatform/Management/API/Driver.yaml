@@ -30,6 +30,14 @@ apis:
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENTS_INFO
       response:
         type: DriverDocumentsInfoRes
+  - POST: # PersonNumbersAPI
+      endpoint: /personNumbers
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PERSON_NUMBERS
+      multipart:
+        type: PersonIdsReq
+      response:
+        type: "[PersonRes]"
+
   - GET: # DriverAadhaarInfoAPI
       endpoint: /{driverId}/aadhaarInfo
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_INFO
@@ -406,3 +414,12 @@ types:
   DriverFeeType:
     - enum: "PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT"
     - derive: "Read, Kernel.Prelude.ToParamSchema"
+  PersonIdsReq:
+    - recordType: NewType
+    - file: FilePath
+    - derive: "'HideSecrets"
+  PersonRes:
+    - id: Text
+    - mobileNumber: Maybe Text
+    - alternateMobileNumber: Maybe Text
+    - merchantOperatingCityId: Text
