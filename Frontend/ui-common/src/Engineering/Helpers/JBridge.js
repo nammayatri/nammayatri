@@ -1847,7 +1847,10 @@ export const isInternetAvailable = function (unit) {
 export const restartApp = function () {
   return function() {
     console.log("HERE IN RESET ===--->>")
-    if (JBridge.restartApp){
+    if (window.__OS == "IOS") {
+      emitJOSEvent("java","onEvent",{event: "show_splash"})
+      emitJOSEvent("java","onEvent",{event: "reboot"})
+    } else if (JBridge.restartApp){
       JBridge.restartApp();
     } else {
       JBridge.factoryResetApp();
@@ -1858,7 +1861,12 @@ export const restartApp = function () {
 // Deprecated
 export const factoryResetApp = function (str) {
   console.log("HERE IN RESET ===--->>")
-  JBridge.factoryResetApp()
+  if (window.__OS == "IOS") {
+    emitJOSEvent("java","onEvent",{event: "show_splash"})
+    emitJOSEvent("java","onEvent",{event: "reboot"})
+  } else {
+    JBridge.factoryResetApp()
+  }
 }
 
 export const uploadFile = function (unit) {
