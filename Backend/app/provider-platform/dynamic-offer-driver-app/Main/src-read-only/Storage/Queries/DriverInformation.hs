@@ -169,10 +169,17 @@ updatePayoutRegistrationOrderId payoutRegistrationOrderId driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updatePayoutVpa :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updatePayoutVpa payoutVpa driverId = do
+updatePayoutVpaAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutVpaAndStatus payoutVpa payoutVpaStatus driverId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+  updateOneWithKV [Se.Set Beam.payoutVpa payoutVpa, Se.Set Beam.payoutVpaStatus payoutVpaStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updatePayoutVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutVpaStatus payoutVpaStatus driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.payoutVpaStatus payoutVpaStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updatePendingPayment :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePendingPayment paymentPending driverId = do
@@ -242,6 +249,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.paymentPending paymentPending,
       Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId,
       Se.Set Beam.payoutVpa payoutVpa,
+      Se.Set Beam.payoutVpaStatus payoutVpaStatus,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),
       Se.Set Beam.subscribed subscribed,

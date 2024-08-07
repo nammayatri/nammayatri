@@ -101,7 +101,7 @@ postPayoutDeleteVpa (mbPersonId, _merchantId, _merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   driverInfo <- runInReplica $ DrInfo.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
   unless (isJust driverInfo.payoutVpa) $ throwError (InvalidRequest "Vpa Id does not Exists")
-  void $ DrInfo.updatePayoutVpa Nothing personId -- Deleting the prev VPA (We can get this in payout order history)
+  void $ DrInfo.updatePayoutVpaAndStatus Nothing Nothing personId -- Deleting the prev VPA (We can get this in payout order history)
   pure Kernel.Types.APISuccess.Success
 
 getPayoutRegistration ::

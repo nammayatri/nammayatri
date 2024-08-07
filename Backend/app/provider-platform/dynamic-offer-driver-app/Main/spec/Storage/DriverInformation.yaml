@@ -17,6 +17,8 @@ DriverInformation:
     DriverAutoPayStatus:
       enum: "PENDING,ACTIVE,SUSPENDED,PAUSED_PSP,CANCELLED_PSP,MANDATE_FAILED,MANDATE_EXPIRED"
       derive: "HttpInstance"
+    PayoutVpaStatus:
+      enum: "VIA_WEBHOOK, MANUALLY_ADDED, VERIFIED_BY_USER"
     DriverSummary:
       totalEarnings: Money
       bonusEarned: Money
@@ -81,6 +83,7 @@ DriverInformation:
     payoutRegistrationOrderId: Maybe Text
     latestScheduledPickup: Maybe LatLong
     latestScheduledBooking : Maybe UTCTime
+    payoutVpaStatus: Maybe PayoutVpaStatus
 
   default:
     active: "false"
@@ -213,9 +216,9 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [forwardBatchingEnabled]
       where: driverId
-    updatePayoutVpa:
+    updatePayoutVpaAndStatus:
       kvFunction: updateOneWithKV
-      params: [payoutVpa]
+      params: [payoutVpa, payoutVpaStatus]
       where: driverId
     updateIsInteroperable:
       kvFunction: updateOneWithKV
@@ -232,5 +235,9 @@ DriverInformation:
     updateOnRideAndLatestScheduledBookingAndPickup:
       kvFunction: updateOneWithKV
       params: [onRide, latestScheduledBooking, latestScheduledPickup]
+      where: driverId
+    updatePayoutVpaStatus:
+      kvFunction: updateOneWithKV
+      params: [payoutVpaStatus]
       where: driverId
 
