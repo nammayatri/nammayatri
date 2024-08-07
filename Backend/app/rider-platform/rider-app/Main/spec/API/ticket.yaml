@@ -102,38 +102,50 @@ types:
     services: [TicketBookingServiceDetails]
     refundDetails: [Refunds]
 
+  TicketBookings:
+    amount: HighPrecMoney
+    bookedSeats: Int
+    cancelledSeats: Maybe Int
+    createdAt: UTCTime
+    id: Text
+    shortId: Text
+    status: Text
+    ticketPlaceId: Maybe Text
+    updatedAt: UTCTime
+    visitDate: Maybe Day
+
   TicketBookingServiceDetails:
     ticketServiceShortId: Text
     ticketServiceName: Text
-    amount : HighPrecMoney
+    amount: HighPrecMoney
     allowCancellation: Bool
     amountWithCurrency: PriceAPIEntity
-    status : ServiceStatus
-    businessHourId : Maybe (Id BusinessHour)
-    verificationCount : Int
+    status: ServiceStatus
+    businessHourId: Maybe (Id BusinessHour)
+    verificationCount: Int
     slot: Maybe TimeOfDay
-    expiryDate : Maybe UTCTime
-    categories : [TicketBookingCategoryDetails]
+    expiryDate: Maybe UTCTime
+    categories: [TicketBookingCategoryDetails]
 
   TicketBookingCategoryDetails:
-    id : Id TicketBookingServiceCategory
-    name : Text
+    id: Id TicketBookingServiceCategory
+    name: Text
     bookedSeats: Int
     cancelledSeats: Maybe Int
     amount: HighPrecMoney
     amountToRefund: Maybe HighPrecMoney
     amountWithCurrency: PriceAPIEntity
     serviceCategoryId: Maybe (Text)
-    peopleCategories : [TicketBookingPeopleCategoryDetails]
+    peopleCategories: [TicketBookingPeopleCategoryDetails]
 
   TicketBookingPeopleCategoryDetails:
-    id : Id TicketBookingPeopleCategory
-    name : Text
-    pricePerUnit : HighPrecMoney
+    id: Id TicketBookingPeopleCategory
+    name: Text
+    pricePerUnit: HighPrecMoney
     pricePerUnitWithCurrency: PriceAPIEntity
-    numberOfUnits : Int
-    numberOfUnitsCancelled : Maybe Int
-    amountToRefund : Maybe HighPrecMoney
+    numberOfUnits: Int
+    numberOfUnitsCancelled: Maybe Int
+    amountToRefund: Maybe HighPrecMoney
     cancelCharges: "Maybe [CancellationCharge]"
 
   TicketBookingUpdateSeatsReq:
@@ -144,10 +156,10 @@ types:
     updatedBookedSeats: Int
 
   TicketServiceCancelReq:
-    businessHourId : (Id BusinessHour)
-    date : Day
-    description : Maybe Text
-    ticketServiceId : Id TicketService
+    businessHourId: (Id BusinessHour)
+    date: Day
+    description: Maybe Text
+    ticketServiceId: Id TicketService
     ticketServiceCategoryId: Id ServiceCategory
 
   TicketBookingCancelReq:
@@ -155,7 +167,7 @@ types:
     ticketBookingShortId: ShortId TicketBooking
 
   TicketBookingServiceCancelReq:
-    shortId:  ShortId TicketBookingService
+    shortId: ShortId TicketBookingService
     businessHourId: Id BusinessHour
     serviceCategory: [TicketBookingServiceCategoryCancelReq]
 

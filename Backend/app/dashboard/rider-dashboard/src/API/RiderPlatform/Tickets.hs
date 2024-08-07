@@ -10,6 +10,7 @@ import qualified "rider-app" API.Dashboard.Tickets as ADT
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import Dashboard.Common (HideSecrets)
 import Data.Time
+import qualified "rider-app" Domain.Action.UI.TicketService as DTB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.TicketBooking as DTB
 import qualified "rider-app" Domain.Types.TicketBookingService as DTB
@@ -39,6 +40,7 @@ type API =
     :<|> CancelTicketBookingServiceAPI
     :<|> CancelTicketServiceAPI
     :<|> GetTicketBookingDetails
+    :<|> GetTicketBookingListAPI
 
 type VerifyBookingDetailsAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'VERIFY_BOOKING_DETAILS
@@ -68,6 +70,10 @@ type GetTicketBookingDetails =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'GET_TICKET_BOOKING_DETAILS
     :> ADT.GetTicketBookingDetailsAPI
 
+type GetTicketBookingListAPI =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'GET_TICKET_BOOKING_LIST
+    :> ADT.GetTicketBookingListAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   verifyBookingDetails merchantId city
@@ -77,6 +83,7 @@ handler merchantId city =
     :<|> cancelTicketBookingService merchantId city
     :<|> cancelTicketService merchantId city
     :<|> getTicketBookingDetails merchantId city
+    :<|> getTicketBookingList merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -156,3 +163,20 @@ getTicketBookingDetails ::
 getTicketBookingDetails merchantShortId opCity apiTokenInfo ticketBookingShortId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.tickets.getTicketBookingDetails) ticketBookingShortId
+
+getTicketBookingList ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Id DTB.TicketPlace ->
+  Maybe Text ->
+  Maybe (Id DTB.TicketBookingService) ->
+  Maybe Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  FlowHandler DTB.TicketBookingListRes
+getTicketBookingList merchantShortId opCity apiTokenInfo ticketPlaceId mbTicketBookinShordId mbTicketBookingServiceId mbTicketBookingStatus mbFrom mbTo mbLimit mbOffset = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderAppOperations checkedMerchantId opCity (.tickets.getTicketBookingList) ticketPlaceId mbTicketBookinShordId mbTicketBookingServiceId mbTicketBookingStatus mbFrom mbTo mbLimit mbOffset

@@ -2,6 +2,7 @@ module Storage.Queries.TicketBookingServiceExtra where
 
 import qualified Data.Time.Calendar
 import qualified Domain.Types.BusinessHour as DTBH
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketBookingService as DTBS
 import qualified Domain.Types.TicketService as DTS
 import Kernel.Beam.Functions
@@ -41,3 +42,30 @@ findByVisitDateAndStatusAndServiceIdAndBtype visitDate status (Id.Id ticketServi
           Se.Is BeamR.expiryDate $ Se.GreaterThanOrEq expiryDate
         ]
     ]
+
+findAllTicketBookingServiceList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Int ->
+  Int ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Id.Id DTBS.TicketBookingService ->
+  Maybe Text ->
+  Maybe DTBS.ServiceStatus ->
+  m [DTBS.TicketBookingService]
+findAllTicketBookingServiceList merchantOperatingCityId limit offset mbFrom mbTo ticketServiceId mbShortId mbStatus = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [ Se.Is BeamR.merchantOperatingCityId $ Se.Eq (Id.getId merchantOperatingCityId),
+            Se.Is BeamR.ticketServiceId $ Se.Eq (Id.getId ticketServiceId)
+          ]
+            ++ maybe [] (\shortId -> [Se.Is BeamR.shortId $ Se.Eq shortId]) mbShortId
+            ++ maybe [] (\status -> [Se.Is BeamR.status $ Se.Eq status]) mbStatus
+            ++ maybe [] (\from -> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq from]) mbFrom
+            ++ maybe [] (\to -> [Se.Is BeamR.createdAt $ Se.LessThanOrEq to]) mbTo
+        )
+    ]
+    (Se.Asc BeamR.createdAt)
+    (Just limit)
+    (Just offset)

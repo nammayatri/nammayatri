@@ -64,6 +64,23 @@ type GetTicketBookingDetailsAPI =
     :> "details"
     :> Get '[JSON] ATB.TicketBookingDetails
 
+type GetTicketBookingListAPI =
+  "bookingList"
+    :> Capture "ticketPlaceId" (Id DTB.TicketPlace)
+    :> "details"
+    :> QueryParam "ticketBookingShortId" Text
+    :> QueryParam "ticketBookingServiceId" (Id DTB.TicketBookingService)
+    :> QueryParam "status" Text
+    :> QueryParam "from" UTCTime
+    :> QueryParam "to" UTCTime
+    :> QueryParam
+         "limit"
+         Int
+    :> QueryParam
+         "offset"
+         Int
+    :> Get '[JSON] DTB.TicketBookingListRes
+
 type API =
   "tickets"
     :> VerifyBookingDetailsAPI
@@ -73,6 +90,7 @@ type API =
     :<|> CancelTicketBookingServiceAPI
     :<|> CancelTicketServiceAPI
     :<|> GetTicketBookingDetailsAPI
+    :<|> GetTicketBookingListAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -83,6 +101,7 @@ handler merchantId =
     :<|> cancelTicketBookingService merchantId
     :<|> cancelTicketService merchantId
     :<|> getTicketBookingDetails merchantId
+    :<|> getTicketBookingList merchantId
 
 verifyBookingDetails :: ShortId DM.Merchant -> Id DTB.TicketService -> ShortId DTB.TicketBookingService -> FlowHandler ATB.TicketServiceVerificationResp
 verifyBookingDetails merchantShortId personServiceId ticketBookingServiceShortId = do
@@ -118,3 +137,8 @@ getTicketBookingDetails :: ShortId DM.Merchant -> ShortId DTB.TicketBooking -> F
 getTicketBookingDetails merchantShortId ticketBookingShortId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
   withFlowHandlerAPI $ DTB.getTicketBookingsDetails (Nothing, m.id) ticketBookingShortId
+
+getTicketBookingList :: ShortId DM.Merchant -> Id DTB.TicketPlace -> Maybe Text -> Maybe (Id DTB.TicketBookingService) -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> FlowHandler DTB.TicketBookingListRes
+getTicketBookingList merchantShortId ticketPlaceId mbTicketBookinShordId mbTicketBookingServiceId mbTicketBookingStatus mbFrom mbTo mbLimit mbOffset = do
+  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withFlowHandlerAPI $ DTB.getTicketBookingList (Nothing, m.id) mbLimit mbOffset ticketPlaceId mbTicketBookinShordId mbTicketBookingServiceId mbTicketBookingStatus mbFrom mbTo
