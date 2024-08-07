@@ -190,6 +190,7 @@ library
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
+      Domain.Action.UI.MultiChat
       Domain.Action.UI.MultiModal
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
@@ -396,6 +397,7 @@ library
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
+      API.Action.UI.MultiChat
       API.Action.UI.MultiModal
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
@@ -408,6 +410,7 @@ library
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
+      API.Types.UI.MultiChat
       API.Types.UI.MultiModal
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin
