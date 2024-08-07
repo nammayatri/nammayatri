@@ -59,9 +59,10 @@ listCustomers ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe Text ->
+  Maybe (Id Common.Customer) ->
   FlowHandler Common.CustomerListRes
-listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked =
-  withFlowHandlerAPI . DCustomer.listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked
+listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked personId =
+  withFlowHandlerAPI . DCustomer.listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked personId
 
 deleteCustomer ::
   ShortId DM.Merchant ->

@@ -94,6 +94,7 @@ type CustomerListAPI =
     :> QueryParam "enabled" Bool
     :> QueryParam "blocked" Bool
     :> QueryParam "phone" Text
+    :> QueryParam "personId" (Id Customer)
     :> Get '[JSON] CustomerListRes
 
 data CustomerListRes = CustomerListRes

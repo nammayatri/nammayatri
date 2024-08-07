@@ -88,10 +88,11 @@ listCustomer ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe Text ->
+  Maybe (Id Common.Customer) ->
   FlowHandler Common.CustomerListRes
-listCustomer merchantShortId opCity apiTokenInfo mbLimit mbOffset enabled blocked phone = withFlowHandlerAPI' $ do
+listCustomer merchantShortId opCity apiTokenInfo mbLimit mbOffset enabled blocked phone mbPersonId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRiderAppOperations checkedMerchantId opCity (.customers.customerList) mbLimit mbOffset enabled blocked phone
+  Client.callRiderAppOperations checkedMerchantId opCity (.customers.customerList) mbLimit mbOffset enabled blocked phone mbPersonId
 
 deleteCustomer ::
   ShortId DM.Merchant ->
