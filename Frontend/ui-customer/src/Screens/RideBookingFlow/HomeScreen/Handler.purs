@@ -120,6 +120,9 @@ homeScreen = do
     RefreshHomeScreen updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
         App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
+    UpdateChatScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_CHAT)
     Retry updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
         App.BackT $ App.NoBack <$> (pure $ RETRY)

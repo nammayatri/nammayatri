@@ -1363,3 +1363,4 @@ getTA stringKey =
     RENTAL_BOOKING -> "வாடகை பதிவு"
     INTERCITY_BOOKING -> "இன்டர்சிட்டி பதிவு"
     BOOKING -> "பதிவு"
+    DRIVER -> "இயக்கி"

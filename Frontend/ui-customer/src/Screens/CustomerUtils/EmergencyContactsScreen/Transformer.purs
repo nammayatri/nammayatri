@@ -3,6 +3,7 @@ module Screens.EmergencyContactsScreen.Transformer where
 import Prelude (map)
 
 import Screens.Types (Contacts, NewContacts)
+import Data.Maybe (Maybe(..))
 
 
 getContactList :: Array Contacts -> Array NewContacts
@@ -17,4 +18,6 @@ getContact contact = {
   , enableForShareRide: false
   , onRide: false
   , priority : 1
+  , contactPersonId : Nothing
+  , notifiedViaFCM : Nothing
 }

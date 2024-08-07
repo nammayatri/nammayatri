@@ -1491,6 +1491,9 @@ homeScreenFlow = do
         pure unit
       homeScreenFlow
     REFRESH_HOME_SCREEN -> homeScreenFlow
+    UPDATE_CHAT -> do 
+      removeChatService ""
+      homeScreenFlow
     RELOAD saveToCurrLocs -> do
       (GlobalState state) <- getState
       void $ liftFlowBT $ setMapPadding 0 0 0 0
@@ -1937,6 +1940,8 @@ homeScreenFlow = do
                 , enableForFollowing: fromMaybe false item.enableForFollowing
                 , enableForShareRide: fromMaybe false item.enableForShareRide
                 , onRide: fromMaybe false item.onRide
+                , contactPersonId : item.contactPersonId
+                , notifiedViaFCM : item.notifiedViaFCM
                 }
             )
             res.defaultEmergencyNumbers
@@ -2920,6 +2925,8 @@ emergencyScreenFlow = do
                     , enableForShareRide: fromMaybe false item.enableForShareRide
                     , onRide: fromMaybe false item.onRide
                     , priority: fromMaybe 1 item.priority
+                    , contactPersonId : item.contactPersonId
+                    , notifiedViaFCM : item.notifiedViaFCM
                     }
                 )
                 res.defaultEmergencyNumbers

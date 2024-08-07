@@ -84,6 +84,7 @@ import Storage (isLocalStageOn)
 import Screens.Types (FareProductType(..)) as FPT
 import Helpers.TipConfig
 import RemoteConfig as RC
+import Components.MessagingView.Controller (dummyChatRecipient)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -216,6 +217,12 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , spLocationName : resp.specialLocationName
       , addressWard : bookingLocationAPIEntity.ward
       , hasToll : DA.any (\(FareBreakupAPIEntity fare) ->  fare.description == "TOLL_CHARGES") resp.estimatedFareBreakup
+      , currentChatRecipient : dummyChatRecipient {
+          uuid = rideList.bppRideId
+        , enableForFollowing = true
+        , name = rideList.driverName
+        , recipient = "DRIVER"
+      }
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -822,7 +829,9 @@ getFormattedContacts = do
       enableForFollowing: fromMaybe false item.enableForFollowing,
       enableForShareRide: fromMaybe false item.enableForShareRide,
       onRide : fromMaybe false item.onRide,
-      priority: fromMaybe 1 item.priority
+      priority: fromMaybe 1 item.priority,
+      contactPersonId : item.contactPersonId,
+      notifiedViaFCM : item.notifiedViaFCM
     }) res.defaultEmergencyNumbers
 
 

@@ -1348,3 +1348,4 @@ getFR stringKey =
         RENTAL_BOOKING -> "Réservation de location"
         INTERCITY_BOOKING -> "Réservation interurbaine"
         BOOKING -> "Réservation"
+        DRIVER -> "Conducteur"
