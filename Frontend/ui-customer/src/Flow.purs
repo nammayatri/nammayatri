@@ -361,7 +361,8 @@ currentFlowStatus = do
   liftFlowBT $ markPerformance "HIDE_LOADER_FLOW"
   hideLoaderFlow
   void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?  
-  homeScreenFlow
+  -- homeScreenFlow
+  driverProfileScreenFlow
   where
   goToConfirmingQuotesStage :: { bookingId :: String, validTill :: String, fareProductType :: Maybe String } -> FlowBT String Unit
   goToConfirmingQuotesStage currentStatus = do
@@ -2924,6 +2925,11 @@ aboutUsScreenFlow = do
   flow <- UI.aboutUsScreen
   case flow of
     GO_TO_HOME_FROM_ABOUT -> homeScreenFlow
+
+driverProfileScreenFlow = do
+  flow <- UI.driverProfileScreen
+  case flow of
+    _ -> homeScreenFlow
 
 permissionScreenFlow :: FlowBT String Unit
 permissionScreenFlow = do

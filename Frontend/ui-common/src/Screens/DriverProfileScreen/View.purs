@@ -1,0 +1,751 @@
+module Screens.DriverProfileScreenCommon.View where
+
+import Prelude
+import Screens.DriverProfileScreenCommon.Controller (Action(..), eval, ScreenOutput, getVariant, getPillText)
+import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, relativeLayout, gravity, height, alpha, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, horizontalScrollView, stroke, text, textSize, textView, visibility, weight, width, singleLine, id, frameLayout, scrollBarY, fillViewport, onAnimationEnd, rippleColor, alignParentBottom, progressBar, scrollBarX)
+import Effect (Effect)
+import Animation as Anim
+import Styles.Colors as Color
+import Font.Style as FontStyle
+import Common.Types.App as CT
+import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth)
+import Data.Array as DA
+import Data.String (joinWith)
+import Data.Maybe (fromMaybe, Maybe(..))
+import Mobility.Prelude
+import Services.Common.Backend as SB
+import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
+import Effect.Aff (launchAff)
+import Data.Time.Duration (Milliseconds(..))
+import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
+import JBridge as JB
+import Control.Monad.Except.Trans (runExceptT)
+import Services.Common.API
+import Control.Transformers.Back.Trans (runBackT)
+import Control.Monad.Trans.Class (lift)
+import Data.Either(Either(..))
+import PrestoDOM.Animation 
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Presto.Core.Types.Language.Flow (delay)
+import Effect.Uncurried(runEffectFn1)
+import Debug (spy)
+
+screen :: DriverProfileScreenCommonState -> Screen Action DriverProfileScreenCommonState ScreenOutput
+screen initialState =
+    { initialState
+    , view: view
+    , name: "DriverProfileScreenCommon"
+    , globalEvents : [
+    (\push -> do
+    --    _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getDriverProfile GetDriverProfileAPIResponseAction push initialState
+       pure $ pure unit
+      )
+    ]
+    , eval: eval
+    }
+
+getDriverProfile :: forall action. (SB.DriverProfileRes -> action) -> (action -> Effect Unit) -> DriverProfileScreenCommonState -> FlowBT String Unit
+getDriverProfile action push state = do
+  void $ lift $ lift $ EHU.toggleLoader true
+  (driversProfileResp) <- lift $ lift $ SB.getDriverProfile "77d40521-b66b-408e-b7d0-f2f9caf1d21f"
+  case driversProfileResp of
+        Right resp -> do
+            void $ lift $ lift $ delay $ Milliseconds 2000.0
+            void $ lift $ lift $ EHU.toggleLoader false
+            liftFlowBT $ push $ action resp
+            pure unit
+        Left _ -> void $ pure $ JB.toast "Not available at this moment"
+
+view :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+view push state =
+  Anim.screenAnimation $
+    scrollView
+     [ height MATCH_PARENT
+     , width MATCH_PARENT
+     , background Color.white900
+     ] $
+     [
+        linearLayout[
+            height MATCH_PARENT
+        ,   width MATCH_PARENT
+        ,   orientation VERTICAL
+        ][
+            back push state
+        ,   header push state
+        ,   driverStats push state
+        ,   driverInfoCard push state
+        ,   reviews push state
+        ,   trainings push state
+        ,   pledge push state
+        ,   aboutMe push state
+        ]
+    ]
+
+back :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+back push state =
+    imageView [
+      width $ V 22
+    , height $ V 22
+    , margin $ Margin 15 20 0 12
+    , onClick push $ const GoBack
+    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_black_cross"
+    ]
+
+getImage :: DriverProfileScreenCommonState -> String
+getImage state = do
+  joinWith "" (DA.mapWithIndex(\index item -> do
+        if index == state.data.imgIdx then item else ""
+        )state.data.profileImages)
+
+driverProfile :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+driverProfile push state =
+    relativeLayout[
+        width MATCH_PARENT
+    ,   height WRAP_CONTENT
+    ][
+        linearLayout
+        [ width MATCH_PARENT
+        , height $ V 275
+        , id $ getNewIDWithTag "add_image_component_images"
+        , afterRender (\action -> do
+            runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage state, id = getNewIDWithTag "add_image_component_images" , scaleType =  "CENTER_CROP", inSampleSize = 2} 
+            ) (const NoAction)
+        ][]
+    ,   linearLayout[
+            width MATCH_PARENT
+        ,   height WRAP_CONTENT
+        ,   margin $ MarginTop 125
+        ][
+            linearLayout[
+                width WRAP_CONTENT
+            ,   height WRAP_CONTENT
+            ,   weight 1.0
+            ][
+                imageView [
+                width $ V 30
+                , height $ V 30
+                , margin $ MarginLeft 5
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_chevron_left"
+                , onClick push $ const PrevImg
+                , gravity LEFT
+                ]
+            ]
+        ,   imageView [
+              width $ V 30
+            , height $ V 30
+            , margin $ MarginRight 5
+            , onClick push $ const NextImg
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_chevron_right"
+            ]
+        ]
+    ]
+
+getElement :: Int -> Array String -> String
+getElement idx arr = fromMaybe "" (DA.index arr idx)
+
+header :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+header push state =
+    let (DriverStatSummary stats) = state.data.driverStats
+    in
+    relativeLayout[
+        height WRAP_CONTENT
+    ,   width MATCH_PARENT
+    ][
+        driverProfile push state
+    ,   linearLayout
+        [
+        height $ V 275
+        , width MATCH_PARENT
+        , padding $ Padding 15 0 0 15
+        , gravity BOTTOM
+        , orientation VERTICAL
+        ][
+            textView $ 
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , text state.data.driverName
+            , color Color.white900
+            , margin $ MarginBottom 5
+            ] <> FontStyle.h2 CT.TypoGraphy
+
+        ,   linearLayout
+            [
+            width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , margin $ MarginBottom 10
+            ][
+                textView $ 
+                [ width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , text $ getVariant state.data.vechicleVariant
+                , color Color.white900
+                , margin $ Margin 0 0 5 0
+                ] <> FontStyle.body3 CT.TypoGraphy
+            ,   linearLayout[
+                    width WRAP_CONTENT
+                ,   height WRAP_CONTENT
+                ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 0
+                ][
+                    imageView
+                    [ width $ V 5
+                    , height $ V 5
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_dot"
+                    , margin $ Margin 0 6 5 0
+                    ]
+                ,   textView $ 
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , text $ getElement 0 state.data.vehicleTags
+                    , color Color.white900
+                    , margin $ Margin 0 0 5 0
+                    ] <> FontStyle.body3 CT.TypoGraphy
+                ,   linearLayout[
+                        width WRAP_CONTENT
+                    ,   height WRAP_CONTENT
+                    ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 1
+                    ][
+                        imageView
+                        [ width $ V 5
+                        , height $ V 5
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_dot"
+                        , margin $ Margin 0 6 5 0
+                        ]
+                    ,   textView $ 
+                        [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , text $ getElement 1 state.data.vehicleTags
+                        , color Color.white900
+                        , margin $ Margin 0 0 5 0
+                        ] <> FontStyle.body3 CT.TypoGraphy
+                    ,   linearLayout[
+                            width WRAP_CONTENT
+                        ,   height WRAP_CONTENT
+                        ,   visibility $ boolToVisibility $ DA.length state.data.vehicleTags > 2
+                        ][
+                            imageView
+                            [ width $ V 5
+                            , height $ V 5
+                            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_dot"
+                            , margin $ Margin 0 6 5 0
+                            ]
+                        ,   textView $ 
+                            [ width WRAP_CONTENT
+                            , height WRAP_CONTENT
+                            , text $ getElement 2 state.data.vehicleTags
+                            , color Color.white900
+                            , margin $ Margin 0 0 5 0
+                            ] <> FontStyle.body3 CT.TypoGraphy  
+                        ]
+                    ] 
+                ]
+            ]
+    ,   linearLayout
+        [
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation HORIZONTAL
+        , background "#383B46"
+        , cornerRadius 24.0
+        ][
+            imageView [ 
+              width $ V 16
+            , height $ V 16
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_heart_cream"
+            , margin $ Margin 10 5 8 5
+            ]
+        ,   textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "By " <> show stats.likedByRidersNum <> " customers"
+            , color Color.yellow800
+            , margin $ MarginTop 2
+            ] <> FontStyle.tags CT.TypoGraphy
+        ,   imageView [ 
+            width $ V 14
+            , height $ V 14
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_grey"
+            , margin $ Margin 5 5 8 5
+            ]
+        ]
+        ]
+    ] 
+
+driverStats :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+driverStats push state =
+    let (DriverStatSummary stats) = state.data.driverStats
+    in
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width MATCH_PARENT
+    ,   orientation HORIZONTAL
+    ,   margin $ Margin 0 16 0 16
+    ][
+        linearLayout[
+            height WRAP_CONTENT
+        ,   width $ V $ (screenWidth unit) / 3
+        ,   orientation VERTICAL
+        ][
+            linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   orientation HORIZONTAL
+            ,   gravity CENTER
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ show (fromMaybe 0.0 stats.avgRating) <> " ⭐"
+                , color Color.black800
+                ] <> FontStyle.h2 CT.TypoGraphy
+            ]
+        ,   linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   gravity CENTER
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ "Rating"
+                , color Color.black700
+                , margin $ MarginRight 9
+                ] <> FontStyle.body3 CT.TypoGraphy
+            ]
+        ]
+    ,   imageView [ 
+            width $ V 1
+        ,   height $ V 35
+        ,   margin $ MarginTop 7
+        ,   imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_line"
+        ]
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width $ V $ (screenWidth unit) / 3
+        ,   orientation VERTICAL
+        ][
+            linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   gravity CENTER
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ show stats.numTrips
+                , color Color.black800
+                ] <> FontStyle.h2 CT.TypoGraphy
+            ]
+        ,   linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   gravity CENTER
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ "Trips"
+                , color Color.black700
+                -- , margin $ MarginRight 9
+                ] <> FontStyle.body3 CT.TypoGraphy
+            ]
+        ]
+    ,   imageView [ 
+            width $ V 1
+        ,   height $ V 35
+        ,   imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_line"
+        ,   margin $ MarginTop 7
+        ]
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width $ V $ (screenWidth unit) / 3
+        ,   orientation VERTICAL
+        ][
+            linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   gravity CENTER
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ show stats.cancellationRate <> "%"
+                , color Color.black800
+                ] <> FontStyle.h2 CT.TypoGraphy
+            ]
+        ,   linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   gravity CENTER
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ "Cancellation"
+                , color Color.black700
+                -- , margin $ MarginRight 9
+                ] <> FontStyle.body3 CT.TypoGraphy
+            ]
+        ]
+    ]
+
+driverInfoCard :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+driverInfoCard push state =
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width MATCH_PARENT
+    ,   margin $ Margin 16 5 10 5
+    ,   orientation VERTICAL
+    ][
+        textView $
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , text $ fromMaybe "" state.data.aboutMe
+            , color Color.black700
+            , margin $ MarginBottom 20
+            , visibility $ boolToVisibility $ not (state.data.aboutMe == Nothing)
+            ] <> FontStyle.body20 CT.TypoGraphy
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width MATCH_PARENT
+        ,   orientation VERTICAL
+        ,   margin $ Margin 0 0 0 15
+        ][
+            linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   orientation HORIZONTAL
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ "🌏    I Speak " <> joinWith "" (DA.mapWithIndex(\index item -> do
+                    if index == 0 then item else if index /= 0 && index /= (DA.length state.data.languages) - 1 then ", " <> item else " and " <> item
+                    )state.data.languages)
+                , color Color.black700
+                ] <> FontStyle.body1 CT.TypoGraphy
+            ]
+        ]
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width MATCH_PARENT
+        ,   orientation VERTICAL
+        ,   margin $ Margin 0 0 0 15
+        ,   visibility $ boolToVisibility $ not (state.data.drivingSince == Nothing)
+        ][
+            textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "🗓️    With NammaYatri for " <> show (fromMaybe 0 state.data.drivingSince) <>"+ years"
+            , color Color.black700
+            ] <> FontStyle.body1 CT.TypoGraphy
+        ]
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width MATCH_PARENT
+        ,   margin $ Margin 0 0 0 15
+        ][
+            textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "ℹ️    Vehicle Number: "
+            , color Color.black700
+            ] <> FontStyle.body1 CT.TypoGraphy
+        ,   textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ state.data.vehicleNum
+            , color Color.black700
+            ] <> FontStyle.body39 CT.TypoGraphy
+        ]
+    ]
+
+reviewItem :: forall w. DriverReview -> PrestoDOM (Effect Unit) w
+reviewItem (DriverReview item) =
+    let _ = spy "array" (item.feedBackPills)
+    in 
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width $ V 245
+    ,   background Color.white900
+    ,   padding $ Padding 15 15 30 15
+    ,   stroke $ "1,"<> Color.grey900
+    ,   cornerRadius 10.0
+    ,   orientation VERTICAL
+    ,   margin $ MarginRight 10
+    ][
+        textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ fromMaybe "" item.review
+        , color Color.black800
+        , margin $ MarginBottom 10
+        , visibility $ boolToVisibility $ not (item.review == Nothing)
+        ] <> FontStyle.paragraphText CT.TypoGraphy
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width WRAP_CONTENT
+        ](
+            map(\idx -> 
+                linearLayout[
+                    height WRAP_CONTENT
+                ,   width WRAP_CONTENT
+                ](
+                    map(\indx -> pill indx)idx
+                )
+                ) (EHC.convertTo2DArray item.feedBackPills)
+        )
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width WRAP_CONTENT
+        ,   margin $ MarginTop 20
+        ][
+            textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ show item.rating
+            , color Color.black
+            , background "#F1F1F1"
+            , cornerRadius 50.0
+            , padding $ Padding 15 4 15 5
+            ] <> FontStyle.body33 CT.TypoGraphy
+        ,   linearLayout[
+                height WRAP_CONTENT
+            ,   width WRAP_CONTENT
+            ,   orientation VERTICAL
+            ,   margin $ Margin 10 0 0 5
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ "Jermey HK"
+                , color Color.black800
+                , margin $ MarginBottom 3
+                ] <> FontStyle.body34 CT.TypoGraphy
+
+            ,   textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ show item.tripDate
+                , color Color.black800
+                ] <> FontStyle.body35 CT.TypoGraphy
+            ]
+        ]
+    ]
+
+reviews :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+reviews push state =
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width MATCH_PARENT
+    ,   orientation VERTICAL
+    ][
+        textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "What People Say"
+            , color Color.black800
+            , margin $ Margin 16 0 0 16
+            ] <> FontStyle.body7 CT.TypoGraphy
+    ,   horizontalScrollView[
+            height WRAP_CONTENT
+        ,   width MATCH_PARENT
+        ,   background Color.blue600
+        ,   padding $ Padding 0 24 0 24
+        ,   scrollBarX false
+        ][
+            linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   margin $ Margin 16 0 16 0
+            ](
+                map(\item -> reviewItem item)state.data.topReviews
+            )
+        ]
+    ]
+
+pill :: forall w. String -> PrestoDOM (Effect Unit) w
+pill title =
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width WRAP_CONTENT
+    ,   stroke $ "1,"<> Color.grey800
+    ,   cornerRadius 8.0
+    ,   background Color.white900
+    ,   padding $ Padding 5 5 7 7
+    ,   margin $ Margin 0 0 10 10
+    ][
+        textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ getPillText title
+            , color "#333333"
+            , margin $ Margin 5 2 0 0
+            ] <> FontStyle.body32 CT.TypoGraphy
+    ]
+
+pills :: forall w. String -> PrestoDOM (Effect Unit) w
+pills title =
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width WRAP_CONTENT
+    ,   stroke $ "1,"<> Color.grey800
+    ,   cornerRadius 8.0
+    ,   background Color.white900
+    ,   padding $ Padding 5 5 10 7
+    ,   margin $ Margin 0 0 10 10
+    ][
+        textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ getPillText title
+            , color Color.black800
+            , margin $ Margin 5 0 0 0
+            ] <> FontStyle.body36 CT.TypoGraphy
+    ]
+
+trainings :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+trainings push state =
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width MATCH_PARENT
+    ,   orientation VERTICAL
+    ,   margin $ Margin 16 26 0 16
+    ][
+        textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "Trainings I completed"
+            , color Color.black800
+            ] <> FontStyle.body7 CT.TypoGraphy
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width WRAP_CONTENT
+        ,   margin $ MarginTop 17
+        ,   orientation VERTICAL
+        ] (map(\item -> 
+            linearLayout[
+                height WRAP_CONTENT
+            ,   width WRAP_CONTENT
+            ](
+                map(\item -> pills item)item
+            )
+            )state.data.certificates)
+    ]
+
+pledge :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+pledge push state =
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width MATCH_PARENT
+    ,   background "#E5F9E5"
+    ,   cornerRadius 10.0
+    ,   margin $ Margin 16 8 16 16
+    ,   padding $ Padding 16 16 0 19
+    ][
+        linearLayout[
+            height WRAP_CONTENT
+        ,   width WRAP_CONTENT
+        ,   orientation VERTICAL
+        ][
+            textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "✋🏼  I Pledge"
+            , color "#CC53BB6F"
+            , margin $ MarginBottom 2
+            ] <> FontStyle.body37 CT.TypoGraphy
+        ,   linearLayout[
+                height WRAP_CONTENT
+            ,   width WRAP_CONTENT
+            ,   orientation VERTICAL
+            ](
+                (map(\item -> 
+                    textView $
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , text $ item
+                    , color "#53BB6F"
+                    , margin $ MarginTop 2
+                    ] <> FontStyle.body7 CT.TypoGraphy
+                )state.data.pledges)
+            )
+        ,   textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "“Safe Journey, Clean Car”"
+            , color "#53BB6F"
+            , margin $ MarginTop 2
+            ] <> FontStyle.body7 CT.TypoGraphy
+        ]
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width MATCH_PARENT
+        ,   gravity RIGHT
+        ,   margin $ MarginTop 5
+        ][
+            imageView [
+                width $ V 17
+            ,   height $ V 17
+            ,   imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_star1"
+            ]
+        ,   imageView [ 
+                width $ V 38
+            ,   height $ V 38
+            ,   imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_star2"
+            ]
+        ]
+    ]
+
+aboutMe :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+aboutMe push state =
+    linearLayout[
+        height WRAP_CONTENT
+    ,   width MATCH_PARENT
+    ,   margin $ Margin 16 13 16 16
+    ,   orientation VERTICAL
+    ][
+        textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "More About Me"
+            , color Color.black800
+            ] <> FontStyle.body7 CT.TypoGraphy
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width MATCH_PARENT
+        ,   orientation VERTICAL
+        ][
+            linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   margin $ MarginTop 16
+            ,   visibility $ boolToVisibility $ not (state.data.drivingSince == Nothing)
+            ][
+                textView $
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ "🚗    "<> show (fromMaybe 0 state.data.drivingSince) <>" Yrs of Driving"
+                , color Color.black800
+                ] <> FontStyle.body38 CT.TypoGraphy
+            ]
+        ,   linearLayout[
+                height WRAP_CONTENT
+            ,   width MATCH_PARENT
+            ,   orientation VERTICAL
+            ](
+                (map(\item -> 
+                    textView $
+                    [ height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , text $ item
+                    , color Color.black800
+                    , margin $ Margin 0 16 0 0
+                    ] <> FontStyle.body38 CT.TypoGraphy
+                )state.data.aspirations)
+            )
+        ]
+    ]

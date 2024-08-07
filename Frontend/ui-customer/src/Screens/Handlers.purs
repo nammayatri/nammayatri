@@ -61,3 +61,4 @@ import Screens.TicketBookingFlow.MetroTicketBooking.Handler (metroTicketBookingS
 import Screens.TicketBookingFlow.MetroTicketStatus.Handler (metroTicketStatusScreen) as UI
 import Screens.RentalBookingFlow.RentalScreen.View (rentalScreen) as UI
 import Screens.RideBookingFlow.PickupInstructionsScreen.Handler (pickupInstructionsScreen) as UI
+import Screens.RiderDriverProfileScreen.Handler (driverProfileScreen) as UI
