@@ -68,6 +68,7 @@ data RideE e = Ride
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     safetyCheckStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    safetyJourneyStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.SosJourneyStatus,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
@@ -141,6 +142,7 @@ instance EncryptedItem Ride where
           rideRating = rideRating entity,
           rideStartTime = rideStartTime entity,
           safetyCheckStatus = safetyCheckStatus entity,
+          safetyJourneyStatus = safetyJourneyStatus entity,
           shortId = shortId entity,
           showDriversPreviousRideDropLoc = showDriversPreviousRideDropLoc entity,
           startOdometerReading = startOdometerReading entity,
@@ -206,6 +208,7 @@ instance EncryptedItem Ride where
             rideRating = rideRating entity,
             rideStartTime = rideStartTime entity,
             safetyCheckStatus = safetyCheckStatus entity,
+            safetyJourneyStatus = safetyJourneyStatus entity,
             shortId = shortId entity,
             showDriversPreviousRideDropLoc = showDriversPreviousRideDropLoc entity,
             startOdometerReading = startOdometerReading entity,
@@ -235,6 +238,20 @@ data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data SosJourneyStatus
+  = Safe
+  | UnexpectedCondition Domain.Types.Ride.UnexpectedConditionStage
+  | IVRCallInitiated
+  | CSAlerted
+  | PoliceMonitoring
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
 $(mkHttpInstancesForEnum ''RideStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)

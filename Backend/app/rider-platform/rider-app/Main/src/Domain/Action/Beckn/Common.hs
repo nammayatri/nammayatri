@@ -291,6 +291,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         cancellationFeeIfCancelled = Nothing,
         isAlreadyFav = Just isAlreadyFav,
         favCount = Just favCount,
+        safetyJourneyStatus = Nothing,
         ..
       }
 

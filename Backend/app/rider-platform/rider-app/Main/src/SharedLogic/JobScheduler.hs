@@ -38,6 +38,7 @@ data RiderJobType
   | SafetyIVR
   | CallPoliceApi
   | CheckExotelCallStatusAndNotifyBPP
+  | SafetyCSAlert
   | OtherJobTypes
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -50,6 +51,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SScheduledRideNotificationsToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToRider jobData
   restoreAnyJobInfo SSafetyIVR jobData = AnyJobInfo <$> restoreJobInfo SSafetyIVR jobData
   restoreAnyJobInfo SCallPoliceApi jobData = AnyJobInfo <$> restoreJobInfo SCallPoliceApi jobData
+  restoreAnyJobInfo SSafetyCSAlert jobData = AnyJobInfo <$> restoreJobInfo SSafetyCSAlert jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBPP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBPP jobData
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
 
@@ -132,3 +134,13 @@ data CallPoliceApiJobData = CallPoliceApiJobData
 instance JobInfoProcessor 'CallPoliceApi
 
 type instance JobContent 'CallPoliceApi = CallPoliceApiJobData
+
+data SafetyCSAlertJobData = SafetyCSAlertJobData
+  { rideId :: Id DRide.Ride,
+    personId :: Id Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SafetyCSAlert
+
+type instance JobContent 'SafetyCSAlert = SafetyCSAlertJobData
