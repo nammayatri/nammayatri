@@ -1780,7 +1780,7 @@ revisedEstimatedFareView push state =
       , width MATCH_PARENT
       , background Color.white900
       , clickable true
-      , accessibility if state.props.showRateCard then DISABLE_DESCENDANT else DISABLE
+      , accessibility if state.props.showRevisedFareDetails then DISABLE_DESCENDANT else ENABLE
       , accessibilityHint $ "Fare Updated to " <> (show (fromMaybe 0 state.data.newEstimatedFare)) <> "Previously fare was " <> (show state.data.driverInfoCardState.price) <> "New Distance is " <> (show ((fromMaybe 0.0 state.data.newEstimatedDistance)/1000.0)) <> "km ( was " <> state.data.driverInfoCardState.estimatedDistance <> "km " <> ")"
       , padding (Padding 16 7 16 24)
       , stroke ("1," <> Color.grey900)
@@ -1826,14 +1826,17 @@ revisedEstimatedFareView push state =
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             , gravity CENTER_HORIZONTAL
+            , onClick push $ const ShowRevisedFareDetails
             ]
             [ textView $
               [
-                text "Details"
+                text $ getString DETAILS
                 , color Color.black700
                 , gravity CENTER
                 , height WRAP_CONTENT
                 , margin $ MarginTop 8
+                , accessibilityHint "Details : Button"
+                , accessibility ENABLE
                 , visibility $ boolToVisibility $ isJust state.data.newEstimatedFare
                 , width WRAP_CONTENT
               ]<> FontStyle.paragraphText TypoGraphy
@@ -1843,7 +1846,6 @@ revisedEstimatedFareView push state =
                 , height $ V 16
                 , width $ V 16
                 , margin $ Margin 6 10 0 0
-                , onClick push $ const ShowRevisedFareDetails
               ]
             ]
             ,  if state.props.showRevisedFareDetails then olderFareDetails state else emptyTextViewNoHeight state

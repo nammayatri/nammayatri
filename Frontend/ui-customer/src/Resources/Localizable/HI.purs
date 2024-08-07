@@ -87,6 +87,7 @@ getHI stringKey =
         WRITE_A_COMMENT -> "एक टिप्पणी लिखें (वैकल्पिक)"
         UPDATE -> "अपडेट"
         LANGUAGE -> "भाषा"
+        DETAILS -> "विवरण"
         OTP -> "ओटीपी"
         PAYMENT_METHOD -> "भुगतान का तरीका"
         PAYMENT_METHOD_STRING -> "कैश / यूपीआई ऐप का इस्तेमाल करें"
