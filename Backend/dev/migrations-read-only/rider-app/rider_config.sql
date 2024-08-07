@@ -98,3 +98,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN cx_agent_details text [] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words text [] ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN cs_alert_trigger_delay integer ;
