@@ -27,6 +27,7 @@ module Domain.Action.UI.Ride
   )
 where
 
+import qualified API.Types.UI.DriverOnboardingV2 as DOVT
 import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM hiding (filter)
@@ -36,6 +37,7 @@ import qualified Data.Text as T hiding (count, map)
 import qualified Data.Text as Text
 import Data.Time (Day)
 import Domain.Action.Dashboard.Ride
+import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.Location as DLoc
 import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types.BapMetadata as DSM
@@ -56,6 +58,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
+import qualified EulerHS.Prelude as Prelude
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
@@ -71,16 +74,17 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Domain as Domain
-import Kernel.Types.Common
+import Kernel.Types.Common hiding (id)
 import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator (fareSum)
+import SharedLogic.FarePolicy
 import SharedLogic.Ride
 import Storage.Beam.IssueManagement ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -95,6 +99,7 @@ import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -208,7 +213,8 @@ data DriverRideRes = DriverRideRes
     bookingType :: BookingType,
     enableFrequentLocationUpdates :: Maybe Bool,
     fleetOwnerId :: Maybe Text,
-    enableOtpLessRide :: Bool
+    enableOtpLessRide :: Bool,
+    bookingFareDetails :: [DOVT.RateCardItem]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -282,6 +288,12 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
+  quote <- QQuote.findById (Id booking.quoteId)
+  fareDetails <- case quote of
+    Just quote' -> do
+      let fareDetails_ = catMaybes $ maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem booking.estimatedDistance Nothing) quote'.farePolicy
+      pure fareDetails_
+    _ -> pure []
   return $
     DriverRideRes
       { id = ride.id,
@@ -356,8 +368,19 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         isValueAddNP,
         enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates,
         fleetOwnerId = rideDetails.fleetOwnerId,
-        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide
+        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide,
+        bookingFareDetails = fareDetails
       }
+  where
+    mkBreakupItem :: Text -> Text -> Maybe DOVT.RateCardItem
+    mkBreakupItem title valueInText = do
+      priceObject <- DOV.stringToPrice INR valueInText
+      return $
+        DOVT.RateCardItem
+          { title,
+            price = priceObject.amountInt,
+            priceWithCurrency = mkPriceAPIEntity priceObject
+          }
 
 calculateLocations ::
   ( CacheFlow m r,

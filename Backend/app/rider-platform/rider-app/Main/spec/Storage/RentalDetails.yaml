@@ -16,7 +16,7 @@ imports:
 RentalDetails:
   tableName: rental_details
 
-  derives: "Generic, Show"
+  derives: "Generic, Show, FromJSON, ToJSON, ToSchema"
 
   fields:
     id: Id RentalDetails

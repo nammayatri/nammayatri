@@ -29,4 +29,4 @@ data InterCityDetails = InterCityDetails
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
