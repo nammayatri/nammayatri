@@ -17,7 +17,7 @@ imports:
 InterCityDetails:
   tableName: inter_city_details
 
-  derives: "Generic, Show"
+  derives: "Generic, Show, FromJSON, ToJSON, ToSchema"
 
   fields:
     id: Id InterCityDetails

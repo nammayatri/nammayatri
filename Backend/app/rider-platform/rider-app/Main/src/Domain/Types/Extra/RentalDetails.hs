@@ -16,7 +16,7 @@ data NightShiftInfo = NightShiftInfo
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data NightShiftInfoAPIEntity = NightShiftInfoAPIEntity
   { nightShiftCharge :: Money,
