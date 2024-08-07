@@ -123,7 +123,7 @@ rentalPackageSelectionView push state =
       , width MATCH_PARENT 
       , background Color.black900 
       , padding $ PaddingTop EHC.safeMarginTop
-      , visibility $ boolToVisibility $ not $ state.props.isSpecialZone
+      , visibility $ boolToVisibility $ not $ state.props.isOtpRideFlow
       ][InputView.view (push <<< InputViewAC) $ mapInputViewConfig state]
     , linearLayout
       [ height WRAP_CONTENT

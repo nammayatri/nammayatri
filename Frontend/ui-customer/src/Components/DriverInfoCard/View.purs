@@ -194,7 +194,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ isSpecialZone state
+  , visibility $ boolToVisibility $ isOtpRideFlow state
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -366,9 +366,9 @@ otpAndWaitView push state =
         , otpView push state
         ]
       -- , trackRideView push state -- TODO :: may use in future
-     ] <> if (isSpecialZone state|| state.data.driverArrived) then 
+     ] <> if (isOtpRideFlow state|| state.data.driverArrived) then 
            [(PrestoAnim.animationSet [ fadeIn true ] $ 
-           let isQuotes = isSpecialZone state
+           let isQuotes = isOtpRideFlow state
            in
            linearLayout
            [ width WRAP_CONTENT
@@ -464,7 +464,7 @@ waitTimeView push state =
   ]
 
 waitTimeHint :: DriverInfoCardState -> String
-waitTimeHint state = (if isSpecialZone state then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
+waitTimeHint state = (if isOtpRideFlow state then "O T P Expires in : " else "Wait Time : ") <> case STR.split (STR.Pattern ":") state.data.waitingTime of
                         [minutes, seconds] -> do 
                           let min = STR.trim $ minutes
                           let sec = STR.trim $ seconds
@@ -478,7 +478,7 @@ colorForWaitTime state =
   case waitTime of
     [minutes, _] -> 
       let mins = fromMaybe 0 (fromString (STR.trim minutes))
-          threshold = if isSpecialZone state then mins < 5 else mins > 2
+          threshold = if isOtpRideFlow state then mins < 5 else mins > 2
       in
       if threshold then Color.carnation100 else Color.grey700 
     _ -> Color.grey700
@@ -629,7 +629,7 @@ navigateView push state =
   , accessibility ENABLE
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
-  , visibility $ boolToVisibility $ isSpecialZone state && rideNotStarted state
+  , visibility $ boolToVisibility $ isOtpRideFlow state && rideNotStarted state
   , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
   ][ imageView
      [ width $ V 20
@@ -657,7 +657,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ not $  isSpecialZone state 
+  , visibility $ boolToVisibility $ not $ isOtpRideFlow state 
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -1507,7 +1507,7 @@ getDriverDetails state = {
   , providerType : state.data.providerType
   , showAcView : state.data.cityConfig.enableAcViews
   , fareProductType : state.data.fareProductType
-  , isSpecialZone : state.data.isSpecialZone
+  , isOtpRideFlow : state.props.isOtpRideFlow
 }
 
 endOTPAnimConfig :: DriverInfoCardState -> AnimConfig.AnimConfig
@@ -1539,7 +1539,7 @@ getTripDetails state = {
   , fareProductType : state.data.fareProductType
   , enableEditDestination : state.data.config.feature.enableEditDestination
   , editingDestinationLoc : EditingDestination
-  , isSpecialZone : state.data.isSpecialZone
+  , isOtpRideFlow : state.props.isOtpRideFlow
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
@@ -1731,5 +1731,5 @@ rideInfoPill state rideData =
       
     ]
 
-isSpecialZone :: DriverInfoCardState -> Boolean
-isSpecialZone state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || (state.props.isSpecialZone && state.props.currentStage == RideAccepted)
+isOtpRideFlow :: DriverInfoCardState -> Boolean
+isOtpRideFlow state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || (state.props.isOtpRideFlow && state.props.currentStage == RideAccepted)

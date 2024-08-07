@@ -386,7 +386,7 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , "isDestinationManuallyMoved" : Just destManuallyMoved
                 , "sessionToken" : Just sessionToken
                 , "isSpecialLocation" : Just isSpecialLocation
-                , "quotesUnifiedFlow" : Just true -- Hybrid Flow backward compatibility check for Backend
+                , "quotesUnifiedFlow" : Just true
                 , "rideRequestAndRideOtpUnifiedFlow" : Just true 
                 }
             )
@@ -1424,7 +1424,7 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                                                   "startTime" : startTime,
                                                   "estimatedRentalDistance" : estimatedRentalDistance,
                                                   "estimatedRentalDuration" : estimatedRentalDuration,
-                                                  "quotesUnifiedFlow" : Just true, -- Hybrid Flow backward compatibility check for Backend
+                                                  "quotesUnifiedFlow" : Just true,
                                                   "rideRequestAndRideOtpUnifiedFlow": Just true
                                                  }),
                     "fareProductType" : "RENTAL"
