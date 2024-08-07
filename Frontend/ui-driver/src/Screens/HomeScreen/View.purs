@@ -109,6 +109,7 @@ import Data.List (elem)
 import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
+import DecodeUtil as DU
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -122,6 +123,7 @@ screen initialState (GlobalState globalState) =
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
+          when initialState.data.config.enableMockLocation $ JB.isMockLocation push IsMockLocation
           when (initialState.data.activeRide.tripType == ST.Rental) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
           when (initialState.data.activeRide.tripType == ST.Rental) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
                     
@@ -337,7 +339,6 @@ view push state =
       , if state.props.enterOtpModal || ((state.data.activeRide.tripType == ST.Intercity || state.data.activeRide.tripType == ST.Rental) && state.props.endRideOtpModal) then enterOtpModal push state else dummyTextView
       , if showEnterOdometerReadingModalView then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
-      , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
       , if state.props.cancelRideModalShow then cancelRidePopUpView push state else dummyTextView
       , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
@@ -373,6 +374,7 @@ view push state =
       , if state.props.currentStage == RideAccepted && state.data.activeRide.estimatedTollCharges > 0.0 && state.data.toll.showTollChargePopup then PopUpModal.view (push <<< TollChargesPopUpAC) (PopUpConfig.tollChargesIncluded state) else dummyTextView
       , if state.props.currentStage == RideCompleted && state.data.toll.tollAmbigous && state.data.toll.showTollChargeAmbigousPopup then PopUpModal.view (push <<< TollChargesAmbigousPopUpAC) (PopUpConfig.finalFareExcludesToll state) else dummyTextView
       , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
+      , if state.props.isMockLocation && not cugUser then sourceUnserviceableView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -388,6 +390,7 @@ view push state =
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
     isCar = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.CarCategory
+    cugUser = fromMaybe false $ runFn3 DU.getAnyFromWindow "isCUGUser" Nothing Just
 
 interOperableInfoPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 interOperableInfoPopUpView push state =
@@ -878,9 +881,9 @@ sourceUnserviceableView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , PP.cornerRadii $ PTD.Corners 24.0 true true false false
         , alignParentBottom "true,-1"
         , gravity BOTTOM
+        , clickable true
         ]
         [
           ErrorModal.view (push <<< ErrorModalActionController) (sourceUnserviceableConfig state)
