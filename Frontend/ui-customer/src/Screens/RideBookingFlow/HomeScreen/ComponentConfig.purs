@@ -898,7 +898,7 @@ waitTimeInfoCardConfig state = let
     }
   , secondaryText {
       text = if not isQuotes then getVarString waitTimeConfig.secondaryText $ if state.data.vehicleVariant == "AUTO_RICKSHAW" then ["3", "1.5"] else ["5", "1"] else getString waitTimeConfig.secondaryText,
-      visibility = boolToVisibility waitTimeConfig.waitingChargeApplicable,
+      visibility = boolToVisibility $ waitTimeConfig.waitingChargeApplicable && state.data.currentCityConfig.enableWaitingConfig,
       padding = PaddingLeft 16,
       color = Color.black700,
       textStyle = FontStyle.ParagraphText,
