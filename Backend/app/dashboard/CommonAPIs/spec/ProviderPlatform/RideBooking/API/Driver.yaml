@@ -110,6 +110,7 @@ apis:
         - dlNumber: Text
         - rcNumber: Text
         - email: Text
+        - personId: (Id Driver)
       response:
         type: DriverInfoRes
       helperApi:
@@ -123,6 +124,7 @@ apis:
               - dlNumber: Text
               - rcNumber: Text
               - email: Text
+              - personId: (Id Driver)
             params:
               fleetOwnerId: Text
               mbFleet: Bool

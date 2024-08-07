@@ -67,7 +67,7 @@ data AppBackendAPIs = AppBackendAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
-  { customerList :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Customer.CustomerListRes,
+  { customerList :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe (Id Customer.Customer) -> Euler.EulerClient Customer.CustomerListRes,
     customerDelete :: Id Customer.Customer -> Euler.EulerClient APISuccess,
     customerBlock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
     customerUnblock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
