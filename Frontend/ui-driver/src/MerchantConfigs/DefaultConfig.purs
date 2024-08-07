@@ -32,6 +32,7 @@ config =
     },
     rcLimit : 3
   , acExplanation : true
+  , showMonthlyLeaderBoard : false
   , subscriptionConfig : {
     enableBlocking : false,
     completePaymentPopup : false,

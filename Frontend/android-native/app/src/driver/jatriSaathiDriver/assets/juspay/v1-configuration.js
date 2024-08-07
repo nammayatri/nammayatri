@@ -215,6 +215,7 @@ window.getMerchantConfig = function () {
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
     , "acExplanation" : false
+    , "showMonthlyLeaderboard" : false // Disabled Monthly Leaderboard till September
     , "rcLimit" : 3
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
@@ -260,7 +261,7 @@ window.getMerchantConfig = function () {
         { "bookingOptionMenuForTaxi" : true
         }
     , "profileVerification" : {
-      "aadharVerificationRequired" : false // HV Integration is done
+      "aadharVerificationRequired" : false // HV Integration is done with Aadhaar as Compulsory on onboarding
     } 
     , "bottomNavConfig" : {
       "subscription" : 
