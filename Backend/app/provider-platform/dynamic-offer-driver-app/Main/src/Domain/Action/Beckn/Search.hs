@@ -252,14 +252,9 @@ handler ValidatedDSearchReq {..} sReq = do
       ([DEst.Estimate], [DQuote.Quote]) ->
       Flow ([DEst.Estimate], [DQuote.Quote])
     processPolicy buildEstimateHelper buildQuoteHelper fp (estimates, quotes) =
-      case fp.tripCategory of
-        DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
-        DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
-        DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
-        DTC.Rental _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
-        DTC.InterCity _ _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
-        DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper True) fp >>= \est -> pure (est : estimates, quotes)
-        _ -> (buildQuoteHelper False) fp >>= \quote -> pure (estimates, quote : quotes)
+      case DTC.tripCategoryToPricingPolicy fp.tripCategory of
+        DTC.EstimateBased {..} -> (buildEstimateHelper nightShiftOverlapChecking) fp >>= \est -> pure (est : estimates, quotes)
+        DTC.QuoteBased {..} -> (buildQuoteHelper nightShiftOverlapChecking) fp >>= \est -> pure (est : estimates, quotes)
 
     buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates specialLocationName now = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
@@ -370,12 +365,6 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
   logDebug $ "Search handler: driver pool " <> show driverPool
   let onlyFPWithDrivers = filter (\fp -> isScheduled || (skipDriverPoolCheck fp.tripCategory) || (isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool))) farePolicies
   return (driverPool, onlyFPWithDrivers)
-
-skipDriverPoolCheck :: DTC.TripCategory -> Bool
-skipDriverPoolCheck (DTC.OneWay DTC.OneWayOnDemandStaticOffer) = False
-skipDriverPoolCheck (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) = False
-skipDriverPoolCheck (DTC.Ambulance DTC.OneWayOnDemandDynamicOffer) = False
-skipDriverPoolCheck _ = True
 
 buildSearchRequest ::
   ( CacheFlow m r,

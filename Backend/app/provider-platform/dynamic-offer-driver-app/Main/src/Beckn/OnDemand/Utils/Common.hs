@@ -226,13 +226,19 @@ castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VEN
 castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
 
 mkFulfillmentType :: DCT.TripCategory -> Text
-mkFulfillmentType = \case
-  DCT.OneWay DCT.OneWayRideOtp -> show Enums.RIDE_OTP
-  DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
-  DCT.Rental _ -> show Enums.RENTAL
-  DCT.InterCity _ _ -> show Enums.INTER_CITY
-  DCT.Ambulance _ -> show Enums.AMBULANCE_FLOW
-  _ -> show Enums.DELIVERY
+mkFulfillmentType tripCategory =
+  case DCT.tripCategoryToPricingPolicy tripCategory of
+    DCT.EstimateBased {..} ->
+      case tripCategory of
+        DCT.Ambulance _ -> show Enums.AMBULANCE_FLOW
+        DCT.OneWay _ -> show Enums.DELIVERY
+        tc -> "Estimate Based mkFulfillmentType Not Implemented for tripCategory: " <> show tc
+    DCT.QuoteBased {..} ->
+      case tripCategory of
+        DCT.OneWay DCT.OneWayRideOtp | DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
+        DCT.Rental _ -> show Enums.RENTAL
+        DCT.InterCity _ _ -> show Enums.INTER_CITY
+        tc -> "Quote Based mkFulfillmentType Not Implemented for tripCategory: " <> show tc
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -1145,9 +1151,7 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
       pricingMinFare = minFare,
-      fulfillmentType = case tripCategory of
-        DTC.Ambulance _ -> show Enums.AMBULANCE
-        _ -> show Enums.DELIVERY,
+      fulfillmentType = mkFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
@@ -1166,7 +1170,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       pricingMinFare = estimatedFare,
       estimatedDistance = distance,
       fareParams = Just fareParams,
-      fulfillmentType = mapToFulfillmentType tripCategory,
+      fulfillmentType = mkFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
@@ -1176,13 +1180,6 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       isAirConditioned = serviceTier.isAirConditioned,
       ..
     }
-  where
-    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = show Enums.RIDE_OTP
-    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
-    mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
-    mapToFulfillmentType (DTC.InterCity _ _) = show Enums.INTER_CITY
-    mapToFulfillmentType (DTC.Ambulance _) = show Enums.AMBULANCE_FLOW
-    mapToFulfillmentType _ = show Enums.RIDE_OTP -- backward compatibility
 
 convertBookingToPricing :: DVST.VehicleServiceTier -> DBooking.Booking -> Pricing
 convertBookingToPricing serviceTier DBooking.Booking {..} =
@@ -1193,9 +1190,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       tripCategory = tripCategory,
       fareParams = Just fareParams,
       farePolicy = Nothing,
-      fulfillmentType = case tripCategory of
-        DTC.Ambulance _ -> show Enums.AMBULANCE
-        _ -> show Enums.DELIVERY,
+      fulfillmentType = mkFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
       vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty

@@ -335,15 +335,15 @@ Booking:
       - distance: getDistance bookingDetails|E
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
-      - fromLocationAndBookingDetails': Storage.Queries.Transformers.Booking.fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue|EM #check
+      - toBookingDetails': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue|EM #check
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E
-    fromLocation: (fst fromLocationAndBookingDetails')|E
-    bookingDetails: (snd fromLocationAndBookingDetails')|E
+    fromLocation: (fst toBookingDetailsAndFromLocation')|E
+    bookingDetails: (snd toBookingDetailsAndFromLocation')|E
     tripTerms: if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing|EM
     merchantOperatingCityId: Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId|EM
-    initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst fromLocationAndBookingDetails')|EM
+    initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst toBookingDetailsAndFromLocation')|EM
     estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
     estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E

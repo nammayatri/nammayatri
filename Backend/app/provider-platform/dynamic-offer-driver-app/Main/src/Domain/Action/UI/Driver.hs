@@ -1061,12 +1061,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             Accept -> do
               whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
               pullList <-
-                case searchTry.tripCategory of
-                  DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-                  DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-                  DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-                  DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-                  _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
+                case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
+                  DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
+                  DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
               QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource sReqFD.id
               return pullList
             Reject -> do

@@ -16,7 +16,45 @@ module Domain.Types.Common where
 
 import Data.Aeson
 import Data.OpenApi
+import qualified Domain.Types.FarePolicy.FareProductType as DTFP
 import Kernel.Prelude
+
+data FulfillmentType
+  = DELIVERY
+  | RIDE_OTP
+  | RENTAL
+  | INTER_CITY
+  | AMBULANCE_FLOW
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
+
+data PricingPolicy
+  = EstimateBased
+  | QuoteBased
+  deriving stock (Eq, Show, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+fulfillmentToPricingPolicy :: FulfillmentType -> PricingPolicy
+fulfillmentToPricingPolicy DELIVERY = EstimateBased
+fulfillmentToPricingPolicy AMBULANCE_FLOW = EstimateBased
+fulfillmentToPricingPolicy RIDE_OTP = QuoteBased
+fulfillmentToPricingPolicy RENTAL = QuoteBased
+fulfillmentToPricingPolicy INTER_CITY = QuoteBased
+
+fulfillmentToFareProduct :: FulfillmentType -> DTFP.FareProductType
+fulfillmentToFareProduct DELIVERY = DTFP.DRIVER_OFFER
+fulfillmentToFareProduct ONE_WAY = DTFP.DRIVER_OFFER
+fulfillmentToFareProduct AMBULANCE_FLOW = DTFP.AMBULANCE
+fulfillmentToFareProduct RIDE_OTP = DTFP.ONE_WAY_SPECIAL_ZONE
+fulfillmentToFareProduct RENTAL = DTFP.RENTAL
+fulfillmentToFareProduct INTER_CITY = DTFP.INTER_CITY
+
+fareProductToFulfillment :: DTFP.FareProductType -> FulfillmentType
+fareProductToFulfillment DTFP.DRIVER_OFFER = DELIVERY
+fareProductToFulfillment DTFP.DRIVER_OFFER = ONE_WAY
+fareProductToFulfillment DTFP.AMBULANCE = AMBULANCE_FLOW
+fareProductToFulfillment DTFP.ONE_WAY_SPECIAL_ZONE = RIDE_OTP
+fareProductToFulfillment DTFP.RENTAL = RENTAL
+fareProductToFulfillment DTFP.INTER_CITY = INTER_CITY
 
 data UsageSafety = Safe | Unsafe
 

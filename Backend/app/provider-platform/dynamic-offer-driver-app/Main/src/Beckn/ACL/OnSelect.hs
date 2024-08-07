@@ -90,9 +90,7 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
     { fulfillmentId = Just quote.id.getId,
       fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation Nothing,
       fulfillmentVehicle = Just $ mkVehicleV2 quote,
-      fulfillmentType = case quote.tripCategory of
-        DTC.Ambulance _ -> Just $ show Enums.AMBULANCE
-        _ -> Just $ show Enums.DELIVERY,
+      fulfillmentType = mkFulfillmentType quote.tripCategory,
       fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,
       fulfillmentCustomer = Nothing,
       fulfillmentState = Nothing,

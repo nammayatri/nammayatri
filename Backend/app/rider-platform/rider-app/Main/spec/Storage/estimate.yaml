@@ -17,6 +17,7 @@ imports:
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
   Minutes: Kernel.Types.Common
+  FareProductType: Domain.Types.FarePolicy.FareProductType
 
 Estimate:
   tableName: estimate
@@ -107,6 +108,7 @@ Estimate:
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
     distanceUnit: DistanceUnit
+    fareProductType: Maybe FareProductType
     updatedAt : UTCTime
     createdAt : UTCTime
     validTill : UTCTime

@@ -38,15 +38,17 @@ buildInitReqV2 ::
 buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
-  let (fulfillmentType, mbBppFullfillmentId) = case res.quoteDetails of
-        SConfirm.ConfirmOneWayDetails -> (show Enums.DELIVERY, Nothing)
-        SConfirm.ConfirmRentalDetails quoteId -> (show Enums.RENTAL, Just quoteId)
-        SConfirm.ConfirmInterCityDetails quoteId -> (show Enums.INTER_CITY, Just quoteId)
-        SConfirm.ConfirmAutoDetails bppQuoteId -> (show Enums.DELIVERY, Just bppQuoteId)
-        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (show Enums.RIDE_OTP, Just quoteId)
-        SConfirm.ConfirmAmbulanceDetails quoteId -> (show Enums.AMBULANCE_FLOW, Just quoteId)
+  let (fulfillmentType, mbBppFullfillmentId) = getFulfillmentTypeAndIdFromQuoteDetails res.quoteDetails
   let action = Context.INIT
   let domain = Context.MOBILITY
   isValueAddNP <- VNP.isValueAddNP res.providerId
   ttl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId isValueAddNP bapConfig ttl
+  where
+    getFulfillmentTypeAndIdFromQuoteDetails = \case
+      SConfirm.ConfirmOneWayDetails -> (show Enums.DELIVERY, Nothing)
+      SConfirm.ConfirmRentalDetails quoteId -> (show Enums.RENTAL, Just quoteId)
+      SConfirm.ConfirmInterCityDetails quoteId -> (show Enums.INTER_CITY, Just quoteId)
+      SConfirm.ConfirmAutoDetails bppQuoteId -> (show Enums.DELIVERY, Just bppQuoteId)
+      SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (show Enums.RIDE_OTP, Just quoteId)
+      SConfirm.ConfirmAmbulanceDetails quoteId -> (show Enums.AMBULANCE_FLOW, Just quoteId)

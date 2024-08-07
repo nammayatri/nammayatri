@@ -84,7 +84,7 @@ getInitialPickupLocation mappings fl = do
       let initialPickupLocMapping = last sortedPickupLocationMap
       QL.findById initialPickupLocMapping.locationId >>= fromMaybeM (InternalError "Incorrect Location Mapping")
 
-fromLocationAndBookingDetails ::
+toBookingDetailsAndFromLocation ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Text ->
   Text ->
@@ -99,7 +99,7 @@ fromLocationAndBookingDetails ::
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
   m (DL.Location, BookingDetails)
-fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
+toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do

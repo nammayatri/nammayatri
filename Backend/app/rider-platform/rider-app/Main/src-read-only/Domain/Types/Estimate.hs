@@ -5,6 +5,7 @@
 module Domain.Types.Estimate where
 
 import Data.Aeson
+import qualified Domain.Types.FarePolicy.FareProductType
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
@@ -40,6 +41,7 @@ data Estimate = Estimate
     estimatedFare :: Kernel.Types.Common.Price,
     estimatedPickupDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
+    fareProductType :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FareProductType.FareProductType,
     id :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBlockedRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -79,9 +81,9 @@ data EstimateBreakup = EstimateBreakup
     price :: Domain.Types.Estimate.EstimateBreakupPrice,
     title :: Kernel.Prelude.Text
   }
-  deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+  deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
-newtype EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Common.Price} deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+newtype EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Common.Price} deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
 data EstimateStatus
   = NEW
@@ -90,9 +92,9 @@ data EstimateStatus
   | GOT_DRIVER_QUOTE
   | DRIVER_QUOTE_CANCELLED
   | COMPLETED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data FareRange = FareRange {maxFare :: Kernel.Types.Common.Price, minFare :: Kernel.Types.Common.Price} deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
+data FareRange = FareRange {maxFare :: Kernel.Types.Common.Price, minFare :: Kernel.Types.Common.Price} deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Kernel.Types.Common.Price,
@@ -100,12 +102,12 @@ data NightShiftInfo = NightShiftInfo
     nightShiftStart :: Kernel.Prelude.TimeOfDay,
     oldNightShiftCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
 
-data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Price} deriving (Generic, Show)
+data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Price} deriving (Generic, (Show))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''EstimateStatus)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''EstimateStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''EstimateStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''EstimateStatus))

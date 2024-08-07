@@ -188,16 +188,6 @@ filterRequiredBreakups fParamsType breakup = do
                ]
     DFParams.Ambulance -> True
 
--- Fix these tage properly
-mkFulfillmentType :: DCT.TripCategory -> Text
-mkFulfillmentType = \case
-  DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
-  DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
-  DCT.Rental _ -> "RENTAL"
-  DCT.InterCity _ _ -> "INTER_CITY"
-  DCT.Ambulance _ -> "AMBULANCE_FLOW"
-  _ -> "DELIVERY"
-
 tfContact :: Maybe Text -> Maybe Spec.Contact
 tfContact phoneNum =
   Just

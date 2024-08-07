@@ -10,6 +10,7 @@ import qualified Data.Aeson as A
 import qualified Data.Maybe
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Init
+import qualified Domain.Types.Common as DTC
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -30,14 +31,11 @@ buildDInitReq subscriber req isValueAddNP = do
   bapCountryText <- req.initReqContext.contextLocation >>= (.locationCountry) >>= (.countryCode) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find Country")
   bapCountry_ <- A.decode (A.encode bapCountryText) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't parse Country")
   fulfillmentId__ <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
-  fulfillmentType_ <- if isValueAddNP then req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found") else pure (req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) & Data.Maybe.fromMaybe "DELIVERY")
-  let fulfillmentId_ = case fulfillmentType_ of
-        "DELIVERY" -> Domain.Action.Beckn.Init.DriverQuoteId (Kernel.Types.Id.Id fulfillmentId__)
-        "RIDE_OTP" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
-        "RENTAL" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
-        "INTER_CITY" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
-        "AMBULANCE_FLOW" -> Domain.Action.Beckn.Init.DriverQuoteId (Kernel.Types.Id.Id fulfillmentId__)
-        _ -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
+  fulfillmentType_ <- if isValueAddNP then req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) >>= readMaybe @DTC.FulfillmentType & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found") else pure (req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentType) >>= readMaybe @DTC.FulfillmentType & Data.Maybe.fromMaybe "DELIVERY")
+  let fulfillmentId_ =
+        case DTC.fulfillmentToPricingPolicy fulfillmentType_ of
+          DTC.EstimateBased -> Domain.Action.Beckn.Init.DriverQuoteId (Kernel.Types.Id.Id fulfillmentId__)
+          DTC.QuoteBased -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
   let maxEstimatedDistance_ = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentTags) >>= Beckn.OnDemand.Utils.Init.getMaxEstimateDistance
   paymentMethodInfo_ <- req.initReqMessage.confirmReqMessageOrder.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
   let vehCategory = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleCategory)

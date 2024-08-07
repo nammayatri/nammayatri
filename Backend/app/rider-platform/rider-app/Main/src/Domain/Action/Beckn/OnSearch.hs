@@ -36,7 +36,9 @@ where
 
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import Domain.Types.BppDetails
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.FarePolicy.FareProductType as DTFP
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
@@ -46,7 +48,7 @@ import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
+import qualified Domain.Types.SpecialZoneQDTCuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant
@@ -122,7 +124,8 @@ data EstimateInfo = EstimateInfo
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
-    specialLocationName :: Maybe Text
+    specialLocationName :: Maybe Text,
+    fareProductType :: DTFP.FareProductType
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -363,6 +366,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         backendConfigVersion = searchRequest.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         distanceUnit = searchRequest.distanceUnit,
+        fareProductType = Just fareProductType,
         ..
       }
 

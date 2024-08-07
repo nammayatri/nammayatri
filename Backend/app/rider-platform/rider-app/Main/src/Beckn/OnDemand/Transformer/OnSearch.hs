@@ -11,6 +11,7 @@ import qualified Data.Maybe
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -98,30 +99,62 @@ tfQuotesInfo provider fulfillments validTill item = do
       estimatedPickupDuration = Beckn.OnDemand.Utils.OnSearch.getestimatedPickupDuration item
   quoteOrEstId_ <- Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
   fulfillment <- find (\f -> f.fulfillmentId == Just quoteOrEstId_) fulfillments & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment for item")
-  fulfillmentType <- fulfillment.fulfillmentType & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment type")
-  case fulfillmentType of
-    "RENTAL" -> do
-      quoteInfo <- buildRentalQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
-      let quoteDetails_ = Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
-      quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
-      pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, isAirConditioned = isAirConditioned_, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_, quoteBreakupList = quoteBreakupList_}
-    "RIDE_OTP" -> do
-      let quoteDetails_ = Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
-      quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
-      pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, isAirConditioned = isAirConditioned_, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_, quoteBreakupList = quoteBreakupList_}
-    "INTER_CITY" -> do
-      interCityQuoteInfo <- buildInterCityQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing intercity quote details")
-      let quoteDetails_ = Domain.Action.Beckn.OnSearch.InterCityDetails interCityQuoteInfo
-      quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
-      pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, isAirConditioned = isAirConditioned_, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_, quoteBreakupList = quoteBreakupList_}
-    _ -> do
+  fulfillmentType <- (fulfillment.fulfillmentType >>= readMaybe @DTC.FulfillmentType) & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment type")
+  case DTC.fulfillmentToPricingPolicy fulfillmentType of
+    EstimateBased -> do
       let bppEstimateId_ = Id itemId_
       driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider vehicleVariant_
       let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
       totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item currency
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item currency
       estimateBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildEstimateBreakupList item currency
-      pure $ Left $ Domain.Action.Beckn.OnSearch.EstimateInfo {bppEstimateId = bppEstimateId_, descriptions = descriptions_, discount = discount_, driversLocation = driversLocation_, estimateBreakupList = estimateBreakupList_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, nightShiftInfo = nightShiftInfo_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, totalFareRange = totalFareRange_, vehicleVariant = vehicleVariant_, waitingCharges = waitingCharges_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isAirConditioned = isAirConditioned_, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_}
+      pure $
+        Left $
+          Domain.Action.Beckn.OnSearch.EstimateInfo
+            { bppEstimateId = bppEstimateId_,
+              descriptions = descriptions_,
+              discount = discount_,
+              driversLocation = driversLocation_,
+              estimateBreakupList = estimateBreakupList_,
+              estimatedFare = estimatedFare_,
+              estimatedTotalFare = estimatedTotalFare_,
+              itemId = itemId_,
+              nightShiftInfo = nightShiftInfo_,
+              specialLocationTag = specialLocationTag_,
+              specialLocationName = specialLocationName_,
+              totalFareRange = totalFareRange_,
+              vehicleVariant = vehicleVariant_,
+              waitingCharges = waitingCharges_,
+              validTill,
+              serviceTierName = mbServiceTierName,
+              serviceTierType = mbServiceTierType,
+              serviceTierShortDesc = mbServiceTierShortDesc,
+              isAirConditioned = isAirConditioned_,
+              isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_,
+              isBlockedRoute = isBlockedRoute_,
+              tollChargesInfo = tollChargesInfo_,
+              estimatedPickupDuration = estimatedPickupDuration,
+              vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_,
+              vehicleServiceTierSeatingCapacity = vehicleCapacity_,
+              fareProductType = fulfillmentToFareProduct fulfillmentType
+            }
+    QuoteBased -> do
+      case fulfillmentType of
+        DTC.RENTAL -> do
+          quoteInfo <- buildRentalQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
+          let quoteDetails_ = Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
+          quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
+          pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, isAirConditioned = isAirConditioned_, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_, quoteBreakupList = quoteBreakupList_}
+        DTC.RIDE_OTP -> do
+          let quoteDetails_ = Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
+          quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
+          pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, isAirConditioned = isAirConditioned_, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_, quoteBreakupList = quoteBreakupList_}
+        DTC.INTER_CITY -> do
+          interCityQuoteInfo <- buildInterCityQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing intercity quote details")
+          let quoteDetails_ = Domain.Action.Beckn.OnSearch.InterCityDetails interCityQuoteInfo
+          quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
+          pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, specialLocationName = specialLocationName_, vehicleVariant = vehicleVariant_, validTill, serviceTierName = mbServiceTierName, serviceTierType = mbServiceTierType, serviceTierShortDesc = mbServiceTierShortDesc, isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute_, isBlockedRoute = isBlockedRoute_, tollChargesInfo = tollChargesInfo_, estimatedPickupDuration = estimatedPickupDuration, isAirConditioned = isAirConditioned_, vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_, vehicleServiceTierSeatingCapacity = vehicleCapacity_, quoteBreakupList = quoteBreakupList_}
+        ft -> throwError (InternalError $ "tfQuotesInfo not implemented for fulfillmentType: " <> show ft)
 
 getCurrency :: Kernel.Types.App.MonadFlow m => BecknV2.OnDemand.Types.Item -> m Currency
 getCurrency item =

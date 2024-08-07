@@ -116,3 +116,12 @@ ALTER TABLE atlas_app.booking ADD COLUMN client_manufacturer text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN is_dashboard_request boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

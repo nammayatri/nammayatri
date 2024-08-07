@@ -187,6 +187,14 @@ data SearchRes = SearchRes
     taggings :: Maybe Beckn.Taggings
   }
 
+data RouteDetails = RouteDetails
+  { longestRouteDistance :: Maybe Meters,
+    shortestRouteDistance :: Maybe Meters,
+    shortestRouteDuration :: Maybe Seconds,
+    shortestRouteInfo :: Maybe Maps.RouteInfo,
+    multipleRoutes :: Maybe [Maps.RouteInfo]
+  }
+
 data SearchDetails = SearchDetails
   { riderPreferredOption :: SearchRequest.RiderPreferredOption,
     origin :: SearchReqLocation,
@@ -288,13 +296,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
             "merchantId: " <> merchant.id.getId <> " ,city: " <> show originCity
         )
   searchRequestId <- generateGUID
-  (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, multipleRoutes) <-
-    case req of
-      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq stopsLatLong now sourceLatLong roundTrip
-      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq stopsLatLong now sourceLatLong roundTrip
-      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq stopsLatLong now sourceLatLong roundTrip
-      RentalSearch rentalReq -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
-
+  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId req stopsLatLong now sourceLatLong roundTrip
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops
   searchRequest <-
@@ -371,6 +373,20 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       whenJust returnTime $ \rt -> do
         when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
       unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
+    getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip sReq = \case
+      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq stopsLatLong now sourceLatLong roundTrip
+      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq stopsLatLong now sourceLatLong roundTrip
+      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq stopsLatLong now sourceLatLong roundTrip
+      RentalSearch rentalReq ->
+        return $
+          RouteDetails
+            { longestRouteDistance = Nothing,
+              shortestRouteDistance = Just rentalReq.estimatedRentalDistance,
+              shortestRouteDuration = Just rentalReq.estimatedRentalDuration,
+              shortestRouteInfo = Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []),
+              multipleRoutes = Nohting
+            }
+
     extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
     extractSearchDetails now = \case
       OneWaySearch OneWaySearchReq {..} ->
@@ -526,7 +542,7 @@ calculateDistanceAndRoutes ::
   Id SearchRequest.SearchRequest ->
   [LatLong] ->
   UTCTime ->
-  Flow (Maybe Meters, Maybe Meters, Maybe Seconds, Maybe Maps.RouteInfo, Maybe [Maps.RouteInfo])
+  Flow RouteDetails
 calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now = do
   let request =
         Maps.GetRoutesReq
@@ -574,7 +590,7 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
       longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
       shortestRouteDistance = (.distance) =<< shortestRouteInfo
       shortestRouteDuration = (.duration) =<< shortestRouteInfo
-  return (longestRouteDistance, shortestRouteDistance, shortestRouteDuration, shortestRouteInfo, Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex)
+  return $ RouteDetails {multipleRoutes = Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex, ..}
 
 autoCompleteEvent ::
   RiderConfig ->

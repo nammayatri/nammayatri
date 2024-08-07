@@ -233,6 +233,41 @@ instance FromHttpApiData TripCategory where
 instance ToHttpApiData TripCategory where
   toUrlPiece = show
 
+data FulfillmentType
+  = DELIVERY
+  | RIDE_OTP
+  | RENTAL
+  | INTER_CITY
+  | AMBULANCE_FLOW
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
+
+data PricingPolicy
+  = EstimateBased {nightShiftOverlapChecking :: Bool}
+  | QuoteBased {nightShiftOverlapChecking :: Bool}
+  deriving stock (Eq, Show, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+fulfillmentToPricingPolicy :: FulfillmentType -> PricingPolicy
+fulfillmentToPricingPolicy DELIVERY = EstimateBased
+fulfillmentToPricingPolicy AMBULANCE_FLOW = EstimateBased
+fulfillmentToPricingPolicy RIDE_OTP = QuoteBased
+fulfillmentToPricingPolicy RENTAL = QuoteBased
+fulfillmentToPricingPolicy INTER_CITY = QuoteBased
+
+tripCategoryToPricingPolicy :: TripCategory -> PricingPolicy
+tripCategoryToPricingPolicy (OneWay OneWayOnDemandDynamicOffer) = EstimateBased False
+tripCategoryToPricingPolicy (CrossCity OneWayOnDemandDynamicOffer) = EstimateBased False
+tripCategoryToPricingPolicy (InterCity OneWayOnDemandDynamicOffer) = EstimateBased False
+tripCategoryToPricingPolicy (Ambulance OneWayOnDemandDynamicOffer) = EstimateBased True
+tripCategoryToPricingPolicy (Rental _) = QuoteBased True
+tripCategoryToPricingPolicy _ = QuoteBased False
+
+skipDriverPoolCheck :: DTC.TripCategory -> Bool
+skipDriverPoolCheck (DTC.OneWay DTC.OneWayOnDemandStaticOffer) = False
+skipDriverPoolCheck (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) = False
+skipDriverPoolCheck (DTC.Ambulance DTC.OneWayOnDemandDynamicOffer) = False
+skipDriverPoolCheck _ = True
+
 isRideOtpBooking :: TripCategory -> Bool
 isRideOtpBooking (OneWay OneWayRideOtp) = True
 isRideOtpBooking (Rental RideOtp) = True
@@ -286,9 +321,8 @@ isDynamicOfferTrip _ = False
 
 isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
 isTollApplicableForTrip AUTO_RICKSHAW _ = False
-isTollApplicableForTrip _ (Rental _) = False
-isTollApplicableForTrip _ (InterCity _ _) = False
-isTollApplicableForTrip _ _ = True
+isTollApplicableForTrip _ (OneWay OneWayOnDemandDynamicOffer) = True
+isTollApplicableForTrip _ _ = False
 
 data NightShiftCharge
   = ProgressiveNightShiftCharge Float

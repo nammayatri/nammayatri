@@ -171,7 +171,8 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
 -- void $ QRB.updateStatus booking.id DRB.CONFIRMED
 onConfirm (ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {..}) = do
   createFareBreakup booking.id fareBreakups
-  DCommon.rideAssignedReqHandler DCommon.ValidatedRideAssignedReq {..}
+
+-- DCommon.rideAssignedReqHandler DCommon.ValidatedRideAssignedReq {..} -- Removed this as OnUpdate For Ride Assigned is doing same thing.
 
 -- TODO: Make sure booking status is new here.
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq

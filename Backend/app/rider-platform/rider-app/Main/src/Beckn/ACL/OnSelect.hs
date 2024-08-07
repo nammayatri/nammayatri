@@ -24,6 +24,7 @@ import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
+import qualified Domain.Types.FarePolicy.FareProduct as DTFP
 import Domain.Types.FarePolicy.FareProductType
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -86,16 +87,9 @@ buildQuoteInfoV2 ::
   Spec.Item ->
   m DOnSelect.QuoteInfo
 buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
-  fulfillmentType <- fulfillment.fulfillmentType & fromMaybeM (InvalidRequest "Missing fulfillmentType")
-  quoteDetails <- case fulfillmentType of
-    "DELIVERY" -> do
-      qDetails <- buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill (Just DRIVER_OFFER)
-      pure $ DOnSelect.OneWay qDetails
-    "AMBULANCE" -> do
-      qDetails <- buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill (Just AMBULANCE)
-      pure $ DOnSelect.Ambulance qDetails
-    "RIDE_OTP" -> throwError $ InvalidRequest "select not supported for ride otp trip"
-    _ -> throwError $ InvalidRequest "Invalid fulfillmentType"
+  fulfillmentType <- (fulfillment.fulfillmentType >>= readMaybe @DTC.FulfillmentType) & fromMaybeM (InvalidRequest "Missing fulfillmentType")
+  let fareProductType = fulfillmentToFareProduct fulfillmentType
+  quoteDetails <- buildQuoteDetailsFromFulfillmentType fareProductType fulfillmentType
   vehicle <- fulfillment.fulfillmentVehicle & fromMaybeM (InvalidRequest "Missing fulfillmentVehicle")
   let mbVariant = Utils.parseVehicleVariant vehicle.vehicleCategory vehicle.vehicleVariant
   let serviceTierName = Utils.getServiceTierName item
@@ -141,6 +135,11 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
     parseDecimalValue :: Text -> Maybe DecimalValue.DecimalValue
     parseDecimalValue = DecimalValue.valueFromString
 
+    buildQuoteDetailsFromFulfillmentType fareProductType = \case
+      DTC.DELIVERY -> DOnSelect.OneWay <$> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill fareProductType
+      DTC.AMBULANCE_FLOW -> DOnSelect.Ambulance <$> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime validTill fareProductType
+      ft -> throwError (InvalidRequest $ "buildQuoteInfoV2 not handling fulfillmentType: " <> show ft)
+
 buildDriverOfferQuoteDetailsV2 ::
   (MonadFlow m, MonadThrow m, Log m, MonadTime m) =>
   Spec.Item ->
@@ -148,7 +147,7 @@ buildDriverOfferQuoteDetailsV2 ::
   Spec.Quotation ->
   UTCTime ->
   UTCTime ->
-  Maybe FareProductType ->
+  Maybe DTFP.FareProductType ->
   m DOnSelect.DriverOfferQuoteDetails
 buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl fareProductType = do
   let agentTags = fulfillment.fulfillmentAgent >>= (.agentPerson) >>= (.personTags)

@@ -19,6 +19,7 @@ where
 
 import qualified Beckn.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.FarePolicy.FareProductType
@@ -66,7 +67,7 @@ data QuoteInfo = QuoteInfo
     estimatedFare :: Price,
     discount :: Maybe Price,
     -- estimatedTotalFare :: Price,
-    quoteDetails :: QuoteDetails,
+    quoteDetails :: OnSelectQuoteDetails,
     specialLocationTag :: Maybe Text,
     serviceTierName :: Maybe Text,
     serviceTierType :: Maybe DVST.VehicleServiceTierType,
@@ -76,7 +77,7 @@ data QuoteInfo = QuoteInfo
     quoteValidTill :: UTCTime
   }
 
-data QuoteDetails
+data OnSelectQuoteDetails
   = OneWay DriverOfferQuoteDetails
   | Ambulance DriverOfferQuoteDetails
 
@@ -161,10 +162,7 @@ buildSelectedQuote ::
 buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {..} QuoteInfo {..} = do
   uid <- generateGUID
   let tripTerms = Nothing
-      quoteDetails_ = case quoteDetails of
-        OneWay qd -> qd
-        Ambulance qd -> qd
-  driverOffer <- buildDriverOffer estimate.id quoteDetails_ req
+  quoteDetails_ <- buildDriverQuoteDetails quoteDetails
   let quote =
         DQuote.Quote
           { id = uid,
@@ -196,6 +194,10 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             ..
           }
   pure quote
+  where
+    buildDriverQuoteDetails = \case
+      OneWay quoteD -> DQuote.DriverOfferDetails <$> buildDriverOffer estimate.id quoteD req
+      Ambulance quoteD -> DQuote.AmbulanceDetails <$> buildDriverOffer estimate.id quoteD req
 
 buildDriverOffer ::
   MonadFlow m =>

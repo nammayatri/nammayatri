@@ -95,14 +95,8 @@ onInit req = do
   riderConfig <- CQRC.findByMerchantOperatingCityId decRider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
-  let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
-        DRB.OneWayDetails details -> Just details.toLocation
-        DRB.DriverOfferDetails details -> Just details.toLocation
-        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
-        DRB.InterCityDetails details -> Just details.toLocation
-        DRB.AmbulanceDetails details -> Just details.toLocation
-  let onInitRes =
+      mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
+      onInitRes =
         OnInitRes
           { bookingId = booking.id,
             paymentUrl = booking.paymentUrl,
@@ -133,3 +127,11 @@ onInit req = do
   where
     prependZero :: Text -> Text
     prependZero str = "0" <> str
+
+    getToLocationFromBookingDetails = \case
+      DRB.RentalDetails _ -> Nothing
+      DRB.OneWayDetails details -> Just details.toLocation
+      DRB.DriverOfferDetails details -> Just details.toLocation
+      DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+      DRB.InterCityDetails details -> Just details.toLocation
+      DRB.AmbulanceDetails details -> Just details.toLocation

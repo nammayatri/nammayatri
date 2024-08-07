@@ -37,6 +37,7 @@ import qualified Domain.Action.UI.Quote as UQuote
 import Domain.Types.Booking
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.FarePolicy.FareProductType as DTFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -104,7 +105,8 @@ data DSelectRes = DSelectRes
     autoAssignEnabled :: Bool,
     phoneNumber :: Maybe Text,
     isValueAddNP :: Bool,
-    isAdvancedBookingEnabled :: Bool
+    isAdvancedBookingEnabled :: Bool,
+    fareProductType :: DTFP.FareProductType
   }
 
 newtype DSelectResultRes = DSelectResultRes
@@ -191,6 +193,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         providerUrl = estimate.providerUrl,
         variant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
         isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
+        fareProductType = fromMaybe DTFP.DRIVER_OFFER estimate.fareProductType, -- TODO: DELIVERY to handle backward compatibility, can be removed later
         ..
       }
   where

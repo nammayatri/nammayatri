@@ -1,0 +1,410 @@
+imports:
+  riderApp:
+    SearchRequest: Domain.Types.SearchRequest
+    DSelectReq: Domain.Action.UI.Select
+    LocationAddress: Domain.Types.LocationAddress
+    Delivery: Domain.Action.Beckn.OnSelect
+    DriverOfferQuoteDetails: Domain.Action.Beckn.OnSelect
+    MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+    Centesimal: Kernel.Types.Common
+  driverApp:
+    Booking: Domain.Types.Booking
+    RiderDetails: Domain.Types.RiderDetails
+    PricingPolicy: Domain.Types.Common
+
+types:
+  common:
+    DeliveryInitiation:
+      enum:
+        - AsSender
+        - AsReciever
+        - AsSomeoneElse      
+      exists: false
+
+  riderApp:
+    FulfillmentType:
+      module: Domain.Types.Common
+      enum:
+        - DELIVERY_FLOW
+      exists: true 
+
+    FareProductType:      
+      enum:
+        - DELIVERY
+      exists: true
+
+    RiderPreferredOption:
+      enum:
+        - Delivery
+      exists: true
+
+  driverApp:
+    FulfillmentType:
+      module: Domain.Types.Common
+      enum:
+        - DELIVERY_FLOW
+      exists: true 
+
+    ServiceTierType:
+      module: Domain.Types.ServiceTierType
+      enum: 
+        - DELIVERY_BIKE
+      exists: true
+
+    VehicleVariant:
+      module: Domain.Types.VehicleVariant
+      enum: 
+        - DELIVERY_BIKE
+      exists: true
+
+    TripCategory:
+      module: Domain.Types.Common
+      enum: 
+        - Delivery OneWayMode      
+      exists: true
+
+rideBookingFlow:
+  searchRiderApp:
+  # Initiate a IntraCity "DELIVERY" fareProductType Search from UI
+  # Creation of SearchRequest table entry
+    trigger:
+      # Request Body => { fareProductType: "DELIVERY", contents: {..} }
+      POST:
+        endpoint: ui/rideSearch
+        request: SearchReq        
+        module: API.UI.Search
+        exists: true
+      types:
+        SearchReq:
+          enum:
+            - DeliverySearch OneWaySearchReq
+          exists: true  
+    functions:
+      fareProductConstructorModifier: Domain.Action.UI.Search # "DeliverySearch" -> "DELIVERY" 
+      getRouteDetails: Domain.Action.UI.Search # SearchReq::DeliverySearch -> processOneWaySearch
+      extractSearchDetails: Domain.Action.UI.Search # SearchReq::(DeliverySearch OneWaySearchReq {..}) -> { riderPreferredOption = RiderPreferredOption::Delivery, roundTrip = False, stops = [destination], startTime = fromMaybe now startTime, returnTime = Nothing, .. }            
+  
+  searchDriverApp:
+  # Send all IntraCity estimates for all possible trip categories
+  # Creation of Estimate table entries
+    trigger:
+      POST:
+        endpoint: /beckn/search
+        exists: true
+    functions:
+      getPossibleTripOption: Domain.Action.Beckn.Search # For IntraCity append following Delivery TripCategory `TripCategory::(Delivery OneWayOnDemandDynamicOffer)`
+      tripCategoryToPricingPolicy: Domain.Types.Common # TripCategory::(Delivery OneWayOnDemandDynamicOffer) -> EstimateBased False
+      skipDriverPoolCheck: Domain.Types.Common # TripCategory::(Delivery OneWayOnDemandDynamicOffer) -> False      
+
+  onSearchDriverApp:
+    functions:
+      mkFulfillmentType: Beckn.OnDemand.Utils.Common # TripCategory::(Delivery _) -> FulfillmentType::DELIVERY_FLOW      
+
+  onSearchRiderApp:
+  # Filter "DELIVERY" fareProductType estimates
+  # Creation of Estimate table entries with the filtered estimates
+    trigger:
+      POST:
+        endpoint: /beckn/onsearch
+        exists: true
+    storage:
+      - Estimate:
+          fields:
+            fareProductType: Maybe FareProductType # Required to filter rider's preffered fareProduct estimates
+          exists: true
+    functions:
+      mkFulfillmentType: Beckn.OnDemand.Utils.Common # TripCategory::(Delivery _) -> FulfillmentType::DELIVERY_FLOW
+      fulfillmentToPricingPolicy: Domain.Types.Common # FulfillmentType::DELIVERY_FLOW -> PricingPolicy::EstimateBased
+      filterEstimtesByPrefference: Domain.Action.Beckn.OnSearch # RiderPreferredOption::Delivery -> filter (\estInfo -> estInfo.fareProductType == Just FareProductType::DELIVERY) estimatesInfo
+    
+  searchResultsRiderApp:
+  # No Change, Return all the estimates stored in Estimate table
+    trigger:
+      GET:
+        endpoint: ui/rideSearch/results
+        exists: true
+
+  selectRiderApp:
+  # Create entry in SearchRequestDeliveryDetails table with the Sender & Reciever details  
+  # Update the `instructions` in Location table for SearchRequest.FromLocation & SearchRequest.ToLocation
+    trigger:
+      # Request Body => { deliveryDetails: { senderDetails : { name: "...", phoneNumber: "...", locationInstructions: "..." }, recieverDetails { name: "...", phoneNumber: "...", locationInstructions: "..." } }, ... }
+      POST:
+        endpoint: ui/rideSearch/:estimateId/select2
+        request: DSelectReq        
+        module: API.UI.Select
+        exists: true
+      types:        
+        PersonDetails:
+          name: Text
+          phoneNumber: Text
+          locationInstructions: Text
+        DeliveryDetails:
+          senderDetails: PersonDetails
+          recieverDetails: PersonDetails
+          initiatedAs: DeliveryInitiation 
+        DSelectReq:
+          deliveryDetails: Maybe DeliveryDetails # For FareProductType::DELIVERY this field should be passed in Select
+    storage:
+      - Location:
+          types:
+            LocationAddress:
+              instructions: Maybe Text
+          fields:
+            address: LocationAddress          
+          beamFields: # Store additional instructions for Sender/Reciever location
+            address:
+              instructions: Maybe Text
+          exists: true
+      - SearchRequestDeliveryDetails:
+          types:
+            DeliveryPersonDetails:
+              name: Text
+              phoneNumber: EncryptedHashedField e Text
+          fields:
+            searchRequestId: Id SearchRequest
+            senderDetails: DeliveryPersonDetails
+            recieverDetails: DeliveryPersonDetails
+            initiatedAs: DeliveryInitiation
+          beamFields:
+            senderDetails:
+              senderName: Text
+              senderPhoneNumber: EncryptedHashedField e Text 
+            recieverDetails:
+              recieverName: Text         
+              recieverPhoneNumber: EncryptedHashedField e Text                     
+          exists: false
+      - SearchRequest:
+          types:
+            SearchRequestDetails:
+              enum:
+                DeliveryDetails SearchRequestDeliveryDetails
+              exists: false
+          fields:
+            searchRequestDetails: Maybe SearchRequestDetails # If RiderPrefferedOption::Delivery
+          beamFields:
+            searchRequestDetails: {}
+    functions:
+      fareProductToFulfillment: Domain.Types.Common # FareProductType::DELIVERY -> FulfillmentType::DELIVERY_FLOW
+  
+  selectDriverApp:
+  # Upsert RiderDetails entry for Sender & Reciever phone number
+  # Create entry in SearchRequestDeliveryDetails table with the Sender & Reciever details  
+  # Update the `instructions` in Location table for SearchRequest.FromLocation & SearchRequest.ToLocation
+  # Initiate Pooling & Broadcast the search request to all the eligible drivers
+    trigger:
+      POST:
+        endpoint: /beckn/select        
+        becknTags:
+          DELIVERY:
+            - SENDER_NUMBER: Maybe Text
+            - SENDER_NAME: Maybe Text
+            - SENDER_LOCATION_INSTRUCTIONS: Maybe Text
+            - INITIATED_AS: DeliveryInitiation
+            - RECEIVER_NUMBER: Maybe Text
+            - RECEIVER_NAME: Maybe Text
+            - RECEIVER_LOCATION_INSTRUCTIONS: Maybe Text
+        exists: true
+    storage:
+      - Location:
+          types:
+            LocationAddress:
+              instructions: Maybe Text
+          fields:
+            address: LocationAddress          
+          beamFields: # Store additional instructions for Sender/Reciever location
+            address:
+              instructions: Maybe Text
+          exists: true
+      - SearchRequestDeliveryDetails:
+          types:
+            DeliveryPersonDetails:
+              name: Text
+              phoneNumber: EncryptedHashedField e Text
+          fields:
+            searchRequestId: Id SearchRequest
+            senderDetails: DeliveryPersonDetails
+            recieverDetails: DeliveryPersonDetails
+            initiatedAs: DeliveryInitiation
+          beamFields:
+            senderDetails:
+              senderName: Text
+              senderPhoneNumber: EncryptedHashedField e Text 
+            recieverDetails:
+              recieverName: Text         
+              recieverPhoneNumber: EncryptedHashedField e Text                     
+          exists: false
+      - SearchRequest:
+          types:
+            SearchRequestDetails:
+              enum:
+                DeliveryDetails SearchRequestDeliveryDetails # If TripCategory::(Delivery _)
+              exists: false
+          fields:
+            searchRequestDetails: Maybe SearchRequestDetails
+          beamFields:
+            searchRequestDetails: {} 
+    
+  onSelectDriverApp:
+  # Creation of entry in DriverQuote table
+    trigger:
+      POST:
+        endpoint: ui/quote/respond
+        exists: true
+    functions:
+      tripCategoryToPricingPolicy: Domain.Types.Common # TripCategory::(Delivery OneWayOnDemandDynamicOffer) -> EstimateBased False
+      mkFulfillmentType: Beckn.OnDemand.Utils.Common # TripCategory::(Delivery _) -> FulfillmentType::DELIVERY_FLOW
+  
+  onSelectRiderApp:
+  # Creation of entry in Quote & DeliveryDriverOfferDetails (DriverOffer) table
+    trigger:
+      POST:
+        endpoint: /beckn/onselect
+        exists: true
+      types:
+        OnSelectQuoteDetails:
+          module: Domain.Action.Beckn.OnSelect
+          enum:
+            - Delivery DriverOfferQuoteDetails
+          exists: true
+    functions:
+      buildQuoteDetailsFromFulfillmentType: Beckn.ACL.OnSelect # Transform => FulfillmentType::DELIVERY_FLOW -> QuoteDetails::(Delivery DriverOfferQuoteDetails)
+      buildDriverQuoteDetails: Domain.Action.Beckn.OnSelect # Transform => OnSelectQuoteDetails::(Delivery DriverOfferQuoteDetails) -> QuoteDetails::(DeliveryDriverOfferDetails DriverOffer)
+      toQuoteDetails: Storage.Queries.Transformers.Quote # Used in FromTType of Quote table
+      fromQuoteDetails: Storage.Queries.Transformers.Quote # Used in ToTType of Quote table
+    storage:
+      - Quote:
+          types:
+            QuoteDetails:
+              enum:
+                - DeliveryDriverOfferDetails DriverOffer
+              exists: true
+          fields:
+            quoteDetails: QuoteDetails
+          exists: true
+  
+  confirmRiderApp:
+  # Creation of entry in Booking table
+    trigger:
+      POST:
+        endpoint: ui/rideSearch/quotes/:quoteId/confirm
+        exists: true
+      types:       
+        ConfirmQuoteDetails:
+          module: SharedLogic.Confirm
+          enum:
+            - ConfirmDeliveryDetails Text
+          exists: true
+    functions:
+      getBPPQuoteId: SharedLogic.Confirm # Transform => QuoteDetails::(DeliveryDriverOfferDetails driverOffer) -> getBPPQuoteIdFromDriverOffer driverOffer now
+      mkConfirmQuoteDetails: SharedLogic.Confirm # Transform => QuoteDetails::(DeliveryDriverOfferDetails _) -> ConfirmQuoteDetails::ConfirmDeliveryDetails bppQuoteId_
+      buildBookingDetails: SharedLogic.Confirm # Transform => QuoteDetails::(DeliveryDriverOfferDetails _) -> BookingDetails::(DeliveryDetails DeliveryBookingDetails)
+      toBookingDetailsAndFromLocation: Storage.Queries.Transformers.Booking # Used in FromTType of Booking table
+      getDistance: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
+      getFareProductType: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
+      getOtpCode: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
+      getStopLocationId: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
+      getToLocationId: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
+    storage:
+      - Booking:
+          types:
+            DeliveryPersonDetails:
+              name: Text
+              phoneNumber: EncryptedHashedField e Text
+            DeliveryBookingDetails:
+              senderDetails: DeliveryPersonDetails
+              recieverDetails: DeliveryPersonDetails
+              initiatedAs: DeliveryInitiation
+              toLocation: Location
+              distance: Distance
+              otpCode: Text
+            BookingDetails:
+              enum:
+                - DeliveryDetails DeliveryBookingDetails
+              exists: true
+          fields:
+            bookingDetails: BookingDetails
+          beamFields:
+            bookingDetails:
+              senderPhoneNumber: EncryptedHashedField e Text
+              senderName: Text
+              recieverPhoneNumber: EncryptedHashedField e Text
+              recieverName: Text
+              initiatedAs: DeliveryInitiation
+          exists: true
+
+  initRiderApp:
+    types:       
+      ConfirmQuoteDetails:
+        module: SharedLogic.Confirm
+        enum:
+          - ConfirmDeliveryDetails Text
+        exists: true
+    functions:
+      getFulfillmentTypeAndIdFromQuoteDetails: Beckn.ACL.Init # Transform => ConfirmQuoteDetails::(ConfirmDeliveryDetails quoteId) -> (show FulfillmentType::DELIVERY_FLOW, Just quoteId)
+  
+  initDriverApp:
+  # Creation of entry in Booking table for ValidatedEstimate
+    trigger:
+      POST:
+        endpoint: /beckn/init
+        exists: true
+    storage:
+      - Booking:
+          types:
+            DeliveryPersonDetails:
+              name: Text
+              phoneNumber: EncryptedHashedField e Text
+            DeliveryBookingDetails:
+              senderDetails: DeliveryPersonDetails
+              recieverDetails: DeliveryPersonDetails
+              initiatedAs: DeliveryInitiation
+          fields:
+            deliveryBookingDetails: Maybe DeliveryBookingDetails
+          beamFields:
+            deliveryBookingDetails:
+              senderPhoneNumber: EncryptedHashedField e Text
+              senderName: Text
+              recieverPhoneNumber: EncryptedHashedField e Text
+              recieverName: Text
+              initiatedAs: DeliveryInitiation
+          exists: true
+    functions:
+      fulfillmentToPricingPolicy: Domain.Types.Common # FulfillmentType::DELIVERY_FLOW -> PricingPolicy::EstimateBased
+
+  onInitDriverApp: # No Change
+  
+  onInitRiderApp: # No Change
+    trigger:
+      POST:
+        endpoint: /beckn/oninit
+        exists: true
+    functions:
+      getToLocationFromBookingDetails: Domain.Action.Beckn.OnInit # Transform => BookingDetails::(DeliveryDetails details) -> Just details.toLocation
+  
+  confirmRiderApp_: # No Change
+    functions:
+      mkFulfillmentType: Beckn.ACL.Confirm # Transform => BookingDetails::(DeliveryDetails _) -> FulfillmentType::DELIVERY_FLOW
+
+  confirmDriverApp:
+  # Creation of entry in Ride table for DriverQuote request type
+    trigger:
+      POST:
+        endpoint: /beckn/confirm
+        exists: true
+    functions:
+      validateRequest: Domain.Action.Beckn.Confirm # Map Delivery TripCategory to 
+
+  onConfirmRiderApp: # No Change
+
+  onUpdateRideAssignedDriverApp: # No Change
+
+  onUpdateRideAssignedRiderApp:
+  # if booking.initiatedAs \= AsSender
+  #   Send SMS to Reciever with RideStartOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
+      
+  OnUpdateRideStartedDriverApp: # No Change
+  
+  OnUpdateRideStartedRiderApp:
+  # if booking.initiatedAs \= AsReciever
+  #   Send SMS to Reciever with RideEndOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl

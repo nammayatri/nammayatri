@@ -29,6 +29,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types
 import Domain.Types.BecknConfig
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Location as Location
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -87,7 +88,7 @@ tfFulfillment res startLoc endLoc isValueAddNP =
       fulfillmentState = Nothing
       fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber else Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
-      fulfillmentType = Just $ show Enums.DELIVERY
+      fulfillmentType = Just $ DTC.fareProductToFulfillment res.fareProductType
       fulfillmentStops = UCommon.mkStops' (Just startLoc) (Just endLoc)
       fulfillmentVehicle = tfVehicle res
    in Spec.Fulfillment
