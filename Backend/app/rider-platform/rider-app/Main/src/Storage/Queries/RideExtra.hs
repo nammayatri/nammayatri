@@ -438,3 +438,10 @@ updateshowDriversPreviousRideDropLoc :: (EsqDBFlow m r, MonadFlow m, CacheFlow m
 updateshowDriversPreviousRideDropLoc showDriversPreviousRideDropLoc (Kernel.Types.Id.Id id) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set BeamR.showDriversPreviousRideDropLoc $ Kernel.Prelude.Just showDriversPreviousRideDropLoc, Se.Set BeamR.updatedAt _now] [Se.Is BeamR.id $ Se.Eq id]
+
+updateSafetyJourneyStatus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> SosJourneyStatus -> m ()
+updateSafetyJourneyStatus rideId status = do
+  updateOneWithKV
+    [ Se.Set BeamR.safetyJourneyStatus $ Just status
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]

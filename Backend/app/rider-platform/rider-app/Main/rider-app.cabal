@@ -259,6 +259,7 @@ library
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
+      SharedLogic.Scheduler.Jobs.SafetyCSAlert
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Serviceability

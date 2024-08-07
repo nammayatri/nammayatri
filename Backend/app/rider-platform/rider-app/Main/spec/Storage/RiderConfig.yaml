@@ -45,6 +45,7 @@ RiderConfig:
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
     cxAgentDetails: "Maybe [CxAgentDetails]"
+    csAlertTriggerDelay: NominalDiffTime
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -52,6 +53,7 @@ RiderConfig:
     hardLimitForSafetyJobs: Maybe Seconds
     exotelStatusCheckSchedulerDelay : Maybe Seconds
     incidentReportSupport: Maybe Bool
+    csAlertTriggerDelay: Maybe Seconds
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -62,6 +64,7 @@ RiderConfig:
     hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: fromMaybe False incidentReportSupport|E
+    csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -69,6 +72,7 @@ RiderConfig:
     hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: Just incidentReportSupport|E
+    csAlertTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
 
   default:
     enableLocalPoliceSupport: "false"

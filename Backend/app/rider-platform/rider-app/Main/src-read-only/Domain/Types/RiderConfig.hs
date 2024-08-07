@@ -23,6 +23,7 @@ data RiderConfig = RiderConfig
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     collectMMIRouteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    csAlertTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     cxAgentDetails :: Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails],
     distanceWeightage :: Kernel.Prelude.Int,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,

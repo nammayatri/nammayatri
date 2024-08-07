@@ -50,6 +50,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import SharedLogic.Scheduler.Jobs.CallPoliceApi
+import SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -187,18 +188,18 @@ createTicketForNewSos person ride riderConfig trackLink req = do
       return sosDetails.id
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
-      let rideInfo = buildRideInfo ride person phoneNumber
+      let rideInfo = SIVR.buildRideInfo ride person phoneNumber
           kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       ticketId <- do
         if riderConfig.enableSupportForSafety
           then do
-            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
+            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
           else return Nothing
-      sosDetails <- buildSosDetails person req ticketId
-      CQSos.cacheSosIdByRideId ride.id sosDetails
+      sosDetails <- SIVR.buildSosDetails person req ticketId
+      when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id sosDetails
       void $ QSos.create sosDetails
       return sosDetails.id
 
@@ -290,11 +291,11 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
     Right _ -> do
       ride <- QRide.findById sosDetails.rideId >>= fromMaybeM (RideDoesNotExist sosDetails.rideId.getId)
       phoneNumber <- mapM decrypt person.mobileNumber
-      let rideInfo = buildRideInfo ride person phoneNumber
+      let rideInfo = SIVR.buildRideInfo ride person phoneNumber
           trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
           kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue))
+        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue))
       createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
 
 createMediaEntry :: Common.AddLinkAsMedia -> Flow AddSosVideoRes
@@ -317,38 +318,6 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
             createdAt = now
           }
 
-buildRideInfo :: DRide.Ride -> Person.Person -> Maybe Text -> Ticket.RideInfo
-buildRideInfo ride person phoneNumber =
-  Ticket.RideInfo
-    { rideShortId = ride.shortId.getShortId,
-      rideCity = show person.currentCity,
-      customerName = Just $ SLP.getName person,
-      customerPhoneNo = phoneNumber,
-      driverName = Just ride.driverName,
-      driverPhoneNo = Just ride.driverMobileNumber,
-      vehicleNo = ride.vehicleNumber,
-      vehicleCategory = Just $ show ride.vehicleVariant,
-      vehicleServiceTier = show <$> ride.vehicleServiceTierType,
-      status = show ride.status,
-      rideCreatedAt = ride.createdAt,
-      pickupLocation = castLocationAPIEntity ride.fromLocation,
-      dropLocation = castLocationAPIEntity <$> ride.toLocation,
-      fare = Nothing
-    }
-  where
-    castLocationAPIEntity ent =
-      Ticket.Location
-        { lat = ent.lat,
-          lon = ent.lon,
-          street = ent.address.street,
-          city = ent.address.city,
-          state = ent.address.state,
-          country = ent.address.country,
-          building = ent.address.building,
-          areaCode = ent.address.areaCode,
-          area = ent.address.area
-        }
-
 callUpdateTicket :: Person.Person -> DSos.Sos -> Maybe Text -> Flow APISuccess.APISuccess
 callUpdateTicket person sosDetails mbComment = do
   case sosDetails.ticketId of
@@ -357,45 +326,6 @@ callUpdateTicket person sosDetails mbComment = do
         void $ Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId (Ticket.UpdateTicketReq (fromMaybe "" mbComment) ticketId Ticket.IN)
       pure APISuccess.Success
     Nothing -> pure APISuccess.Success
-
-mkTicket :: Person.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
-mkTicket person phoneNumber mediaLinks info flow disposition queue = do
-  Ticket.CreateTicketReq
-    { category = "Code Red",
-      subCategory = Just "SOS Alert (follow-back)",
-      issueId = Nothing,
-      issueDescription,
-      mediaFiles = Just mediaLinks,
-      name = Just $ SLP.getName person,
-      phoneNo = phoneNumber,
-      personId = person.id.getId,
-      classification = Ticket.CUSTOMER,
-      rideDescription = Just info,
-      disposition,
-      queue
-    }
-  where
-    issueDescription = case flow of
-      DSos.Police -> "112 called"
-      _ -> "SOS activated"
-
-buildSosDetails :: (EncFlow m r) => Person.Person -> SosReq -> Maybe Text -> m DSos.Sos
-buildSosDetails person req ticketId = do
-  pid <- generateGUID
-  now <- getCurrentTime
-  return
-    DSos.Sos
-      { id = pid,
-        personId = person.id,
-        status = DSos.Pending,
-        flow = req.flow,
-        rideId = req.rideId,
-        ticketId = ticketId,
-        merchantId = Just person.merchantId,
-        merchantOperatingCityId = Just person.merchantOperatingCityId,
-        createdAt = now,
-        updatedAt = now
-      }
 
 getSosIvrOutcome :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow APISuccess.APISuccess
 getSosIvrOutcome mbCallFrom mbCallSid mbCallStatus mbDigitPressed = do
@@ -415,31 +345,39 @@ getSosIvrOutcome mbCallFrom mbCallSid mbCallStatus mbDigitPressed = do
       let digitPressed = fromMaybe "0" $ T.replace "\"" "" <$> mbdigitPressed
       QCallStatus.updateCustomerIvrResponse callSid (Just digitPressed) validStatus
       logDebug $ "digitPressed : " <> digitPressed
-      when (digitPressed /= "1") $ handleEmergencyCall callSid res
+      case res.rideId of
+        Just rideId -> do
+          if digitPressed /= "1"
+            then handleEmergencyCall rideId
+            else do
+              logDebug $ "In exotel response customer pressed : " <> show digitPressed <> " and marking ride as safe."
+              void $ QRide.updateSafetyJourneyStatus rideId DRide.Safe
+        Nothing -> throwError $ RideIdEmptyInCallRecord callSid
 
-    handleEmergencyCall :: Text -> DCall.CallStatus -> Flow ()
-    handleEmergencyCall callSid res = case res.rideId of
-      Just rideId -> do
-        ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-        booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-        void $ postSosCallPolice (Just booking.riderId, booking.merchantId) (CallPoliceAPI {rideId = rideId})
-        pure ()
-      Nothing -> throwError $ RideIdEmptyInCallRecord callSid
+    handleEmergencyCall :: Id DRide.Ride -> Flow ()
+    handleEmergencyCall rideId = do
+      ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+      void $ postSosCallPolice (Just booking.riderId, booking.merchantId) (CallPoliceAPI {rideId = rideId})
 
 postSosCallPolice :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> CallPoliceAPI -> Flow APISuccess.APISuccess
 postSosCallPolice (mbPersonId, merchantId) CallPoliceAPI {..} = do
-  logDebug "Calling Police API started for SOS"
+  logDebug "User didn't pressed 1 on exotel call"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let merchantOpCityId = booking.merchantOperatingCityId
   riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
-  unless (riderConfig.incidentReportSupport) $
-    throwError $ IncidentReportServiceUnavailable merchantOpCityId.getId
-  coordinates <- fetchLatLong ride merchantId
-  token <- getTokenofJMService merchantId merchantOpCityId
-  incidentReportHandler person merchantId merchantOpCityId ride.id token coordinates riderConfig
+  if riderConfig.incidentReportSupport
+    then do
+      coordinates <- fetchLatLong ride merchantId
+      token <- getTokenofJMService merchantId merchantOpCityId
+      incidentReportHandler person merchantId merchantOpCityId ride.id token coordinates riderConfig
+      void $ QRide.updateSafetyJourneyStatus rideId DRide.PoliceMonitoring
+    else do
+      logDebug $ "Incident Report Support is not enabled for this merchant so creating ticket for rideID : " <> show ride.id
+      SIVR.createSafetyTicket person ride
   return APISuccess.Success
 
 incidentReportHandler :: Person.Person -> Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> Id DRide.Ride -> Text -> Maps.LatLong -> DRC.RiderConfig -> Flow ()
