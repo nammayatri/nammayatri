@@ -83,6 +83,7 @@ getML stringKey =
         WRITE_A_COMMENT -> "ഒരു അഭിപ്രായം എഴുതുക (ഓപ്ഷണൽ)"
         UPDATE -> "അപ്ഡേറ്റ് ചെയ്യുക"
         LANGUAGE -> "ഭാഷ"
+        DETAILS -> "വിവരങ്ങൾ"
         OTP -> "OTP"
         PAYMENT_METHOD -> "പണമടയ്ക്കൽ രീതി"
         PAYMENT_METHOD_STRING -> "പണം / UPI ആപ്പ് ഉപയോഗിക്കുക"

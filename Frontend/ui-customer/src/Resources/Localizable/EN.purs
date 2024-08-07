@@ -85,6 +85,7 @@ getEN stringKey =
         WRITE_A_COMMENT -> "Write a comment (Optional)"
         UPDATE -> "Update"
         LANGUAGE -> "Language"
+        DETAILS -> "Details"
         OTP -> "OTP"
         PAYMENT_METHOD -> "Payment Method"
         PAYMENT_METHOD_STRING -> "Cash / Use UPI app"

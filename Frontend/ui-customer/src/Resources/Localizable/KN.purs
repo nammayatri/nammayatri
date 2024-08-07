@@ -86,6 +86,7 @@ getKN stringKey =
         WRITE_A_COMMENT -> "ಕಾಮೆಂಟ್ ಬರೆಯಿರಿ (ಐಚ್ al ಿಕ)"
         UPDATE -> "ನವೀಕರಿಸು"
         LANGUAGE -> "ಭಾಷೆಗಳು"
+        DETAILS -> "ವಿವರಗಳು"
         OTP -> "ಒತ್ತು"
         PAYMENT_METHOD -> "ಪಾವತಿ ವಿಧಾನ"
         PAYMENT_METHOD_STRING -> "ನಗದು / UPI ಅಪ್ಲಿಕೇಶನ್ ಬಳಸಿ"

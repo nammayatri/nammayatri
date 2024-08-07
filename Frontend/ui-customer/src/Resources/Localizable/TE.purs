@@ -100,6 +100,7 @@ getTE stringKey =
     WRITE_A_COMMENT -> "వ్యాఖ్యను వ్రాయండి (ఐచ్ఛికం)"
     UPDATE -> "నవీకరించు"
     LANGUAGE -> "భాష"
+    DETAILS -> "వివరాలు"
     OTP -> "OTP"
     PAYMENT_METHOD -> "చెల్లింపు పద్ధతి"
     PAYMENT_METHOD_STRING -> "నగదు / UPI యాప్ ఉపయోగించండి"

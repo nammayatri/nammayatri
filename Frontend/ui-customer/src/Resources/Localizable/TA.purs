@@ -101,6 +101,7 @@ getTA stringKey =
     WRITE_A_COMMENT -> "கருத்து எழுதவும் (விரும்பினால்)"
     UPDATE -> "புதுப்பிப்பு"
     LANGUAGE -> "மொழி"
+    DETAILS -> "விவரங்கள்"
     OTP -> "OTP"
     PAYMENT_METHOD -> "கட்டண முறை"
     PAYMENT_METHOD_STRING -> "பணம் / UPI பயன்பாட்டைப் பயன்படுத்து"

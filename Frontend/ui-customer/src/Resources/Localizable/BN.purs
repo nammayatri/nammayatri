@@ -85,6 +85,7 @@ getBN stringKey =
         WRITE_A_COMMENT -> "একটি মন্তব্য লিখুন (ঐচ্ছিক)"
         UPDATE -> "আপডেট"
         LANGUAGE -> "ভাষা"
+        DETAILS -> "বিশদ"
         OTP -> "ওটিপি"
         PAYMENT_METHOD -> "অর্থপ্রদানের পদ্ধতি"
         PAYMENT_METHOD_STRING -> "নগদ / যেকোনো UPI অ্যাপ"

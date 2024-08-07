@@ -85,6 +85,7 @@ getFR stringKey =
         WRITE_A_COMMENT -> "Écrivez un commentaire (facultatif)"
         UPDATE -> "Mise à jour"
         LANGUAGE -> "Langue"
+        DETAILS -> "Details"
         OTP -> "OTP"
         PAYMENT_METHOD -> "Mode de paiement"
         PAYMENT_METHOD_STRING -> "Cash / Utilisez n'importe quelle application UPI"
