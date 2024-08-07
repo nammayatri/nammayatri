@@ -94,7 +94,7 @@ view push state =
       pure unit
       )(const AfterRender)
   , gradient $ Linear 0.0 ["#F5F8FF", "#E2EAFF"]
-  ][ if state.props.isMockLocation && state.data.config.enableMockLocation 
+  ][ if state.props.isMockLocation && state.data.config.enableMockLocation  && not cugUser
       then mockLocationEnabledView push state
       else
         relativeLayout
@@ -118,6 +118,7 @@ view push state =
             ][ PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state) ]
           ]
     ]
+    where cugUser = Mb.fromMaybe false $ runFn3 DU.getAnyFromWindow "isCUGUser" Mb.Nothing Mb.Just
 
 headerView :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 headerView state push = 

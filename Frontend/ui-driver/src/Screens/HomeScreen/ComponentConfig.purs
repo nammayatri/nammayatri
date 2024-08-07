@@ -1964,7 +1964,6 @@ sourceUnserviceableConfig state =
       config
         { height = if state.data.config.enableMockLocation && state.props.isMockLocation then MATCH_PARENT else WRAP_CONTENT
         , background = Color.white900
-        , corners = (Corners 24.0 true true false false)
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig
           { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"
