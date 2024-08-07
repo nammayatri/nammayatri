@@ -381,7 +381,6 @@ intercityPreferenceView push state = do
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , visibility $ MP.boolToVisibility $ (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory && isJust state.props.canSwitchToIntercity
     ][serviceTierItem state push item (fromMaybe false state.props.canSwitchToIntercity) false (-1)]
   where 
     item :: ST.RidePreference
