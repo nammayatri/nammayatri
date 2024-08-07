@@ -9,21 +9,21 @@ import Screens.Types (City, SearchResultType, FareProductType)
 
 type DriverDetailsType
   = { fareProductType :: FareProductType
-    , rating :: Number
-    , driverName :: String
-    , vehicleDetails :: String
-    , vehicleVariant :: String
-    , merchantCity :: City
-    , registrationNumber :: String
-    , config :: AppConfig
-    , rideStarted :: Boolean
-    , enablePaddingBottom :: Boolean
-    , vehicleModel :: String
-    , vehicleColor :: String
-    , serviceTierName :: Maybe String
-    , providerType :: CTP.ProviderType
-    , showAcView :: Boolean
-    , isSpecialZone :: Boolean
+      , rating :: Number
+      , driverName :: String
+      , vehicleDetails :: String
+      , vehicleVariant :: String
+      , merchantCity :: City
+      , registrationNumber :: String
+      , config :: AppConfig
+      , rideStarted :: Boolean
+      , enablePaddingBottom :: Boolean
+      , vehicleModel :: String
+      , vehicleColor :: String
+      , serviceTierName :: Maybe String
+      , providerType :: CTP.ProviderType
+      , showAcView :: Boolean
+      , isOtpRideFlow :: Boolean
     }
 
 type TripDetails a
@@ -35,6 +35,6 @@ type TripDetails a
   , enablePaddingBottom :: Boolean
   , fareProductType :: FareProductType
   , enableEditDestination :: Boolean
-  , isSpecialZone :: Boolean
+  , isOtpRideFlow :: Boolean
   , editingDestinationLoc :: a
     }
