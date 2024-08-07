@@ -64,15 +64,15 @@ checkRideStatus rideAssigned = do
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
             bookingStatus = resp.status
             fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
-            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
+            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode)) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
             dropLocation = if (fareProductType == FPT.RENTAL) then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
             newState = 
               state
                 { data
-                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) state.data.driverInfoCardState
+                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
@@ -137,6 +137,7 @@ checkRideStatus rideAssigned = do
                     homeScreen
                     { props
                       { isSpecialZone = true
+                      , isOtpRideFlow = true
                       , isInApp = true
                       }
                     , data
@@ -148,7 +149,7 @@ checkRideStatus rideAssigned = do
             Just (RideAPIEntity _) ->
               if isJust otpCode then do
                 setValueToLocalStore TRACKING_ENABLED "True"
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
+                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true, isOtpRideFlow = true }}) else
                 pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen

@@ -475,7 +475,9 @@ newtype OneWaySearchReq = OneWaySearchReq {
   isDestinationManuallyMoved :: Maybe Boolean,
   sessionToken :: Maybe String,
   isSpecialLocation :: Maybe Boolean,
-  startTime :: Maybe String
+  startTime :: Maybe String,
+  quotesUnifiedFlow :: Maybe Boolean,
+  rideRequestAndRideOtpUnifiedFlow :: Maybe Boolean
 }
 
 newtype SearchReqLocation = SearchReqLocation {
@@ -513,7 +515,9 @@ newtype RentalSearchReq = RentalSearchReq {
   estimatedRentalDistance :: Int,
   estimatedRentalDuration :: Int,
   startTime :: String,
-  isReallocationEnabled :: Maybe Boolean
+  isReallocationEnabled :: Maybe Boolean,
+  quotesUnifiedFlow :: Maybe Boolean,
+  rideRequestAndRideOtpUnifiedFlow :: Maybe Boolean
 }
 
 derive instance genericContentType :: Generic ContentType _

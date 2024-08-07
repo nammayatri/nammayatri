@@ -30,6 +30,7 @@ import PrestoDOM.List
 import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API hiding (Followers(..))
 import SuggestionUtils
+import Accessor
 import Timers
 import Types.App
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
@@ -289,6 +290,7 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen pollingCount 3000.0 push initialState
               HomeScreen -> do
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
+                void $ pure $ setValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT "100"
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
                   void $ launchAff $ flowRunner defaultGlobalState $ updateRecentTrips UpdateRepeatTrips push Nothing
@@ -332,7 +334,7 @@ screen initialState =
                   void $ waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction
                 else 
                   when 
-                    (initialState.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) $ do
+                    (initialState.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || initialState.props.isOtpRideFlow) $ do
                       let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
                       void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -565,7 +567,7 @@ view push state =
             , rideRequestFlowView push state
             , preferenceView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
-            , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && onUsRide) then messageWidgetView push state else emptyTextView state
+            , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && onUsRide && not (state.props.currentStage == RideAccepted && state.props.isOtpRideFlow && any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.INTER_CITY])) then messageWidgetView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideDetailsBottomView push state else emptyTextView state
             , if state.props.currentStage == ChatWithDriver then messagingView push state else emptyTextView state
             , if state.props.currentStage /= RideRating && state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI) && state.props.currentStage == HomeScreen then (sourceUnserviceableView push state) else emptyTextView state
@@ -766,8 +768,7 @@ confirmEditDestPopUp push state =
 
 messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messageWidgetView push state = 
-  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL) && state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
-
+  let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL) && state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && not (state.props.currentStage == RideAccepted && state.props.isOtpRideFlow && any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.INTER_CITY]) && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification 
   in 
   linearLayout
   [ height MATCH_PARENT
@@ -2636,7 +2637,12 @@ rideTrackingView push state =
                             [ height WRAP_CONTENT
                             , width MATCH_PARENT
                             ]
-                            [ if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
+                            [ 
+                              
+                              if state.props.currentStage == RideAccepted && (any (_ ==  state.data.fareProductType) [FPT.RENTAL, FPT.INTER_CITY]) && state.props.isOtpRideFlow then
+                               let driverInfoCardState = driverInfoCardViewState state
+                               in DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardState { props { isOtpRideFlow = true}}
+                              else if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
                                 DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
                               else
                                 emptyTextView state
@@ -2685,6 +2691,7 @@ getMessageNotificationViewConfig state =
                             Just contact -> contact.name
                     else "Driver"
     }
+  , isOtpRideFlow : state.props.isOtpRideFlow
 }
 
 separatorView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
@@ -3218,7 +3225,8 @@ confirmRide trackingId rideConfirmationAction checkFlowStatusAction goToHomeScre
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
             fareProductType = getFareProductType $ (resp.bookingDetails) ^. _fareProductType
-            isSpecialZoneRide = any ( _ == fareProductType ) [FPT.ONE_WAY_SPECIAL_ZONE]
+            otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
+            isSpecialZoneRide = any ( _ == fareProductType ) [FPT.ONE_WAY_SPECIAL_ZONE] || isJust otpCode
             status = if isSpecialZoneRide then "CONFIRMED" else "TRIP_ASSIGNED"
         if status == resp.status && (isSpecialZoneRide || not (null resp.rideList)) then do
           doAff do liftEffect $ push $ rideConfirmationAction response
