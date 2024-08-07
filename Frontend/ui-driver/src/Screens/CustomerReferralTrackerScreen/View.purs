@@ -295,6 +295,8 @@ upiDetailsScreen push state =
 emptyReferralView :: forall w. (Action -> Effect Unit) -> CustomerReferralTrackerScreenState -> PrestoDOM (Effect Unit) w
 emptyReferralView push state = 
   let hasVPA = isJust state.data.upiID
+      cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      image = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then cityConfig.assets.empty_referral_auto else cityConfig.assets.empty_referral_cab
   in 
   linearLayout
   [ height $ if hasVPA then MATCH_PARENT else WRAP_CONTENT
@@ -306,7 +308,7 @@ emptyReferralView push state =
   ][ imageView 
      [ height $ V 248
      , width MATCH_PARENT
-     , imageWithFallback $ fetchImage COMMON_ASSET $ if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then "ny_ic_refer_now_auto" else "ny_ic_refer_now_cab" 
+     , imageWithFallback image
      ]
    , textView $ 
      [ text $ getString $ EARN_FOR_EACH_REFERRAL $ state.data.config.currency <> (show state.data.referralRewardAmountPerRide)

@@ -723,7 +723,9 @@ dummyCityConfig = {
   rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
   assets :{
     auto_image :  "ny_ic_black_yellow_auto_side_view",
-    onboarding_auto_image : "ny_ic_auto_right_side_yellow"
+    onboarding_auto_image : "ny_ic_auto_right_side_yellow",
+    empty_referral_auto : "",
+    empty_referral_cab : ""
   },
   gstPercentage : "18",
   enableHvSdk : false
