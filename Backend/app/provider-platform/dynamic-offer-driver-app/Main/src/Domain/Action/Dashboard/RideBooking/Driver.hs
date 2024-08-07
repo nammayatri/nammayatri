@@ -98,9 +98,10 @@ getDriverInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (Id Common.Driver) ->
   Flow Common.DriverInfoRes
-getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mobileNumber mobileCountryCode vehicleNumber dlNumber rcNumber email =
-  DDriver.driverInfo merchantShortId opCity mobileNumber mobileCountryCode vehicleNumber dlNumber rcNumber email fleetOwnerId mbFleet
+getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mobileNumber mobileCountryCode vehicleNumber dlNumber rcNumber email mbDriverId =
+  DDriver.driverInfo merchantShortId opCity mobileNumber mobileCountryCode vehicleNumber dlNumber rcNumber email fleetOwnerId mbFleet mbDriverId
 
 postDriverUnlinkVehicle ::
   ShortId DM.Merchant ->
