@@ -335,6 +335,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       cancellationFeeIfCancelled = Nothing
       isAlreadyFav = Just False
       favCount = Just 0
+      safetyJourneyStatus = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::
