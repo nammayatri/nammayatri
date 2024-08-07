@@ -395,16 +395,35 @@ rideBookingFlow:
     functions:
       validateRequest: Domain.Action.Beckn.Confirm # Map Delivery TripCategory to 
 
+  # rideListDriverApp:
+  #   GET:
+  #     endpoint: /ui/driver/ride/list?limit=1
+  #     request: DriverRideListRes        
+  #     module: API.UI.Select
+  #     exists: true
+  #   types:
+  #     DriverRideRes:
+  
   onConfirmRiderApp: # No Change
 
-  onUpdateRideAssignedDriverApp: # No Change
+  onUpdateRideAssignedDriverApp: # No Change, Creation of entry in Ride table
 
-  onUpdateRideAssignedRiderApp:
+  onUpdateRideAssignedRiderApp: 
   # if booking.initiatedAs \= AsSender
-  #   Send SMS to Reciever with RideStartOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
+  #   => Send SMS to Reciever with RideStartOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
+  # Creation of entry in Ride table
+
+  # rideListRiderApp:
+  #   GET:
+  #     endpoint: /ui/rideBooking/list?limit=1
+  #     request: RideBookingListRes        
+  #     module: API.UI.Select
+  #     exists: true
+  #   types:
+  #     DriverRideRes:
       
   OnUpdateRideStartedDriverApp: # No Change
   
   OnUpdateRideStartedRiderApp:
   # if booking.initiatedAs \= AsReciever
-  #   Send SMS to Reciever with RideEndOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
+  #   => Send SMS to Reciever with RideEndOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
