@@ -7,6 +7,8 @@ import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import Data.Maybe (Maybe)
+import Language.Types(STR(..))
+import Data.Show.Generic (genericShow)
 
 
 type SafetyVideoConfig
@@ -59,3 +61,15 @@ newtype FamousDestination = FamousDestination {
 
 derive instance genericFamousDestination :: Generic FamousDestination _
 instance decodeFamousDestination :: Decode FamousDestination where decode = defaultDecode
+
+type Service = {
+  type :: ServiceType,
+  name :: STR,
+  image :: String
+}
+
+data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS
+
+derive instance genericServiceType :: Generic ServiceType _
+instance eqServiceType :: Eq ServiceType where eq = genericEq
+instance showServiceType :: Show ServiceType where show = genericShow

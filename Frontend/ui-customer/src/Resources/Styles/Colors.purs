@@ -421,3 +421,15 @@ lightGrey1 = "#F3F3F3"
 
 moonCreme :: Color
 moonCreme = "#FFF5DA"
+
+manatee5 :: Color
+manatee5 = "#059A9CA1"
+
+manatee33 :: Color 
+manatee33 = "#339A9CA1"
+
+gunMetal :: Color 
+gunMetal = "#282B35"
+
+eerieBlack :: Color 
+eerieBlack = "#121319"

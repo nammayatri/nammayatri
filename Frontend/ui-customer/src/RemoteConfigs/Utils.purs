@@ -88,3 +88,9 @@ getLocationSuggestionsToExclude city = do
     let config = fetchRemoteConfigString "location_suggestions_to_exclude"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
+
+getEnabledServices :: String -> Array String
+getEnabledServices city = do
+    let config = fetchRemoteConfigString "enabled_services"
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+    getCityBasedConfig value city
