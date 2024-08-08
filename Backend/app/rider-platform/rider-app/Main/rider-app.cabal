@@ -271,6 +271,7 @@ library
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
+      Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg

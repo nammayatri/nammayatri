@@ -52,13 +52,14 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
-import Kernel.Types.Id
+import Kernel.Types.Id as ID
 import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -284,7 +285,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
 callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id SRide.Ride -> m APISuccess
 callOnClickTracker rideId = do
   maxShards <- asks (.maxShards)
-  ride <- runInReplica $ QRide.findById (Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
+  ride <- runInReplica $ QRide.findById (ID.Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   buildCallStatus <- callStatusObj
@@ -397,5 +398,5 @@ sendFCMToDriverOnCallFailure dCallStatus mbRideId mbMerchantId =
     rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") mbRideId
     ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     merchantId <- fromMaybeM (RideFieldNotPresent "merchantId") mbMerchantId
-    merchant <- SMerchant.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+    merchant <- SMerchant.findById (ID.Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
     void $ CallBPPInternal.callCustomerFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl (getId ride.bppRideId)

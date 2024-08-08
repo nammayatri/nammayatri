@@ -38,6 +38,7 @@ import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
+import Lib.Scheduler.JobStorageType.DB.Table
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
 
@@ -132,7 +133,7 @@ type JobCreator r m = (JobCreatorEnv r, JobMonad r m)
 
 type JobExecutor r m = (HasField "streamName" r Text, HasField "maxShards" r Int, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
 
-type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r)
+type JobMonad r m = (HasSchemaName SchedulerJobT, HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m, EsqDBFlow m r)
 
 runSchedulerM :: HasSchemaName SystemConfigsT => SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM schedulerConfig env action = do

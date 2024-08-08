@@ -24,6 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import Storage.Beam.SchedulerJob ()
 
 pushReminderUpdatesInScheduler :: (MonadFlow m, SchedulerFlow r, EsqDBFlow m r, CacheFlow m r) => DB.Booking -> DR.Ride -> UTCTime -> Id DP.Person -> DRN.RideRelatedNotificationConfig -> m ()
 pushReminderUpdatesInScheduler booking ride now driverId DRN.RideRelatedNotificationConfig {..} = do
