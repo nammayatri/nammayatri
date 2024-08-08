@@ -377,6 +377,7 @@ library
       Storage.Beam.IssueManagement
       Storage.Beam.Payment
       Storage.Beam.Quote
+      Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
       Storage.Cac.DriverIntelligentPoolConfig
       Storage.Cac.DriverPoolConfig

@@ -52,6 +52,7 @@ import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import SharedLogic.Scheduler.Jobs.CallPoliceApi
 import SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import Storage.Beam.IssueManagement ()
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC

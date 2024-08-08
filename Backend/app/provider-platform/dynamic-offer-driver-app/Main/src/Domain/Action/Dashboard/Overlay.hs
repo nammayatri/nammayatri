@@ -29,11 +29,12 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
-import Kernel.Types.Id
+import Kernel.Types.Id as ID
 import Kernel.Utils.Common
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -89,7 +90,7 @@ createOverlay merchantShortId opCity req = do
   where
     buildOverlay :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateOverlayReq -> OverlayContent -> Flow DTMO.Overlay
     buildOverlay merchantId merchantOpCityId _overlay@CreateOverlayReq {..} _content@OverlayContent {..} = do
-      guid <- Id <$> generateGUID
+      guid <- ID.Id <$> generateGUID
       return
         DTMO.Overlay
           { id = guid,

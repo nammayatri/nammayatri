@@ -34,4 +34,4 @@ type SchedulerJob = SchedulerJobT Identity
 
 $(enableKVPG ''SchedulerJobT ['id] [])
 
-$(mkTableInstances ''SchedulerJobT "scheduler_job" "atlas_driver_offer_bpp")
+$(mkTableInstancesGenericSchema ''SchedulerJobT "scheduler_job")

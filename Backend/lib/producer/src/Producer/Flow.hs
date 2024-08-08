@@ -28,6 +28,7 @@ import Kernel.Utils.Time ()
 import Lib.Scheduler.JobStorageType.DB.Queries (getPendingStuckJobs)
 import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST hiding (Id)
 import Lib.Scheduler.Types as ST
+import Producer.SchedulerJob ()
 import qualified Sequelize as Se
 import SharedLogic.Allocator
 
