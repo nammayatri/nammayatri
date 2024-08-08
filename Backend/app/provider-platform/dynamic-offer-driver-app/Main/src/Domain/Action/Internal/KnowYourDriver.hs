@@ -102,11 +102,11 @@ getDriver driverId apiKey = do
 
 getDriverProfile :: DP.Person -> Flow DriverProfileRes
 getDriverProfile person = do
-  driverProfile <- DPQ.findByPersonId person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+  driverProfile <- DPQ.findByPersonId person.id
   driverStats <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-  vehicle <- QVeh.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
+  vehicle <- QVeh.findById person.id >>= fromMaybeM (DriverWithoutVehicle person.id.getId)
   modules <- SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED >>= mapM (\driverModule -> QLmsModule.findById driverModule.moduleId)
-  images <- getImages (maybe [] (Id <$>) driverProfile.imageIds)
+  images <- maybe (pure []) (maybe (pure []) (getImages . map Id) . (.imageIds)) driverProfile
   profileImage <- ImageQuery.findByPersonIdImageTypeAndValidationStatus (person.id) DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
   topFeedbacks <- getTopFeedBackForDriver person.id
   pure $
@@ -115,15 +115,15 @@ getDriverProfile person = do
         homeTown = Nothing,
         driverName = person.firstName,
         onboardedAt = person.createdAt,
-        pledges = driverProfile.pledges,
+        pledges = maybe [] (.pledges) driverProfile,
         languages = fromMaybe [] ((map getLanguages) <$> person.languagesSpoken),
-        aboutMe = driverProfile.aboutMe,
-        drivingSince = driverProfile.drivingSince,
+        aboutMe = (.aboutMe) =<< driverProfile,
+        drivingSince = (.drivingSince) =<< driverProfile,
         driverStats = getDriverStatsSummary driverStats,
-        aspirations = fromMaybe [] driverProfile.aspirations,
+        aspirations = fromMaybe [] ((.aspirations) =<< driverProfile),
         vehicleNum = vehicle.registrationNo,
         vechicleVariant = vehicle.variant,
-        vehicleTags = fromMaybe [] driverProfile.vehicleTags,
+        vehicleTags = fromMaybe [] ((.vehicleTags) =<< driverProfile),
         images = images,
         profileImage = profileImage,
         topReviews = topFeedbacks
