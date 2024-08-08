@@ -1362,7 +1362,7 @@ eval (PopUpModalAdvancedRideAction PopUpModal.OnButton2Click) state = continue s
 
 eval (PopUpModalAdvancedRideAction PopUpModal.DismissPopup) state = continue state {props{showAdvancedRidePopUp = false}}
 
-eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false, safetyAudioAutoPlay = false}} [ do 
+eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false, safetyAudioAutoPlay = false, showGenericAccessibilityPopUp = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
   void $ runEffectFn1 removeMediaPlayer ""
   pure NoAction
@@ -1755,7 +1755,7 @@ getBannerConfigs state =
     then [autpPayBannerCarousel state BannerCarousal] 
     else [])
   -- <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else []) NOTE::- Deprecated the complete profile banner for now
-  <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])
+  <> (if state.props.currentStage == ST.HomeScreen && HU.shouldShowPurpleVideos state then [accessbilityBannerConfig state BannerCarousal] else [])
   <> (if state.data.cityConfig.enableAdvancedBooking && (not DS.null state.data.cityConfig.advancedRidePopUpYoutubeLink) then [advancedRideBannerCarousel state BannerCarousal] else [])
   <> getRemoteBannerConfigs
   where 

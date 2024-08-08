@@ -50,7 +50,7 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -68,6 +68,7 @@ import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
 import MerchantConfig.Utils as MU
+import MerchantConfig.Types
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import ConfigProvider as CP
 import Locale.Utils
@@ -1108,13 +1109,13 @@ accessibilityPopUpConfig state =
         cornerRadius = (PTD.Corners 15.0 true true true true),
         coverImageConfig {
           imageUrl = popupData.imageUrl
-        , visibility = if popupData.videoUrl /= "" && (state.data.config.purpleRideConfig.showPurpleVideos || (popupData.mediaType /= "Audio")) then GONE else VISIBLE
+        , visibility = if popupData.videoUrl /= "" && (HU.shouldShowPurpleVideos state || (popupData.mediaType /= "Audio")) then GONE else VISIBLE
         , height = V 160
         , width = MATCH_PARENT
         , margin = Margin 16 16 16 0
         },
         coverMediaConfig {
-          visibility = boolToVisibility $ state.data.activeRide.disabilityTag == Just ST.SAFETY || (popupData.videoUrl /= "" && (state.data.config.purpleRideConfig.showPurpleVideos || (popupData.mediaType == "Audio")))
+          visibility = boolToVisibility $ state.data.activeRide.disabilityTag == Just ST.SAFETY || (popupData.videoUrl /= "" && (HU.shouldShowPurpleVideos state || (popupData.mediaType == "Audio")))
         , width = WRAP_CONTENT
         , padding = if popupData.mediaType == "Audio" then Padding 6 6 6 6 else Padding 16 16 16 0
         , mediaType = popupData.mediaType
@@ -1267,7 +1268,7 @@ genericAccessibilityPopUpConfig state = let
         , width = MATCH_PARENT
         , padding = Padding 16 16 16 0
         , mediaType = "PortraitVideoLink"
-        , mediaUrl = state.data.config.purpleRideConfig.genericAccessibilityVideo
+        , mediaUrl = HU.getGenericAccessibilityVideo state
         , id = "GenericAccessibilityCoverVideo"
         }
     }
@@ -1303,6 +1304,13 @@ chatBlockerPopUpConfig state = let
 accessibilityConfig :: LazyCheck -> ContentConfig
 accessibilityConfig dummy = { title : "", coverMediaText : "", primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", mediaType : "", videoId : "", background : Color.lightPurple, textColor : Color.purple, clickable : false}
 
+getDisabilityTypeVideo :: ST.HomeScreenState -> String -> String
+getDisabilityTypeVideo state pwdtype =
+  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION) 
+      purpleRideConfigForVehicle = getPurpleRideConfigForVehicle state.data.linkedVehicleVariant cityConfig.purpleRideConfig
+      disabilityToVideo = DA.find (\item -> item.disabilityType == pwdtype) purpleRideConfigForVehicle.disabilityToVideo
+  in maybe "" (\obj -> obj.videoUrl) disabilityToVideo
+
 getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
 getAccessibilityPopupData state pwdtype isDriverArrived = 
   let accessibilityConfig' = accessibilityConfig Config
@@ -1321,7 +1329,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       Just ST.BLIND_AND_LOW_VISION, false -> accessibilityConfig'
                                               { secondaryText = getString CUSTOMER_HAS_LOW_VISION_CALL_THEM_INSTEAD_OF_CHATTING,
                                                 imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
-                                                videoUrl = state.data.config.purpleRideConfig.visualImpairmentVideo,
+                                                videoUrl = getDisabilityTypeVideo state (show ST.BLIND_AND_LOW_VISION),
                                                 mediaType = "VideoLink",
                                                 videoId = "BlindOrLowVisionCoverVideo"
                                               }
@@ -1335,7 +1343,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       Just ST.HEAR_IMPAIRMENT, false ->     accessibilityConfig'
                                               { secondaryText= getString CUSTOMER_HAS_POOR_HEARING_CHAT_WITH_THEM_INSTEAD_OF_CALLING ,
                                                 imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
-                                                videoUrl = state.data.config.purpleRideConfig.hearingImpairmentVideo,
+                                                videoUrl = getDisabilityTypeVideo state (show ST.HEAR_IMPAIRMENT),
                                                 mediaType = "VideoLink",
                                                 videoId = "HearingImpairmentCoverVideo"
                                               }
@@ -1349,7 +1357,7 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
       Just ST.LOCOMOTOR_DISABILITY, false -> accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_LOW_MOBILITY_GO_TO_EXACT_LOC, 
                                                 imageUrl = fetchImage FF_ASSET (getUpdatedAssets city),
-                                                videoUrl = state.data.config.purpleRideConfig.physicalImpairmentVideo, 
+                                                videoUrl = getDisabilityTypeVideo state (show ST.LOCOMOTOR_DISABILITY),
                                                 mediaType = "VideoLink",
                                                 videoId = "LocomotorDisabilityCoverVideo"
                                               }

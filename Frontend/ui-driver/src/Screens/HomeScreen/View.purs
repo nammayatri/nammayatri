@@ -998,13 +998,11 @@ driverDetail push state =
   , background Color.white900
   , clickable true
   , margin (MarginTop 5)
-  ] if rideAccStage && state.data.cityConfig.enableAdvancedBooking then [
-        tripStageTopBar push state
-    ]
-    else [ 
-      driverProfile push state,
-      accessibilityHeaderView push state (getAccessibilityHeaderText state),
-      defaultTopBar
+  ] 
+  [ driverProfile push state
+  , tripStageTopBar push state
+  , accessibilityHeaderView push state (getAccessibilityHeaderText state)
+  , defaultTopBar
     ]
 
   where
@@ -1019,15 +1017,17 @@ driverDetail push state =
               else if state.props.driverStatusSet == Online then ("2," <> Color.darkMint)
               else ("2," <> Color.blue800)
       , cornerRadius 50.0
-      , alpha if rideAccStage then 0.5 else 1.0
+      , alpha if rideStartedStage then 0.5 else 1.0
       , margin (Margin 0 10 10 10)
-      , visibility $ boolToVisibility $ not $ isJust state.data.activeRide.disabilityTag || state.data.activeRide.bookingFromOtherPlatform
+      , visibility $ boolToVisibility $ not $ isJust state.data.activeRide.disabilityTag && rideAccStage && state.data.cityConfig.enableAdvancedBooking || state.data.activeRide.bookingFromOtherPlatform
       ](DA.mapWithIndex (\index item ->
           driverStatusPill item push state index
         ) driverStatusIndicators
       ) 
     
     rideAccStage =  DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]
+    rideStartedStage = DA.any (_ == state.props.currentStage) [RideStarted, ChatWithCustomer]
+    disabiltiyRide = isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag
 
 driverProfile :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 driverProfile push state = 
@@ -1066,7 +1066,8 @@ tripStageTopBar push state =
       width MATCH_PARENT,
       height WRAP_CONTENT,
       scrollBarX false,
-      background Color.white900
+      background Color.white900,
+      visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag))
     ][
       linearLayout[
         width MATCH_PARENT,
@@ -1074,10 +1075,7 @@ tripStageTopBar push state =
         background Color.white900,
         margin $ MarginRight 16,
         gravity CENTER_VERTICAL
-      ] $ [ 
-        driverProfile push state
-      , advanceBookingSwitch
-      ] 
+      ] $ [ advanceBookingSwitch] 
       <> ( 
             map (\(Tuple childs action) -> (tripStageTopBarPill action) childs) [
               -- [

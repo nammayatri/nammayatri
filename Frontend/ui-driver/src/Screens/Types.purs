@@ -56,7 +56,7 @@ import Foreign (Foreign)
 import Screens (ScreenName)
 import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..),CoinEntity(..), PayoutVpaStatus(..))
 import Styles.Types (FontSize)
-import Common.Types.Config
+import MerchantConfig.Types
 import RemoteConfig.Types as RC
 import Services.API as API
 import Styles.Types (FontSize)
