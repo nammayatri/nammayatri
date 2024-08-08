@@ -125,7 +125,25 @@ type TipsConfig
       default :: Maybe (Array Int)
     }
 
+type SubscriptionConfigVariantLevel 
+  = { autoRickshaw :: Maybe SubscriptionConfigVariantLevelEntity,
+      suv :: Maybe SubscriptionConfigVariantLevelEntity,
+      sedan :: Maybe SubscriptionConfigVariantLevelEntity,
+      hatchback :: Maybe SubscriptionConfigVariantLevelEntity,
+      bookAny :: Maybe SubscriptionConfigVariantLevelEntity,
+      taxi :: Maybe SubscriptionConfigVariantLevelEntity,
+      taxiPlus :: Maybe SubscriptionConfigVariantLevelEntity,
+      default :: Maybe SubscriptionConfigVariantLevelEntity
+    }
 
+
+type SubscriptionConfigVariantLevelEntity = {
+   noChargesTillDate :: String,
+   lowestFeesFromDate :: String,
+   useFreeTrialLottie :: Maybe Boolean
+}
+
+  
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
 data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity
