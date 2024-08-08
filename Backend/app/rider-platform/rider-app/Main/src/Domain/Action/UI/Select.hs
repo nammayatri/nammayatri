@@ -49,6 +49,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -160,6 +161,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  Metrics.startGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST estimate.requestId.getId
   let searchRequestId = estimate.requestId
   remainingEstimates <- catMaybes <$> (QEstimate.findById `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
   unless (all (\e -> e.requestId == searchRequestId) remainingEstimates) $ throwError (InvalidRequest "All selected estimate should belong to same search request")

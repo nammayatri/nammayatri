@@ -40,3 +40,10 @@ cabal run rider-app  --enable-profiling -- +RTS -p -RTS
 cabal run dynamic-offer-driver-app  --enable-profiling -- +RTS -hc -Pa -RTS
 cabal run rider-app  --enable-profiling -- +RTS -hc -Pa -RTS
 ```
+
+
+# to use it with profeteur
+- go into nix shell and run the following command
+```
+nix-shell -p haskellPackages.profiteur
+```

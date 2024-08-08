@@ -39,6 +39,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import Tools.Auth
+import qualified Tools.Metrics as Metrics
 
 type API =
   "rideSearch"
@@ -76,7 +77,8 @@ confirm (personId, _) quoteId mbPaymentMethodId =
     confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
     confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
     let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
-    handle (errHandler dConfirmRes.booking) $
+    handle (errHandler dConfirmRes.booking) $ do
+      Metrics.startMetricsBap Metrics.INIT dConfirmRes.merchant.name dConfirmRes.searchRequestId.getId dConfirmRes.booking.merchantOperatingCityId.getId
       void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq dConfirmRes.merchant.id
 
     return $
