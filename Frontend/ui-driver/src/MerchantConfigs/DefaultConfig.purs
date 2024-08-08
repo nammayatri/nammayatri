@@ -2,7 +2,6 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
-import Common.Types.Config as CTC
 import Engineering.Helpers.Commons as EHC
 
 config :: AppConfig
@@ -167,7 +166,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
               },
-              enableHvSdk : true
+              enableHvSdk : true,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : true,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             },
             {
               cityName : "Hyderabad",
@@ -210,7 +227,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             },
             {
               cityName : "Mysore",
@@ -253,7 +288,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             },
             {
               cityName : "Delhi",
@@ -296,7 +349,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             },
             {
               cityName : "Chennai",
@@ -339,7 +410,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             },
             {
               cityName : "Coimbatore",
@@ -382,7 +471,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             },
             {
               cityName : "Puducherry",
@@ -425,7 +532,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             },
             {
               cityName : "Gurugram",
@@ -468,7 +593,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ] 
             },
             {             
               cityName : "Noida",
@@ -511,7 +654,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ] 
             },
             {
               cityName : "TamilNaduCities",
@@ -554,7 +715,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             },
             {
               cityName : "Kolkata",
@@ -601,7 +780,25 @@ config =
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ys,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ys.png"
               },
-              enableHvSdk : false
+              enableHvSdk : false,
+              purpleRideConfig : [ {
+                vehicleVariant : "Auto",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Cab",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              },
+              {
+                vehicleVariant : "Bike",
+                showVideo : false,
+                disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+                genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+              } ]
             }, 
             {
               cityName : "Kochi",
@@ -648,7 +845,25 @@ config =
               empty_referral_auto : "ny_ic_refer_now_auto_yatri_black,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_black.png",
               empty_referral_cab : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
             },
-            enableHvSdk : false
+            enableHvSdk : false,
+            purpleRideConfig : [ {
+              vehicleVariant : "Auto",
+              showVideo : false,
+              disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+              genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+            },
+            {
+              vehicleVariant : "Cab",
+              showVideo : false,
+              disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+              genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+            },
+            {
+              vehicleVariant : "Bike",
+              showVideo : false,
+              disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
+              genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+            } ]
           }
             --, For future use
             -- {
@@ -782,21 +997,21 @@ config =
   , showProfileAadhaarPan : true
 }
 
-registrationConfig :: CTC.RegistrationConfig
+registrationConfig :: RegistrationConfig
 registrationConfig = {
   supportWAN : "919625724848",
   callSupport : true,
   whatsappSupport : false
 }
 
-getStaticViewPlans :: Array CTC.StaticViewPlans
+getStaticViewPlans :: Array StaticViewPlans
 getStaticViewPlans = [
   {price : 45.0, frequency : "PER_DAY", variantCategory : "CarCategory", name : "DAILY_UNLIMITED", introductoryOffer : "FREE_RIDE_OFFER", showSelected : false, planDesc : "CAB_DAILY_UNLIMITED_OFFER"},
   {price : 9.0, frequency : "PER_RIDE", variantCategory : "CarCategory", name : "DAILY_PER_RIDE", introductoryOffer : "", showSelected : false, planDesc : "CAB_DAILY_PER_RIDE_OFFER"},
   {price : 25.0, frequency : "PER_DAY", variantCategory : "AutoCategory", name : "DAILY_UNLIMITED", introductoryOffer : "NO_CHARGES_TILL", showSelected : true, planDesc : ""}
 ]
 
-defWaitingChargesConfig :: CTC.WaitingChargesConfig
+defWaitingChargesConfig :: WaitingChargesConfig
 defWaitingChargesConfig = {
   cab : {
     freeSeconds : 300,
@@ -812,7 +1027,7 @@ defWaitingChargesConfig = {
   }
 }
 
-defRentalWaitingChargesConfig :: CTC.WaitingChargesConfig
+defRentalWaitingChargesConfig :: WaitingChargesConfig
 defRentalWaitingChargesConfig = {
   cab : {
     freeSeconds : 180,
@@ -828,7 +1043,7 @@ defRentalWaitingChargesConfig = {
   }
 }
 
-defRateCardConfig :: CTC.RateCardConfig
+defRateCardConfig :: RateCardConfig
 defRateCardConfig = {
   showLearnMore : false,
   learnMoreVideoLink : ""
