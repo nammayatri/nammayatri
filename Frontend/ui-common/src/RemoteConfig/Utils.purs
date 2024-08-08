@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -199,3 +199,53 @@ defaultTipsConfig =
   , bookAny: Nothing
   , default: Nothing
   }
+
+
+defaultSubscriptionsConfigVariantLevel :: SubscriptionConfigVariantLevel
+defaultSubscriptionsConfigVariantLevel = 
+  { sedan: Nothing
+  , suv: Nothing
+  , hatchback: Nothing
+  , autoRickshaw: Nothing
+  , taxi: Nothing
+  , taxiPlus: Nothing
+  , bookAny: Nothing
+  , default: Nothing
+  }
+
+
+defaultSubscriptionsConfigVariantLevelEntity :: SubscriptionConfigVariantLevelEntity
+defaultSubscriptionsConfigVariantLevelEntity = 
+  { 
+    noChargesTillDate : "Oct 1st 2024-*$*-ಅಕ್ಟೋಬರ್ 01, ರವರೆಗೆ-*$*-1 अक्टूबर 2024-*$*-১লা অক্টোবর, ২০২৪-*$*-ഒക്ടോബര്‍ 1, 2024-*$*-1 அக்டோபர் 2024-*$*-1 అక్టోబర్ 2024",
+    lowestFeesFromDate : "Oct 2nd 2024-*$*-ಅಕ್ಟೋಬರ್ 2, 2024-*$*-2 अक्टूबर 2024-*$*-২য় অক্টোবর, ২০২৪-*$*-രണ്ടാം ഒക്ടോബര്‍, 2024-*$*-அக்டோபர் 2, 2024-*$*-అక్టోబరు 2, 2024",
+    useFreeTrialLottie : Just false
+  }
+
+subscriptionsConfigVariantLevel :: String -> String -> SubscriptionConfigVariantLevelEntity
+subscriptionsConfigVariantLevel city variant = do
+  let
+    subscriptionConfig = runFn3 getAnyFromWindow "subscription_config_variant_level" Nothing Just
+    decodedConfig = case subscriptionConfig of
+          Just (config :: (RemoteConfig SubscriptionConfigVariantLevel)) -> config
+          Nothing -> do
+            let remoteConfig = fetchRemoteConfigString "subscription_config_variant_level"
+                decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultRemoteConfig defaultSubscriptionsConfigVariantLevel
+                _ = runFn2 setAnyInWindow "subscription_config_variant_level" decodedConfg
+            decodedConfg
+  getConfigForVariant variant $ getCityBasedConfig decodedConfig $ toLower city
+  where
+    getConfigForVariant variant config = case getSubscriptionConfig config variant of
+      Nothing -> fromMaybe defaultSubscriptionsConfigVariantLevelEntity $ getSubscriptionConfig config "default"
+      Just config -> config
+
+    getSubscriptionConfig config variant = 
+      case variant of 
+        "SEDAN" -> config.sedan
+        "SUV" -> config.suv
+        "HATCHBACK" -> config.hatchback
+        "AUTO_RICKSHAW" -> config.autoRickshaw
+        "TAXI" -> config.taxi
+        "TAXI_PLUS" -> config.taxiPlus
+        "BOOK_ANY" -> config.bookAny
+        _ -> config.default
