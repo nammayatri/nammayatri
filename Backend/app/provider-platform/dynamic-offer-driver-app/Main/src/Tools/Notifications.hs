@@ -250,7 +250,7 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Just Notification.HIGH,
-          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId (),
+          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId EmptyDynamicParam,
           dynamicParams = EmptyDynamicParam,
           body = body,
           title = title,
