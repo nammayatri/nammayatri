@@ -99,6 +99,7 @@ Person:
     enableOtpLessRide : Maybe Bool
     deviceId : Maybe Text
     informPoliceSos : Bool
+    androidId: Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>

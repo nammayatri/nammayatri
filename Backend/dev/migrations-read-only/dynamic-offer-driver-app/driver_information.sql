@@ -118,3 +118,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_registra
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_vpa_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_vpa_bank_account text ;
