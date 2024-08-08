@@ -188,7 +188,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , driverLat : 0.0
       , driverLng : 0.0
       , distance : 0
-      , waitingTime : "--"
+      , waitingTime : prevState.waitingTime
       , driverArrived : prevState.driverArrived
       , driverArrivalTime : 0
       , bppRideId : rideList.bppRideId

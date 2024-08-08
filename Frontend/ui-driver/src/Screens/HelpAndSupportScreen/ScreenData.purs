@@ -19,7 +19,7 @@ import Prelude (class Eq, (<>))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Screens.Types as ST
-import Common.Types.Config (CityConfig)
+import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Screens as Screen
 

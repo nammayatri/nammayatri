@@ -20,7 +20,6 @@ import Screens.ChooseCityScreen.ComponentConfig
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..), CarouselData)
-import Common.Types.Config
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SelectMenuButton as MenuButton
@@ -47,6 +46,7 @@ import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import MerchantConfig.Utils as MU
+import MerchantConfig.Types
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Components.ErrorModal as ErrorModal

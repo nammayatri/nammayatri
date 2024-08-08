@@ -31,7 +31,7 @@ import Data.String.Common as DSC
 import MerchantConfig.Utils
 import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
 import Domain.Payments (PaymentStatus(..))
-import Common.Types.Config (CityConfig(..), GeoJson, GeoJsonFeature, GeoJsonGeometry)
+import Common.Types.Config (GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
@@ -679,16 +679,16 @@ contactSupportNumber supportType = do
       else
         pure $ showDialer supportNumber false
 
-setForwardBatchingData :: CityConfig -> CityConfig
+setForwardBatchingData :: MCT.CityConfig -> MCT.CityConfig
 setForwardBatchingData cityConf =
   let (ForwardBatchConfigData forwardBatchRemoteConfig) = forwardBatchConfigData cityConf.cityName
   in cityConf {enableAdvancedBooking = forwardBatchRemoteConfig.is_Forward_Dispatch_Feature_Enabled, advancedRidePopUpYoutubeLink = forwardBatchRemoteConfig.advancedRidePopUpYoutubeLink, callDriverInfoPost = forwardBatchRemoteConfig.callDriverInfoPost}
 
-getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig :: Array MCT.CityConfig -> String -> MCT.CityConfig
 getCityConfig cityConfig cityName = do
   maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
     
-getCityConfigFromCityCode :: Array CityConfig -> String -> CityConfig
+getCityConfigFromCityCode :: Array MCT.CityConfig -> String -> MCT.CityConfig
 getCityConfigFromCityCode cityConfigArr cityCode =
   let cityConfig = fromMaybe defaultCityConfig $ DA.find (\item -> item.cityCode == cityCode) cityConfigArr
   in setForwardBatchingData cityConfig
@@ -890,7 +890,7 @@ checkSpecialPickupZone maybeLabel =
                   in specialPickupZone == "PickupZone"
     Nothing    -> false
 
-getChargesOb :: ST.TripType -> CTC.CityConfig -> String -> CTC.ChargesEntity
+getChargesOb :: ST.TripType -> MCT.CityConfig -> String -> CTC.ChargesEntity
 getChargesOb tripType cityConfig driverVehicle = 
   if tripType == ST.Rental then
     getRentalChargesOb cityConfig driverVehicle
@@ -899,7 +899,7 @@ getChargesOb tripType cityConfig driverVehicle =
       "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
       _ -> cityConfig.waitingChargesConfig.cab
 
-getRentalChargesOb :: CTC.CityConfig -> String -> CTC.ChargesEntity
+getRentalChargesOb :: MCT.CityConfig -> String -> CTC.ChargesEntity
 getRentalChargesOb cityConfig driverVehicle = 
   case driverVehicle of
     "AUTO_RICKSHAW" -> cityConfig.rentalWaitingChargesConfig.auto
@@ -961,3 +961,22 @@ getLatestAndroidVersion merchant =
     MOBILITY_PM -> 1
     MOBILITY_RS -> 1
     PASSCULTURE -> 1
+
+shouldShowPurpleVideos :: ST.HomeScreenState -> Boolean
+shouldShowPurpleVideos state = do
+  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION) 
+      purpleRideConfigForVehicle = getPurpleRideConfigForVehicle state.data.linkedVehicleVariant cityConfig.purpleRideConfig
+  purpleRideConfigForVehicle.showVideo
+  
+getGenericAccessibilityVideo :: ST.HomeScreenState -> String
+getGenericAccessibilityVideo state = do
+  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION) 
+      purpleRideConfigForVehicle = getPurpleRideConfigForVehicle state.data.linkedVehicleVariant cityConfig.purpleRideConfig
+  purpleRideConfigForVehicle.genericVideoForVariant
+
+getPurpleRideConfigForVehicle :: String -> MCT.PurpleRideConfigForVehicle -> MCT.VariantToDisabilityVideo
+getPurpleRideConfigForVehicle linkedVehicleVariant purpleRideConfigForCity = 
+  case linkedVehicleVariant of  
+    "AUTO_RICKSHAW" -> purpleRideConfigForCity.purpleRideConfigForAuto
+    "BIKE" -> purpleRideConfigForCity.purpleRideConfigForBikes
+    _ -> purpleRideConfigForCity.purpleRideConfigForCabs
