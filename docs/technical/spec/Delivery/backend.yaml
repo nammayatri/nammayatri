@@ -578,3 +578,37 @@ rideBookingFlow:
   OnUpdateRideStartedRiderApp:
   # if booking.initiatedAs \= AsReciever
   #   => Send SMS to Reciever with RideEndOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
+
+#### Ride Flow API Level ####
+riderApp:
+   GET:
+    endpoint: /rideBooking/list
+    # Already defined above
+
+driverApp:
+    GET:
+     endpoint: /driver/ride/list
+     exist: true
+     response: DriverRideRes
+      type:
+        DriverRideRes:
+          senderDetails: Maybe DeliveryPersonDetails
+          recieverDetails: Maybe DeliveryPersonDetails
+      funtions:
+        mkDriverRideRes: Domain.Action.UI.Ride # Changes required to make the DriverRideRes
+
+    POST:
+      endpoint: /driver/ride/:rideId/start
+      exist: true
+      request: StartRideReq
+      type:
+        Ride:
+           parcelDeliveryImage: Maybe (Id MediaFile)
+        StartRideReq:
+           parcelDeliveryImage: Maybe Text
+        # to be uploaded to s3
+
+    POST:
+      endpoint: /driver/ride/:rideId/end
+      exist: true
+      # End otp only required for Delivery
