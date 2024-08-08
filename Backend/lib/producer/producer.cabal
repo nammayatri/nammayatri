@@ -29,6 +29,7 @@ library
       App
       Environment
       Producer.Flow
+      Producer.SchedulerJob
   other-modules:
       Paths_producer
   hs-source-dirs:
