@@ -34,7 +34,7 @@ import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), splitBasedOnLanguage)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import MerchantConfig.Types (SubscriptionConfig, GradientConfig, AppConfig)
+import MerchantConfig.Types (CityConfig, SubscriptionConfig, GradientConfig, AppConfig, StaticViewPlans)
 import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
 import Services.API (ReelVideoThresholdConfig, ReelsResp, DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -43,7 +43,6 @@ import RemoteConfig as RC
 import Services.API as API
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Foldable (foldl)
-import Common.Types.Config (CityConfig, StaticViewPlans)
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
 type PlanData = {

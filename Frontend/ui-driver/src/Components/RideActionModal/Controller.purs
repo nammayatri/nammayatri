@@ -17,7 +17,7 @@ module Components.RideActionModal.Controller where
 
 import ConfigProvider
 
-import Common.Types.Config as CTC
+import MerchantConfig.Types (CityConfig)
 import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
 import Screens.Types as ST
@@ -72,7 +72,7 @@ type Config = {
   rideStartRemainingTime :: Int,
   estimatedTollCharges :: Number,
   driverVehicle :: String,
-  cityConfig :: CTC.CityConfig,
+  cityConfig :: CityConfig,
   capacity :: Mb.Maybe Int,
   serviceTierAndAC :: String,
   acRide :: Mb.Maybe Boolean,

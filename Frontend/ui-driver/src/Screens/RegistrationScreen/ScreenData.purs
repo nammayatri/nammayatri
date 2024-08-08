@@ -19,7 +19,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Language.Strings (getString)
-import Common.Types.Config (CityConfig)
+import MerchantConfig.Types (CityConfig)
 import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 import ConfigProvider
@@ -156,5 +156,6 @@ dummyCityConfig = {
                         empty_referral_cab : ""
                       },
                     gstPercentage : "18",
-                    enableHvSdk : false
+                    enableHvSdk : false,
+                    purpleRideConfig : []
 }
