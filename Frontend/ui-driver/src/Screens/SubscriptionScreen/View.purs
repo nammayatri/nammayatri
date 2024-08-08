@@ -31,6 +31,8 @@ import Components.DueDetailsList as DueDetailsList
 import Components.OptionsMenu as OptionsMenu
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Common.RemoteConfig.Types as RemoteConfig
+import Common.RemoteConfig.Utils as RemoteConfig
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -238,44 +240,49 @@ view push state =
   ]
 
 joinPlanView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-joinPlanView push state visibility' = 
+joinPlanView push state visibility' = do
+  let remoteSubscriptionsConfigVariantLevel = getRemoteSubscriptionsConfigVariantLevel
   PrestoAnim.animationSet [ Anim.fadeIn visibility' ] $
-  linearLayout
-  [ width MATCH_PARENT
-  , height MATCH_PARENT
-  , orientation VERTICAL
-  , visibility if visibility' then VISIBLE else GONE
-  , margin $ MarginBottom 48
-  ][ 
     linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
-    ][
-      lottieView state "lottieSubscriptionScreen" (Margin 0 0 0 0) (Padding 16 16 16 0)
-    , relativeLayout
+    , visibility if visibility' then VISIBLE else GONE
+    , margin $ MarginBottom 48
+    ][ 
+      linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
-      , background Color.blue600
-      ][  imageView
-          [ width $ V 116
-          , height $ V 368
-          , margin $ MarginTop 20
-          , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImageType
-          ]
-        , enjoyBenefitsView push state
-        , plansBottomView push state
+      , orientation VERTICAL
+      ][
+        lottieView state "lottieSubscriptionScreen" (Margin 0 0 0 0) (Padding 16 16 16 0) (fromMaybe false remoteSubscriptionsConfigVariantLevel.useFreeTrialLottie) --- did this as lotties were no available TODO :- need to refactor this
+      , relativeLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , background Color.blue600
+        ][  imageView
+            [ width $ V 116
+            , height $ V 368
+            , margin $ MarginTop 20
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImageType
+            ]
+          , enjoyBenefitsView push state remoteSubscriptionsConfigVariantLevel
+          , plansBottomView push state
+        ]
       ]
     ]
-  ]
   where 
     driverImageType = 
       if getValueToLocalStore VEHICLE_CATEGORY == "CarCategory" then "ny_ic_ny_driver_cab"
       else if getValueToLocalStore VEHICLE_CATEGORY == "AutoCategory" then "ny_ic_ny_driver_auto"
       else "ny_ic_ny_driver"
+    getRemoteSubscriptionsConfigVariantLevel = do
+        let vehicleVariant = getValueToLocalStore VEHICLE_VARIANT
+            city = getValueToLocalStore DRIVER_LOCATION
+        RemoteConfig.subscriptionsConfigVariantLevel city vehicleVariant
 
-enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
-enjoyBenefitsView push state = 
+enjoyBenefitsView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> RemoteConfig.SubscriptionConfigVariantLevelEntity -> PrestoDOM (Effect Unit) w
+enjoyBenefitsView push state remoteSubscriptionsConfigVariantLevel = 
   linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
@@ -318,11 +325,14 @@ enjoyBenefitsView push state =
         
     ]
     where
-      benefitsData = if state.props.joinPlanProps.isIntroductory 
-                        then [ getVarString ZERO_FEE_TILL [HU.splitBasedOnLanguage state.data.config.subscriptionConfig.noChargesTillDate],
+      benefitsData = do
+        let noChargesTillDate = remoteSubscriptionsConfigVariantLevel.noChargesTillDate
+            lowestFeesFromDate = remoteSubscriptionsConfigVariantLevel.lowestFeesFromDate
+        if state.props.joinPlanProps.isIntroductory 
+                        then [ getVarString ZERO_FEE_TILL [HU.splitBasedOnLanguage noChargesTillDate ],
                                getString ZERO_COMMISION_UNLIMITED_RIDES,
                                getString EARN_TODAY_PAY_TOMORROW,
-                               getVarString LOWEST_FEES_FROM [HU.splitBasedOnLanguage state.data.config.subscriptionConfig.lowestFeesFromDate]
+                               getVarString LOWEST_FEES_FROM [HU.splitBasedOnLanguage lowestFeesFromDate]
                              ]
                         else 
                              [ getString ZERO_COMMISION, 
@@ -769,7 +779,7 @@ myPlanBodyview push state =
           ]
         , paymentMethodView push state.data.myPlanData
       ]
-    , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0)
+    , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0) false
     , planCardView push state.data.myPlanData.planEntity true (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false [] -- Always expended
     , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)) false state.props.offerBannerProps isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
@@ -1907,8 +1917,8 @@ commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPaddin
       , padding imageViewPadding
       ]
 
-lottieView :: SubscriptionScreenState -> String -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w
-lottieView state viewId margin' padding'= 
+lottieView :: SubscriptionScreenState -> String -> Margin -> Padding -> Boolean -> forall w . PrestoDOM (Effect Unit) w
+lottieView state viewId margin' padding' useFreeTrial = 
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -1921,7 +1931,7 @@ lottieView state viewId margin' padding'=
     lottieAnimationView
     [ id (getNewIDWithTag viewId)
     , afterRender (\action-> do
-                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang (isOnFreeTrial FunctionCall) state.props.joinPlanProps.isIntroductory, lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = false}
+                  void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = lottieJsonAccordingToLang ((isOnFreeTrial FunctionCall) && (not useFreeTrial)) (state.props.joinPlanProps.isIntroductory && (not useFreeTrial)) , lottieId = (getNewIDWithTag viewId), scaleType = "CENTER_CROP", forceToUseRemote = false}
                   )(const NoAction)
     , height $ V 35
     , width MATCH_PARENT

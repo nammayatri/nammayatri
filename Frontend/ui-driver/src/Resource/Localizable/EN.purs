@@ -1283,7 +1283,7 @@ getEN stringKey =
         UNABLE_TO_LOAD_QUIZ_PLEASE_TRY_AGAIN -> "Unable to load quiz. Please try again"
         WE_GUARANTEE_YOU -> "We guarantee you:"
         LOWEST_FEES_FROM -> "Lowest Fees from {}"
-        ZERO_FEE_TILL -> "ZERO Fee till Oct 1st 2024"
+        ZERO_FEE_TILL -> "ZERO Fee till {}"
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "We are currently live with only Autorickshaws in your city"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "Stay tuned for more updates"
