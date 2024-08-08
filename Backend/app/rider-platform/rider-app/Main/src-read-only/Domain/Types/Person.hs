@@ -24,6 +24,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PersonE e = Person
   { aadhaarVerified :: Kernel.Prelude.Bool,
+    androidId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blocked :: Kernel.Prelude.Bool,
     blockedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -100,6 +101,7 @@ instance EncryptedItem Person where
     pure
       Person
         { aadhaarVerified = aadhaarVerified entity,
+          androidId = androidId entity,
           backendAppVersion = backendAppVersion entity,
           blocked = blocked entity,
           blockedAt = blockedAt entity,
@@ -168,6 +170,7 @@ instance EncryptedItem Person where
     pure
       ( Person
           { aadhaarVerified = aadhaarVerified entity,
+            androidId = androidId entity,
             backendAppVersion = backendAppVersion entity,
             blocked = blocked entity,
             blockedAt = blockedAt entity,

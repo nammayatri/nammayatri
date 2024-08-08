@@ -249,6 +249,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.paymentPending paymentPending,
       Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId,
       Se.Set Beam.payoutVpa payoutVpa,
+      Se.Set Beam.payoutVpaBankAccount payoutVpaBankAccount,
       Se.Set Beam.payoutVpaStatus payoutVpaStatus,
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),

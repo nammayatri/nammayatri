@@ -296,7 +296,8 @@ data DriverInformationRes = DriverInformationRes
     payoutVpa :: Maybe Text,
     payoutVpaStatus :: Maybe DriverInfo.PayoutVpaStatus,
     isPayoutEnabled :: Maybe Bool,
-    payoutRewardAmount :: Maybe HighPrecMoney
+    payoutRewardAmount :: Maybe HighPrecMoney,
+    payoutVpaBankAccount :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -337,7 +338,8 @@ data DriverEntityRes = DriverEntityRes
     checkIfACWorking :: Bool,
     isVehicleSupported :: Bool,
     payoutVpa :: Maybe Text,
-    payoutVpaStatus :: Maybe DriverInfo.PayoutVpaStatus
+    payoutVpaStatus :: Maybe DriverInfo.PayoutVpaStatus,
+    payoutVpaBankAccount :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -825,7 +827,8 @@ buildDriverEntityRes (person, driverInfo, driverStats) = do
         checkIfACWorking,
         isVehicleSupported = isVehicleSupported,
         payoutVpa = driverInfo.payoutVpa,
-        payoutVpaStatus = driverInfo.payoutVpaStatus
+        payoutVpaStatus = driverInfo.payoutVpaStatus,
+        payoutVpaBankAccount = driverInfo.payoutVpaBankAccount
       }
 
 deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
@@ -990,6 +993,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
           isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
           payoutVpaStatus = payoutVpaStatus,
           payoutRewardAmount = mbPayoutConfig <&> (.referralRewardAmountPerRide),
+          payoutVpaBankAccount = payoutVpaBankAccount,
           ..
         }
 

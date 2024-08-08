@@ -84,6 +84,7 @@ DriverInformation:
     latestScheduledPickup: Maybe LatLong
     latestScheduledBooking : Maybe UTCTime
     payoutVpaStatus: Maybe PayoutVpaStatus
+    payoutVpaBankAccount: Maybe Text
 
   default:
     active: "false"
