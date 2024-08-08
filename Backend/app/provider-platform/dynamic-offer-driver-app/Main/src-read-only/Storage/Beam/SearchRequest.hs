@@ -26,6 +26,7 @@ data SearchRequestT f = SearchRequestT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerCancellationDues :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     customerLanguage :: B.C f (Kernel.Prelude.Maybe Tools.Maps.Language),
+    customerNammaTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     device :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),

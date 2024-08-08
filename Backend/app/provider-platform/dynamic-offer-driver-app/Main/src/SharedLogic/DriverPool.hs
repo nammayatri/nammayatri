@@ -594,7 +594,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
         Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
-    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, ..}
+    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, ..}
 
     getRoutesForAllDrivers =
       mapM
@@ -639,6 +639,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
           serviceTier = serviceTier',
+          customerTags = Nothing,
           ..
         }
 
@@ -703,6 +704,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
     makeDriverPoolResult QP.NearestDriversResult {..} = do
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
+          customerTags = Nothing,
           ..
         }
 
@@ -929,10 +931,11 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
       DriverPoolResult
         { lat = previousRideDropLat,
           lon = previousRideDropLon,
+          customerTags = Nothing,
           ..
         }
     calculateActualDistanceCurrently _driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
-      let temp = DriverPoolResult {..}
+      let temp = DriverPoolResult {customerTags = Nothing, ..}
       computeActualDistanceOneToOne driverPoolCfg.distanceUnit merchantId merchantOperatingCityId (Just $ LatLong previousRideDropLat previousRideDropLon) (LatLong previousRideDropLat previousRideDropLon) temp
     combine driverToDestinationDistanceThreshold (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y, previousDropGeoHash = pDGeoHash}, DriverPoolWithActualDistResult {..}) =
       if actualDistanceToPickup < driverToDestinationDistanceThreshold

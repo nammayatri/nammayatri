@@ -1,6 +1,7 @@
 imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Text: Data.Text
+  TimeBound : Domain.Types.TimeBound
 
 AppDynamicLogic:
   tableName: app_dynamic_logic
@@ -10,6 +11,7 @@ AppDynamicLogic:
     description: Text
     domain: Text
     logic: Data.Aeson.Value
+    timeBounds: TimeBound|NoRelation
     order: Int
 
   constraints:
@@ -23,13 +25,22 @@ AppDynamicLogic:
       where:
         and: [merchantOperatingCityId, domain]
 
+  sqlType:
+    timeBounds: text
+
   beamType:
     logic: Text
+    timeBounds: Maybe TimeBound
 
   toTType:
     logic: (Data.String.Conversions.cs . Data.Aeson.encode)|I
+    timeBounds: Kernel.Prelude.Just|I
 
   fromTType:
     logic: (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)|I
+    timeBounds: (Kernel.Prelude.fromMaybe Domain.Types.TimeBound.Unbounded)|I
+
+  default:
+    timeBounds: "'Unbounded'"
 
   excludedFields: [merchantId]

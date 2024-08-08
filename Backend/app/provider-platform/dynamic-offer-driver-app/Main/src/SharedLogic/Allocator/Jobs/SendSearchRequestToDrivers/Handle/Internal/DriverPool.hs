@@ -53,6 +53,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters
 import Lib.Queries.GateInfo
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
+import SharedLogic.AppDynamicLogic
 import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -62,8 +63,8 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import qualified Storage.Queries.AppDynamicLogic as DAL
 import Tools.Maps as Maps
+import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 isBatchNumExceedLimit ::
@@ -345,7 +346,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType of
-            Tagged -> makeTaggedDriverPool mOCityId onlyNewDrivers batchSize' isOnRidePool
+            Tagged -> makeTaggedDriverPool mOCityId onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags
             Intelligent -> makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
             Random -> makeRandomDriverPool onlyNewDrivers batchSize'
 
@@ -558,21 +559,33 @@ makeTaggedDriverPool ::
   [DriverPoolWithActualDistResult] ->
   Int ->
   Bool ->
+  Maybe [Text] ->
   m [DriverPoolWithActualDistResult]
-makeTaggedDriverPool mOCityId onlyNewDrivers batchSize isOnRidePool = do
-  allLogics <- DAL.findByMerchantOpCityAndDomain (Just mOCityId) "POOLING"
+makeTaggedDriverPool mOCityId onlyNewDrivers batchSize isOnRidePool customerNammaTags = do
+  allLogics <- getAppDynamicLogic mOCityId "POOLING"
+  let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
+  logDebug $ "All Logics-" <> show allLogics
+  logDebug $ "Only New Drivers-" <> show onlyNewDriversWithCustomerInfo
   res <-
     foldlM
       ( \acc logics -> do
           case A.fromJSON $ JL.jsonLogic logics.logic . A.Object $ "drivers" .= A.toJSON acc <> "needOnRideDrivers" .= isOnRidePool of
-            A.Success res -> pure res
+            A.Success res -> do
+              logDebug $ "Logic-" <> show logics.logic <> "Result-" <> show res
+              pure res
             A.Error err -> do
               logError $ "failed to run this logic" <> CS.cs (A.encode logics.logic) <> " with error: " <> show err
-              pure $ if null acc then onlyNewDrivers else acc
+              pure acc
       )
-      []
+      onlyNewDriversWithCustomerInfo
       allLogics
   pure $ take batchSize res
+  where
+    updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
+      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, ..}
+
+    updateDriverPoolResult DriverPoolResult {..} =
+      DriverPoolResult {customerTags = convertTags <$> customerNammaTags, ..}
 
 sortWithDriverScore ::
   ( CacheFlow m r,

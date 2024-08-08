@@ -1,5 +1,6 @@
 module Storage.Queries.Person.GetNearestDrivers where
 
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Text as T
@@ -26,6 +27,7 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
+import qualified Tools.Utils as TU
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
@@ -48,7 +50,8 @@ data NearestDriversResult = NearestDriversResult
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe Maps.LatLong
+    latestScheduledPickup :: Maybe Maps.LatLong,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -127,4 +130,4 @@ getNearestDrivers NearestDriversReq {..} = do
       where
         mkDriverResult mbDefaultServiceTierForDriver person vehicle info dist cityServiceTiersHashMap serviceTier = do
           serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap
-          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice (getVehicleAge vehicle.mYManufacturing now) person.backendConfigVersion person.backendAppVersion info.latestScheduledBooking info.latestScheduledPickup
+          Just $ NearestDriversResult (cast person.id) person.deviceToken person.language info.onRide (roundToIntegral dist) vehicle.variant serviceTier (maybe 0 (\d -> d.priority - serviceTierInfo.priority) mbDefaultServiceTierForDriver) serviceTierInfo.isAirConditioned location.lat location.lon info.mode person.clientSdkVersion person.clientBundleVersion person.clientConfigVersion person.clientDevice (getVehicleAge vehicle.mYManufacturing now) person.backendConfigVersion person.backendAppVersion info.latestScheduledBooking info.latestScheduledPickup (TU.convertTags $ fromMaybe [] person.driverTag)

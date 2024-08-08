@@ -9,6 +9,7 @@ import qualified Data.String.Conversions
 import qualified Data.Text
 import qualified Domain.Types.AppDynamicLogic
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.TimeBound
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,7 +28,7 @@ createMany = traverse_ create
 
 findByMerchantOpCityAndDomain ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Data.Text.Text -> m ([Domain.Types.AppDynamicLogic.AppDynamicLogic]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Data.Text.Text -> m [Domain.Types.AppDynamicLogic.AppDynamicLogic])
 findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   findAllWithKV
     [ Se.And
@@ -52,9 +53,10 @@ updateByPrimaryKey (Domain.Types.AppDynamicLogic.AppDynamicLogic {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.description description,
-      Se.Set Beam.logic (((Data.String.Conversions.cs . Data.Aeson.encode)) logic),
+      Se.Set Beam.logic ((Data.String.Conversions.cs . Data.Aeson.encode) logic),
       Se.Set Beam.name name,
       Se.Set Beam.order order,
+      Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -67,9 +69,10 @@ instance FromTType' Beam.AppDynamicLogic Domain.Types.AppDynamicLogic.AppDynamic
         Domain.Types.AppDynamicLogic.AppDynamicLogic
           { description = description,
             domain = domain,
-            logic = ((Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)) logic,
+            logic = (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs) logic,
             name = name,
             order = order,
+            timeBounds = Kernel.Prelude.fromMaybe Domain.Types.TimeBound.Unbounded timeBounds,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -80,9 +83,10 @@ instance ToTType' Beam.AppDynamicLogic Domain.Types.AppDynamicLogic.AppDynamicLo
     Beam.AppDynamicLogicT
       { Beam.description = description,
         Beam.domain = domain,
-        Beam.logic = ((Data.String.Conversions.cs . Data.Aeson.encode)) logic,
+        Beam.logic = (Data.String.Conversions.cs . Data.Aeson.encode) logic,
         Beam.name = name,
         Beam.order = order,
+        Beam.timeBounds = Kernel.Prelude.Just timeBounds,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

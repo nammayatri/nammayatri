@@ -9,3 +9,8 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic ADD COLUMN merchant_operati
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic ADD PRIMARY KEY ( domain, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic ADD COLUMN time_bounds text  default 'Unbounded';

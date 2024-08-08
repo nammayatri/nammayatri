@@ -169,15 +169,12 @@ data SearchRes = SearchRes
     returnTime :: Maybe UTCTime,
     riderPreferredOption :: SearchRequest.RiderPreferredOption,
     roundTrip :: Bool,
-    isDashboardRequest :: Bool,
     searchId :: Id DSearchReq.SearchRequest,
     now :: UTCTime,
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
     merchant :: DM.Merchant,
     city :: City,
-    customerLanguage :: Maybe Maps.Language,
-    disabilityTag :: Maybe Text,
     device :: Maybe Text,
     distance :: Maybe Meters,
     duration :: Maybe Seconds,
@@ -336,16 +333,14 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       { searchId = searchRequest.id,
         gatewayUrl = merchant.gatewayUrl,
         searchRequestExpiry = searchRequest.validTill,
-        customerLanguage = searchRequest.language,
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        disabilityTag = tag,
-        taggings = getTags shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled,
+        taggings = getTags tag searchRequest person shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest,
         ..
       }
   where
-    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled = do
+    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       Just $
         def{Beckn.fulfillmentTags =
@@ -363,6 +358,12 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
                 (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"),
                 (Beckn.MANDATORY_ARBITRATION, Just "TRUE"),
                 (Beckn.COURT_JURISDICTION, Just txnCity)
+              ],
+            Beckn.personTags =
+              [ (Beckn.CUSTOMER_LANGUAGE, (Just . show) searchRequest.language),
+                (Beckn.DASHBOARD_USER, (Just . show) isDashboardRequest),
+                (Beckn.CUSTOMER_DISABILITY, (decode . encode) tag),
+                (Beckn.CUSTOMER_NAMMA_TAGS, show <$> person.customerNammaTags)
               ]
            }
 

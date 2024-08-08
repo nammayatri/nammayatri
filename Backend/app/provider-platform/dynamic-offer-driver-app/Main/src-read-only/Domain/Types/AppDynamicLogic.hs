@@ -7,6 +7,7 @@ module Domain.Types.AppDynamicLogic where
 import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.TimeBound
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -17,6 +18,7 @@ data AppDynamicLogic = AppDynamicLogic
     logic :: Data.Aeson.Value,
     name :: Data.Text.Text,
     order :: Kernel.Prelude.Int,
+    timeBounds :: Domain.Types.TimeBound.TimeBound,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

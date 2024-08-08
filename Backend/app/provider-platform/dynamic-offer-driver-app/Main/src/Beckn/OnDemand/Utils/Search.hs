@@ -103,6 +103,12 @@ buildCustomerLanguage req = do
   let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
   readMaybe . T.unpack =<< tagValue
 
+buildCustomerNammaTags :: Spec.SearchReqMessage -> Maybe [Text]
+buildCustomerNammaTags req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+  let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_NAMMA_TAGS tagGroups
+  readMaybe . T.unpack =<< tagValue
+
 checkIfDashboardSearch :: Spec.SearchReqMessage -> Maybe Bool
 checkIfDashboardSearch req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)

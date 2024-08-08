@@ -4,7 +4,6 @@
 module Beckn.OnDemand.Transformer.Search where
 
 import qualified Beckn.OnDemand.Utils.Common
-import qualified Beckn.OnDemand.Utils.Search
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types
@@ -42,10 +41,10 @@ buildBecknSearchReqV2 res@Domain.Action.UI.Search.SearchRes {..} bapConfig bapUr
 buildSearchMessageV2 :: Domain.Action.UI.Search.SearchRes -> BecknConfig -> BecknV2.OnDemand.Types.SearchReqMessage
 buildSearchMessageV2 res bapConfig = BecknV2.OnDemand.Types.SearchReqMessage {searchReqMessageIntent = tfIntent res bapConfig}
 
-tfCustomer :: Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Bool -> Maybe BecknV2.OnDemand.Types.Customer
-tfCustomer customerLanguage disabilityTag isDashboardRequest = do
+tfCustomer :: Maybe Tags.Taggings -> Maybe BecknV2.OnDemand.Types.Customer
+tfCustomer taggings = do
   let customerContact_ = Nothing
-      customerPerson_ = tfPerson customerLanguage disabilityTag isDashboardRequest
+      customerPerson_ = tfPerson taggings
       returnData = BecknV2.OnDemand.Types.Customer {customerContact = customerContact_, customerPerson = customerPerson_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -61,7 +60,7 @@ tfFulfillment Domain.Action.UI.Search.SearchRes {..} = do
       fulfillmentTags_ = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
       fulfillmentType_ = Nothing
       fulfillmentVehicle_ = Nothing
-      fulfillmentCustomer_ = tfCustomer customerLanguage disabilityTag isDashboardRequest
+      fulfillmentCustomer_ = tfCustomer taggings
       returnData = BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -96,12 +95,12 @@ tfPayment res bapConfig = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
   Just $ mkPayment' updatedPaymentTags (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams
 
-tfPerson :: Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Bool -> Maybe BecknV2.OnDemand.Types.Person
-tfPerson customerLanguage disabilityTag isDashboardRequest = do
+tfPerson :: Maybe Tags.Taggings -> Maybe BecknV2.OnDemand.Types.Person
+tfPerson taggings = do
   let personId_ = Nothing
       personImage_ = Nothing
       personName_ = Nothing
-      personTags_ = Beckn.OnDemand.Utils.Search.mkCustomerInfoTags customerLanguage disabilityTag isDashboardRequest -- TODO: move this also similar to fulfillmentTags using personTags field of taggings
+      personTags_ = Tags.convertToTagGroup . (.personTags) =<< taggings
       returnData = BecknV2.OnDemand.Types.Person {personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
