@@ -1238,7 +1238,7 @@ homeScreenFlow = do
       let
         topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
         finalEstimate = if (null topProvider) then filter (\quotes -> quotes.providerType == OFFUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList else topProvider
-        selectedEstimate = fromMaybe ChooseVehicle.config (head topProvider)
+        selectedEstimate = fromMaybe ChooseVehicle.config (head finalEstimate)
         valid = timeValidity (getCurrentUTC "") selectedEstimate.validTill
 
       if valid then do
