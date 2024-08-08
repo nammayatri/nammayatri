@@ -136,6 +136,10 @@ type API =
                       :> TokenAuth
                       :> MandatoryQueryParam "day" Day
                       :> Get '[JSON] DDriver.DriverStatsRes
+                    :<|> "verify"
+                      :> "vpaStatus"
+                      :> TokenAuth
+                      :> Post '[JSON] APISuccess
                     :<|> "photo"
                       :> ( TokenAuth
                              :> ReqBody '[JSON] DDriver.DriverPhotoUploadReq
@@ -241,6 +245,7 @@ handler =
              :<|> getInformationV2
              :<|> updateDriver
              :<|> getStats
+             :<|> verifyVpaStatus
              :<|> uploadDriverPhoto
              :<|> fetchDriverPhoto
          )
@@ -322,6 +327,9 @@ fetchDriverPhoto ids = withFlowHandlerAPI . DDriver.fetchDriverPhoto ids
 
 uploadDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverPhotoUploadReq -> FlowHandler APISuccess
 uploadDriverPhoto req = withFlowHandlerAPI . DDriver.driverPhotoUpload req
+
+verifyVpaStatus :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
+verifyVpaStatus ids = withFlowHandlerAPI $ DDriver.verifyVpaStatus ids
 
 validate :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
 validate alternateNumber = withFlowHandlerAPI . DDriver.validate alternateNumber

@@ -81,9 +81,10 @@ updatePersonalInfo ::
   Text ->
   Maybe Bool ->
   Maybe Text ->
+  Maybe Text ->
   Person ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId person = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId person = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -110,6 +111,7 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.backendAppVersion (Just deploymentVersion)]
         <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
         <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]
+        <> [Se.Set BeamP.androidId mbAndroidId | isJust mbAndroidId]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 

@@ -122,8 +122,8 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
 
     formatMessageTransformer title body booking = do
       let isRentalOrIntercity = case booking.tripCategory of
-            DTC.Rental _ -> "Rental "
-            DTC.InterCity _ _ -> "InterCity "
+            DTC.Rental _ -> "Rental"
+            DTC.InterCity _ _ -> "InterCity"
             _ -> ""
       let formattedTitle = T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity title
           fullAddress = fromMaybe "" booking.fromLocation.address.fullAddress

@@ -114,7 +114,8 @@ data ProfileRes = ProfileRes
     frontendConfigHash :: Maybe Text,
     isSafetyCenterDisabled :: Bool,
     customerReferralCode :: Maybe Text,
-    deviceId :: Maybe Text
+    deviceId :: Maybe Text,
+    androidId :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -133,7 +134,8 @@ data UpdateProfileReq = UpdateProfileReq
     disability :: Maybe Disability,
     hasDisability :: Maybe Bool,
     enableOtpLessRide :: Maybe Bool,
-    deviceId :: Maybe Text
+    deviceId :: Maybe Text,
+    androidId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -225,6 +227,7 @@ getPersonDetails (personId, _) mbToss = do
           bundleVersion = clientBundleVersion,
           clientVersion = clientSdkVersion,
           deviceId = maskText <$> deviceId,
+          androidId = maskText <$> androidId,
           ..
         }
 
@@ -261,6 +264,7 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
       deploymentVersion.getDeploymentVersion
       req.enableOtpLessRide
       (if isJust person.deviceId then Nothing else req.deviceId)
+      (if isJust person.androidId then Nothing else req.androidId)
       person
   updateDisability req.hasDisability req.disability personId
 

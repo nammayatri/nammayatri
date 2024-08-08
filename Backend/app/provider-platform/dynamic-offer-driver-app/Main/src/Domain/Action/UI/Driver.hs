@@ -74,6 +74,7 @@ module Domain.Action.UI.Driver
     acceptScheduledBooking,
     getInformationV2,
     clearDriverFeeWithCreate,
+    verifyVpaStatus,
   )
 where
 
@@ -99,6 +100,7 @@ import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.Merchant as DM
+import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
@@ -205,6 +207,7 @@ import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -285,7 +288,12 @@ data DriverInformationRes = DriverInformationRes
     isVehicleSupported :: Bool,
     checkIfACWorking :: Bool,
     frontendConfigHash :: Maybe Text,
-    bankDetails :: Maybe DOVT.BankAccountResp
+    bankDetails :: Maybe DOVT.BankAccountResp,
+    payoutVpa :: Maybe Text,
+    payoutVpaStatus :: Maybe DriverInfo.PayoutVpaStatus,
+    isPayoutEnabled :: Maybe Bool,
+    payoutRewardAmount :: Maybe HighPrecMoney,
+    payoutVpaBankAccount :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -324,7 +332,10 @@ data DriverEntityRes = DriverEntityRes
     maskedDeviceToken :: Maybe Text,
     blockStateModifier :: Maybe Text,
     checkIfACWorking :: Bool,
-    isVehicleSupported :: Bool
+    isVehicleSupported :: Bool,
+    payoutVpa :: Maybe Text,
+    payoutVpaStatus :: Maybe DriverInfo.PayoutVpaStatus,
+    payoutVpaBankAccount :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -810,7 +821,10 @@ buildDriverEntityRes (person, driverInfo, driverStats) = do
         freeTrialDaysLeft = freeTrialDaysLeft,
         maskedDeviceToken = maskedDeviceToken,
         checkIfACWorking,
-        isVehicleSupported = isVehicleSupported
+        isVehicleSupported = isVehicleSupported,
+        payoutVpa = driverInfo.payoutVpa,
+        payoutVpaStatus = driverInfo.payoutVpaStatus,
+        payoutVpaBankAccount = driverInfo.payoutVpaBankAccount
       }
 
 deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
@@ -950,6 +964,9 @@ updateMetaData (personId, _, _) req = do
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
+  mbVehicle <- QVehicle.findById id
+  let vehicleCategory = fromMaybe SV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory
   bankDetails <-
     if merchant.onlinePayment
       then do
@@ -968,6 +985,11 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
           frontendConfigHash = md5DigestHash,
           currentDuesWithCurrency = flip PriceAPIEntity merchantOperatingCity.currency <$> currentDues,
           manualDuesWithCurrency = flip PriceAPIEntity merchantOperatingCity.currency <$> manualDues,
+          payoutVpa = payoutVpa,
+          isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
+          payoutVpaStatus = payoutVpaStatus,
+          payoutRewardAmount = mbPayoutConfig <&> (.referralRewardAmountPerRide),
+          payoutVpaBankAccount = payoutVpaBankAccount,
           ..
         }
 
@@ -2184,3 +2206,10 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
         (_, _) -> Just (0.0, 0.0)
 
     calcPercentage percentage = (percentage * fee') / 100.0
+
+verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
+verifyVpaStatus (personId, _, opCityId) = do
+  void $ QDriverInformation.updatePayoutVpaStatus (Just DriverInfo.VERIFIED_BY_USER) personId
+  driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
+  fork ("processing backlog payout for driver via verify vpaStatus " <> personId.getId) $ Payout.processPreviousPayoutAmount (cast personId) driverInfo.payoutVpa opCityId
+  pure Success
