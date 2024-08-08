@@ -94,6 +94,7 @@ type CityConfig = {
   mapImage :: String,
   cityCode :: String,
   showSubscriptions :: Boolean,
+  enableGullak :: Boolean,
   enableAdvancedBooking :: Boolean,
   advancedRidePopUpYoutubeLink :: String,
   callDriverInfoPost :: Boolean,

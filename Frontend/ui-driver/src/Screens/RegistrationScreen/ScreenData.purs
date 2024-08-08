@@ -86,6 +86,7 @@ dummyCityConfig = {
                     cityName : "",
                     mapImage : "",
                     cityCode : "",
+                    enableGullak : false,
                     showSubscriptions : false,
                     enableAdvancedBooking : false,
                     advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change

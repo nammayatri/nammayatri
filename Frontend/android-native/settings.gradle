@@ -4,3 +4,6 @@ include ':mobility-common'
 include ':mobility-customer'
 include ':mobility-driver'
 include ':mobility-app'
+if (includeDynamicFeature.toBoolean()){
+    include ':dynamicfeature'
+}

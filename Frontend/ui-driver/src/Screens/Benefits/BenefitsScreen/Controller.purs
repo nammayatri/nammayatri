@@ -28,6 +28,7 @@ import Foreign (unsafeToForeign)
 import Data.Array (find)
 import Services.API
 import Effect.Uncurried (runEffectFn4)
+import JBridge as JB
 import Screens.Benefits.BenefitsScreen.Transformer (buildLmsModuleRes)
 import PrestoDOM.List (ListItem)
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -41,6 +42,7 @@ import Data.Int as DI
 import PrestoDOM.Core (processEvent)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 
 instance showAction :: Show Action where
   show _ = ""
@@ -102,6 +104,8 @@ data Action = BackPressed
             | BannerChanged String
             | BannerStateChanged String
             | NoAction
+            | GullakSDKResponse String
+            | GullakBannerClick
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -124,6 +128,13 @@ eval BackPressed state =
 eval GoToCustomerReferralTracker state = exit $ GoToCustomerReferralTrackerScreen state
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
+
+eval (GullakSDKResponse _ ) state = 
+  continueWithCmd state { props { glBannerClickable = true}}
+    [do
+      void $ EHU.terminateLoader ""
+      pure NoAction
+    ]
 
 eval ShowQRCode state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_app_qr_code_click"
@@ -227,6 +238,8 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
+
+eval GullakBannerClick state = continue state { props { glBannerClickable = false}}
   
 eval _ state = update state
 

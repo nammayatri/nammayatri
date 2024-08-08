@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, GullakConfig, defaultForwardBatchConfigData)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -199,3 +199,15 @@ defaultTipsConfig =
   , bookAny: Nothing
   , default: Nothing
   }
+
+defaultGullakConfig :: GullakConfig
+defaultGullakConfig = 
+  { image: "",
+    enabled : false
+  }
+
+gullakConfig :: String -> GullakConfig
+gullakConfig city = do
+    let config = fetchRemoteConfigString "gullak_config"
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultGullakConfig
+    getCityBasedConfig value $ toLower city

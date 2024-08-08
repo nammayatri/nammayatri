@@ -153,3 +153,8 @@ newtype WebLinkParams = WebLinkParams {
 derive instance genericWebLinkParams :: Generic WebLinkParams _
 instance decodeWebLinkParams :: Decode WebLinkParams where decode = defaultDecode
 instance encodeWebLinkParams :: Encode WebLinkParams where encode = defaultEncode
+
+type GullakConfig = {
+  image :: String,
+  enabled :: Boolean
+}

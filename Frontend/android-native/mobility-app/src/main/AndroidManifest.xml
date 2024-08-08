@@ -95,9 +95,11 @@
             android:resource="@mipmap/ic_launcher_round" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
+            tools:replace="android:resource"
             android:resource="@color/colorPrimary" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
+            tools:replace="android:value"
             android:value="General" />
 
         <receiver
