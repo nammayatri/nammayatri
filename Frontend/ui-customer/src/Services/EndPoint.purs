@@ -291,3 +291,6 @@ confirmEditLocResult bookingUpdateRequestId = (getBaseUrl "60") <> "/edit/result
 
 getMetroBookingConfig :: String -> String
 getMetroBookingConfig city = (getBaseUrl "58") <> "/frfs/config?city=" <> city
+
+multiChat :: String -> String 
+multiChat _ = (getBaseUrl "61") <> "/multichat/message"

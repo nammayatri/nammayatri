@@ -1346,3 +1346,4 @@ getBN stringKey =
         RENTAL_BOOKING -> "রেন্টাল বুকিং"
         INTERCITY_BOOKING -> "আন্তঃনগর বুকিং"
         BOOKING -> "বুকিং"
+        DRIVER -> "ড্রাইভার"

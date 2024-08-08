@@ -40,6 +40,7 @@ import Components.ErrorModal as ErrorModal
 import Components.LocationTagBarV2 as LocationTagBar
 import Components.MenuButton as MenuButton
 import Components.MessagingView as MessagingView
+import Components.MessagingView.Controller (ChatContacts(..))
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
@@ -58,11 +59,13 @@ import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
+import Data.Foldable (foldl)
 import Data.Int (toNumber)
 import Data.Int as INT
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
+import Data.String (trim)
 import Data.String.CodeUnits (stripPrefix, stripSuffix)
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
@@ -87,7 +90,7 @@ import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..), NewContacts(..))
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Services.API as API
@@ -1088,6 +1091,19 @@ messagingViewConfig state =
         , otp = state.data.driverInfoCardState.otp
         , suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
         , isKeyBoardOpen = state.props.isKeyBoardOpen
+        , enableMultiChatView = state.props.enableMultiChatView
+        , contactList = (getChatDetails state $ fromMaybe [] state.data.contactList) <> 
+                 [{ name : state.data.driverInfoCardState.driverName
+                  , number : ""
+                  , uuid : state.data.driverInfoCardState.bppRideId
+                  , recipient : "DRIVER"
+                  , enableForFollowing : false
+                  , enableForShareRide : false
+                  , contactPersonId : Nothing
+                  , notifiedViaFCM : Nothing
+                 }]
+
+        , currentChatRecipient = state.data.driverInfoCardState.currentChatRecipient       
         }
   in
     messagingViewConfig'
@@ -2435,3 +2451,19 @@ scheduledRideExistsPopUpConfig state =
 
   formatDateInHHMM :: String -> String
   formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+
+getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts
+getChatDetails state contacts = 
+  foldl
+    ( \acc item -> if (isJust item.contactPersonId && (item.enableForShareRide || item.enableForFollowing)) then 
+                      acc <> [ { name : item.name
+                        , number : item.number
+                        , uuid : state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" item.contactPersonId)
+                        , recipient : "USER"
+                        , enableForFollowing : item.enableForFollowing
+                        , enableForShareRide : item.enableForShareRide
+                        , contactPersonId : item.contactPersonId
+                        , notifiedViaFCM : item.notifiedViaFCM
+                       }]
+                    else acc
+    ) [] contacts

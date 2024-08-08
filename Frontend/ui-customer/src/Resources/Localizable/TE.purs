@@ -1361,3 +1361,4 @@ getTE stringKey =
     RENTAL_BOOKING -> "అద్దె బుకింగ్"
     INTERCITY_BOOKING -> "ఇంటర్‌సిటీ బుకింగ్"
     BOOKING -> "బుకింగ్"
+    DRIVER -> "డ్రైవర్"

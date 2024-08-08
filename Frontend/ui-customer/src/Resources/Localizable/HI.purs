@@ -1345,3 +1345,4 @@ getHI stringKey =
         RENTAL_BOOKING -> "रेंटल बुकिंग"
         INTERCITY_BOOKING -> "इंटरसिटी बुकिंग"
         BOOKING -> "बुकिंग"
+        DRIVER -> "ड्राइवर"

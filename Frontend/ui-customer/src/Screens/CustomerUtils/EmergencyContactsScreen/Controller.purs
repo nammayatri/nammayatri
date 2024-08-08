@@ -178,7 +178,7 @@ eval (ContactListClearText) state = continueWithCmd state { data { editedText = 
   ]
 
 eval (NewContactActionController (NewContactController.ContactSelected index)) state = do
-  let contact = getValidContact $ fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, enableForShareRide:false, onRide: false, priority : 0} (state.data.searchResult !! index)
+  let contact = getValidContact $ fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, enableForShareRide:false, onRide: false, priority : 0, contactPersonId : Nothing, notifiedViaFCM : Nothing} (state.data.searchResult !! index)
   let item = (getValidContact contact){isSelected = not contact.isSelected}
   if (length state.data.selectedContacts) >= 3 && not contact.isSelected then do
     _ <- pure $ toast $ getString LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED

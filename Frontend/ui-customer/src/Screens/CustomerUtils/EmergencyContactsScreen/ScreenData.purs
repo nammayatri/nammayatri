@@ -4,6 +4,7 @@ import Prelude
 
 import Foreign.Object (empty)
 import Screens.Types (EmergencyContactsScreenState(..))
+import Data.Maybe (Maybe(..))
 
 initData :: EmergencyContactsScreenState
 initData = {
@@ -23,6 +24,8 @@ initData = {
                               , enableForShareRide: false
                               , onRide : false
                               , priority: 1
+                              , contactPersonId : Nothing
+                              , notifiedViaFCM : Nothing
                               }
     , editedText : ""
     , logField : empty
