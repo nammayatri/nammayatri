@@ -166,7 +166,7 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
           logDebug $ "Payment Status: " <> show status <> " Payer Vpa: " <> show payerVpa <> " OrderId: " <> order.id.getId
           logDebug $ "Invoices: " <> show invoices
           when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && status == Payment.CHARGED) do
-            whenJust payerVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
+            whenJust payerVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
             logDebug $ "Updating Payout (Via getStatus) And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
             when (isJust payerVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
           unless (status /= Payment.CHARGED) $ do
@@ -217,7 +217,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
       logDebug $ "Invoices: " <> show invoices
       when (any (\inv -> inv.paymentMode == INV.PAYOUT_REGISTRATION_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices && transactionStatus == Payment.CHARGED) do
         let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
-        whenJust mbVpa $ \vpa -> QDI.updatePayoutVpa (Just vpa) (cast order.personId)
+        whenJust mbVpa $ \vpa -> QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast order.personId)
         logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
         when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchanOperatingCityId
       when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do

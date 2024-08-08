@@ -52,6 +52,8 @@ data DriverInformation = DriverInformation
     paymentPending :: Kernel.Prelude.Bool,
     payoutRegistrationOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    payoutVpaBankAccount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     subscribed :: Kernel.Prelude.Bool,
@@ -103,6 +105,8 @@ data DriverSummary = DriverSummary
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
@@ -112,3 +116,5 @@ $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverMode)
 
 $(mkHttpInstancesForEnum ''DriverMode)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)

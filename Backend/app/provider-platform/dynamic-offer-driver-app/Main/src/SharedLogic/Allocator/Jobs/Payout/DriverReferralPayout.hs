@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout where
 import Data.Time (addDays, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -109,7 +110,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   where
     getStatsWithVpaList dStats = do
       dInfo <- QDI.findById dStats.driverId >>= fromMaybeM (PersonNotFound dStats.driverId.getId)
-      when (isNothing dInfo.payoutVpa) do
+      when (isNothing dInfo.payoutVpa || dInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED) do
         Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 $ do
           QDailyStats.updatePayoutStatusById DS.PendingForVpa dStats.id
       pure $ DailyStatsWithVpa {dailyStats = dStats, payoutVpa = dInfo.payoutVpa}

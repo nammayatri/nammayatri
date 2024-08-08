@@ -113,3 +113,13 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_interoperabl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_registration_order_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_vpa_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_vpa_bank_account text ;

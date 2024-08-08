@@ -50,6 +50,8 @@ data DriverInformationT f = DriverInformationT
     paymentPending :: B.C f Kernel.Prelude.Bool,
     payoutRegistrationOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    payoutVpaBankAccount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    payoutVpaStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus),
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     subscribed :: B.C f Kernel.Prelude.Bool,
