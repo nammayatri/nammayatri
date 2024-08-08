@@ -244,7 +244,9 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     googleRoadsUrl :: BaseUrl,
     googleKey :: Text,
     useAdvancedDirections :: Bool,
-    googleRouteConfig :: Maps.GoogleRouteConfig
+    googleRouteConfig :: Maps.GoogleRouteConfig,
+    googlePlaceNewUrl :: BaseUrl,
+    useNewPlaces :: Bool
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
