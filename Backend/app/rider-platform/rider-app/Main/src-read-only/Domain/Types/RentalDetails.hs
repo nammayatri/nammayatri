@@ -24,4 +24,4 @@ data RentalDetails = RentalDetails
     perHourCharge :: Kernel.Types.Common.Price,
     plannedPerKmRate :: Kernel.Types.Common.Price
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
