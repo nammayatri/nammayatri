@@ -359,6 +359,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                         case NotificationTypes.REGISTRATION_APPROVED:
                             sharedPref.edit().putString(getString(R.string.REGISTRATION_APPROVED), "true").apply();
+                            NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                             break;
 
                         case NotificationTypes.REFERRAL_ACTIVATED:

@@ -110,7 +110,6 @@ mockLocationConfig state =
   ErrorModal.config
         { height = MATCH_PARENT
         , background = Color.white900
-        , corners = Corners 24.0 true true false false
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig
           { imageUrl = fetchImage FF_ASSET "ny_ic_location_unserviceable"

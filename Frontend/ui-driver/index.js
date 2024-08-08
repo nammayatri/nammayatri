@@ -188,10 +188,12 @@ function checkForReferral(viewParam, eventType) {
 
 window.onMerchantEvent = function (_event, payload) {
   console.log(payload);
+  const JOSFlags = window.JOS.getJOSflags();
   const clientPaylod = JSON.parse(payload);
   const clientId = clientPaylod.payload.clientId;
   const appName = clientPaylod.payload.appName;
   window.appName = appName;
+  window.isCUGUser = JOSFlags.isCUGUser;
   if (_event == "initiate") {
     console.log("APP_PERF INDEX_BUNDLE_INITIATE_START : ", new Date().getTime());
     if (clientId == "yatriprovider") {
