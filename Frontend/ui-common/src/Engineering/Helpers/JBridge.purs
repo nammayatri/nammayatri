@@ -293,6 +293,9 @@ foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
 foreign import getAndroidId :: Unit -> String
 foreign import getAppName :: String
+foreign import isPackageInstalled :: String -> Boolean
+foreign import requestUninstallPackage :: String -> Boolean
+
 
 type SliderConfig = { 
   id :: String,
