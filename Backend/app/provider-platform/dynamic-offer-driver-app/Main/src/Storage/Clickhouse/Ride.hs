@@ -175,7 +175,7 @@ getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to limit offset s
         Just True -> CH.desc
         _ -> CH.asc
   let sortOn = case mbSortOn of
-        Just Common.CANCELLED_RIDES -> (\_ (_, _, cancelledRides, _, _, _) -> sortBy cancelledRides)
+        Just Common.CANCELLED_RIDES -> (\_ (_, _, _, cancelledRides, _, _) -> sortBy cancelledRides)
         _ -> (\_ (_, _, completedRides, _, _, _) -> sortBy completedRides)
   res <-
     CH.findAll $
