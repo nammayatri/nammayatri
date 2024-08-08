@@ -880,7 +880,7 @@ isMockLocationConfig state =
 
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = let
-  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
+  isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.props.isOtpRideFlow
   waitTimeConfig = textConfig isQuotes  
   config = RequestInfoCard.config
   requestInfoCardConfig' = config{
@@ -1028,6 +1028,7 @@ driverInfoCardViewState state = { props:
                                   , unReadMessages : state.props.unReadMessages
                                   , showCallPopUp: state.props.showCallPopUp
                                   , isSpecialZone: state.props.isSpecialZone
+                                  , isOtpRideFlow: state.props.isOtpRideFlow
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType
                                   , merchantCity : state.props.city
@@ -1093,14 +1094,12 @@ messagingViewConfig state =
     messagingViewConfig'
 
 getDefaultPeekHeight :: ST.HomeScreenState -> Int
-getDefaultPeekHeight state = do
-  let
-    isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
-
-    height = case state.props.currentStage == ST.RideAccepted of
-      true -> if isQuotes then 285 else 381
-      false -> if isQuotes then 377 else 368
-  height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
+getDefaultPeekHeight state =
+  let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.props.isOtpRideFlow
+      height = case state.props.currentStage == ST.RideAccepted of
+        true -> if isQuotes then 285 else 381
+        false -> if isQuotes then 377 else 368
+  in height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
 metersToKm :: Int -> Boolean -> String
 metersToKm distance towardsDrop =

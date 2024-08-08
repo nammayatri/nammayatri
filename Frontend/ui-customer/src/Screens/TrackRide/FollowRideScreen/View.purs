@@ -411,6 +411,7 @@ getMessageNotificationViewConfig state =
   , user :{ userName : name
     , receiver : name
     }
+  , isOtpRideFlow : false
   }
 
 bottomSheetView ::
