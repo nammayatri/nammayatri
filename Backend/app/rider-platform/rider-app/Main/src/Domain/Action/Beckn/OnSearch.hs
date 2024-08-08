@@ -282,9 +282,11 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference _estimateInfo =
       case searchRequest.riderPreferredOption of
         Rental -> []
-        OneWay -> _estimateInfo
+        OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants)) _estimateInfo
         InterCity -> []
-        Ambulance -> _estimateInfo
+        Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
+
+    ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
 
     mkBppDetails :: Flow BppDetails
     mkBppDetails = do
