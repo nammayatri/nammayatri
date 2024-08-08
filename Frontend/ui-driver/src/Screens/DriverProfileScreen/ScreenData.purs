@@ -130,7 +130,7 @@ initData =
     paymentInfoView : false,
     enableGoto : false,
     isRideActive : false,
-    canSwitchToRental : false,
+    canSwitchToRental : Nothing,
     canSwitchToInterCity : Nothing
    }
 }
@@ -214,7 +214,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , maskedDeviceToken     : Nothing
     , operatingCity         : Nothing
     , isVehicleSupported    : Nothing
-    , canSwitchToRental     : false
+    , canSwitchToRental     : Nothing
     , checkIfACWorking    : Nothing
     , canSwitchToInterCity   : Nothing
 }

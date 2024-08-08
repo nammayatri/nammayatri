@@ -1760,7 +1760,7 @@ bookingOptionsFlow = do
   (API.DriverVehicleServiceTierResponse resp) <- HelpersAPI.callApiBT $ API.DriverVehicleServiceTierReq
   let ridePreferences' = transfromRidePreferences resp.tiers
       canSwitchToInterCity' = resp.canSwitchToInterCity
-      canSwitchToRental' = fromMaybe false resp.canSwitchToRental
+      canSwitchToRental' = resp.canSwitchToRental
       defaultRide = fromMaybe BookingOptionsScreenData.defaultRidePreferenceOption $ find (\item -> item.isDefault) ridePreferences'
 
   modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions
@@ -1811,7 +1811,7 @@ bookingOptionsFlow = do
         driverProfileFlow
     ENABLE_RENTAL_INTERCITY_RIDE state -> do
       let (UpdateDriverInfoReq initialData) = mkUpdateDriverInfoReq ""
-          requiredData = initialData{canSwitchToRental = Just state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity}
+          requiredData = initialData{canSwitchToRental = state.props.canSwitchToRental, canSwitchToInterCity = state.props.canSwitchToInterCity}
       (UpdateDriverInfoResp (GetDriverInfoResp updateDriverResp)) <- Remote.updateDriverInfoBT ((UpdateDriverInfoReq) requiredData)
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props{ canSwitchToRental = updateDriverResp.canSwitchToRental, canSwitchToInterCity = updateDriverResp.canSwitchToInterCity} })
       bookingOptionsFlow

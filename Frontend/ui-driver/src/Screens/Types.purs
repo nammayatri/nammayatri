@@ -549,7 +549,7 @@ type DriverProfileScreenProps = {
   paymentInfoView :: Boolean,
   enableGoto :: Boolean,
   isRideActive :: Boolean,
-  canSwitchToRental :: Boolean,
+  canSwitchToRental :: Maybe Boolean,
   canSwitchToInterCity :: Maybe Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
@@ -1951,7 +1951,7 @@ type RidePreference = {
 type BookingOptionsScreenProps = {
   isBtnActive :: Boolean,
   downgraded :: Boolean,
-  canSwitchToRental :: Boolean,
+  canSwitchToRental :: Maybe Boolean,
   acExplanationPopup :: Boolean,
   fromDeepLink :: Boolean,
   canSwitchToInterCity :: Maybe Boolean,

@@ -448,7 +448,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , maskedDeviceToken     :: Maybe String
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
-    , canSwitchToRental     :: Boolean
+    , canSwitchToRental     :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
     , canSwitchToInterCity  :: Maybe Boolean
     }

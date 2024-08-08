@@ -70,7 +70,7 @@ eval (ToggleRidePreference service) state =
     update state
   else updateAndExit state $ ChangeRidePreference state service
 
-eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not state.props.canSwitchToRental} } $ ToggleRentalIntercityRide state { props {canSwitchToRental = not state.props.canSwitchToRental} }
+eval ToggleRentalRide state = updateAndExit state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} } $ ToggleRentalIntercityRide state { props {canSwitchToRental = not <$> state.props.canSwitchToRental} }
 
 eval ToggleIntercityRide state = updateAndExit state {props {canSwitchToInterCity = not <$> state.props.canSwitchToInterCity}} $ ToggleRentalIntercityRide state {props {canSwitchToInterCity = not <$> state.props.canSwitchToInterCity}}
 

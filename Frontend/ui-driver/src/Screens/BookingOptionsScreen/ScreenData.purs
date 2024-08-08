@@ -23,7 +23,7 @@ initData =
   , props:
       { isBtnActive: false
       , downgraded: false
-      , canSwitchToRental: false
+      , canSwitchToRental: Nothing
       , acExplanationPopup: false
       , canSwitchToInterCity : Nothing
       , fromDeepLink : false
