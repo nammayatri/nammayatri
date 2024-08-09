@@ -167,9 +167,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
     _ -> void $ QRB.updateStatus booking.id DRB.CONFIRMED
 -- TODO: Find a Better way to remove this from on_confirm.
 -- void $ QRB.updateStatus booking.id DRB.CONFIRMED
-onConfirm (ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {..}) = do
-  createFareBreakup booking.id fareBreakups
-  DCommon.rideAssignedReqHandler DCommon.ValidatedRideAssignedReq {..}
+onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
 -- TODO: Make sure booking status is new here.
 validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
