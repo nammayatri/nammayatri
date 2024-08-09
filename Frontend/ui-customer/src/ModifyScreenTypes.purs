@@ -19,10 +19,10 @@ import Accessor (_lat, _lon)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.BackTrack (modifyState, getState)
-import Prelude (Unit, bind, ($))
+import Prelude (Unit, bind, ($), (==))
 import Resources.Constants (encodeAddress, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreen
-import Screens.Types (MyRidesScreenState, Stage(..), Trip(..), LocationSelectType(..))
+import Screens.Types (MyRidesScreenState, Stage(..), Trip(..), LocationSelectType(..), HomeScreenState)
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
@@ -101,6 +101,28 @@ updateRepeatRideDetails state = do
     }
     })
 
+updateSafetyScreenState :: HomeScreenState -> Int -> Boolean -> Boolean -> FlowBT String Unit
+updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos = do
+  modifyScreenState
+        $ NammaSafetyScreenStateType
+            ( \nammaSafetyScreen ->
+                nammaSafetyScreen
+                  { props
+                    { triggeringSos = false
+                    , timerValue = defaultTimerValue
+                    , showTestDrill = false
+                    , showShimmer = true
+                    , confirmTestDrill = showtestDrill
+                    , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                    , checkPastRide = state.props.currentStage == HomeScreen
+                    , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false
+                    }
+                  , data
+                    { rideId = state.data.driverInfoCardState.rideId
+                    , vehicleDetails = state.data.driverInfoCardState.registrationNumber
+                    }
+                  }
+            )
 
 data FlowState = HelpAndSupportScreenFlow 
                | IssueReportChatScreenFlow
