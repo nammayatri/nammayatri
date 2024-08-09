@@ -8,7 +8,7 @@ import qualified Data.Text
 import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Maps.Types
+import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Servant
@@ -31,10 +31,11 @@ data SosDetailsRes = SosDetailsRes {sos :: Kernel.Prelude.Maybe Domain.Types.Sos
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SosReq = SosReq
-  { flow :: Domain.Types.Sos.SosType,
+  { customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    flow :: Domain.Types.Sos.SosType,
     isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
-    customerLocation :: Maybe LatLong
+    notifyAllContacts :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

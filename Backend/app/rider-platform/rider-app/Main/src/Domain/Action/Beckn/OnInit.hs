@@ -33,6 +33,8 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
+import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import Tools.Notifications
 
@@ -81,7 +83,10 @@ onInit req = do
   void $ QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedFare req.paymentUrl -- TODO : 4th parameter is discounted fare (not implemented)
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt
+  person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  decRider <- decrypt person
+  safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId (Just person)
+  personENList <- QPDEN.findpersonENListWithFallBack booking.riderId (Just person)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <-
@@ -119,17 +124,19 @@ onInit req = do
             mbRiderName = decRider.firstName,
             transactionId = booking.transactionId,
             merchant = merchant,
-            nightSafetyCheck = decRider.nightSafetyChecks,
-            enableFrequentLocationUpdates =
-              decRider.shareTripWithEmergencyContactOption == Just ALWAYS_SHARE
-                || ( decRider.shareTripWithEmergencyContactOption == Just SHARE_WITH_TIME_CONSTRAINTS
-                       && checkTimeConstraintForFollowRide riderConfig now
-                   ),
+            nightSafetyCheck = safetySettings.nightSafetyChecks,
+            enableFrequentLocationUpdates = any (\item -> checkSharedOptions item riderConfig now) personENList,
             paymentId = req.paymentId,
-            enableOtpLessRide = fromMaybe False decRider.enableOtpLessRide,
+            enableOtpLessRide = safetySettings.enableOtpLessRide,
             ..
           }
   pure (onInitRes, booking)
   where
     prependZero :: Text -> Text
     prependZero str = "0" <> str
+
+    checkSharedOptions item riderConfig now =
+      case item.shareTripWithEmergencyContactOption of
+        Just ALWAYS_SHARE -> True
+        Just SHARE_WITH_TIME_CONSTRAINTS -> checkTimeConstraintForFollowRide riderConfig now
+        _ -> False

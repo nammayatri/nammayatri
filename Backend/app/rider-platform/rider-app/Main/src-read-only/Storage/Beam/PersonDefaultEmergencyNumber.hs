@@ -6,6 +6,7 @@
 module Storage.Beam.PersonDefaultEmergencyNumber where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
@@ -23,7 +24,8 @@ data PersonDefaultEmergencyNumberT f = PersonDefaultEmergencyNumberT
     mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     name :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,
-    priority :: B.C f Kernel.Prelude.Int
+    priority :: B.C f Kernel.Prelude.Int,
+    shareTripWithEmergencyContactOption :: B.C f (Kernel.Prelude.Maybe Domain.Types.Person.RideShareOptions)
   }
   deriving (Generic, B.Beamable)
 

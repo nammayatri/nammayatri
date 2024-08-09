@@ -2,6 +2,7 @@ imports:
   Person: Domain.Types.Person
   EncryptedHashedField: Kernel.External.Encryption
   Merchant: Domain.Types.Merchant
+  RideShareOptions: Domain.Types.Person
 
 PersonDefaultEmergencyNumber:
   derives: Generic
@@ -16,6 +17,7 @@ PersonDefaultEmergencyNumber:
     enableForShareRide: Bool
     merchantId: Maybe (Id Merchant)
     priority: Int
+    shareTripWithEmergencyContactOption : Maybe RideShareOptions
 
   # beamType: -- Why do this its already having a default value
   #   enableForShareRide: Maybe Bool
