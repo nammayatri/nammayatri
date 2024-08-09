@@ -74,7 +74,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min, (>>>))
 import Mobility.Prelude (capitalize)
-import ModifyScreenState (modifyScreenState, updateRepeatRideDetails, FlowState(..))
+import ModifyScreenState (modifyScreenState, updateSafetyScreenState, updateRepeatRideDetails, FlowState(..))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling (delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
@@ -2097,26 +2097,7 @@ homeScreenFlow = do
       rentalScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
     GO_TO_NAMMASAFETY state triggerSos showtestDrill -> do
-      modifyScreenState
-        $ NammaSafetyScreenStateType
-            ( \nammaSafetyScreen ->
-                nammaSafetyScreen
-                  { props
-                    { triggeringSos = false
-                    , timerValue = defaultTimerValue
-                    , showTestDrill = false
-                    , showShimmer = true
-                    , confirmTestDrill = showtestDrill
-                    , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
-                    , checkPastRide = state.props.currentStage == HomeScreen
-                    , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false
-                    }
-                  , data
-                    { rideId = state.data.driverInfoCardState.rideId
-                    , vehicleDetails = state.data.driverInfoCardState.registrationNumber
-                    }
-                  }
-            )
+      updateSafetyScreenState state defaultTimerValue triggerSos showtestDrill
       case (triggerSos || showtestDrill) of
         true -> do
           let
@@ -2132,10 +2113,12 @@ homeScreenFlow = do
       case res of
         Right resp -> do
           void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
-          when (isSafe)
-            $ do
-                void $ pure $ toast $ getString STR.GLAD_TO_KNOW_YOU_ARE_SAFE
-                pure unit
+          if isSafe then do
+              void $ pure $ toast $ getString STR.GLAD_TO_KNOW_YOU_ARE_SAFE
+              pure unit
+          else do
+            updateSafetyScreenState state defaultTimerValue true false
+            activateSafetyScreenFlow
         Left err -> do
           void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           pure unit
