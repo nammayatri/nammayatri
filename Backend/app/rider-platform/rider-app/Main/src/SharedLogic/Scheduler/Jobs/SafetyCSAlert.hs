@@ -69,8 +69,8 @@ createSafetyTicket person ride = do
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   phoneNumber <- mapM decrypt person.mobileNumber
-  let rideInfo = buildRideInfo ride person phoneNumber
-      kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+  rideInfo <- buildRideInfo ride person phoneNumber
+  let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
   ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo DSos.CSAlertSosTicket riderConfig.kaptureConfig.disposition kaptureQueue))
   ticketId <- do
     case ticketResponse of
@@ -106,24 +106,26 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue = do
       DSos.CSAlertSosTicket -> "SOS ticket created for night safety when rider didn't picked exotel call"
       _ -> "SOS activated"
 
-buildRideInfo :: DRide.Ride -> DP.Person -> Maybe Text -> Ticket.RideInfo
-buildRideInfo ride person phoneNumber =
-  Ticket.RideInfo
-    { rideShortId = ride.shortId.getShortId,
-      rideCity = show person.currentCity,
-      customerName = Just $ SLP.getName person,
-      customerPhoneNo = phoneNumber,
-      driverName = Just ride.driverName,
-      driverPhoneNo = Just ride.driverMobileNumber,
-      vehicleNo = ride.vehicleNumber,
-      vehicleCategory = Just $ show ride.vehicleVariant,
-      vehicleServiceTier = show <$> ride.vehicleServiceTierType,
-      status = show ride.status,
-      rideCreatedAt = ride.createdAt,
-      pickupLocation = castLocationAPIEntity ride.fromLocation,
-      dropLocation = castLocationAPIEntity <$> ride.toLocation,
-      fare = Nothing
-    }
+buildRideInfo :: EncFlow m r => DRide.Ride -> DP.Person -> Maybe Text -> m Ticket.RideInfo
+buildRideInfo ride person phoneNumber = do
+  driverPhoneNo <- mapM decrypt ride.driverPhoneNumber
+  pure
+    Ticket.RideInfo
+      { rideShortId = ride.shortId.getShortId,
+        rideCity = show person.currentCity,
+        customerName = Just $ SLP.getName person,
+        customerPhoneNo = phoneNumber,
+        driverName = Just ride.driverName,
+        driverPhoneNo,
+        vehicleNo = ride.vehicleNumber,
+        vehicleCategory = Just $ show ride.vehicleVariant,
+        vehicleServiceTier = show <$> ride.vehicleServiceTierType,
+        status = show ride.status,
+        rideCreatedAt = ride.createdAt,
+        pickupLocation = castLocationAPIEntity ride.fromLocation,
+        dropLocation = castLocationAPIEntity <$> ride.toLocation,
+        fare = Nothing
+      }
   where
     castLocationAPIEntity ent =
       Ticket.Location

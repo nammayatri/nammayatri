@@ -144,7 +144,7 @@ buildRideEntity booking updRide newRideInfo = do
       unless (existingRide.bookingId == booking.id) $ throwError (InvalidRequest "Invalid rideId")
       pure $ UpdatedRide $ DUpdatedRide {ride = updRide existingRide, rideOldStatus = existingRide.status}
 
-rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
+rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "storeRidesTimeLimit" r Int) => DB.BookingStatus -> DRide.RideStatus -> DB.Booking -> RideEntity -> m ()
 rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
   unless (booking.status == bookingNewStatus) $ do
     QB.updateStatus booking.id bookingNewStatus

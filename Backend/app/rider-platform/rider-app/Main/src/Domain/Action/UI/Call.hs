@@ -278,7 +278,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
 
     getNumberBasedOnType numberType ride =
       case numberType of
-        PrimaryNumber -> return $ fromMaybe ride.driverMobileNumber ride.driverPhoneNumber
+        PrimaryNumber -> maybe (throwError $ RideFieldNotPresent "driverMobileNumber") pure ride.driverPhoneNumber
         AlternateNumber ->
           maybe (throwError $ RideFieldNotPresent "driverAlternateNumber") pure ride.driverAlternateNumber
 
@@ -351,12 +351,19 @@ getPersonPhone Person {..} = do
   let phonenum = (<>) <$> mobileCountryCode <*> decMobNum
   phonenum & fromMaybeM (InternalError "Customer has no phone number.")
 
+-- | Get driver's mobile phone
+getDriverPhone :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SRide.Ride -> m Text
+getDriverPhone ride = do
+  driverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
+  driverPhoneNumber & fromMaybeM (RideFieldNotPresent "driverMobileNumber")
+
 -- | Returns phones pair
 getCustomerAndDriverPhones :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SRide.Ride -> BT.Booking -> m (Text, Text)
 getCustomerAndDriverPhones ride booking = do
   person <- getPerson booking
   customerPhone <- getPersonPhone person
-  return (customerPhone, ride.driverMobileNumber)
+  driverPhone <- getDriverPhone ride
+  return (customerPhone, driverPhone)
 
 throwCallError ::
   ( HasCallStack,

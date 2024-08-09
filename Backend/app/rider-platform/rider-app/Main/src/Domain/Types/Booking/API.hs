@@ -33,6 +33,7 @@ import Domain.Types.Sos as DSos
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (elem, id, length, null)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -186,6 +187,7 @@ data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 makeBookingAPIEntity ::
+  EncFlow m r =>
   Booking ->
   Maybe DRide.Ride ->
   [DRide.Ride] ->
@@ -200,60 +202,62 @@ makeBookingAPIEntity ::
   Bool ->
   Bool ->
   Maybe BookingCancellationReasonAPIEntity ->
-  BookingAPIEntity
+  m BookingAPIEntity
 makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
       providerNum = fromMaybe "+91" bppDetails.supportNumber
-  BookingAPIEntity
-    { id = booking.id,
-      status = booking.status,
-      agencyName = bppDetails.name,
-      agencyNumber = Just providerNum,
-      estimatedFare = booking.estimatedFare.amountInt,
-      discount = booking.discount <&> (.amountInt),
-      estimatedTotalFare = booking.estimatedTotalFare.amountInt,
-      estimatedFareWithCurrency = mkPriceAPIEntity booking.estimatedFare,
-      discountWithCurrency = mkPriceAPIEntity <$> booking.discount,
-      estimatedTotalFareWithCurrency = mkPriceAPIEntity booking.estimatedTotalFare,
-      fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation,
-      initialPickupLocation = SLoc.makeLocationAPIEntity booking.initialPickupLocation,
-      rideList = allRides <&> makeRideAPIEntity,
-      hasNightIssue = hasNightIssue,
-      tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
-      estimatedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> estimatedFareBreakups,
-      fareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
-      rideScheduledTime = booking.startTime,
-      bookingDetails,
-      rideStartTime = activeRide >>= (.rideStartTime),
-      rideEndTime = activeRide >>= (.rideEndTime),
-      estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
-      estimatedDistanceWithUnit = booking.estimatedDistance,
-      estimatedDuration = booking.estimatedDuration,
-      duration = getRideDuration activeRide,
-      merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
-      specialLocationTag = booking.specialLocationTag,
-      specialLocationName = booking.specialLocationName,
-      paymentMethodId = paymentMethodId,
-      paymentUrl = booking.paymentUrl,
-      createdAt = booking.createdAt,
-      updatedAt = booking.updatedAt,
-      hasDisability = hasDisability,
-      sosStatus = mbSosStatus,
-      isBookingUpdated = booking.isBookingUpdated,
-      isValueAddNP,
-      vehicleServiceTierType = booking.vehicleServiceTierType,
-      vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
-      vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
-      isAirConditioned = booking.isAirConditioned,
-      serviceTierName = booking.serviceTierName,
-      serviceTierShortDesc = booking.serviceTierShortDesc,
-      driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
-      driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
-      isScheduled = booking.isScheduled,
-      cancellationReason = mbCancellationReason,
-      isAlreadyFav = activeRide >>= (.isAlreadyFav),
-      favCount = activeRide >>= (.favCount)
-    }
+  allRides' <- Kernel.Prelude.mapM makeRideAPIEntity allRides
+  pure
+    BookingAPIEntity
+      { id = booking.id,
+        status = booking.status,
+        agencyName = bppDetails.name,
+        agencyNumber = Just providerNum,
+        estimatedFare = booking.estimatedFare.amountInt,
+        discount = booking.discount <&> (.amountInt),
+        estimatedTotalFare = booking.estimatedTotalFare.amountInt,
+        estimatedFareWithCurrency = mkPriceAPIEntity booking.estimatedFare,
+        discountWithCurrency = mkPriceAPIEntity <$> booking.discount,
+        estimatedTotalFareWithCurrency = mkPriceAPIEntity booking.estimatedTotalFare,
+        fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation,
+        initialPickupLocation = SLoc.makeLocationAPIEntity booking.initialPickupLocation,
+        rideList = allRides',
+        hasNightIssue = hasNightIssue,
+        tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
+        estimatedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> estimatedFareBreakups,
+        fareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
+        rideScheduledTime = booking.startTime,
+        bookingDetails,
+        rideStartTime = activeRide >>= (.rideStartTime),
+        rideEndTime = activeRide >>= (.rideEndTime),
+        estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
+        estimatedDistanceWithUnit = booking.estimatedDistance,
+        estimatedDuration = booking.estimatedDuration,
+        duration = getRideDuration activeRide,
+        merchantExoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
+        specialLocationTag = booking.specialLocationTag,
+        specialLocationName = booking.specialLocationName,
+        paymentMethodId = paymentMethodId,
+        paymentUrl = booking.paymentUrl,
+        createdAt = booking.createdAt,
+        updatedAt = booking.updatedAt,
+        hasDisability = hasDisability,
+        sosStatus = mbSosStatus,
+        isBookingUpdated = booking.isBookingUpdated,
+        isValueAddNP,
+        vehicleServiceTierType = booking.vehicleServiceTierType,
+        vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
+        vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
+        isAirConditioned = booking.isAirConditioned,
+        serviceTierName = booking.serviceTierName,
+        serviceTierShortDesc = booking.serviceTierShortDesc,
+        driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
+        driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
+        isScheduled = booking.isScheduled,
+        cancellationReason = mbCancellationReason,
+        isAlreadyFav = activeRide >>= (.isAlreadyFav),
+        favCount = activeRide >>= (.favCount)
+      }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
     getRideDuration mbRide = do
@@ -326,7 +330,7 @@ getActiveSos mbRide personId = do
           return $ mockSos <&> (.status)
         Just sos -> return $ Just sos.status
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
+buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
 buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findByRBId booking.id
@@ -355,7 +359,7 @@ buildBookingAPIEntity booking personId = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
+  makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
   where
     makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
     makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
@@ -370,26 +374,28 @@ favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 
 -- TODO move to Domain.Types.Ride.Extra
-makeRideAPIEntity :: DRide.Ride -> RideAPIEntity
-makeRideAPIEntity DRide.Ride {..} =
-  let driverMobileNumber' = if status `elem` [DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
+makeRideAPIEntity :: EncFlow m r => DRide.Ride -> m RideAPIEntity
+makeRideAPIEntity DRide.Ride {..} = do
+  decryptedDriverNumber <- mapM decrypt driverPhoneNumber
+  let driverMobileNumber' = if status `elem` [DRide.NEW, DRide.INPROGRESS] then decryptedDriverNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
       vehicleColor' = fromMaybe "NA" vehicleColor -- TODO::remove this default value
-   in RideAPIEntity
-        { shortRideId = shortId,
-          driverNumber = driverMobileNumber',
-          driverRatings = driverRating',
-          driverRegisteredAt = Just driverRegisteredAt',
-          rideOtp = otp,
-          computedPrice = totalFare <&> (.amountInt),
-          computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
-          chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
-          chargeableRideDistanceWithUnit = chargeableDistance,
-          traveledRideDistance = traveledDistance,
-          vehicleColor = vehicleColor',
-          allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
-          allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
-          ..
-        }
+  pure
+    RideAPIEntity
+      { shortRideId = shortId,
+        driverNumber = driverMobileNumber',
+        driverRatings = driverRating',
+        driverRegisteredAt = Just driverRegisteredAt',
+        rideOtp = otp,
+        computedPrice = totalFare <&> (.amountInt),
+        computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
+        chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
+        chargeableRideDistanceWithUnit = chargeableDistance,
+        traveledRideDistance = traveledDistance,
+        vehicleColor = vehicleColor',
+        allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
+        allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
+        ..
+      }

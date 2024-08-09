@@ -39,10 +39,10 @@ import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.Person ()
 import Tools.Metrics (CoreMetrics)
 
-createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
+createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int, EncFlow m r) => Ride -> m ()
 createRide' ride = createWithKV ride >> appendByDriverPhoneNumber ride
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
+create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int, EncFlow m r) => Ride -> m ()
 create ride = do
   _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
   _ <- whenJust ride.toLocation $ \location -> processLocation location
@@ -50,7 +50,7 @@ create ride = do
   where
     processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
 
-createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
+createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int, EncFlow m r) => Ride -> m ()
 createRide ride = do
   fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
   mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId) ride.toLocation
@@ -208,7 +208,7 @@ roundToMidnightUTCToDate :: UTCTime -> UTCTime
 roundToMidnightUTCToDate (UTCTime day _) = UTCTime (addDays 1 day) 0
 
 findAllRideItems ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   Id Merchant ->
   Int ->
   Int ->
@@ -222,6 +222,7 @@ findAllRideItems ::
   m [RideItem]
 findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now = do
   dbConf <- getMasterBeamConfig
+  driverMobileNumberHash <- traverse getDbHash mbDriverPhone
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
@@ -232,7 +233,7 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                   booking.merchantId B.==?. B.val_ (getId merchantID)
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> person.mobileNumberHash B.==?. B.val_ (Just hash)) mbCustomerPhoneDBHash
-                    B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverMobileNumber -> ride.driverMobileNumber B.==?. B.val_ driverMobileNumber) mbDriverPhone
+                    B.&&?. (ride.driverNumberHash B.==?. B.val_ driverMobileNumberHash)
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
@@ -384,7 +385,7 @@ extractRideIds :: KVDBAnswer [ByteString] -> [Text]
 extractRideIds (Right value) = TE.decodeUtf8 <$> value
 extractRideIds _ = []
 
-findLatestByDriverPhoneNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+findLatestByDriverPhoneNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Text -> m (Maybe Ride)
 findLatestByDriverPhoneNumber driverMobileNumber = do
   let lookupKey = driverMobileNumberKey driverMobileNumber
   rideIds_ <- L.runKVDB meshConfig.kvRedis $ L.smembers lookupKey
@@ -408,13 +409,14 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           (Just (Se.Desc BeamR.createdAt))
         <&> listToMaybe
 
-    findLatestActiveByDriverNumber :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+    findLatestActiveByDriverNumber :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
     findLatestActiveByDriverNumber driverNum =
       do
         let limit = 1
+        driverNumberHash <- getDbHash driverNum
         findAllWithOptionsKV
           [ Se.And
-              [ Se.Is BeamR.driverMobileNumber $ Se.Eq driverNum,
+              [ Se.Is BeamR.driverNumberHash $ Se.Eq $ Just driverNumberHash,
                 Se.Is BeamR.status $ Se.Eq Ride.NEW
               ]
           ]
@@ -423,10 +425,11 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           Nothing
         <&> listToMaybe
 
-appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
+appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r, EncFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 appendByDriverPhoneNumber ride = do
   storeRidesTimeLimit <- asks (.storeRidesTimeLimit)
-  let lookupKey = driverMobileNumberKey ride.driverMobileNumber
+  driverPhoneNo <- mapM decrypt ride.driverPhoneNumber
+  let lookupKey = driverMobileNumberKey (fromMaybe "" driverPhoneNo)
       rideId = [TE.encodeUtf8 $ getId ride.id]
       expTime = toInteger storeRidesTimeLimit -- 60 minutes
   void $

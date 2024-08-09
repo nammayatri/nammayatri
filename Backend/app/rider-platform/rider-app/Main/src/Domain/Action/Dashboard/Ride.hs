@@ -242,6 +242,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
 buildRideListItem :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
+  driverPhoneNo <- mapM decrypt ride.driverPhoneNumber
   pure
     Common.RideListItem
       { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) ride.shortId,
@@ -250,7 +251,7 @@ buildRideListItem QRide.RideItem {..} = do
         customerName = person.firstName,
         customerPhoneNo,
         driverName = ride.driverName,
-        driverPhoneNo = ride.driverMobileNumber,
+        driverPhoneNo = fromMaybe "NA" driverPhoneNo,
         vehicleNo = ride.vehicleNumber,
         endOtp = ride.endOtp,
         nextStopLocation = getStopFromBookingDetails bookingDetails,
@@ -361,6 +362,7 @@ rideInfo merchantId reqRideId = do
         _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  driverPhoneNo <- mapM decrypt ride.driverPhoneNumber
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
@@ -372,7 +374,7 @@ rideInfo merchantId reqRideId = do
         customerPickupLocation = mkCommonBookingLocation booking.fromLocation,
         customerDropLocation = mbtoLocation,
         driverName = ride.driverName,
-        driverPhoneNo = Just ride.driverMobileNumber,
+        driverPhoneNo,
         driverRegisteredAt = ride.driverRegisteredAt,
         vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
