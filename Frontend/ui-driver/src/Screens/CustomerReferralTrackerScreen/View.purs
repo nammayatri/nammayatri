@@ -131,7 +131,7 @@ view push state =
         ]
     , if state.props.calendarState.calendarPopup then Calendar.view (push <<< CalendarAC) (calendarConfig state) else dummyView state
     , if state.data.currentStage == ReferralSteps then referralStepsView push state else dummyView state
-    , if state.data.currentStage == UPIDetails then upiDetailsScreen push state else dummyView state
+    , if state.data.currentStage == UPIDetails && (not state.props.showShimmer) then upiDetailsScreen push state else dummyView state
     , if state.data.currentStage == TransactionHistory then transactionHistoryView push state else dummyView state
     , if state.props.showMenu && state.data.currentStage == Tracker then menuView push state else dummyView state
     , if (any (_ == state.data.orderStatus) [Just CHARGED, Just FAILED]) && state.props.showInfoPopUp then infoCardView push state else dummyView state

@@ -67,6 +67,8 @@ import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Prim.Boolean (True)
 import Debug
+import Constants (languageKey)
+import Locale.Utils (getLanguageLocale)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -371,6 +373,7 @@ view push state =
                , margin state.secondaryText.suffixImage.margin
              ]
           ]
+        , upiView push state
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
         , linearLayout
@@ -668,3 +671,41 @@ parseConerRadius corners =
                 Corners radius _ _ _ _ -> radius
                 Corner radius -> radius
     in spy "rd" rd 
+
+upiView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+upiView push state = 
+  let imageConfig = state.upiDetailConfig.imageConfig
+      hasSecondaryText = state.upiDetailConfig.accountName /= ""
+  in
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ MarginTop 16
+  , cornerRadius 12.0
+  , background Color.grey700
+  , padding $ Padding 12 8 12 8
+  , gravity CENTER_VERTICAL
+  , visibility state.upiDetailConfig.visibility
+  ][imageView
+    [ imageWithFallback $ imageConfig.imageUrl
+    , height $ imageConfig.height
+    , width $ imageConfig.width
+    , margin $ imageConfig.margin
+    , padding $ imageConfig.padding
+    ]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ PaddingBottom $ if ((getLanguageLocale languageKey) == "EN_US") then 4 else 0
+    ][textView $
+      [ text state.upiDetailConfig.upiID
+      , color Color.black800
+      ] <> FontStyle.subHeading3 TypoGraphy 
+    , textView $
+      [ text state.upiDetailConfig.accountName
+      , color Color.black700
+      , visibility $ boolToVisibility $ hasSecondaryText
+      ] <> FontStyle.body23 TypoGraphy 
+    ]
+  ]
