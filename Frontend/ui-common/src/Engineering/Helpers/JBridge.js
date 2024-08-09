@@ -2000,7 +2000,10 @@ export const shareImageMessage = function (message) {
     try {
       if (JBridge.shareImageMessage && methodArgumentCount("shareImageMessage") == 3) {
         JBridge.shareImageMessage(message, "", JSON.stringify(data));
-      } else {
+      } else if (window.__OS == "IOS" && JBridge.shareImageMessage) {
+        JBridge.shareImageMessage(message, "", JSON.stringify(data));
+      }
+      else {
         if (JBridge.shareTextMessage) {
           JBridge.shareTextMessage("", message);
         }
