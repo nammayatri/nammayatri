@@ -21,6 +21,10 @@ data EmergencyContactsStatusRes = EmergencyContactsStatusRes {details :: [API.Ty
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FollowRideCustomerDetailsRes = FollowRideCustomerDetailsRes {bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking, customerName :: Data.Text.Text, customerPhone :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data Followers = Followers {bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking, mobileNumber :: Data.Text.Text, name :: Kernel.Prelude.Maybe Data.Text.Text, priority :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

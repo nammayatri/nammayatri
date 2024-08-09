@@ -821,15 +821,14 @@ notifyRideStartToEmergencyContacts booking ride = do
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
-  let shouldShare =
-        rider.shareTripWithEmergencyContactOption == Just ALWAYS_SHARE
-          || (rider.shareTripWithEmergencyContactOption == Just SHARE_WITH_TIME_CONSTRAINTS && checkTimeConstraintForFollowRide riderConfig now)
+  personENList <- QPDEN.findAllByPersonId booking.riderId
+  let isENUpdated = isUpdatedInEN personENList
+  let shouldShare = isENUpdated || checkSharedOptions rider riderConfig now
   if shouldShare
     then do
       let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-      emContacts <- QPDEN.findAllByPersonId booking.riderId
-      decEmContacts <- decrypt `mapM` emContacts
-      let followingContacts = filter (.enableForFollowing) decEmContacts
+      decEmContacts <- decrypt `mapM` personENList
+      let followingContacts = filter (\contact -> bool contact.enableForFollowing (checkSharedOptions contact riderConfig now) isENUpdated) decEmContacts
       for_ followingContacts \contact -> do
         case contact.contactPersonId of
           Just personId -> do
@@ -838,6 +837,14 @@ notifyRideStartToEmergencyContacts booking ride = do
           Nothing -> sendSMS contact rider.firstName trackLink
     else logInfo "Follow ride is not enabled"
   where
+    checkSharedOptions item riderConfig now =
+      item.shareTripWithEmergencyContactOption == Just ALWAYS_SHARE
+        || ( item.shareTripWithEmergencyContactOption == Just SHARE_WITH_TIME_CONSTRAINTS
+               && checkTimeConstraintForFollowRide riderConfig now
+           )
+
+    isUpdatedInEN personENList = not $ any (\item -> isJust item.shareTripWithEmergencyContactOption) personENList
+
     updateFollowsRideCount emPersonId = do
       void $ CQFollowRide.updateFollowRideList emPersonId booking.riderId True
       Person.updateFollowsRide True emPersonId
