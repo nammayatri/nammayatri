@@ -1581,3 +1581,9 @@ getKN stringKey =
         REMOVE_EYEWERE -> "ದಯವಿಟ್ಟು ಕನ್ನಡಕ ಅಥವಾ ಸನ್ಗ್ಲಾಸ್ ಯಾವುದಾದರೂ ಇದ್ದರೆ ತೆಗೆದುಹಾಕಿ"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "ಚಿತ್ರದ ಮೌಲ್ಯೀಕರಣವು ಮಿತಿಯನ್ನು ಮೀರಿದೆ"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "ಪ್ಯಾನ್ ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ"
+        RIDE_CANCELLATION_RATE -> "ಸವಾರಿ ರದ್ದು ದರ"
+        CANCELLATION_RATE_TRIVIA -> "ರದ್ದು ದರವನ್ನು ಕಡಿಮೆ ಮಾಡುವ ವಿಧಾನಗಳು:"
+        HIGH_CANCELLATION_RATE -> "ರದ್ದು ದರ ಚಾಲಕರ ಮಧ್ಯೆ 90% ಕ್ಕಿಂತ ಹೆಚ್ಚಾಗಿದೆ"
+        LAST_N_DAYS n -> "(ಕೊನೆಯ " <> n <> " ದಿನಗಳು)"
+        CANCELLATION_RATE_TRIVIA_2 -> "ನೀವು ರದ್ದು ಮಾಡದಿದ್ದರೆ ಏನು ಆಗುತ್ತದೆ?"
+

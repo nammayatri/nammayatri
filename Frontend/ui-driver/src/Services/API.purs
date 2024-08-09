@@ -451,6 +451,10 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , canSwitchToRental     :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
     , canSwitchToInterCity  :: Maybe Boolean
+    , cancellationRateInWindow :: Maybe Int
+    , cancelledRidesCountInWindow :: Maybe Int
+    , assignedRidesCountInWindow :: Maybe Int
+    , windowSize :: Maybe Int
     }
 
 

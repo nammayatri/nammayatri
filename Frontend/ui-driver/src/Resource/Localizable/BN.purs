@@ -1583,3 +1583,8 @@ getBN stringKey =
         REMOVE_EYEWERE -> "অনুগ্রহ করে চশমা বা সানগ্লাস সরিয়ে ফেলুন যদি থেকে থাকে।"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "চিত্রের বৈধতা সীমা ছাড়িয়ে গেছে।"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "প্যান যাচাই ব্যর্থ হয়েছে।"
+        RIDE_CANCELLATION_RATE -> "রাইড বাতিলের হার"
+        CANCELLATION_RATE_TRIVIA -> "বাতিলের হার কমানোর উপায়:"
+        HIGH_CANCELLATION_RATE -> "বাতিলের হার ড্রাইভারদের 90% এর বেশি"
+        LAST_N_DAYS n -> "(গত " <> n <> " দিন)"
+        CANCELLATION_RATE_TRIVIA_2 -> "বাতিলের হার কমানোর উপায়:"

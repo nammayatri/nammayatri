@@ -200,6 +200,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | SubscriptionScreen
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
                     | GoToPendingVehicle DriverProfileScreenState String ST.VehicleCategory
+                    | GoToCancellationRateScreen DriverProfileScreenState
 
 data Action = BackPressed
             | NoAction
@@ -256,6 +257,7 @@ data Action = BackPressed
             | ShareQR PrimaryButtonController.Action
             | ManageVehicleButtonAC PrimaryButtonController.Action
             | PendingVehicle String ST.VehicleCategory
+            | OpenCancellationRateScreen
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -530,6 +532,8 @@ eval (DeactivateRc rcType regNumber) state = do
 eval (UpdateRC rcNo rcStatus) state  = continue state{props{activateRcView = true}, data{rcNumber = rcNo, isRCActive = rcStatus}}
 
 eval (PendingVehicle rcNumber vehicleCategory) state = exit $ GoToPendingVehicle state rcNumber vehicleCategory
+
+eval (OpenCancellationRateScreen) state = exit $ GoToCancellationRateScreen state
 
 eval (OpenRcView idx) state  = do
   let val = if elem idx state.data.openInactiveRCViewOrNotArray then filter(\x -> x/=idx) state.data.openInactiveRCViewOrNotArray else state.data.openInactiveRCViewOrNotArray <> [idx]

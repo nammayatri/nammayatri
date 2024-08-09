@@ -1582,3 +1582,8 @@ getHI stringKey =
         REMOVE_EYEWERE -> "कृपया यदि कोई आईवियर या धूप का चश्मा हो तो उसे हटा दें"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "छवि को सत्यापित करने के प्रयासों की संख्या पार हो गई"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "पैन सत्यापन विफल हो गया है"
+        RIDE_CANCELLATION_RATE -> "सवारी रद्द करने की दर"
+        CANCELLATION_RATE_TRIVIA -> "रद्दीकरण दर कम करने के लिए:"
+        HIGH_CANCELLATION_RATE -> "रद्दीकरण दर ड्राइवरों के 90% से अधिक है"
+        LAST_N_DAYS n -> "(पिछले " <> n <> " दिन)"
+        CANCELLATION_RATE_TRIVIA_2 -> "अगर आप नहीं करते हैं तो क्या होता है?"

@@ -25,8 +25,10 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverProfileScreen.Controller (ScreenOutput(..))
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.DriverProfileScreen.View as DriverProfileScreen
+import Screens.CancellationRateScreen.ScreenData as CancellationRateScreenData
 import Types.App (FlowBT, GlobalState(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Data.Maybe (isJust)
 
 driverProfileScreen :: FlowBT String DRIVER_PROFILE_SCREEN_OUTPUT
 driverProfileScreen = do
@@ -105,3 +107,11 @@ driverProfileScreen = do
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
       App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
+    GoToCancellationRateScreen state -> do
+      modifyScreenState $ CancellationRateScreenStateType (\cancellationData -> 
+        CancellationRateScreenData.initData { data { cancellationRate = if isJust cancellationData.data.cancellationWindow then cancellationData.data.cancellationRate else state.data.analyticsData.cancellationRate
+                                                   , assignedRides = state.data.analyticsData.totalRidesAssigned
+                                                   , cancelledRides = state.data.analyticsData.ridesCancelled
+                                                   , cancellationWindow = cancellationData.data.cancellationWindow
+                                                   , missedEarnings = state.data.analyticsData.missedEarnings}})
+      App.BackT $ App.BackPoint <$> pure CANCELLATION_RATE_SCREEN

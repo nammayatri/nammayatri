@@ -1584,3 +1584,8 @@ getTE stringKey =
         REMOVE_EYEWERE -> "దయచేసి కళ్లద్దాలు లేదా సన్ గ్లాసెస్ ఏదైనా ఉంటే తీసివేయండి"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "చిత్రాన్ని ధృవీకరించడానికి చేసిన ప్రయత్నాల సంఖ్య మించిపోయింది"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "పాన్ ధృవీకరణ విఫలమైంది"
+        RIDE_CANCELLATION_RATE -> "రైడ్ రద్దు రేట్"
+        CANCELLATION_RATE_TRIVIA -> "రద్దు రేట్ ని తగ్గించడానికి:"
+        HIGH_CANCELLATION_RATE -> "రద్దు రేట్ డ్రైవర్ల యొక్క 90% కంటే ఎక్కువంది"
+        LAST_N_DAYS n -> "(చివరి " <> n <> " రోజులు)"
+        CANCELLATION_RATE_TRIVIA_2 -> "మీరు చేయకపోతే ఏమి జరుగుతుంది?"

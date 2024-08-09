@@ -34,3 +34,11 @@ export const getReelsData = function (reelsData) {
   }
   return "[]";
 }
+
+export const getCancellationData = function (cancellationRateData) {
+  try {
+    return JSON.parse(cancellationRateData);
+  } catch (e) {
+    console.error("Error in parsing remote config for cancellation data")
+  }
+}

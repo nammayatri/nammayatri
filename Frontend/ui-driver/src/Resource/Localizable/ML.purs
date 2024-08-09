@@ -1582,3 +1582,8 @@ getML stringKey =
         REMOVE_EYEWERE -> "കണ്ണടകളോ സൺഗ്ലാസുകളോ ഉണ്ടെങ്കിൽ അത് നീക്കം ചെയ്യുക"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "ചിത്രം സാധൂകരിക്കാനുള്ള ശ്രമങ്ങളുടെ എണ്ണം കവിഞ്ഞു"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "പാൻ സ്ഥിതീകരണം പരാജയപ്പെട്ടു"
+        RIDE_CANCELLATION_RATE -> "റൈഡ് റദ്ദാക്കൽ നിരക്ക്"
+        CANCELLATION_RATE_TRIVIA -> "റൈഡ് റദ്ദാക്കൽ നിരക്ക് കുറയ്ക്കാനുള്ള വഴികൾ:"
+        HIGH_CANCELLATION_RATE -> "റൈഡ് റദ്ദാക്കൽ നിരക്ക് ഡ്രൈവർമാർക്ക് നല്ല നിരക്കിലാണ്"
+        LAST_N_DAYS n -> "(കഴിഞ്ഞ " <> n <> " ദിവസങ്ങൾ)"
+        CANCELLATION_RATE_TRIVIA_2 -> "നിങ്ങൾ റൈഡ് റദ്ദാക്കുന്നതിനുള്ള നിരക്ക് കുറയ്ക്കുന്നതിനുള്ള വഴികൾ:"
