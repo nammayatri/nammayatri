@@ -36,6 +36,7 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
@@ -93,7 +94,8 @@ getTotalRidesCount :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFl
 getTotalRidesCount riderId mSearchReq =
   case mSearchReq >>= DSR.totalRidesCount of
     Nothing -> do
-      totalRidesCount <- CHB.findCountByRiderIdAndStatus riderId BT.COMPLETED
+      person <- QP.findById riderId >>= fromMaybeM (PersonNotFound ("Person not found with id: " <> riderId.getId))
+      totalRidesCount <- CHB.findCountByRiderIdAndStatus riderId BT.COMPLETED person.createdAt
       QP.updateTotalRidesCount riderId (Just totalRidesCount)
       pure totalRidesCount
     Just totalCount -> pure totalCount
