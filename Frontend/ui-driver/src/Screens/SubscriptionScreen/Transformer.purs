@@ -22,6 +22,7 @@ import Prelude
 
 import Common.Styles.Colors as Color
 import Common.Types.App (LazyCheck(..), ReelModal(..))
+import Common.RemoteConfig.Utils as RemoteConfig
 import Components.PaymentHistoryListItem (PaymentBreakUp)
 import Data.Array (cons, length, mapWithIndex, (!!))
 import Data.Array as DA
@@ -125,10 +126,13 @@ freeRideOfferConfig count =
     }
 
 introductoryOfferConfig :: SubscriptionConfig -> String -> PromoConfig
-introductoryOfferConfig config offerName = 
-    let offer = case offerName of 
+introductoryOfferConfig config offerName =
+    let vehicleVariant = getValueToLocalStore VEHICLE_VARIANT
+        city = getValueToLocalStore DRIVER_LOCATION
+        configRemote = RemoteConfig.subscriptionsConfigVariantLevel city vehicleVariant
+        offer = case offerName of 
                     "FREE_RIDE_OFFER" -> getString FIRST_FREE_RIDE
-                    "NO_CHARGES_TILL" -> getVarString NO_CHARGES_TILL [splitBasedOnLanguage config.noChargesTillDate]
+                    "NO_CHARGES_TILL" -> getVarString NO_CHARGES_TILL [splitBasedOnLanguage configRemote.noChargesTillDate]
                     _ -> splitBasedOnLanguage offerName 
     in
     {  

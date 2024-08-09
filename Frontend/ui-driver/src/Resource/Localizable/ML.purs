@@ -1256,7 +1256,7 @@ getML stringKey =
         OUR_SAFETY_PARTNER -> "ഞങ്ങളുടെ സുരക്ഷാ പങ്കാളി"
         WE_GUARANTEE_YOU -> "We guarantee you:"
         LOWEST_FEES_FROM -> "Lowest Fees from {}"
-        ZERO_FEE_TILL -> "ZERO Fee till Oct 1st 2024"
+        ZERO_FEE_TILL -> "ZERO Fee till {}"
         ZERO_COMMISION_UNLIMITED_RIDES -> "ZERO commission, unlimited rides"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "ഞങ്ങൾ നിലവിൽ നിങ്ങളുടെ നഗരത്തിൽ ഓട്ടോറിക്ഷകളിൽ മാത്രമാണ് താമസിക്കുന്നത്"
         WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "കൂടുതൽ അപ്‌ഡേറ്റുകൾക്കായി കാത്തിരിക്കുക"
