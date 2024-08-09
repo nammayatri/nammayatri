@@ -821,16 +821,14 @@ notifyRideStartToEmergencyContacts booking ride = do
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
-  let shouldShare =
-        rider.shareTripWithEmergencyContactOption == Just ALWAYS_SHARE
-          || (rider.shareTripWithEmergencyContactOption == Just SHARE_WITH_TIME_CONSTRAINTS && checkTimeConstraintForFollowRide riderConfig now)
+  personENList <- QPDEN.findpersonENListWithFallBack booking.riderId (Just rider)
+  let followingContacts = filter (\contact -> checkSharedOptions contact riderConfig now) personENList
+  let shouldShare = not $ null followingContacts
   if shouldShare
     then do
       let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-      emContacts <- QPDEN.findAllByPersonId booking.riderId
-      decEmContacts <- decrypt `mapM` emContacts
-      let followingContacts = filter (.enableForFollowing) decEmContacts
-      for_ followingContacts \contact -> do
+      decEmContacts <- decrypt `mapM` followingContacts
+      for_ decEmContacts \contact -> do
         case contact.contactPersonId of
           Just personId -> do
             updateFollowsRideCount personId
@@ -838,6 +836,12 @@ notifyRideStartToEmergencyContacts booking ride = do
           Nothing -> sendSMS contact rider.firstName trackLink
     else logInfo "Follow ride is not enabled"
   where
+    checkSharedOptions item riderConfig now =
+      case item.shareTripWithEmergencyContactOption of
+        Just ALWAYS_SHARE -> True
+        Just SHARE_WITH_TIME_CONSTRAINTS -> checkTimeConstraintForFollowRide riderConfig now
+        _ -> False
+
     updateFollowsRideCount emPersonId = do
       void $ CQFollowRide.updateFollowRideList emPersonId booking.riderId True
       Person.updateFollowsRide True emPersonId

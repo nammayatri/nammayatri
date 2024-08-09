@@ -29,7 +29,12 @@ data SosDetailsRes = SosDetailsRes {sos :: Kernel.Prelude.Maybe Domain.Types.Sos
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosReq = SosReq {flow :: Domain.Types.Sos.SosType, isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
+data SosReq = SosReq
+  { flow :: Domain.Types.Sos.SosType,
+    isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    notifyAllContacts :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

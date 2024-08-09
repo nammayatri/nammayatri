@@ -112,3 +112,11 @@ getFollowRideECStatus (mbPersonId, _merchantId) rideId = do
   let hashKey = DAB.makeEmergencyContactSOSCacheKey ride.id
   keyValues <- Kernel.Prelude.map (\(personIdText, utcTime) -> ContactsDetail (Id personIdText) utcTime) <$> Hedis.hGetAll hashKey
   return $ EmergencyContactsStatusRes keyValues
+
+getFollowRideCustomerDetails :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow FollowRideCustomerDetailsRes
+getFollowRideCustomerDetails (mbPersonId, _merchantId) rideId = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  customerPhone <- mapM decrypt person.mobileNumber
+  return $ FollowRideCustomerDetailsRes {bookingId = ride.bookingId, customerName = SLP.getName person, ..}

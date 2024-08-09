@@ -20,6 +20,11 @@ types:
   EmergencyContactsStatusRes:
     details : [ContactsDetail]
 
+  FollowRideCustomerDetailsRes:
+    bookingId: Id Booking
+    customerName: Text
+    customerPhone: Maybe Text
+
   ContactsDetail:
     updateTime : UTCTime
     personId : Id Person
@@ -49,3 +54,12 @@ apis:
         rideId: Id Ride
       response:
         type: API.Types.UI.FollowRide.EmergencyContactsStatusRes
+
+  # GET followRide/customerDetails
+  - GET:
+        endpoint: followRide/{rideId}/customerDetails
+        auth: TokenAuth
+        params:
+          rideId: Id Ride
+        response:
+          type: API.Types.UI.FollowRide.FollowRideCustomerDetailsRes

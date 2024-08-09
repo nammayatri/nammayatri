@@ -62,6 +62,7 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.Sos as QSos
 import qualified Tools.Call as Call
 import Tools.Error
@@ -145,6 +146,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
+  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
@@ -153,7 +155,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
         }
   when (req.isRideEnded /= Just True) $ do
     emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-    when (shouldSendSms person) $ do
+    when (shouldSendSms safetySettings) $ do
       void $ QPDEN.updateShareRideForAll personId True
       enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
       SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers
@@ -162,7 +164,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
       { sosId = sosId
       }
   where
-    shouldSendSms person_ = person_.shareEmergencyContacts && req.flow /= DSos.Police
+    shouldSendSms safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
     notificationBody person_ = SLP.getName person_ <> " has initiated an SOS. Tap to follow and respond to the emergency situation"
     notificationTitle = "SOS Alert"
 
@@ -219,6 +221,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, merchantId)
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   case isMock of
     Just True -> do
       mockSos :: Maybe DSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
@@ -234,7 +237,7 @@ postSosMarkRideAsSafe (mbPersonId, merchantId) sosId MarkAsSafeReq {..} = do
       void $ callUpdateTicket person sosDetails $ Just "Mark Ride as Safe"
       void $ QSos.updateStatus DSos.Resolved sosId
       CQSos.cacheSosIdByRideId sosDetails.rideId $ sosDetails {DSos.status = DSos.Resolved}
-      when (person.shareEmergencyContacts && isRideEnded /= Just True) $ do
+      when (safetySettings.notifySosWithEmergencyContacts && isRideEnded /= Just True) $ do
         SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_RESOLVED Nothing False emergencyContacts.defaultEmergencyNumbers
       pure APISuccess.Success
   where
@@ -250,6 +253,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
+  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   case startDrill of
     Just True -> do
       SPDEN.notifyEmergencyContacts person (notificationBody person True) notificationTitle Notification.SOS_MOCK_DRILL_NOTIFY Nothing False emergencyContacts.defaultEmergencyNumbers
@@ -257,7 +261,7 @@ postSosCreateMockSos (mbPersonId, _) MockSosReq {..} = do
         void $ QPDEN.updateShareRideForAll personId True
         enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
     _ -> do
-      when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus (Just True) personId
+      unless (fromMaybe False safetySettings.hasCompletedMockSafetyDrill) $ QSafety.updateMockSafetyDrillStatus (Just True) personId
       when (fromMaybe False onRide) $ do
         let mockEntity = DSos.SosMockDrill {personId, status = DSos.MockPending}
         Redis.setExp (CQSos.mockSosKey personId) mockEntity 13400
