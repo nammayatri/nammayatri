@@ -119,23 +119,7 @@ data LocationAPIEntity = LocationAPIEntity
 data RideStatus = R_NEW | R_INPROGRESS | R_COMPLETED | R_CANCELLED | R_UPCOMING
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-instance HasSqlValueSyntax be Value => HasSqlValueSyntax be RideStatus where
-  sqlValueSyntax = sqlValueSyntax . toJSON
-
-instance FromField RideStatus where
-  fromField = fromFieldEnum
-
-instance FromField [RideStatus] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [RideStatus] where
-  sqlValueSyntax batchList =
-    let x = (show <$> batchList :: [Text])
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [RideStatus]
-
-instance FromBackendRow Postgres [RideStatus]
+$(mkBeamInstancesForEnumAndList ''RideStatus)
 
 data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED
   deriving stock (Show, Read, Generic)

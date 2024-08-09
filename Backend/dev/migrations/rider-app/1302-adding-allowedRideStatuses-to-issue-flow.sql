@@ -4,11 +4,6 @@ ADD COLUMN allowed_ride_statuses text[];
 ALTER TABLE atlas_app.issue_option
 ADD COLUMN restricted_ride_statuses text[] DEFAULT '{}';
 
--- DO NOT RUN THIS IN PROD ---------
-UPDATE atlas_app.rider_config
-SET allow_blocked_user_login = true;
-------------------------------------
-
 UPDATE atlas_app.issue_config ic
 SET message_transformation_config = JSONB_SET(
     ic.message_transformation_config::jsonb,

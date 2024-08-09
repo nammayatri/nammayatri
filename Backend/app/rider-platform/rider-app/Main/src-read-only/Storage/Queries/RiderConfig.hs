@@ -40,8 +40,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowBlockedUserLogin allowBlockedUserLogin,
-      Se.Set Beam.appUrl appUrl,
+    [ Se.Set Beam.appUrl appUrl,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
       Se.Set Beam.avgSpeedInKmPerHr (Just avgSpeedInKmPerHr),
       Se.Set Beam.bookingSyncStatusCallSecondsDiffThreshold bookingSyncStatusCallSecondsDiffThreshold,
@@ -86,8 +85,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     pure $
       Just
         Domain.Types.RiderConfig.RiderConfig
-          { allowBlockedUserLogin = allowBlockedUserLogin,
-            appUrl = appUrl,
+          { appUrl = appUrl,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
             avgSpeedInKmPerHr = fromMaybe 20 avgSpeedInKmPerHr,
             bookingSyncStatusCallSecondsDiffThreshold = bookingSyncStatusCallSecondsDiffThreshold,
@@ -130,8 +128,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
 instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
   toTType' (Domain.Types.RiderConfig.RiderConfig {..}) = do
     Beam.RiderConfigT
-      { Beam.allowBlockedUserLogin = allowBlockedUserLogin,
-        Beam.appUrl = appUrl,
+      { Beam.appUrl = appUrl,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
         Beam.avgSpeedInKmPerHr = Just avgSpeedInKmPerHr,
         Beam.bookingSyncStatusCallSecondsDiffThreshold = bookingSyncStatusCallSecondsDiffThreshold,

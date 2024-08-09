@@ -15,6 +15,7 @@
 module API.RiderPlatform.IssueList where
 
 import qualified "rider-app" API.Dashboard.IssueList as BAP
+import qualified Data.Aeson as A
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -66,8 +67,7 @@ listIssue merchantShortId opCity apiTokenInfo mbLimit mbOffset mbMobileCountryCo
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.issues.listIssue) mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
 
-ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> A.Value -> FlowHandler APISuccess
 ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.issues.ticketStatusCallBack) req
+  Client.callRiderAppOperations checkedMerchantId opCity (.issues.ticketStatusCallBack) req

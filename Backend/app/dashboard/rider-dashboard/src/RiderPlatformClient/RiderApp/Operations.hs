@@ -27,6 +27,7 @@ import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Ride as Ride
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
@@ -95,7 +96,7 @@ data RidesAPIs = RidesAPIs
 
 data ListIssueAPIs = ListIssueAPIs
   { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes,
-    ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess
+    ticketStatusCallBack :: A.Value -> Euler.EulerClient APISuccess
   }
 
 data IssueAPIs = IssueAPIs
@@ -106,7 +107,7 @@ data IssueAPIs = IssueAPIs
     issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
     issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
     issueFetchMedia :: Text -> Euler.EulerClient Text,
-    ticketStatusCallBack_ :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess,
+    ticketStatusCallBack_ :: A.Value -> Euler.EulerClient APISuccess,
     createIssueCategory :: Issue.CreateIssueCategoryReq -> Euler.EulerClient Issue.CreateIssueCategoryRes,
     updateIssueCategory :: Id IssueCategory -> Issue.UpdateIssueCategoryReq -> Euler.EulerClient APISuccess,
     createIssueOption :: Id IssueCategory -> Id IssueMessage -> Issue.CreateIssueOptionReq -> Euler.EulerClient Issue.CreateIssueOptionRes,

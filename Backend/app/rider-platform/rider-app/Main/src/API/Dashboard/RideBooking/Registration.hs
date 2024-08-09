@@ -111,7 +111,8 @@ buildAuthReq merchantShortId req =
       otpChannel = req.otpChannel,
       registrationLat = Nothing,
       registrationLon = Nothing,
-      enableOtpLessRide = Nothing
+      enableOtpLessRide = Nothing,
+      allowBlockedUserLogin = Nothing
     }
 
 data CustomerAuthReq = CutomerAuthReq

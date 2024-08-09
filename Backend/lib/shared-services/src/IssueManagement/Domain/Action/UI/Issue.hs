@@ -101,7 +101,7 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
     mkIssueCategory (issueCategory, issueTranslation) =
       Common.IssueCategoryRes
         { issueCategoryId = issueCategory.id,
-          label = issueCategory.category & T.toUpper & T.replace " " "_",
+          label = fromMaybe (issueCategory.category & T.toUpper & T.replace " " "_") issueCategory.label,
           category = fromMaybe issueCategory.category $ issueTranslation <&> (.translation),
           logoUrl = issueCategory.logoUrl,
           categoryType = issueCategory.categoryType,
@@ -852,7 +852,7 @@ transformText getCfgValue mediaFileUrls text =
     extractKey pattern_ = T.drop 2 $ T.dropEnd 2 pattern_
 
     replaceNewLineChar :: Text -> Text
-    replaceNewLineChar = T.replace "\\n" "<br>"
+    replaceNewLineChar = T.replace "\n" "<br>"
 
     replaceFirstImage :: Text -> [Text] -> Text -> Text
     replaceFirstImage pattern_ urls txt =
