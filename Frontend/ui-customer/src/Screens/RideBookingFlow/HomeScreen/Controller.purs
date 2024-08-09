@@ -2523,7 +2523,7 @@ eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
 eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
     void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_need_help"
     void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
-    exit $ GoToNammaSafety state{props{safetyAlertType = Nothing}} true false
+    exit $ SafetySupport state{props{safetyAlertType = Nothing}} false 
 
 eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotifyRideShare state
 
