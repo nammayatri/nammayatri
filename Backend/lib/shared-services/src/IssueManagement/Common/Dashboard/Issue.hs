@@ -8,6 +8,7 @@ module IssueManagement.Common.Dashboard.Issue
 where
 
 import Data.Aeson
+import Data.Aeson.Types (Parser)
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
@@ -28,6 +29,10 @@ import Kernel.Types.Common
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Types.Id
 import Servant hiding (Summary)
+
+-- import Options.Applicative (Parser)
+-- import Control.Applicative ((<|>))
+-- import Data.Generics.Aliases (orElse)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data IssueEndpoint
@@ -238,7 +243,7 @@ type IssueFetchMediaAPI =
 type TicketStatusCallBackAPI =
   "kapture"
     :> "ticketStatus"
-    :> ReqBody '[JSON] TicketStatusCallBackReq
+    :> ReqBody '[JSON] Value
     :> Post '[JSON] APISuccess
 
 data TicketStatusCallBackReq = TicketStatusCallBackReq
@@ -248,7 +253,28 @@ data TicketStatusCallBackReq = TicketStatusCallBackReq
     queue :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
+
+instance FromJSON TicketStatusCallBackReq where
+  parseJSON = withObject "TicketStatusCallBackReq" $ \v ->
+    TicketStatusCallBackReq
+      <$> v .: "ticketId"
+      <*> v .: "status"
+      <*> parseSubStatus v
+      <*> v .:? "queue"
+    where
+      parseSubStatus :: Object -> Parser (Maybe Text)
+      parseSubStatus v = firstJustM (v .:?) ["subStatus", "sub_status", "sub-status"]
+
+      firstJustM :: Monad m => (k -> m (Maybe v)) -> [k] -> m (Maybe v)
+      firstJustM _ [] = return Nothing
+      firstJustM f (x : xs) = do
+        result <- f x
+        case result of
+          Just val -> return $ Just val
+          Nothing -> firstJustM f xs
+
+instance ToJSON TicketStatusCallBackReq
 
 instance HideSecrets TicketStatusCallBackReq where
   hideSecrets = identity

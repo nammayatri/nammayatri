@@ -19,6 +19,7 @@ module API.ProviderPlatform.DynamicOfferDriver.Issue
 where
 
 import qualified "dashboard-helper-api" Dashboard.Common as DC
+import qualified Data.Aeson as A
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -190,11 +191,10 @@ issueFetchMedia merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAP
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.issueFetchMedia) filePath
 
-ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> A.Value -> FlowHandler APISuccess
 ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.ticketStatusCallBack) req
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.issue.ticketStatusCallBack) req
 
 createIssueCategory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateIssueCategoryReq -> FlowHandler APISuccess
 createIssueCategory merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
