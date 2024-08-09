@@ -18,6 +18,7 @@ types:
     flow: SosType
     rideId: Id Ride
     isRideEnded: Maybe Bool
+    notifyAllContacts: Maybe Bool
 
   SosUpdateReq:
     status: SosStatus

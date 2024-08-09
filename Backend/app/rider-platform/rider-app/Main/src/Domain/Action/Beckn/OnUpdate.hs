@@ -80,6 +80,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as SQQ
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Transformers.Booking as STB
 import Tools.Error
@@ -410,9 +411,9 @@ onUpdate = \case
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
     riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-    person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
     void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
-    when person.informPoliceSos $ do
+    safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId Nothing
+    when (safetySettings.informPoliceSos || safetySettings.notifySafetyTeamForSafetyCheckFailure) $ do
       logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
       maxShards <- asks (.maxShards)
       let scheduleAfter = riderConfig.ivrTriggerDelay

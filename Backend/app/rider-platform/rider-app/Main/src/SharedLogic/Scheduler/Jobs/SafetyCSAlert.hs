@@ -81,7 +81,7 @@ createSafetyTicket person ride = do
       Left err -> do
         logError $ "Ticket didn't created when rider didn't picked up call with error : " <> show err
         return Nothing
-  sosDetails <- buildSosDetails person SosReq {flow = DSos.CSAlertSosTicket, rideId = ride.id, isRideEnded = Nothing} ticketId
+  sosDetails <- buildSosDetails person SosReq {flow = DSos.CSAlertSosTicket, rideId = ride.id, isRideEnded = Nothing, notifyAllContacts = Nothing} ticketId
   void $ QSos.create sosDetails
 
 mkTicket :: DP.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
