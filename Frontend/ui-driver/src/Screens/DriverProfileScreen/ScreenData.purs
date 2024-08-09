@@ -92,7 +92,12 @@ initData =
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
       },
-    config
+    config,
+    cancellationRate : 30,
+    assignedRides : 100,
+    cancelledRides : 69,
+    cancellationWindow : Nothing,
+    missedEarnings : 14254
     },
 
   props: {
@@ -217,6 +222,10 @@ dummyDriverInfo = GetDriverInfoResp {
     , canSwitchToRental     : Nothing
     , checkIfACWorking    : Nothing
     , canSwitchToInterCity   : Nothing
+    , cancellationRateInWindow : Nothing
+    , cancelledRidesCountInWindow : Nothing
+    , assignedRidesCountInWindow : Nothing
+    , windowSize : Nothing
 }
 
 organizationInfo :: OrganizationInfo

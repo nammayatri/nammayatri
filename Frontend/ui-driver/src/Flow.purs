@@ -1529,6 +1529,11 @@ driverProfileFlow = do
       setValueToLocalStore ENTERED_RC rcNumber
       modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Just vehicleCategory }, data { linkedRc = Nothing}})
       onBoardingFlow
+    
+    CANCELLATION_RATE_SCREEN -> do
+      let (GlobalState defaultEpassState') = defaultGlobalState
+      modifyScreenState $ CancellationRateScreenStateType (\_ -> defaultEpassState'.cancellationRateScreen)
+      cancellationRateFlow
 
 documentDetailsScreen :: FlowBT String Unit
 documentDetailsScreen = do
@@ -1656,6 +1661,9 @@ aboutUsFlow = do
   case action of
     GO_TO_DRIVER_HOME_SCREEN -> homeScreenFlow
   pure unit
+
+cancellationRateFlow :: FlowBT String Unit
+cancellationRateFlow = UI.cancellationRateScreen
 
 goToLocationFlow :: FlowBT String Unit
 goToLocationFlow = do
@@ -3702,6 +3710,7 @@ updateBannerAndPopupFlags = do
                 , config = appConfig
                 , isVehicleSupported = fromMaybe true getDriverInfoResp.isVehicleSupported
                 , cityConfig = cityConfig
+                , cancellationRate = fromMaybe 0 getDriverInfoResp.cancellationRateInWindow
                 }
               , props
                 { autoPayBanner = autopayBannerType

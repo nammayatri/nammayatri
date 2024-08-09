@@ -151,6 +151,7 @@ initData =
       , isVehicleSupported: true
       , parking : initialParkingData
       , toll : initialTollState
+      , cancellationRate : 50
     }
   , props:
       { isFreeRide: false

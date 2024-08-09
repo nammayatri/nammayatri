@@ -23,13 +23,14 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs)
+import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, CancellationRateConfig, CancellationRateEntity(..))
 import Data.Maybe (Maybe(..))
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
 
 foreign import getReelsData :: String -> Foreign
+foreign import getCancellationData :: String -> Foreign
 
 subscriptionRemoteConfig :: RCSubscription
 subscriptionRemoteConfig = {
@@ -88,3 +89,20 @@ defaultReelsData = []
 
 defaultReelButtonConfig :: Maybe ReelButtonConfig
 defaultReelButtonConfig = Nothing
+
+reduceCancellationRate :: String -> Array CancellationRateConfig
+reduceCancellationRate key =
+  let cancellationDataString = getCancellationData $ fetchRemoteConfigString key
+  in decodeForeignAny cancellationDataString defaultCancellationRateConfig
+
+defaultCancellationRateConfig :: Array CancellationRateConfig
+defaultCancellationRateConfig = [
+    { title : "Example Title"
+    , description : "Example Description"
+    , entity_type : HOW_TO_REDUCE
+    },
+    { title : "Example Title 2"
+    , description : "Example Description 2"
+    , entity_type : WHAT_HAPPENS
+    }
+  ]

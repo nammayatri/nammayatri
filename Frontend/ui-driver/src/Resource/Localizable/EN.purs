@@ -1579,3 +1579,8 @@ getEN stringKey =
         REMOVE_EYEWERE -> "Please remove eyewear or sunglasses if any"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "Image validation limit exceeded."
         DB_CHECK_AND_NAME_MATCH_FAILED -> "Pan verification failed"
+        RIDE_CANCELLATION_RATE -> "Ride Cancellation Rate"
+        CANCELLATION_RATE_TRIVIA -> "How to Reduce the Cancellation Rate:"
+        HIGH_CANCELLATION_RATE -> "Cancellation rate is higher than 90% of drivers"
+        LAST_N_DAYS n -> "(last " <> n <> " Days)"
+        CANCELLATION_RATE_TRIVIA_2 -> "What Happens if You Don't?"

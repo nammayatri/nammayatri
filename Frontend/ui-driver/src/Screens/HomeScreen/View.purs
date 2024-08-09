@@ -1039,7 +1039,7 @@ driverProfile push state =
     , height WRAP_CONTENT
     , gravity CENTER
     , padding $ Padding 16 20 12 16
-    ][ linearLayout [
+    ][ relativeLayout [
         width $ V 42
       , height $ V 42
       , onClick push $ const GoToProfile
@@ -1047,6 +1047,18 @@ driverProfile push state =
           [ width $ V 42
           , height $ V 42
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
+          ]
+        , imageView
+          [ width $ V 42
+          , height $ V 42
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_orange_pfp_ring"
+          , visibility $ boolToVisibility (state.data.cancellationRate > 40)
+          ]
+        , imageView
+          [ width $ V 42
+          , height $ V 42
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_red_pfp_ring"
+          , visibility $ boolToVisibility (state.data.cancellationRate > 70)
           ]
         ]
     ]

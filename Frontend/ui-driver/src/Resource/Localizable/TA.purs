@@ -1582,3 +1582,8 @@ getTA stringKey =
         REMOVE_EYEWERE -> "கண்ணாடிகள் அல்லது சன்கிளாஸ்கள் ஏதேனும் இருந்தால் தயவுசெய்து அகற்றவும்"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "படத்தைச் சரிபார்க்கும் முயற்சிகள் எண்ணிக்கையை மீறியது"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "PAN சரிபார்ப்பு தோல்வியடைந்தது"
+        RIDE_CANCELLATION_RATE -> "ரைட் ரத்து விகிதம்"
+        CANCELLATION_RATE_TRIVIA -> "ரைட் ரத்து விகிதம் குறைக்க எப்படி:"
+        HIGH_CANCELLATION_RATE -> "ரத்து விகிதம் ஓர் சவாரிகளின் 90% க்கும் அதிகமாக உள்ளது"
+        LAST_N_DAYS n -> "(கடைசி " <> n <> " நாட்கள்)"
+        CANCELLATION_RATE_TRIVIA_2 -> "நீங்கள் செய்யாவிட்டால் என்ன நடக்கும்?"
