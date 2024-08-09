@@ -202,7 +202,7 @@ upsertFromLocationAndMappingForOldData locationId bookingId merchantId merchantO
   loc <- QBBL.findById `mapM` locationId >>= fromMaybeM (InternalError "From Location Id Not Found in Booking Table")
   pickupLoc <- maybe (throwError $ InternalError ("From Location Not Found in Booking Location Table for BookingId : " <> bookingId)) buildLocation loc
   fromLocationMapping <- SLM.buildPickUpLocationMapping pickupLoc.id bookingId DLM.BOOKING (Just $ Id merchantId) (Id <$> merchantOperatingCityId)
-  void $ QL.create pickupLoc >> QLM.create fromLocationMapping
+  void $ QL.create pickupLoc >> QLM.upsert fromLocationMapping
   return pickupLoc
 
 upsertToLocationAndMappingForOldData :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> Text -> Maybe Text -> m ()
