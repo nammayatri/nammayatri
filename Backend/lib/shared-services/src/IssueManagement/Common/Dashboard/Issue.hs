@@ -18,7 +18,6 @@ import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
 import IssueManagement.Domain.Types.MediaFile (MediaFile)
-import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto (derivePersistField)
@@ -276,6 +275,7 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     categoryType :: CategoryType,
     isRideRequired :: Bool,
     maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus],
     isActive :: Maybe Bool,
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
@@ -309,6 +309,7 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
     restrictedVariants :: Maybe [Variant],
+    restrictedRideStatuses :: Maybe [RideStatus],
     showOnlyWhenUserBlocked :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
@@ -333,18 +334,12 @@ data UpdateIssueCategoryReq = UpdateIssueCategoryReq
     priority :: Maybe Int,
     isRideRequired :: Maybe Bool,
     maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus],
     isActive :: Maybe Bool,
     translations :: [Translation],
     label :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data Translation = Translation
-  { language :: Language,
-    translation :: Text
-  }
-  deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets UpdateIssueCategoryReq where
@@ -383,6 +378,7 @@ data UpdateIssueOptionReq = UpdateIssueOptionReq
     isActive :: Maybe Bool,
     translations :: [Translation],
     restrictedVariants :: Maybe [Variant],
+    restrictedRideStatuses :: Maybe [RideStatus],
     showOnlyWhenUserBlocked :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)

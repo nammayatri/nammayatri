@@ -173,20 +173,19 @@ issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandl
       Just iReportShortId -> B.runInReplica $ QIR.findByShortId iReportShortId >>= fromMaybeM (IssueReportDoesNotExist iReportShortId.getShortId)
       Nothing -> throwError (InvalidRequest "Either issueReportId or issueReportShortId is required")
   person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
-  void $ checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
-  mkIssueInfoRes person issueReport issueHandle
+  merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
+  mkIssueInfoRes person issueReport merchantOpCity.id
   where
-    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> ServiceHandle m -> m Common.IssueInfoRes
-    mkIssueInfoRes person issueReport iHandle = do
+    mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> Id MerchantOperatingCity -> m Common.IssueInfoRes
+    mkIssueInfoRes person issueReport merchantOpCityId = do
       personDetail <- Just <$> mkPersonDetail person
       mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
       comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
       category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
       option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
-      defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId iHandle identifier
       issueConfig <-
-        CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier
-          >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
+        CQI.findByMerchantOpCityId merchantOpCityId identifier
+          >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
       issueChats <- case identifier of
         DRIVER -> return Nothing
         CUSTOMER -> Just <$> UIR.recreateIssueChats issueReport issueConfig Nothing ENGLISH identifier
@@ -310,8 +309,14 @@ ticketStatusCallBack req issueHandle identifier = do
   case transformedStatus of
     RESOLVED -> do
       issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
-      defaultMerchantOpCityId <- getDefaultMerchantOperatingCityId issueHandle identifier
-      issueConfig <- CQI.findByMerchantOpCityId defaultMerchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound defaultMerchantOpCityId.getId)
+      merchantOpCityId <-
+        maybe
+          ( issueHandle.findPersonById issueReport.personId
+              >>= fromMaybeM (PersonNotFound issueReport.personId.getId) <&> (.merchantOperatingCityId)
+          )
+          return
+          issueReport.merchantOperatingCityId
+      issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
       mbIssueMessages <- mapM (`CQIM.findById` identifier) issueConfig.onKaptMarkIssueResMsgs
       let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
       now <- getCurrentTime
@@ -410,6 +415,7 @@ createIssueCategory merchantShortId city Common.CreateIssueCategoryReq {..} issu
             updatedAt = now,
             merchantId = merchantOperatingCity.merchantId,
             merchantOperatingCityId = merchantOperatingCity.id,
+            allowedRideStatuses = allowedRideStatuses <|> Just defaultAllowedRideStatuses,
             ..
           }
 
@@ -479,6 +485,7 @@ updateIssueCategory merchantShortId city issueCategoryId req issueHandle identif
             isActive = fromMaybe isActive req.isActive,
             isRideRequired = fromMaybe isRideRequired req.isRideRequired,
             maxAllowedRideAge = req.maxAllowedRideAge <|> maxAllowedRideAge,
+            allowedRideStatuses = req.allowedRideStatuses <|> allowedRideStatuses,
             label = req.label <|> label,
             updatedAt = now,
             ..
@@ -541,6 +548,7 @@ createIssueOption merchantShortId city mbMerchantOpCity issueCategoryId issueMes
             issueMessageId = Just issueMessageId.getId,
             isActive = fromMaybe False isActive,
             restrictedVariants = fromMaybe [] restrictedVariants,
+            restrictedRideStatuses = fromMaybe [] restrictedRideStatuses,
             showOnlyWhenUserBlocked = fromMaybe False showOnlyWhenUserBlocked,
             merchantId = merchantOperatingCity.merchantId,
             merchantOperatingCityId = merchantOperatingCity.id,
@@ -582,6 +590,7 @@ updateIssueOption merchantShortId city issueOptionId req issueHandle identifier 
             issueMessageId = (req.issueMessageId <&> (.getId)) <|> issueMessageId,
             issueCategoryId = req.issueCategoryId <|> issueCategoryId,
             restrictedVariants = fromMaybe [] $ req.restrictedVariants <|> Just restrictedVariants,
+            restrictedRideStatuses = fromMaybe [] $ req.restrictedRideStatuses <|> Just restrictedRideStatuses,
             showOnlyWhenUserBlocked = fromMaybe False $ req.showOnlyWhenUserBlocked <|> Just showOnlyWhenUserBlocked,
             label = req.label <|> label,
             updatedAt = now,
@@ -744,7 +753,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
         "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported contType
 
-upsertTranslations :: BeamFlow m r => Text -> Maybe Text -> MerchantOperatingCity -> [Common.Translation] -> m ()
+upsertTranslations :: BeamFlow m r => Text -> Maybe Text -> MerchantOperatingCity -> [Translation] -> m ()
 upsertTranslations newSentence mbOldSentence merchantOpCity =
   mapM_
     ( \translation -> do
@@ -753,7 +762,7 @@ upsertTranslations newSentence mbOldSentence merchantOpCity =
         if isJust extTranslation then QIT.updateByPrimaryKey updatedTranslation else QIT.create updatedTranslation
     )
   where
-    mkIssueTranslation :: BeamFlow m r => Maybe DIT.IssueTranslation -> Common.Translation -> m DIT.IssueTranslation
+    mkIssueTranslation :: BeamFlow m r => Maybe DIT.IssueTranslation -> Translation -> m DIT.IssueTranslation
     mkIssueTranslation mbTranslation translation = do
       id <- maybe generateGUID (return . (.id)) mbTranslation
       now <- getCurrentTime
@@ -855,3 +864,6 @@ getIssueMessageType DIC.FAQ _ _ = DIM.FAQ
 getIssueMessageType DIC.Category currentIndex lastIndex
   | currentIndex == lastIndex = DIM.Terminal
   | otherwise = DIM.Intermediate
+
+defaultAllowedRideStatuses :: [RideStatus]
+defaultAllowedRideStatuses = [R_CANCELLED, R_COMPLETED]

@@ -29,6 +29,7 @@ updateByPrimaryKey IssueOption {..} =
       Set BeamIO.label label,
       Set BeamIO.isActive isActive,
       Set BeamIO.restrictedVariants restrictedVariants,
+      Set BeamIO.restrictedRideStatuses restrictedRideStatuses,
       Set BeamIO.showOnlyWhenUserBlocked showOnlyWhenUserBlocked,
       Set BeamIO.createdAt createdAt,
       Set BeamIO.updatedAt updatedAt
@@ -108,6 +109,7 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.priority = priority,
         BeamIO.issueMessageId = issueMessageId,
         BeamIO.restrictedVariants = restrictedVariants,
+        BeamIO.restrictedRideStatuses = restrictedRideStatuses,
         BeamIO.showOnlyWhenUserBlocked = showOnlyWhenUserBlocked,
         BeamIO.label = label,
         BeamIO.merchantId = getId merchantId,

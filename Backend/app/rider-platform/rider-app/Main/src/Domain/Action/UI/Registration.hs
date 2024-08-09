@@ -250,42 +250,39 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
   regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM
-  if not person.blocked
-    then do
-      deploymentVersion <- asks (.version)
-      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
-      RegistrationToken.create regToken
-      when (isNothing useFakeOtpM) $ do
-        let otpCode = SR.authValueHash regToken
-        let otpHash = smsCfg.credConfig.otpHash
-        case otpChannel of
-          SMS -> do
-            countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
-            mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
-            let phoneNumber = countryCode <> mobileNumber
-            withLogTag ("personId_" <> getId person.id) $ do
-              buildSmsReq <-
-                MessageBuilder.buildSendOTPMessage merchantOperatingCityId $
-                  MessageBuilder.BuildSendOTPMessageReq
-                    { otp = otpCode,
-                      hash = otpHash
-                    }
-              Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
-                >>= Sms.checkSmsResult
-          WHATSAPP -> do
-            countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for WHATSAPP OTP channel")
-            mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for WHATSAPP OTP channel")
-            let phoneNumber = countryCode <> mobileNumber
-            withLogTag ("personId_" <> getId person.id) $ do
-              void $ callWhatsappOptApi phoneNumber person.id merchant.id (Just Whatsapp.OPT_IN)
-              result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
-              when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
-          EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
-            receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
-            riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-            emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-            L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
-    else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
+  deploymentVersion <- asks (.version)
+  void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
+  RegistrationToken.create regToken
+  when (isNothing useFakeOtpM) $ do
+    let otpCode = SR.authValueHash regToken
+    let otpHash = smsCfg.credConfig.otpHash
+    case otpChannel of
+      SMS -> do
+        countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
+        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
+        let phoneNumber = countryCode <> mobileNumber
+        withLogTag ("personId_" <> getId person.id) $ do
+          buildSmsReq <-
+            MessageBuilder.buildSendOTPMessage merchantOperatingCityId $
+              MessageBuilder.BuildSendOTPMessageReq
+                { otp = otpCode,
+                  hash = otpHash
+                }
+          Sms.sendSMS person.merchantId merchantOperatingCityId (buildSmsReq phoneNumber)
+            >>= Sms.checkSmsResult
+      WHATSAPP -> do
+        countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for WHATSAPP OTP channel")
+        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for WHATSAPP OTP channel")
+        let phoneNumber = countryCode <> mobileNumber
+        withLogTag ("personId_" <> getId person.id) $ do
+          void $ callWhatsappOptApi phoneNumber person.id merchant.id (Just Whatsapp.OPT_IN)
+          result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
+          when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
+      EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
+        receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
+        riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+        emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
+        L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
   return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked
   where
     castChannelToMedium :: OTPChannel -> SR.Medium

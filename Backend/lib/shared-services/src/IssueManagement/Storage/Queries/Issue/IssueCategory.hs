@@ -26,6 +26,7 @@ updateByPrimaryKey IssueCategory {..} =
       Set BeamIC.priority priority,
       Set BeamIC.isActive isActive,
       Set BeamIC.maxAllowedRideAge maxAllowedRideAge,
+      Set BeamIC.allowedRideStatuses allowedRideStatuses,
       Set BeamIC.label label,
       Set BeamIC.createdAt createdAt,
       Set BeamIC.updatedAt updatedAt
@@ -98,6 +99,7 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.categoryType = categoryType,
         BeamIC.isRideRequired = isRideRequired,
         BeamIC.maxAllowedRideAge = maxAllowedRideAge,
+        BeamIC.allowedRideStatuses = allowedRideStatuses,
         BeamIC.label = label,
         BeamIC.isActive = isActive,
         BeamIC.createdAt = createdAt,

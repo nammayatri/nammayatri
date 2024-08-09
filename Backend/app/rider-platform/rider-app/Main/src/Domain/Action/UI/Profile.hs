@@ -94,6 +94,7 @@ data ProfileRes = ProfileRes
     email :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe Text,
+    isBlocked :: Bool,
     hasTakenRide :: Bool,
     hasTakenValidRide :: Bool,
     hasTakenValidAutoRide :: Bool,
@@ -228,6 +229,7 @@ getPersonDetails (personId, _) mbToss = do
           clientVersion = clientSdkVersion,
           deviceId = maskText <$> deviceId,
           androidId = maskText <$> androidId,
+          isBlocked = blocked,
           ..
         }
 

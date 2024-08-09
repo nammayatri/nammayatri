@@ -172,7 +172,8 @@ data IssueCategoryRes = IssueCategoryRes
     logoUrl :: Text,
     categoryType :: CategoryType,
     isRideRequired :: Bool,
-    maxAllowedRideAge :: Maybe Seconds
+    maxAllowedRideAge :: Maybe Seconds,
+    allowedRideStatuses :: Maybe [RideStatus]
   }
   deriving (Generic, Show, ToJSON, ToSchema)
 
