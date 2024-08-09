@@ -77,6 +77,7 @@ newtype RCCarousel
   , categoryFilter :: Maybe (Array String)
   , image_banner :: Maybe String
   , dynamic_action :: Maybe RemoteAC
+  , accessibilityHint :: Maybe String
   }
 
 derive instance genericRCCarousel :: Generic RCCarousel _

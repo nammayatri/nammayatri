@@ -410,7 +410,7 @@ radioButton config push index item =
       ][ textView $
           [ text item.description
           , accessibilityHint case config.activeIndex of 
-                            Just activeIndex' -> if (activeIndex' == index) then (item.description <> " : Selected") else (item.description <> " : Un Selected")
+                            Just activeIndex' -> if (activeIndex' == index) then ("Selected : " <> item.description) else (item.description <> " : Un Selected")
                             Nothing -> item.description <> " : Un Selected"
           , padding $ PaddingBottom 5
           , accessibility ENABLE

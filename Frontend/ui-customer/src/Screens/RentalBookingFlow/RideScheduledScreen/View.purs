@@ -23,7 +23,7 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError, storeCallBack
 import JBridge (toast)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibility , accessibilityHint)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig, cancelScheduledRideConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (Action(..), ScreenOutput, eval)
@@ -363,6 +363,8 @@ cancelBookingView push state =
   , color Color.black700
   , onClick push $ const CancelRide
   , gravity CENTER_HORIZONTAL
+  , accessibility ENABLE
+  , accessibilityHint cancelBookingText
   ] <> FontStyle.body3 TypoGraphy
 
 cancelRidePopUpView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w

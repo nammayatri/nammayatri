@@ -101,12 +101,14 @@ view push config =
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , gravity CENTER_VERTICAL
+                    , accessibility DISABLE_DESCENDANT
                     ][ vehicleDetailsView push config ]
                   , linearLayout
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , padding $ PaddingTop 5
                     , gravity CENTER_VERTICAL
+                    , accessibility DISABLE_DESCENDANT
                     ][ capacityView push config
                     ]
                   ]

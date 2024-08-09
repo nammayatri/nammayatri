@@ -193,6 +193,8 @@ headerView push state =
       , height $ V 27
       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , onClick push $ const BackPressed
+      , accessibility ENABLE 
+      , accessibilityHint "Go Back Button"
       ]
     , textView $ [
         width WRAP_CONTENT

@@ -712,12 +712,15 @@ getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZON
 
 
 getCarouselConfig ∷ ListItem → HomeScreenState → Array (BannerCarousel.Config (BannerCarousel.Action → Action)) → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
-getCarouselConfig view state banners = {
+getCarouselConfig view state banners = 
+  let 
+    isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
+  in {
     view
   , items : BannerCarousel.bannerTransformer banners
   , orientation : HORIZONTAL
   , currentPage : state.data.bannerData.currentPage
-  , autoScroll : state.data.config.bannerCarousel.enableAutoScroll
+  , autoScroll : state.data.config.bannerCarousel.enableAutoScroll && not isBlindPerson
   , autoScrollDelay : state.data.config.bannerCarousel.autoScrollDelay
   , id : "bannerCarousel"
   , autoScrollAction : Just UpdateBanner
