@@ -33,6 +33,7 @@ import qualified Kernel.Utils.FlowLogging as L
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import Lib.Yudhishthira.Types
+import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SystemConfigs ()
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle Chakra

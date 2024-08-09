@@ -29,6 +29,7 @@ library
       App
       Environment
       Jobs.Daily
+      Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
   other-modules:
       Paths_kaal_chakra

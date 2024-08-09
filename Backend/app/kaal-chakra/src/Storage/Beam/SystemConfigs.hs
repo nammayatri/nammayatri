@@ -7,4 +7,4 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.Storage.Beam.SystemConfigs as Reexport
 
 instance HasSchemaName SystemConfigsT where
-  schemaName _ = T.pack "kaal_chakra"
+  schemaName _ = T.pack "yudhishthira"
