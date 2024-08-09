@@ -14,3 +14,9 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic ADD PRIMARY KEY ( domain, m
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic ADD COLUMN time_bounds text  default 'Unbounded';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic DROP CONSTRAINT app_dynamic_logic_pkey;
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic ADD PRIMARY KEY ( domain, name, merchant_operating_city_id);

@@ -28,22 +28,26 @@ createMany = traverse_ create
 
 findByMerchantOpCityAndDomain ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Data.Text.Text -> m [Domain.Types.AppDynamicLogic.AppDynamicLogic])
-findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
-  findAllWithKV
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Data.Text.Text -> m [Domain.Types.AppDynamicLogic.AppDynamicLogic])
+findByMerchantOpCityAndDomain limit offset merchantOperatingCityId domain = do
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
           Se.Is Beam.domain $ Se.Eq domain
         ]
     ]
+    (Se.Asc Beam.order)
+    limit
+    offset
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Data.Text.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.AppDynamicLogic.AppDynamicLogic))
-findByPrimaryKey domain merchantOperatingCityId = do
+  (Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.AppDynamicLogic.AppDynamicLogic))
+findByPrimaryKey domain name merchantOperatingCityId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.name $ Se.Eq name,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
         ]
     ]
@@ -54,13 +58,12 @@ updateByPrimaryKey (Domain.Types.AppDynamicLogic.AppDynamicLogic {..}) = do
   updateWithKV
     [ Se.Set Beam.description description,
       Se.Set Beam.logic ((Data.String.Conversions.cs . Data.Aeson.encode) logic),
-      Se.Set Beam.name name,
       Se.Set Beam.order order,
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]]
+    [Se.And [Se.Is Beam.domain $ Se.Eq domain, Se.Is Beam.name $ Se.Eq name, Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]]
 
 instance FromTType' Beam.AppDynamicLogic Domain.Types.AppDynamicLogic.AppDynamicLogic where
   fromTType' (Beam.AppDynamicLogicT {..}) = do

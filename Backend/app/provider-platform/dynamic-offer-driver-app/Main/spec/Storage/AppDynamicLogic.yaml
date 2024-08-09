@@ -17,11 +17,14 @@ AppDynamicLogic:
   constraints:
     merchantOperatingCityId: PrimaryKey
     domain: PrimaryKey
+    name: PrimaryKey
 
   queries:
     findByMerchantOpCityAndDomain:
-      kvFunction: findAllWithKV
-      orderBy: order
+      kvFunction: findAllWithOptionsKV
+      orderBy:
+        field: order
+        order: asc
       where:
         and: [merchantOperatingCityId, domain]
 

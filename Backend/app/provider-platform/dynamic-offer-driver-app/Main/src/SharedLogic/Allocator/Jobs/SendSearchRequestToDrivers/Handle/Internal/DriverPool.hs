@@ -565,31 +565,36 @@ makeTaggedDriverPool ::
 makeTaggedDriverPool mOCityId onlyNewDrivers batchSize isOnRidePool customerNammaTags = do
   allLogics <- getAppDynamicLogic mOCityId "POOLING"
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
-  logDebug $ "All Logics-" <> show allLogics
-  logDebug $ "Only New Drivers-" <> show onlyNewDriversWithCustomerInfo
+      logicData = A.Object $ "drivers" .= A.toJSON onlyNewDriversWithCustomerInfo <> "needOnRideDrivers" .= isOnRidePool
+  logDebug $ "allLogics- " <> show allLogics
+  logDebug $ "logicData- " <> CS.cs (A.encode logicData)
   res <-
     foldlM
       ( \acc logics -> do
-          let result = JL.jsonLogic logics.logic . A.Object $ "drivers" .= A.toJSON acc <> "needOnRideDrivers" .= isOnRidePool
-          logDebug $ "json logic result - " <> show result
-          case result of
-            A.Object obj ->
-              case AKM.lookup "drivers" obj of
-                Just res -> do
-                  logDebug $ "Logic-" <> show logics.logic <> "Result-" <> show res
-                  case A.fromJSON res of
-                    A.Success dpr -> pure dpr
-                    A.Error err -> do
-                      logError $ "failed to run this logic" <> CS.cs (A.encode logics.logic) <> " with error: " <> show err
-                      pure acc
-                Nothing -> do
-                  logError "result empty"
-                  pure acc
-            _ -> logError "Hayein !" $> acc
+          let result = JL.jsonLogic logics.logic acc
+          logDebug $ "logic- " <> (CS.cs . A.encode $ logics.logic)
+          logDebug $ "json logic result - " <> (CS.cs . A.encode $ result)
+          return result
       )
-      onlyNewDriversWithCustomerInfo
+      logicData
       allLogics
-  pure $ take batchSize res
+  sortedPool <-
+    case res of
+      A.Object sortedPoolData ->
+        case AKM.lookup "drivers" sortedPoolData of
+          Nothing -> do
+            logError "Error in parsing sortedPoolData - drivers key not found"
+            pure onlyNewDriversWithCustomerInfo
+          Just driverPool ->
+            case A.fromJSON driverPool of
+              A.Success sortedPoolData' -> pure sortedPoolData'
+              A.Error err -> do
+                logError $ "Error in parsing sortedPoolData - " <> show err
+                pure onlyNewDriversWithCustomerInfo
+      _ -> do
+        logError "Error in parsing sortedPoolData - not an object"
+        pure onlyNewDriversWithCustomerInfo
+  pure $ take batchSize sortedPool
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, ..}

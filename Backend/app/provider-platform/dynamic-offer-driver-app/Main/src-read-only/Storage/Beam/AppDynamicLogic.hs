@@ -27,11 +27,11 @@ data AppDynamicLogicT f = AppDynamicLogicT
   deriving (Generic, B.Beamable)
 
 instance B.Table AppDynamicLogicT where
-  data PrimaryKey AppDynamicLogicT f = AppDynamicLogicId (B.C f Data.Text.Text) (B.C f (Kernel.Prelude.Maybe Data.Text.Text)) deriving (Generic, B.Beamable)
-  primaryKey = AppDynamicLogicId <$> domain <*> merchantOperatingCityId
+  data PrimaryKey AppDynamicLogicT f = AppDynamicLogicId (B.C f Data.Text.Text) (B.C f Data.Text.Text) (B.C f (Kernel.Prelude.Maybe Data.Text.Text)) deriving (Generic, B.Beamable)
+  primaryKey = AppDynamicLogicId <$> domain <*> name <*> merchantOperatingCityId
 
 type AppDynamicLogic = AppDynamicLogicT Identity
 
-$(enableKVPG ''AppDynamicLogicT ['domain, 'merchantOperatingCityId] [])
+$(enableKVPG ''AppDynamicLogicT ['domain, 'name, 'merchantOperatingCityId] [])
 
 $(mkTableInstances ''AppDynamicLogicT "app_dynamic_logic")

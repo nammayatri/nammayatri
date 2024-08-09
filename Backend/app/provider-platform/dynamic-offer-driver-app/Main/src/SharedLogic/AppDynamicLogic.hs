@@ -32,7 +32,7 @@ getAppDynamicLogic ::
   Text ->
   m [AppDynamicLogic]
 getAppDynamicLogic merchantOpCityId domain = do
-  configs <- DAL.findByMerchantOpCityAndDomain (Just merchantOpCityId) domain
+  configs <- DAL.findByMerchantOpCityAndDomain Nothing Nothing (Just merchantOpCityId) domain
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
