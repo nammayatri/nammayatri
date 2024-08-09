@@ -1584,3 +1584,8 @@ getTE stringKey =
         REMOVE_EYEWERE -> "దయచేసి కళ్లద్దాలు లేదా సన్ గ్లాసెస్ ఏదైనా ఉంటే తీసివేయండి"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "చిత్రాన్ని ధృవీకరించడానికి చేసిన ప్రయత్నాల సంఖ్య మించిపోయింది"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "పాన్ ధృవీకరణ విఫలమైంది"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "రెఫరల్ రివార్డ్ మొత్తాన్ని అందుకోవడానికి UPI వివరాలను జోడించండి"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "మీరు ఈ ఖాతాలో రెఫరల్ రివార్డ్ మొత్తాన్ని అందుకోవాలనుకుంటున్నారా?"
+        YES_PAY_TO_THIS_ACCOUNT -> "సరే, ఈ ఖాతాకు చెల్లించండి"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "నేను వేరొక ఖాతాను జోడిస్తాను"
+        ADD_NOW -> "ఇప్పుడే జోడించండి"

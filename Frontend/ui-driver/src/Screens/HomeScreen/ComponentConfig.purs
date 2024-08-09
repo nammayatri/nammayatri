@@ -50,7 +50,7 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -2480,6 +2480,171 @@ referralEarnedConfig state =
           { text = getString OKAY
           , width = MATCH_PARENT
           , margin = MarginTop 8
+          , background = Color.transparent
+          , color = Color.black650
+          , strokeColor = Color.transparent
+          }
+        , backgroundColor = Color.black9000
+        , gravity = CENTER
+        , padding = Padding 16 20 16 16
+        , cornerRadius = Corners 16.0 true true true true
+        , margin = MarginHorizontal 16 16
+        , buttonLayoutMargin = MarginLeft 0
+        , optionButtonOrientation = "VERTICAL"
+        , dismissPopup = true
+        }
+  in
+    requestInfoCardConfig'
+
+referNowConfig :: ST.HomeScreenState -> PopUpModal.Config
+referNowConfig state =
+  let
+    config = PopUpModal.config
+    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    image = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then cityConfig.assets.empty_referral_auto else cityConfig.assets.empty_referral_cab
+    requestInfoCardConfig' =
+      config
+        { primaryText 
+          { visibility = GONE
+          }
+        , secondaryText 
+          { text = getString $ EARN_FOR_EACH_REFERRAL $ state.data.config.currency <> show (fromMaybe 0 state.data.payoutRewardAmount)
+          , margin = MarginTop 24
+          , textStyle = Heading2
+          }
+        , coverImageConfig
+          { imageUrl = image
+          , height = V $ JB.getHeightFromPercent 31
+          , width = V $ (EHC.screenWidth unit) - 64
+          , visibility = VISIBLE
+          , margin = MarginLeft 0
+          }
+        , option1 
+          { text = getString REFER_NOW
+          , width = MATCH_PARENT
+          , margin = MarginTop 24
+          , background = Color.black900
+          , color = Color.yellow900
+          }
+        , option2
+          { text = getString CLOSE
+          , width = MATCH_PARENT
+          , height = V 36
+          , margin = MarginTop 8
+          , background = Color.transparent
+          , color = Color.black650
+          , strokeColor = Color.transparent
+          }
+        , backgroundColor = Color.black9000
+        , gravity = CENTER
+        , padding = Padding 16 20 16 16
+        , cornerRadius = Corners 16.0 true true true true
+        , margin = MarginHorizontal 16 16
+        , buttonLayoutMargin = MarginLeft 0
+        , optionButtonOrientation = "VERTICAL"
+        , dismissPopup = true
+        }
+  in
+    requestInfoCardConfig'
+
+addUPIConfig :: ST.HomeScreenState -> PopUpModal.Config
+addUPIConfig state =
+  let
+    config = PopUpModal.config
+    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    image = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then cityConfig.assets.empty_referral_auto else cityConfig.assets.empty_referral_cab
+    requestInfoCardConfig' =
+      config
+        { primaryText 
+          { visibility = GONE
+          }
+        , secondaryText 
+          { text = getString ADD_UPI_TO_RECEIVE_REFERRAL_REWARD
+          , margin = MarginTop 24
+          , textStyle = Heading2
+          }
+        , coverImageConfig
+          { imageUrl = image
+          , height = V $ JB.getHeightFromPercent 31
+          , width = V $ (EHC.screenWidth unit) - 64
+          , visibility = VISIBLE
+          , margin = MarginLeft 0
+          }
+        , option1 
+          { text = getString ADD_NOW
+          , width = MATCH_PARENT
+          , margin = MarginTop 24
+          , background = Color.black900
+          , color = Color.yellow900
+          }
+        , option2
+          { text = getString LATER
+          , width = MATCH_PARENT
+          , margin = MarginTop 8
+          , height = V 36
+          , background = Color.transparent
+          , color = Color.black650
+          , strokeColor = Color.transparent
+          }
+        , backgroundColor = Color.black9000
+        , gravity = CENTER
+        , padding = Padding 16 20 16 16
+        , cornerRadius = Corners 16.0 true true true true
+        , margin = MarginHorizontal 16 16
+        , buttonLayoutMargin = MarginLeft 0
+        , optionButtonOrientation = "VERTICAL"
+        , dismissPopup = true
+        }
+  in
+    requestInfoCardConfig'
+
+verifyUPI :: ST.HomeScreenState -> PopUpModal.Config
+verifyUPI state =
+  let
+    config = PopUpModal.config
+    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    image = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then cityConfig.assets.empty_referral_auto else cityConfig.assets.empty_referral_cab
+    requestInfoCardConfig' =
+      config
+        { primaryText 
+          { visibility = GONE
+          }
+        , secondaryText 
+          { text = getString DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE
+          , margin = MarginTop 24
+          , textStyle = Heading2
+          }
+        , upiDetailConfig {
+            visibility = VISIBLE,
+            upiID = fromMaybe "" state.data.payoutVpa,
+            accountName = fromMaybe "" state.data.payoutVpaBankAccount,
+            imageConfig {
+              visibility = VISIBLE
+              , imageUrl = fetchImage COMMON_ASSET "ny_ic_add_upi_cirlce"
+              , height = V 36
+              , width = V 36
+              , margin = MarginRight 16
+            }
+          }
+        , coverImageConfig
+          { imageUrl = image
+          , height = V $ JB.getHeightFromPercent 31
+          , width = V $ (EHC.screenWidth unit) - 64
+          , visibility = VISIBLE
+          , margin = MarginLeft 0
+          }
+        , option1 
+          { text = getString YES_PAY_TO_THIS_ACCOUNT
+          , width = MATCH_PARENT
+          , margin = MarginTop 24
+          , background = Color.black900
+          , color = Color.yellow900
+          }
+        , option2
+          { text = getString I_WILL_ADD_DIFFERENT_ACCOUNT
+          , width = MATCH_PARENT
+          , margin = MarginTop 8
+          , height = V 36
           , background = Color.transparent
           , color = Color.black650
           , strokeColor = Color.transparent

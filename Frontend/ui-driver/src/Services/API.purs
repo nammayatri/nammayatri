@@ -451,6 +451,11 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , canSwitchToRental     :: Maybe Boolean
     , checkIfACWorking      :: Maybe Boolean
     , canSwitchToInterCity  :: Maybe Boolean
+    , payoutVpa             :: Maybe String 
+    , payoutVpaStatus       :: Maybe PayoutVpaStatus
+    , isPayoutEnabled       :: Maybe Boolean
+    , payoutRewardAmount    :: Maybe Int
+    , payoutVpaBankAccount  :: Maybe String
     }
 
 
@@ -483,6 +488,17 @@ newtype Vehicle = Vehicle
         createdAt        :: String,
         serviceTierType  :: Maybe String
     }
+
+data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER
+
+derive instance genericPayoutVpaStatus :: Generic PayoutVpaStatus _
+instance showPayoutVpaStatus :: Show PayoutVpaStatus where show = genericShow
+instance decodePayoutVpaStatus :: Decode PayoutVpaStatus where decode = defaultEnumDecode
+instance encodePayoutVpaStatus :: Encode PayoutVpaStatus where encode = defaultEnumEncode
+instance eqPayoutVpaStatus :: Eq PayoutVpaStatus where eq = genericEq
+instance standardEncodePayoutVpaStatus :: StandardEncode PayoutVpaStatus
+  where
+    standardEncode _ = standardEncode {}
 
 instance makeDriverInfoReq :: RestEndpoint DriverInfoReq where
     makeRequest reqBody headers = defaultMakeRequest POST (EP.getDriverInfoV2 "") headers reqBody Nothing
@@ -4530,6 +4546,28 @@ instance showDeleteVPARes :: Show DeleteVPARes where show = genericShow
 instance standardEncodeDeleteVPARes :: StandardEncode DeleteVPARes where standardEncode _ = standardEncode {}
 instance decodeDeleteVPARes :: Decode DeleteVPARes where decode = defaultDecode
 instance encodeDeleteVPARes :: Encode DeleteVPARes where encode = defaultEncode
+
+--------------------------------- VERIFY VPA REQUEST ---------------------------------------------------------------------------------------------------------------------------
+
+data VerifyVpaReq = VerifyVpaReq String
+
+newtype VerifyVpaRes = VerifyVpaRes ApiSuccessResult
+
+instance makeVerifyVpaReq :: RestEndpoint VerifyVpaReq where
+    makeRequest reqBody@(VerifyVpaReq dummy) headers = defaultMakeRequest POST (EP.verifyUPI dummy) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericVerifyVpaReq :: Generic VerifyVpaReq _
+instance showVerifyVpaReq :: Show VerifyVpaReq where show = genericShow
+instance standardEncodeVerifyVpaReq :: StandardEncode VerifyVpaReq where standardEncode _ = standardEncode {}
+instance decodeVerifyVpaReq :: Decode VerifyVpaReq where decode = defaultDecode
+instance encodeVerifyVpaReq :: Encode VerifyVpaReq where encode = defaultEncode
+
+derive instance genericVerifyVpaRes :: Generic VerifyVpaRes _
+instance showVerifyVpaRes :: Show VerifyVpaRes where show = genericShow
+instance standardEncodeVerifyVpaRes :: StandardEncode VerifyVpaRes where standardEncode _ = standardEncode {}
+instance decodeVerifyVpaRes :: Decode VerifyVpaRes where decode = defaultDecode
+instance encodeVerifyVpaRes :: Encode VerifyVpaRes where encode = defaultEncode
 
 --------------------------------- GET PAYOUT REGISTER ---------------------------------------------------------------------------------------------------------------------------
 

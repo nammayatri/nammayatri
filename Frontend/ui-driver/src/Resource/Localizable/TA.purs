@@ -1582,3 +1582,8 @@ getTA stringKey =
         REMOVE_EYEWERE -> "கண்ணாடிகள் அல்லது சன்கிளாஸ்கள் ஏதேனும் இருந்தால் தயவுசெய்து அகற்றவும்"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "படத்தைச் சரிபார்க்கும் முயற்சிகள் எண்ணிக்கையை மீறியது"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "PAN சரிபார்ப்பு தோல்வியடைந்தது"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "பரிந்துரை ரிவார்டு தொகையைப் பெற UPI விவரங்களைச் சேர்க்கவும்"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "இந்தக் கணக்கில் பரிந்துரை வெகுமதித் தொகையைப் பெற விரும்புகிறீர்களா?"
+        YES_PAY_TO_THIS_ACCOUNT -> "சரி, இந்தக் கணக்கில் செலுத்துங்கள்"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "நான் வேறு கணக்கைச் சேர்ப்பேன்"
+        ADD_NOW -> "இப்போது சேர்"

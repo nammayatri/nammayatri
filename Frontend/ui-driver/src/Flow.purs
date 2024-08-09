@@ -127,7 +127,7 @@ import Screens.DriverEarningsScreen.Transformer (checkPopupShowToday, isPopupSho
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -2942,6 +2942,17 @@ homeScreenFlow = do
           pure unit
         Nothing -> pure unit
       homeScreenFlow
+    GO_TO_BENEFITS_SCREEN_FROM_HOME -> referralFlow
+    GO_TO_ADD_UPI_SCREEN -> do
+      let (GlobalState defGlobalState) = defaultGlobalState
+      let customerReferralTrackerScreenState = defGlobalState.customerReferralTrackerScreen
+      modifyScreenState $ CustomerReferralTrackerScreenStateType (\_ -> customerReferralTrackerScreenState{data{currentStage = CRST.UPIDetails}})
+      customerReferralTrackerFlow
+    VERIFY_MANUAL_UPI state -> do 
+      response <- lift $ lift $ Remote.verifyVpaID ""
+      case response of 
+        Right val -> pure unit
+        Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
   homeScreenFlow
 
 categoryTransformer :: Array Category -> String -> Array CategoryListType 
@@ -3497,6 +3508,11 @@ updateDriverDataToStates = do
         , linkedVehicleCategory = fromMaybe linkedVehicle.variant linkedVehicle.serviceTierType
         , linkedVehicleVariant = linkedVehicle.variant
         , gender = fromMaybe "UNKNOWN" getDriverInfoResp.gender
+        , payoutVpa = getDriverInfoResp.payoutVpa
+        , payoutVpaStatus = getDriverInfoResp.payoutVpaStatus
+        , isPayoutEnabled = getDriverInfoResp.isPayoutEnabled
+        , payoutRewardAmount = getDriverInfoResp.payoutRewardAmount
+        , payoutVpaBankAccount = getDriverInfoResp.payoutVpaBankAccount
         , driverGotoState { gotoCount = driverGoHomeInfo.cnt,
                             gotoValidTill = fromMaybe "-" driverGoHomeInfo.validTill,
                             isGotoEnabled = driverGoHomeInfo.status == Just "ACTIVE",
@@ -3681,6 +3697,22 @@ updateBannerAndPopupFlags = do
 
     coinPopupType = if (coinPopupType__ == ST.NO_COIN_POPUP) then (checkPopupShowToday ST.REFER_AND_EARN_COIN appConfig hsState) else coinPopupType__
 
+    isPayoutEnabled = fromMaybe false getDriverInfoResp.isPayoutEnabled
+
+    payoutVpa = getDriverInfoResp.payoutVpa
+    
+    payoutVpaStatus = getDriverInfoResp.payoutVpaStatus
+
+    showReferNowPopUp = isPayoutEnabled && showReferralPopUp REFER_NOW_LAST_SHOWN && isJust payoutVpa && case payoutVpaStatus of 
+                                                                                                            Just status -> status == VIA_WEBHOOK || status == VERIFIED_BY_USER
+                                                                                                            Nothing -> false
+  
+    showAddUPIPopUp = isPayoutEnabled && showReferralPopUp ADD_UPI_LAST_SHOWN && isNothing payoutVpa
+
+    showVerifyUPIPopUp = isPayoutEnabled && showReferralPopUp VERIFY_UPI_LAST_SHOWN && isJust payoutVpa && case payoutVpaStatus of 
+                                                                                                              Just status -> status == MANUALLY_ADDED
+                                                                                                              Nothing -> false
+
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
       changeDriverStatus Offline
@@ -3709,12 +3741,19 @@ updateBannerAndPopupFlags = do
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
                 , showCoinsPopup = showCoinPopup
                 , coinPopupType = coinPopupType
+                , showReferNowPopUp = showReferNowPopUp
+                , showAddUPIPopUp = showAddUPIPopUp
+                , showVerifyUPIPopUp = showVerifyUPIPopUp
                 , showAcWorkingPopup = if isNothing allState.homeScreen.props.showAcWorkingPopup
                                           then getDriverInfoResp.checkIfACWorking
                                        else allState.homeScreen.props.showAcWorkingPopup
                 }
               }
         )
+  where 
+    showReferralPopUp popUpType =
+      let showPopUp = (isYesterday $ getValueToLocalStore popUpType) || (getValueToLocalStore popUpType == "__failed") 
+      in showPopUp
 
 callGetPastDaysData :: AppConfig -> HomeScreenState -> FlowBT String ST.CoinEarnedPopupType
 callGetPastDaysData appConfig hsState = do

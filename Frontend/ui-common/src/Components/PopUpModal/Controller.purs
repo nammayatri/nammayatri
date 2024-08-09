@@ -90,7 +90,15 @@ type Config = {
     coverLottieConfig :: LottieConfig,
     showRetry :: Boolean,
     coverLottie :: CoverLottie,
-    layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w)
+    layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
+    upiDetailConfig :: UPIDetailConfig
+}
+
+type UPIDetailConfig = {
+  visibility :: Visibility,
+  upiID :: String,
+  accountName :: String,
+  imageConfig :: ImageConfig
 }
 
 type LayoutConfig = {
@@ -651,6 +659,19 @@ config = {
     gravity : CENTER
   }
   , layout : Mb.Nothing
+  , upiDetailConfig : {
+      visibility : GONE,
+      upiID : "",
+      accountName : "",
+      imageConfig : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    }
 }
 
 
