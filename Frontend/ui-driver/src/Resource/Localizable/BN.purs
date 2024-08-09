@@ -1583,3 +1583,8 @@ getBN stringKey =
         REMOVE_EYEWERE -> "অনুগ্রহ করে চশমা বা সানগ্লাস সরিয়ে ফেলুন যদি থেকে থাকে।"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "চিত্রের বৈধতা সীমা ছাড়িয়ে গেছে।"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "প্যান যাচাই ব্যর্থ হয়েছে।"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "রেফারেল পুরস্কারের পরিমাণ পেতে UPI বিস্তারিত যোগ করুন"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "আপনি কি এই অ্যাকাউন্টে রেফারেল পুরস্কারের পরিমাণ পেতে চান?"
+        YES_PAY_TO_THIS_ACCOUNT -> "হ্যাঁ, এই অ্যাকাউন্টে অর্থ প্রদান করুন"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "আমি বিভিন্ন অ্যাকাউন্ট যোগ করব"
+        ADD_NOW  -> "এখন যোগ করুন"

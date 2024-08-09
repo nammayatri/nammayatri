@@ -1581,3 +1581,8 @@ getKN stringKey =
         REMOVE_EYEWERE -> "ದಯವಿಟ್ಟು ಕನ್ನಡಕ ಅಥವಾ ಸನ್ಗ್ಲಾಸ್ ಯಾವುದಾದರೂ ಇದ್ದರೆ ತೆಗೆದುಹಾಕಿ"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "ಚಿತ್ರದ ಮೌಲ್ಯೀಕರಣವು ಮಿತಿಯನ್ನು ಮೀರಿದೆ"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "ಪ್ಯಾನ್ ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "ರೆಫರಲ್ ಬಹುಮಾನ ಮೊತ್ತವನ್ನು ಸ್ವೀಕರಿಸಲು UPI ವಿವರವನ್ನು ಸೇರಿಸಿ"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "ನೀವು ಈ ಖಾತೆಯಲ್ಲಿ ರೆಫರಲ್ ಬಹುಮಾನ ಮೊತ್ತವನ್ನು ಸ್ವೀಕರಿಸಲು ಬಯಸುವಿರಾ?"
+        YES_PAY_TO_THIS_ACCOUNT -> "ಸರಿ, ಈ ಖಾತೆಗೆ ಪಾವತಿಸಿ"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "ನಾನು ಬೇರೆ ಖಾತೆಯನ್ನು ಸೇರಿಸುತ್ತೇನೆ"
+        ADD_NOW -> "ಈಗ ಸೇರಿಸಿ"

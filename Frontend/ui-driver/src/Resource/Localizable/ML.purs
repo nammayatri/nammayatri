@@ -1582,3 +1582,8 @@ getML stringKey =
         REMOVE_EYEWERE -> "കണ്ണടകളോ സൺഗ്ലാസുകളോ ഉണ്ടെങ്കിൽ അത് നീക്കം ചെയ്യുക"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "ചിത്രം സാധൂകരിക്കാനുള്ള ശ്രമങ്ങളുടെ എണ്ണം കവിഞ്ഞു"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "പാൻ സ്ഥിതീകരണം പരാജയപ്പെട്ടു"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "റഫറൽ റിവാർഡ് തുക ലഭിക്കാൻ UPI വിശദാംശങ്ങൾ ചേർക്കുക"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "ഈ അക്കൗണ്ടിൽ നിങ്ങൾക്ക് റഫറൽ റിവാർഡ് തുക ലഭിക്കണോ?"
+        YES_PAY_TO_THIS_ACCOUNT -> "ശരി, ഈ അക്കൗണ്ടിലേക്ക് പണമടയ്ക്കുക"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "ഞാൻ മറ്റൊരു അക്കൗണ്ട് ചേർക്കും"
+        ADD_NOW  -> "ആഡ് ചെയ്യുക"

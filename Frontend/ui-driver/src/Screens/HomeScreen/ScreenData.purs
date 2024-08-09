@@ -151,6 +151,11 @@ initData =
       , isVehicleSupported: true
       , parking : initialParkingData
       , toll : initialTollState
+      , payoutVpa : Nothing
+      , payoutVpaStatus : Nothing
+      , isPayoutEnabled : Nothing
+      , payoutRewardAmount : Nothing
+      , payoutVpaBankAccount : Nothing
     }
   , props:
       { isFreeRide: false
@@ -229,7 +234,10 @@ initData =
       , acExplanationPopup : false
       , isOdometerReadingsRequired: false
       , showInterOperablePopUp : false
-      , referralEarned : false
+      , showReferralEarnedPopUp : false
+      , showReferNowPopUp : false
+      , showAddUPIPopUp : false 
+      , showVerifyUPIPopUp : false
       }
   }
 
