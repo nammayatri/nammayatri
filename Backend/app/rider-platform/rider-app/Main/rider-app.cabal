@@ -339,6 +339,7 @@ library
       Storage.Queries.QuoteExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
+      Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.TicketBookingExtra
@@ -481,6 +482,7 @@ library
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
+      Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
@@ -566,6 +568,7 @@ library
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
+      Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
@@ -661,6 +664,7 @@ library
       Storage.Queries.OrphanInstances.Quote
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.TicketBooking
@@ -686,6 +690,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
+      Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest

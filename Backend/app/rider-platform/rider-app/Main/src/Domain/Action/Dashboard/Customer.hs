@@ -56,6 +56,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Clickhouse.Sos as CHSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SavedReqLocation as QSRL
 
 ---------------------------------------------------------------------
@@ -131,7 +132,7 @@ customerInfo merchantShortId opCity customerId = do
     runInReplica $
       QP.findById personId
         >>= fromMaybeM (PersonDoesNotExist personId.getId)
-
+  safetySettings <- QSafety.findSafetySettingsWithFallback personId Nothing
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
@@ -142,8 +143,8 @@ customerInfo merchantShortId opCity customerId = do
   pure $
     Common.CustomerInfoRes
       { numberOfRides,
-        falseSafetyAlarmCount = customer.falseSafetyAlarmCount,
-        safetyCenterDisabledOnDate = customer.safetyCenterDisabledOnDate,
+        falseSafetyAlarmCount = safetySettings.falseSafetyAlarmCount,
+        safetyCenterDisabledOnDate = safetySettings.safetyCenterDisabledOnDate,
         ..
       }
 
@@ -211,17 +212,16 @@ updateSafetyCenterBlocking ::
   Common.UpdateSafetyCenterBlockingReq ->
   Flow APISuccess
 updateSafetyCenterBlocking personId req = do
+  let personId' = cast @Common.Customer @DP.Person personId
+  safetySettings <- QSafety.findSafetySettingsWithFallback personId' Nothing
   case req.resetCount of
     Just True -> do
-      let personId' = cast @Common.Customer @DP.Person personId
-      QP.updateSafetyCenterBlockingCounter personId' (Just 0) Nothing
+      QSafety.updateSafetyCenterBlockingCounter personId' (Just 0) Nothing
     _ -> pure ()
   case req.incrementCount of
     Just True -> do
-      let personId' = cast @Common.Customer @DP.Person personId
       now <- getCurrentTime
-      person <- runInReplica $ QP.findById personId' >>= fromMaybeM (PersonNotFound personId'.getId)
-      QP.updateSafetyCenterBlockingCounter personId' (Just $ person.falseSafetyAlarmCount + 1) $ blockingDate now person.falseSafetyAlarmCount
+      QSafety.updateSafetyCenterBlockingCounter personId' (Just $ safetySettings.falseSafetyAlarmCount + 1) $ blockingDate now safetySettings.falseSafetyAlarmCount
     _ -> pure ()
   return Success
   where
