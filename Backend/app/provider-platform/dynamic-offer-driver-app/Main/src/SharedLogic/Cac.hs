@@ -14,6 +14,8 @@
 module SharedLogic.Cac where
 
 import qualified Data.Aeson as DA
+import qualified Data.Aeson.KeyMap as DAKM
+import qualified Data.Text
 import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
@@ -25,15 +27,22 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMercha
 import Tools.Error
 import Utils.Common.CacUtils
 
-getFrontendConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) => Id MerchantOperatingCity -> Maybe Int -> m (Maybe DA.Object)
-getFrontendConfigs merchantOpCityId mbToss = do
+getFrontendConfigs ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
+  Id MerchantOperatingCity ->
+  Maybe Int ->
+  Maybe Text ->
+  DA.Object ->
+  m (Maybe DA.Object)
+getFrontendConfigs merchantOpCityId toss tenant context = do
   city <- (QMerchantOpCity.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)) <&> (.city)
-  let ghcCond = [(City, show city)]
-  contextValue <- case mbToss of
-    Just toss -> getConfigFromCac ghcCond (show DriverFrontEndTenat) toss Empty
-    Nothing -> getConfigFromCac ghcCond (show DriverFrontEndTenat) 1 Empty
+  let ghcCond :: DA.Object = DAKM.fromList [("city", show city)]
+  let context' = context <> ghcCond
+  let tenant' = maybe "" Data.Text.unpack tenant
+  let toss' = fromMaybe 2 toss
+  contextValue <- getConfigFromCacAsString context' tenant' toss'
   case contextValue of
     Nothing -> do
-      logError $ "Error in getting frontend configs for City: " <> show city <> "toss: " <> show mbToss
+      logError $ "Error in getting frontend configs for City: " <> show city <> "toss: " <> show toss'
       return Nothing
     Just cfgs -> return $ Just cfgs

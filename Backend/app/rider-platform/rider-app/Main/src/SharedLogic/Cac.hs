@@ -14,6 +14,8 @@
 module SharedLogic.Cac where
 
 import qualified Data.Aeson as DA
+import qualified Data.Aeson.KeyMap as DAKM
+import qualified Data.Text
 import Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
@@ -21,14 +23,21 @@ import Kernel.Types.Common
 import Kernel.Utils.Logging
 import Utils.Common.CacUtils
 
-getFrontendConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) => Person -> Maybe Int -> m (Maybe DA.Object)
-getFrontendConfigs person mbToss = do
-  let ghcCond = [(City, show person.currentCity)]
-  contextValue <- case mbToss of
-    Just toss -> getConfigFromCac ghcCond (show RiderFrontEndTenant) toss Empty
-    Nothing -> getConfigFromCac ghcCond (show RiderFrontEndTenant) 1 Empty
+getFrontendConfigs ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Log m) =>
+  Person ->
+  Maybe Int ->
+  Maybe Text ->
+  DA.Object ->
+  m (Maybe DA.Object)
+getFrontendConfigs person toss tenant context = do
+  let ghcCond :: DA.Object = DAKM.fromList [("city", show person.currentCity)]
+  let context' = context <> ghcCond
+  let toss' = fromMaybe 2 toss
+  let tenant' = maybe "" Data.Text.unpack tenant
+  contextValue <- getConfigFromCacAsString context' tenant' toss'
   case contextValue of
     Nothing -> do
-      logError $ "Error in getting frontend configs for City: " <> show person.currentCity <> "toss: " <> show mbToss
+      logError $ "Error in getting frontend configs for City: " <> show person.currentCity <> "toss: " <> show toss'
       return Nothing
     Just cfgs -> return $ Just cfgs

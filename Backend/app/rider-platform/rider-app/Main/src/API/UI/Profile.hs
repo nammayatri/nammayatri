@@ -46,6 +46,8 @@ type API =
   "profile"
     :> ( TokenAuth
            :> QueryParam "toss" Int
+           :> QueryParam "tenant" Text
+           :> QueryParam "context" Text
            :> Get '[JSON] DProfile.ProfileRes
            :<|> TokenAuth
              :> ReqBody '[JSON] DProfile.UpdateProfileReq
@@ -80,8 +82,8 @@ handler =
     :<|> updateDefaultEmergencyNumbers
     :<|> getDefaultEmergencyNumbers
 
-getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> FlowHandler DProfile.ProfileRes
-getPersonDetails (personId, merchantId) = withFlowHandlerAPI . DProfile.getPersonDetails (personId, merchantId)
+getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler DProfile.ProfileRes
+getPersonDetails (personId, merchantId) toss tenant context = withFlowHandlerAPI $ DProfile.getPersonDetails (personId, merchantId) toss tenant context
 
 updatePerson :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateProfileReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler APISuccess.APISuccess
 updatePerson (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientConfigVersion
