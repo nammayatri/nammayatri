@@ -81,7 +81,8 @@ type Config a = {
   actionImageUrl :: String,
   actionImageVisibility :: Boolean,
   actionArrowIconVisibility :: Boolean,
-  actionBottomArrowIconVisibility :: Boolean
+  actionBottomArrowIconVisibility :: Boolean,
+  accessibilityHint :: Maybe String
 , imageBannerUrl :: String
 , dynamicAction :: Maybe RemoteAC
 }
@@ -119,7 +120,8 @@ config action = {
     showImageAsCTA : false,
     actionImageVisibility : false,
     actionArrowIconVisibility : true,
-    actionBottomArrowIconVisibility : false
+    actionBottomArrowIconVisibility : false,
+    accessibilityHint : Nothing
 , imageBannerUrl : ""
 , dynamicAction : Nothing
 }
@@ -147,7 +149,8 @@ type PropConfig = (
   actionArrowIconVisibility :: PropValue,
   actionBottomArrowIconVisibility :: PropValue,
   imageBannerUrl :: PropValue,
-  imageBannerVisibility :: PropValue
+  imageBannerVisibility :: PropValue,
+  accessibilityHint :: PropValue
 )
 
 
@@ -180,6 +183,7 @@ bannerTransformer =
   actionBottomArrowIconVisibility : toPropValue $ if item.actionBottomArrowIconVisibility then "visible" else "gone"
 , imageBannerUrl : toPropValue $ imageBannerUrl
 , imageBannerVisibility : toPropValue $ if DS.null $ imageBannerUrl then "gone" else "visible"
+, accessibilityHint : toPropValue $ fromMaybe "banner" item.accessibilityHint
   }
 )
 
@@ -208,6 +212,7 @@ remoteConfigTransformer remoteConfig action =
         actionArrowIconVisibility = DS.null remoteConfig.cta_image_url,
         actionBottomArrowIconVisibility = DS.null remoteConfig.cta_image_url,
         imageBannerUrl = fromMaybe "" remoteConfig.image_banner,
-        dynamicAction = remoteConfig.dynamic_action
+        dynamicAction = remoteConfig.dynamic_action,
+        accessibilityHint = remoteConfig.accessibilityHint
       }
     in config'') remoteConfig

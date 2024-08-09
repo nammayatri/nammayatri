@@ -69,7 +69,7 @@ import Log (printLog)
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
 import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when, (<#>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..))
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..),accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -344,6 +344,8 @@ backIconView push state = let
     , gravity CENTER
     , onClick push $ const BackpressAction
     , margin $ Margin 16 48 0 0
+    , accessibility ENABLE
+    , accessibilityHint "Go Back Button"
     ][  imageView
           [ height $ V 24 
           , width $ V 24 
@@ -458,6 +460,8 @@ recenterButtonView push state =
   , gravity RIGHT
   , padding $ Padding 0 0 16 14
   , disableClickFeedback true
+  , accessibility ENABLE
+  , accessibilityHint "Tap To Recenter Your Location"
   ][
       imageView
         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"

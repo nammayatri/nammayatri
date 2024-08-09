@@ -58,7 +58,7 @@ menuButtonConfig state language = MenuButton.config {
         , selectedTextStyle = FontStyle.ParagraphText
         , unselectedTextStyle = FontStyle.ParagraphText
        }
-      , accessibilityHint = language.subTitle
+      , accessibilityHint = if language.name == "English" then language.name else language.subTitle
       ,subTitleConfig
       {
         text = language.subTitle

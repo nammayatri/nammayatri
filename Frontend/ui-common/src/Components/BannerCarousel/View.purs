@@ -22,7 +22,7 @@ import Common.Types.App (LazyCheck(..))
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, root, backgroundColor)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, root, backgroundColor,accessibility ,accessibilityHint, Accessiblity(..))
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Styles.Colors as Color
@@ -36,6 +36,7 @@ view push config =
     , width $ V $ screenWidth unit
     , padding $ PaddingHorizontal 16 16
     , root true
+    , accessibilityHintHolder "accessibilityHint"
     ][ 
       bannerView push config
     , imageBannerView push config
@@ -49,6 +50,7 @@ imageBannerView push config =
   , width MATCH_PARENT
   , imageUrlHolder "imageBannerUrl"
   , visibilityHolder "imageBannerVisibility"
+  , accessibilityHintHolder "accessibilityHint"
   , margin $ MarginTop if os == "IOS" then  15 else 0
   ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action
 
@@ -62,6 +64,8 @@ bannerView push config =
     , backgroundHolder "backgroundColor"
     , visibilityHolder "visibility"
     , gravity CENTER
+    , accessibility ENABLE
+    , accessibilityHint $ "swipe to see other options"
     ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action)
     [ linearLayout
         [ height WRAP_CONTENT

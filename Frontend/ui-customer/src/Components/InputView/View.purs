@@ -154,6 +154,8 @@ dateTimePickerButton config push =
             [ text config.suffixButton.text
             , margin $ MarginHorizontal 4 4
             , color Color.black600
+            , accessibility ENABLE
+            , accessibilityHint $ if config.suffixButton.accessibilityHint /= "" then config.suffixButton.accessibilityHint else config.suffixButton.text 
             ] <> FontStyle.subHeading2 LanguageStyle
         , imageView
             [ imageWithFallback $ fetchImage FF_ASSET config.suffixButton.suffixImage
@@ -274,6 +276,8 @@ crossButtonView push config =
             [ height $ config.clearTextIcon.height
             , width $ config.clearTextIcon.width 
             , imageWithFallback $ fetchImage FF_ASSET config.clearTextIcon.imageName
+            , accessibility ENABLE 
+            , accessibilityHint "Clear Text Button"
             ]
         ]
 

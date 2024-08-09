@@ -52,6 +52,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Data.Lens ((^.))
 import Accessor (_amount)
+import Resources.Localizable.EN (getEN)
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -150,6 +151,7 @@ confirmLocBtnConfig state =
         { textConfig
           { text = getString CONFIRM_LOCATION
           , color = state.appConfig.primaryTextColor
+          , accessibilityHint = (getEN CONFIRM_LOCATION) <> " Button"
           }
         , cornerRadius = state.appConfig.primaryButtonCornerRadius
         , margin = MarginTop 8 

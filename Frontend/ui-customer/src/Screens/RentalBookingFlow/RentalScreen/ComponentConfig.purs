@@ -55,6 +55,11 @@ primaryButtonConfig state =
             _ -> ""
         , color = Color.yellow900
         , height = V 40
+        , accessibilityHint = case state.data.currentStage of
+            RENTAL_SELECT_PACKAGE -> getEN VIEW_FARES <> " Button"
+            RENTAL_SELECT_VARIANT -> getEN BOOK_RENTAL <> " Button"
+            RENTAL_CONFIRMATION -> getEN CONFIRM_RENTAL <> " Button"
+            _ -> ""
         }
       , gravity = CENTER
       , margin = MarginHorizontal 0 0
@@ -137,6 +142,7 @@ mapInputViewConfig state =
           , suffixImage = "ny_ic_chevron_down"
           , padding = Padding 8 0 8 1
           , gravity = CENTER_VERTICAL
+          , accessibilityHint = if suffixButtonText == (getString NOW) then "Select to Schedule Ride" else "Selected Date : " <> suffixButtonText 
           }
         , suffixButtonVisibility = GONE --boolToVisibility isSelectPackageStage -- TODO :: enable this once scheduled ride is handled properly. -- MERCY 
         , imageLayoutVisibility = boolToVisibility isSelectPackageStage
