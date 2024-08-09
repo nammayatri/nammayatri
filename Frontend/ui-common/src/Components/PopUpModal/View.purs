@@ -360,7 +360,7 @@ view push state =
              , gravity $ state.secondaryText.gravity
              , textFromHtml state.secondaryText.text
              , accessibility ENABLE
-             , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.secondaryText.text
+             , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") (if state.secondaryText.accessibilityHint /= ""  then state.secondaryText.accessibilityHint else state.secondaryText.text)
              , visibility $ state.secondaryText.visibility
              ]  <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
             , imageView [

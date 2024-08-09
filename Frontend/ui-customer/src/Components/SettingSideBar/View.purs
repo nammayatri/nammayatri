@@ -171,7 +171,7 @@ profileView state push =
   ][ imageView
       [ width ( V 48 )
       , height ( V 48 )
-      , accessibilityHint "Close Menu Bar Button"
+      , accessibilityHint "Close Menu Bar"
       , accessibility ENABLE
       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_user"
       , onClick push $ (const OnClose)

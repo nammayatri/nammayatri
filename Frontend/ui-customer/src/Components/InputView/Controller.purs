@@ -86,6 +86,7 @@ type ButtonLayoutConfig =
   , suffixImage :: String
   , padding :: Padding
   , gravity :: Gravity
+  , accessibilityHint :: String
   }
 
 config :: InputViewConfig
@@ -110,7 +111,8 @@ config = {
     prefixImage : "",
     suffixImage : "",
     padding : Padding 0 0 0 0,
-    gravity : CENTER_VERTICAL
+    gravity : CENTER_VERTICAL,
+    accessibilityHint : ""
   }
 }
 
