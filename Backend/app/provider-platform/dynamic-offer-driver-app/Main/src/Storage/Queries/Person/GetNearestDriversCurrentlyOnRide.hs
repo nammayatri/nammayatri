@@ -1,5 +1,8 @@
 module Storage.Queries.Person.GetNearestDriversCurrentlyOnRide where
 
+-- import qualified Storage.Queries.DriverStats as QDriverStats
+
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Text as T
@@ -24,10 +27,10 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
--- import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle.Internal as Int
+import qualified Tools.Utils as TU
 
 data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
   { driverId :: Id Driver,
@@ -53,7 +56,8 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe LatLong
+    latestScheduledPickup :: Maybe LatLong,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -176,5 +180,6 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
                 backendConfigVersion = person.backendConfigVersion,
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
-                latestScheduledPickup = info.latestScheduledPickup
+                latestScheduledPickup = info.latestScheduledPickup,
+                driverTags = TU.convertTags $ fromMaybe [] person.driverTag
               }

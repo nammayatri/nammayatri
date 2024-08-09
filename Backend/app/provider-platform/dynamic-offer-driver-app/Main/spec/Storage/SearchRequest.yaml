@@ -52,6 +52,7 @@ SearchRequest:
     roundTrip: Maybe Bool
     isAdvanceBookingEnabled: Bool
     isDashboardRequest: Bool
+    customerNammaTags: "Maybe [Text]"
     startTime: UTCTime
     createdAt: UTCTime
 

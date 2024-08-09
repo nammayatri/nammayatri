@@ -330,7 +330,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
         useFakeOtp,
-        driverTag = Nothing
+        driverTag = Just ["SafetyCohort#New"]
       }
 
 makeSession ::

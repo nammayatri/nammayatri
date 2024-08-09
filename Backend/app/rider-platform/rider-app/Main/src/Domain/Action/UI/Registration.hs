@@ -441,6 +441,7 @@ buildPerson req identifierType notificationToken clientBundleVersion clientSdkVe
         defaultPaymentMethodId = Nothing,
         enableOtpLessRide = req.enableOtpLessRide,
         totalRidesCount = Nothing,
+        customerNammaTags = Nothing,
         informPoliceSos = False
       }
 

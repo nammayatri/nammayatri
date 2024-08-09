@@ -304,6 +304,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+      SharedLogic.AppDynamicLogic
       SharedLogic.Beckn.Common
       SharedLogic.BlockedRouteDetector
       SharedLogic.Booking
@@ -575,6 +576,7 @@ library
       Tools.Payout
       Tools.SMS
       Tools.Ticket
+      Tools.Utils
       Tools.Verification
       Tools.Whatsapp
       API.Action.Dashboard.Fleet.Driver
@@ -614,6 +616,7 @@ library
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
+      Domain.Types.AppDynamicLogic
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
@@ -728,6 +731,7 @@ library
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
+      Storage.Beam.AppDynamicLogic
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
@@ -844,6 +848,7 @@ library
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
+      Storage.Queries.AppDynamicLogic
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
@@ -1089,6 +1094,7 @@ library
     , http-client-tls
     , http-conduit
     , http-types
+    , json-logic-hs
     , lens
     , lens-aeson
     , location-updates
@@ -1214,6 +1220,7 @@ executable dynamic-offer-driver-app-exe
     , http-client-tls
     , http-conduit
     , http-types
+    , json-logic-hs
     , lens
     , lens-aeson
     , mobility-core

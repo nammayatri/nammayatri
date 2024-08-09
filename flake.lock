@@ -1920,6 +1920,22 @@
         "type": "github"
       }
     },
+    "json-logic-hs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1723197377,
+        "narHash": "sha256-oizWhlwdW+tFIR731M6tESBcLMz317EDvvGljGUddZo=",
+        "owner": "nammayatri",
+        "repo": "json-logic-hs",
+        "rev": "74a7173a3a4b3b4e759df95e6da3c7684118d533",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nammayatri",
+        "repo": "json-logic-hs",
+        "type": "github"
+      }
+    },
     "juspay-extra": {
       "inputs": {
         "flake-parts": "flake-parts_9",
@@ -3901,6 +3917,7 @@
           "common",
           "haskell-flake"
         ],
+        "json-logic-hs": "json-logic-hs",
         "location-tracking-service": "location-tracking-service",
         "namma-dsl": "namma-dsl",
         "nixpkgs": [

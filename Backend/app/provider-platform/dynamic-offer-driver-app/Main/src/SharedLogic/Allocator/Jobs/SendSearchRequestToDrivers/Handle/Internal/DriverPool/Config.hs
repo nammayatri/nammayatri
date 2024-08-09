@@ -65,7 +65,7 @@ type HasDriverPoolBatchesConfig r =
   ( HasField "driverPoolBatchesCfg" r DriverPoolBatchesConfig
   )
 
-data PoolSortingType = Intelligent | Random
+data PoolSortingType = Intelligent | Random | Tagged
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, FromDhall, ToSchema)
 
