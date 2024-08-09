@@ -248,16 +248,16 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
         notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward
       let referralRewardAmount = payoutConfig.referralRewardAmountPerRide
       driverStats <- QDriverStats.findByPrimaryKey referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
-      QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId
+      QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + referralRewardAmount) referredDriverId -- update total bonus earned here
       case mbDailyStats of
         Just stats -> do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referredDriverId.getId) 3 3 $ do
-            QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + referralRewardAmount) DDS.Verifying referredDriverId (utctDay localTime)
+            QDailyStats.updateReferralStatsByDriverId (stats.activatedValidRides + 1) (stats.referralEarnings + referralRewardAmount) DDS.Verifying referredDriverId (utctDay localTime) -- update bonus earned today
         Nothing -> do
           id <- generateGUIDText
           now <- getCurrentTime
           let dailyStatsOfDriver' =
-                DDS.DailyStats
+                DDS.DailyStats -- update bonus earned today
                   { id = id,
                     driverId = referredDriverId,
                     totalEarnings = 0.0,
