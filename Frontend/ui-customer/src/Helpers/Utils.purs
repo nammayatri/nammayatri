@@ -42,7 +42,7 @@ import Data.Number (pi, sin, cos, sqrt, asin, abs)
 import Data.Ord (comparing, Ordering)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
-import Data.String (replace, split, Pattern(..), Replacement(..), toLower)
+import Data.String (replace, split, Pattern(..), Replacement(..), toLower, trim)
 import Data.String as DS
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Traversable (traverse)
@@ -1186,3 +1186,13 @@ breakPrefixAndId str = do
           Just [_ , prefix] -> Just $ Tuple (fromMaybe "" prefix) Nothing
           _ -> Nothing
     Left _ -> Nothing
+
+trimMobileNumber :: String -> String
+trimMobileNumber mobileNumber=
+  let number = let
+                                    prefixLength =
+                                      if startsWith "+91" mobileNumber then 3
+                                      else if startsWith "+1" mobileNumber then 2
+                                      else 0
+                                  in DS.drop prefixLength (trim $ mobileNumber)
+                      in if startsWith "0" number then DS.drop 1 number else number

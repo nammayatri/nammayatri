@@ -15,6 +15,8 @@ import Font.Style as FontStyle
 import Helpers.Utils as HU
 import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
+import Data.Maybe (Maybe(..))
+import Debug 
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -31,7 +33,7 @@ view config push =
       [ linearLayout
           ( [ height $ V 32
             , width $ V 32
-            , background backgroundColor
+            , background viewDetails.backgroundColor
             , cornerRadius if EHC.os == "IOS" then 16.0 else 20.0
             , gravity CENTER
             , onClick push $ const $ OnClick config.index
@@ -39,8 +41,8 @@ view config push =
               <> if config.enableCheckmark then [ margin $ MarginTop 10 ] else []
           )
           [ textView
-              $ [ text text'
-                , color textColor
+              $ [ text viewDetails.text'
+                , color viewDetails.textColor
                 ]
               <> FontStyle.tags TypoGraphy
           ]
@@ -60,11 +62,18 @@ view config push =
           ]
       ]
   where
-  backgroundColor = fromMaybe "" (fromMaybe [] (contactColorsList !! config.index) !! 0)
+  viewDetails = getContactViewDetails config.index config.contact.name
 
-  textColor = fromMaybe "" (fromMaybe [] (contactColorsList !! config.index) !! 1)
+getContactViewDetails :: Int -> String -> ContactViewDetails 
+getContactViewDetails  index name = 
+  -- index 
+  -- name 
+    {
+      backgroundColor : fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0),
+      textColor : fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1),
+      text' : (DS.toUpper ((<>) (getFirstChar name) (getLastChar name)))
+    }
 
-  text' = (DS.toUpper ((<>) (getFirstChar config.contact.name) (getLastChar config.contact.name)))
 
 getFirstChar :: String -> String
 getFirstChar name = DS.take 1 (fromMaybe "" ((getNameInitials name) !! 0))
@@ -81,6 +90,12 @@ type Config
     , enableCheckmark :: Boolean
     }
 
+type ContactViewDetails  
+  = { backgroundColor :: String
+    , textColor :: String
+    , text' :: String
+  }
+
 config :: Config
 config =
   { contact:
@@ -91,6 +106,8 @@ config =
       , enableForFollowing: false
       , enableForShareRide: false
       , onRide : false
+      , contactPersonId : Nothing
+      , notifiedViaFCM : Nothing
       }
   , index: 0
   , enableCheckmark: true

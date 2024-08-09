@@ -1348,3 +1348,4 @@ getEN stringKey =
         RENTAL_BOOKING -> "Rental Booking"
         INTERCITY_BOOKING -> "Intercity Booking"
         BOOKING -> "Booking"
+        DRIVER -> "Driver"

@@ -43,5 +43,7 @@ listItem1 = {
   enableForFollowing: false,
   enableForShareRide: false,
   onRide: false,
-  priority : 1
+  priority : 1,
+  contactPersonId : Nothing,
+  notifiedViaFCM : Nothing
 }

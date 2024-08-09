@@ -1349,3 +1349,4 @@ getML stringKey =
         RENTAL_BOOKING -> "വാടക ബുക്കിംഗ്"
         INTERCITY_BOOKING -> "ഇന്റർസിറ്റി ബുക്കിംഗ്"
         BOOKING -> "ബുക്കിംഗ്"
+        DRIVER -> "ഡ്രൈവർ"

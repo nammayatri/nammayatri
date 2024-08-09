@@ -23,6 +23,7 @@ import Data.FoldableWithIndex
 import Data.Tuple
 import Engineering.Helpers.BackTrack
 import Locale.Utils
+import Helpers.Utils
 import Mobility.Prelude
 import Mobility.Prelude
 import PrestoDOM.Core
@@ -349,7 +350,11 @@ screen initialState =
                 when (not initialState.props.chatcallbackInitiated && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) $ do
                   -- @TODO need to revert once apk update is done
                   --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
-                  startChatServices push initialState.data.driverInfoCardState.bppRideId "Customer" false
+                  -- void $ liftFlowBT $ push (UpdateContacts contacts)
+                  case initialState.data.contactList of 
+                    Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
+                    Just _ -> pure unit
+                  startChatServices push initialState.data.driverInfoCardState.currentChatRecipient.uuid "Customer" false
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
@@ -371,7 +376,17 @@ screen initialState =
                   void $ rideDurationTimer (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ) "1" "RideDurationTimer" push (RideDurationTimer)
                   else pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
-              ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
+              ChatWithDriver -> do 
+                if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
+                when ((isNothing initialState.data.contactList || not initialState.props.chatcallbackInitiated) && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE ) $ do
+                  -- @TODO need to revert once apk update is done
+                  --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
+                  -- void $ liftFlowBT $ push (UpdateContacts contacts)
+                  case initialState.data.contactList of 
+                    Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
+                    Just _ -> pure unit
+                  startChatServices push initialState.data.driverInfoCardState.currentChatRecipient.uuid "Customer" false
+                  push LoadMessages
               ConfirmingLocation -> do
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               GoToConfirmLocation -> do
@@ -416,9 +431,12 @@ screen initialState =
       ]
   , eval:
       \action state -> do
-        let _ = spy "HomeScreen action " action
-        let _ = spy "HomeScreen state " state
-        eval2 action state
+        case action of 
+          WaitingTimeAction  _ _ _ -> eval2 action state
+          _ -> do 
+            let _ = spy "HomeScreen action " action  
+            let _ = spy "HomeScreen state " state
+            eval2 action state
   }
 
 
@@ -4582,23 +4600,28 @@ updateEmergencyContacts :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT 
 updateEmergencyContacts push state = do
   if state.data.fareProductType == FPT.RENTAL && state.props.chatcallbackInitiated then pure unit
   else if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
-    then liftFlowBT $ startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
+    then liftFlowBT $ startChatServices push state.data.driverInfoCardState.currentChatRecipient.uuid state.data.chatPersonId false 
     else do
       contacts <- getFormattedContacts
       void $ liftFlowBT $ push (UpdateContacts contacts)
       void $ liftFlowBT $ validateAndStartChat contacts push state
-      
+
+fetchContactsForMultiChat :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT String Unit
+fetchContactsForMultiChat push state = do
+  contacts <- getFormattedContacts
+  void $ liftFlowBT $ push (UpdateContacts contacts)
+
 validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Effect Unit
 validateAndStartChat contacts push state = do
   if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
-    then startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
+    then startChatServices push state.data.driverInfoCardState.currentChatRecipient.uuid "Customer" false 
   else do
     let filterContacts = filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0 && not item.onRide)) contacts
     if (length filterContacts) == 0 
       then push RemoveChat
       else do
         push $ UpdateChatWithEM true
-        if (not $ state.props.chatcallbackInitiated) then startChatServices push state.data.driverInfoCardState.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true else pure unit
+        if (not $ state.props.chatcallbackInitiated) then startChatServices push (state.data.driverInfoCardState.currentChatRecipient.uuid) (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true else pure unit
 
 
 startChatServices ::  (Action -> Effect Unit) -> String -> String -> Boolean -> Effect Unit

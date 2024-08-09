@@ -95,6 +95,8 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
                 , enableForShareRide: fromMaybe false item.enableForShareRide
                 , onRide : fromMaybe false item.onRide
                 , priority: fromMaybe 1 item.priority
+                , contactPersonId : item.contactPersonId
+                , notifiedViaFCM : item.notifiedViaFCM
                 }
             )
             response.defaultEmergencyNumbers

@@ -35,6 +35,7 @@ import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
+import Components.MessagingView.Controller (ChatContacts, dummyChatRecipient)
 
 initData :: HomeScreenState
 initData = let
@@ -182,6 +183,7 @@ initData = let
     , famousDestinations : []
     , parking : initialParkingData
     , toll : initialTollData
+    , chatPersonId : "Customer"
     },
     props: {
       rideRequestFlow : false
@@ -376,6 +378,7 @@ initData = let
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
     , isSharedLocationFlow : false
+    , enableMultiChatView : false
   }
 }
 
@@ -489,6 +492,7 @@ dummyDriverInfo =
   , spLocationName : Nothing
   , addressWard : Nothing
   , hasToll : false
+  , currentChatRecipient : dummyChatRecipient
   }
 
 dummySettingBar :: SettingSideBarState

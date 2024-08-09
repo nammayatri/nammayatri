@@ -49,6 +49,8 @@ initData = let
           , enableForShareRide: false
           , onRide : false
           , priority : 1
+          , contactPersonId : Nothing
+          , notifiedViaFCM : Nothing
           }
       , currentLocation : "Loading..."
       , vehicleDetails : "Loading..."

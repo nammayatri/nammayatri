@@ -1348,3 +1348,4 @@ getKN stringKey =
         RENTAL_BOOKING -> "ಬಾಡಿಗೆ ಬುಕ್"
         INTERCITY_BOOKING -> "ಅಂತರನಗರಿ ಬುಕ್"
         BOOKING -> "ಬುಕ್"
+        DRIVER -> "ಚಾಲಕ"

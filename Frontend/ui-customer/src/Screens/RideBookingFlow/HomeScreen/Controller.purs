@@ -84,7 +84,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<$>))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -150,7 +150,9 @@ import ConfigProvider
 import Screens.HomeScreen.Controllers.Types
 import Data.Show.Generic 
 import Data.Array as DA
-
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Helpers.API (callApiBT)
+import Services.API as API
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
 import Screens.HomeScreen.Controllers.PopUpModelControllers as PopUpModelControllers
@@ -710,9 +712,23 @@ eval (MessagingViewActionController (MessagingView.SendMessage)) state = do
   then do
     pure $ sendMessage state.data.messageToBeSent
     pure $ setText (getNewIDWithTag "ChatInputEditText") ""
-    continue state{data{messageToBeSent = ""},props {sendMessageActive = false}}
+    continueWithCmd state{data{messageToBeSent = ""},props {sendMessageActive = false}} [
+      do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+          $ do
+              when (state.data.driverInfoCardState.currentChatRecipient.notifiedViaFCM /= Just true) $ do
+                push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
+                let _ = spy "calling API" "calling API"
+                liftFlowBT $ push $ EnableNotificationForMultiChat 
+                pure unit
+        pure NoAction
+    ]
   else
     continue state
+
+eval EnableNotificationForMultiChat state = do 
+  let updatedContactList = (map (\item -> if item.contactPersonId == state.data.driverInfoCardState.currentChatRecipient.contactPersonId then item{ notifiedViaFCM = Just true} else item)) <$> state.data.contactList
+  continue state { data {contactList = updatedContactList, driverInfoCardState {currentChatRecipient {notifiedViaFCM = Just true}}}}
 
 eval (MessagingViewActionController (MessagingView.BackPressed)) state = do
   void $ pure $ performHapticFeedback unit
@@ -786,6 +802,23 @@ eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion
     continue state {data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
+eval (MessagingViewActionController (MessagingView.MultiChat)) state = do 
+  if state.props.enableMultiChatView then do 
+    continue state {props {enableMultiChatView = false}}
+  else 
+    do
+      void $ pure $ hideKeyboardOnNavigation true
+      continue state {props {enableMultiChatView = true}}
+
+eval (MessagingViewActionController (MessagingView.SwitchChat contact)) state = do
+  let chatPersonId = if contact.recipient == "DRIVER" then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
+      uuid = if contact.recipient == "DRIVER" then state.data.driverInfoCardState.bppRideId else contact.uuid
+      updatedContact = contact{uuid = uuid}
+  if state.data.driverInfoCardState.currentChatRecipient.uuid == contact.uuid then do
+    continue state {props {enableMultiChatView = false}}
+  else do
+    exit $ UpdateChatScreen state {data { chatPersonId = chatPersonId, driverInfoCardState { currentChatRecipient = updatedContact}} , props {enableMultiChatView = false}}
+
 eval AllChatsLoaded state = do
   if state.props.isChatWithEMEnabled then do
     void $ pure $ sendMessage "c013253fcbe2fdc50b1c261501de9045"
@@ -793,7 +826,8 @@ eval AllChatsLoaded state = do
   else
     continue state
 
-------------------------------- ChatService - End --------------------------
+
+------------------------------- ChatService - End -----------------------------------------------------------------------------------
 
 eval (MessageExpiryTimer seconds status timerID) state = do
   let newState = state{data{triggerPatchCounter = state.data.triggerPatchCounter + 1}}

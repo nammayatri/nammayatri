@@ -125,6 +125,7 @@ data ScreenOutput = LogoutUser
   | EditDestLocSelected HomeScreenState
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
+  | UpdateChatScreen HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -325,6 +326,7 @@ data Action = NoAction
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
   | TollChargeIncludedPopUpAction PopUpModal.Action
+  | EnableNotificationForMultiChat 
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

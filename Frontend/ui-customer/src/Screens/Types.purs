@@ -45,7 +45,7 @@ import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes)
 import Components.SettingSideBar.Controller as SideBar
-import Components.MessagingView.Controller (ChatComponent)
+import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
 import PrestoDOM.List
 import JBridge (Location)
@@ -65,7 +65,9 @@ type NewContacts = {
   enableForFollowing :: Boolean,
   enableForShareRide:: Boolean,
   onRide :: Boolean,
-  priority :: Int
+  priority :: Int,
+  contactPersonId :: Maybe String,
+  notifiedViaFCM :: Maybe Boolean
 }
 
 type NewContactsProp = {
@@ -671,8 +673,9 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
-, parking :: ParkingData
-, toll :: TollData
+  , parking :: ParkingData
+  , toll :: TollData
+  , chatPersonId :: String
 }
 
 type TollData = {
@@ -944,6 +947,7 @@ type HomeScreenStateProps =
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
   , isSharedLocationFlow :: Boolean
+  , enableMultiChatView :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1324,6 +1328,7 @@ type DriverInfoCard =
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
   , hasToll :: Boolean
+  , currentChatRecipient :: ChatContacts
   }
 
 type RatingCard =

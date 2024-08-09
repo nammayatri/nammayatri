@@ -10,6 +10,7 @@ import Foreign.Object (empty)
 import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..))
 import Common.Types.App as CT
 import Screens.Types (FareProductType(..)) as FPT
+import Components.MessagingView.Controller (dummyChatRecipient)
 
 initData :: FollowRideScreenState
 initData =
@@ -213,4 +214,5 @@ mockDriverInfo =
   , spLocationName : Nothing
   , addressWard : Nothing
   , hasToll : false
+  , currentChatRecipient : dummyChatRecipient
   }

@@ -19,6 +19,9 @@ import MerchantConfig.Types
 import MerchantConfig.DefaultConfig as DC
 import PrestoDOM (BottomSheetState(..))
 import Common.Resources.Constants (chatSuggestion)
+import Data.Maybe (Maybe(..))
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 data Action = SendMessage
             | SendSuggestion String
@@ -26,6 +29,8 @@ data Action = SendMessage
             | TextChanged String
             | Call
             | NoAction
+            | MultiChat
+            | SwitchChat ChatContacts
 
 type Config = 
   { userConfig :: UserConfig
@@ -45,6 +50,9 @@ type Config =
   , feature :: Feature
   , suggestionKey :: String
   , isKeyBoardOpen :: Boolean
+  , enableMultiChatView :: Boolean
+  , contactList :: Array ChatContacts
+  , currentChatRecipient :: ChatContacts
   }
 
 type Feature = 
@@ -66,6 +74,17 @@ type ChatComponent = {
   , timeStamp :: String
   , type :: String
   , delay :: Int
+}
+
+type ChatContacts = {
+  name :: String,
+  number :: String,
+  uuid :: String,
+  recipient :: String,
+  enableForFollowing :: Boolean,
+  enableForShareRide:: Boolean,
+  contactPersonId :: Maybe String,
+  notifiedViaFCM :: Maybe Boolean
 }
 
 config :: Config
@@ -96,9 +115,24 @@ config =
   , otp : ""
   , suggestionKey : chatSuggestion
   , isKeyBoardOpen : false
+  , enableMultiChatView : false
+  , contactList : []
+  , currentChatRecipient : dummyChatRecipient
   }
 
 
 
 dummyChatComponent :: ChatComponent
 dummyChatComponent = { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
+
+dummyChatRecipient :: ChatContacts
+dummyChatRecipient =  
+  { name : ""
+  , number : ""
+  , uuid : ""
+  , recipient : "DRIVER"
+  , enableForFollowing : false
+  , enableForShareRide : false
+  , contactPersonId : Nothing
+  , notifiedViaFCM : Nothing
+  }

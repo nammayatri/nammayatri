@@ -286,6 +286,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EDIT_LOCATION_DEST_SELECTED
                         | EDIT_DEST_BACKPRESSED
                         | EXIT_AND_ENTER_HOME_SCREEN
+                        | UPDATE_CHAT
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
