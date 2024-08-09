@@ -14,6 +14,7 @@
 
 module API.Dashboard.IssueList where
 
+import qualified Data.Aeson as A
 import qualified Domain.Action.Dashboard.IssueList as DDI
 import qualified Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Types.Merchant as DM
@@ -52,5 +53,5 @@ handler merchantShortId =
 listIssue :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
 listIssue merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ DDI.getIssueList merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
 
-ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack :: ShortId DM.Merchant -> A.Value -> FlowHandler APISuccess
 ticketStatusCallBack merchantShortId = withFlowHandlerAPI . DDI.ticketStatusCallBack merchantShortId

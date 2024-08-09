@@ -16,6 +16,7 @@
 module Domain.Action.Dashboard.IssueList where
 
 import qualified API.Dashboard.Issue as ADI
+import qualified Data.Aeson as A
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Issue as DI
 import qualified Domain.Types.Merchant as DM
@@ -23,7 +24,6 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import Environment
 import qualified IssueManagement.Common as Common
-import qualified IssueManagement.Common.Dashboard.Issue as Common
 import qualified IssueManagement.Domain.Action.Dashboard.Issue as DCommon
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -108,10 +108,11 @@ buildIssueList (issues, person) = do
         updatedAt = issues.updatedAt
       }
 
-ticketStatusCallBack :: ShortId DM.Merchant -> Common.TicketStatusCallBackReq -> Flow APISuccess
-ticketStatusCallBack _ req = do
+ticketStatusCallBack :: ShortId DM.Merchant -> A.Value -> Flow APISuccess
+ticketStatusCallBack _ reqJson = do
+  req <- A.decode (A.encode reqJson) & fromMaybeM (InvalidRequest "Failed to parse TicketStatusCallBackReq")
   mbTicket <- QIssue.findByTicketId req.ticketId
   case mbTicket of
     Just _ -> QIssue.updateIssueStatus req.ticketId =<< DCommon.transformKaptureStatus req
-    Nothing -> void $ DCommon.ticketStatusCallBack req ADI.dashboardIssueHandle Common.CUSTOMER
+    Nothing -> void $ DCommon.ticketStatusCallBack reqJson ADI.dashboardIssueHandle Common.CUSTOMER
   return Success

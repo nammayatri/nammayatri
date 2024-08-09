@@ -2,6 +2,7 @@ module IssueManagement.Domain.Action.Dashboard.Issue where
 
 import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.List as DL
 import qualified Data.Text as T hiding (count, map)
@@ -44,6 +45,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Logging
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person -> m (Maybe Person),
@@ -301,11 +303,14 @@ ticketStatusCallBack ::
   ( Esq.EsqDBReplicaFlow m r,
     BeamFlow m r
   ) =>
-  Common.TicketStatusCallBackReq ->
+  A.Value ->
   ServiceHandle m ->
   Identifier ->
   m APISuccess
-ticketStatusCallBack req issueHandle identifier = do
+ticketStatusCallBack reqJson issueHandle identifier = do
+  logError ("Received TicketStatusCallBackReq - " <> show reqJson)
+  req <- A.decode (A.encode reqJson) & fromMaybeM (InvalidRequest "Failed to parse TicketStatusCallBackReq")
+  logError ("Parsed TicketStatusCallBackReq - " <> show req)
   transformedStatus <- transformKaptureStatus req
   case transformedStatus of
     RESOLVED -> do

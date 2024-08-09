@@ -1,6 +1,7 @@
 module API.Dashboard.Management.Issue where
 
 import qualified API.UI.Issue as AUI
+import qualified Data.Aeson as A
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified IssueManagement.API.Dashboard.Issue as IMD
@@ -98,7 +99,7 @@ issueAddComment (ShortId merchantShortId) opCity issueReportId req = withFlowHan
 issueFetchMedia :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler Text
 issueFetchMedia (ShortId merchantShortId) _opCity = withFlowHandlerAPI . DIssue.issueFetchMedia (ShortId merchantShortId)
 
-ticketStatusCallBack :: ShortId DM.Merchant -> Context.City -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack :: ShortId DM.Merchant -> Context.City -> A.Value -> FlowHandler APISuccess
 ticketStatusCallBack (ShortId _merchantShortId) _opCity req = withFlowHandlerAPI $ DIssue.ticketStatusCallBack req dashboardIssueHandle Common.DRIVER
 
 createIssueCategory :: ShortId DM.Merchant -> Context.City -> Common.CreateIssueCategoryReq -> FlowHandler APISuccess

@@ -489,7 +489,7 @@ sendUnattendedSosTicketAlert ticketId = do
   where
     sendAlert :: DMOC.MerchantOperatingCity -> DSos.Sos -> Maybe Text -> IC.CxAgentDetails -> Flow ()
     sendAlert merchantOpCity sos maybeAppId cxAgentDetails =
-      fork ("Sending unattended sos ticket alert to agent with phone number" <> show cxAgentDetails) $ do
+      fork ("Sending unattended sos ticket alert to agentDetails - " <> show cxAgentDetails) $ do
         callStatusId <- generateGUID
         let callReq =
               Call.InitiateCallReq
