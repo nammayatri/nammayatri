@@ -1364,3 +1364,4 @@ getTE stringKey =
     UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"
     DRIVER_AVAILABLE -> "డ్రైవర్ అందుబాటులో ఉన్నాడు"
     DRIVERS_AVAILABLE -> "డ్రైవర్లు అందుబాటులో ఉన్నారు"
+    NOT_FOUND_IN_SAVED_LOCATION -> "సేవ్ చేసిన స్థానాల్లో కనబడలేదు"

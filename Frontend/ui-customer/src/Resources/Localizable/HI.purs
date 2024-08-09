@@ -1349,3 +1349,4 @@ getHI stringKey =
         UNCOMFORTABLE_BIKE -> "असहज बाइक"
         DRIVER_AVAILABLE -> "चालक उपलब्ध"
         DRIVERS_AVAILABLE -> "चालक उपलब्ध हैं"
+        NOT_FOUND_IN_SAVED_LOCATION -> "सहेजे गए स्थानों में नहीं मिला"

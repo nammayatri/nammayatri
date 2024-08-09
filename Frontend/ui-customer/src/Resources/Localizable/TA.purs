@@ -1368,3 +1368,4 @@ getTA stringKey =
     UNCOMFORTABLE_BIKE -> "அமைதியற்ற பைக்"
     DRIVER_AVAILABLE -> "ஓட்டுநர் கிடைக்கின்றார்"
     DRIVERS_AVAILABLE -> "ஓட்டுநர்கள் கிடைக்கின்றனர்"
+    NOT_FOUND_IN_SAVED_LOCATION -> "சேமிக்கப்பட்ட இடத்தில் காணப்படவில்லை"

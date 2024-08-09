@@ -1350,3 +1350,4 @@ getBN stringKey =
         UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"
         DRIVER_AVAILABLE -> "ড্রাইভার উপলব্ধ"
         DRIVERS_AVAILABLE -> "ড্রাইভারগণ উপলব্ধ"
+        NOT_FOUND_IN_SAVED_LOCATION -> "সংরক্ষিত স্থানে পাওয়া যায়নি"

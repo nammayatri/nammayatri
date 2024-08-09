@@ -1353,3 +1353,4 @@ getFR stringKey =
         UNCOMFORTABLE_BIKE -> "Vélo inconfortable"
         DRIVER_AVAILABLE -> "Chauffeur disponible"
         DRIVERS_AVAILABLE -> "Chauffeurs disponibles"
+        NOT_FOUND_IN_SAVED_LOCATION -> "Non trouvé dans les emplacements enregistrés"

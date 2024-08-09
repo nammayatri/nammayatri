@@ -1352,3 +1352,4 @@ getKN stringKey =
         UNCOMFORTABLE_BIKE -> "ಅಸಂತೋಷಕರ ಬೈಕ್"
         DRIVER_AVAILABLE -> "ಡ್ರೈವರ್ ಲಭ್ಯವಿದೆ"
         DRIVERS_AVAILABLE -> "ಡ್ರೈವರ್‌ಗಳು ಲಭ್ಯವಿದ್ದಾರೆ"
+        NOT_FOUND_IN_SAVED_LOCATION -> "ಸೇವ್ ಮಾಡಿದ ಸ್ಥಳದಲ್ಲಿ ಕಂಡುಬರಲಿಲ್ಲ"
