@@ -185,7 +185,7 @@ findStuckBookings merchant moCity bookingIds now = do
 findBookingBySpecialZoneOTP :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> UTCTime -> Int -> m (Maybe Booking)
 findBookingBySpecialZoneOTP cityId otpCode now specialZoneBookingOtpExpiry = do
   let otpExpiryCondition = addUTCTime (- (fromIntegral specialZoneBookingOtpExpiry * 60) :: NominalDiffTime) now
-  findOneWithKV [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just cityId), Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
+  findOneWithKVRedis [Se.And [Se.Is BeamB.specialZoneOtpCode $ Se.Eq (Just otpCode), Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just cityId), Se.Is BeamB.createdAt $ Se.GreaterThanOrEq otpExpiryCondition, Se.Is BeamB.status $ Se.Eq NEW]]
 
 cancelBookings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> UTCTime -> m ()
 cancelBookings bookingIds now =
