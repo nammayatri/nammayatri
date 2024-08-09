@@ -23,6 +23,7 @@ where
 import qualified Control.Monad as CM
 import Control.Monad.Extra (partitionM)
 import Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
@@ -569,13 +570,22 @@ makeTaggedDriverPool mOCityId onlyNewDrivers batchSize isOnRidePool customerNamm
   res <-
     foldlM
       ( \acc logics -> do
-          case A.fromJSON $ JL.jsonLogic logics.logic . A.Object $ "drivers" .= A.toJSON acc <> "needOnRideDrivers" .= isOnRidePool of
-            A.Success res -> do
-              logDebug $ "Logic-" <> show logics.logic <> "Result-" <> show res
-              pure res
-            A.Error err -> do
-              logError $ "failed to run this logic" <> CS.cs (A.encode logics.logic) <> " with error: " <> show err
-              pure acc
+          let result = JL.jsonLogic logics.logic . A.Object $ "drivers" .= A.toJSON acc <> "needOnRideDrivers" .= isOnRidePool
+          logDebug $ "json logic result - " <> show result
+          case result of
+            A.Object obj ->
+              case AKM.lookup "drivers" obj of
+                Just res -> do
+                  logDebug $ "Logic-" <> show logics.logic <> "Result-" <> show res
+                  case A.fromJSON res of
+                    A.Success dpr -> pure dpr
+                    A.Error err -> do
+                      logError $ "failed to run this logic" <> CS.cs (A.encode logics.logic) <> " with error: " <> show err
+                      pure acc
+                Nothing -> do
+                  logError "result empty"
+                  pure acc
+            _ -> logError "Hayein !" $> acc
       )
       onlyNewDriversWithCustomerInfo
       allLogics
