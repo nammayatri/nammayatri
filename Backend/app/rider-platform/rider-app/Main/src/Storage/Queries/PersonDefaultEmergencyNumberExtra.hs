@@ -1,7 +1,7 @@
 module Storage.Queries.PersonDefaultEmergencyNumberExtra where
 
 import qualified Domain.Types.Merchant as DMerchant
-import Domain.Types.Person
+import Domain.Types.Person (Person, RideShareOptions)
 import Domain.Types.PersonDefaultEmergencyNumber
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -52,6 +52,14 @@ updateShareRideForAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Perso
 updateShareRideForAll (Id personId) enableForShareRide = do
   updateWithKV
     [ Se.Set BeamPDEN.enableForShareRide enableForShareRide
+    ]
+    [ Se.Is BeamPDEN.personId $ Se.Eq personId
+    ]
+
+updateShareTripWithEmergencyContactOptions :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe RideShareOptions -> m ()
+updateShareTripWithEmergencyContactOptions (Id personId) shareTripWithEmergencyContactOption = do
+  updateWithKV
+    [ Se.Set BeamPDEN.shareTripWithEmergencyContactOption shareTripWithEmergencyContactOption
     ]
     [ Se.Is BeamPDEN.personId $ Se.Eq personId
     ]

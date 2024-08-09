@@ -38,10 +38,19 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.FollowRide.EmergencyContactsStatusRes
+      :<|> TokenAuth
+      :> "followRide"
+      :> Capture
+           "rideId"
+           (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
+      :> "customerDetails"
+      :> Get
+           '[JSON]
+           API.Types.UI.FollowRide.FollowRideCustomerDetailsRes
   )
 
 handler :: Environment.FlowServer API
-handler = getFollowRide :<|> postShareRide :<|> getFollowRideECStatus
+handler = getFollowRide :<|> postShareRide :<|> getFollowRideECStatus :<|> getFollowRideCustomerDetails
 
 getFollowRide :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.FollowRide.Followers])
 getFollowRide a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -63,3 +72,12 @@ getFollowRideECStatus ::
     Environment.FlowHandler API.Types.UI.FollowRide.EmergencyContactsStatusRes
   )
 getFollowRideECStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRideECStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getFollowRideCustomerDetails ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
+    Environment.FlowHandler API.Types.UI.FollowRide.FollowRideCustomerDetailsRes
+  )
+getFollowRideCustomerDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRideCustomerDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

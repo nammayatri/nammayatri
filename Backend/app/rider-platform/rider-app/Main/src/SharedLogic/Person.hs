@@ -32,6 +32,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QP
+import qualified Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -113,8 +114,9 @@ getName person = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.
 
 checkSafetyCenterDisabled :: (EsqDBFlow m r, CacheFlow m r) => DP.Person -> m Bool
 checkSafetyCenterDisabled person = do
-  let isPermanentBlock = person.falseSafetyAlarmCount >= 6
-  case person.safetyCenterDisabledOnDate of
+  mbSafetySettings <- QSafety.findByPrimaryKey person.id
+  let isPermanentBlock = maybe person.falseSafetyAlarmCount (.falseSafetyAlarmCount) mbSafetySettings >= 6
+  case maybe person.safetyCenterDisabledOnDate (.safetyCenterDisabledOnDate) mbSafetySettings of
     Nothing -> return False
     Just safetyCenterDisabledOnDate -> do
       if isPermanentBlock
@@ -125,6 +127,8 @@ checkSafetyCenterDisabled person = do
           let unblockAfterDays = (intToNominalDiffTime riderConfig.autoUnblockSafetyCenterAfterDays) * 24 * 60 * 60
           if diffUTCTime now safetyCenterDisabledOnDate > unblockAfterDays
             then do
-              fork "" $ QPerson.updateSafetyCenterBlockingCounter person.id Nothing Nothing
+              fork "" $ updateSafetyCenterBlockingCounter person.id mbSafetySettings
               return False
             else return True
+  where
+    updateSafetyCenterBlockingCounter personId = maybe (QPerson.updateSafetyCenterBlockingCounter personId Nothing Nothing) (\_ -> QSafety.updateSafetyCenterBlockingCounter personId Nothing Nothing)
