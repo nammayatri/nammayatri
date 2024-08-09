@@ -50,7 +50,6 @@ RiderConfig:
     sensitiveWords: "Maybe [Text]"
     payoutBatchSize: Maybe Int
     payoutBatchDelay: NominalDiffTime
-    allowBlockedUserLogin: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

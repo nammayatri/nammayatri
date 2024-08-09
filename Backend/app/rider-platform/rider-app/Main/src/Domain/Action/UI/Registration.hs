@@ -110,7 +110,8 @@ data AuthReq = AuthReq
     otpChannel :: Maybe OTPChannel,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double,
-    enableOtpLessRide :: Maybe Bool
+    enableOtpLessRide :: Maybe Bool,
+    allowBlockedUserLogin :: Maybe Bool
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -134,6 +135,7 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "registrationLat"
         <*> obj .:? "registrationLon"
         <*> obj .:? "enableOtpLessRide"
+        <*> obj .:? "allowBlockedUserLogin"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -252,8 +254,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
       scfg = sessionConfig smsCfg
   let mkId = getId $ merchant.id
   regToken <- makeSession (castChannelToMedium otpChannel) scfg entityId mkId useFakeOtpM
-  riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
-  if (fromMaybe False riderConfig.allowBlockedUserLogin) || not person.blocked
+  if (fromMaybe False req.allowBlockedUserLogin) || not person.blocked
     then do
       deploymentVersion <- asks (.version)
       void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion
@@ -284,6 +285,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
               result <- Whatsapp.whatsAppOtpApi person.merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
               when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
           EMAIL -> withLogTag ("personId_" <> getId person.id) $ do
+            riderConfig <- CRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
             emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
             L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
@@ -756,7 +758,8 @@ createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
                 otpChannel = Nothing,
                 registrationLat = Nothing,
                 registrationLon = Nothing,
-                enableOtpLessRide = Nothing
+                enableOtpLessRide = Nothing,
+                allowBlockedUserLogin = Nothing
               }
       createdPerson <-
         createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing merchant Nothing

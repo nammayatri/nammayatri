@@ -122,7 +122,8 @@ mkAuthReq =
       otpChannel = Nothing,
       registrationLat = Nothing,
       registrationLon = Nothing,
-      enableOtpLessRide = Nothing
+      enableOtpLessRide = Nothing,
+      allowBlockedUserLogin = Nothing
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq

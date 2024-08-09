@@ -102,7 +102,8 @@ postSocialLogin req = do
           otpChannel = Nothing,
           registrationLat = req.registrationLat,
           registrationLon = req.registrationLon,
-          enableOtpLessRide = req.enableOtpLessRide
+          enableOtpLessRide = req.enableOtpLessRide,
+          allowBlockedUserLogin = Nothing
         }
 
 makeSession ::

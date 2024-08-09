@@ -423,24 +423,31 @@ incidentReportHandler person merchantId merchantOpCityId rideId token coordinate
 
 sendUnattendedSosTicketAlert :: Text -> Flow ()
 sendUnattendedSosTicketAlert ticketId = do
-  sos <- QSos.findByTicketId (Just ticketId) >>= fromMaybeM (InvalidRequest $ "SOS with ticketId-" <> ticketId <> " does not exist.")
-  merchantOpCityId <-
-    maybe
-      ( ( QP.findById sos.personId
-            >>= fromMaybeM (PersonNotFound sos.personId.getId)
-        )
-          <&> (.merchantOperatingCityId)
-      )
-      return
-      sos.merchantOperatingCityId
-  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
-  let maybeAppId = (HM.lookup DRC.UnattendedTicketAppletID . DRC.exotelMap) =<< riderConfig.exotelAppIdMapping
-  mapM_ (sendAlert merchantOperatingCity sos maybeAppId) (fromMaybe [] riderConfig.cxAgentDetails)
+  unattendedSosRedisKey :: Maybe Bool <- Redis.safeGet mkUnattendedSosAlertKey
+  case unattendedSosRedisKey of
+    Just _value -> do
+      logTagInfo "Unattended SOS Ticket Alert" ("Alert discarded for Ticket ID: " <> ticketId)
+      return ()
+    Nothing -> do
+      Redis.setExp mkUnattendedSosAlertKey True 60
+      sos <- QSos.findByTicketId (Just ticketId) >>= fromMaybeM (InvalidRequest $ "SOS with ticketId-" <> ticketId <> " does not exist.")
+      merchantOpCityId <-
+        maybe
+          ( ( QP.findById sos.personId
+                >>= fromMaybeM (PersonNotFound sos.personId.getId)
+            )
+              <&> (.merchantOperatingCityId)
+          )
+          return
+          sos.merchantOperatingCityId
+      merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+      riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+      let maybeAppId = (HM.lookup DRC.UnattendedTicketAppletID . DRC.exotelMap) =<< riderConfig.exotelAppIdMapping
+      mapM_ (sendAlert merchantOperatingCity sos maybeAppId) (fromMaybe [] riderConfig.cxAgentDetails)
   where
     sendAlert :: DMOC.MerchantOperatingCity -> DSos.Sos -> Maybe Text -> IC.CxAgentDetails -> Flow ()
     sendAlert merchantOpCity sos maybeAppId cxAgentDetails =
-      fork ("Sending unattended sos ticket alert to agent with phone number" <> show cxAgentDetails) $ do
+      fork ("Sending unattended sos ticket alert to agentDetails - " <> show cxAgentDetails) $ do
         callStatusId <- generateGUID
         let callReq =
               Call.InitiateCallReq
@@ -474,3 +481,6 @@ sendUnattendedSosTicketAlert ticketId = do
             updatedAt = now,
             customerIvrResponse = Nothing
           }
+
+    mkUnattendedSosAlertKey :: Text
+    mkUnattendedSosAlertKey = "Unattended:SOS:Alert:TicketId-" <> ticketId

@@ -241,7 +241,7 @@ buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
 
 findLatestBookingByRiderId :: Id Common.Person -> Flow (Maybe Common.Booking)
 findLatestBookingByRiderId personId = do
-  mbLatestBooking <- QBE.findLatestByRiderId (cast personId)
+  mbLatestBooking <- QBE.findLatestSelfAndPartyBookingByRiderId (cast personId)
   return $ castBooking <$> mbLatestBooking
   where
     castBooking booking = Common.Booking (cast booking.id)

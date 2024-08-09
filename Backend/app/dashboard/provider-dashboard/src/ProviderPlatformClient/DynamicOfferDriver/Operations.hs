@@ -33,6 +33,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout as PayoutDSL
 import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
 import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
 import qualified Dashboard.ProviderPlatform.Management.Driver as Driver
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Overlay as Overlay
@@ -92,7 +93,7 @@ data IssueAPIs = IssueAPIs
     issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
     issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
     issueFetchMedia :: Text -> Euler.EulerClient Text,
-    ticketStatusCallBack :: Issue.TicketStatusCallBackReq -> Euler.EulerClient APISuccess,
+    ticketStatusCallBack :: A.Value -> Euler.EulerClient APISuccess,
     createIssueCategory :: Issue.CreateIssueCategoryReq -> Euler.EulerClient Issue.CreateIssueCategoryRes,
     updateIssueCategory :: Id IssueCategory -> Issue.UpdateIssueCategoryReq -> Euler.EulerClient APISuccess,
     createIssueOption :: Id IssueCategory -> Id IssueMessage -> Issue.CreateIssueOptionReq -> Euler.EulerClient Issue.CreateIssueOptionRes,
