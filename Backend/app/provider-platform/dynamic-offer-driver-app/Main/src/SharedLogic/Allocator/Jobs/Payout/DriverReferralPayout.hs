@@ -152,6 +152,7 @@ callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutVpa payoutConfig
             QDailyStats.updatePayoutOrderId (Just uid) id
           phoneNo <- mapM decrypt person.mobileNumber
           let entityName = DLP.DRIVER_DAILY_STATS
+              -- Add Bonus field to in payoutOrder to distinguish between bonus and payout.
               createPayoutOrderReq =
                 Juspay.CreatePayoutOrderReq
                   { orderId = uid,
