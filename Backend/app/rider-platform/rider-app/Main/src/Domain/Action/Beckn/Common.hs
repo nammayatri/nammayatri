@@ -15,6 +15,7 @@
 
 module Domain.Action.Beckn.Common where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
@@ -228,7 +229,7 @@ data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
 
 data DFareBreakup = DFareBreakup
   { amount :: Price,
-    description :: Text
+    description :: Enums.QuoteBreakupTitle
   }
 
 buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> Bool -> Int -> m DRide.Ride
@@ -360,7 +361,7 @@ rideAssignedReqHandler req = do
       let BookingDetails {..} = req'.bookingDetails
       let fareParams = fromMaybe [] req'.fareBreakups
       ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount
-      let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
+      let applicationFeeAmountBreakups = [Enums.INSURANCE_CHARGES, Enums.CARD_CHARGES_ON_FARE, Enums.CARD_CHARGES_FIXED]
       let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
@@ -506,7 +507,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              paymentDone = maybe True (not . (.onlinePayment)) mbMerchant,
              endOdometerReading
             }
-  breakups <- traverse (buildFareBreakup ride.id) fareBreakups
+  breakups <- traverse (buildFareBreakupV2 ride.id.getId DFareBreakup.BOOKING) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
@@ -556,16 +557,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   unless isInitiatedByCronJob $
     Notify.notifyOnRideCompleted booking updRide
   where
-    buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
-    buildFareBreakup rideId DFareBreakup {..} = do
-      guid <- generateGUID
-      pure
-        DFareBreakup.FareBreakup
-          { id = guid,
-            entityId = rideId.getId,
-            entityType = DFareBreakup.RIDE,
-            ..
-          }
 
 getListOfServiceTireTypes :: BecknConfig.VehicleCategory -> [DVST.VehicleServiceTierType]
 getListOfServiceTireTypes BecknConfig.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS]
@@ -582,6 +573,7 @@ buildFareBreakupV2 entityId entityType DFareBreakup {..} = do
       { id = guid,
         entityId,
         entityType,
+        description = show description,
         ..
       }
 
