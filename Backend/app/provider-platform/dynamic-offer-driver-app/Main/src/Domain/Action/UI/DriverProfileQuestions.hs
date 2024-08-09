@@ -14,6 +14,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
@@ -119,7 +120,8 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) =
                   drivingSince = res.drivingSince,
                   vehicleTags = fromMaybe [] res.vehicleTags,
                   otherImages = images, -- fromMaybe [] res.images
-                  profileImage = Nothing
+                  profileImage = Nothing,
+                  otherImageIds = fromMaybe [] res.imageIds
                 }
       Nothing ->
         pure $
@@ -130,9 +132,14 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) =
               drivingSince = Nothing,
               vehicleTags = [],
               otherImages = [],
-              profileImage = Nothing
+              profileImage = Nothing,
+              otherImageIds = []
             }
   where
-    getImages imageIds =
+    getImages imageIds = do
       mapM (QMF.findById) imageIds <&> catMaybes <&> ((.url) <$>)
-        >>= mapM (S3.get . T.unpack)
+        >>= mapM (S3.get . T.unpack . extractFilePath)
+
+    extractFilePath url = case T.splitOn "filePath=" url of
+      [_before, after] -> after
+      _ -> T.empty

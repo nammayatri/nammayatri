@@ -24,6 +24,7 @@ data DriverProfileQuesRes = DriverProfileQuesRes
   { aspirations :: [Kernel.Prelude.Text],
     drivingSince :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     hometown :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    otherImageIds :: [Kernel.Prelude.Text],
     otherImages :: [Kernel.Prelude.Text],
     pledges :: [Kernel.Prelude.Text],
     profileImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
