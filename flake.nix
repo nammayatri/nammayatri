@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/find-one-from-redis-only";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
