@@ -845,7 +845,7 @@ allCitiesDefCityConfig =
     appLogoLight : "",
     enableAcViews : false,
     enableRentals : false,
-    enableIntercity : true, 
+    enableIntercity : false, 
     waitingChargeConfig : {
       auto : {
         freeMinutes : 3.0

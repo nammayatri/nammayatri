@@ -19,9 +19,9 @@ import Data.Maybe
 import Screens.Types
 
 import Foreign.Object (empty)
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 import ConfigProvider
 import Screens.Types as ST
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: AddVehicleDetailsScreenState
 initData = {
@@ -40,7 +40,7 @@ initData = {
       dateOfRegistrationView : "",
       logField : empty,
       driverMobileNumber : "",
-      cityConfig : dummyCityConfig,
+      cityConfig : defaultCityConfig,
       vehicleCategory : Nothing,
       rcNumberPrefixList : [],
       config : getAppConfig appConfig,

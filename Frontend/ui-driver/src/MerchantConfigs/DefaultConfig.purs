@@ -4,6 +4,8 @@ import MerchantConfig.Types
 import Common.DefaultConfig
 import Common.Types.Config as CTC
 import Engineering.Helpers.Commons as EHC
+import MerchantConfig.Utils as MU
+import Common.Types.App as CTA
 
 config :: AppConfig
 config =
@@ -612,10 +614,10 @@ config =
               gstPercentage : "18",
               rateCardConfig : defRateCardConfig,
               assets :{
-                auto_image :  "ny_ic_black_yellow_auto_side_view",
+                auto_image : "ny_ic_auto_side_view",
                 onboarding_auto_image : "ny_ic_auto_side",
-                empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-                empty_referral_cab : "ny_ic_refer_now_cab_ys,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ys.png"
+                empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+                empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
               },
               enableHvSdk : false
             }, 
@@ -850,3 +852,143 @@ defRateCardConfig = {
   showLearnMore : false,
   learnMoreVideoLink : ""
 }
+
+defaultCityConfig :: CTC.CityConfig
+defaultCityConfig = 
+  case MU.getMerchant CTA.FunctionCall of
+    MU.YATRISATHI -> ysDefaultCityConfig
+    _ -> allCitiesDefaultCityConfig
+
+
+allCitiesDefaultCityConfig :: CTC.CityConfig
+allCitiesDefaultCityConfig = {
+  cityName : "",
+  mapImage : "",
+  cityCode : "",
+  showSubscriptions : false,
+  enableAdvancedBooking : false,
+  advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
+  callDriverInfoPost : false,
+  cityLat : 0.0,
+  cityLong : 0.0,
+  supportNumber : "",
+  languageKey : "",
+  enableYatriCoins : false,
+  showDriverReferral : false,
+  showCustomerReferral : false,
+  uploadRCandDL : true,
+  vehicleNSImg : "",
+  registration : { 
+    callSupport : false,
+    supportWAN : "", 
+    whatsappSupport : false
+  },
+  variantSubscriptionConfig : {
+    enableVariantBasedSubscription : true,
+    variantList : ["AutoCategory"],
+    enableCabsSubscriptionView : false,
+    staticViewPlans : []
+  },
+  showEarningSection: true,
+  referral : {
+      domain : ""
+    , customerAppId : ""
+    , driverAppId : ""
+  },
+  waitingCharges : 1.50,
+  waitingChargesConfig : {
+    cab : {
+      freeSeconds : 300,
+      perMinCharges : 1.0
+    },
+    auto : {
+      freeSeconds : 180,
+      perMinCharges : 1.50
+    },
+    bike: {
+      freeSeconds : 3,
+      perMinCharges : 1.50
+    }
+  },
+  rentalWaitingChargesConfig : {
+    cab : {
+      freeSeconds : 180,
+      perMinCharges : 2.0
+    },
+    auto : {
+      freeSeconds : 180,
+      perMinCharges : 2.0
+    },
+    bike: {
+      freeSeconds : 180,
+      perMinCharges : 1.5
+    }
+  },
+  rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
+  assets :{
+    auto_image :  "ny_ic_black_yellow_auto_side_view",
+    onboarding_auto_image : "ny_ic_auto_right_side_yellow",
+    empty_referral_auto : "",
+    empty_referral_cab : ""
+  },
+  gstPercentage : "18",
+  enableHvSdk : false
+}
+
+ysDefaultCityConfig :: CTC.CityConfig
+ysDefaultCityConfig = 
+  allCitiesDefaultCityConfig {
+      showSubscriptions = true
+    , enableAdvancedBooking = true
+    , supportNumber = "+918069724949"
+    , languageKey = "BN_IN"
+    , showDriverReferral = true
+    , showCustomerReferral = true
+    , vehicleNSImg = "ny_ic_location_unserviceable" -- Unserviceable Image when Driver Not able to go online (isVehicleSupported false in driver/profile resp)
+    , registration {
+        supportWAN = "918088065549"
+      , callSupport = true
+      , whatsappSupport = false
+      }
+    , variantSubscriptionConfig {
+        enableVariantBasedSubscription = true
+      , variantList = ["CarCategory"] -- To be updated after variant specific plans are introduced in BE
+      , enableCabsSubscriptionView = true
+      , staticViewPlans = [] -- No Static Plans to be shown as per external requirement
+      }
+    , referral {
+        domain = "https://www.yatrisathi.in"
+      , customerAppId = "in.juspay.jatrisaathi"
+      , driverAppId = "in.juspay.jatrisaathidriver"
+      }
+    , waitingCharges = 1.50
+    , waitingChargesConfig {
+        cab {
+          freeSeconds = 180
+        , perMinCharges = 2.0
+        }
+      , auto {
+          freeSeconds = 180
+        , perMinCharges = 1.50
+        }
+      , bike {
+          freeSeconds = 180
+        , perMinCharges = 2.0
+        }
+      }
+    , rentalWaitingChargesConfig {
+        cab {
+          freeSeconds = 180
+        , perMinCharges = 2.0
+        }
+      , auto {
+          freeSeconds = 180
+        , perMinCharges = 2.0
+        }
+      , bike {
+          freeSeconds = 180
+        , perMinCharges = 2.0
+        }
+      }
+    , enableHvSdk = true -- Hyperverge Integration Activation at launch
+  }
