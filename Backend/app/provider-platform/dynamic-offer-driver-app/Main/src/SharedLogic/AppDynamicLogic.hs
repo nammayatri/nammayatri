@@ -24,7 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Cac.TransporterConfig as CTC
-import qualified Storage.Queries.AppDynamicLogic as DAL
+import qualified Storage.CachedQueries.AppDynamicLogic as DAL
 
 getAppDynamicLogic ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -32,7 +32,7 @@ getAppDynamicLogic ::
   Text ->
   m [AppDynamicLogic]
 getAppDynamicLogic merchantOpCityId domain = do
-  configs <- DAL.findByMerchantOpCityAndDomain Nothing Nothing (Just merchantOpCityId) domain
+  configs <- DAL.findByMerchantOpCityAndDomain (Just merchantOpCityId) domain
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
