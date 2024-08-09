@@ -436,18 +436,24 @@ eval (IsMockLocation isMock) state = do
 
 eval (UpdateCurrentStageStatus stage (RideBookingStatusRes resp)) newState = do
   _ <- pure $ spy "updateCurrentPollingStage" stage
-  case stage of
-    "REALLOCATED" -> exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
-    "INPROGRESS"  -> updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
-    "NEW"         -> updateAndExit newState $ NotificationHandler "DRIVER_ASSIGNMENT" newState
-    "COMPLETED"   -> if not $ isLocalStageOn HomeScreen
-                       then exit $ NotificationHandler "TRIP_FINISHED" newState
-                       else continue newState
-    "CANCELLED"   -> if not $ isLocalStageOn HomeScreen
-                       then exit $ NotificationHandler "CANCELLED_PRODUCT" newState
-                       else continue newState
-    _             -> continue newState
-
+  let isDestChanged = resp.isBookingUpdated
+  if isDestChanged then do
+    void $ pure $ setValueToLocalStore TRACKING_DRIVER "False"
+  else pure unit
+  if stage == "REALLOCATED" then
+    exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
+  else if (stage == "INPROGRESS") && (not $ (isLocalStageOn RideStarted || (isLocalStageOn ChatWithDriver && newState.props.stageBeforeChatScreen == RideStarted))) then
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+  else if stage == "INPROGRESS" && isDestChanged then
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+  else if stage == "NEW" && isDestChanged then
+    updateAndExit newState $ NotificationHandler "DRIVER_ASSIGNMENT" newState
+  else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
+    exit $ NotificationHandler "TRIP_FINISHED" newState
+  else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
+    exit $ NotificationHandler "CANCELLED_PRODUCT" newState
+  else
+    continue newState
 
 eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
   _ <- pure $ spy "updateCurrentStage" stage
