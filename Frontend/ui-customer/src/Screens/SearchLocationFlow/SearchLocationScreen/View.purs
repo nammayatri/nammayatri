@@ -15,7 +15,7 @@
 
 module Screens.SearchLocationScreen.View where
 
-import Animation (translateYAnimFromTop, fadeInWithDelay, screenAnimation)
+import Animation (translateYAnimFromTop, fadeInWithDelay, fadeIn, screenAnimation, translateYAnimFromTopWithAlpha, scaleAnim)
 import Animation.Config (translateFullYAnimWithDurationConfig)
 import Common.Types.App (LazyCheck(..))
 import Components.ChooseVehicle as ChooseVehicle
@@ -43,7 +43,6 @@ import Debug(spy)
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom, safeMarginTop, flowRunner, getNewIDWithTag, getCurrentUTC, convertUTCtoISC) as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
@@ -69,12 +68,12 @@ import Log (printLog)
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
 import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when, (<#>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..))
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..), accessibilityHint, lineHeight)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig)
+import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig, autoAnimConfig)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
@@ -89,6 +88,7 @@ import Screens.SearchLocationScreen.ScreenData (dummyQuote)
 import Helpers.TipConfig
 import Components.LocationListItem (dummyAddress)
 import Screens (getScreen, ScreenName(..))
+import Helpers.CommonView (horizontalSeparatorView)
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -109,7 +109,7 @@ searchLocationScreen initialState globalProps =
         LocateOnMapStage -> storeCallBackLocateOnMap push LocFromMap 
         ConfirmLocationStage -> do 
           storeCallBackLocateOnMap push LocFromMap
-        ChooseYourRide -> do
+        FindingEstimates -> do
           void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
           when (DA.null initialState.data.quotesList) $ do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ getEstOrQuotes GetQuotes CheckFlowStatusAction 10 1000.0 push initialState
@@ -126,6 +126,7 @@ view globalProps push state =
     , padding $ PaddingBottom EHC.safeMarginBottom
     , background Color.white900
     ][  (if currentStageOn state ChooseYourRide then screenAnimation 
+          else if currentStageOn state FindingEstimates then PrestoAnim.animationSet []
           else PrestoAnim.animationSet
                 [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true] ) $ 
         relativeLayout
@@ -141,6 +142,7 @@ view globalProps push state =
             , if currentStageOn state LocateOnMapStage then locateOnMapView push state globalProps else emptyTextView
             , confirmLocationView push state
             , if currentStageOn state ChooseYourRide then chooseYourRideView push state else emptyTextView
+            , if currentStageOn state FindingEstimates then loaderView push state else emptyTextView
             , if state.props.showRateCard then 
                 linearLayout
                 [ height MATCH_PARENT
@@ -237,7 +239,7 @@ mapViewLayout push state globalProps =
         , width MATCH_PARENT
         , orientation VERTICAL
         , margin $ MarginBottom if state.props.searchLocStage == ChooseYourRide then 200 else 0
-        , visibility $ boolToInvisibility $ DA.any (_ == state.props.searchLocStage) [LocateOnMapStage , ConfirmLocationStage , ChooseYourRide]
+        , visibility $ boolToInvisibility $ DA.any (_ == state.props.searchLocStage) [LocateOnMapStage , ConfirmLocationStage , ChooseYourRide, FindingEstimates]
         , id (EHC.getNewIDWithTag "SearchLocationScreenMap")
         ][]
 
@@ -775,6 +777,84 @@ saveFavCardView push state globalProps =
     ]
     [ SaveFavouriteCard.view (push <<< SaveFavCardAC globalProps.savedLocations) (state.data.saveFavouriteCard) ]
 
+loaderView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
+loaderView push state = 
+  linearLayout[
+    height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.transparent
+  , gravity BOTTOM 
+  ][  linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER_HORIZONTAL
+      , orientation VERTICAL
+      ][  lottieLoaderView state push
+        , linearLayout 
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , gravity CENTER
+          , background Color.white900
+          ][ imageView
+              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_wallet_filled"
+              , height $ V 20
+              , width $ V 20
+              , margin $ MarginTop 3
+              ]
+            , textView $
+              [ text (getString PAY_DRIVER_USING_CASH_OR_UPI)
+              , accessibilityHint "Pay Driver using Cash/UPI : Text"
+              , accessibility ENABLE
+              , lineHeight "18"
+              , width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , padding (Padding 5 20 0 16)
+              , color Color.black800
+              , gravity CENTER
+              ] <> FontStyle.body1 TypoGraphy
+            ]
+        ]
+      ]
+
+lottieLoaderView :: forall w. SearchLocationScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+lottieLoaderView state push = 
+  linearLayout
+    [ orientation VERTICAL 
+    , height WRAP_CONTENT
+    , width MATCH_PARENT 
+    , padding $ PaddingVertical 40 24 
+    , background Color.white900
+    , stroke $ "1," <> Color.grey900
+    , cornerRadii $ Corners 24.0 true true false false
+    , clickable true
+    , gravity CENTER_HORIZONTAL
+    ][
+      PrestoAnim.animationSet [ scaleAnim $ autoAnimConfig ]
+        $ lottieAnimationView
+    [ id (EHC.getNewIDWithTag "lottieLoaderSearchLocationScreen")
+    , afterRender
+        ( \action -> do
+            void $ pure $ startLottieProcess lottieAnimationConfig {speed = 1.5, rawJson = state.appConfig.estimateAndQuoteConfig.genericLoaderLottie, lottieId = (EHC.getNewIDWithTag "lottieLoaderSearchLocationScreen") }
+            pure unit
+        )
+        (const LottieLoaderAction)
+    , height $ V state.appConfig.searchLocationConfig.lottieHeight
+    , width $ V state.appConfig.searchLocationConfig.lottieWidth
+    ]
+    , PrestoAnim.animationSet [ fadeIn true ]
+      $ textView $
+          [ accessibilityHint $ "Getting Estimates for you"
+          , text $ getString GETTING_ESTIMATES_FOR_YOU
+          , accessibility ENABLE
+          , color Color.black800
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          , lineHeight "20"
+          , gravity CENTER
+          , margin (MarginVertical 16 16)
+          ] <> FontStyle.subHeading1 TypoGraphy
+  ]
 infoView :: forall w. InfoState -> PrestoDOM (Effect Unit) w
 infoView item = 
   linearLayout
@@ -829,7 +909,7 @@ currentStageOn state stage  =
 
 getEstOrQuotes :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> SearchLocationScreenState -> Flow GlobalState Unit
 getEstOrQuotes action flowStatusAction count duration push state = do
-  if (currentStageOn state ChooseYourRide ) then
+  if (currentStageOn state FindingEstimates ) then
     if (count > 0) then do
       resp <- getQuotes (state.data.rideDetails.searchId)
       _ <- pure $ printLog "caseId" (state.data.rideDetails.searchId)

@@ -2184,6 +2184,7 @@ data SearchLocationStage =  ConfirmLocationStage
                           | LocateOnMapStage
                           | AllFavouritesStage
                           | PredictionSelectedFromHome
+                          | FindingEstimates
                           | ChooseYourRide
 
 derive instance genericSearchLocationStage :: Generic SearchLocationStage _
