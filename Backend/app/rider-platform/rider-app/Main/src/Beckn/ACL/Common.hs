@@ -18,10 +18,14 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.Hashable as Hash
 import qualified Data.Text as T
+import qualified Data.Tuple.Extra as Tuple
 import Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -240,7 +244,10 @@ parseRideCompletedEvent order msgId = do
       endOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.END_ODOMETER_READING tagGroups
       tollConfidence :: Maybe Confidence = readMaybe . T.unpack =<< getTagV2' Tag.TOLL_CONFIDENCE_INFO Tag.TOLL_CONFIDENCE tagGroups
   fareBreakupsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
-  fareBreakups <- traverse mkDFareBreakup fareBreakupsQuotationBreakup
+  fareBreakups' <- traverse mkDFareBreakup fareBreakupsQuotationBreakup
+  let substituteCongestionCharge = bool Enums.BASE_FARE Enums.DISTANCE_FARE $ any (\fb -> fb.description == Enums.DISTANCE_FARE) fareBreakups'
+      mergePairs = [(Enums.CONGESTION_CHARGE, substituteCongestionCharge)]
+  fareBreakups <- mergeFareBreakups fareBreakups' mergePairs
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
       tripEndLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       rideEndTime = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) >>= Utils.getDropLocation >>= (.stopTime) >>= (.timeTimestamp)
@@ -257,11 +264,46 @@ parseRideCompletedEvent order msgId = do
         ..
       }
 
+-- | Takes a list of fareBreakups and a list of pairs of breakup titles to be merged (first element is merged into second element) and returns a list of fareBreakups with the merged titles.
+-- | In case of duplicate first elements of pair, the last pair will be considered.
+-- | If the given pair's first element is not present in the given list of DFareBreakup, it is ignored.
+-- | If the given pair's second element is not present in the given list of DFareBreakup, first element isn't removed from the list.
+-- mergeFareBreakups :: (MonadFlow m) => [Common.DFareBreakup] -> [(Enums.QuoteBreakupTitle, Enums.QuoteBreakupTitle)] -> m [Common.DFareBreakup]
+-- mergeFareBreakups fareBreakups mergePairs = do
+--   let mergerHashMap = HMS.fromList mergePairs
+--       (toBeMergedFBList, mergeIntoFBList) = partitionMaybe (\fb -> (fb,) <$> HMS.lookup fb.description mergerHashMap) fareBreakups
+--       mergeIntoHashMap = HMS.fromList $ map ((.description) Tuple.&&& (.amount)) mergeIntoFBList
+--   finalFBHashMap :: HMS.HashMap Enums.QuoteBreakupTitle Price <-
+--     foldlM
+--       (\hmap (fb, mergeIntoFBTitle) -> insertWithM addPrice mergeIntoFBTitle fb.amount hmap)
+--       mergeIntoHashMap
+--       toBeMergedFBList
+--   pure $ HMS.toList finalFBHashMap <&> \(description, amount) -> Common.DFareBreakup {..}
+--   where
+--     -- TODO:: Move to shared kernel
+--     partitionMaybe :: (a -> Maybe b) -> [a] -> ([b], [a])
+--     partitionMaybe f =
+--       foldr'
+--         (\x (ys, zs) ->
+--           case f x of
+--             Just y -> (y:ys, zs)
+--             Nothing -> (ys, x:zs)
+--         )
+--         ([], [])
+
+--     -- TODO:: Move to shared kernel
+--     -- | > insertWithM f k v map
+--     -- | where f takes new value and old value and applies monadic aggregator function
+--     insertWithM :: (Eq k, Hash.Hashable k, Monad m) => (v -> v -> m v) -> k -> v -> HMS.HashMap k v -> m (HMS.HashMap k v)
+--     insertWithM aggregatorM key newValue mp = do
+--       finaValue <- mapM (aggregatorM newValue) $ HMS.lookup key mp
+--       pure $ HMS.insert key (fromMaybe newValue finaValue) mp
+
 mkDFareBreakup :: (MonadFlow m, CacheFlow m r) => Spec.QuotationBreakupInner -> m Common.DFareBreakup
 mkDFareBreakup breakup = do
   val :: DecimalValue.DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.breakup.price.value is not present in RideCompleted Event.")
   currency :: Currency <- breakup.quotationBreakupInnerPrice >>= (.priceCurrency) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "quote.breakup.price.currency is not present in RideCompleted Event.")
-  title <- breakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
+  title <- breakup.quotationBreakupInnerTitle >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
   pure $
     Common.DFareBreakup
       { amount = Utils.decimalValueToPrice currency val,
