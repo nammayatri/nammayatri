@@ -105,6 +105,7 @@ data DSearchReq = DSearchReq
     pickupAddress :: Maybe BA.Address,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
+    customerNammaTags :: Maybe [Text],
     disabilityTag :: Maybe Text,
     isReallocationEnabled :: Maybe Bool,
     dropLocation :: Maybe LatLong,
@@ -366,7 +367,7 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
       else pure []
   let driverPool =
         driverPoolNotOnRide
-          <> map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {..}) driverPoolCurrentlyOnRide
+          <> map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
   logDebug $ "Search handler: driver pool " <> show driverPool
   let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` DVST.offUsVariants)) farePolicies
   return (driverPool, onlyFPWithDrivers)

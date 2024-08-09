@@ -369,6 +369,7 @@ castDPoolSortingType :: DriverPool.PoolSortingType -> Common.PoolSortingType
 castDPoolSortingType = \case
   DriverPool.Intelligent -> Common.Intelligent
   DriverPool.Random -> Common.Random
+  DriverPool.Tagged -> Common.Tagged
 
 ---------------------------------------------------------------------
 postMerchantConfigDriverPoolUpdate ::
@@ -417,6 +418,7 @@ castPoolSortingType :: Common.PoolSortingType -> DriverPool.PoolSortingType
 castPoolSortingType = \case
   Common.Intelligent -> DriverPool.Intelligent
   Common.Random -> DriverPool.Random
+  Common.Tagged -> DriverPool.Tagged
 
 castBatchSplitByPickupDistance :: Common.BatchSplitByPickupDistance -> DriverPool.BatchSplitByPickupDistance
 castBatchSplitByPickupDistance Common.BatchSplitByPickupDistance {..} = DriverPool.BatchSplitByPickupDistance {..}

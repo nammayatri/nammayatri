@@ -388,6 +388,7 @@ data OnRideRadiusConfig = OnRideRadiusConfig {onRideRadius :: Kernel.Types.Commo
 data PoolSortingType
   = Intelligent
   | Random
+  | Tagged
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

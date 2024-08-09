@@ -53,3 +53,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN distance_unit chara
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_dashboard_request boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_namma_tags text[] ;

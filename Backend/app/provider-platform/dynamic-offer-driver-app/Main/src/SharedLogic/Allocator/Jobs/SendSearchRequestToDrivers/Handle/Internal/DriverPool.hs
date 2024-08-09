@@ -22,10 +22,13 @@ where
 
 import qualified Control.Monad as CM
 import Control.Monad.Extra (partitionM)
+import Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as Map
+import qualified Data.String.Conversions as CS
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -41,6 +44,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
+import qualified JsonLogic as JL
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -50,6 +54,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters
 import Lib.Queries.GateInfo
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
+import SharedLogic.AppDynamicLogic
 import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -60,6 +65,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Tools.Maps as Maps
+import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 isBatchNumExceedLimit ::
@@ -341,6 +347,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType of
+            Tagged -> makeTaggedDriverPool mOCityId onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags
             Intelligent -> makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
             Random -> makeRandomDriverPool onlyNewDrivers batchSize'
 
@@ -489,6 +496,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCountWithServiceTier
+              Tagged -> pure $ take fillSize allNearbyDrivers -- TODO : Pooling change
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
           batches <- previouslyAttemptedDrivers searchTry.id consideOnRideDrivers
@@ -542,6 +550,57 @@ previouslyAttemptedDrivers searchTryId consideOnRideDrivers = do
         logWarning "Unexpected empty driver pool batch."
         return []
       a -> return a
+
+makeTaggedDriverPool ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Id MerchantOperatingCity ->
+  [DriverPoolWithActualDistResult] ->
+  Int ->
+  Bool ->
+  Maybe [Text] ->
+  m [DriverPoolWithActualDistResult]
+makeTaggedDriverPool mOCityId onlyNewDrivers batchSize isOnRidePool customerNammaTags = do
+  allLogics <- getAppDynamicLogic mOCityId "POOLING"
+  let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
+      logicData = A.Object $ "drivers" .= A.toJSON onlyNewDriversWithCustomerInfo <> "needOnRideDrivers" .= isOnRidePool
+  logDebug $ "allLogics- " <> show allLogics
+  logDebug $ "logicData- " <> CS.cs (A.encode logicData)
+  res <-
+    foldlM
+      ( \acc logics -> do
+          let result = JL.jsonLogic logics.logic acc
+          logDebug $ "logic- " <> (CS.cs . A.encode $ logics.logic)
+          logDebug $ "json logic result - " <> (CS.cs . A.encode $ result)
+          return result
+      )
+      logicData
+      allLogics
+  sortedPool <-
+    case res of
+      A.Object sortedPoolData ->
+        case AKM.lookup "drivers" sortedPoolData of
+          Nothing -> do
+            logError "Error in parsing sortedPoolData - drivers key not found"
+            pure onlyNewDriversWithCustomerInfo
+          Just driverPool ->
+            case A.fromJSON driverPool of
+              A.Success sortedPoolData' -> pure sortedPoolData'
+              A.Error err -> do
+                logError $ "Error in parsing sortedPoolData - " <> show err
+                pure onlyNewDriversWithCustomerInfo
+      _ -> do
+        logError "Error in parsing sortedPoolData - not an object"
+        pure onlyNewDriversWithCustomerInfo
+  pure $ take batchSize sortedPool
+  where
+    updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
+      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, ..}
+
+    updateDriverPoolResult DriverPoolResult {..} =
+      DriverPoolResult {customerTags = convertTags <$> customerNammaTags, ..}
 
 sortWithDriverScore ::
   ( CacheFlow m r,

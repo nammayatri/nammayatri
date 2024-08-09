@@ -347,6 +347,7 @@ data BecknTag
   | -- Customer info tags
     CUSTOMER_LANGUAGE
   | CUSTOMER_DISABILITY
+  | CUSTOMER_NAMMA_TAGS
   | DASHBOARD_USER
   | CUSTOMER_PHONE_NUMBER
   | NIGHT_SAFETY_CHECK
@@ -452,6 +453,10 @@ instance CompleteTag BecknTag where
     STATIC_TERMS -> SETTLEMENT_TERMS
     SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     IS_REALLOCATION_ENABLED -> REALLOCATION_INFO
+    CUSTOMER_LANGUAGE -> CUSTOMER_INFO
+    DASHBOARD_USER -> CUSTOMER_INFO
+    CUSTOMER_DISABILITY -> CUSTOMER_INFO
+    CUSTOMER_NAMMA_TAGS -> CUSTOMER_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

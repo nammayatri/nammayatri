@@ -28,6 +28,7 @@ data SearchRequest = SearchRequest
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     customerLanguage :: Kernel.Prelude.Maybe Tools.Maps.Language,
+    customerNammaTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,

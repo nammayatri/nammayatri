@@ -30,6 +30,7 @@ module SharedLogic.DriverPool.Types
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
@@ -105,7 +106,9 @@ data DriverPoolResult = DriverPoolResult
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe Maps.LatLong
+    latestScheduledPickup :: Maybe Maps.LatLong,
+    customerTags :: Maybe A.Value,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -132,7 +135,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe Maps.LatLong
+    latestScheduledPickup :: Maybe Maps.LatLong,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 

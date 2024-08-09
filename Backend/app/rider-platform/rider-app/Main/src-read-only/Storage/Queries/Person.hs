@@ -140,6 +140,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.currentCity (Kernel.Prelude.Just currentCity),
+      Se.Set Beam.customerNammaTags customerNammaTags,
       Se.Set Beam.customerPaymentId customerPaymentId,
       Se.Set Beam.customerReferralCode customerReferralCode,
       Se.Set Beam.defaultPaymentMethodId defaultPaymentMethodId,

@@ -61,6 +61,8 @@
     amazonka-git.url = "github:brendanhay/amazonka?ref=2.0.0";
     amazonka-git.flake = false;
 
+    json-logic-hs.url = "github:nammayatri/json-logic-hs";
+    json-logic-hs.flake = false;
   };
 
   outputs = inputs:

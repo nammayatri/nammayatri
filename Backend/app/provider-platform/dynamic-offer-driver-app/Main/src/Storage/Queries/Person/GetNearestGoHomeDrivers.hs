@@ -5,6 +5,7 @@ module Storage.Queries.Person.GetNearestGoHomeDrivers
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Text as T
@@ -34,6 +35,7 @@ import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
+import qualified Tools.Utils as TU
 
 data NearestGoHomeDriversReq = NearestGoHomeDriversReq
   { cityServiceTiers :: [DVST.VehicleServiceTier],
@@ -71,7 +73,8 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     backendConfigVersion :: Maybe Version,
     backendAppVersion :: Maybe Text,
     latestScheduledBooking :: Maybe UTCTime,
-    latestScheduledPickup :: Maybe LatLong
+    latestScheduledPickup :: Maybe LatLong,
+    driverTags :: A.Value
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -158,5 +161,6 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 backendConfigVersion = person.backendConfigVersion,
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
-                latestScheduledPickup = info.latestScheduledPickup
+                latestScheduledPickup = info.latestScheduledPickup,
+                driverTags = TU.convertTags $ fromMaybe [] person.driverTag
               }
