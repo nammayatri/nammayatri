@@ -142,11 +142,11 @@ getDriverProfile person = do
           likedByRidersNum = driverStats.favRiderCount
         }
 
-    getImages imagePaths =
+    getImages imagePaths = do
       mapM (QMF.findById) imagePaths
         >>= pure . catMaybes
         >>= pure . ((.url) <$>)
-        >>= mapM (S3.get . T.unpack)
+        >>= mapM (S3.get . T.unpack . extractFilePath)
 
     getTopFeedBackForDriver driverId = do
       ratings <- QRating.findTopRatingsForDriver driverId (Just 5)
@@ -181,3 +181,7 @@ getDriverProfile person = do
       feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> prevRatings) (Just 5)
       ratings <- (mapM QRating.findRatingForRideIfPositive ((.rideId) <$> feedbacks)) <&> catMaybes
       pure $ foldl (goFeedbacks feedbacks) [] ratings
+
+    extractFilePath url = case T.splitOn "filePath=" url of
+      [_before, after] -> after
+      _ -> T.empty
