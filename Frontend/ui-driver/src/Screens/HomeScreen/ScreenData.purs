@@ -23,7 +23,7 @@ import Domain.Payments as PP
 import ConfigProvider
 import Screens.Types as ST
 import RemoteConfig.Utils as RU
-import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: HomeScreenState
 initData = 
@@ -39,7 +39,7 @@ initData =
       , gender: "UNKNOWN"
       , subsRemoteConfig: RU.subscriptionConfig "subscription_configs"
       , driverStats: false
-      , cityConfig : dummyCityConfig
+      , cityConfig : defaultCityConfig
       , activeRide : dummyRideData
       , advancedRideData : Nothing
       , currentRideData : Nothing
