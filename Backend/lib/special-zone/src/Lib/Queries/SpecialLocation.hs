@@ -81,9 +81,9 @@ findSpecialLocationByLatLongNearby point radius = do
       return (specialLocation, F.getGeomGeoJSON)
   return $ listToMaybe specialLocations
 
-findPickupSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe D.SpecialLocation)
+findPickupSpecialLocationByLatLong :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.SpecialLocation)
 findPickupSpecialLocationByLatLong point = do
-  mbSpecialLocation <- findSpecialLocationByLatLong' point
+  mbSpecialLocation <- Esq.runInReplica $ findSpecialLocationByLatLong' point
   case mbSpecialLocation of
     Just specialLocation -> pure $ Just specialLocation
     Nothing -> maybe (pure Nothing) (Lib.Queries.SpecialLocation.findById . (.specialLocationId)) =<< QGI.findGateInfoByLatLongWithoutGeoJson point
