@@ -15,16 +15,17 @@
 
 module SharedLogic.AppDynamicLogic where
 
-import Domain.Types.AppDynamicLogic
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.TimeBound
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic as DAL
+import Lib.Yudhishthira.Types.AppDynamicLogic
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as CTC
-import qualified Storage.CachedQueries.AppDynamicLogic as DAL
 
 getAppDynamicLogic ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -32,7 +33,7 @@ getAppDynamicLogic ::
   Text ->
   m [AppDynamicLogic]
 getAppDynamicLogic merchantOpCityId domain = do
-  configs <- DAL.findByMerchantOpCityAndDomain (Just merchantOpCityId) domain
+  configs <- DAL.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime

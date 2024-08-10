@@ -28,11 +28,11 @@ import Data.Text as Text hiding (filter, find)
 import Domain.Types.DriverPoolConfig
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType as DVST
-import Domain.Types.TimeBound
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SystemConfigs ()

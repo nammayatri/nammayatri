@@ -1,0 +1,53 @@
+imports:
+  Text: Data.Text
+  TimeBound : Kernel.Types.TimeBound
+  MerchantOperatingCity: Lib.Yudhishthira.Types
+
+AppDynamicLogic:
+  tableName: app_dynamic_logic
+
+  fields:
+    name: Text
+    description: Text
+    domain: Text
+    logic: Data.Aeson.Value
+    merchantOperatingCityId: Id MerchantOperatingCity
+    timeBounds: TimeBound|NoRelation
+    order: Int
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    domain: PrimaryKey
+    name: PrimaryKey
+
+  queries:
+    findByMerchantOpCityAndDomain:
+      kvFunction: findAllWithOptionsKV
+      orderBy:
+        field: order
+        order: asc
+      where:
+        and: [merchantOperatingCityId, domain]
+
+  sqlType:
+    timeBounds: text
+
+  beamType:
+    logic: Text
+    timeBounds: Maybe TimeBound
+
+  toTType:
+    logic: (Data.String.Conversions.cs . Data.Aeson.encode)|I
+    timeBounds: Kernel.Prelude.Just|I
+
+  fromTType:
+    logic: (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)|I
+    timeBounds: (Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded)|I
+
+  default:
+    timeBounds: "'Unbounded'"
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+  
+  excludedFields: [merchantId]

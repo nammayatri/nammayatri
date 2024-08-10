@@ -1,0 +1,42 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Lib.Yudhishthira.Storage.Beam.NammaTag where
+
+import qualified Database.Beam as B
+import Kernel.External.Encryption
+import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
+import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.NammaTag
+import Tools.Beam.UtilsTH
+
+data NammaTagT f = NammaTagT
+  { category :: B.C f Kernel.Prelude.Text,
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    chakra :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra),
+    event :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ApplicationEvent),
+    tagType :: B.C f Lib.Yudhishthira.Types.NammaTag.TagType,
+    validity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Hours),
+    name :: B.C f Kernel.Prelude.Text,
+    rangeEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    rangeStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    tags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    rule :: B.C f Lib.Yudhishthira.Types.TagRule,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  }
+  deriving (Generic, B.Beamable)
+
+instance B.Table NammaTagT where
+  data PrimaryKey NammaTagT f = NammaTagId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = NammaTagId . name
+
+type NammaTag = NammaTagT Identity
+
+$(enableKVPG ''NammaTagT ['name] [])
+
+$(mkTableInstancesGenericSchema ''NammaTagT "namma_tag")

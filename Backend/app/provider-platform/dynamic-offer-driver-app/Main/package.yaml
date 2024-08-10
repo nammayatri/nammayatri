@@ -126,6 +126,7 @@ dependencies:
   - split
   - hashable
   - json-logic-hs
+  - yudhishthira
 
 ghc-options:
   - -fwrite-ide-info

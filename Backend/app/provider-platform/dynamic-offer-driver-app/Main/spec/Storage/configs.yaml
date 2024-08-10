@@ -10,7 +10,7 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
-  TimeBound : Domain.Types.TimeBound
+  TimeBound : Kernel.Types.TimeBound
   Currency: Kernel.Utils.Common
   DayOfWeek: Data.Time
   Centesimal: Kernel.Types.Common

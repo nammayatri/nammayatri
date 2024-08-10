@@ -275,7 +275,6 @@ library
       Domain.Types.Quote
       Domain.Types.RideRoute
       Domain.Types.ServiceTierType
-      Domain.Types.TimeBound
       Domain.Types.UtilsTH
       Environment
       Lib.DriverCoins.Coins
@@ -380,6 +379,7 @@ library
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
+      Storage.Beam.Yudhishthira
       Storage.Cac.DriverIntelligentPoolConfig
       Storage.Cac.DriverPoolConfig
       Storage.Cac.FarePolicy
@@ -394,7 +394,6 @@ library
       Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Cac.GoHomeConfig
       Storage.Cac.TransporterConfig
-      Storage.CachedQueries.AppDynamicLogic
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
@@ -620,7 +619,6 @@ library
       Domain.Types.AadhaarCard
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
-      Domain.Types.AppDynamicLogic
       Domain.Types.BackgroundVerification
       Domain.Types.BapMetadata
       Domain.Types.BecknConfig
@@ -735,7 +733,6 @@ library
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
-      Storage.Beam.AppDynamicLogic
       Storage.Beam.BackgroundVerification
       Storage.Beam.BapMetadata
       Storage.Beam.BecknConfig
@@ -852,7 +849,6 @@ library
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
-      Storage.Queries.AppDynamicLogic
       Storage.Queries.BackgroundVerification
       Storage.Queries.BapMetadata
       Storage.Queries.BecknConfig
@@ -1142,6 +1138,7 @@ library
     , wai
     , wai-extra
     , warp
+    , yudhishthira
   extra-libraries:
       cac_client
   default-language: Haskell2010
@@ -1263,6 +1260,7 @@ executable dynamic-offer-driver-app-exe
     , wai
     , wai-extra
     , warp
+    , yudhishthira
   extra-libraries:
       cac_client
   default-language: Haskell2010

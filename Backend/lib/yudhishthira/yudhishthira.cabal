@@ -1,0 +1,174 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           yudhishthira
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2024 Moving Innovation Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Lib.Yudhishthira.Event
+      Lib.Yudhishthira.Flow.Dashboard
+      Lib.Yudhishthira.Storage.Beam.BeamFlow
+      Lib.Yudhishthira.Storage.Beam.SystemConfigs
+      Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic
+      Lib.Yudhishthira.Storage.Queries.NammaTagExtra
+      Lib.Yudhishthira.Storage.Queries.Transformers.NammaTag
+      Lib.Yudhishthira.Tools.Error
+      Lib.Yudhishthira.Tools.Utils
+      Lib.Yudhishthira.Types
+      Lib.Yudhishthira.Types.Application
+      Lib.Yudhishthira.Types.Common
+      Lib.Yudhishthira.Types.KaalChakra
+      Lib.Yudhishthira.Types.Tag
+      Tools.Beam.UtilsTH
+      Lib.Yudhishthira.Storage.Beam.AppDynamicLogic
+      Lib.Yudhishthira.Storage.Beam.ChakraQueries
+      Lib.Yudhishthira.Storage.Beam.NammaTag
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogic
+      Lib.Yudhishthira.Storage.Queries.ChakraQueries
+      Lib.Yudhishthira.Storage.Queries.NammaTag
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
+      Lib.Yudhishthira.Types.AppDynamicLogic
+      Lib.Yudhishthira.Types.ChakraQueries
+      Lib.Yudhishthira.Types.NammaTag
+  other-modules:
+      Paths_yudhishthira
+  hs-source-dirs:
+      src
+      src-read-only
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+      TemplateHaskell
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  extra-libraries:
+      cac_client
+  build-depends:
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , data-default-class
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , geohash ==1.0.1
+    , hashable
+    , haskell-cac
+    , hspec
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , json-logic-hs
+    , lens
+    , lens-aeson
+    , mobility-core
+    , openapi3
+    , passetto-client
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , pureMD5
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , sessionizer-metrics
+    , shared-services
+    , singletons
+    , singletons-th
+    , split
+    , stm
+    , string-conversions
+    , template-haskell
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , utils
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , warp
+  default-language: Haskell2010
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

@@ -10,9 +10,9 @@ import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.TimeBound
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import qualified Lib.Types.SpecialLocation
 import qualified Tools.Beam.UtilsTH
 
@@ -24,7 +24,7 @@ data FareProduct = FareProduct
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     searchSource :: Domain.Types.FareProduct.SearchSource,
-    timeBounds :: Domain.Types.TimeBound.TimeBound,
+    timeBounds :: Kernel.Types.TimeBound.TimeBound,
     tripCategory :: Domain.Types.Common.TripCategory,
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType
   }
