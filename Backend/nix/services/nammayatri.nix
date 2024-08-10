@@ -67,7 +67,6 @@ in
         "search-result-aggregator-exe"
         "special-zone-exe"
         "safety-dashboard-exe"
-        "yudhishthira-exe"
         "kaal-chakra-exe"
       ];
 
@@ -244,7 +243,6 @@ in
                   ../../dev/local-testing-data/safety-dashboard.sql
                   ../../dev/sql-seed/special-zone-seed.sql
                   ../../dev/local-testing-data/special-zone.sql
-                  ../../dev/sql-seed/yudhishthira-seed.sql
                 ];
               }
             ];

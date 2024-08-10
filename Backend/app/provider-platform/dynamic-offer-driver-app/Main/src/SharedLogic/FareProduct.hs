@@ -14,12 +14,12 @@ import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.TimeBound as DTB
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority

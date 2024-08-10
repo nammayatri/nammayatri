@@ -2,7 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Area: Lib.Types.SpecialLocation
-  TimeBound: Domain.Types.TimeBound
+  TimeBound: Kernel.Types.TimeBound
   FarePolicy: Domain.Types.FarePolicy
   ServiceTierType: Domain.Types.ServiceTierType
   TripCategory: Domain.Types.Common

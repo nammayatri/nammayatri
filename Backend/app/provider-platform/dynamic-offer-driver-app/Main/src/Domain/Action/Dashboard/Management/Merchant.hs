@@ -82,7 +82,6 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Overlay as DMO
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.ServiceTierType as DVST
-import Domain.Types.TimeBound
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -98,6 +97,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
+import Kernel.Types.TimeBound
 import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
