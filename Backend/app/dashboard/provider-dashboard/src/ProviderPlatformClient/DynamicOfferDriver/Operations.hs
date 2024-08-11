@@ -28,6 +28,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverReferral as DriverR
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration as DriverRegistrationDSL
 import qualified API.Types.ProviderPlatform.Management.Merchant as MerchantDSL
 import qualified API.Types.ProviderPlatform.Management.Message as MessageDSL
+import qualified API.Types.ProviderPlatform.Management.NammaTag as NammaTagDSL
 import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
 import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
 import qualified Dashboard.ProviderPlatform.Management.Driver as Driver
@@ -65,6 +66,7 @@ data DriverOperationAPIs = DriverOperationAPIs
     messageDSL :: MessageDSL.MessageAPIs,
     revenueDSL :: RevenueDSL.RevenueAPIs,
     rideDSL :: RideDSL.RideAPIs,
+    nammaTagDSL :: NammaTagDSL.NammaTagAPIs,
     driverDSL :: DriverDSL.DriverAPIs,
     driverCoinsDSL :: DriverCoinsDSL.DriverCoinsAPIs,
     driverGoHomeDSL :: DriverGoHomeDSL.DriverGoHomeAPIs,
@@ -127,6 +129,7 @@ mkDriverOperationAPIs merchantId city token = do
   let messageDSL = MessageDSL.mkMessageAPIs messageClientDSL
   let revenueDSL = RevenueDSL.mkRevenueAPIs revenueClientDSL
   let rideDSL = RideDSL.mkRideAPIs rideClientDSL
+  let nammaTagDSL = NammaTagDSL.mkNammaTagAPIs nammaTagClientDSL
   let driverDSL = DriverDSL.mkDriverAPIs driverClientDSL
   let driverCoinsDSL = DriverCoinsDSL.mkDriverCoinsAPIs driverCoinsClientDSL
   let driverGoHomeDSL = DriverGoHomeDSL.mkDriverGoHomeAPIs driverGoHomeClientDSL
@@ -142,6 +145,7 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> messageClientDSL
       :<|> revenueClientDSL
       :<|> rideClientDSL
+      :<|> nammaTagClientDSL
       :<|> driverClientDSL
       :<|> driverCoinsClientDSL
       :<|> driverGoHomeClientDSL

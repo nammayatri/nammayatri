@@ -1,0 +1,24 @@
+imports:
+  CreateNammaTagRequest: Lib.Yudhishthira.Types
+  APISuccess: Kernel.Types.APISuccess
+  ChakraQueriesAPIEntity: Lib.Yudhishthira.Types
+
+module: NammaTag
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /tag/create
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      request:
+        type: CreateNammaTagRequest
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /query/create
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_CHAKRA_QUERY
+      request:
+        type: ChakraQueriesAPIEntity
+      response:
+        type: APISuccess

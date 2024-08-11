@@ -97,7 +97,6 @@ dependencies:
   - esqueleto
   - beckn-services
   - unordered-containers
-  - dashboard-helper-api
   - shared-services
   - extra
   - scheduler
@@ -161,7 +160,6 @@ library:
     - mobility-core
     - haskell-cac
     - sessionizer-metrics
-    - utils
   extra-libraries:
     - cac_client
 

@@ -19,6 +19,3 @@ data ChakraQueries = ChakraQueries
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data ChakraQueriesAPIEntity = ChakraQueriesAPIEntity {chakra :: Lib.Yudhishthira.Types.Chakra, queryResults :: [Kernel.Prelude.Text], queryText :: Kernel.Prelude.Text}
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

@@ -22,6 +22,7 @@ import qualified API.Action.Dashboard.Management.DriverReferral as DriverReferra
 import qualified API.Action.Dashboard.Management.DriverRegistration as DriverRegistrationDSL
 import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
 import qualified API.Action.Dashboard.Management.Message as MessageDSL
+import qualified API.Action.Dashboard.Management.NammaTag as NammaTagDSL
 import qualified API.Action.Dashboard.Management.Revenue as RevenueDSL
 import qualified API.Action.Dashboard.Management.Ride as RideDSL
 import qualified API.Dashboard.Management.Issue as Issue
@@ -43,6 +44,7 @@ type API =
            :<|> MessageDSL.API
            :<|> RevenueDSL.API
            :<|> RideDSL.API
+           :<|> NammaTagDSL.API
            :<|> DriverDSL.API
            :<|> DriverCoinsDSL.API
            :<|> DriverGoHomeDSL.API
@@ -60,6 +62,7 @@ handler merchantId city _ =
     :<|> MessageDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city
+    :<|> NammaTagDSL.handler merchantId city
     :<|> DriverDSL.handler merchantId city
     :<|> DriverCoinsDSL.handler merchantId city
     :<|> DriverGoHomeDSL.handler merchantId city

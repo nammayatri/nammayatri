@@ -51,6 +51,7 @@ library
       Domain.Action.ProviderPlatform.Management.DriverRegistration
       Domain.Action.ProviderPlatform.Management.Merchant
       Domain.Action.ProviderPlatform.Management.Message
+      Domain.Action.ProviderPlatform.Management.NammaTag
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
       Domain.Action.ProviderPlatform.RideBooking.Driver
@@ -70,6 +71,7 @@ library
       API.Action.ProviderPlatform.Management.DriverRegistration
       API.Action.ProviderPlatform.Management.Merchant
       API.Action.ProviderPlatform.Management.Message
+      API.Action.ProviderPlatform.Management.NammaTag
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
       API.Action.ProviderPlatform.RideBooking.Driver
@@ -145,6 +147,7 @@ library
     , time
     , unordered-containers
     , utf8-string
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -221,6 +224,7 @@ executable provider-dashboard-exe
     , time
     , unordered-containers
     , utf8-string
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

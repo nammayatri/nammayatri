@@ -34,6 +34,7 @@ import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
+import qualified "dashboard-helper-api" Dashboard.Common.NammaTag as Common
 import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverReferral as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
@@ -100,6 +101,7 @@ data Endpoint
   | DriverReferralAPI Common.ReferralEndpoint
   | DriverRegistrationAPI Common.DriverRegistrationEndpoint
   | MerchantAPI Common.MerchantEndpoint
+  | NammaTagAPI Common.NammaTagEndpoint
   | CustomerAPI Common.CustomerEndpoint
   | MessageAPI Common.MessageEndpoint
   | ExotelAPI Common.ExotelEndpoint
@@ -164,6 +166,10 @@ instance Read Endpoint where
                ]
             ++ [ (MerchantAPI v1, r2)
                  | r1 <- stripPrefix "MerchantAPI " r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (NammaTagAPI v1, r2)
+                 | r1 <- stripPrefix "NammaTagAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (CustomerAPI v1, r2)

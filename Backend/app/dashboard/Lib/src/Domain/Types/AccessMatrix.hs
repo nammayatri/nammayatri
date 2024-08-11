@@ -257,6 +257,8 @@ data UserActionType
   | LIST_DRIVER_RIDES
   | LINK_RC_WITH_DRIVER
   | CLEAR_FEE
+  | CREATE_NAMMA_TAG
+  | CREATE_CHAKRA_QUERY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
@@ -265,7 +267,7 @@ genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY
+data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY | NAMMA_TAG
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''ApiEntity)

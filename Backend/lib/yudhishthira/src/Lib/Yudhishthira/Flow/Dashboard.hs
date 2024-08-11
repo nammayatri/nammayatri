@@ -19,7 +19,7 @@ import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
 import Servant hiding (throwError)
 
-postTagCreate :: BeamFlow m r => Lib.Yudhishthira.Types.NammaTag -> m Kernel.Types.APISuccess.APISuccess
+postTagCreate :: BeamFlow m r => Lib.Yudhishthira.Types.CreateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
 postTagCreate tagRequest = do
   nammaTag <- buildNammaTag
   checkForDuplicacy nammaTag.name
@@ -59,7 +59,7 @@ postTagCreate tagRequest = do
                 updatedAt = now
               }
 
-postQueryCreate :: BeamFlow m r => Lib.Yudhishthira.Types.ChakraQueries.ChakraQueriesAPIEntity -> m Kernel.Types.APISuccess.APISuccess
+postQueryCreate :: BeamFlow m r => Lib.Yudhishthira.Types.ChakraQueriesAPIEntity -> m Kernel.Types.APISuccess.APISuccess
 postQueryCreate queryRequest = do
   existingQueryFields <- getChakraQueryFields queryRequest.chakra
   checkIfMandtoryFieldsArePresent queryRequest.queryResults
@@ -71,7 +71,7 @@ postQueryCreate queryRequest = do
     buildQuery = do
       now <- getCurrentTime
       id <- generateGUID
-      let Lib.Yudhishthira.Types.ChakraQueries.ChakraQueriesAPIEntity {..} = queryRequest
+      let Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..} = queryRequest
       return $ Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {createdAt = now, updatedAt = now, ..}
 
     checkIfMandtoryFieldsArePresent newQueryFields = do
