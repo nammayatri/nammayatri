@@ -49,5 +49,5 @@ AppDynamicLogic:
 
   beamInstance: MakeTableInstancesGenericSchema
   defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
-  
+
   excludedFields: [merchantId]

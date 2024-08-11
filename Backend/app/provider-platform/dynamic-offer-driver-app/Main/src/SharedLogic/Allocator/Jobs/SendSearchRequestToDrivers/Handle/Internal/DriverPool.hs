@@ -571,10 +571,16 @@ makeTaggedDriverPool mOCityId onlyNewDrivers batchSize isOnRidePool customerNamm
   res <-
     foldlM
       ( \acc logics -> do
-          let result = JL.jsonLogic logics.logic acc
+          let result = JL.jsonLogicEither logics.logic acc
+          res <-
+            case result of
+              Left err -> do
+                logError $ "got error: " <> show err <> " while running logic: " <> CS.cs (A.encode logics)
+                pure acc
+              Right res -> pure res
           logDebug $ "logic- " <> (CS.cs . A.encode $ logics.logic)
-          logDebug $ "json logic result - " <> (CS.cs . A.encode $ result)
-          return result
+          logDebug $ "json logic result - " <> (CS.cs . A.encode $ res)
+          return res
       )
       logicData
       allLogics
