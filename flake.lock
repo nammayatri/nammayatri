@@ -1923,11 +1923,11 @@
     "json-logic-hs": {
       "flake": false,
       "locked": {
-        "lastModified": 1723197377,
-        "narHash": "sha256-oizWhlwdW+tFIR731M6tESBcLMz317EDvvGljGUddZo=",
+        "lastModified": 1723372497,
+        "narHash": "sha256-Hk86zecu93zKZaAMWJEbwXQVFSzA6ZQe4cZdOJaELGI=",
         "owner": "nammayatri",
         "repo": "json-logic-hs",
-        "rev": "74a7173a3a4b3b4e759df95e6da3c7684118d533",
+        "rev": "64c39fd39523384da7f1b3edc8a06212815865f1",
         "type": "github"
       },
       "original": {
