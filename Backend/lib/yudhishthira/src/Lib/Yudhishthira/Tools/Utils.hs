@@ -36,4 +36,4 @@ runJsonLogic dataText ruleText = do
     case eitherData of
       Right data_ -> return data_
       Left err -> throwError $ InternalError ("Unable to decode data:" <> show err)
-  return $ jsonLogic rule data'
+  jsonLogic rule data'
