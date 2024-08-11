@@ -110,7 +110,6 @@ library
     , cereal
     , containers
     , cryptonite
-    , dashboard-helper-api
     , data-default-class
     , either
     , esqueleto
@@ -161,7 +160,6 @@ library
     , text-conversions
     , time
     , unordered-containers
-    , utils
     , uuid
     , vector
     , wai

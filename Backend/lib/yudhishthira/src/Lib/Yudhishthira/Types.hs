@@ -2,13 +2,15 @@ module Lib.Yudhishthira.Types
   ( module Reexport,
     YudhishthiraDecideReq (..),
     YudhishthiraDecideResp (..),
+    ChakraQueriesAPIEntity (..),
     Source (..),
     SourceData,
-    NammaTag (..),
+    CreateNammaTagRequest (..),
   )
 where
 
 import Kernel.Prelude
+import Kernel.Types.HideSecrets
 import Lib.Yudhishthira.Types.Application as Reexport
 import Lib.Yudhishthira.Types.Common as Reexport
 import Lib.Yudhishthira.Types.KaalChakra as Reexport
@@ -21,10 +23,23 @@ data Source
 
 type SourceData = Text -- json to be decoded in the respective tag
 
-data NammaTag
+data CreateNammaTagRequest
   = ApplicationTag NammaTagApplication
   | KaalChakraTag NammaTagChakra
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateNammaTagRequest where
+  hideSecrets = identity
+
+data ChakraQueriesAPIEntity = ChakraQueriesAPIEntity
+  { chakra :: Chakra,
+    queryResults :: [Text],
+    queryText :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ChakraQueriesAPIEntity where
+  hideSecrets = identity
 
 data YudhishthiraDecideReq = YudhishthiraDecideReq
   { source :: Source,

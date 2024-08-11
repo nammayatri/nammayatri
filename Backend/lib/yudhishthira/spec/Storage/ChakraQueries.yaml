@@ -3,11 +3,6 @@ imports:
 
 ChakraQueries:
   tableName: chakra_queries
-  types:
-    ChakraQueriesAPIEntity:
-      chakra: Chakra
-      queryText: Text
-      queryResults: '[Text]'
 
   fields:
     id: Id ChakraQueries
@@ -22,6 +17,6 @@ ChakraQueries:
     findAllByChakra:
       kvFunction: findAllWithKV
       where: chakra
-  
+
   beamInstance: MakeTableInstancesGenericSchema
   defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"

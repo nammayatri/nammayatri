@@ -84,6 +84,7 @@ dependencies:
   - servant-multipart
   - beckn-services
   - special-zone-a
+  - yudhishthira
 
 ghc-options:
   - -Wall

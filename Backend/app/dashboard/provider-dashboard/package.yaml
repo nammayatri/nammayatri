@@ -84,6 +84,7 @@ dependencies:
   - unordered-containers
   - beckn-services
   - utf8-string
+  - yudhishthira
 
 ghc-options:
   - -Wall
