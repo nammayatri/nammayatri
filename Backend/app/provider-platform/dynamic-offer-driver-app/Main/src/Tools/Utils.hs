@@ -13,7 +13,9 @@ convertTags input = A.object $ map toObject pairs
     pairs = map (T.splitOn "#") input
     toObject [name, value] = (A.fromText $ T.strip name :: A.Key) A..= fromMaybe A.Null (textToMaybeValue (T.strip value) :: Maybe A.Value)
     toObject [name] = (A.fromText $ T.strip name :: A.Key) A..= A.Null
-    toObject _ = error "Invalid tag format"
+    toObject xs = do
+      let reconstructed = T.intercalate "#" xs
+      (A.fromText $ T.strip reconstructed :: A.Key) A..= A.Null
 
 decodeText :: Text -> Maybe A.Value
 decodeText txt = A.decode (fromStrict . encodeUtf8 $ txt)
