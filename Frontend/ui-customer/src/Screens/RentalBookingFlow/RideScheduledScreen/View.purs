@@ -23,7 +23,7 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError, storeCallBack
 import JBridge (toast)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibility , accessibilityHint)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig, cancelScheduledRideConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (Action(..), ScreenOutput, eval)
@@ -36,6 +36,7 @@ import Helpers.CommonView (dummyView)
 import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Screens.Types (FareProductType(..)) as FPT
+import Resources.Localizable.EN (getEN)
 
 rideScheduledScreen :: RideScheduledScreenState -> Screen Action RideScheduledScreenState ScreenOutput
 rideScheduledScreen initialState =
@@ -159,6 +160,8 @@ scheduledDetailsView push state =
       , color Color.black800
       , margin $ MarginTop 16
       , gravity CENTER
+      , accessibility ENABLE
+      , accessibilityHint $ getEN RIDE_SCHEDULED
       ] <> FontStyle.h1 TypoGraphy
   , rideDetailsView push state
   ]
@@ -204,11 +207,15 @@ rideDetailsView push state =
             , text $ getString RENTAL_PACKAGE
             , margin $ MarginRight 8
             , color Color.black700
+            , accessibility ENABLE
+            , accessibilityHint $ getEN RENTAL_PACKAGE
             ] <> FontStyle.body1 TypoGraphy
         , textView $
             [ textSize FontSize.a_14
             , text $ state.data.baseDuration <> " hr"
             , color Color.black800
+            , accessibility ENABLE
+            , accessibilityHint $ state.data.baseDuration <> " hr"
             ] <> FontStyle.subHeading1 TypoGraphy
         , textView $
             [ textSize FontSize.a_14
@@ -219,6 +226,8 @@ rideDetailsView push state =
             [ textSize FontSize.a_14
             , text $ state.data.baseDistance <> " km"
             , color Color.black800
+            , accessibility ENABLE
+            , accessibilityHint $ " and " <> state.data.baseDistance <> " hr"
             ] <> FontStyle.subHeading1 TypoGraphy
         ]
     ]
@@ -257,6 +266,7 @@ rideStartDetails push state =
             , color Color.black700
             , text $ getString RIDE_STARTS_ON
             , textSize FontSize.a_14
+            , accessibilityHint $ getRideDetailsAccessibilty state
             ] <> FontStyle.body3 TypoGraphy
         , linearLayout
             [ width WRAP_CONTENT
@@ -290,6 +300,8 @@ rideStartDetails push state =
         ] <> FontStyle.h2 TypoGraphy
 
     ]
+    where 
+    getRideDetailsAccessibilty state = getEN RIDE_STARTS_ON <> EHC.convertUTCtoISC state.data.startTime "ddd" <> ", " <> EHC.convertUTCtoISC state.data.startTime "D" <> " " <> EHC.convertUTCtoISC state.data.startTime "MMM" <> " " <> EHC.convertUTCtoISC state.data.startTime "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTime "mm" <> " " <> EHC.convertUTCtoISC state.data.startTime "a" <> "and total Fare is : " <>  "₹" <> state.data.finalPrice
 
 notificationView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 notificationView push state =
@@ -313,6 +325,8 @@ notificationView push state =
         , width MATCH_PARENT
         , singleLine false
         , text $ getVarString DRIVER_WILL_BE_ASSIGNED_MINUTES_BEFORE_STARTING_THE_RIDE (singleton state.props.driverAllocationTime)  --  getString DRIVER_WILL_BE_ASSIGNED <> " " <> state.driverAllocationTime <> " " <> getString MINUTES_BEFORE_STARTING_THE_RIDE
+        , accessibility ENABLE
+        , accessibilityHint $ getVarString DRIVER_WILL_BE_ASSIGNED_MINUTES_BEFORE_STARTING_THE_RIDE (singleton state.props.driverAllocationTime)
         , color Color.black800
         ] <> FontStyle.body3 TypoGraphy
     ]
