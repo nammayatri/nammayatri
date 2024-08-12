@@ -310,6 +310,8 @@ data DriverQuoteError
   | DriverQuoteExpired
   | NoSearchRequestForDriver
   | RideRequestAlreadyAccepted
+  | RideRequestAlreadyAcceptedOrCancelled Text
+  | DriverAlreadyQuoted Text
   | QuoteAlreadyRejected
   | UnexpectedResponseValue
   | NoActiveRidePresent
@@ -327,6 +329,8 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage RideRequestAlreadyAccepted = Just "Ride request already accepted by other driver"
+  toMessage (RideRequestAlreadyAcceptedOrCancelled srfd) = Just $ "Ride request already accepted by other driver or cancelled:-" <> show srfd
+  toMessage (DriverAlreadyQuoted stId) = Just $ "Driver already quoted for stId:-" <> show stId
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
   toMessage NoActiveRidePresent = Just "No active ride is present for this driver registered with given vehicle Number"
@@ -342,6 +346,8 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     RideRequestAlreadyAccepted -> "RIDE_REQUEST_ALREADY_ACCEPTED"
+    RideRequestAlreadyAcceptedOrCancelled _ -> "RIDE_REQUEST_ALREADY_ACCEPTED_OR_CANCELLED"
+    DriverAlreadyQuoted _ -> "DRIVER_ALREADY_QUOTED"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
     UnexpectedResponseValue -> "UNEXPECTED_RESPONSE_VALUE"
     NoActiveRidePresent -> "NO_ACTIVE_RIDE_PRESENT"
@@ -356,6 +362,8 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
     RideRequestAlreadyAccepted -> E400
+    RideRequestAlreadyAcceptedOrCancelled _ -> E409
+    DriverAlreadyQuoted _ -> E409
     QuoteAlreadyRejected -> E400
     UnexpectedResponseValue -> E400
     NoActiveRidePresent -> E400
