@@ -5,6 +5,7 @@ module Lib.Yudhishthira.Flow.Dashboard where
 
 import qualified Data.List as DL
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as DT
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -75,11 +76,11 @@ postQueryCreate queryRequest = do
       return $ Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {createdAt = now, updatedAt = now, ..}
 
     checkIfMandtoryFieldsArePresent newQueryFields = do
-      let missingFields = filter (\field -> field `notElem` newQueryFields) mandatoryChakraFields
-      unless (null missingFields) $ throwError (MissingQueryFields missingFields)
+      let missingFields = filter (\field -> field `notElem` newQueryFields) (map toQueryResultInfo mandatoryChakraFields)
+      unless (null missingFields) $ throwError (MissingQueryFields $ map (DT.pack . show) missingFields)
 
     checkIfFieldsAreNotRepeated newQueryFields existingQueryFields = do
-      let repeatedFields = newQueryFields `DL.intersect` existingQueryFields
+      let repeatedFields = map fromQueryResultInfo newQueryFields `DL.intersect` existingQueryFields
       unless (null repeatedFields) $ throwError (RepeatedQueryFields repeatedFields)
 
 -- createDynamicLogic :: Text -> [Value] -> [a] -> Environment.Flow Kernel.Types.APISuccess.APISuccess

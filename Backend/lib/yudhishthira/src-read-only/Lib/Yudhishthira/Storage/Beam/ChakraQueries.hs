@@ -10,12 +10,13 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.Common
 import Tools.Beam.UtilsTH
 
 data ChakraQueriesT f = ChakraQueriesT
   { chakra :: B.C f Lib.Yudhishthira.Types.Chakra,
     id :: B.C f Kernel.Prelude.Text,
-    queryResults :: B.C f [Kernel.Prelude.Text],
+    queryResults :: B.C f [Lib.Yudhishthira.Types.Common.QueryResultInfo],
     queryText :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

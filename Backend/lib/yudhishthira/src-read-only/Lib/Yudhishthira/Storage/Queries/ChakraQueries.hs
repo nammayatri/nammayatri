@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries] -> m ())
 createMany = traverse_ create
 
-findAllByChakra :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> m [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries])
+findAllByChakra :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.Chakra -> m ([Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries]))
 findAllByChakra chakra = do findAllWithKV [Se.Is Beam.chakra $ Se.Eq chakra]
 
 findByPrimaryKey ::

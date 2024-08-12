@@ -1,5 +1,6 @@
 imports:
   Chakra: Lib.Yudhishthira.Types
+  QueryResultInfo: Lib.Yudhishthira.Types.Common
 
 ChakraQueries:
   tableName: chakra_queries
@@ -8,10 +9,14 @@ ChakraQueries:
     id: Id ChakraQueries
     chakra: Chakra
     queryText: Text
-    queryResults: '[Text]'
+    queryResults: "[QueryResultInfo]"
 
   sqlType:
-    queryResults: text[]
+    queryResults: "text[]"
+
+  default:
+    queryResults: "{}"
+
 
   queries:
     findAllByChakra:

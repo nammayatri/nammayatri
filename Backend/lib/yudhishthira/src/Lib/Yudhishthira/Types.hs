@@ -33,7 +33,7 @@ instance HideSecrets CreateNammaTagRequest where
 
 data ChakraQueriesAPIEntity = ChakraQueriesAPIEntity
   { chakra :: Chakra,
-    queryResults :: [Text],
+    queryResults :: [QueryResultInfo],
     queryText :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

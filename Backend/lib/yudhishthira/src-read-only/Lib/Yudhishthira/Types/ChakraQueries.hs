@@ -8,12 +8,13 @@ import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.Common
 import qualified Tools.Beam.UtilsTH
 
 data ChakraQueries = ChakraQueries
   { chakra :: Lib.Yudhishthira.Types.Chakra,
     id :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries,
-    queryResults :: [Kernel.Prelude.Text],
+    queryResults :: [Lib.Yudhishthira.Types.Common.QueryResultInfo],
     queryText :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
