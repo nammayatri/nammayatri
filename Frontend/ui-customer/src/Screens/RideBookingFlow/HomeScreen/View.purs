@@ -651,6 +651,7 @@ rideDetailsBottomView push state =
   relativeLayout [ 
     width MATCH_PARENT
   , height MATCH_PARENT
+  , margin $ MarginTop safeMarginTop
   ][ rideTrackingView push state 
     , DriverInfoCard.brandingBannerView state.data.config.driverInfoConfig brandingBannerVis (Just "BrandingBanner") onUsRide state.data.driverInfoCardState.providerName
   ]
@@ -4375,24 +4376,6 @@ reAllocateConfirmation push state action duration = do
   when state.props.reAllocation.showPopUp $
     void $ delay $ Milliseconds duration
   doAff do liftEffect $ push $ action
-
-updateMapPadding :: HomeScreenState -> Effect Unit
-updateMapPadding state = 
-  if state.props.currentStage /= HomeScreen then 
-    void $ setMapPadding 0 0 0 0
-  else 
-    void $ setMapPadding 0 0 0 requiredViewHeight
-  where
-    recentViewHeight = (runFn1 getLayoutBounds (getNewIDWithTag "buttonLayout")).height + 200
-    iosScale = runFn1 getPixels FunctionCall
-    iosNativeScale = runFn1 getDefaultPixels ""
-    displayZoomFactor = iosNativeScale / iosScale
-    pixels = runFn1 getPixels FunctionCall
-    density = (runFn1 getDeviceDefaultDensity FunctionCall) / defaultDensity
-    requiredViewHeight = if os /= "IOS" 
-                         then ceil ((toNumber recentViewHeight / pixels) * density) 
-                         else ceil ((toNumber recentViewHeight / displayZoomFactor) / iosScale)
-
 
 
 locationUnserviceableView ::  forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

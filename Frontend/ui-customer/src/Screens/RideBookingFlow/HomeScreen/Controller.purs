@@ -1669,7 +1669,9 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
                           , hasEstimateBackpoint = false
                           }
                     }
-  (updateAndExit newState) $ UpdatedState newState false
+  if STR.null state.data.source then recenterCurrentLocation MovedToCurrentLoation newState else (updateAndExit newState) $ UpdatedState newState false
+
+eval MovedToCurrentLoation state = updateAndExit state $ UpdatedState state false
 
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -2093,9 +2095,9 @@ eval (NotificationListener notificationType) state = do
     _ -> exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
 
 eval RecenterCurrentLocation state = do
-  recenterCurrentLocation state
+  recenterCurrentLocation NoAction state 
 
-eval (SearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state
+eval (SearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation NoAction state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateCurrentLocation lat lng)) state = do
   if state.props.isSource == Just true then
@@ -2804,7 +2806,7 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
       let newState = state{data{destination = name,destinationAddress = encodeAddress name [] Nothing lat lng},props{ destinationLat = lat,  destinationLong = lng, destinationPlaceId = Nothing}}
       updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
 
-eval (EditDestSearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation state
+eval (EditDestSearchLocationModelActionController (SearchLocationModelController.RecenterCurrentLocation)) state = recenterCurrentLocation NoAction state
 
 eval (EditDestSearchLocationModelActionController (SearchLocationModelController.UpdateCurrentLocation lat lng)) state = do
   if state.props.isSource == Just true then
@@ -2989,8 +2991,8 @@ tagClickEvent savedAddressType arrItem state isEditDestination = do
 flowWithoutOffers :: LazyCheck -> Boolean
 flowWithoutOffers dummy = not $ (getValueToLocalStore FLOW_WITHOUT_OFFERS) == "false"
 
-recenterCurrentLocation :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-recenterCurrentLocation state = continueWithCmd state [ do
+recenterCurrentLocation :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+recenterCurrentLocation action state = continueWithCmd state [ do
     if state.props.locateOnMap || (not state.props.locateOnMap && state.props.currentStage == ConfirmingLocation) then do
       _ <- pure $ currentPosition "NO_ZOOM"
       pure unit
@@ -3001,7 +3003,7 @@ recenterCurrentLocation state = continueWithCmd state [ do
       void $ showMarkerOnMap (getCurrentLocationMarker $ getValueToLocalStore VERSION_NAME) 9.9 9.9
       pure unit
     -- let newState = state{data{source = state.props.currentLocation.place}}
-    pure NoAction
+    pure action
   ]
 
 updateCurrentLocation :: HomeScreenState -> String -> String -> Eval Action  ScreenOutput HomeScreenState

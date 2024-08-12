@@ -326,6 +326,7 @@ data Action = NoAction
   | TollChargeIncludedPopUpAction PopUpModal.Action
   | LocateOnMapCallBack String String String
   | UpdatePickupLocation String String String
+  | MovedToCurrentLoation 
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where
