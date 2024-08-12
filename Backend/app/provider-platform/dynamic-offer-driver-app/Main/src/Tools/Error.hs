@@ -360,7 +360,7 @@ instance IsHTTPError DriverQuoteError where
     UnexpectedResponseValue -> E400
     NoActiveRidePresent -> E400
     RecentActiveRide -> E400
-    DriverTransactionTryAgain _ -> E500
+    DriverTransactionTryAgain _ -> E409
     CustomerDestinationUpdated -> E400
 
 instance IsAPIError DriverQuoteError
