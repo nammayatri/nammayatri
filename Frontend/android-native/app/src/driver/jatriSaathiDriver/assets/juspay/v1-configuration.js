@@ -407,7 +407,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_side"
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ys,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ys.png"
       }
     },
     {
@@ -476,7 +478,9 @@ window.getMerchantConfig = function () {
       },
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_side"
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ys,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ys.png"
       }
     }
   ]

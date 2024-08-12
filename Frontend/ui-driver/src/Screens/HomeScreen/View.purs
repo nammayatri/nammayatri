@@ -381,7 +381,10 @@ view push state =
         state.props.accountBlockedPopup,
         state.props.vehicleNSPopup && not state.props.rcDeactivePopup,
         state.props.acExplanationPopup && not onRide && isCar,
-        state.props.referralEarned
+        state.props.showReferralEarnedPopUp,
+        state.props.showReferNowPopUp,
+        state.props.showAddUPIPopUp,
+        state.props.showVerifyUPIPopUp
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
@@ -2161,6 +2164,9 @@ popupModals push state =
           ST.BgLocationPopup -> bgLocPopup state
           ST.TopAcDriver -> topAcDriverPopUpConfig state
           ST.ReferralEarned -> referralEarnedConfig state
+          ST.ReferNow -> referNowConfig state
+          ST.AddUPI -> addUPIConfig state 
+          ST.VerifyUPI -> verifyUPI state
       ]
   where 
   
@@ -2171,7 +2177,10 @@ popupModals push state =
       else if state.props.vehicleNSPopup then ST.VehicleNotSupported
       else if state.props.bgLocationPopup then ST.BgLocationPopup
       else if state.props.acExplanationPopup then ST.TopAcDriver
-      else if state.props.referralEarned then ST.ReferralEarned
+      else if state.props.showReferralEarnedPopUp then ST.ReferralEarned
+      else if state.props.showReferNowPopUp then ST.ReferNow
+      else if state.props.showAddUPIPopUp then ST.AddUPI
+      else if state.props.showVerifyUPIPopUp then ST.VerifyUPI
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -2182,7 +2191,10 @@ popupModals push state =
           ST.VehicleNotSupported -> VehicleNotSupportedAC
           ST.BgLocationPopup -> BgLocationPopupAC
           ST.TopAcDriver -> ACExpController
-          ST.ReferralEarned -> ReferralEarnedAC
+          ST.ReferralEarned -> (ReferralPopUpAction popupType Nothing)
+          ST.ReferNow -> (ReferralPopUpAction popupType (Just REFER_NOW_LAST_SHOWN))
+          ST.AddUPI -> (ReferralPopUpAction popupType (Just ADD_UPI_LAST_SHOWN))
+          ST.VerifyUPI -> (ReferralPopUpAction popupType (Just VERIFY_UPI_LAST_SHOWN))
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

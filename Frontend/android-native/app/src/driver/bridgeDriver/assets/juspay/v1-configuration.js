@@ -209,7 +209,9 @@ window.getMerchantConfig = function () {
         "rateCardConfig" : defRateCardConfig,
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side"
+          "onboarding_auto_image" : "ny_ic_auto_side",
+          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
       {
@@ -261,7 +263,9 @@ window.getMerchantConfig = function () {
         "rateCardConfig" : defRateCardConfig,
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-          "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
+          "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" ,
+          "empty_referral_auto" : "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
+          "empty_referral_cab" : "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
         }
       },
       {
@@ -301,7 +305,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side"
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
       }
       },
       {
@@ -354,7 +360,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side"
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
       }
       },
       {
@@ -407,7 +415,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" ,
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
       }
       },
       {
@@ -447,7 +457,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png" 
       }
       },
       {
@@ -487,7 +499,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png" 
       }
       },
       {
@@ -527,7 +541,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_side"
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
       }
       },
       {
@@ -567,7 +583,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_side"
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
       }
       },
       {
@@ -607,7 +625,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_side"
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
       }
       },
       {
@@ -647,7 +667,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
+        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" ,
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
       }
       },
       {
@@ -687,7 +709,9 @@ window.getMerchantConfig = function () {
       "rateCardConfig" : defRateCardConfig,
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side"
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
       }
       },
       {
@@ -726,7 +750,9 @@ window.getMerchantConfig = function () {
       "rentalChargesConfig" : defRentalWaitingChargesConfig,
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_black"
+        "onboarding_auto_image" : "ny_ic_auto_right_side_black",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_black,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_black.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
       }
       }
   ]

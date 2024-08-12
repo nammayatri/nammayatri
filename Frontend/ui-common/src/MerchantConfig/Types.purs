@@ -124,7 +124,9 @@ type RateCardConfig = {
 
 type Assets ={
   auto_image :: String,
-  onboarding_auto_image :: String
+  onboarding_auto_image :: String,
+  empty_referral_auto :: String,
+  empty_referral_cab :: String
 }
 
 type Referral = {

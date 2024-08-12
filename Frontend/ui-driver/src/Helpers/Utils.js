@@ -420,6 +420,21 @@ export const isYesterday = function (dateString){
   return false;
 }
 
+export const isMoreThan24HoursOld = function(timestamp) {
+  try {
+    const timestampDate = new Date(timestamp);
+    const now = Date.now();
+    const timestampTime = timestampDate.getTime();
+    const timeDifference = now - timestampTime;
+    const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+    
+    return timeDifference > twentyFourHoursInMs;
+  } catch (error) {
+    console.log(error);
+    return false
+  }
+}
+
 export const isToday = function (dateString){
   try {
     const today = new Date()

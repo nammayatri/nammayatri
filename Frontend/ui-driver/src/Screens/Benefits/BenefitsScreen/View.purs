@@ -320,13 +320,13 @@ driverReferralCode push state =
       , height $ V 1
       , background config.separatorColor
       , margin $ MarginTop 10
-      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false
+      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
       ][]
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , margin $ MarginTop 10
-      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false
+      , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
       ][ referralCountView false (getString REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
        , referralCountView true config.infoText (show activatedCount) true push config.popupType
        ] 
@@ -337,7 +337,7 @@ driverReferralCode push state =
        , cornerRadius 8.0
        , background Color.lightBlue80
        , gravity CENTER_VERTICAL
-       , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just true
+       , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just true && state.props.driverReferralType == CUSTOMER
        , onClick push $ const $ GoToCustomerReferralTracker
        ][ relativeLayout
           [ height MATCH_PARENT

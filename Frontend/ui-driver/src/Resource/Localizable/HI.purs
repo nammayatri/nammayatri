@@ -1499,3 +1499,8 @@ getHI stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "चयनित तिथि पर आपके पास कोई सक्रिय रेफरल नहीं था"
         PAYMENT_IN_PROGRESS -> "भुगतान प्रगति पर है..."
         REFRESH_PAYMENT -> "ताज़ा करना"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "रेफरल इनाम राशि प्राप्त करने के लिए UPI विवरण जोड़ें"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "क्या आप इस खाते में रेफरल इनाम राशि प्राप्त करना चाहते हैं?"
+        YES_PAY_TO_THIS_ACCOUNT -> "खैर, इस खाते में भुगतान करें"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "मैं अलग खाता जोड़ूंगा" 
+        ADD_NOW -> "अभी जोड़ें"

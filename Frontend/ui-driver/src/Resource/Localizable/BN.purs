@@ -1500,3 +1500,8 @@ getBN stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "নির্বাচিত তারিখে আপনার কোনো সক্রিয় রেফারেল নেই"
         PAYMENT_IN_PROGRESS -> "পেমেন্ট চলছে..."
         REFRESH_PAYMENT -> "রিফ্রেশ"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "রেফারেল পুরস্কারের পরিমাণ পেতে UPI বিস্তারিত যোগ করুন"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "আপনি কি এই অ্যাকাউন্টে রেফারেল পুরস্কারের পরিমাণ পেতে চান?"
+        YES_PAY_TO_THIS_ACCOUNT -> "হ্যাঁ, এই অ্যাকাউন্টে অর্থ প্রদান করুন"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "আমি বিভিন্ন অ্যাকাউন্ট যোগ করব"
+        ADD_NOW  -> "এখন যোগ করুন"

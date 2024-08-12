@@ -1498,3 +1498,8 @@ getKN stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "ಆಯ್ಕೆಮಾಡಿದ ದಿನಾಂಕದಂದು ನೀವು ಯಾವುದೇ ಸಕ್ರಿಯ ರೆಫರಲ್‌ಗಳನ್ನು ಹೊಂದಿಲ್ಲ"
         PAYMENT_IN_PROGRESS -> "ಪಾವತಿ ಪ್ರಗತಿಯಲ್ಲಿದೆ..."
         REFRESH_PAYMENT -> "ರಿಫ್ರೆಶ್ ಮಾಡಿ"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "ರೆಫರಲ್ ಬಹುಮಾನ ಮೊತ್ತವನ್ನು ಸ್ವೀಕರಿಸಲು UPI ವಿವರವನ್ನು ಸೇರಿಸಿ"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "ನೀವು ಈ ಖಾತೆಯಲ್ಲಿ ರೆಫರಲ್ ಬಹುಮಾನ ಮೊತ್ತವನ್ನು ಸ್ವೀಕರಿಸಲು ಬಯಸುವಿರಾ?"
+        YES_PAY_TO_THIS_ACCOUNT -> "ಸರಿ, ಈ ಖಾತೆಗೆ ಪಾವತಿಸಿ"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "ನಾನು ಬೇರೆ ಖಾತೆಯನ್ನು ಸೇರಿಸುತ್ತೇನೆ"
+        ADD_NOW -> "ಈಗ ಸೇರಿಸಿ"

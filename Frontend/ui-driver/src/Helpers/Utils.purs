@@ -141,6 +141,7 @@ foreign import getPixels :: Fn1 String Number
 foreign import setValueToLocalStore :: Fn2 String String Unit
 foreign import getDeviceDefaultDensity ::Fn1 String Number
 foreign import isYesterday :: String -> Boolean
+foreign import isMoreThan24HoursOld :: String -> Boolean
 
 foreign import isToday :: String -> Boolean
 
@@ -720,7 +721,9 @@ getCityConfig cityConfig cityName = do
                           rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
                           assets :{
                             auto_image :  "ny_ic_black_yellow_auto_side_view",
-                            onboarding_auto_image : "ny_ic_auto_right_side_yellow"
+                            onboarding_auto_image : "ny_ic_auto_right_side_yellow",
+                            empty_referral_auto : "",
+                            empty_referral_cab : ""
                           }
                         }
   maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig

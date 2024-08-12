@@ -1499,3 +1499,8 @@ getTA stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "தேர்ந்தெடுக்கப்பட்ட தேதியில் நீங்கள் செயல்படுத்தப்பட்ட பரிந்துரைகள் எதுவும் இல்லை"
         PAYMENT_IN_PROGRESS -> "கட்டணம் செலுத்தப்படுகிறது..."
         REFRESH_PAYMENT -> "புதுப்பிப்பு"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "பரிந்துரை ரிவார்டு தொகையைப் பெற UPI விவரங்களைச் சேர்க்கவும்"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "இந்தக் கணக்கில் பரிந்துரை வெகுமதித் தொகையைப் பெற விரும்புகிறீர்களா?"
+        YES_PAY_TO_THIS_ACCOUNT -> "சரி, இந்தக் கணக்கில் செலுத்துங்கள்"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "நான் வேறு கணக்கைச் சேர்ப்பேன்"
+        ADD_NOW -> "இப்போது சேர்"

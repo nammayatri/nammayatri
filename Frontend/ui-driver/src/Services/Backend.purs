@@ -1570,6 +1570,15 @@ deleteVPA vpaId = do
     where
         unwrapResponse (x) = x
 
+--------------------------------- verifyVpaId ---------------------------------------------------------------------------------------------------
+
+verifyVpaID :: String -> Flow GlobalState (Either ErrorResponse VerifyVpaRes)
+verifyVpaID dummy = do 
+        headers <- getHeaders "" true
+        withAPIResult (EP.verifyUPI "") unwrapResponse $ callAPI headers (VerifyVpaReq dummy)
+    where
+        unwrapResponse (x) = x
+
 --------------------------------- payoutRegistration ---------------------------------------------------------------------------------------------------
 
 payoutRegistration :: String -> Flow GlobalState (Either ErrorResponse PayoutRegisterRes)

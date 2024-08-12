@@ -183,3 +183,12 @@ homeScreen = do
     GoToBookingPreferences updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_BOOKING_PREFERENCES)
+    BenefitsScreen updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_BENEFITS_SCREEN_FROM_HOME)
+    GotoAddUPIScreen updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_ADD_UPI_SCREEN)
+    VerifyManualUPI updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ VERIFY_MANUAL_UPI updatedState)

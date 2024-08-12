@@ -360,3 +360,6 @@ deleteVPA dummy = (getBaseUrl "") <> "/payout/delete/vpa"
 
 registerPayout :: String -> String
 registerPayout dummy = (getBaseUrl "") <> "/payout/registration"
+
+verifyUPI :: String -> String
+verifyUPI dummy = (getBaseUrl "") <> "/driver/profile/verify/vpaStatus"

@@ -423,6 +423,9 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_BOOKING_PREFERENCES
                           | UPDATE_ROUTE_ON_STAGE_SWITCH HomeScreenState
                           | GO_TO_CUSTOMER_REFERRAL_TRACKER HomeScreenState
+                          | GO_TO_BENEFITS_SCREEN_FROM_HOME
+                          | GO_TO_ADD_UPI_SCREEN
+                          | VERIFY_MANUAL_UPI HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

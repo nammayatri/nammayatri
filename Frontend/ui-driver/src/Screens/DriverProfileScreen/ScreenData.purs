@@ -217,6 +217,11 @@ dummyDriverInfo = GetDriverInfoResp {
     , canSwitchToRental     : false
     , checkIfACWorking    : Nothing
     , canSwitchToIntercity   : Nothing
+    , payoutVpa             : Nothing
+    , payoutVpaStatus       : Nothing
+    , isPayoutEnabled       : Nothing
+    , payoutRewardAmount    : Nothing
+    , payoutVpaBankAccount  : Nothing
 }
 
 organizationInfo :: OrganizationInfo

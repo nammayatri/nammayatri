@@ -1499,3 +1499,8 @@ getEN stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "You did not have any activated referrals on the selected date"
         PAYMENT_IN_PROGRESS -> "Payment in progress..."
         REFRESH_PAYMENT -> "Refresh"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "Add UPI detail to receive referral reward amount"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "Do you want to receive referral reward amount in this account?"
+        YES_PAY_TO_THIS_ACCOUNT -> "Yes, pay to this account"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "I will add different account"
+        ADD_NOW -> "Add Now"

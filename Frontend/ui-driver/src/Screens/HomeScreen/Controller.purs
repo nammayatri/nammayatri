@@ -302,6 +302,9 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToBookingPreferences ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
                     | CustomerReferralTrackerScreen ST.HomeScreenState
+                    | BenefitsScreen ST.HomeScreenState
+                    | GotoAddUPIScreen ST.HomeScreenState
+                    | VerifyManualUPI ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -433,7 +436,7 @@ data Action = NoAction
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
-            | ReferralEarnedAC PopUpModal.Action
+            | ReferralPopUpAction ST.HomeScreenPopUpTypes (Maybe KeyStore) PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -457,11 +460,38 @@ eval (BgLocationPopupAC PopUpModal.OnButton1Click) state =
     pure NoAction
   ]
 
-eval (ReferralEarnedAC PopUpModal.OnButton1Click) state = exit $ CustomerReferralTrackerScreen state{props{referralEarned = false}}
+eval (ReferralPopUpAction popUpType storageKey PopUpModal.OnButton1Click) state = do 
+  case storageKey of 
+    Just value -> void $ pure $ setValueToLocalNativeStore value (getCurrentUTC "")
+    Nothing -> pure unit
+  case popUpType of
+    ST.ReferralEarned -> exit $ CustomerReferralTrackerScreen state{props{showReferralEarnedPopUp = false}}
+    ST.ReferNow -> exit $ BenefitsScreen state{props{showReferNowPopUp = false}}
+    ST.AddUPI -> exit $ GotoAddUPIScreen state{props{showAddUPIPopUp = false}}
+    ST.VerifyUPI -> exit $ VerifyManualUPI state{props{showVerifyUPIPopUp = false}}
+    _ -> continue state
 
-eval (ReferralEarnedAC PopUpModal.OnButton2Click) state = continue state{props{referralEarned = false}}
+eval (ReferralPopUpAction popUpType storageKey PopUpModal.OnButton2Click) state = do 
+  case storageKey of 
+    Just value -> void $ pure $ setValueToLocalNativeStore value (getCurrentUTC "")
+    Nothing -> pure unit
+  case popUpType of
+    ST.ReferralEarned -> continue state{props{showReferralEarnedPopUp = false}}
+    ST.ReferNow -> continue state{props{showReferNowPopUp = false}}
+    ST.AddUPI -> continue state{props{showAddUPIPopUp = false}}
+    ST.VerifyUPI -> exit $ GotoAddUPIScreen state{props{showVerifyUPIPopUp = false}}
+    _ -> continue state
 
-eval (ReferralEarnedAC PopUpModal.DismissPopup) state = continue state{props{referralEarned = false}}
+eval (ReferralPopUpAction popUpType storageKey PopUpModal.DismissPopup) state = do 
+  case storageKey of 
+    Just value -> void $ pure $ setValueToLocalNativeStore value (getCurrentUTC "")
+    Nothing -> pure unit
+  case popUpType of
+    ST.ReferralEarned -> continue state{props{showReferralEarnedPopUp = false}}
+    ST.ReferNow -> continue state{props{showReferNowPopUp = false}}
+    ST.AddUPI -> continue state{props{showAddUPIPopUp = false}}
+    ST.VerifyUPI -> continue state{props{showVerifyUPIPopUp = false}}
+    _ -> continue state
 
 eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
 
@@ -567,6 +597,16 @@ eval BackPressed state = do
   else if state.props.specialZoneProps.specialZonePopup then continue state { props { specialZoneProps{specialZonePopup = false} }}
   else if state.props.bgLocationPopup then continue state { props { bgLocationPopup = false}}
   else if state.props.acExplanationPopup then continue state { props { acExplanationPopup = false }}
+  else if state.props.showReferralEarnedPopUp then continue state {props { showReferralEarnedPopUp = false}}
+  else if state.props.showReferNowPopUp then do 
+    void $ pure $ setValueToLocalNativeStore REFER_NOW_LAST_SHOWN (getCurrentUTC "")
+    continue state {props { showReferNowPopUp = false}}
+  else if state.props.showAddUPIPopUp then do 
+    void $ pure $ setValueToLocalNativeStore ADD_UPI_LAST_SHOWN (getCurrentUTC "")
+    continue state {props { showAddUPIPopUp = false}}
+  else if state.props.showVerifyUPIPopUp then do 
+    void $ pure $ setValueToLocalNativeStore VERIFY_UPI_LAST_SHOWN (getCurrentUTC "")
+    continue state {props { showVerifyUPIPopUp = false}}
   else do
     _ <- pure $ minimizeApp ""
     continue state

@@ -1499,3 +1499,8 @@ getML stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "തിരഞ്ഞെടുത്ത തീയതിയിൽ നിങ്ങൾക്ക് സജീവമാക്കിയ റഫറലുകളൊന്നും ഉണ്ടായിരുന്നില്ല"
         PAYMENT_IN_PROGRESS -> "പേയ്‌മെൻ്റ് പുരോഗമിക്കുന്നു..."
         REFRESH_PAYMENT -> "പുതുക്കുക"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "റഫറൽ റിവാർഡ് തുക ലഭിക്കാൻ UPI വിശദാംശങ്ങൾ ചേർക്കുക"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "ഈ അക്കൗണ്ടിൽ നിങ്ങൾക്ക് റഫറൽ റിവാർഡ് തുക ലഭിക്കണോ?"
+        YES_PAY_TO_THIS_ACCOUNT -> "ശരി, ഈ അക്കൗണ്ടിലേക്ക് പണമടയ്ക്കുക"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "ഞാൻ മറ്റൊരു അക്കൗണ്ട് ചേർക്കും"
+        ADD_NOW  -> "ആഡ് ചെയ്യുക"

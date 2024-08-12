@@ -1501,3 +1501,8 @@ getTE stringKey =
         NO_ACTIVE_REFERRAL_ON_DATE -> "మీరు ఎంచుకున్న తేదీలో సక్రియం చేయబడిన సిఫార్సులు ఏవీ లేవు"
         PAYMENT_IN_PROGRESS -> "చెల్లింపు పురోగతిలో ఉంది..."
         REFRESH_PAYMENT -> "రిఫ్రెష్ చేయండి"
+        ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "రెఫరల్ రివార్డ్ మొత్తాన్ని అందుకోవడానికి UPI వివరాలను జోడించండి"
+        DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "మీరు ఈ ఖాతాలో రెఫరల్ రివార్డ్ మొత్తాన్ని అందుకోవాలనుకుంటున్నారా?"
+        YES_PAY_TO_THIS_ACCOUNT -> "సరే, ఈ ఖాతాకు చెల్లించండి"
+        I_WILL_ADD_DIFFERENT_ACCOUNT -> "నేను వేరొక ఖాతాను జోడిస్తాను"
+        ADD_NOW -> "ఇప్పుడే జోడించండి"

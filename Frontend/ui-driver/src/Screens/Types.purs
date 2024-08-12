@@ -48,7 +48,7 @@ import Components.ChatView.Controller as ChatView
 import Foreign.Object (Object)
 import Foreign (Foreign)
 import Screens (ScreenName)
-import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..))
+import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..), PayoutVpaStatus(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
 import RemoteConfig.Types as RC
@@ -996,7 +996,12 @@ type HomeScreenData =  {
   isVehicleSupported :: Boolean,
   linkedVehicleCategory :: String,
   linkedVehicleVariant :: String,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  payoutVpa :: Maybe String,
+  payoutVpaStatus :: Maybe PayoutVpaStatus,
+  isPayoutEnabled :: Maybe Boolean,
+  payoutRewardAmount :: Maybe Int,
+  payoutVpaBankAccount :: Maybe String
 }
 
 type BannerCarousalData = {
@@ -1245,7 +1250,10 @@ type HomeScreenProps =  {
   bookingStage :: BookingTypes,
   showAdvancedRidePopUp :: Boolean,
   showInterOperablePopUp :: Boolean,
-  referralEarned :: Boolean
+  showReferralEarnedPopUp :: Boolean,
+  showReferNowPopUp :: Boolean,
+  showAddUPIPopUp :: Boolean,
+  showVerifyUPIPopUp :: Boolean
  }
 
 type TollState = {
@@ -2370,7 +2378,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
