@@ -71,7 +71,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -83,6 +82,7 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 import in.juspay.mobility.app.dataModel.VariantConfig;
+import in.juspay.mobility.app.autoclicker.AutoClickerDetector;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.mobility.common.services.TLSSocketFactory;
@@ -124,6 +124,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private final String BRAND_VIVO = "vivo";
     private final String NON_AC = "Non AC";
     private final String AC_TAXI = "AC Taxi";
+    public static String lastClickedRequest = "";
 
     @Override
     public void onCreate() {
@@ -367,6 +368,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
         LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
         holder.reqButton.setOnClickListener(view -> {
+            if (RideRequestUtils.checkForAutoClicker(this, sharedPref, model, RideRequestUtils.RideRequestUI.OVERLAY)) return;
             if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
                 respondDummyRequest();
                 removeCard(position);

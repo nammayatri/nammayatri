@@ -1103,24 +1103,31 @@
                             app:cornerRadius="8dp"
                             app:strokeColor="#6D7280" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/reqButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="match_parent"
-                            android:layout_marginLeft="8dp"
+                        <in.juspay.mobility.app.autoclicker.AutoClickerFrameLayout
+                            android:layout_width="0dp"
                             android:layout_weight="12"
-                            android:backgroundTint="#53BB64"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
-                            android:letterSpacing="0"
-                            android:paddingHorizontal="15dp"
-                            android:paddingVertical="16dp"
-                            android:shadowColor="@color/white"
-                            android:text="@string/accept_offer"
-                            android:textAllCaps="false"
-                            android:textFontWeight="700"
-                            android:textSize="18dp"
-                            android:theme="@style/Theme.MaterialComponents.Light"
-                            app:cornerRadius="8dp" />
+                            android:layout_height="wrap_content">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/reqButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:layout_marginLeft="8dp"
+                                android:backgroundTint="#53BB64"
+                                android:fontFamily="@font/plus_jakartasans_semibold"
+                                android:letterSpacing="0"
+                                android:paddingHorizontal="15dp"
+                                android:paddingVertical="16dp"
+                                android:shadowColor="@color/white"
+                                android:text="@string/accept_offer"
+                                android:textAllCaps="false"
+                                android:textFontWeight="700"
+                                android:textSize="18dp"
+                                android:theme="@style/Theme.MaterialComponents.Light"
+                                app:cornerRadius="8dp" />
+
+                        </in.juspay.mobility.app.autoclicker.AutoClickerFrameLayout>
+
                     </LinearLayout>
                 </LinearLayout>
             </ScrollView>

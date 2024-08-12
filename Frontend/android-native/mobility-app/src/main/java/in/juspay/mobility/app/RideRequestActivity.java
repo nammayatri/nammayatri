@@ -65,6 +65,7 @@ public class RideRequestActivity extends AppCompatActivity {
 
     private String service = "";
     private String DUMMY_FROM_LOCATION = "dummyFromLocation";
+    public static String lastClickedRequest = "";
 
     public static RideRequestActivity getInstance() {
         return instance;
@@ -301,6 +302,7 @@ public class RideRequestActivity extends AppCompatActivity {
             LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
 
             holder.reqButton.setOnClickListener(view -> {
+                if (RideRequestUtils.checkForAutoClicker(RideRequestActivity.this, sharedPref, model, RideRequestUtils.RideRequestUI.OVERLAY)) return;
                 if (model.getSearchRequestId().equals(DUMMY_FROM_LOCATION)) {
                     respondDummyRequest();
                     removeCard(position);

@@ -78,6 +78,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
+import in.juspay.mobility.app.autoclicker.AutoClickerDetector;
 import in.juspay.mobility.app.dataModel.VariantConfig;
 import in.juspay.mobility.common.services.TLSSocketFactory;
 import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
@@ -90,6 +91,8 @@ public class RideRequestUtils {
     private static final String KOLKATA = "kolkata";
     private static final String KOCHI = "kochi";
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+
+    public enum RideRequestUI {ACTIVITY,OVERLAY}
 
     public static Boolean driverRespondApi(SheetModel model, boolean isAccept, Context context, int slotNumber) {
         String searchRequestId = model.getSearchRequestId();
@@ -809,5 +812,27 @@ public class RideRequestUtils {
                 holder.durationToPickupImage.setVisibility(View.GONE);
             }
         });
+    }
+
+    public static boolean checkForAutoClicker(Context context, SharedPreferences sharedPref, SheetModel model, RideRequestUI rideRequestUI){
+        if (remoteConfigs.hasKey("detectSimilarGestures") && remoteConfigs.getBoolean("detectSimilarGestures")){
+            boolean similarGesturesDetected = AutoClickerDetector.isAccessibilityServiceEnabled(context) && AutoClickerDetector.isDetectingSimilarGestures();
+            if (similarGesturesDetected) {
+                String lastClickedRequest = rideRequestUI.equals(RideRequestUI.OVERLAY) ? OverlaySheetService.lastClickedRequest : RideRequestActivity.lastClickedRequest;
+                if (!lastClickedRequest.equals(model.getSearchRequestId())) {
+                    if (rideRequestUI == RideRequestUI.OVERLAY){
+                        OverlaySheetService.lastClickedRequest = model.getSearchRequestId();
+                    }else {
+                        RideRequestActivity.lastClickedRequest = model.getSearchRequestId();
+                    }
+                    firebaseLogEventWithParams("similar_gestures_detected","", "", context);
+                    sharedPref.edit().putString("SIMILAR_GESTURES_DETECTED", "true").apply();
+                }
+                return true;
+            } else {
+                sharedPref.edit().putString("SIMILAR_GESTURES_DETECTED", "false").apply();
+            }
+        }
+        return false;
     }
 }
