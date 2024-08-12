@@ -5,6 +5,7 @@ imports:
   Estimate: Domain.Types.Estimate
   Distance: Kernel.Types.Common
   FareProductType: Domain.Types.FarePolicy.FareProductType
+  Gender: Domain.Types.Person
 
 DriverOffer:
   tableName: driver_offer
@@ -27,6 +28,7 @@ DriverOffer:
     bppQuoteId : Text
     rating : Maybe Centesimal
     status : DriverOfferStatus
+    gender: Maybe Gender
     createdAt: UTCTime
     updatedAt : UTCTime
     fareProductType : Maybe FareProductType

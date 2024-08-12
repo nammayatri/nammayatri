@@ -17,6 +17,7 @@ module Domain.Action.UI.DriverOffer
   )
 where
 
+import Domain.Types.Person as DPerson
 import Kernel.Prelude
 import Kernel.Types.Common
 
@@ -27,6 +28,7 @@ data DriverOfferAPIEntity = DriverOfferAPIEntity
     distanceToPickupWithUnit :: Maybe Distance,
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
-    tollCharges :: Maybe PriceAPIEntity
+    tollCharges :: Maybe PriceAPIEntity,
+    gender :: Maybe DPerson.Gender
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

@@ -110,6 +110,7 @@ tfCustomer res =
               { personId = Nothing,
                 personImage = Nothing,
                 personName = Just riderName,
+                personGender = Nothing,
                 personTags = Nothing
               }
       }
@@ -137,6 +138,7 @@ tfAgent res =
                   { personId = Nothing,
                     personImage = Nothing,
                     personName = driverName,
+                    personGender = Nothing,
                     personTags = Nothing
                   }
           }

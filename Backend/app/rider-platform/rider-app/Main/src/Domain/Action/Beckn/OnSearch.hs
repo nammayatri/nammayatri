@@ -408,6 +408,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         backendConfigVersion = searchRequest.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         quoteBreakupList = quoteBreakupList',
+        vehicleModel = Nothing,
         tollChargesInfo =
           tollChargesInfo <&> \tollChargesInfo' ->
             DQuote.TollChargesInfo

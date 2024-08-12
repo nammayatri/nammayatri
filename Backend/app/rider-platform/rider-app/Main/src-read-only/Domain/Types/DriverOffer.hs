@@ -9,6 +9,7 @@ import qualified Domain.Types.Estimate
 import qualified Domain.Types.FarePolicy.FareProductType
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -23,6 +24,7 @@ data DriverOffer = DriverOffer
     durationToPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
     fareProductType :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FareProductType.FareProductType,
+    gender :: Kernel.Prelude.Maybe Domain.Types.Person.Gender,
     id :: Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

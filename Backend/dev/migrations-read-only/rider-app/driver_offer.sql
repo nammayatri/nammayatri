@@ -21,3 +21,8 @@ ALTER TABLE atlas_app.driver_offer ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.driver_offer ADD COLUMN fare_product_type character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.driver_offer ADD COLUMN gender text ;

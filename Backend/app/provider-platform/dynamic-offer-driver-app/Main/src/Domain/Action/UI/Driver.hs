@@ -1216,6 +1216,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
+      mbVehicle <- runInReplica $ QVehicle.findById driver.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
       farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchReq.fromLocation) merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId Nothing (Just (TransactionId (Id searchReq.transactionId)))
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
@@ -1261,7 +1262,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
           then QSRD.findAllActiveBySTId searchTry.id DSRD.Active
           else pure []
       pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
-      sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
+      sendDriverOffer merchant searchReq sReqFD searchTry driverQuote mbVehicle driver.gender
       return driverFCMPulledList
 
 acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe (Id DC.Client) -> Flow [SearchRequestForDriver]

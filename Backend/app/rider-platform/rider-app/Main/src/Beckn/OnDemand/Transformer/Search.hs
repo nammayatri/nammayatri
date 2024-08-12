@@ -100,8 +100,9 @@ tfPerson taggings = do
   let personId_ = Nothing
       personImage_ = Nothing
       personName_ = Nothing
+      personGender_ = Nothing
       personTags_ = Tags.convertToTagGroup . (.personTags) =<< taggings
-      returnData = BecknV2.OnDemand.Types.Person {personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
+      returnData = BecknV2.OnDemand.Types.Person {personId = personId_, personImage = personImage_, personName = personName_, personGender = personGender_, personTags = personTags_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing

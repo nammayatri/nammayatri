@@ -160,6 +160,7 @@ tfCustomer res =
           { personId = Nothing,
             personImage = Nothing,
             personName = res.mbRiderName,
+            personGender = Nothing,
             personTags = mkPersonTags
           }
 
