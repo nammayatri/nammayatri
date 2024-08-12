@@ -12,7 +12,6 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.RentalBookingFlow.RentalScreen.Controller
   ( Action(..)
   , FareBreakupRowType(..)
@@ -20,8 +19,7 @@ module Screens.RentalBookingFlow.RentalScreen.Controller
   , ScreenOutput(..)
   , eval
   , dummyRentalQuote
-  )
-  where
+  ) where
 
 import Common.Types.App (LazyCheck(..))
 import Components.ChooseVehicle.Controller as ChooseVehicleController
@@ -75,8 +73,8 @@ instance loggableAction :: Loggable Action where
     InputViewAC _ -> trackAppActionClick appId (getScreen RIDE_SCHEDULED_SCREEN) "InputView" "on_click"
     _ -> pure unit
 
-data Action = 
-    NoAction 
+data Action
+  = NoAction
   | PrimaryButtonActionController PrimaryButtonController.Action
   | GenericHeaderAC GenericHeaderController.Action
   | DurationIncrementDecrementAC IncrementDecrementModelController.Action
@@ -93,115 +91,152 @@ data Action =
   | RequestInfoCardAction RequestInfoCardController.Action
   | UpdateSliderValue Int
 
-data ScreenOutput = NoScreen
-                  | GoToHomeScreen RentalScreenState (Maybe BookingTime)
-                  | SearchLocationForRentals RentalScreenState String
-                  | GoToRideScheduledScreen RentalScreenState
-                  | OnRentalRideConfirm RentalScreenState
-                  | DoRentalSearch RentalScreenState
-                  | UpdateQuoteList RentalScreenState
-                  | GoToSelectPackage RentalScreenState
-                  | GoToSelectVariant RentalScreenState
-                  
-data FareBreakupRowType = BookingFrom | BookingTime | BookingDistance | BaseFare | TollFee | ParkingCharges | NightTimeFee
+data ScreenOutput
+  = NoScreen
+  | GoToHomeScreen RentalScreenState (Maybe BookingTime)
+  | SearchLocationForRentals RentalScreenState String
+  | GoToRideScheduledScreen RentalScreenState
+  | OnRentalRideConfirm RentalScreenState
+  | DoRentalSearch RentalScreenState
+  | GoToConfirmingLocStage RentalScreenState
+  | UpdateQuoteList RentalScreenState
+  | GoToSelectPackage RentalScreenState
+  | GoToSelectVariant RentalScreenState
+
+data FareBreakupRowType
+  = BookingFrom
+  | BookingTime
+  | BookingDistance
+  | BaseFare
+  | TollFee
+  | ParkingCharges
+  | NightTimeFee
 
 derive instance genericFareBreakupRowType :: Generic FareBreakupRowType _
-instance showFareBreakupRowType :: Show FareBreakupRowType where show = genericShow
-instance eqFareBreakupRowType :: Eq FareBreakupRowType where eq = genericEq
 
-data DescriptionType = BookingTimeAndDist | EstimatedCharges | AdditionalCharges 
+instance showFareBreakupRowType :: Show FareBreakupRowType where
+  show = genericShow
+
+instance eqFareBreakupRowType :: Eq FareBreakupRowType where
+  eq = genericEq
+
+data DescriptionType
+  = BookingTimeAndDist
+  | EstimatedCharges
+  | AdditionalCharges
 
 derive instance genericDescriptionType :: Generic DescriptionType _
-instance showDescriptionType :: Show DescriptionType where show = genericShow
-instance eqDescriptionType :: Eq DescriptionType where eq = genericEq
+
+instance showDescriptionType :: Show DescriptionType where
+  show = genericShow
+
+instance eqDescriptionType :: Eq DescriptionType where
+  eq = genericEq
 
 eval :: Action -> RentalScreenState -> Eval Action ScreenOutput RentalScreenState
+eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = continue state { props { showPopUpModal = false } }
 
-eval (PopUpModalAC (PopUpModalController.OnButton2Click)) state = continue state {props{showPopUpModal = false}}
+eval RentalPolicyInfo state = continue state { props { showRentalPolicy = true } }
 
-eval RentalPolicyInfo state = continue state { props { showRentalPolicy = true}}
+eval (RequestInfoCardAction (RequestInfoCardController.Close)) state = continue state { props { showRentalPolicy = false } }
 
-eval (RequestInfoCardAction (RequestInfoCardController.Close)) state = continue state {props { showRentalPolicy = false}}
-
-eval (RequestInfoCardAction (RequestInfoCardController.BackPressed)) state = continue state {props { showRentalPolicy = false}}
+eval (RequestInfoCardAction (RequestInfoCardController.BackPressed)) state = continue state { props { showRentalPolicy = false } }
 
 eval (UpdateLocAndLatLong lat lon) state =
-  if fromMaybe 0.0 state.data.pickUpLoc.lat == 0.0 then continue state{data{pickUpLoc{lat = fromString lat, lon = fromString lon}}}
-  else continue state
+  if fromMaybe 0.0 state.data.pickUpLoc.lat == 0.0 then
+    continue state { data { pickUpLoc { lat = fromString lat, lon = fromString lon } } }
+  else
+    continue state
 
-eval BackpressAction state = genericBackPressed state 
+eval BackpressAction state = genericBackPressed state
 
-eval (SliderCallback hours) state = 
-  let minDistance = hours * 10
-      maxDistance = minDistance + (min 50 $ min (hours * 10) $ 120 - (hours * 10))
-  in continue state{data{rentalBookingData{baseDuration = hours, baseDistance = minDistance}}, props{minDistance = minDistance, maxDistance = maxDistance}}
+eval (SliderCallback hours) state =
+  let
+    minDistance = hours * 10
 
-eval (UpdateSliderValue value) state = do 
-  continueWithCmd state [do 
-    let isSliderValueValid = value <= state.props.maxDuration && value >= state.props.minDuration
-    if isSliderValueValid then do 
-      void $ updateSliderValue {sliderValue : value, id : (EHC.getNewIDWithTag "DurationSliderView")}
-      pure $ SliderCallback value 
-      else pure $ NoAction
+    maxDistance = minDistance + (min 50 $ min (hours * 10) $ 120 - (hours * 10))
+  in
+    continue state { data { rentalBookingData { baseDuration = hours, baseDistance = minDistance } }, props { minDistance = minDistance, maxDistance = maxDistance } }
+
+eval (UpdateSliderValue value) state = do
+  continueWithCmd state
+    [ do
+        let
+          isSliderValueValid = value <= state.props.maxDuration && value >= state.props.minDuration
+        if isSliderValueValid then do
+          void $ updateSliderValue { sliderValue: value, id: (EHC.getNewIDWithTag "DurationSliderView") }
+          pure $ SliderCallback value
+        else
+          pure $ NoAction
     ]
 
-eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = 
-  case state.data.currentStage of
-    RENTAL_SELECT_PACKAGE -> do
-      let maybeOverLappingBookingDetails = invalidBookingTime state.data.startTimeUTC $ Just $ state.data.rentalBookingData.baseDuration * 60
-      if (isJust maybeOverLappingBookingDetails) then exit $ GoToHomeScreen state maybeOverLappingBookingDetails
-      else updateAndExit state{props{showPrimaryButton = false}} $ DoRentalSearch state{props{showPrimaryButton = false}}
-    RENTAL_CONFIRMATION -> exit $ OnRentalRideConfirm state
-    _ -> continue state
+eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = case state.data.currentStage of
+  RENTAL_SELECT_PACKAGE -> do
+    let
+      maybeOverLappingBookingDetails = invalidBookingTime state.data.startTimeUTC $ Just $ state.data.rentalBookingData.baseDuration * 60
+    if (isJust maybeOverLappingBookingDetails) then
+      exit $ GoToHomeScreen state maybeOverLappingBookingDetails
+    else
+      updateAndExit state { props { showPrimaryButton = false } } $ GoToConfirmingLocStage state { props { showPrimaryButton = false } }
+  -- DoRentalSearch state{props{showPrimaryButton = false}}
+  RENTAL_CONFIRMATION -> exit $ OnRentalRideConfirm state
+  _ -> continue state
   where
-    rideScheduledStartingOrEndingTime :: BookingTime -> String
-    rideScheduledStartingOrEndingTime bookingDetails = 
-      let diffInMins = (EHC.compareUTCDate bookingDetails.rideStartTime state.data.startTimeUTC) / 60
-      in
-        if rideStartingInBetweenPrevRide diffInMins bookingDetails (state.data.rentalBookingData.baseDuration * 60)
-          then EHC.getUTCAfterNSeconds bookingDetails.rideStartTime $ (bookingDetails.estimatedDuration - 30) * 60
-        else bookingDetails.rideStartTime
+  rideScheduledStartingOrEndingTime :: BookingTime -> String
+  rideScheduledStartingOrEndingTime bookingDetails =
+    let
+      diffInMins = (EHC.compareUTCDate bookingDetails.rideStartTime state.data.startTimeUTC) / 60
+    in
+      if rideStartingInBetweenPrevRide diffInMins bookingDetails (state.data.rentalBookingData.baseDuration * 60) then
+        EHC.getUTCAfterNSeconds bookingDetails.rideStartTime $ (bookingDetails.estimatedDuration - 30) * 60
+      else
+        bookingDetails.rideStartTime
 
-    formatTimeInHHMM :: String -> String
-    formatTimeInHHMM rideTime = EHC.convertUTCtoISC rideTime "hh" <> ":" <> EHC.convertUTCtoISC rideTime "mm"
+  formatTimeInHHMM :: String -> String
+  formatTimeInHHMM rideTime = EHC.convertUTCtoISC rideTime "hh" <> ":" <> EHC.convertUTCtoISC rideTime "mm"
 
+eval (DurationIncrementDecrementAC (IncrementDecrementModelController.OnIncrement)) state = continue $ incrementDecrementDuration true state
 
-eval (DurationIncrementDecrementAC (IncrementDecrementModelController.OnIncrement)) state = 
-  continue $ incrementDecrementDuration true state
+eval (DurationIncrementDecrementAC (IncrementDecrementModelController.OnDecrement)) state = continue $ incrementDecrementDuration false state
 
-eval (DurationIncrementDecrementAC (IncrementDecrementModelController.OnDecrement)) state = 
-  continue $ incrementDecrementDuration false state
+eval (DistanceIncrementDecrementAC (IncrementDecrementModelController.OnIncrement)) state = continue $ incrementDecrementDistance true state
 
-eval (DistanceIncrementDecrementAC (IncrementDecrementModelController.OnIncrement)) state =
-  continue $ incrementDecrementDistance true state 
-
-eval (DistanceIncrementDecrementAC (IncrementDecrementModelController.OnDecrement)) state =
-  continue $ incrementDecrementDistance false state
+eval (DistanceIncrementDecrementAC (IncrementDecrementModelController.OnDecrement)) state = continue $ incrementDecrementDistance false state
 
 eval (GenericHeaderAC GenericHeaderController.PrefixImgOnClick) state = genericBackPressed state
 
 eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
-  if DA.any (_ /= "SELECTED") [dateResp, timeResp] then continue state 
+  if DA.any (_ /= "SELECTED") [ dateResp, timeResp ] then
+    continue state
   else
-    let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
-        selectedUTC = unsafePerformEffect $ EHC.convertDateTimeConfigToUTC year (month + 1) day hour minute 0
-        isAfterThirtyMinutes = (EHC.compareUTCDate selectedUTC (EHC.getCurrentUTC "")) > (30 * 60)
-        validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
-                        && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
-        updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
-        newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
-    in if validDate && isAfterThirtyMinutes then do 
-      let maybeInvalidBookingId = invalidBookingTime selectedUTC Nothing
-      if (isJust maybeInvalidBookingId) then do
-        exit $ GoToHomeScreen state maybeInvalidBookingId
-      else continue newState {props{showPrimaryButton = true}}
-       else 
-        if validDate then do 
-          void $ pure $ toast $ getString STR.SCHEDULE_RIDE_AVAILABLE
-          continue state {props{showPrimaryButton = true}}
-        else do
-          void $ pure $ toast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
-          continue state {props{showPrimaryButton = true}}
+    let
+      selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month + 1)) <> "-" <> (if day < 10 then "0" else "") <> (show day)
+
+      selectedUTC = unsafePerformEffect $ EHC.convertDateTimeConfigToUTC year (month + 1) day hour minute 0
+
+      isAfterThirtyMinutes = (EHC.compareUTCDate selectedUTC (EHC.getCurrentUTC "")) > (30 * 60)
+
+      validDate =
+        (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
+          && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 ""))
+
+      updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
+
+      newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC } } else state
+    in
+      if validDate && isAfterThirtyMinutes then do
+        let
+          maybeInvalidBookingId = invalidBookingTime selectedUTC Nothing
+        if (isJust maybeInvalidBookingId) then do
+          exit $ GoToHomeScreen state maybeInvalidBookingId
+        else
+          continue newState { props { showPrimaryButton = true } }
+      else if validDate then do
+        void $ pure $ toast $ getString STR.SCHEDULE_RIDE_AVAILABLE
+        continue state { props { showPrimaryButton = true } }
+      else do
+        void $ pure $ toast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
+        continue state { props { showPrimaryButton = true } }
 
 eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed state
 
@@ -210,75 +245,88 @@ eval (InputViewAC (InputViewController.DateTimePickerButtonClicked)) state = ope
 eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFocus)) state = do
   case state.data.currentStage of
     RENTAL_SELECT_PACKAGE -> exit $ SearchLocationForRentals state id
-    RENTAL_SELECT_VARIANT -> 
-      if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props{showPrimaryButton = true}} 
-        [ do 
-          push <- getPushFn Nothing "RentalScreen"
-          _ <- launchAff $ showDateTimePicker push DateTimePickerAction
-          pure NoAction
-        ]
-      else genericBackPressed state {props{showPrimaryButton = true}}
+    RENTAL_SELECT_VARIANT ->
+      if (id == "DateAndTime") then
+        continueWithCmd state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = [] }, props { showPrimaryButton = true } }
+          [ do
+              push <- getPushFn Nothing "RentalScreen"
+              _ <- launchAff $ showDateTimePicker push DateTimePickerAction
+              pure NoAction
+          ]
+      else
+        genericBackPressed state { props { showPrimaryButton = true } }
     _ -> continue state
 
-eval (RateCardAC action) state =
-  case action of
-    RateCardController.NoAction -> continue state
-    RateCardController.PrimaryButtonAC (PrimaryButtonController.NoAction) -> continue state
-    _ -> continue state { props {showRateCard = false}}
+eval (RateCardAC action) state = case action of
+  RateCardController.NoAction -> continue state
+  RateCardController.PrimaryButtonAC (PrimaryButtonController.NoAction) -> continue state
+  _ -> continue state { props { showRateCard = false } }
 
 eval _ state = continue state
 
-
 genericBackPressed :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 genericBackPressed state = case state.data.currentStage of
-  RENTAL_SELECT_PACKAGE -> do 
-    if state.props.showRentalPolicy then continue state { props {showRentalPolicy = false}}
-    else exit $ GoToHomeScreen state Nothing
-  RENTAL_SELECT_VARIANT -> do 
-    if state.props.showRateCard then continue state { props {showRateCard = false}}
-    else exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props { showPrimaryButton = true}}
+  RENTAL_SELECT_PACKAGE -> do
+    if state.props.showRentalPolicy then
+      continue state { props { showRentalPolicy = false } }
+    else
+      exit $ GoToHomeScreen state Nothing
+  RENTAL_SELECT_VARIANT -> do
+    if state.props.showRateCard then
+      continue state { props { showRateCard = false } }
+    else
+      exit $ GoToSelectPackage state { data { currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = [] }, props { showPrimaryButton = true } }
   RENTAL_CONFIRMATION -> exit $ GoToSelectVariant state
   _ -> continue state
 
 openDateTimePicker :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 openDateTimePicker state =
   continueWithCmd state
-    [ do 
-      push <- getPushFn Nothing "RentalScreen"
-      _ <- launchAff $ showDateTimePicker push DateTimePickerAction
-      pure NoAction
+    [ do
+        push <- getPushFn Nothing "RentalScreen"
+        _ <- launchAff $ showDateTimePicker push DateTimePickerAction
+        pure NoAction
     ]
 
 incrementDecrementDuration :: Boolean -> RentalScreenState -> RentalScreenState
-incrementDecrementDuration isIncrement state = 
-  let initialDuration = state.data.rentalBookingData.baseDuration
-      toUpdate = if isIncrement then (initialDuration < state.props.maxDuration) else (initialDuration > state.props.minDuration)
-      updatedDuration = if toUpdate then initialDuration + (if isIncrement then 1 else (negate 1)) else initialDuration
-      updatedDistance = if toUpdate then updatedDuration * 10 else state.data.rentalBookingData.baseDistance
-  in state { data { rentalBookingData { baseDuration = updatedDuration, baseDistance = updatedDistance }}}
+incrementDecrementDuration isIncrement state =
+  let
+    initialDuration = state.data.rentalBookingData.baseDuration
+
+    toUpdate = if isIncrement then (initialDuration < state.props.maxDuration) else (initialDuration > state.props.minDuration)
+
+    updatedDuration = if toUpdate then initialDuration + (if isIncrement then 1 else (negate 1)) else initialDuration
+
+    updatedDistance = if toUpdate then updatedDuration * 10 else state.data.rentalBookingData.baseDistance
+  in
+    state { data { rentalBookingData { baseDuration = updatedDuration, baseDistance = updatedDistance } } }
 
 incrementDecrementDistance :: Boolean -> RentalScreenState -> RentalScreenState
-incrementDecrementDistance isIncrement state = 
-  let initialDistance = state.data.rentalBookingData.baseDistance
-      toUpdate = if isIncrement then (initialDistance < state.props.maxDistance) else (initialDistance > state.props.minDistance)
-      updatedDistance = if toUpdate then initialDistance + (if isIncrement then 5 else (negate 5)) else initialDistance
-  in state { data { rentalBookingData { baseDistance = updatedDistance }}}
+incrementDecrementDistance isIncrement state =
+  let
+    initialDistance = state.data.rentalBookingData.baseDistance
 
-dummyFareQuoteDetails = {
-  baseFare : 0 ,
-  includedKmPerHr : 0 ,
-  perExtraKmRate : 0 ,
-  perExtraMinRate : 0 ,
-  perHourCharge : 0 ,
-  plannedPerKmRate : 0,
-  nightShiftCharge : 0,
-  tollCharges : Nothing,
-  deadKmFare : Nothing
-}
+    toUpdate = if isIncrement then (initialDistance < state.props.maxDistance) else (initialDistance > state.props.minDistance)
 
-dummyRentalQuote = {
-  quoteDetails : ChooseVehicleController.config ,
-  index : 0 ,
-  activeIndex : 0 ,
-  fareDetails : dummyFareQuoteDetails
-}
+    updatedDistance = if toUpdate then initialDistance + (if isIncrement then 5 else (negate 5)) else initialDistance
+  in
+    state { data { rentalBookingData { baseDistance = updatedDistance } } }
+
+dummyFareQuoteDetails =
+  { baseFare: 0
+  , includedKmPerHr: 0
+  , perExtraKmRate: 0
+  , perExtraMinRate: 0
+  , perHourCharge: 0
+  , plannedPerKmRate: 0
+  , nightShiftCharge: 0
+  , tollCharges: Nothing
+  , deadKmFare: Nothing
+  }
+
+dummyRentalQuote =
+  { quoteDetails: ChooseVehicleController.config
+  , index: 0
+  , activeIndex: 0
+  , fareDetails: dummyFareQuoteDetails
+  }

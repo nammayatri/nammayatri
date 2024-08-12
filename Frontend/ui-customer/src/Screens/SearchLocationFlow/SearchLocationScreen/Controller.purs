@@ -109,6 +109,7 @@ data Action = NoAction
             | CurrentLocation 
             | ChooseYourRideAC ChooseYourRideController.Action
             | NotificationListener String
+            | GoToConfirmingLocationStage
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -129,11 +130,14 @@ data ScreenOutput = NoOutput SearchLocationScreenState
                   | SelectedQuote SearchLocationScreenState
                   | CurrentFlowStatus
                   | NotificationListenerSO String
+                  | ConfirmingLocationStage SearchLocationScreenState
+                  | CallConfirmLocation SearchLocationScreenState
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
 eval CheckFlowStatusAction state = exit $ CurrentFlowStatus
 
+eval GoToConfirmingLocationStage state = exit $ ConfirmingLocationStage state
 eval (MapReady _ _ _) state = do 
   if state.props.searchLocStage == PredictionSelectedFromHome then 
     continueWithCmd state [do 
@@ -357,11 +361,12 @@ eval (UpdateLocAndLatLong cachedSearches lat lng) state = do
       updatedLoc = {placeId : MB.Nothing, city : AnyCity , addressComponents : LocationListItemController.dummyAddress , address : defaultAddress , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : ""}
       shouldUpdateCurrent = MB.fromMaybe 0.0 state.data.currentLoc.lat == 0.0
       shouldUpdateSrc = MB.maybe true (\loc -> (MB.fromMaybe 0.0 loc.lat) == 0.0) (state.data.srcLoc)
-  continue state{ data 
+      newState = state{ data 
                     { srcLoc = if shouldUpdateSrc then MB.Just updatedLoc else state.data.srcLoc
                     , currentLoc = if shouldUpdateCurrent then updatedLoc else state.data.currentLoc
                     , locationList = DA.sortBy (comparing (_.actualDistance)) $ updateLocListWithDistance cachedSearches (MB.fromMaybe 0.0 updatedLoc.lat) (MB.fromMaybe 0.0 updatedLoc.lon) true state.appConfig.suggestedTripsAndLocationConfig.locationWithinXDist }
-                    }
+                    , props{searchLocStage = GoToConfirmingLocStage}}
+  updateAndExit newState $ CallConfirmLocation newState
 
 eval RecenterCurrentLocation state = continueWithCmd state [ do 
   void $ pure $ currentPosition "NO_ZOOM"

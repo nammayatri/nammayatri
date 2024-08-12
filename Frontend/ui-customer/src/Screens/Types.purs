@@ -2178,6 +2178,7 @@ data SearchLocationStage =  ConfirmLocationStage
                           | AllFavouritesStage
                           | PredictionSelectedFromHome
                           | ChooseYourRide
+                          | GoToConfirmingLocStage
 
 derive instance genericSearchLocationStage :: Generic SearchLocationStage _
 instance eqSearchLocationStage :: Eq SearchLocationStage where eq = genericEq

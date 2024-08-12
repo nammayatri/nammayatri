@@ -1948,6 +1948,8 @@ export const showKeyboard = function (id) {
 }
 
 export const locateOnMap = (configObj) => {
+
+  console.log("Inside locateOnMap configObj", configObj);
   if (JBridge.locateOnMapV2) {
     configObj.lat = configObj.lat == 0.0 ? "0.0" : configObj.lat.toString();
     configObj.lon = configObj.lon == 0.0 ? "0.0" : configObj.lon.toString();
@@ -2522,6 +2524,7 @@ export const storeCallBackLocateOnMap = function (cb) {
     return function () {
       try {
         const callback = callbackMapper.map(function (key, lat, lon) {
+          console.log("INisde storeCallBackLocateOnMap, getting callback", key, lat, lon);
           if (timerIdDebounce) {
             clearTimeout(timerIdDebounce);
           }

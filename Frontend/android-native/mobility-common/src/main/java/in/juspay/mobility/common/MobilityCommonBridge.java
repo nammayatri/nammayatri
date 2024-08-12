@@ -874,11 +874,14 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
 
                 googleMap.setOnCameraIdleListener(() -> {
+                    System.out.println("INside GoogleMap setOnCameraIdleListener IV");
                     double lat1 = (googleMap.getCameraPosition().target.latitude);
                     double lng = (googleMap.getCameraPosition().target.longitude);
                     if (storeLocateOnMapCallBack != null) {
                         String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeLocateOnMapCallBack, "LatLon", lat1, lng);
+                        System.out.println("Inside storeLocateOnMapCallback"+ javascript);
                         bridgeComponents.getJsCallback().addJsToWebView(javascript);
+
                     }
                 });
                 if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && moveToCurrentPosition) {
@@ -903,6 +906,7 @@ public class MobilityCommonBridge extends HyperBridge {
         if (googleMap != null) {
             try {
                 JSONObject payload = new JSONObject(_payload);
+                System.out.println("INside locateOnMap V2");
                 boolean goToCurrentLocation = payload.optBoolean("goToCurrentLocation", false);
                 String lat = payload.optString("lat", "0.0");
                 String lon = payload.optString("lon", "0.0");
@@ -1011,6 +1015,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
                         googleMap.setOnCameraIdleListener(() -> {
                             try {
+                                System.out.println("INside GoogleMap setOnCameraIdleListener III");
                                 double lat1 = (googleMap.getCameraPosition().target.latitude);
                                 double lng = (googleMap.getCameraPosition().target.longitude);
                                 boolean isPointInsidePolygon = false;
@@ -1443,6 +1448,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void exitLocateOnMap(String str) {
         try {
             locateOnMapManager = null;
+            System.out.println("INisde exit Locate On Map");
             storeLocateOnMapCallBack = null;
             ExecutorManager.runOnMainThread(() -> {
                 if (googleMap != null) {
@@ -2095,6 +2101,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             }
                         });
                         this.googleMap.setOnCameraIdleListener(() -> {
+                            System.out.println("INside GoogleMap setOnCameraIdleListener II");
                             if (callback != null) {
                                 double lat = (googleMap.getCameraPosition().target.latitude);
                                 double lng = (googleMap.getCameraPosition().target.longitude);
@@ -2936,6 +2943,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             JsCallback jsCallback = bridgeComponents.getJsCallback();
                             if (!mapUpdate.isIdleListenerActive) {
                                 googleMap.setOnCameraIdleListener(() -> {
+                                    System.out.println("INside GoogleMap setOnCameraIdleListener I");
                                     if (isIdleCallback != null && jsCallback != null) {
                                         String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", isIdleCallback);
                                         jsCallback.addJsToWebView(javascript);

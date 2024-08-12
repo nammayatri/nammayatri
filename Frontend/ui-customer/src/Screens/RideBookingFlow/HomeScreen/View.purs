@@ -15,29 +15,13 @@
 
 module Screens.HomeScreen.View where
 
-import Components.MessagingView.Common.Types
-import Components.MessagingView.Common.View
-import ConfigProvider
-import Constants.Configs
-import Data.FoldableWithIndex
-import Data.Tuple
-import Engineering.Helpers.BackTrack
-import Locale.Utils
-import Mobility.Prelude
-import Mobility.Prelude
-import PrestoDOM.Core
-import PrestoDOM.List
-import Screens.RideBookingFlow.HomeScreen.Config
-import Services.API hiding (Followers(..))
-import SuggestionUtils
-import Timers
-import Types.App
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
 import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, emptyScreenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
 import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
 import CarouselHolder as CarouselHolder
+import Common.Resources.Constants (zoomLevel)
 import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
 import Common.Types.App as CT
 import Common.Types.App as CTP
@@ -56,6 +40,8 @@ import Components.LocationTagBar as LocationTagBar
 import Components.LocationTagBarV2 as LocationTagBarV2
 import Components.MenuButton as MenuButton
 import Components.MessagingView as MessagingView
+import Components.MessagingView.Common.Types
+import Components.MessagingView.Common.View
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Components.PricingTutorialModel as PricingTutorialModel
@@ -72,16 +58,17 @@ import Components.SelectListModal as CancelRidePopUp
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SettingSideBar as SettingSideBar
 import Components.SourceToDestination as SourceToDestination
+import ConfigProvider 
 import Constants (defaultDensity)
+import Constants.Configs
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, length, mapWithIndex, take, (!!), head, filter, cons, null, tail, drop)
 import Data.Array as Arr
 import Data.Either (Either(..))
-import Data.Function.Uncurried (runFn1)
-import Data.Function.Uncurried (runFn1, runFn2)
-import Data.Function.Uncurried (runFn3)
+import Data.FoldableWithIndex
+import Data.Function.Uncurried (runFn1, runFn2, runFn3)
 import Data.Int (ceil, floor, fromNumber, fromString, toNumber, pow)
 import Data.Int as INT
 import Data.Lens ((^.))
@@ -98,14 +85,12 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2,runEffectFn3, runEffectFn9)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.BackTrack
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, getCurrentUTC)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
-import Engineering.Helpers.Events as Events
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, compareUTCDate, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC)
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion, emChatSuggestion)
-import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -113,90 +98,54 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.API as HelpersAPI
 import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
-import Helpers.Utils (decodeBookingTimeList )
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..),decodeBookingTimeList, getCityFromString, getLanguageBasedCityName)
+import Helpers.Utils as HU
 import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, differenceBetweenTwoUTCInMinutes, differenceBetweenTwoUTC, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
+import Locale.Utils
 import LocalStorage.Cache (getValueFromCache)
 import Log (printLog, logStatus)
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Mobility.Prelude
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>), identity, (>=), (<*>))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, modifyState, getState)
 import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), scrollBarY, adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift, horizontalScrollView, shadow, onStateChanged, scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout, imageUrl)
 import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Core
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Elements.Keyed as Keyed
+import PrestoDOM.List
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resources.Constants (getEditDestPollingCount)
 import Resources.Localizable.EN (getEN)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
+import Screens.HomeScreen.Controllers.Types
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
+import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..), City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..), VehicleViewType(..))
 import Screens.Types as ST
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
+import Services.API hiding (Followers(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Services.FlowCache as FlowCache
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
-import Types.App (FlowBT, GlobalState(..), defaultGlobalState)
-import Halogen.VDom.DOM.Prop (Prop)
-import Data.String as DS
-import Data.Function.Uncurried (runFn1, runFn2)
-import Components.CommonComponentConfig as CommonComponentConfig
-import Constants.Configs 
-import Common.Resources.Constants (zoomLevel)
-import Constants (defaultDensity)
-import Resources.Constants (getEditDestPollingCount)
-import Animation as Anim
-import Animation.Config (AnimConfig, animConfig)
-import Components.SourceToDestination as SourceToDestination
-import Data.Map as Map
 import SuggestionUtils
-import MerchantConfig.Types (MarginConfig, ShadowConfig)
-import ConfigProvider
-import Mobility.Prelude
 import Timers
-import PrestoDOM.Core
-import Locale.Utils
-import CarouselHolder as CarouselHolder
-import PrestoDOM.List
-import Components.BannerCarousel as BannerCarousel
-import Components.MessagingView.Common.Types
-import Components.MessagingView.Common.View
-import Data.FoldableWithIndex
-import Engineering.Helpers.BackTrack (liftFlowBT)
-import LocalStorage.Cache (getValueFromCache)
-import Components.PopupWithCheckbox.View as PopupWithCheckbox
-import Services.FlowCache as FlowCache
-import Engineering.Helpers.BackTrack
-import Engineering.Helpers.Events as Events
 import Types.App
-import Mobility.Prelude
-import Screens.Types as ST
-import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
-import Components.ServiceTierCard.View as ServiceTierCard
-import Common.Types.App as CTP
-import JBridge as JB
-import Common.Types.App as CT
-import Effect.Unsafe (unsafePerformEffect)
-import Screens.Types (FareProductType(..)) as FPT
-import Helpers.Utils (decodeBookingTimeList, getCityFromString, getLanguageBasedCityName)
-import Resources.Localizable.EN (getEN)
-import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
-import Screens.HomeScreen.Controllers.Types
-import Helpers.Utils as HU
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
