@@ -1226,8 +1226,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             throwError $ NotAllowedExtraFee $ show off
       when (searchReq.autoAssignEnabled == Just True) do
         unlessM (CS.lockSearchTry searchTry.id) do
-          logError ("SEARCH_TRY_CANCELLED " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
-          throwError (InternalError "SEARCH_TRY_CANCELLED")
+          logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
+          throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
       fareParams <- do
         calculateFareParameters
           CalculateFareParametersParams
