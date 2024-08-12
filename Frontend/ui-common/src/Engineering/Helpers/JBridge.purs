@@ -807,17 +807,17 @@ mapRouteConfig = {
 getHeightFromPercentWithOffset :: Int -> Int -> Int
 getHeightFromPercentWithOffset offset percent =
   let scrHeight = (screenHeight unit) - offset
-    in ((scrHeight / 100) * percent)
+    in ceil $ (((toNumber scrHeight) / 100.0) * (toNumber percent))
 
 getHeightFromPercent :: Int -> Int
 getHeightFromPercent percent =
   let scrHeight = (screenHeight unit)
-    in ((scrHeight / 100) * percent)
+    in ceil $ (((toNumber scrHeight) / 100.0) * (toNumber percent))
 
 getWidthFromPercentWithOffset :: Int -> Int -> Int
 getWidthFromPercentWithOffset offset percent =
   let scrWidth = (screenWidth unit) - offset
-    in ((scrWidth / 100) * percent)
+    in ceil $ (((toNumber scrWidth) / 100.0) * (toNumber percent))
 
 getWidthFromPercent :: Int -> Int
 getWidthFromPercent percent =

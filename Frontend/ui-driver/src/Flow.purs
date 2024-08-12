@@ -88,7 +88,7 @@ import Presto.Core.Types.API (ErrorResponse(..))
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork, Flow)
 import PrestoDOM (initUI)
 import RemoteConfig as RC
-import Resource.Constants (decodeAddress)
+import Resource.Constants (decodeAddress, transformToDoctype)
 import Resource.Constants as RC
 import Screens as ScreenNames
 import Screens.AddVehicleDetailsScreen.ScreenData (initData, VehicleDetails(..)) as AddVehicleDetailsScreenData
@@ -710,6 +710,10 @@ onBoardingFlow = do
       _ = setCleverTapUserProp [{key : "PendingOnboardingSteps", value : unsafeToForeign $ ((length filterCabs) - completedSteps + (if isProfileDetailsCompleted then 1 else 0))}]
       _ = setCleverTapUserProp [{key : "TotalOnboardingSteps", value : unsafeToForeign $ length filterCabs}]
       _ = setCleverTapUserProp [{key : "DriverOnboarded", value : unsafeToForeign $ isAllCompleted}]
+  void $ lift $ lift $ fork $ do
+    _ <- pure $ if isProfileDetailsCompleted then cleverTapEvent ("ny_onboarding_completed_profile_details") [] else unit
+    pure $ void $ map (\item -> if item.status == ST.COMPLETED then cleverTapEvent ("ny_onboarding_completed_" <> (toLower $ transformToDoctype $  item.docType)) [] else unit) filterCabs
+
   
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
@@ -1919,6 +1923,9 @@ helpAndSupportFlow = do
     GO_BACK_TO_TRIP_DETAILS updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
       tripDetailsScreenFlow ""
+    GO_BACK_TO_EARNINGS updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+      driverEarningsFlow
 
 writeToUsFlow :: FlowBT String Unit
 writeToUsFlow = do
@@ -4110,7 +4117,7 @@ driverEarningsFlow = do
   logField_ <- lift $ lift $ getLogFields
   let earningScreenState = globalState.driverEarningsScreen
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
-  if false -- TODO: Enable after earnigns is completed.
+  if (getMerchant FunctionCall) == BRIDGE -- TODO: Enable after earnings is completed.
     then flowRouter (TA.EarningsV2Daily false)
     else do
       uiAction <- UI.driverEarningsScreen
@@ -4294,4 +4301,4 @@ goToHelpAndSupportScreen = do
   (GetCategoriesRes response) <- Remote.getCategoriesBT language
   let temp = categoryTransformer response.categories language 
       categories' = sortBy compareByOrder temp
-  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' , goBackTo = ScreenNames.EARNINGS_SCREEN} } )

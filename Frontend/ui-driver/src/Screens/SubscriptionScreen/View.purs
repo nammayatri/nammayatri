@@ -1249,6 +1249,7 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER_VERTICAL
+            , margin $ MarginBottom 8
             ][ textView $
               [ text state.description
               , color Color.black600
@@ -1261,7 +1262,6 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , scrollBarX false
-            , margin $ MarginTop 8
             , visibility if DA.length state.offers == 1 || (isSelected && DA.length state.offers > 0) then VISIBLE else GONE
             ][ linearLayout
               [ height WRAP_CONTENT

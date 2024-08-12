@@ -339,5 +339,5 @@ getTranslatedString str = case str of
                     "DAILY_UNLIMITED" -> getString DAILY_UNLIMITED
                     "DAILY_PER_RIDE" -> getString DAILY_PER_RIDE
                     "CAB_DAILY_UNLIMITED_OFFER" -> getString DAILY_UNLIMITED_PLAN_DESC
-                    "CAB_DAILY_PER_RIDE_OFFER" -> getString $ DAILY_PER_RIDE_PLAN_DESC (getCurrency appConfig <> "90")
+                    "CAB_DAILY_PER_RIDE_OFFER" -> getString $ DAILY_PER_RIDE_PLAN_DESC (getCurrency appConfig <> "9")
                     _ -> splitBasedOnLanguage str

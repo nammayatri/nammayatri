@@ -602,7 +602,7 @@ bridgeStatsView push state =
                   )
         )
         []
-        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "0" , infoView: true} ]
+        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "0" , infoView: false} ]
     )
     , bridgeLocationUpdateview push state
     ]
@@ -1916,7 +1916,7 @@ goOfflineModal push state =
   , gravity BOTTOM
   ][
    PrestoAnim.animationSet [
-      Anim.translateYAnim AnimConfig.translateYAnimConfig
+      Anim.translateInYAnim AnimConfig.animConfig { duration = 150, fromY = EHC.screenHeight unit, toY = 0, ifAnim = true } 
     ] $
       linearLayout
       [ width MATCH_PARENT
@@ -1988,7 +1988,7 @@ goOfflineModal push state =
            , linearLayout
              [ width (V $ ((EHC.screenWidth unit)/7) * 3)
              , height (V $ 55)
-             , stroke ("1," <> Color.black900)
+             , stroke ("1," <> state.data.config.primaryBackground)
              , cornerRadius 8.0
              , gravity CENTER
              , margin (MarginRight 10)

@@ -119,9 +119,6 @@ testRideConfirmationConfig state = let
       text = if state.props.popupType == ST.TEST_RIDE_RECIEVED then getString YES else getString GOT_IT
     , margin = MarginLeft 12
     , width = V $ ((EHC.screenWidth unit)-92)/2
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
     , enableRipple = true
     },
     backgroundClickable = false,

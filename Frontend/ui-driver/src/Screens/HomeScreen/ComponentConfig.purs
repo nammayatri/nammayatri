@@ -843,11 +843,11 @@ driverStatusIndicators state =
       , imageUrl: fetchImage FF_ASSET "ic_driver_status_offline"
       , textColor: Color.white900
       }
-    , { status: ST.Silent
-      , background: Color.blue800
-      , imageUrl: fetchImage FF_ASSET "ic_driver_status_silent"
-      , textColor: Color.white900
-      }
+    -- , { status: ST.Silent
+    --   , background: Color.blue800
+    --   , imageUrl: fetchImage FF_ASSET "ic_driver_status_silent"
+    --   , textColor: Color.white900
+    --   }
     , { status: ST.Online
       , background: Color.darkMint
       , imageUrl: fetchImage FF_ASSET "ic_driver_status_online"
@@ -1340,9 +1340,9 @@ chatBlockerPopUpConfig state = let
     secondaryText {text = (getString PLEASE_CONSIDER_CALLING_THEM )},
     option1{ text = (getString GOT_IT),
       width = MATCH_PARENT,
-      background = Color.black900,
-      strokeColor = Color.black900,
-      color = Color.yellow900,
+      background = state.data.config.primaryBackground,
+      strokeColor = state.data.config.primaryBackground,
+      color = state.data.config.primaryTextColor,
       margin = MarginHorizontal 16 16
       },
     option2{text = (getString PROCEED_TO_CHAT),

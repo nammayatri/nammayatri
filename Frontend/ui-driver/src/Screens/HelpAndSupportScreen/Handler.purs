@@ -56,4 +56,7 @@ helpAndSupportScreen = do
     GoToTripDetailsScreen updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_TRIP_DETAILS updatedState)
+    GoToEarningsScreen updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> pure (GO_BACK_TO_EARNINGS updatedState)
     
