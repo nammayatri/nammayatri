@@ -18,7 +18,7 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogic
 findByMerchantOpCityAndDomain ::
   (BeamFlow.BeamFlow m r) =>
   Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
-  Data.Text.Text ->
+  Lib.Yudhishthira.Types.LogicDomain ->
   m ([Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic])
 findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ "driverOfferCachedQueries:AppDynamicLogic:" <> ":MerchantOperatingCityId-" <> show (Kernel.Types.Id.getId merchantOperatingCityId) <> ":Domain-" <> show domain)

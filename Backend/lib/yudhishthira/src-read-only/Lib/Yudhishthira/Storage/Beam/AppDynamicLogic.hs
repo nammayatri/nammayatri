@@ -11,11 +11,12 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.TimeBound
+import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data AppDynamicLogicT f = AppDynamicLogicT
   { description :: B.C f Data.Text.Text,
-    domain :: B.C f Data.Text.Text,
+    domain :: B.C f Lib.Yudhishthira.Types.LogicDomain,
     logic :: B.C f Data.Text.Text,
     merchantOperatingCityId :: B.C f Data.Text.Text,
     name :: B.C f Data.Text.Text,
@@ -27,7 +28,7 @@ data AppDynamicLogicT f = AppDynamicLogicT
   deriving (Generic, B.Beamable)
 
 instance B.Table AppDynamicLogicT where
-  data PrimaryKey AppDynamicLogicT f = AppDynamicLogicId (B.C f Data.Text.Text) (B.C f Data.Text.Text) (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
+  data PrimaryKey AppDynamicLogicT f = AppDynamicLogicId (B.C f Lib.Yudhishthira.Types.LogicDomain) (B.C f Data.Text.Text) (B.C f Data.Text.Text) deriving (Generic, B.Beamable)
   primaryKey = AppDynamicLogicId <$> domain <*> merchantOperatingCityId <*> name
 
 type AppDynamicLogic = AppDynamicLogicT Identity

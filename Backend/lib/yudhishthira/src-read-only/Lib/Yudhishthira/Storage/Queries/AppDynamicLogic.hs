@@ -29,7 +29,7 @@ createMany = traverse_ create
 
 findByMerchantOpCityAndDomain ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Data.Text.Text -> m [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic])
 findByMerchantOpCityAndDomain limit offset merchantOperatingCityId domain = do
   findAllWithOptionsKV
     [ Se.And
@@ -43,7 +43,7 @@ findByMerchantOpCityAndDomain limit offset merchantOperatingCityId domain = do
 
 findByPrimaryKey ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Data.Text.Text -> Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Data.Text.Text -> m (Maybe Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic))
+  (Lib.Yudhishthira.Types.LogicDomain -> Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Data.Text.Text -> m (Maybe Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic))
 findByPrimaryKey domain merchantOperatingCityId name = do
   findOneWithKV
     [ Se.And

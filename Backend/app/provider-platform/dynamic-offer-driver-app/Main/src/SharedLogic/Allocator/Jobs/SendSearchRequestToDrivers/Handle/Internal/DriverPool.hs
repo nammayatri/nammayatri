@@ -23,12 +23,10 @@ where
 import qualified Control.Monad as CM
 import Control.Monad.Extra (partitionM)
 import Data.Aeson as A
-import qualified Data.Aeson.KeyMap as AKM
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Map as Map
-import qualified Data.String.Conversions as CS
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -44,7 +42,6 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
-import qualified JsonLogic as JL
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -53,11 +50,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowCounters
 import Lib.Queries.GateInfo
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
-import SharedLogic.AppDynamicLogic
 import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -347,7 +346,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType of
-            Tagged -> makeTaggedDriverPool mOCityId onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags
+            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags
             Intelligent -> makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
             Random -> makeRandomDriverPool onlyNewDrivers batchSize'
 
@@ -496,7 +495,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCountWithServiceTier
-              Tagged -> makeTaggedDriverPool merchantOpCityId nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags -- TODO: Fix isOnRidePool flag
+              Tagged -> makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags -- TODO: Fix isOnRidePool flag
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
           batches <- previouslyAttemptedDrivers searchTry.id consideOnRideDrivers
@@ -551,54 +550,36 @@ previouslyAttemptedDrivers searchTryId consideOnRideDrivers = do
         return []
       a -> return a
 
+data TaggedDriverPoolInput = TaggedDriverPoolInput
+  { drivers :: [DriverPoolWithActualDistResult],
+    needOnRideDrivers :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 makeTaggedDriverPool ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m
   ) =>
   Id MerchantOperatingCity ->
+  Seconds ->
   [DriverPoolWithActualDistResult] ->
   Int ->
   Bool ->
   Maybe [Text] ->
   m [DriverPoolWithActualDistResult]
-makeTaggedDriverPool mOCityId onlyNewDrivers batchSize isOnRidePool customerNammaTags = do
-  allLogics <- getAppDynamicLogic mOCityId "POOLING"
+makeTaggedDriverPool mOCityId timeDiffFromUtc onlyNewDrivers batchSize isOnRidePool customerNammaTags = do
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  appDynamicLogics <- LYTU.getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime
+  let allLogics = appDynamicLogics <&> (.logic)
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
-      logicData = A.Object $ "drivers" .= A.toJSON onlyNewDriversWithCustomerInfo <> "needOnRideDrivers" .= isOnRidePool
-  logDebug $ "allLogics- " <> show allLogics
-  logDebug $ "logicData- " <> CS.cs (A.encode logicData)
-  res <-
-    foldlM
-      ( \acc logics -> do
-          let result = JL.jsonLogicEither logics.logic acc
-          res <-
-            case result of
-              Left err -> do
-                logError $ "got error: " <> show err <> " while running logic: " <> CS.cs (A.encode logics)
-                pure acc
-              Right res -> pure res
-          logDebug $ "logic- " <> (CS.cs . A.encode $ logics.logic)
-          logDebug $ "json logic result - " <> (CS.cs . A.encode $ res)
-          return res
-      )
-      logicData
-      allLogics
+  let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool}
+  resp <- LYTU.runLogics allLogics taggedDriverPoolInput
   sortedPool <-
-    case res of
-      A.Object sortedPoolData ->
-        case AKM.lookup "drivers" sortedPoolData of
-          Nothing -> do
-            logError "Error in parsing sortedPoolData - drivers key not found"
-            pure onlyNewDriversWithCustomerInfo
-          Just driverPool ->
-            case A.fromJSON driverPool of
-              A.Success sortedPoolData' -> pure sortedPoolData'
-              A.Error err -> do
-                logError $ "Error in parsing sortedPoolData - " <> show err
-                pure onlyNewDriversWithCustomerInfo
-      _ -> do
-        logError "Error in parsing sortedPoolData - not an object"
+    case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
+      A.Success sortedPoolData -> pure sortedPoolData.drivers
+      A.Error err -> do
+        logError $ "Error in parsing sortedPoolData - " <> show err
         pure onlyNewDriversWithCustomerInfo
   pure $ take batchSize sortedPool
   where
