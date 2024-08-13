@@ -35,6 +35,7 @@ type API =
            :<|> Common.ShareRideInfoByShortIdAPI
            :<|> Common.RideListAPI
            :<|> Common.TripRouteAPI
+           :<|> Common.PickupRouteAPI
            :<|> Common.RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> Common.MultipleRideSyncAPI
@@ -54,6 +55,7 @@ handler merchantId =
     :<|> shareRideInfoByShortId merchantId
     :<|> rideList merchantId
     :<|> callGetTripRoute merchantId
+    :<|> callGetPickupRoute merchantId
     :<|> callRideInfo merchantId
     :<|> multipleRideCancel -- FIXME merchantId ?
     :<|> multipleRideSync merchantId
@@ -86,7 +88,15 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustom
   withFlowHandlerAPI $ DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
 
 callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
-callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon
+callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False
+
+callGetPickupRoute ::
+  ShortId DM.Merchant ->
+  Id Common.Ride ->
+  Double ->
+  Double ->
+  FlowHandler Maps.GetRoutesResp
+callGetPickupRoute merchantShortId rideId currLocationLat currLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
 
 callRideInfo ::
   ShortId DM.Merchant ->
