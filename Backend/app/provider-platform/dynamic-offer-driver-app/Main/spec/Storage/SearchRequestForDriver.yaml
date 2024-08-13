@@ -55,6 +55,7 @@ SearchRequestForDriver:
     lat : Maybe Double
     lon : Maybe Double
     createdAt : UTCTime
+    updatedAt: Maybe UTCTime
     response : Maybe SearchRequestForDriverResponse
     notificationSource: Maybe NotificationSource
     driverMinExtraFee : Maybe HighPrecMoney
