@@ -86,3 +86,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN client_model_name text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN client_manufacturer text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN previous_drop_geo_hash text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN updated_at timestamp with time zone  default CURRENT_TIMESTAMP;

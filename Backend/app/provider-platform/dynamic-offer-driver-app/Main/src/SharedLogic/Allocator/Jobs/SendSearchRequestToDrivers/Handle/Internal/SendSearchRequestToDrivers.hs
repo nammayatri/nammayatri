@@ -214,6 +214,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 lat = Just dpRes.lat,
                 lon = Just dpRes.lon,
                 createdAt = now,
+                updatedAt = Just now,
                 response = Nothing,
                 driverMinExtraFee = tripQuoteDetail.driverMinFee,
                 driverMaxExtraFee = tripQuoteDetail.driverMaxFee,

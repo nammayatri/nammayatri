@@ -71,6 +71,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     status :: Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
     straightLineDistanceToPickup :: Kernel.Types.Common.Meters,
     totalRides :: Kernel.Prelude.Int,
+    updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
