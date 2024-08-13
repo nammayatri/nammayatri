@@ -4174,7 +4174,7 @@ driverEarningsFlow = do
   logField_ <- lift $ lift $ getLogFields
   let earningScreenState = globalState.driverEarningsScreen
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
-  if (getMerchant FunctionCall) == BRIDGE -- TODO: Enable after earnings is completed.
+  if false -- TODO: Enable after earnings is completed.
     then flowRouter (TA.EarningsV2Daily false)
     else do
       uiAction <- UI.driverEarningsScreen
