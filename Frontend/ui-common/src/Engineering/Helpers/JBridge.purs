@@ -301,6 +301,9 @@ foreign import initialiseShakeListener :: forall action. EffectFn3 (action -> Ef
 foreign import unregisterShakeListener :: Unit -> Unit
 foreign import registerShakeListener :: Unit -> Unit
 foreign import fetchFilesFromFolderPath :: String -> Array String
+foreign import isPackageInstalled :: String -> Boolean
+foreign import requestUninstallPackage :: String -> Boolean
+
 
 type SliderConfig = { 
   id :: String,

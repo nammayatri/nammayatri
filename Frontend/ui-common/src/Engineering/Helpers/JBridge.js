@@ -1084,15 +1084,15 @@ export const isCoordOnPath = function (data) {
             try {
               console.log("I AM HERE ------------------ IN CHECK ROUTE");
               if(speed == 0)
-                {
-                  const res = {
-                    "points": (data.points != undefined) ? data.points : [] ,
-                    "eta": 0,
-                    "distance": 0,
-                    "isInPath": true
-                  };
-                  return res;
-                }
+              {
+                const res = {
+                  "points": (data.points != undefined) ? data.points : [] ,
+                  "eta": 0,
+                  "distance": 0,
+                  "isInPath": true
+                };
+                return res;
+              }
               const res = window.JBridge.isCoordOnPath(json, lat, lon, speed);
               return JSON.parse(res);
             } catch (err) {
@@ -1859,6 +1859,11 @@ export const isInternetAvailable = function (unit) {
   };
 };
 
+export const emitJOSEvent = function (mapp, eventType, payload) {
+  console.log("payload", payload);
+  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
+};
+
 export const restartApp = function () {
   return function() {
     console.log("HERE IN RESET ===--->>")
@@ -2301,11 +2306,6 @@ export const cleverTapEvent = function (_event) {
     }
   }
 }
-
-export const emitJOSEvent = function (mapp, eventType, payload) {
-  console.log("payload", payload);
-  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
-};
 
 export const getLocationNameV2 = function (lat, lon) { 
   try {
@@ -2766,26 +2766,26 @@ export const getFromUTC = (timestamp) => (val) => {
 }
 
 export const initHVSdk = function (accessToken, workFLowId, transactionId, useLocation, defLanguageCode, inputJson, action, cb) {
-    try {
-      const callback = callbackMapper.map(function(stringifyPayload) {
-        cb(action(stringifyPayload))();
-      });
-      const jsonObjectPayload = {
-        event : "launchHyperVerge",
-        accessToken: accessToken,
-        workFlowId: workFLowId,
-        transactionId: transactionId,
-        useLocation: useLocation,
-        defLanguageCode: defLanguageCode,
-        inputJson: inputJson,
-        callback: callback
-      };
-      window.JOS.emitEvent("java")("onEvent")(JSON.stringify(jsonObjectPayload))()();
-    }
-    catch (err) {
-      console.error(err);
-    }
+  try {
+    const callback = callbackMapper.map(function(stringifyPayload) {
+      cb(action(stringifyPayload))();
+    });
+    const jsonObjectPayload = {
+      event : "launchHyperVerge",
+      accessToken: accessToken,
+      workFlowId: workFLowId,
+      transactionId: transactionId,
+      useLocation: useLocation,
+      defLanguageCode: defLanguageCode,
+      inputJson: inputJson,
+      callback: callback
+    };
+    window.JOS.emitEvent("java")("onEvent")(JSON.stringify(jsonObjectPayload))()();
   }
+  catch (err) {
+    console.error(err);
+  }
+}
 
 
 
@@ -2860,4 +2860,17 @@ export const fetchFilesFromFolderPath = (folderPath) => {
     console.log("files ", files);
     return JSON.parse(files);
   }
+}
+export const isPackageInstalled = function (packageName) {
+  if (window.__OS == "ANDROID" && window.JBridge.isPackageInstalled) {
+    return window.JBridge.isPackageInstalled(packageName);
+  }
+  return false;
+}
+
+export const requestUninstallPackage = function (packageName) {
+  if (window.__OS == "ANDROID" && window.JBridge.requestUninstallPackage) {
+    return window.JBridge.requestUninstallPackage(packageName);
+  }
+  return false;
 }

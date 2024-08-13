@@ -5401,4 +5401,29 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         return Arrays.toString(filePaths);
     }
+    public boolean requestUninstallPackage(String packageName){
+        try {
+            Intent intent = new Intent(Intent.ACTION_DELETE);
+            intent.setData(Uri.parse("package:" + packageName));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            bridgeComponents.getContext().startActivity(intent);
+            return true; // requested successfully
+        } catch (Exception ignored) {
+            return false;// request failed
+        }
+    }
+
+    public boolean isPackageInstalled(String packageName) {
+        PackageManager packageManager = bridgeComponents.getContext().getPackageManager();
+        if (packageName == null || packageName.isEmpty()) {
+            return false;
+        }
+        try {
+            packageManager.getPackageInfo(packageName, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
 }
