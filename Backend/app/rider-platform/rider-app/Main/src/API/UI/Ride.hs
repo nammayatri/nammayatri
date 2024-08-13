@@ -53,6 +53,7 @@ type API =
               )
            :<|> "driver"
              :> "photo"
+             :> "media"
              :> TokenAuth
              :> MandatoryQueryParam "filePath" Text
              :> Get '[JSON] Text
