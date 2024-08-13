@@ -522,7 +522,7 @@ feeBreakUpView push isPaidByYatriCoins text' color' fontStyle marginTop gravity'
   , text text'
   , color color'
   , gravity CENTER_VERTICAL
-  , visibility if visibility' then VISIBLE else GONE
+  , visibility $ boolToVisibility visibility'
   ])
    [(textView $
      [ width WRAP_CONTENT

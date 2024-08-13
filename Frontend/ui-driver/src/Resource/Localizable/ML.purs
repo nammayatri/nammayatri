@@ -1125,6 +1125,7 @@ getML stringKey =
         PAID_BY_YATRI_POINTS -> "യാത്രി പോയിൻ്റുകൾ വഴി പണമടക്കി"
         DISCOUNT_POINTS_SMALL -> "ഡിസ്കൗണ്ട് പോയിൻറുകൾ"
         YATRI_POINTS_USAGE_POPUP _ -> "യാത്രി പോയിൻ്റുകൾ നിങ്ങളുടെ സബ്സ്ക്രിപ്ഷൻ പ്ലാൻ വിരുദ്ധമായ ഡിസ്കൗണ്ടുകൾക്ക് മാറും."
+        YATRI_POINTS_USAGE_SECONDARY points discountPoints -> "ഓരോ "<> points <>" യാത്ര \nപോയിന്റുകൾ "<> discountPoints <>" ഡിസ്കൗണ്ട് പോയിന്റായി പരിവർത്തനം ചെയ്യാൻ കഴിയും"
         USE_POINTS_NOW -> "ഇപ്പോൾ പോയിൻ്റുകൾ ഉപയോഗിക്കുക"
         BUY_NOW -> "ഇപ്പോൾ വാങ്ങുക"
         SELECT_DATE -> "തീയതി തിരഞ്ഞെടുക്കുക"

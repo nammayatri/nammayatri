@@ -1100,7 +1100,7 @@ ansWithHyperLinkView push answer state =
           , color Color.blue900
           , gravity CENTER
           , margin $ Margin 0 0 0 40
-          , visibility $ boolToVisibility (if hyperLinkUrl == "" || hyperLinkText == "" then false else true)
+          , visibility $ boolToVisibility $ ( DS.null hyperLinkUrl || DS.null hyperLinkText)
           , onClick (\_ -> openUrlInApp $ hyperLinkUrl) (const unit)
           ] <> FontStyle.subHeading2 TypoGraphy
         )
@@ -1633,7 +1633,7 @@ coinsUsagePopup push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (coinsInfoCardConfig FunctionCall) ]
+        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (coinsInfoCardConfig FunctionCall state.data.config.coinsConfig.stepFunctionForCoinConversion) ]
 
 dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [ visibility GONE ] []

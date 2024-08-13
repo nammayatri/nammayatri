@@ -343,7 +343,7 @@ window.getMerchantConfig = function () {
     "oneOrTwoStarRatingCoins" : "-40",
     "rideCancellationCoins" : "-40",
     "whatAreYatriCoinFAQ" : "",
-    "coinTermsAndConditions" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
+    "coinTermsAndConditions" : "https://docs.google.com/document/u/0/d/1hLnxlJLlC8bZIsm3WCoQFf7lsdffy-do",
     "howToEarnYatriCoinFAQ" : "",
     "howToRedeemYatriCoinFAQ" : "",
     "rideCompletedCoinEvent" : true,

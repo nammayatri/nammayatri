@@ -254,15 +254,15 @@ constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity it
   }) duesArr)
 
 getFeeBreakup :: Maybe Int -> Maybe Number -> Number -> Int -> String
-getFeeBreakup maxRidesEligibleForCharge pointsApplied driverFeeAmount totalRides =
+getFeeBreakup maxRidesEligibleForCharge pointsApplied driverFeeAmount totalRides = do
     case maxRidesEligibleForCharge of
-        Nothing ->  (if driverFeeAmount > 0.0 then "₹" <> getFixedTwoDecimals driverFeeAmount else "") <> maybe "" ( \x -> if x == 0.0 then "" else " + " <> getFixedTwoDecimals x ) pointsApplied
+        Nothing ->  getStringFeeBreakup
         Just maxRides -> do
             let ridesToConsider = min totalRides maxRides
-            if ridesToConsider /= 0 then 
-                (if driverFeeAmount > 0.0 then "₹" <> getFixedTwoDecimals driverFeeAmount else "") <> maybe "" ( \x ->if x == 0.0 then "" else  " + " <> getFixedTwoDecimals x ) pointsApplied
+            if ridesToConsider /= 0 then getStringFeeBreakup
             else getString $ NO_OPEN_MARKET_RIDES "NO_OPEN_MARKET_RIDES"
-
+   where 
+    getStringFeeBreakup = (if driverFeeAmount > 0.0 then "₹" <> getFixedTwoDecimals driverFeeAmount else "") <> maybe "" ( \x ->if x == 0.0 then "" else  " + " <> getFixedTwoDecimals x ) pointsApplied
 
 getPlanAmountConfig :: String -> {value :: Number, isFixed :: Boolean, perRide :: Number}
 getPlanAmountConfig plan = case plan of

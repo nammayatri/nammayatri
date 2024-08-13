@@ -1125,6 +1125,7 @@ getKN stringKey =
         PAID_BY_YATRI_POINTS -> "ಯಾತ್ರಿ ಪಾಯಿಂಟ್ಗಳಿಂದ ಪಾವತಿಸಲಾಗಿದೆ"
         DISCOUNT_POINTS_SMALL -> "ಛುಟ್ಟಿ ಅಂಕಗಳು"
         YATRI_POINTS_USAGE_POPUP _ -> "ಯಾತ್ರಿ ಅಂಕಗಳು ನಿಮ್ಮ ಯೋಜನೆಯ ಪ್ರತಿಫಲಗಳಾಗಿ ಪರಿವರ್ತಿತವಾಗುತ್ತವೆ."
+        YATRI_POINTS_USAGE_SECONDARY points discountPoints -> "ಪ್ರತಿ "<> points <>" ಯಾತ್ರಿ ಪಾಯಿಂಟ್ \nಗಳನ್ನು "<> discountPoints <>" ರಿಯಾಯಿತಿ ಪಾಯಿಂಟ್ ಆಗಿ ಪರಿವರ್ತಿಸಬಹುದು"
         USE_POINTS_NOW -> "ಈಗ ಪಾಯಿಂಟ್ಗಳನ್ನು ಬಳಸಿ"
         BUY_NOW -> "ಈಗ ಖರೀದಿಸಿ"
         SELECT_DATE -> "ದಿನಾಂಕವನ್ನು ಆಯ್ಕೆಮಾಡಿ"

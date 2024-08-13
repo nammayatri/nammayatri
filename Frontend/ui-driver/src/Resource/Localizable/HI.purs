@@ -1126,6 +1126,7 @@ getHI stringKey =
         PAID_BY_YATRI_POINTS -> "यात्री अंक द्वारा भुगतान किया गया"
         DISCOUNT_POINTS_SMALL -> "छूट अंक"
         YATRI_POINTS_USAGE_POPUP _ -> "यात्री अंक को छूट में बदल दिया जाएगा जिसका आप अपनी सदस्यता योजना के खिलाफ उपयोग कर सकते हैं।"
+        YATRI_POINTS_USAGE_SECONDARY points discountPoints -> "प्रत्येक " <> points <> " यात्री अंक को \n"<> discountPoints <>" डिस्काउंट पॉइंट में परिवर्तित किया जा सकता है"
         USE_POINTS_NOW -> "अब अंक का उपयोग करें"
         BUY_NOW -> "अभी खरीदें"
         SELECT_DATE -> "तिथि चुनें"

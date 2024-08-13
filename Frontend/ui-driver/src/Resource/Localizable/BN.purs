@@ -1124,6 +1124,7 @@ getBN stringKey =
         PAID_BY_YATRI_POINTS -> "ইয়াত্রি পয়েন্ট দ্বারা পরিশোধিত"
         DISCOUNT_POINTS_SMALL -> "ডিসকাউন্ট পয়েন্ট"
         YATRI_POINTS_USAGE_POPUP _ -> "ইয়াত্রি পয়েন্ট আপনার সাবস্ক্রিপশন পরিকল্পনার বিরুদ্ধে আপনি উপভোগ করতে পারেন ছাড়।"
+        YATRI_POINTS_USAGE_SECONDARY points discountPoints -> "প্রতিটি "<> points <>" যাত্রী পয়েন্টগুলি \n"<> discountPoints <>" ডিসকাউন্ট পয়েন্টে রূপান্তরিত হতে পারে"
         USE_POINTS_NOW -> "এখন পয়েন্ট ব্যবহার করুন"
         BUY_NOW -> "এখন কিনুন"
         SELECT_DATE -> "তারিখ নির্বাচন করুন"
