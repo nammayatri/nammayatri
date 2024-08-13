@@ -366,8 +366,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
                 let (tollCharges, tollNames, tollConfidence) = do
                       let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
-                          driverDeviationToTollRoute = fromMaybe False updRide.driverDeviatedToTollRoute
-                      if (isJust updRide.tollCharges && driverDeviationToTollRoute && distanceCalculationFailure)
+                      if isJust updRide.estimatedTollCharges && isJust updRide.tollCharges && distanceCalculationFailure
                         then (updRide.tollCharges, updRide.tollNames, Just Neutral)
                         else
                           if (isJust updRide.estimatedTollCharges || isJust updRide.tollCharges) && distanceCalculationFailure
