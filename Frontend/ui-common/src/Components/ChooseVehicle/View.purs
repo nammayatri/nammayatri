@@ -129,7 +129,7 @@ view push config =
           , accessibility DISABLE
           , onClick push $ const $ case config.showInfo && isActiveIndex of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo && isOneWayOrRental then ShowRateCard config else NoAction config                        
+                                    true  -> if config.showInfo && isOneWayOrRental  && not ( config.vehicleVariant `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]) then ShowRateCard config else NoAction config                
           ][]
        ]
     ]
@@ -293,13 +293,18 @@ getVehicleName config =
     "BIKE" -> "Bike Taxi"
     "BOOK_ANY" -> "Book Any"
     "SUV_PLUS" -> "XL Plus"
+    "AMBULANCE_TAXI" -> "Non-AC" <> "\x00B7" <> "O̶₂"
+    "AMBULANCE_TAXI_OXY" -> "Non-AC" <> "\x00B7" <> "O₂"
+    "AMBULANCE_AC" -> "AC" <> "\x00B7" <> "O̶₂"
+    "AMBULANCE_AC_OXY" -> "AC" <> "\x00B7" <> "O₂"
+    "AMBULANCE_VENTILATOR" -> "Ventilator"
     _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails
+      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails && (not $ config.vehicleVariant `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"])
       isBookAny = config.vehicleVariant == "BOOK_ANY"
   in
   linearLayout
@@ -308,7 +313,7 @@ priceDetailsView push config =
     , padding $ PaddingLeft 8
     , clickable isActiveIndex
     , afterRender push (const $ NoAction config)
-    , onClick push $ case enableRateCard of
+    , onClick push $ case  enableRateCard of
                           false -> const $ NoAction config
                           true  -> const $ ShowRateCard config
     , accessibility DISABLE
@@ -410,7 +415,7 @@ capacityView push config =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    ][ vehicleInfoView "ic_user_filled" config.capacity
+    ][ if config.vehicleVariant `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] then textView [] else vehicleInfoView "ic_user_filled" config.capacity
      , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
      ]
 
@@ -446,6 +451,7 @@ descriptionView description vehicleVariant airConditioned =
         , width $ V 3
         , height $ V 3
         , margin $ Margin 2 2 0 0
+        , visibility $ boolToVisibility $ not $ vehicleVariant `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
         ]
      , imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac"

@@ -1460,3 +1460,11 @@ getBN stringKey =
         WHERE_ARE_YOU_GOING -> "আপনি কোথায় যাচ্ছেন?"
         TAP_TO_FOLLOW -> "অনুসরণ করতে আলতো চাপুন"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " আপনার সাথে একটি রাইড শেয়ার করেছে৷ অনুসরণ করতে আলতো চাপুন" 
+        
+        A_C -> "সম্মত এবং চালিয়ে যান"
+        NO_OXYGEN -> "অক্সিজেন নেই"
+        OXYGEN -> "অক্সিজেন"
+        VENTILATOR -> "ভেন্টিলেটর"
+        AMBULANCE_ -> "অ্যাম্বুলেন্স"
+        UNCOMFORTABLE_AMBULANCE -> "অস্বস্তিকর অ্যাম্বুলেন্স"
+        CLEAN_AMBULANCE -> "পরিষ্কার অ্যাম্বুলেন্স"

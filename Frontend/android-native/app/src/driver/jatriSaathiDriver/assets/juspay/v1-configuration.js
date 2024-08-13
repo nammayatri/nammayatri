@@ -398,10 +398,14 @@ window.getMerchantConfig = function () {
            },
            "auto" : {
              "freeSeconds" : 180,
-             "perMinCharges" : 1.50
+             "perMinCharges" : 2.00
            },
            "bike" : {
              "freeSeconds" : 180,
+             "perMinCharges" : 2.0
+           },
+           "ambulance" : {
+             "freeSeconds" : 480,
              "perMinCharges" : 2.0
            }
          },
@@ -416,6 +420,10 @@ window.getMerchantConfig = function () {
         },
         "bike" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
           "perMinCharges" : 2.0
         }
       },
@@ -494,10 +502,14 @@ window.getMerchantConfig = function () {
         },
         "auto" : {
           "freeSeconds" : 180,
-          "perMinCharges" : 1.50
+          "perMinCharges" : 2.00
         },
         "bike" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
           "perMinCharges" : 2.0
         }
       },
@@ -513,6 +525,10 @@ window.getMerchantConfig = function () {
         },
         "bike" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
           "perMinCharges" : 2.0
         }
       },
@@ -588,10 +604,14 @@ window.getMerchantConfig = function () {
         },
         "auto" : {
           "freeSeconds" : 180,
-          "perMinCharges" : 1.50
+          "perMinCharges" : 2.00
         },
         "bike" : {
           "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
           "perMinCharges" : 1.0
         }
       },
@@ -608,6 +628,10 @@ window.getMerchantConfig = function () {
         },
         "bike" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
           "perMinCharges" : 2.0
         }
       },

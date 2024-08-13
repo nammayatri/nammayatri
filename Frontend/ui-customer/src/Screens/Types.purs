@@ -33,13 +33,13 @@ import Data.Map (Map)
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Domain.Payments as PP
-import Foreign (Foreign)
+import Foreign (Foreign,unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
 import JBridge (Location)
 import Language.Types (STR(..))
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show,($))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
@@ -52,8 +52,10 @@ import JBridge (Location)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
+import Services.API (DeadKmFare)
 import Services.API as API
-
+import Control.Monad.Except (runExcept, except)
+import Data.Either (Either(..))
 type Contacts = {
   name :: String,
   number :: String
@@ -482,15 +484,15 @@ type IndividualRideCardState =
   , estimatedFare :: Int
   , showDestination :: String
   , rideScheduledTime :: String
+  , isAirConditioned :: Maybe Boolean
   }
 
-
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
-
+instance encodeVehicleVariant :: Encode VehicleVariant where encode = defaultEncode
 type ItemState =
   {
     date :: PropValue,
@@ -518,6 +520,7 @@ type ItemState =
     showVariantImage :: PropValue,
     showRepeatRide :: PropValue,
     showDestination :: PropValue
+    -- isAirConditioned :: PropValue
   }
 
 -- ################################################ PermissionScreenState ##################################################
@@ -956,6 +959,9 @@ type HomeScreenStateProps =
   , isOtpRideFlow :: Boolean
   , isShakeEnabled :: Boolean
   , editedPickUpLocation :: EditedLocation
+  , bookAmbulanceModal :: Boolean
+  , firstTimeAmbulanceSearch :: Boolean
+  , types_ :: Maybe String
   }
 
 type EditedLocation = {
@@ -1356,6 +1362,7 @@ type DriverInfoCard =
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
   , hasToll :: Boolean
+  , isAirConditioned :: Maybe Boolean
   }
 
 type RatingCard =
@@ -2751,7 +2758,7 @@ type DateTimeConfig = {
 
 ----------------------------------------------------------------------
 
-data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | AMBULANCE
 
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow

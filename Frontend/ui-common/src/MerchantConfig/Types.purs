@@ -95,6 +95,13 @@ type Referral = {
   , driverAppId :: String
 }
 
+type WaitingChargesConfig = {
+  cab :: ChargesEntity,
+  auto :: ChargesEntity,
+  bike :: ChargesEntity,
+  ambulance :: ChargesEntity
+}
+
 type ChargesEntity = {
   freeSeconds :: Int,
   perMinCharges :: Number

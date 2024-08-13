@@ -146,7 +146,7 @@ type SubscriptionConfigVariantLevelEntity = {
   
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | AmbulanceBooking | SafetyExplaination
 
 derive instance genericRemoteAC :: Generic RemoteAC _
 instance decodeRemoteAC :: Decode RemoteAC where 

@@ -1049,7 +1049,7 @@ config =
   }
   , clientName : ""
   , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
-  , showProfileAadhaarPan : true -- Only for backward compatibility and testing in PROD environment
+  , showProfileAadhaarPan : true
 }
 
 registrationConfig :: RegistrationConfig
@@ -1079,7 +1079,11 @@ defWaitingChargesConfig = {
   bike : {
     freeSeconds : 180,
     perMinCharges : 1.50
-  }
+  },
+  ambulance : {
+    freeSeconds : 480,
+    perMinCharges : 2.0
+}
 }
 
 defRentalWaitingChargesConfig :: WaitingChargesConfig
@@ -1094,6 +1098,10 @@ defRentalWaitingChargesConfig = {
   },
   bike: {
     freeSeconds : 180,
+    perMinCharges : 1.5
+  },
+  ambulance: {
+    freeSeconds : 480,
     perMinCharges : 1.5
   }
 }
@@ -1159,6 +1167,10 @@ allCitiesDefaultCityConfig = {
     bike: {
       freeSeconds : 3,
       perMinCharges : 1.50
+    },
+    ambulance: {
+      freeSeconds : 480,
+      perMinCharges : 2.0
     }
   },
   rentalWaitingChargesConfig : {
@@ -1173,6 +1185,10 @@ allCitiesDefaultCityConfig = {
     bike: {
       freeSeconds : 180,
       perMinCharges : 1.5
+    },
+    ambulance: {
+      freeSeconds : 480,
+      perMinCharges : 2.0
     }
   },
   rateCardConfig : { showLearnMore : false, learnMoreVideoLink : "" },
@@ -1246,7 +1262,11 @@ ysDefaultCityConfig =
       , bike {
           freeSeconds = 180
         , perMinCharges = 2.0
-        }
+        },
+    ambulance {
+      freeSeconds = 480,
+      perMinCharges = 2.0
+    }
       }
     , rentalWaitingChargesConfig {
         cab {
@@ -1260,7 +1280,11 @@ ysDefaultCityConfig =
       , bike {
           freeSeconds = 180
         , perMinCharges = 2.0
-        }
+        },
+    ambulance {
+      freeSeconds = 480,
+      perMinCharges = 2.0
+    }
       }
     , enableHvSdk = true -- Hyperverge Integration Activation at launch
     , enableGullak = false

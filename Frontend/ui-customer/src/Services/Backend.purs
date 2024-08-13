@@ -285,13 +285,14 @@ searchLocationBT payload = do
                 BackT $ pure GoBack
 
 
-makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> Maybe AutoCompleteReqType -> String -> SearchLocationReq
-makeSearchLocationReq input lat lng language components geoCodeConfig autoCompleteType sessionToken = SearchLocationReq {
+makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> Maybe AutoCompleteReqType -> String -> Maybe String -> SearchLocationReq
+makeSearchLocationReq input lat lng language components geoCodeConfig autoCompleteType sessionToken types_ = SearchLocationReq {
     "input" : input,
     "location" : (show lat <> "," <> show lng),
     "radius" : geoCodeConfig.radius,
     "components" : components,
     "language" : language,
+    "types_" : types_,
     "strictbounds": if geoCodeConfig.strictBounds then Just true else Nothing,
     "origin" : LatLong {
             "lat" : lat,
@@ -1443,8 +1444,79 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                     "fareProductType" : "RENTAL"
                    }
 
-------------------------------------------------------------------------- Edit Location API -----------------------------------------------------------------------------
+makeAmbulanceSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
+makeAmbulanceSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = 
+    let appConfig = CP.getAppConfig CP.appConfig
+    in  SearchReq 
+        { "contents" : AmbulanceSearchRequest 
+            ( OneWaySearchReq
+                { "startTime" : Just startTime
+                , "destination" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : dlat 
+                        , "lon" : dlong
+                        }
+                    , "address" : validateLocationAddress dlat dlong (LocationAddress desAdd)
+                    }
+                , "origin" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : slat 
+                        , "lon" : slong
+                        }
+                    , "address" : validateLocationAddress slat slong (LocationAddress srcAdd)
+                    }
+                , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                , "isSourceManuallyMoved" : Just sourceManuallyMoved
+                , "isDestinationManuallyMoved" : Just destManuallyMoved
+                , "sessionToken" : Just sessionToken
+                , "isSpecialLocation" : Just isSpecialLocation
+                , "quotesUnifiedFlow" : Just true
+                , "rideRequestAndRideOtpUnifiedFlow" : Just false
+                }
+            )
+        , "fareProductType" : "AMBULANCE"
+        }
+    where
+        validateLocationAddress :: Number -> Number -> LocationAddress -> LocationAddress
+        validateLocationAddress lat long address = 
+            let addressValidated = validateAddressHelper address
+            in 
+                if addressValidated
+                    then address 
+                    else fallbackAndFetchAgain lat long
 
+        validateAddressHelper :: LocationAddress -> Boolean
+        validateAddressHelper (LocationAddress address) = 
+            or
+                [ isNonEmpty address.area
+                , isNonEmpty address.state
+                , isNonEmpty address.country
+                , isNonEmpty address.building
+                , isNonEmpty address.door
+                , isNonEmpty address.street
+                , isNonEmpty address.city
+                , isNonEmpty address.areaCode
+                , isNonEmpty address.ward
+                , isNonEmpty address.placeId
+                ]
+        
+        fallbackAndFetchAgain :: Number -> Number -> LocationAddress
+        fallbackAndFetchAgain lat long = 
+            let addressFetched = runFn2 JB.getLocationNameV2 lat long
+            in 
+                if addressFetched /= "NO_LOCATION_FOUND" then
+                    LocationAddress $ Constants.encodeAddress addressFetched [] Nothing lat long
+                else do
+                    let calNearbyLocation = MP.calculateNearbyLocation lat long
+                        nearbyAddressFetched = runFn2 JB.getLocationNameV2 lat long
+                    if nearbyAddressFetched /= "NO_LOCATION_FOUND" then
+                        LocationAddress $ Constants.encodeAddress nearbyAddressFetched [] Nothing lat long
+                    else
+                        LocationAddress $ Constants.encodeAddress (getValueToLocalStore CUSTOMER_LOCATION) [] Nothing lat long
+
+        isNonEmpty :: Maybe String -> Boolean
+        isNonEmpty = maybe false (\s -> not $ DS.null s)
+------------------------------------------------------------------------ Edit Destination -----------------------------------------------------------------------------
 makeEditLocationRequest :: String -> Maybe SearchReqLocation -> Maybe SearchReqLocation -> EditLocationRequest
 makeEditLocationRequest rideId srcAddress destAddress =
     EditLocationRequest rideId $ makeEditLocationReq srcAddress destAddress

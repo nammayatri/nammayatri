@@ -81,6 +81,7 @@ type AppConfigCustomer a =
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
+  , ambulanceConfig :: GeoCodeConfig
   | a
   }
 
@@ -395,7 +396,12 @@ type VariantConfig = {
   taxiPlus :: VariantInfo,
   bookAny :: VariantInfo,
   bike :: VariantInfo,
-  suvPlus :: VariantInfo
+  suvPlus :: VariantInfo,
+  ambulanceTaxi :: VariantInfo,
+  ambulanceTaxiOxy :: VariantInfo,
+  ambulanceAc :: VariantInfo,
+  ambulanceAcOxy :: VariantInfo,
+  ambulanceVentilator :: VariantInfo
 }
 
 type VariantInfo = {
@@ -474,7 +480,8 @@ type AcPopupConfig = {
 type WaitingChargeConfig = {
   auto :: WaitingCharge,
   cabs :: WaitingCharge,
-  bike :: WaitingCharge
+  bike :: WaitingCharge,
+  ambulance :: WaitingCharge
 }
 
 type WaitingCharge = {

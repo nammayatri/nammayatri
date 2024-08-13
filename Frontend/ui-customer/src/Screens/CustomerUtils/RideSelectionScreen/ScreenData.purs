@@ -167,4 +167,5 @@ dummyIndividualCard = {
   , estimatedFare : 0
   , showDestination : ""
   , rideScheduledTime : ""
+  , isAirConditioned : Nothing
 }
