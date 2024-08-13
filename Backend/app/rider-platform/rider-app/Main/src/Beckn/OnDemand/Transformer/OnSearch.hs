@@ -71,7 +71,7 @@ buildInterCityQuoteInfo item quoteId_ currency = do
   let kmPerPlannedExtraHour = fromMaybe 0 (Beckn.OnDemand.Utils.OnSearch.getIncludedKmPerHr itemTags)
   let plannedPerKmRateOneWay = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRate itemTags currency)
   let plannedPerKmRateRoundTrip = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRateRoundTrip itemTags currency)
-  let perDayMaxHourAllowance = fromMaybe (Hours 0) (Beckn.OnDemand.Utils.OnSearch.getPerDayMaxHourAllowance itemTags)
+  let perDayMaxHourAllowance = fromMaybe (Minutes 0) (Beckn.OnDemand.Utils.OnSearch.getPerDayMaxHourAllowance itemTags)
   let deadKmFare = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getDeadKilometerFare itemTags currency)
   let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
   Just $ Domain.Action.Beckn.OnSearch.InterCityQuoteDetails {..}

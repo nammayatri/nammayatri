@@ -1,0 +1,1 @@
+UPDATE atlas_driver_offer_bpp.fare_policy_inter_city_details set per_day_max_hour_allowance = 840; -- Run immediately after release

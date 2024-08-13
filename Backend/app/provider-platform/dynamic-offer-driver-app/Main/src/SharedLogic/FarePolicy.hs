@@ -278,13 +278,13 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
           plannedPerKmRateRoundCaption = show Tags.PLANNED_PER_KM_CHARGE_ROUND_TRIP
           plannedPerKmRateRoundItem = mkBreakupItem plannedPerKmRateRoundCaption . mkValue $ show det.perKmRateRoundTrip
 
-          perDayMaxHourAllowanceCaption = show Tags.PER_DAY_MAX_HOUR_ALLOWANCE
-          perDayMaxHourAllowanceItem = mkBreakupItem perDayMaxHourAllowanceCaption . mkValue $ show det.perDayMaxHourAllowance
+          perDayMaxAllowanceInMinutesCaption = show Tags.PER_DAY_MAX_ALLOWANCE_IN_MINS
+          perDayMaxAllowanceInMinutesItem = mkBreakupItem perDayMaxAllowanceInMinutesCaption . mkValue $ show det.perDayMaxHourAllowance
 
           pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
-      [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
+      [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxAllowanceInMinutesItem]
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 

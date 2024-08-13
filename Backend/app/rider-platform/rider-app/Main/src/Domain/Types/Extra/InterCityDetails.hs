@@ -23,7 +23,7 @@ data InterCityDetailsAPIEntity = InterCityDetailsAPIEntity
     plannedPerKmRateRoundTrip :: PriceAPIEntity,
     kmPerPlannedExtraHour :: Distance,
     nightShiftInfo :: Maybe NightShiftInfoAPIEntity,
-    perDayMaxHourAllowance :: Hours,
+    perDayMaxHourAllowance :: Minutes,
     tollCharges :: Maybe PriceAPIEntity,
     roundTrip :: Maybe Bool
   }
