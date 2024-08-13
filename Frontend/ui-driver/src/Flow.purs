@@ -3752,7 +3752,7 @@ updateBannerAndPopupFlags = do
         )
   where 
     showReferralPopUp popUpType =
-      let showPopUp = (isYesterday $ getValueToLocalStore popUpType) || (getValueToLocalStore popUpType == "__failed") 
+      let showPopUp = (HU.isMoreThan24Hours $ getValueToLocalStore popUpType) || (getValueToLocalStore popUpType == "__failed")
       in showPopUp
 
 callGetPastDaysData :: AppConfig -> HomeScreenState -> FlowBT String ST.CoinEarnedPopupType

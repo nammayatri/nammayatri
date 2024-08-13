@@ -142,6 +142,7 @@ foreign import getPixels :: Fn1 String Number
 foreign import setValueToLocalStore :: Fn2 String String Unit
 foreign import getDeviceDefaultDensity ::Fn1 String Number
 foreign import isYesterday :: String -> Boolean
+foreign import isMoreThan24Hours :: String -> Boolean
 
 foreign import isToday :: String -> Boolean
 
