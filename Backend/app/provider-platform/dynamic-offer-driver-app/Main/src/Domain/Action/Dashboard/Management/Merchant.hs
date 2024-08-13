@@ -1026,7 +1026,11 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     minCancellationCharge :: Text,
     perMetreCancellationCharge :: Text,
     perMinuteCancellationCharge :: Text,
-    percentageOfRideFareToBeCharged :: Text
+    percentageOfRideFareToBeCharged :: Text,
+    platformFeeChargeType :: Text,
+    platformFeeCharge :: Text,
+    platformFeeCgst :: Text,
+    platformFeeSgst :: Text
   }
   deriving (Show)
 
@@ -1076,6 +1080,10 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "per_metre_cancellation_charge"
       <*> r .: "per_minute_cancellation_charge"
       <*> r .: "percentage_of_ride_fare_to_be_charged"
+      <*> r .: "platform_fee_charge_type"
+      <*> r .: "platform_fee_charge"
+      <*> r .: "platform_fee_cgst"
+      <*> r .: "platform_fee_sgst"
 
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
@@ -1112,6 +1120,9 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
     cleanCSVField idx fieldValue fieldName =
       cleanField fieldValue & fromMaybeM (InvalidRequest $ "Invalid " <> fieldName <> ": " <> show fieldValue <> " at row: " <> show idx)
 
+    cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
+    cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
+
     groupFarePolices :: [(Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)] -> [[(Context.City, DVST.ServiceTierType, DTC.TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)]]
     groupFarePolices = DL.groupBy (\a b -> fst5 a == fst5 b) . DL.sortBy (compare `on` fst5)
       where
@@ -1145,6 +1156,21 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                               _ -> perExtraKmRateSections <> NE.fromList (concat remainingPerKmSections)
                       let perExtraKmRateSectionsDuplicateRemoved = NE.nubBy (\a b -> a.startDistance == b.startDistance) perExtraKmRateSections'
                       return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {perExtraKmRateSections = perExtraKmRateSectionsDuplicateRemoved, ..}
+                    FarePolicy.SlabsDetails FarePolicy.FPSlabsDetails {..} -> do
+                      remainingSlabs <-
+                        mapM
+                          ( \f ->
+                              case f.farePolicyDetails of
+                                FarePolicy.SlabsDetails details -> return $ NE.toList details.slabs
+                                _ -> throwError $ InvalidRequest "Please have same fare policy type for all fare policies of a area, service tier, trip category and time bound"
+                          )
+                          remainingfarePolicies
+                      let slabs' =
+                            case remainingSlabs of
+                              [] -> slabs
+                              _ -> slabs <> NE.fromList (concat remainingSlabs)
+                      let slabsDuplicateRemoved = NE.nubBy (\a b -> a.startDistance == b.startDistance) slabs'
+                      return $ FarePolicy.SlabsDetails FarePolicy.FPSlabsDetails {slabs = slabsDuplicateRemoved}
                     _ -> return farePolicyDetails
                 return $ FarePolicy.FarePolicy {id = newId, driverExtraFeeBounds = driverExtraFeeBoundsDuplicateRemoved, farePolicyDetails = farePolicyDetails', ..}
 
@@ -1233,7 +1259,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
       currency :: Currency <- readCSVField idx row.currency "Currency"
 
-      (freeWatingTime, waitingCharges, nightCharges) <- do
+      (freeWatingTime, waitingCharges, mbNightCharges) <- do
         freeWatingTime :: Minutes <- readCSVField idx row.freeWatingTime "Free Waiting Time"
         waitingCharge :: HighPrecMoney <- readCSVField idx row.waitingCharge "Waiting Charge"
         waitingChargeType <- cleanCSVField idx row.waitingChargeType "Waiting Charge Type"
@@ -1242,19 +1268,17 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                 "PerMinuteWaitingCharge" -> FarePolicy.PerMinuteWaitingCharge waitingCharge
                 "ConstantWaitingCharge" -> FarePolicy.ConstantWaitingCharge waitingCharge
                 _ -> FarePolicy.PerMinuteWaitingCharge waitingCharge
-        nightShiftChargeType <- cleanCSVField idx row.nightShiftChargeType "Night Shift Charge Type"
-        nightCharges <-
+        let nightShiftChargeType = cleanMaybeCSVField idx row.nightShiftChargeType "Night Shift Charge Type"
+        mbNightCharges <-
           case nightShiftChargeType of
-            "ProgressiveNightShiftCharge" -> do
+            Just "ProgressiveNightShiftCharge" -> do
               nightShiftCharge :: Float <- readCSVField idx row.nightShiftCharge "Night Shift Charge"
-              return $ FarePolicy.ProgressiveNightShiftCharge nightShiftCharge
-            "ConstantNightShiftCharge" -> do
+              return (Just $ FarePolicy.ProgressiveNightShiftCharge nightShiftCharge)
+            Just "ConstantNightShiftCharge" -> do
               nightShiftCharge :: HighPrecMoney <- readCSVField idx row.nightShiftCharge "Night Shift Charge"
-              return $ FarePolicy.ConstantNightShiftCharge nightShiftCharge
-            _ -> do
-              nightShiftCharge :: Float <- readCSVField idx row.nightShiftCharge "Night Shift Charge"
-              return $ FarePolicy.ProgressiveNightShiftCharge nightShiftCharge
-        return (freeWatingTime, waitingCharges, nightCharges)
+              return (Just $ FarePolicy.ConstantNightShiftCharge nightShiftCharge)
+            _ -> return Nothing
+        return (freeWatingTime, waitingCharges, mbNightCharges)
 
       -- TODO: Add support for insurance charge and card charges in csv file
       let perDistanceUnitInsuranceCharge = Nothing
@@ -1296,6 +1320,16 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             QCFP.create cancellationFarePolicy
             return (Just newId)
 
+      let mbPlatformFeeInfo = do
+            let platformFeeType :: Maybe Text = cleanMaybeCSVField idx row.platformFeeChargeType "Platform Fee Charge Type"
+                platformFeeCharge :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeCharge "Platform Fee Charge"
+                platformFeeCgst :: Maybe Double = readMaybeCSVField idx row.platformFeeCgst "Platform Fee CGST %"
+                platformFeeSgst :: Maybe Double = readMaybeCSVField idx row.platformFeeSgst "Platform Fee SGST %"
+            case (platformFeeType, platformFeeCharge, platformFeeCgst, platformFeeSgst) of
+              (Just "ProgressivePlatformFee", Just charge, Just cgstCharge, Just sgstCharge) -> Just $ FarePolicy.PlatformFeeInfo (FarePolicy.ProgressivePlatformFee charge) cgstCharge sgstCharge
+              (Just "ConstantPlatformFee", Just charge, Just cgstCharge, Just sgstCharge) -> Just $ FarePolicy.PlatformFeeInfo (FarePolicy.ConstantPlatformFee charge) cgstCharge sgstCharge
+              (_, _, _, _) -> Nothing
+
       farePolicyDetails <-
         case farePolicyType of
           FarePolicy.Progressive -> do
@@ -1313,7 +1347,18 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate}]
             -- TODO: Add support for per min rate sections in csv file
             let perMinRateSections = Nothing
-            return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = Just nightCharges, ..}
+            return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = mbNightCharges, ..}
+          FarePolicy.Slabs -> do
+            baseDistance :: Meters <- readCSVField idx row.baseDistance "Base Distance"
+            baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"
+            let waitingChargeInfo =
+                  Just
+                    FarePolicy.WaitingChargeInfo
+                      { waitingCharge = waitingCharges,
+                        freeWaitingTime = freeWatingTime
+                      }
+            let slabs = NE.fromList [FarePolicy.FPSlabsDetailsSlab {startDistance = baseDistance, nightShiftCharge = mbNightCharges, platformFeeInfo = mbPlatformFeeInfo, ..}]
+            return $ FarePolicy.SlabsDetails FarePolicy.FPSlabsDetails {slabs}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
 
       driverExtraFeeBounds <- do
