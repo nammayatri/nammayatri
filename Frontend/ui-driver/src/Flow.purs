@@ -3640,8 +3640,10 @@ updateInitialCleverTapUserProps  (GetDriverInfoResp getDriverInfoResp) = do
                     Just name -> " " <> name
                     Nothing -> ""
       name = getDriverInfoResp.firstName <> middleName <> lastName
+  config <- runEffectFn1 getAppConfigEff appConfig
   void $ pure $ setCleverTapUserProp [{key :"Name" , value :unsafeToForeign name}]
-  void $ pure $ getDriverInfoResp.mobileNumber >>= \mobileNumber -> void $ pure $ setCleverTapUserProp [{key : "Mobile_Number", value : unsafeToForeign $ "+91" <> mobileNumber}]
+  void $ pure $ getDriverInfoResp.mobileNumber >>= \mobileNumber -> void $ pure $ setCleverTapUserProp [{key : "Mobile_Number", value : unsafeToForeign $ config.defaultCountryCodeConfig.countryCode <> mobileNumber}]
+  void $ pure $ getDriverInfoResp.email >>= \email -> void $ pure $ setCleverTapUserProp [{key : "Email", value : unsafeToForeign $ email}]
   void $ pure $ getDriverInfoResp.referralCode >>= \referralCode -> void $ pure $ setCleverTapUserProp [{key : "Referral Code", value : unsafeToForeign referralCode}] 
 
 
