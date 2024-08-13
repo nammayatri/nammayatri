@@ -59,19 +59,38 @@ createMany = traverse_ createOne
 
 setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id SearchTry -> m ()
 setInactiveBySTId (Id searchTryId) = do
-  -- srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
-  -- mapM_ (\s -> void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]) srfds -- this will remove the key from redis
+  srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+  now <- getCurrentTime
+  mapM_
+    ( \s -> do
+        (personOS, merchantOpCityId) <- getDriverMobileType (Domain.driverId s)
+        transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing
+        isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
+        when isDriverValid do
+          void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]
+    )
+    srfds -- this will remove the key from redis
   updateWithKV
-    [Se.Set BeamSRFD.status Domain.Inactive]
+    [Se.Set BeamSRFD.status Domain.Inactive, Se.Set BeamSRFD.updatedAt (Just now)]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
 setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id SearchRequestForDriver] -> m ()
 setInactiveAndPulledByIds srdIds = do
-  -- srfd <- findAllWithKV [Se.And [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
-  -- mapM_ (\s -> void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]) srfd -- this will remove the key from redis
+  srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
+  now <- getCurrentTime
+  mapM_
+    ( \s -> do
+        (personOS, merchantOpCityId) <- getDriverMobileType (Domain.driverId s)
+        transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing
+        isDriverValid <- isDriverValidToCache (transporterConfig <&> TC.cachedDevicesOSForSearchRequest) personOS
+        when isDriverValid do
+          void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]
+    )
+    srfds -- this will remove the key from redis
   updateWithKV
     [ Se.Set BeamSRFD.status Domain.Inactive,
-      Se.Set BeamSRFD.response (Just Domain.Pulled)
+      Se.Set BeamSRFD.response (Just Domain.Pulled),
+      Se.Set BeamSRFD.updatedAt (Just now)
     ]
     [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds)]
 
