@@ -18,7 +18,7 @@ To build or develop the project, you need to install the following.
     ```
     - For this command to succeed, you should add yourself to the `trusted-users` list of `nix.conf` and then restart the Nix daemon using `sudo pkill nix-daemon`.
 1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
-1. Run `nix run nixpkgs#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅) or Amber (🟧)
+1. Run `nix --accept-flake-config run github:juspay/omnix health github:nammayatri/nammayatri` and make sure that everything is green (✅) or Amber (🟧)
 
 [^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.
 [^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time.
