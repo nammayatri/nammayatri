@@ -2992,7 +2992,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS
               routeType = if onUsRide then "LineString" else "DASH"
               specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
-                                      specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon onUsRide getPolylineAnimationConfig
+                                      specialLocationConfig destSpecialTagIcon sourceSpecialTagIcon false getPolylineAnimationConfig
                                     else
                                       specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
               mapRouteConfig = if onUsRide then specialLocationTag else specialLocationTag{dashUnit = 30, gapUnit = 20}
@@ -3097,7 +3097,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                         if locationResp.isInPath then do
                           let newPoints = { points : locationResp.points}
                               specialLocationTag =  if (any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) then
-                                                      specialLocationConfig "" sourceSpecialTagIcon onUsRide getPolylineAnimationConfig
+                                                      specialLocationConfig "" sourceSpecialTagIcon false getPolylineAnimationConfig
                                                     else
                                                       specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
                               mapRouteConfig = if onUsRide then specialLocationTag else specialLocationTag{dashUnit = 30, gapUnit = 20}

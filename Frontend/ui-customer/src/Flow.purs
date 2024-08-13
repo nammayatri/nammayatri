@@ -1327,7 +1327,7 @@ homeScreenFlow = do
           srcMarkerConfig = defaultMarkerConfig { markerId = markers.srcMarker, pointerIcon = markers.srcMarker }
 
           destMarkerConfig = defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = markers.destMarker }
-        void $ Remote.drawMapRoute srcLat srcLon dstLat dstLon srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon true getPolylineAnimationConfig)
+        void $ Remote.drawMapRoute srcLat srcLon dstLat dstLon srcMarkerConfig destMarkerConfig "DRIVER_LOCATION_UPDATE" Nothing "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig)
         homeScreenFlow
       else if state.props.currentStage == HomeScreen then do
         void $ pure $ removeAllPolylines ""
