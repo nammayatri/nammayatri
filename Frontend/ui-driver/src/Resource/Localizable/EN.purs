@@ -1124,6 +1124,7 @@ getEN stringKey =
         PAID_BY_YATRI_POINTS -> "paid by Yatri Points"
         DISCOUNT_POINTS_SMALL -> "discount points"
         YATRI_POINTS_USAGE_POPUP _ -> "Yatri Points will be converted into discounts that you can avail against your subscription plan."
+        YATRI_POINTS_USAGE_SECONDARY points discountPoints -> "Every " <> points <> " Yatri points can be \nconverted to "<> discountPoints <>" discount point"
         USE_POINTS_NOW -> "Use Points Now"
         BUY_NOW -> "Buy Now"
         SELECT_DATE -> "Select Date"

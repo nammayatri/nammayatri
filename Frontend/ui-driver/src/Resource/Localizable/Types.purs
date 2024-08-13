@@ -1160,6 +1160,7 @@ data STR = LETS_GET_STARTED
         | PAID_BY_YATRI_POINTS
         | DISCOUNT_POINTS_SMALL
         | YATRI_POINTS_USAGE_POPUP String
+        | YATRI_POINTS_USAGE_SECONDARY String String
         | USE_POINTS_NOW
         | BUY_NOW
         | SELECT_DATE

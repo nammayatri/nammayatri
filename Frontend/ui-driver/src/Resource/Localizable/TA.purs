@@ -1126,6 +1126,7 @@ getTA stringKey =
         PAID_BY_YATRI_POINTS -> "யாத்திரி புள்ளிகள் வழங்கியது"
         DISCOUNT_POINTS_SMALL -> "தள்ளுபடிகள்"
         YATRI_POINTS_USAGE_POPUP _ -> "யாத்ரி புள்ளிகள் உங்கள் சந்தா திட்டத்திற்குப் பயன்படுத்தக்கூடிய தள்ளுபடிகளாகப் பரிமாறிக்கொள்ளலாம்."
+        YATRI_POINTS_USAGE_SECONDARY points discountPoints -> "ஒவ்வொரு " <> points <>" யாத்ரி \nபுள்ளிகளையும் "<> discountPoints <>" தள்ளுபடி புள்ளியாக மாற்றலாம்"
         USE_POINTS_NOW -> "இப்போது புள்ளிகள் பயன்படுத்துங்கள்"
         BUY_NOW -> "இப்போது வாங்குங்கள்"
         SELECT_DATE -> "தேதியைத் தேர்ந்தெடுக்கவும்"

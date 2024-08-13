@@ -1125,6 +1125,7 @@ getTE stringKey =
         PAID_BY_YATRI_POINTS -> "యాత్రి కాయిన్స్ ద్వారా చెల్లించబడింది"
         DISCOUNT_POINTS_SMALL -> "డిస్కౌంట్ పాయింట్లు"
         YATRI_POINTS_USAGE_POPUP _ -> "యాత్రి నాణేలు మీ సబ్‌స్క్రిప్షన్ ప్లాన్‌కు మీరు పొందగలిగే డిస్కౌంట్‌లుగా మార్చబడతాయి."
+        YATRI_POINTS_USAGE_SECONDARY points discountPoints -> "ప్రతి "<> points <>" యాత్రి \nపాయింట్లను "<> discountPoints <>" డిస్కౌంట్ పాయింట్ గా మార్చవచ్చు."
         USE_POINTS_NOW -> "ఇప్పుడే కాయిన్లను ఉపయోగించండి"
         BUY_NOW -> "ఇప్పుడే ఖరీదు చేయండి"
         SELECT_DATE -> "తేదీ ఎంచుకోండి"

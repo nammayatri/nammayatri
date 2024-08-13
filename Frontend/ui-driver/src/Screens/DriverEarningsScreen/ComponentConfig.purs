@@ -42,6 +42,7 @@ import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Data.Array as DA
+import Font.Style as FontStyle
 
 primaryButtonConfig :: Boolean -> PrimaryButtonConfig.Config
 primaryButtonConfig isActive =
@@ -180,7 +181,7 @@ getPopupConfig state = case state.props.popupType of
     , option2: getString GO_BACK
     , secondaryTextVisibility: false
     , option2Visibility: false
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_no_POINTS"
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_no_coins"
     }
   ST.COINS_EXPIRING_POPUP ->
     { optionButtonOrientation: "VERTICAL"
@@ -238,8 +239,8 @@ calendarCancelButtonConfig state =
     , alpha = if isJust state.props.calendarState.startDate then 1.0 else 0.5
     }
 
-coinsInfoCardConfig :: LazyCheck -> RequestInfoCard.Config
-coinsInfoCardConfig _ =
+coinsInfoCardConfig :: LazyCheck -> Int -> RequestInfoCard.Config
+coinsInfoCardConfig _ stepFunction =
   RequestInfoCard.config
     { title
       { text = getString WHAT_WILL_MY_POINTS_BE_CONVERTED_TO
@@ -249,6 +250,13 @@ coinsInfoCardConfig _ =
       { text = getString $ YATRI_POINTS_USAGE_POPUP "YATRI_POINTS_USAGE_POPUP"
       , padding = Padding 16 16 0 0
       , color = Color.black700
+      }
+    , secondaryText 
+      { text = getString $ YATRI_POINTS_USAGE_SECONDARY (show $ stepFunction) (show 1),
+        textStyle = FontStyle.Body1,
+        padding = Padding 16 16 26 0,
+        visibility = VISIBLE,
+        margin = MarginRight 116
       }
     , imageConfig
       { imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_coins_info"
