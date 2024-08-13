@@ -304,7 +304,7 @@ cardsListView push state =
       count = foldr (\item acc -> if item then acc + 1 else acc) 0 [state.data.cityConfig.showDriverReferral, isRefreshVisible , callSupportVisibility state]
   in scrollView
     [ width MATCH_PARENT
-    , height $ if EHC.os == "IOS" then V $ (JB.getHeightFromPercent (80 - (count * 10))) - EHC.safeMarginBottom else WRAP_CONTENT
+    , height $ if EHC.os == "IOS" then V $ (JB.getHeightFromPercent (70 - (count * 10))) - EHC.safeMarginBottom else WRAP_CONTENT
     , scrollBarY false
     , fillViewport true
     ][ linearLayout

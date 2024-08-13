@@ -128,15 +128,12 @@ eval (OAuthResponse status token name email) state =
 
 eval (KeyboardCallback event) state = case event of
   "onKeyboardOpen" ->
-    if state.data.config.enterMobileNumberScreen.emailAuth then do
-      continueWithCmd state
+    continueWithCmd state
         [ do 
           when (not state.props.loginWithMobileBtnClicked) $ do
             void $ scrollToEnd (getNewIDWithTag "OAuthScrollView") true
           pure NoAction
         ]
-    else
-      update state
   _ -> update state
 
 eval (EmailPBAC (PrimaryEditText.TextChanged id val)) state = do

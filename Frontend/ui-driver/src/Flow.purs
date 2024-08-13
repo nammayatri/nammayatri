@@ -38,7 +38,7 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
 import Data.Array as DA
-import Data.Either (Either(..), either, isRight)
+import Data.Either (Either(..), either, isRight, isLeft)
 import Data.Function (on)
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Functor (map)
@@ -4255,7 +4255,8 @@ documentcaptureScreenFlow = do
       void $ lift $ lift $ HelpersAPI.callApi $ UpdateSSNReq{ssn : state.data.ssn}
       onBoardingFlow false
     TA.UPDATE_SOCIAL_PROFILE state -> do 
-      void $ lift $ lift $ HelpersAPI.callApi $ Remote.mkSocialProfileUpdate state
+      eiResp <- lift $ lift $ HelpersAPI.callApi $ Remote.mkSocialProfileUpdate state
+      when (isLeft eiResp) $ do pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
       gState <- getState
       void $ getDriverInfoDataFromCache gState true
       onBoardingFlow false

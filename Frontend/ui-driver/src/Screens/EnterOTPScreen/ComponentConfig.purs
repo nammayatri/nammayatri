@@ -32,6 +32,7 @@ import Font.Size as FontSize
 import Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
 import Screens.Types as ST
+import Data.String as DS
 import Locale.Utils
 
 primaryButtonViewConfig :: ST.EnterOTPScreenState -> PrimaryButton.Config
@@ -80,8 +81,8 @@ primaryEditTextConfig state =
       , margin = (Margin 0 30 0 20)
       , topLabel
         { text = case (getLanguageLocale languageKey) of 
-                  "EN_US" -> (getString ENTER_OTP_SENT_TO) <> state.data.mobileNo
-                  _ -> state.data.mobileNo <> (getString ENTER_OTP_SENT_TO)
+                  "EN_US" -> (getString ENTER_OTP_SENT_TO) <> if DS.null state.data.mobileNo then state.data.email else state.data.config.defaultCountryCodeConfig.countryCode <> " " <> state.data.mobileNo
+                  _ -> (if DS.null state.data.mobileNo then state.data.email else state.data.config.defaultCountryCodeConfig.countryCode <> " " <> state.data.mobileNo) <> (getString ENTER_OTP_SENT_TO)
         , color = Color.black800
         , alpha = 0.8
         , accessibility = DISABLE

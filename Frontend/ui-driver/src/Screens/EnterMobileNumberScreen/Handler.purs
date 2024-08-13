@@ -27,6 +27,7 @@ import Types.App (FlowBT, GlobalState(..),ScreenType(..), ENTER_MOBILE_NUMBER_SC
 import Types.ModifyScreenState (modifyScreenState)
 import Data.Maybe (fromMaybe)
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
+import Screens.EnterOTPScreen.ScreenData as EnterOTPScreenData
 
 enterMobileNumber :: FlowBT String ENTER_MOBILE_NUMBER_SCREEN_OUTPUT
 enterMobileNumber = do
@@ -39,7 +40,7 @@ enterMobileNumber = do
       App.BackT $ pure App.GoBack
     GoToNextScreen updatedState -> do
       _ <- setValueToLocalStore MOBILE_NUMBER_KEY (if updatedState.data.mobileNumber /= "" then updatedState.data.mobileNumber else fromMaybe "" updatedState.data.email)
-      modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data {mobileNo = updatedState.data.mobileNumber, email = fromMaybe "" updatedState.data.email}})
+      modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → EnterOTPScreenData.initData { data {mobileNo = updatedState.data.mobileNumber, email = fromMaybe "" updatedState.data.email}})
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreenScreen → updatedState)
       App.BackT $ App.BackPoint <$> pure (GO_TO_ENTER_OTP updatedState)
     OAuthReq updatedState -> do
