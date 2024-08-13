@@ -2,6 +2,8 @@ imports:
   CreateNammaTagRequest: Lib.Yudhishthira.Types
   APISuccess: Kernel.Types.APISuccess
   ChakraQueriesAPIEntity: Lib.Yudhishthira.Types
+  AppDynamicLogicReq: Lib.Yudhishthira.Types
+  AppDynamicLogicResp: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -22,3 +24,10 @@ apis:
         type: ChakraQueriesAPIEntity
       response:
         type: APISuccess
+  - POST:
+      endpoint: /appDynamicLogic/verify
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      request:
+        type: AppDynamicLogicReq
+      response:
+        type: AppDynamicLogicResp

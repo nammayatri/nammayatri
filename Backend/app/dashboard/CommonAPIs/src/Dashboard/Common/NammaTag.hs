@@ -28,6 +28,7 @@ import Kernel.Storage.Esqueleto (derivePersistField)
 data NammaTagEndpoint
   = PostNammaTagTagCreateEndpoint
   | PostNammaTagQueryCreateEndpoint
+  | PostNammaTagAppDynamicLogicVerifyEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "NammaTagEndpoint"

@@ -6,9 +6,14 @@ module Lib.Yudhishthira.Types
     Source (..),
     SourceData,
     CreateNammaTagRequest (..),
+    LogicDomain (..),
+    AppDynamicLogicReq (..),
+    AppDynamicLogicResp (..),
   )
 where
 
+import Data.Aeson
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.HideSecrets
 import Lib.Yudhishthira.Types.Application as Reexport
@@ -51,3 +56,26 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
   { tags :: [NammaTagResponse]
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data LogicDomain
+  = POOLING
+  | FARE_POLICY
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnumAndList ''LogicDomain)
+
+data AppDynamicLogicReq = AppDynamicLogicReq
+  { rules :: [Value],
+    inputData :: Maybe Value,
+    domain :: LogicDomain
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data AppDynamicLogicResp = AppDynamicLogicResp
+  { result :: Value,
+    errors :: [String]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets AppDynamicLogicReq where
+  hideSecrets = identity

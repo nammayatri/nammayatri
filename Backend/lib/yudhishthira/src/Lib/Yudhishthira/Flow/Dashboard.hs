@@ -82,5 +82,5 @@ postQueryCreate queryRequest = do
       let repeatedFields = newQueryFields `DL.intersect` existingQueryFields
       unless (null repeatedFields) $ throwError (RepeatedQueryFields repeatedFields)
 
--- createDynamicLogic :: Text -> [Value] -> [a] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
--- createDynamicLogic domain logics data_ = throwError $ InternalError "Not implemented"
+verifyDynamicLogic :: (BeamFlow m r, ToJSON a) => [Value] -> a -> m Lib.Yudhishthira.Types.AppDynamicLogicResp
+verifyDynamicLogic logics data_ = runLogics logics data_

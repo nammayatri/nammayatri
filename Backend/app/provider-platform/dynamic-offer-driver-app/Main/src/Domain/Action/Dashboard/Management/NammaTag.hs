@@ -4,6 +4,7 @@
 module Domain.Action.Dashboard.Management.NammaTag
   ( postNammaTagTagCreate,
     postNammaTagQueryCreate,
+    postNammaTagAppDynamicLogicVerify,
   )
 where
 
@@ -24,3 +25,6 @@ postNammaTagTagCreate _merchantShortId _opCity req = do error "Logic yet to be d
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate _merchantShortId _opCity req = do error "Logic yet to be decided" req
+
+postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.AppDynamicLogicReq -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicResp)
+postNammaTagAppDynamicLogicVerify _merchantShortId _opCity req = do error "Logic yet to be decided" req

@@ -2,6 +2,7 @@ imports:
   Text: Data.Text
   TimeBound : Kernel.Types.TimeBound
   MerchantOperatingCity: Lib.Yudhishthira.Types
+  LogicDomain: Lib.Yudhishthira.Types
 
 AppDynamicLogic:
   tableName: app_dynamic_logic
@@ -9,7 +10,7 @@ AppDynamicLogic:
   fields:
     name: Text
     description: Text
-    domain: Text
+    domain: LogicDomain
     logic: Data.Aeson.Value
     merchantOperatingCityId: Id MerchantOperatingCity
     timeBounds: TimeBound|NoRelation

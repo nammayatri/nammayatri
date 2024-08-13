@@ -14,7 +14,7 @@ import qualified Tools.Beam.UtilsTH
 
 data AppDynamicLogic = AppDynamicLogic
   { description :: Data.Text.Text,
-    domain :: Data.Text.Text,
+    domain :: Lib.Yudhishthira.Types.LogicDomain,
     logic :: Data.Aeson.Value,
     merchantOperatingCityId :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity,
     name :: Data.Text.Text,
