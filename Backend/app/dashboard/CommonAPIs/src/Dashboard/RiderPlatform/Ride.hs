@@ -263,6 +263,14 @@ type TripRouteAPI =
     :> MandatoryQueryParam "lon" Double
     :> Get '[JSON] Maps.GetRoutesResp
 
+type PickupRouteAPI =
+  "pickup"
+    :> "route"
+    :> Capture "rideId" (Id DP.Ride)
+    :> MandatoryQueryParam "lat" Double
+    :> MandatoryQueryParam "lon" Double
+    :> Get '[JSON] Maps.GetRoutesResp
+
 ---------------------------------------------------------
 -- multiple ride sync -----------------------------
 

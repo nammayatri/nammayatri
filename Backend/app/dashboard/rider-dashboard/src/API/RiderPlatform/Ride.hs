@@ -47,6 +47,7 @@ type API =
            :<|> Common.ShareRideInfoByShortIdAPI
            :<|> RideListAPI
            :<|> Common.TripRouteAPI
+           :<|> Common.PickupRouteAPI
            :<|> RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> MultipleRideSyncAPI
@@ -79,6 +80,7 @@ handler merchantId city =
     :<|> shareRideInfoByShortId merchantId city
     :<|> rideList merchantId city
     :<|> tripRoute merchantId city
+    :<|> pickupRoute merchantId city
     :<|> rideInfo merchantId city
     :<|> multipleRideCancel merchantId city
     :<|> multipleRideSync merchantId city
@@ -149,6 +151,17 @@ tripRoute ::
 tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
+
+pickupRoute ::
+  ShortId DM.Merchant ->
+  City.City ->
+  Id Common.Ride ->
+  Double ->
+  Double ->
+  FlowHandler Maps.GetRoutesResp
+pickupRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+  Client.callRiderAppOperations checkedMerchantId opCity (.rides.pickupRoute) rideId pickupLocationLat pickupLocationLon
 
 rideInfo ::
   ShortId DM.Merchant ->
