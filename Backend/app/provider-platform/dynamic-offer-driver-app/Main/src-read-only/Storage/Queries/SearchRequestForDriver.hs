@@ -35,12 +35,10 @@ updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
 updateDriverResponse response status notificationSource id = do
-  _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.response response,
       Se.Set Beam.status status,
-      Se.Set Beam.notificationSource notificationSource,
-      Se.Set Beam.updatedAt (Just _now)
+      Se.Set Beam.notificationSource notificationSource
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -51,7 +49,6 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
 updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {..}) = do
-  _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.acceptanceRatio acceptanceRatio,
       Se.Set Beam.actualDistanceToPickup actualDistanceToPickup,
@@ -109,7 +106,6 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.status status,
       Se.Set Beam.straightLineDistanceToPickup straightLineDistanceToPickup,
       Se.Set Beam.totalRides (Kernel.Prelude.Just totalRides),
-      Se.Set Beam.updatedAt (Just _now),
       Se.Set Beam.vehicleAge vehicleAge,
       Se.Set Beam.vehicleServiceTier (Kernel.Prelude.Just vehicleServiceTier),
       Se.Set Beam.vehicleServiceTierName vehicleServiceTierName,

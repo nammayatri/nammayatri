@@ -61,20 +61,17 @@ setInactiveBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) 
 setInactiveBySTId (Id searchTryId) = do
   -- srfds <- findAllWithKV [Se.And [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
   -- mapM_ (\s -> void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]) srfds -- this will remove the key from redis
-  now <- getCurrentTime
   updateWithKV
-    [Se.Set BeamSRFD.status Domain.Inactive, Se.Set BeamSRFD.updatedAt (Just now)]
+    [Se.Set BeamSRFD.status Domain.Inactive]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
 setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id SearchRequestForDriver] -> m ()
 setInactiveAndPulledByIds srdIds = do
   -- srfd <- findAllWithKV [Se.And [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds), Se.Is BeamSRFD.status (Se.Eq Domain.Active)]]
   -- mapM_ (\s -> void $ Hedis.withCrossAppRedis $ Hedis.zRem (searchReqestForDriverkey $ getId $ Domain.driverId s) [getId $ Domain.id s]) srfd -- this will remove the key from redis
-  now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamSRFD.status Domain.Inactive,
-      Se.Set BeamSRFD.response (Just Domain.Pulled),
-      Se.Set BeamSRFD.updatedAt (Just now)
+      Se.Set BeamSRFD.response (Just Domain.Pulled)
     ]
     [Se.Is BeamSRFD.id (Se.In $ (.getId) <$> srdIds)]
 
