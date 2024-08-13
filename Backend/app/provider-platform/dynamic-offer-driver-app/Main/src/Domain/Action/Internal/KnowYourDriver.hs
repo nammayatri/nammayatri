@@ -20,6 +20,7 @@ import qualified Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.DriverModuleCompletion
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Rating as DRating
 import Domain.Types.Ride
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -31,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Error
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.DriverModuleCompletion as SQDMC
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -44,7 +46,8 @@ import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
 data DriverReview = DriverReview
-  { review :: Maybe Text,
+  { riderName :: Maybe Text,
+    review :: Maybe Text,
     feedBackPills :: [Text],
     rating :: Int,
     tripDate :: UTCTime
@@ -70,8 +73,8 @@ data DriverProfileRes = DriverProfileRes
     driverStats :: DriverStatSummary,
     languages :: [Text],
     aspirations :: [Text],
-    vehicleNum :: Text,
-    vechicleVariant :: DVeh.Variant,
+    vehicleNum :: Maybe Text,
+    vechicleVariant :: Maybe DVeh.Variant,
     vehicleTags :: [Text],
     profileImage :: Maybe Text,
     images :: [Text],
@@ -104,7 +107,7 @@ getDriverProfile :: DP.Person -> Flow DriverProfileRes
 getDriverProfile person = do
   driverProfile <- DPQ.findByPersonId person.id
   driverStats <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
-  vehicle <- QVeh.findById person.id >>= fromMaybeM (DriverWithoutVehicle person.id.getId)
+  vehicle <- QVeh.findById person.id
   modules <- SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED >>= mapM (\driverModule -> QLmsModule.findById driverModule.moduleId)
   images <- maybe (pure []) (maybe (pure []) (getImages . map Id) . (.imageIds)) driverProfile
   profileImage <- ImageQuery.findByPersonIdImageTypeAndValidationStatus (person.id) DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
@@ -121,8 +124,8 @@ getDriverProfile person = do
         drivingSince = (.drivingSince) =<< driverProfile,
         driverStats = getDriverStatsSummary driverStats,
         aspirations = fromMaybe [] ((.aspirations) =<< driverProfile),
-        vehicleNum = vehicle.registrationNo,
-        vechicleVariant = vehicle.variant,
+        vehicleNum = (.registrationNo) <$> vehicle,
+        vechicleVariant = (.variant) <$> vehicle,
         vehicleTags = fromMaybe [] ((.vehicleTags) =<< driverProfile),
         images = images,
         profileImage = profileImage,
@@ -150,17 +153,19 @@ getDriverProfile person = do
 
     getTopFeedBackForDriver driverId = do
       ratings <- QRating.findTopRatingsForDriver driverId (Just 5)
-      partialRatings <- QFeedback.findFeedbackFromRatings (ratings <&> (.rideId)) >>= constructPartialRatings ratings
-      remRatings <- constructRemRatings ratings
+      ratingsWithDriverNames <- getBookingsAndRides ratings
+      partialRatings <- QFeedback.findFeedbackFromRatings (ratings <&> (.rideId)) >>= constructPartialRatings ratingsWithDriverNames
+      remRatings <- constructRemRatings ratingsWithDriverNames
       pure $ partialRatings <> remRatings
 
     constructPartialRatings ratings feedbacks =
       pure $ foldl (goFeedbacks feedbacks) [] ratings
 
-    goFeedbacks feedbacks fullRating rating =
+    goFeedbacks feedbacks fullRating (rating, driverName) =
       fullRating
         <> [ DriverReview
-               { review = rating.feedbackDetails,
+               { riderName = driverName,
+                 review = rating.feedbackDetails,
                  feedBackPills = filter (\feedback -> feedback.rideId == rating.rideId) feedbacks <&> (.badge), -- map () ratingFeedbacks,
                  rating = rating.ratingValue,
                  tripDate = rating.createdAt
@@ -178,10 +183,32 @@ getDriverProfile person = do
       lang -> lang
 
     constructRemRatings prevRatings = do
-      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> prevRatings) (Just 5)
+      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) (Just 5)
       ratings <- (mapM QRating.findRatingForRideIfPositive ((.rideId) <$> feedbacks)) <&> catMaybes
-      pure $ foldl (goFeedbacks feedbacks) [] ratings
+      ratingsWithDriverNames <- getBookingsAndRides ratings
+      pure $ foldl (goFeedbacks feedbacks) [] ratingsWithDriverNames
 
     extractFilePath url = case T.splitOn "filePath=" url of
       [_before, after] -> after
       _ -> T.empty
+
+    getBookingsAndRides :: [DRating.Rating] -> Flow [(DRating.Rating, Maybe Text)]
+    getBookingsAndRides ratings = do
+      rides <- QRide.findRidesFromDB ((.rideId) <$> ratings)
+      bookings <- QBooking.findBookingsFromDB (rides <&> (.bookingId))
+      let ratingBookingIds = constructRatingWithBookingId ratings rides
+      pure (constructRatingWithRiderName bookings ratingBookingIds)
+
+    constructRatingWithBookingId ratings rides =
+      foldl (mkRatingWithBookingId rides) [] ratings
+
+    constructRatingWithRiderName bookings ratings =
+      foldl (mkRatingWithRiderName bookings) [] ratings
+
+    mkRatingWithBookingId rides ratingWithBooking rating =
+      ratingWithBooking
+        <> [(rating, fromMaybe "" $ (find (\ride -> ride.id == rating.rideId) rides) <&> (.bookingId))]
+
+    mkRatingWithRiderName bookings ratingWithBooking (rating, bookingId) =
+      ratingWithBooking
+        <> [(rating, fromMaybe Nothing $ (find (\booking -> booking.id == bookingId) bookings) <&> (.riderName))]

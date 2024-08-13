@@ -5,6 +5,7 @@ module Domain.Action.UI.DriverProfileQuestions where
 
 import qualified API.Types.UI.DriverProfileQuestions
 import qualified AWS.S3 as S3
+import Data.Maybe (fromJust)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time.Calendar (diffDays)
@@ -78,17 +79,17 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
 
     ratingStat driverStats =
       let avgRating = divideMaybe driverStats.totalRatingScore driverStats.totalRatings
-       in if avgRating > Just 4.82
-            then ("I have an average rating of " <> T.pack (show $ avgRating) <> " and is among the top 10 percentile. ")
+       in if avgRating > Just 4.82 && isJust avgRating
+            then ("I have an average rating of " <> T.pack (show $ fromJust avgRating) <> " and is among the top 10 percentile. ")
             else ""
 
     cancellationStat driverStats =
       let cancRate = divideMaybe driverStats.ridesCancelled driverStats.totalRidesAssigned
        in if (cancRate < Just 0.04 && isJust cancRate)
-            then (if ratingStat driverStats == "" then "" else "Also, ") <> "I have a very low cancellation rate of " <> (T.pack $ show cancRate) <> " that ranks among top 10 percentile. "
+            then (if ratingStat driverStats == "" then "" else "Also, ") <> "I have a very low cancellation rate of " <> (T.pack $ show $ fromJust cancRate) <> " that ranks among top 10 percentile. "
             else ""
 
-    genAspirations aspirations' = "I aspire to " <> T.toLower (T.intercalate ", " aspirations')
+    genAspirations aspirations' = "With the earnings from my trips, I aspire to " <> T.toLower (T.intercalate ", " aspirations')
 
     divideMaybe :: Maybe Int -> Maybe Int -> Maybe Double
     divideMaybe mNum mDenom = do
@@ -114,7 +115,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) =
           >>= \images ->
             pure $
               API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
-                { aspirations = fromMaybe [] res.vehicleTags,
+                { aspirations = fromMaybe [] res.aspirations,
                   hometown = res.hometown,
                   pledges = res.pledges,
                   drivingSince = res.drivingSince,
