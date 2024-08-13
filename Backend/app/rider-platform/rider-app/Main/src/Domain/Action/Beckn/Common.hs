@@ -251,12 +251,11 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
   mfuPattern <- fromMaybeM (MerchantDoesNotExist ("BuildRide merchant:" <> booking.merchantId.getId)) (fmap DMerchant.mediaFileUrlPattern mbMerchant)
   let fileUrl =
-        fmap
-          ( mfuPattern
-              & Text.replace "<DOMAIN>" "driver/photo"
-              & Text.replace "<FILE_PATH>"
-          )
-          driverImage
+        ( mfuPattern
+            & Text.replace "<DOMAIN>" "driver/photo"
+            & flip (Text.replace "<FILE_PATH>")
+        )
+          <$> driverImage
   return
     DRide.Ride
       { id = guid,
