@@ -91,7 +91,8 @@ data RideT f = RideT
     vehicleModel :: B.C f Kernel.Prelude.Text,
     vehicleNumber :: B.C f Kernel.Prelude.Text,
     vehicleServiceTierType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType),
-    vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant
+    vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,
+        tipAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

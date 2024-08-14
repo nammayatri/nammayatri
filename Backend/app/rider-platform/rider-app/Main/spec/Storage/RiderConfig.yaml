@@ -38,6 +38,8 @@ RiderConfig:
     kaptureConfig: IssueManagement.Common.KaptureConfig
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
     ivrTriggerDelay: NominalDiffTime
+    executePaymentDelay: NominalDiffTime
+    cancellationPaymentDelay: NominalDiffTime
     policeTriggerDelay: NominalDiffTime
     exotelAppIdMapping: Maybe ExotelMapping
     hardLimitForSafetyJobs: Int
@@ -60,12 +62,16 @@ RiderConfig:
     csAlertTriggerDelay: Maybe Seconds
     avgSpeedInKmPerHr: Maybe Kilometers
     payoutBatchDelay: Maybe Seconds
+    executePaymentDelay: Maybe Seconds
+    cancellationPaymentDelay: Maybe Seconds
 
   constraints:
     merchantOperatingCityId: PrimaryKey
 
   fromTType:
     ivrTriggerDelay: fromMaybe 3000 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerDelay)|E
+    executePaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> executePaymentDelay)|E
+    cancellationPaymentDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> cancellationPaymentDelay)|E
     policeTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay)|E
     hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
@@ -76,6 +82,8 @@ RiderConfig:
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    executePaymentDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    cancellationPaymentDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     policeTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
