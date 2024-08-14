@@ -69,7 +69,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.clientOsType (clientDevice <&> (.deviceType)),
       Se.Set Beam.clientOsVersion (clientDevice <&> (.deviceVersion)),
       Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
-      Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill),
+      Se.Set Beam.createdAt (Data.Time.utcToLocalTime Data.Time.utc createdAt),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerCancellationDues (Kernel.Prelude.Just customerCancellationDues),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
