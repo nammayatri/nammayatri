@@ -25,10 +25,10 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTypes
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as OnDemandEnums
 import Data.Maybe (listToMaybe)
 import Data.OpenApi hiding (email, info, name)
 import qualified Domain.Action.UI.Registration as DReg
-import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -326,6 +326,6 @@ shareTicketInfo ticketBookingId = do
       whenWithLockRedisWithoutUnlock statusTriggerLockKey bppStatusCallCfg.intervalInSec $ do
         bapConfig <-
           B.runInReplica $
-            CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) DBC.METRO
-              >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| DBC.METRO ||+ "")
+            CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) OnDemandEnums.METRO
+              >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| OnDemandEnums.METRO ||+ "")
         void $ CallFRFSBPP.callBPPStatus ticketBooking bapConfig city merchantId

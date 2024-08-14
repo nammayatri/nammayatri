@@ -15,11 +15,12 @@
 
 module Domain.Action.Beckn.Common where
 
+import qualified BecknV2.OnDemand.Enums as BecknEnums
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
-import qualified Domain.Types.BecknConfig as BecknConfig
 import qualified Domain.Types.Booking as BT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -33,7 +34,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
@@ -270,7 +271,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         chargeableDistance = Nothing,
         traveledDistance = Nothing,
         driverArrivalTime = Nothing,
-        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- fix later
+        vehicleVariant = DV.castServiceTierToVariant booking.vehicleServiceTierType, -- fix later
         vehicleServiceTierType = Just booking.vehicleServiceTierType,
         createdAt = now,
         updatedAt = now,
@@ -528,16 +529,16 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
   fork "update first ride info" $ do
-    mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+    mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
     case mbPersonFirstRideInfo of
       Just personFirstRideInfo -> do
-        QCP.updateHasTakenValidRideCount (personFirstRideInfo.rideCount + 1) booking.riderId $ Just (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+        QCP.updateHasTakenValidRideCount (personFirstRideInfo.rideCount + 1) booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
       Nothing -> do
-        totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (getListOfServiceTireTypes $ DVST.castServiceTierToCategory booking.vehicleServiceTierType)
-        personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (DVST.castServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
+        totalCount <- B.runInReplica $ QRB.findCountByRideIdStatusAndVehicleServiceTierType booking.riderId BT.COMPLETED (Utils.getListOfServiceTireTypes $ Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
+        personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
         QCP.create personClientInfo
         when (totalCount + 1 == 1) $ do
-          Notify.notifyFirstRideEvent booking.riderId (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+          Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
@@ -581,13 +582,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
             entityType = DFareBreakup.RIDE,
             ..
           }
-
-getListOfServiceTireTypes :: BecknConfig.VehicleCategory -> [DVST.VehicleServiceTierType]
-getListOfServiceTireTypes BecknConfig.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS]
-getListOfServiceTireTypes BecknConfig.AUTO_RICKSHAW = [DVST.AUTO_RICKSHAW]
-getListOfServiceTireTypes BecknConfig.MOTORCYCLE = [DVST.BIKE]
-getListOfServiceTireTypes BecknConfig.AMBULANCE = [DVST.AMBULANCE_TAXI, DVST.AMBULANCE_TAXI_OXY, DVST.AMBULANCE_AC, DVST.AMBULANCE_AC_OXY, DVST.AMBULANCE_VENTILATOR]
-getListOfServiceTireTypes BecknConfig.METRO = []
 
 buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakup.FareBreakupEntityType -> DFareBreakup -> m DFareBreakup.FareBreakup
 buildFareBreakupV2 entityId entityType DFareBreakup {..} = do
@@ -864,7 +858,7 @@ validateBookingCancelledReq BookingCancelledReq {..} = do
     isBookingCancellable booking =
       booking.status `elem` [DRB.NEW, DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.TRIP_ASSIGNED]
 
-buildPersonClientInfo :: MonadFlow m => Id DPerson.Person -> Maybe (Id DC.Client) -> Id DMOC.MerchantOperatingCity -> Id DMerchant.Merchant -> BecknConfig.VehicleCategory -> Int -> m DPCI.ClientPersonInfo
+buildPersonClientInfo :: MonadFlow m => Id DPerson.Person -> Maybe (Id DC.Client) -> Id DMOC.MerchantOperatingCity -> Id DMerchant.Merchant -> BecknEnums.VehicleCategory -> Int -> m DPCI.ClientPersonInfo
 buildPersonClientInfo personId clientId cityId merchantId vehicleCategory rideCount = do
   now <- getCurrentTime
   id <- generateGUID

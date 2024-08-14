@@ -5,9 +5,9 @@
 module Domain.Types.DriverPoolConfig where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -53,6 +53,6 @@ data DriverPoolConfig = DriverPoolConfig
     tripCategory :: Kernel.Prelude.Text,
     tripDistance :: Kernel.Types.Common.Meters,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

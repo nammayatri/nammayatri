@@ -4,7 +4,7 @@
 
 module Storage.CachedQueries.SurgePricing where
 
-import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.Common
 import qualified Domain.Types.SurgePricing
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -14,7 +14,7 @@ import qualified Storage.Queries.SurgePricing as Queries
 
 findByHexDayHourAndVehicleServiceTier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> Domain.Types.ServiceTierType.ServiceTierType -> m (Kernel.Prelude.Maybe Domain.Types.SurgePricing.SurgePricing))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Int -> Domain.Types.Common.ServiceTierType -> m (Kernel.Prelude.Maybe Domain.Types.SurgePricing.SurgePricing))
 findByHexDayHourAndVehicleServiceTier sourceHex dayOfWeek hourOfDay vehicleServiceTier = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ "driverOfferCachedQueries:SurgePricing:" <> ":SourceHex-" <> show sourceHex <> ":DayOfWeek-" <> show dayOfWeek <> ":HourOfDay-" <> show hourOfDay <> ":VehicleServiceTier-" <> show vehicleServiceTier)
     >>= ( \case

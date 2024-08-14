@@ -16,7 +16,7 @@
 module Storage.Queries.Quote where
 
 import qualified Data.Time as T
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
 import Domain.Types.Quote
 import Kernel.Beam.Functions
 import Kernel.Prelude

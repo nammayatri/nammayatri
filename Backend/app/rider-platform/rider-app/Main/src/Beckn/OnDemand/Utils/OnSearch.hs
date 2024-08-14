@@ -25,7 +25,7 @@ import qualified Data.Text as T
 import Data.Time (TimeOfDay (..))
 import Domain.Action.Beckn.OnSearch as OnSearch
 import Domain.Types.Estimate as Estimate
-import Domain.Types.VehicleServiceTier as DVST
+import Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
@@ -79,7 +79,7 @@ isValidItem fulfillments item =
   let fulfId = item.itemFulfillmentIds >>= listToMaybe
    in any (\f -> f.fulfillmentId == fulfId) fulfillments
 
-getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
+getServiceTierType :: Spec.Item -> Maybe DVST.ServiceTierType
 getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)
 
 getServiceTierName :: Spec.Item -> Maybe Text

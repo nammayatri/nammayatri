@@ -7,13 +7,13 @@ module Domain.Action.UI.FareCalculator where
 import qualified API.Types.UI.FareCalculator
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Action.Beckn.Search as DBS
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Environment
 import EulerHS.Prelude hiding (id, map)
 import qualified Kernel.External.Maps.Types

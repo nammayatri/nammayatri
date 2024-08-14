@@ -2,7 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   PlanBaseAmount: Domain.Types.Extra.Plan
-  Variant: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
 
 Plan:
   tableName: plan
@@ -53,7 +53,7 @@ Plan:
     merchantOpCityId : Id MerchantOperatingCity
     basedOnEntity : BasedOnEntity
     serviceName : ServiceNames
-    vehicleVariant : Maybe Variant
+    vehicleVariant : Maybe VehicleVariant|NoRelation
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>

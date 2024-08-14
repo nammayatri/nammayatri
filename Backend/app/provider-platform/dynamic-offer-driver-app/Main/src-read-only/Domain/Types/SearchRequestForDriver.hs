@@ -5,6 +5,7 @@
 module Domain.Types.SearchRequestForDriver where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Merchant
@@ -12,8 +13,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchTry
-import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -73,11 +73,11 @@ data SearchRequestForDriver = SearchRequestForDriver
     totalRides :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleVariant :: Domain.Types.Vehicle.Variant
+    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data DriverSearchRequestStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -85,8 +85,8 @@ data NotificationSource = FCM | GRPC deriving (Eq, Ord, Show, Read, Generic, ToJ
 
 data SearchRequestForDriverResponse = Accept | Reject | Pulled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverSearchRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverSearchRequestStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NotificationSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''NotificationSource))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestForDriverResponse)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestForDriverResponse))

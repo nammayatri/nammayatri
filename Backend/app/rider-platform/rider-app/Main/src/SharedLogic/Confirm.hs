@@ -29,10 +29,8 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalDetails as DRental
 import qualified Domain.Types.SearchRequest as DSReq
-import qualified Domain.Types.VehicleServiceTier as DVST
-import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Interface as Payment
@@ -74,8 +72,8 @@ data DConfirmRes = DConfirmRes
     itemId :: Text,
     fromLoc :: DL.Location,
     toLoc :: Maybe DL.Location,
-    vehicleVariant :: VehicleVariant,
-    quoteDetails :: ConfirmQuoteDetails,
+    vehicleVariant :: DV.VehicleVariant,
+    bppQuoteId :: Text,
     booking :: DRB.Booking,
     riderPhone :: Maybe Text,
     riderName :: Maybe Text,
@@ -85,15 +83,6 @@ data DConfirmRes = DConfirmRes
     maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
-  deriving (Show, Generic)
-
-data ConfirmQuoteDetails
-  = ConfirmOneWayDetails
-  | ConfirmInterCityDetails Text
-  | ConfirmRentalDetails Text
-  | ConfirmAutoDetails Text
-  | ConfirmOneWaySpecialZoneDetails Text
-  | ConfirmAmbulanceDetails Text
   deriving (Show, Generic)
 
 tryInitTriggerLock :: (Redis.HedisFlow m r) => Id DSReq.SearchRequest -> m Bool
@@ -118,14 +107,7 @@ confirm ::
 confirm DConfirmReq {..} = do
   now <- getCurrentTime
   when (quote.validTill < now) $ throwError (InvalidRequest $ "Quote expired " <> show quote.id) -- init validation check
-  fulfillmentId <-
-    case quote.quoteDetails of
-      DQuote.OneWayDetails _ -> pure Nothing
-      DQuote.AmbulanceDetails driverOffer -> getBPPQuoteId driverOffer now
-      DQuote.RentalDetails rentalDetails -> return $ Just rentalDetails.id.getId
-      DQuote.DriverOfferDetails driverOffer -> getBPPQuoteId driverOffer now
-      DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
-      DQuote.InterCityDetails details -> pure (Just details.id.getId)
+  bppQuoteId <- getBppQuoteId now quote.quoteDetails
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
@@ -149,7 +131,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
+  booking <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhone <-
@@ -158,9 +140,8 @@ confirm DConfirmReq {..} = do
       else pure . Just $ prependZero booking.primaryExophone
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
-  details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
   void $ QRideB.createBooking booking
-  void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails)}
+  void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
   return $
     DConfirmRes
@@ -170,8 +151,8 @@ confirm DConfirmReq {..} = do
         itemId = booking.bppEstimateId,
         fromLoc = fromLocation,
         toLoc = mbToLocation,
-        vehicleVariant = DVST.castServiceTierToVariant quote.vehicleServiceTierType,
-        quoteDetails = details,
+        vehicleVariant = DV.castServiceTierToVariant quote.vehicleServiceTierType,
+        bppQuoteId = bppQuoteId,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = Nothing, -- can be removed later
@@ -181,18 +162,20 @@ confirm DConfirmReq {..} = do
     prependZero :: Text -> Text
     prependZero str = "0" <> str
 
-    mkConfirmQuoteDetails quoteDetails fulfillmentId = do
-      case quoteDetails of
-        DQuote.OneWayDetails _ -> pure ConfirmOneWayDetails
-        DQuote.AmbulanceDetails _ -> do
-          bppQuoteId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
-          pure $ ConfirmAmbulanceDetails bppQuoteId
-        DQuote.RentalDetails DRental.RentalDetails {id} -> pure $ ConfirmRentalDetails id.getId
-        DQuote.InterCityDetails details -> pure $ ConfirmInterCityDetails details.id.getId
-        DQuote.DriverOfferDetails _ -> do
-          bppQuoteId <- fulfillmentId & fromMaybeM (InternalError "FulfillmentId not found in Init. this error should never come.")
-          pure $ ConfirmAutoDetails bppQuoteId
-        DQuote.OneWaySpecialZoneDetails details -> pure $ ConfirmOneWaySpecialZoneDetails details.quoteId
+    getBppQuoteId now = \case
+      DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
+      DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
+      DQuote.RentalDetails rentalDetails -> pure rentalDetails.id.getId
+      DQuote.DriverOfferDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
+      DQuote.OneWaySpecialZoneDetails details -> pure details.quoteId
+      DQuote.InterCityDetails details -> pure details.id.getId
+
+    getBppQuoteIdFromDriverOffer driverOffer now = do
+      estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
+      when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
+      when (driverOffer.validTill < now) $ throwError $ QuoteExpired quote.id.getId
+      pure driverOffer.bppQuoteId
+
     checkOverlap :: (ServiceFlow m r) => Int -> Int -> UTCTime -> Maybe DL.Location -> DM.Merchant -> DRB.Booking -> m Bool
     checkOverlap estimatedDistance estimatedDuration curBookingStartTime currBookingToLocation merchant booking = do
       destToScheduledPickup <- calculateDistanceToScheduledPickup currBookingToLocation booking
@@ -218,18 +201,13 @@ confirm DConfirmReq {..} = do
                   distanceUnit = Meter
                 }
           return $ distance.distance.getMeters
-    getBPPQuoteId driverOffer now = do
-      estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
-      when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
-      when (driverOffer.validTill < now) $ throwError $ QuoteExpired quote.id.getId
-      pure (Just driverOffer.bppQuoteId)
 
 buildBooking ::
   ( MonadFlow m,
     HasFlowEnv m r '["version" ::: DeploymentVersion]
   ) =>
   DSReq.SearchRequest ->
-  Maybe Text ->
+  Text ->
   DQuote.Quote ->
   DL.Location ->
   Maybe DL.Location ->
@@ -239,7 +217,7 @@ buildBooking ::
   Maybe Payment.PaymentMethodId ->
   Bool ->
   m DRB.Booking
-buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
+buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   deploymentVersion <- asks (.version)
@@ -249,7 +227,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         clientId = searchRequest.clientId,
         transactionId = searchRequest.id.getId,
         bppBookingId = Nothing,
-        fulfillmentId = mbFulfillmentId,
+        fulfillmentId = Just bppQuoteId,
         quoteId = Just quote.id,
         paymentMethodId,
         paymentUrl = Nothing,
@@ -293,7 +271,8 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         paymentStatus = Nothing,
         distanceUnit = searchRequest.distanceUnit,
         specialLocationName = quote.specialLocationName,
-        isDashboardRequest = searchRequest.isDashboardRequest
+        isDashboardRequest = searchRequest.isDashboardRequest,
+        tripCategory = quote.tripCategory
       }
   where
     buildBookingDetails = case quote.quoteDetails of

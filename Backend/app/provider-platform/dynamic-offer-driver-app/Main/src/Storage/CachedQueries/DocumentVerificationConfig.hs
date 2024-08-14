@@ -31,7 +31,7 @@ import Domain.Types.DocumentVerificationConfig as DTO
     SupportedVehicleClasses,
   )
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.Vehicle
+import Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -47,13 +47,13 @@ findAllByMerchantOpCityId id =
     Just a -> return a
     Nothing -> cacheDocumentVerificationConfigs id /=<< Queries.findAllByMerchantOpCityId Nothing Nothing id
 
-findByMerchantOpCityIdAndDocumentTypeAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> Category -> m (Maybe DTO.DocumentVerificationConfig)
+findByMerchantOpCityIdAndDocumentTypeAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> VehicleCategory -> m (Maybe DTO.DocumentVerificationConfig)
 findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType category = find (\config -> config.vehicleCategory == category && config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
 
 findByMerchantOpCityIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> m [DTO.DocumentVerificationConfig]
 findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType = filter (\config -> config.documentType == documentType) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Category -> m [DTO.DocumentVerificationConfig]
+findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m [DTO.DocumentVerificationConfig]
 findByMerchantOpCityIdAndCategory merchantOpCityId category = filter (\config -> config.vehicleCategory == category) <$> findAllByMerchantOpCityId merchantOpCityId
 
 cacheDocumentVerificationConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DTO.DocumentVerificationConfig] -> m ()

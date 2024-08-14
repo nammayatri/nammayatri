@@ -10,7 +10,7 @@ import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -34,7 +34,7 @@ data IdfyVerificationE e = IdfyVerification
     requestId :: Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Kernel.Prelude.Text,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Category,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
@@ -43,9 +43,9 @@ data IdfyVerificationE e = IdfyVerification
   }
   deriving (Generic)
 
-type IdfyVerification = IdfyVerificationE 'AsEncrypted
+type IdfyVerification = IdfyVerificationE ('AsEncrypted)
 
-type DecryptedIdfyVerification = IdfyVerificationE 'AsUnencrypted
+type DecryptedIdfyVerification = IdfyVerificationE ('AsUnencrypted)
 
 instance EncryptedItem IdfyVerification where
   type Unencrypted IdfyVerification = (DecryptedIdfyVerification, HashSalt)
@@ -115,4 +115,4 @@ instance EncryptedItem' IdfyVerification where
 
 data ImageExtractionValidation = Success | Skipped | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ImageExtractionValidation)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ImageExtractionValidation))

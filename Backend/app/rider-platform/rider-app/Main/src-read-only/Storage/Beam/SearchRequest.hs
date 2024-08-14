@@ -6,6 +6,7 @@
 module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.SearchRequest
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps

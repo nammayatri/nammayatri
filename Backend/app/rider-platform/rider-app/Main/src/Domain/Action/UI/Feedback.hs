@@ -28,7 +28,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import qualified Environment as App
 import Kernel.External.Encryption (decrypt)
@@ -70,7 +70,7 @@ data FeedbackRes = FeedbackRes
     city :: Context.City,
     issueId :: Maybe Text,
     vehicleVariant :: DVeh.VehicleVariant,
-    vehicleServiceTierType :: DVST.VehicleServiceTierType,
+    vehicleServiceTierType :: DVST.ServiceTierType,
     shouldFavDriver :: Maybe Bool,
     riderPhoneNum :: Maybe Text,
     isValueAddNP :: Bool
@@ -114,7 +114,7 @@ feedback request personId = do
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
         issueId = issueId',
-        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
+        vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
         vehicleServiceTierType = booking.vehicleServiceTierType,
         shouldFavDriver = request.shouldFavDriver,
         riderPhoneNum = unencryptedMobileNumber,

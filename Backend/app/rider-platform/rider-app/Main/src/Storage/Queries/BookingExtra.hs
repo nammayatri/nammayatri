@@ -2,6 +2,7 @@ module Storage.Queries.BookingExtra where
 
 import Control.Applicative
 import qualified Database.Beam as B
+import Domain.Types
 import Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
@@ -12,7 +13,6 @@ import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
-import Domain.Types.VehicleServiceTier
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
@@ -159,7 +159,7 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
 
   pure $ either (const 0) (\r -> if null r then 0 else head r) res
 
-findCountByRideIdStatusAndVehicleServiceTierType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> [VehicleServiceTierType] -> m Int
+findCountByRideIdStatusAndVehicleServiceTierType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> [ServiceTierType] -> m Int
 findCountByRideIdStatusAndVehicleServiceTierType (Id personId) status vehicleServiceTierType =
   findAllWithKV
     [ Se.And

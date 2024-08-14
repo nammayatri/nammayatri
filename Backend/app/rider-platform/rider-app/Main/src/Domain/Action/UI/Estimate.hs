@@ -18,7 +18,6 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
 import Domain.Types.BppDetails
 import Domain.Types.Estimate
-import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -113,7 +112,7 @@ mkEstimateAPIEntity Estimate {..} = do
         tollChargesInfo = mkTollChargesInfoAPIEntity <$> tollChargesInfo,
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
-        vehicleVariant = DVST.castServiceTierToVariant vehicleServiceTierType,
+        vehicleVariant = Vehicle.castServiceTierToVariant vehicleServiceTierType,
         ..
       }
   where

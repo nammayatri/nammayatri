@@ -1,10 +1,9 @@
 module Storage.Queries.Transformers.Booking where
 
 import qualified Data.Text as T
+import Domain.Types
 import qualified Domain.Types.Booking
 import qualified Domain.Types.BookingLocation as DBBL
-import qualified Domain.Types.Common
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Kernel.Prelude
@@ -17,15 +16,15 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Tools.Error
 
-getTripCategory :: (Domain.Types.Booking.BookingType -> Kernel.Prelude.Maybe Domain.Types.Common.TripCategory -> Domain.Types.Common.TripCategory)
+getTripCategory :: (Domain.Types.Booking.BookingType -> Kernel.Prelude.Maybe TripCategory -> TripCategory)
 getTripCategory _bookingType _tripCategory = case _tripCategory of
   Just cat -> cat
   Nothing -> do
     case _bookingType of
-      Domain.Types.Booking.NormalBooking -> DTC.OneWay DTC.OneWayOnDemandDynamicOffer
-      Domain.Types.Booking.SpecialZoneBooking -> DTC.OneWay DTC.OneWayRideOtp
+      Domain.Types.Booking.NormalBooking -> OneWay OneWayOnDemandDynamicOffer
+      Domain.Types.Booking.SpecialZoneBooking -> OneWay OneWayRideOtp
 
-fromAndToLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DLM.LocationMapping] -> Maybe Domain.Types.Common.TripCategory -> Text -> Maybe Text -> Maybe Text -> Text -> Maybe Text -> m (DL.Location, Maybe DL.Location)
+fromAndToLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DLM.LocationMapping] -> Maybe TripCategory -> Text -> Maybe Text -> Maybe Text -> Text -> Maybe Text -> m (DL.Location, Maybe DL.Location)
 fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId = do
   case (mappings, tripCategory) of
     ([], Nothing) -> do
@@ -49,12 +48,12 @@ fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerI
 
       return (fl, tl)
 
-getBookingTypeFromTripCategory :: Domain.Types.Common.TripCategory -> Domain.Types.Booking.BookingType
+getBookingTypeFromTripCategory :: TripCategory -> Domain.Types.Booking.BookingType
 getBookingTypeFromTripCategory tripCategory =
   case tripCategory of
-    DTC.OneWay DTC.OneWayRideOtp -> Domain.Types.Booking.SpecialZoneBooking
-    DTC.Rental DTC.RideOtp -> Domain.Types.Booking.SpecialZoneBooking
-    DTC.InterCity DTC.OneWayRideOtp _ -> Domain.Types.Booking.SpecialZoneBooking
+    OneWay OneWayRideOtp -> Domain.Types.Booking.SpecialZoneBooking
+    Rental RideOtp -> Domain.Types.Booking.SpecialZoneBooking
+    InterCity OneWayRideOtp _ -> Domain.Types.Booking.SpecialZoneBooking
     _ -> Domain.Types.Booking.NormalBooking
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

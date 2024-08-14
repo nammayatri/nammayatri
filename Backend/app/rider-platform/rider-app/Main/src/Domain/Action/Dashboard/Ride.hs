@@ -38,6 +38,7 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import Domain.Types.CancellationReason
+import Domain.Types.Common
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (Location (..))
 import Domain.Types.LocationAddress
@@ -46,7 +47,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Sos as DSos
-import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -147,6 +147,7 @@ buildShareRideInfo merchantId ride = do
         DB.InterCityDetails details -> Just details.distance
         _ -> Nothing
   sosDetails <- CQSos.findByRideId ride.id
+  let fareProductType = mkFareProductType booking.bookingDetails
   return $
     Common.ShareRideInfoRes
       { id = cast ride.id,
@@ -167,10 +168,11 @@ buildShareRideInfo merchantId ride = do
         fromLocation = mkCommonBookingLocation booking.fromLocation,
         toLocation = mbtoLocation,
         sosStatus = castSosStatus . (.status) <$> sosDetails,
-        vehicleVariant = castVehicleVariant ride.vehicleVariant,
+        vehicleVariant = ride.vehicleVariant,
         nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
         rideScheduledAt = booking.startTime,
-        fareProductType = mkFareProductType booking.bookingDetails
+        fareProductType = fareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+        tripCategory = getTripCategory booking.tripCategory fareProductType
       }
 
 getStopFromBookingDetails :: DTB.BookingDetails -> Maybe Common.Location
@@ -185,25 +187,6 @@ castSosStatus = \case
   DSos.NotResolved -> Common.NotResolved
   DSos.MockPending -> Common.MockPending
   DSos.MockResolved -> Common.MockResolved
-
-castVehicleVariant :: VehVar.VehicleVariant -> Common.Variant
-castVehicleVariant = \case
-  VehVar.SEDAN -> Common.SEDAN
-  VehVar.HATCHBACK -> Common.HATCHBACK
-  VehVar.SUV -> Common.SUV
-  VehVar.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
-  VehVar.TAXI -> Common.TAXI
-  VehVar.TAXI_PLUS -> Common.TAXI_PLUS
-  VehVar.PREMIUM_SEDAN -> Common.PREMIUM_SEDAN
-  VehVar.BLACK -> Common.BLACK
-  VehVar.BLACK_XL -> Common.BLACK_XL
-  VehVar.BIKE -> Common.BIKE
-  VehVar.AMBULANCE_TAXI -> Common.AMBULANCE_TAXI
-  VehVar.AMBULANCE_TAXI_OXY -> Common.AMBULANCE_TAXI_OXY
-  VehVar.AMBULANCE_AC -> Common.AMBULANCE_AC
-  VehVar.AMBULANCE_AC_OXY -> Common.AMBULANCE_AC_OXY
-  VehVar.AMBULANCE_VENTILATOR -> Common.AMBULANCE_VENTILATOR
-  VehVar.SUV_PLUS -> Common.SUV_PLUS
 
 ---------------------------------------------------------------------
 
@@ -242,6 +225,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
 buildRideListItem :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
+  let fareProductType = mkFareProductType bookingDetails
   pure
     Common.RideListItem
       { rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) ride.shortId,
@@ -254,7 +238,8 @@ buildRideListItem QRide.RideItem {..} = do
         vehicleNo = ride.vehicleNumber,
         endOtp = ride.endOtp,
         nextStopLocation = getStopFromBookingDetails bookingDetails,
-        fareProductType = mkFareProductType bookingDetails,
+        fareProductType = fareProductType,
+        tripCategory = getTripCategory tripCategory fareProductType,
         ..
       }
 
@@ -319,7 +304,8 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           classification = Ticket.CUSTOMER,
           nextStopLocation = detail.nextStopLocation,
           rideScheduledAt = detail.rideScheduledAt,
-          fareProductType = detail.fareProductType,
+          fareProductType = detail.fareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+          tripCategory = detail.tripCategory,
           endOtp = ride.endOtp
         }
 
@@ -361,6 +347,7 @@ rideInfo merchantId reqRideId = do
         _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  let fareProductType = mkFareProductType booking.bookingDetails
   pure
     Common.RideInfoRes
       { rideId = reqRideId,
@@ -376,7 +363,7 @@ rideInfo merchantId reqRideId = do
         driverRegisteredAt = ride.driverRegisteredAt,
         vehicleNo = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
-        vehicleVariant = castVehicleVariant ride.vehicleVariant,
+        vehicleVariant = ride.vehicleVariant,
         vehicleServiceTierName = show <$> ride.vehicleServiceTierType,
         rideBookingTime = booking.createdAt,
         actualDriverArrivalTime = ride.driverArrivalTime,
@@ -398,7 +385,8 @@ rideInfo merchantId reqRideId = do
         cancelledBy = cancelledBy,
         nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
         rideScheduledAt = booking.startTime,
-        fareProductType = mkFareProductType booking.bookingDetails,
+        fareProductType = fareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+        tripCategory = getTripCategory booking.tripCategory fareProductType,
         endOtp = ride.endOtp,
         estimateFareBP = map EstimateBP.transformEstimate' <$> estBreakup,
         merchantOperatingCityId = getId <$> ride.merchantOperatingCityId,
@@ -422,14 +410,14 @@ mkEntityType = \case
   DFareBreakup.RIDE -> Common.RIDE
   DFareBreakup.INITIAL_BOOKING -> Common.INITIAL_BOOKING
 
-mkFareProductType :: DTB.BookingDetails -> Common.FareProductType
+mkFareProductType :: DTB.BookingDetails -> FareProductType
 mkFareProductType bookingDetails = case bookingDetails of
-  DTB.OneWayDetails _ -> Common.ONE_WAY
-  DTB.RentalDetails _ -> Common.RENTAL
-  DTB.DriverOfferDetails _ -> Common.DRIVER_OFFER
-  DTB.OneWaySpecialZoneDetails _ -> Common.ONE_WAY_SPECIAL_ZONE
-  DTB.InterCityDetails _ -> Common.INTER_CITY
-  DTB.AmbulanceDetails _ -> Common.AMBULANCE_FLOW
+  DTB.OneWayDetails _ -> ONE_WAY
+  DTB.RentalDetails _ -> RENTAL
+  DTB.DriverOfferDetails _ -> DRIVER_OFFER
+  DTB.OneWaySpecialZoneDetails _ -> ONE_WAY_SPECIAL_ZONE
+  DTB.InterCityDetails _ -> INTER_CITY
+  DTB.AmbulanceDetails _ -> AMBULANCE
 
 timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
 timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1

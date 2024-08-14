@@ -8,8 +8,8 @@ import qualified Database.Beam as B
 import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Image
 import qualified Domain.Types.Merchant as Merchant
-import Domain.Types.Vehicle as Vehicle
 import Domain.Types.VehicleRegistrationCertificate
+import Domain.Types.VehicleVariant as Vehicle
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -62,7 +62,7 @@ findLastVehicleRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m 
 findLastVehicleRC certNumberHash = do
   findAllWithOptionsKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certNumberHash] (Se.Desc BeamVRC.fitnessExpiry) Nothing Nothing <&> listToMaybe
 
-updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.Variant -> Maybe Bool -> Maybe Bool -> m ()
+updateVehicleVariant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id VehicleRegistrationCertificate -> Maybe Vehicle.VehicleVariant -> Maybe Bool -> Maybe Bool -> m ()
 updateVehicleVariant (Id vehicleRegistrationCertificateId) variant reviewDone reviewRequired = do
   now <- getCurrentTime
   updateOneWithKV

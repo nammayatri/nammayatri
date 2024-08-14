@@ -20,9 +20,9 @@ where
 
 import qualified Beckn.OnDemand.Transformer.Search as Search
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.UI.Search as DSearch
-import Domain.Types.BecknConfig
 import EulerHS.Prelude hiding (state, (%~))
 import Kernel.Types.Common
 import Kernel.Types.Error

@@ -5,8 +5,8 @@ imports:
   MandatoryValue: Kernel.Types.Value
   OptionalValue: Kernel.Types.Value
   NominalDiffTime: Kernel.Prelude
-  Variant: Dashboard.Common
-  Category:  Dashboard.Common
+  VehicleVariant: Dashboard.Common
+  VehicleCategory:  Dashboard.Common
   FarePolicy:  Dashboard.Common
   SlidingWindowOptions: Kernel.Types.SlidingWindowCounters
   Area: Lib.Types.SpecialLocation
@@ -71,7 +71,7 @@ apis:
       query:
         - tripDistanceValue: HighPrecDistance
         - distanceUnit: DistanceUnit
-        - vehicleVariant: Variant
+        - vehicleVariant: VehicleVariant
         - tripCategory: Text
       request:
         type: DriverPoolConfigUpdateReq
@@ -88,7 +88,7 @@ apis:
       query:
         - tripDistanceValue: HighPrecDistance
         - distanceUnit: DistanceUnit
-        - vehiclevariant: Variant
+        - vehiclevariant: VehicleVariant
         - tripCategory: Text
       request:
         type: DriverPoolConfigCreateReq
@@ -114,7 +114,7 @@ apis:
       endpoint: /config/onboardingDocument/
       query:
         - documentType: DocumentType
-        - vehicleCategory: Category
+        - vehicleCategory: VehicleCategory
       auth:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG
       response:
@@ -125,7 +125,7 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_UPDATE
       mandatoryQuery:
         - documentType: DocumentType
-        - category: Category
+        - category: VehicleCategory
       request:
         type: DocumentVerificationConfigUpdateReq
       response:
@@ -136,7 +136,7 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_CREATE
       mandatoryQuery:
         - documentType: DocumentType
-        - category: Category
+        - category: VehicleCategory
       request:
         type: DocumentVerificationConfigCreateReq
       response:
@@ -451,7 +451,7 @@ types:
     - createdAt: UTCTime
     - updatedAt: UTCTime
   PoolSortingType:
-    - enum: "Intelligent, Random"
+    - enum: "Intelligent, Random, Tagged"
   DriverPoolConfigUpdateReq:
     - minRadiusOfSearch: Maybe (MandatoryValue Meters)
     - maxRadiusOfSearch: Maybe (MandatoryValue Meters)

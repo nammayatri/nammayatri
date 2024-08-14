@@ -6,9 +6,7 @@ import Data.Ord
 import Domain.Types.Booking
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
-import Domain.Types.FarePolicy.FareProductType as DFF
-import qualified Domain.Types.FarePolicy.FareProductType
-import qualified Domain.Types.FarePolicy.FareProductType as DQuote
+import Domain.Types.Common
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -33,14 +31,15 @@ getDistance = \case
   DRB.InterCityDetails details -> Just details.distance
   DRB.AmbulanceDetails details -> Just details.distance
 
-getFareProductType :: Domain.Types.Booking.BookingDetails -> Domain.Types.FarePolicy.FareProductType.FareProductType
+-- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+getFareProductType :: Domain.Types.Booking.BookingDetails -> FareProductType
 getFareProductType = \case
-  DRB.OneWayDetails _ -> DQuote.ONE_WAY
-  DRB.RentalDetails _ -> DQuote.RENTAL
-  DRB.DriverOfferDetails _ -> DQuote.DRIVER_OFFER
-  DRB.OneWaySpecialZoneDetails _ -> DQuote.ONE_WAY_SPECIAL_ZONE
-  DRB.InterCityDetails _ -> DQuote.INTER_CITY
-  DRB.AmbulanceDetails _ -> DQuote.AMBULANCE
+  DRB.OneWayDetails _ -> ONE_WAY
+  DRB.RentalDetails _ -> RENTAL
+  DRB.OneWaySpecialZoneDetails _ -> ONE_WAY_SPECIAL_ZONE
+  DRB.InterCityDetails _ -> INTER_CITY
+  DRB.AmbulanceDetails _ -> AMBULANCE
+  _ -> DRIVER_OFFER
 
 getOtpCode :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getOtpCode = \case
@@ -84,7 +83,7 @@ getInitialPickupLocation mappings fl = do
       let initialPickupLocMapping = last sortedPickupLocationMap
       QL.findById initialPickupLocMapping.locationId >>= fromMaybeM (InternalError "Incorrect Location Mapping")
 
-fromLocationAndBookingDetails ::
+toBookingDetailsAndFromLocation ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Text ->
   Text ->
@@ -92,6 +91,7 @@ fromLocationAndBookingDetails ::
   [DLM.LocationMapping] ->
   Maybe HighPrecMeters ->
   FareProductType ->
+  Maybe TripCategory ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
@@ -99,28 +99,31 @@ fromLocationAndBookingDetails ::
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
   m (DL.Location, BookingDetails)
-fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
+toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do
       -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
       logInfo "Accessing Booking Location Table"
       pickupLoc <- upsertFromLocationAndMappingForOldData (Id <$> fromLocationId) id merchantId merchantOperatingCityId
-      bookingDetails <- case fareProductType of
-        DFF.ONE_WAY -> do
-          upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-          DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-        DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-        DFF.DRIVER_OFFER -> do
-          upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-          DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId
-        DFF.ONE_WAY_SPECIAL_ZONE -> do
-          upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-          DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
-        DFF.INTER_CITY -> do
-          upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
-          DRB.InterCityDetails <$> buildInterCityDetails toLocationId
-        DFF.AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
+      upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
+      bookingDetails <- case mbTripCategory of
+        Just tripCategory ->
+          case tripCategory of
+            OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+            RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+            Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
+            Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
+            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId
+        Nothing ->
+          case fareProductType of
+            ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+            RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+            INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
+            AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
+            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId
       return (pickupLoc, bookingDetails)
     else do
       fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
@@ -132,13 +135,23 @@ fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings dis
       logTagDebug ("bookingId:-" <> id) $ "To Location Mapping:-" <> show mbToLocationMapping
       logTagDebug ("bookingId:-" <> id) $ "To Location Id:-" <> show toLocId
 
-      bookingDetails <- case fareProductType of
-        DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
-        DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-        DFF.DRIVER_OFFER -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
-        DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
-        DFF.INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
-        DFF.AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
+      bookingDetails <- case mbTripCategory of
+        Just tripCategory ->
+          case tripCategory of
+            OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+            RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+            Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
+            Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
+            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
+        Nothing ->
+          case fareProductType of
+            ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
+            RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
+            DRIVER_OFFER -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
+            ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+            INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
+            AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
       return (fl, bookingDetails)
   where
     buildOneWayDetails mbToLocid = do

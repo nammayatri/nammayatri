@@ -3,43 +3,39 @@ imports:
   Merchant: Domain.Types.Merchant
   UTCTime: Kernel.Prelude
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
+  VehicleVariant: Domain.Types.VehicleVariant
 
 Vehicle:
   tableName: vehicle
 
   types:
-    Category:
-      enum: "CAR,MOTORCYCLE,TRAIN,BUS,FLIGHT,AUTO_CATEGORY,AMBULANCE"
-      derive: "HttpInstance"
     RegistrationCategory:
       enum: "COMMERCIAL,PERSONAL,OTHER,PUBLIC"
       derive: "HttpInstance"
-    Variant:
-      enum: "SEDAN,SUV,HATCHBACK,AUTO_RICKSHAW,TAXI,TAXI_PLUS,PREMIUM_SEDAN,BLACK,BLACK_XL,BIKE,AMBULANCE_TAXI,AMBULANCE_TAXI_OXY,AMBULANCE_AC,AMBULANCE_AC_OXY,AMBULANCE_VENTILATOR,SUV_PLUS"
-      derive: "HttpInstance,Enum,Bounded"
     VehicleAPIEntity:
       driverId: Id Person
-      variant: Variant
+      variant: VehicleVariant
       serviceTierType: Maybe ServiceTierType
       model: Text
       color: Text
       vehicleName: Maybe Text
       registrationNo: Text
-      category: Maybe Category
+      category: Maybe VehicleCategory
       capacity: Maybe Int
       createdAt: UTCTime
 
   fields:
     driverId: Id Person
     merchantId: Id Merchant
-    variant: Variant
+    variant: VehicleVariant|NoRelation
     model: Text
     color: Text
     vehicleName: Maybe Text
     registrationNo: Text
     capacity: Maybe Int
-    category: Maybe Category
+    category: Maybe VehicleCategory|NoRelation
     make: Maybe Text
     size: Maybe Text
     energyType: Maybe Text

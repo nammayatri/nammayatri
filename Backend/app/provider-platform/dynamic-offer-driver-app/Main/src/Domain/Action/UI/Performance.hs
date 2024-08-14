@@ -4,7 +4,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.RiderDetails ()
-import qualified Domain.Types.Vehicle as DV
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
@@ -38,6 +38,6 @@ getDriverPerformance (driverId, _, merchantOpCityId) = do
   di <- B.runInReplica (DriverInformation.findById driverId) >>= fromMaybeM DriverInfoNotFound
   let totalReferredDrivers = fromMaybe 0 di.totalReferred
   mbVehicle <- QVeh.findById driverId
-  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
   pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList) totalReferredDrivers payoutConfig.isPayoutEnabled)

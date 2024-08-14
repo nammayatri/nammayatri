@@ -824,7 +824,7 @@ supportedVCModifier = \case
 data VehicleClassVariantMap = VehicleClassVariantMap
   { vehicleClass :: Text,
     vehicleCapacity :: Maybe Int,
-    vehicleVariant :: Variant,
+    vehicleVariant :: VehicleVariant,
     manufacturer :: Maybe Text,
     manufacturerModel :: Maybe Text,
     reviewRequired :: Maybe Bool,

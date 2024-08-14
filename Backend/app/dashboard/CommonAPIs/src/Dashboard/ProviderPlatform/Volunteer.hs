@@ -55,7 +55,7 @@ data BookingInfoResponse = BookingInfoResponse
     estimatedFareWithCurrency :: PriceAPIEntity,
     estimatedDuration :: Maybe Seconds,
     riderName :: Maybe Text,
-    vehicleVariant :: Variant
+    vehicleVariant :: VehicleVariant
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

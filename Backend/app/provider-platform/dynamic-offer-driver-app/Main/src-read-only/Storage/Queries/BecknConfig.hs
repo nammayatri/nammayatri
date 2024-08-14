@@ -4,6 +4,7 @@
 
 module Storage.Queries.BecknConfig where
 
+import qualified BecknV2.OnDemand.Enums
 import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
@@ -27,12 +28,12 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByMerchantIdAndDomain ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> m [Domain.Types.BecknConfig.BecknConfig])
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> m ([Domain.Types.BecknConfig.BecknConfig]))
 findByMerchantIdAndDomain merchantId domain = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId), Se.Is Beam.domain $ Se.Eq domain]]
 
 findByMerchantIdDomainAndVehicle ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Domain.Types.BecknConfig.VehicleCategory -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.BecknConfig.BecknConfig))
 findByMerchantIdDomainAndVehicle merchantId domain vehicleCategory = do
   findOneWithKV
     [ Se.And
@@ -65,7 +66,7 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
       Se.Set Beam.settlementType settlementType,
       Se.Set Beam.settlementWindow settlementWindow,
-      Se.Set Beam.staticTermsUrl (Kernel.Prelude.fmap showBaseUrl staticTermsUrl),
+      Se.Set Beam.staticTermsUrl ((Kernel.Prelude.fmap showBaseUrl) staticTermsUrl),
       Se.Set Beam.subscriberId subscriberId,
       Se.Set Beam.subscriberUrl (Kernel.Prelude.showBaseUrl subscriberUrl),
       Se.Set Beam.uniqueKeyId uniqueKeyId,
@@ -81,7 +82,7 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   fromTType' (Beam.BecknConfigT {..}) = do
     gatewayUrl' <- Kernel.Prelude.parseBaseUrl gatewayUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
-    staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
+    staticTermsUrl' <- ((Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))) staticTermsUrl
     subscriberUrl' <- Kernel.Prelude.parseBaseUrl subscriberUrl
     pure $
       Just
@@ -134,7 +135,7 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
         Beam.registryUrl = Kernel.Prelude.showBaseUrl registryUrl,
         Beam.settlementType = settlementType,
         Beam.settlementWindow = settlementWindow,
-        Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,
+        Beam.staticTermsUrl = (Kernel.Prelude.fmap showBaseUrl) staticTermsUrl,
         Beam.subscriberId = subscriberId,
         Beam.subscriberUrl = Kernel.Prelude.showBaseUrl subscriberUrl,
         Beam.uniqueKeyId = uniqueKeyId,

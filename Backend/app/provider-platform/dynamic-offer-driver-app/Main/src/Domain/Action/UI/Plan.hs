@@ -35,7 +35,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as P
 import Domain.Types.TransporterConfig (TransporterConfig)
-import qualified Domain.Types.Vehicle as Vehicle
+import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -297,7 +297,7 @@ planList ::
   ServiceNames ->
   Maybe Int ->
   Maybe Int ->
-  Maybe Vehicle.Variant ->
+  Maybe Vehicle.VehicleVariant ->
   Flow PlanListAPIRes
 planList (driverId, _, merchantOpCityId) serviceName _mbLimit _mbOffset _mbVariant = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)

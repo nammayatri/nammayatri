@@ -22,7 +22,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
@@ -78,7 +78,7 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   mbRide <- QRide.findOneByBookingId booking.id
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   customerPhoneNo <- decrypt riderDetails.mobileNumber
-  let vehicleCategory = BUtils.mapServiceTierToCategory booking.vehicleServiceTier
+  let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
   mbVehicle <- maybe (pure Nothing) (runInReplica . QVeh.findById . (.driverId)) mbRide
   mbPerson <- maybe (pure Nothing) (runInReplica . QPerson.findById . (.driverId)) mbRide
   mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
@@ -149,7 +149,7 @@ tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle driverPho
         { fulfillmentId = Just booking.quoteId,
           fulfillmentState = mkFulfillmentState rideStatus,
           fulfillmentStops = stops,
-          fulfillmentType = Just $ BUtils.mkFulfillmentType booking.tripCategory,
+          fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
           fulfillmentAgent = tfAgent booking driverName driverPhone,
           fulfillmentCustomer = tfCustomer booking customerPhoneNo,
           fulfillmentTags = Nothing,

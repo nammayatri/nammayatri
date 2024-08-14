@@ -6,7 +6,7 @@ module Domain.Types.RideDetails where
 
 import Data.Aeson
 import qualified Domain.Types.Ride
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -26,13 +26,13 @@ data RideDetailsE e = RideDetails
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic)
 
-type RideDetails = RideDetailsE 'AsEncrypted
+type RideDetails = RideDetailsE ('AsEncrypted)
 
-type DecryptedRideDetails = RideDetailsE 'AsUnencrypted
+type DecryptedRideDetails = RideDetailsE ('AsUnencrypted)
 
 instance EncryptedItem RideDetails where
   type Unencrypted RideDetails = (DecryptedRideDetails, HashSalt)

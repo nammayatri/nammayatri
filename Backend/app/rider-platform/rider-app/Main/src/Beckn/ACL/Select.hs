@@ -20,7 +20,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UCommonV2
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapVariantToVehicle)
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.OnDemand.Utils.Payment
 import Control.Lens ((%~))
@@ -44,7 +44,7 @@ buildSelectReqV2 ::
   m Spec.SelectReq
 buildSelectReqV2 dSelectRes = do
   endLoc <- dSelectRes.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle dSelectRes.merchant.id "MOBILITY" (UCommon.mapVariantToVehicle dSelectRes.variant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle dSelectRes.merchant.id "MOBILITY" (Utils.mapVariantToVehicle dSelectRes.variant) >>= fromMaybeM (InternalError "Beckn Config not found")
   messageId <- generateGUID
   let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig
       transactionId = dSelectRes.searchRequest.id.getId
@@ -87,7 +87,7 @@ tfFulfillment res startLoc endLoc isValueAddNP =
       fulfillmentState = Nothing
       fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber else Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
-      fulfillmentType = Just $ show Enums.DELIVERY
+      fulfillmentType = UCommonV2.tripCategoryToFulfillmentType <$> res.tripCategory
       fulfillmentStops = UCommon.mkStops' (Just startLoc) (Just endLoc)
       fulfillmentVehicle = tfVehicle res
    in Spec.Fulfillment

@@ -44,7 +44,7 @@ data DLDetails = DLDetails
     driverDateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     classOfVehicles :: [Kernel.Prelude.Text],
     imageId1 :: Kernel.Prelude.Text,
-    imageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    imageId2 :: Kernel.Prelude.Maybe (Kernel.Prelude.Text),
     dateOfIssue :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime
   }
@@ -134,7 +134,7 @@ data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel
 
 data RCApproveDetails = RCApproveDetails
   { documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image,
-    vehicleVariant :: Kernel.Prelude.Maybe Dashboard.Common.Variant,
+    vehicleVariant :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
     vehicleNumberPlate :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleManufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -312,97 +312,97 @@ instance Kernel.Types.HideSecrets.HideSecrets VerifyAadhaarOtpRes where
 type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate)
 
 type GetDriverRegistrationDocumentsList =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list"
+  ( Capture "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver)) :> "documents" :> "list"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.DocumentsListResponse
   )
 
 type GetDriverRegistrationGetDocument =
-  ( "getDocument" :> Capture "imageId" (Kernel.Types.Id.Id Dashboard.Common.Image)
+  ( "getDocument" :> Capture "imageId" ((Kernel.Types.Id.Id Dashboard.Common.Image))
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.GetDocumentResponse
   )
 
 type PostDriverRegistrationDocumentUpload =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "document" :> "upload"
+  ( Capture "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver)) :> "document" :> "upload"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentResp
   )
 
 type PostDriverRegistrationRegisterDl =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "register" :> "dl"
+  ( Capture "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver)) :> "register" :> "dl"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.RegisterDLReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverRegistrationRegisterRc =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "register" :> "rc"
+  ( Capture "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver)) :> "register" :> "rc"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.RegisterRCReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverRegistrationRegisterGenerateAadhaarOtp =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "register" :> "generateAadhaarOtp"
+  ( Capture "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver)) :> "register" :> "generateAadhaarOtp"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.GenerateAadhaarOtpReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.GenerateAadhaarOtpRes
   )
 
 type PostDriverRegistrationRegisterVerifyAadhaarOtp =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "register" :> "verifyAadhaarOtp"
+  ( Capture "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver)) :> "register" :> "verifyAadhaarOtp"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.VerifyAadhaarOtpReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.VerifyAadhaarOtpRes
   )
 
 type GetDriverRegistrationUnderReviewDrivers =
   ( "underReviewDrivers" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.ProviderPlatform.Management.DriverRegistration.UnderReviewDriversListResponse
   )
 
 type GetDriverRegistrationDocumentsInfo =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "info"
+  ( Capture "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver)) :> "documents" :> "info"
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.ProviderPlatform.Management.DriverRegistration.DriverDocument]
   )
 
 type PostDriverRegistrationDocumentsUpdate =
-  ( "documents" :> "update" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.DriverRegistration.UpdateDocumentRequest
+  ( "documents" :> "update" :> ReqBody ('[JSON]) API.Types.ProviderPlatform.Management.DriverRegistration.UpdateDocumentRequest
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
-  { getDriverRegistrationDocumentsList :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.DocumentsListResponse,
-    getDriverRegistrationGetDocument :: Kernel.Types.Id.Id Dashboard.Common.Image -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.GetDocumentResponse,
-    postDriverRegistrationDocumentUpload :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentResp,
-    postDriverRegistrationRegisterDl :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverRegistrationRegisterRc :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverRegistrationRegisterGenerateAadhaarOtp :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.GenerateAadhaarOtpReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.GenerateAadhaarOtpRes,
-    postDriverRegistrationRegisterVerifyAadhaarOtp :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.VerifyAadhaarOtpReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.VerifyAadhaarOtpRes,
-    getDriverRegistrationUnderReviewDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.UnderReviewDriversListResponse,
-    getDriverRegistrationDocumentsInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.DriverRegistration.DriverDocument],
-    postDriverRegistrationDocumentsUpdate :: API.Types.ProviderPlatform.Management.DriverRegistration.UpdateDocumentRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { getDriverRegistrationDocumentsList :: ((Kernel.Types.Id.Id Dashboard.Common.Driver) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.DocumentsListResponse),
+    getDriverRegistrationGetDocument :: ((Kernel.Types.Id.Id Dashboard.Common.Image) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.GetDocumentResponse),
+    postDriverRegistrationDocumentUpload :: ((Kernel.Types.Id.Id Dashboard.Common.Driver) -> API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentResp),
+    postDriverRegistrationRegisterDl :: ((Kernel.Types.Id.Id Dashboard.Common.Driver) -> API.Types.ProviderPlatform.Management.DriverRegistration.RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverRegistrationRegisterRc :: ((Kernel.Types.Id.Id Dashboard.Common.Driver) -> API.Types.ProviderPlatform.Management.DriverRegistration.RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postDriverRegistrationRegisterGenerateAadhaarOtp :: ((Kernel.Types.Id.Id Dashboard.Common.Driver) -> API.Types.ProviderPlatform.Management.DriverRegistration.GenerateAadhaarOtpReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.GenerateAadhaarOtpRes),
+    postDriverRegistrationRegisterVerifyAadhaarOtp :: ((Kernel.Types.Id.Id Dashboard.Common.Driver) -> API.Types.ProviderPlatform.Management.DriverRegistration.VerifyAadhaarOtpReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.VerifyAadhaarOtpRes),
+    getDriverRegistrationUnderReviewDrivers :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverRegistration.UnderReviewDriversListResponse),
+    getDriverRegistrationDocumentsInfo :: ((Kernel.Types.Id.Id Dashboard.Common.Driver) -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.DriverRegistration.DriverDocument]),
+    postDriverRegistrationDocumentsUpdate :: (API.Types.ProviderPlatform.Management.DriverRegistration.UpdateDocumentRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
 
 mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegistrationAPIs)

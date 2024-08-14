@@ -19,14 +19,13 @@ import Data.Ord (comparing)
 import Data.Text as T hiding (find)
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
-import Domain.Types.Common (UsageSafety (..))
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
+import Domain.Types.Common
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.ServiceTierType
-import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis

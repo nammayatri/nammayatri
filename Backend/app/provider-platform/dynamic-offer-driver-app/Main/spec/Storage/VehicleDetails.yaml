@@ -4,7 +4,7 @@ imports:
   Id: Kernel.Types.Id
   merchantId: Domain.Types.Merchant
   merchantOperatingCityId: Domain.Types.MerchantOperatingCity
-  Variant: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
 
 VehicleDetails:
   tableName: vehicle_details
@@ -15,7 +15,7 @@ VehicleDetails:
     capacity: Maybe Int
     acAvailable: Maybe Bool
     year: Maybe Int
-    vehicleVariant: Variant
+    vehicleVariant: VehicleVariant|NoRelation
   constraints:
     id: PrimaryKey
   queries:

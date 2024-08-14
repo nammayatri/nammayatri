@@ -2,8 +2,8 @@ imports:
   Driver: Dashboard.Common
   Summary: Dashboard.Common
   Image: Dashboard.Common
-  Category: Dashboard.Common
-  Variant: Dashboard.Common
+  VehicleCategory: Dashboard.Common
+  VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
   ServiceNames: Dashboard.Common.Driver
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
@@ -417,7 +417,7 @@ types:
     - airConditioned: Maybe Bool
     - driverName: Text
     - imageId: Maybe (Id Image)
-    - vehicleCategory: Maybe Category
+    - vehicleCategory: Maybe VehicleCategory
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
     - dateOfRegistration: Maybe UTCTime
@@ -428,7 +428,7 @@ types:
     - recordType: NewType
     - vehicles: [VehicleAPIEntity]
   VehicleAPIEntity:
-    - variant: Maybe Variant
+    - variant: Maybe VehicleVariant
     - model: Maybe Text
     - color: Maybe Text
     - registrationNo: Text
@@ -463,7 +463,7 @@ types:
     - driverId: Maybe (Id Driver)
     - driverName: Maybe Text
     - status: Maybe DriverMode
-    - vehicleType: Maybe Variant
+    - vehicleType: Maybe VehicleVariant
     - totalDuration: TotalDuration
     - distanceTravelled: Double
     - driverPhoneNo: Maybe Text
@@ -491,7 +491,7 @@ types:
     - status: Maybe DriverMode
     - driverPhoneNo: Maybe Text
     - completedRides: Int # will remove this
-    - vehicleType: Maybe Variant
+    - vehicleType: Maybe VehicleVariant
     - earning: Int # this also
     - isDriverActive: Bool
     - isRcAssociated: Bool

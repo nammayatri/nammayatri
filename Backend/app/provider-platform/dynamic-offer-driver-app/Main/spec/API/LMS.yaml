@@ -2,7 +2,7 @@ imports:
   LmsCategory: Domain.Types.LmsModule
   LmsModule: Domain.Types.LmsModule
   LmsBonus: Domain.Types.LmsModule
-  Variant: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
   Maybe: Data.Maybe
   Text: Data.Text
   Bool: Kernel.Prelude
@@ -34,7 +34,7 @@ types:
     duration : Int
     noOfVideos : Int
     rank : Int
-    variant : Maybe Variant
+    variant : Maybe VehicleVariant
     name : Text
     description : Text
     thumbnailImage : Text
@@ -61,7 +61,7 @@ types:
     duration : Int
     noOfVideos : Int
     rank : Int
-    variant : Maybe Variant
+    variant : Maybe VehicleVariant
     name : Text
     description : Text
     thumbnailImage : Text
@@ -152,7 +152,7 @@ apis:
       endpoint: /lms/listAllModules
       auth: TokenAuth PROVIDER_TYPE
       query:
-        variant: Variant
+        variant: VehicleVariant
         language: Language
         limit: Int
         offset: Int

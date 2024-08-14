@@ -18,8 +18,8 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Domain.Action.UI.Call
+import qualified Domain.Types as DTC
 import qualified Domain.Types.CallStatus as SCS
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverInformation as DInfo
 import qualified Domain.Types.Overlay as DOverlay
 import Domain.Types.RideRelatedNotificationConfig

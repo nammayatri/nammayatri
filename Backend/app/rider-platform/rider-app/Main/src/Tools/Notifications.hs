@@ -14,12 +14,12 @@
 
 module Tools.Notifications where
 
+import qualified BecknV2.OnDemand.Enums as BecknEnums
 import Data.Aeson (object)
 import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Time hiding (secondsToNominalDiffTime)
 import Domain.Action.UI.Quote as UQuote
-import qualified Domain.Types.BecknConfig as BecknConfig
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
@@ -996,12 +996,12 @@ notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
   notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
 
 data FirstRideEvent = FirstRideEvent
-  { vehicleCategory :: BecknConfig.VehicleCategory,
+  { vehicleCategory :: BecknEnums.VehicleCategory,
     hasTakenFirstValidRide :: Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-notifyFirstRideEvent :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> BecknConfig.VehicleCategory -> m ()
+notifyFirstRideEvent :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> BecknEnums.VehicleCategory -> m ()
 notifyFirstRideEvent personId vehicleCategory = do
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId

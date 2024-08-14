@@ -4,9 +4,10 @@
 
 module Storage.Queries.Vehicle (module Storage.Queries.Vehicle, module ReExport) where
 
+import qualified Domain.Types.Common
 import qualified Domain.Types.Person
-import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -38,14 +39,14 @@ updateAirConditioned airConditioned driverId = do
 updateOxygen :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateOxygen oxygen driverId = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Common.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSelectedServiceTiers selectedServiceTiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.selectedServiceTiers selectedServiceTiers, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateVariantAndServiceTiers ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.Vehicle.Variant -> [Domain.Types.ServiceTierType.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  (Domain.Types.VehicleVariant.VehicleVariant -> [Domain.Types.Common.ServiceTierType] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVariantAndServiceTiers variant selectedServiceTiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.variant variant, Se.Set Beam.selectedServiceTiers selectedServiceTiers, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
@@ -58,7 +59,7 @@ updateVehicleName vehicleName driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.vehicleName vehicleName, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateVehicleVariant :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Vehicle.Variant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVehicleVariant :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleVariant.VehicleVariant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVehicleVariant variant driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.variant variant, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]

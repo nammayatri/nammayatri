@@ -31,7 +31,7 @@ findByMakeAndModelAndYear ::
   (Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))
 findByMakeAndModelAndYear make model year = do findOneWithKV [Se.And [Se.Is Beam.make $ Se.Eq make, Se.Is Beam.model $ Se.Eq model, Se.Is Beam.year $ Se.Eq year]]
 
-findByMakeAndYear :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.VehicleDetails.VehicleDetails])
+findByMakeAndYear :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m ([Domain.Types.VehicleDetails.VehicleDetails]))
 findByMakeAndYear make year = do findAllWithKV [Se.And [Se.Is Beam.make $ Se.Eq make, Se.Is Beam.year $ Se.Eq year]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleDetails.VehicleDetails -> m (Maybe Domain.Types.VehicleDetails.VehicleDetails))

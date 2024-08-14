@@ -14,8 +14,8 @@
 
 module Domain.Action.Beckn.Init where
 
+import Domain.Types
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
@@ -25,8 +25,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.Vehicle as Veh
+import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
@@ -52,7 +51,7 @@ data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
 
 data InitReq = InitReq
   { fulfillmentId :: FulfillmentId,
-    vehicleVariant :: Veh.Variant,
+    vehicleVariant :: Veh.VehicleVariant,
     bapId :: Text,
     bapUri :: BaseUrl,
     bapCity :: Context.City,
@@ -81,7 +80,7 @@ data InitRes = InitRes
     bppSubscriberId :: Maybe Text,
     riderPhoneNumber :: Text,
     riderName :: Maybe Text,
-    vehicleVariant :: Veh.Variant,
+    vehicleVariant :: Veh.VehicleVariant,
     paymentId :: Text,
     cancellationFee :: Maybe PriceAPIEntity,
     estimateId :: Text
@@ -127,7 +126,7 @@ handler merchantId req validatedReq = do
     buildBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
-        HasField "vehicleServiceTier" q DVST.ServiceTierType,
+        HasField "vehicleServiceTier" q ServiceTierType,
         HasField "distance" q (Maybe Meters),
         HasField "estimatedFare" q HighPrecMoney,
         HasField "currency" q Currency,
@@ -137,7 +136,7 @@ handler merchantId req validatedReq = do
       DSR.SearchRequest ->
       q ->
       Text ->
-      DTC.TripCategory ->
+      TripCategory ->
       UTCTime ->
       Maybe (Id DMPM.MerchantPaymentMethod) ->
       Maybe Text ->
@@ -147,7 +146,7 @@ handler merchantId req validatedReq = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
-          isTollApplicable = DTC.isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
+          isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       pure

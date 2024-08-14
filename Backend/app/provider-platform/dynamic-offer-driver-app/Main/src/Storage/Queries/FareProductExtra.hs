@@ -3,12 +3,12 @@
 
 module Storage.Queries.FareProductExtra where
 
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import Domain.Types.FarePolicy
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

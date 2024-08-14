@@ -7,7 +7,7 @@ imports:
   PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
   TimeBound : Kernel.Types.TimeBound
@@ -162,7 +162,7 @@ SurgePricing:
     id: PrimaryKey
 
   fromTType:
-    vehicleServiceTier: Kernel.Prelude.fromMaybe Domain.Types.ServiceTierType.HATCHBACK|I
+    vehicleServiceTier: Kernel.Prelude.fromMaybe Domain.Types.Common.HATCHBACK|I
 
   toTType:
     vehicleServiceTier: Kernel.Prelude.Just|I

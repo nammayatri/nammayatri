@@ -35,6 +35,7 @@ module Domain.Action.Beckn.OnSearch
 where
 
 import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
+import qualified Domain.Types as DT
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
@@ -46,10 +47,11 @@ import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps
@@ -115,14 +117,15 @@ data EstimateInfo = EstimateInfo
     specialLocationTag :: Maybe Text,
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
-    serviceTierType :: Maybe DVST.VehicleServiceTierType,
+    serviceTierType :: Maybe DVST.ServiceTierType,
     serviceTierShortDesc :: Maybe Text,
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
-    specialLocationName :: Maybe Text
+    specialLocationName :: Maybe Text,
+    tripCategory :: DT.TripCategory
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -167,7 +170,7 @@ data QuoteInfo = QuoteInfo
     specialLocationTag :: Maybe Text,
     validTill :: UTCTime,
     serviceTierName :: Maybe Text,
-    serviceTierType :: Maybe DVST.VehicleServiceTierType,
+    serviceTierType :: Maybe DVST.ServiceTierType,
     serviceTierShortDesc :: Maybe Text,
     isCustomerPrefferedSearchRoute :: Maybe Bool,
     isBlockedRoute :: Maybe Bool,
@@ -176,7 +179,8 @@ data QuoteInfo = QuoteInfo
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
-    quoteBreakupList :: [QuoteBreakupInfo]
+    quoteBreakupList :: [QuoteBreakupInfo],
+    tripCategory :: DT.TripCategory
   }
 
 data QuoteDetails
@@ -282,10 +286,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference :: [EstimateInfo] -> [EstimateInfo]
     filterEstimtesByPrefference _estimateInfo =
       case searchRequest.riderPreferredOption of
-        Rental -> []
         OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants)) _estimateInfo
-        InterCity -> []
         Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
+        _ -> []
 
     ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
 
@@ -332,7 +335,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         providerUrl = providerInfo.url,
         estimatedDistance = searchRequest.distance,
         serviceTierName = serviceTierName,
-        vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
+        vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType,
         serviceTierShortDesc = serviceTierShortDesc,
         estimatedDuration = searchRequest.estimatedRideDuration,
         device = searchRequest.device,
@@ -366,6 +369,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         backendConfigVersion = searchRequest.backendConfigVersion,
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         distanceUnit = searchRequest.distanceUnit,
+        tripCategory = Just tripCategory,
         ..
       }
 
@@ -401,7 +405,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
         quoteDetails = quoteDetails',
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,
-        vehicleServiceTierType = fromMaybe (DVST.castVariantToServiceTier vehicleVariant) serviceTierType,
+        vehicleServiceTierType = fromMaybe (castVariantToServiceTier vehicleVariant) serviceTierType,
         clientBundleVersion = searchRequest.clientBundleVersion,
         clientSdkVersion = searchRequest.clientSdkVersion,
         clientDevice = searchRequest.clientDevice,
@@ -416,6 +420,7 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
                 tollNames = tollChargesInfo'.tollNames
               },
         distanceUnit = searchRequest.distanceUnit,
+        tripCategory = Just tripCategory,
         ..
       }
 

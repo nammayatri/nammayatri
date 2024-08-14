@@ -9,7 +9,7 @@ imports:
   Location: Domain.Types.Location
   Seconds: Kernel.Types.Common
   FareParameters: Domain.Types.FareParameters
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
   City: Kernel.Types.Beckn.Context
   Country: Kernel.Types.Beckn.Context

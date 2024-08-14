@@ -19,8 +19,9 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Me
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Data.Text as Text
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.CancellationFarePolicy as DTC
-import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyAmbulanceDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyInterCityDetails as Reexport
@@ -28,7 +29,6 @@ import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
-import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI

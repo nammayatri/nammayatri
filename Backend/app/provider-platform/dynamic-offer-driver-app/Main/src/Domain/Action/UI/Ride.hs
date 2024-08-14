@@ -38,11 +38,12 @@ import Data.Time (Day)
 import Domain.Action.Dashboard.Ride
 import qualified Domain.Action.UI.Location as DLoc
 import qualified Domain.Action.UI.RideDetails as RD
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Client as DC
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -52,8 +53,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
-import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -80,7 +80,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
-import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator (fareSum)
 import SharedLogic.Ride
 import Storage.Beam.IssueManagement ()
@@ -145,7 +144,7 @@ data DriverRideRes = DriverRideRes
     toLocation :: Maybe DLoc.LocationAPIEntity,
     driverName :: Text,
     driverNumber :: Maybe Text,
-    vehicleVariant :: DVeh.Variant,
+    vehicleVariant :: DVeh.VehicleVariant,
     pickupDropOutsideOfThreshold :: Maybe Bool,
     vehicleModel :: Text,
     vehicleColor :: Text,
@@ -177,7 +176,7 @@ data DriverRideRes = DriverRideRes
     customerExtraFee :: Maybe Money,
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     disabilityTag :: Maybe Text,
-    requestedVehicleVariant :: DVeh.Variant,
+    requestedVehicleVariant :: DVeh.VehicleVariant,
     isOdometerReadingsRequired :: Bool,
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Text,
@@ -330,7 +329,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         bapName = bapMetadata <&> (.name),
         bapLogo = bapMetadata >>= (.logoUrl),
         disabilityTag = booking.disabilityTag,
-        requestedVehicleVariant = castServiceTierToVariant booking.vehicleServiceTier,
+        requestedVehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTier,
         isOdometerReadingsRequired = DTC.isOdometerReadingsRequired booking.tripCategory,
         vehicleServiceTier = booking.vehicleServiceTier,
         vehicleServiceTierName = booking.vehicleServiceTierName,

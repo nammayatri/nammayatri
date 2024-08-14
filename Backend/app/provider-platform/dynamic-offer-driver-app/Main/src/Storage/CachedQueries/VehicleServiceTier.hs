@@ -15,8 +15,8 @@
 
 module Storage.CachedQueries.VehicleServiceTier where
 
+import Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Domain.Types.ServiceTierType
 import Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

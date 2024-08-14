@@ -6,7 +6,7 @@ module Storage.Queries.PayoutConfig where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PayoutConfig
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findByMerchantOpCityIdAndIsPayoutEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.PayoutConfig.PayoutConfig])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.PayoutConfig.PayoutConfig]))
 findByMerchantOpCityIdAndIsPayoutEnabled merchantOperatingCityId isPayoutEnabled = do
   findAllWithKV
     [ Se.And
@@ -37,7 +37,7 @@ findByMerchantOpCityIdAndIsPayoutEnabled merchantOperatingCityId isPayoutEnabled
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Vehicle.Category -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.PayoutConfig.PayoutConfig))
 findByPrimaryKey merchantOperatingCityId vehicleCategory = do
   findOneWithKV
     [ Se.And

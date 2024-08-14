@@ -19,6 +19,7 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
+import Domain.Types
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
 import qualified Domain.Types.BppDetails as DBppDetails
@@ -29,8 +30,8 @@ import Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Location (Location, LocationAPIEntity)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Sos as DSos
-import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (elem, id, length, null)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Payment.Interface as Payment
@@ -74,6 +75,7 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedFareBreakup :: [FareBreakupAPIEntity],
     fareBreakup :: [FareBreakupAPIEntity],
     bookingDetails :: BookingAPIDetails,
+    tripCategory :: Maybe TripCategory,
     rideScheduledTime :: UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
@@ -91,7 +93,7 @@ data BookingAPIEntity = BookingAPIEntity
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     isValueAddNP :: Bool,
-    vehicleServiceTierType :: DVST.VehicleServiceTierType,
+    vehicleServiceTierType :: DVST.ServiceTierType,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
@@ -252,7 +254,8 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       isScheduled = booking.isScheduled,
       cancellationReason = mbCancellationReason,
       isAlreadyFav = activeRide >>= (.isAlreadyFav),
-      favCount = activeRide >>= (.favCount)
+      favCount = activeRide >>= (.favCount),
+      tripCategory = booking.tripCategory
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

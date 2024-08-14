@@ -6,7 +6,8 @@
 module Storage.Beam.PayoutConfig where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Vehicle
+import Domain.Types.Common ()
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -14,31 +15,31 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PayoutConfigT f = PayoutConfigT
-  { batchLimit :: B.C f Kernel.Prelude.Int,
-    isPayoutEnabled :: B.C f Kernel.Prelude.Bool,
-    maxRetryCount :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    orderType :: B.C f Kernel.Prelude.Text,
-    payoutRegistrationCgst :: B.C f Kernel.Types.Common.HighPrecMoney,
-    payoutRegistrationFee :: B.C f Kernel.Types.Common.HighPrecMoney,
-    payoutRegistrationSgst :: B.C f Kernel.Types.Common.HighPrecMoney,
-    referralRewardAmountPerRide :: B.C f Kernel.Types.Common.HighPrecMoney,
-    remark :: B.C f Kernel.Prelude.Text,
-    thresholdPayoutAmountPerPerson :: B.C f Kernel.Types.Common.HighPrecMoney,
-    timeDiff :: B.C f Kernel.Types.Common.Seconds,
-    vehicleCategory :: B.C f Domain.Types.Vehicle.Category,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { batchLimit :: (B.C f Kernel.Prelude.Int),
+    isPayoutEnabled :: (B.C f Kernel.Prelude.Bool),
+    maxRetryCount :: (B.C f Kernel.Prelude.Int),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    orderType :: (B.C f Kernel.Prelude.Text),
+    payoutRegistrationCgst :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    payoutRegistrationFee :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    payoutRegistrationSgst :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    referralRewardAmountPerRide :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    remark :: (B.C f Kernel.Prelude.Text),
+    thresholdPayoutAmountPerPerson :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    timeDiff :: (B.C f Kernel.Types.Common.Seconds),
+    vehicleCategory :: (B.C f Domain.Types.VehicleCategory.VehicleCategory),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table PayoutConfigT where
-  data PrimaryKey PayoutConfigT f = PayoutConfigId (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.Vehicle.Category) deriving (Generic, B.Beamable)
+  data PrimaryKey PayoutConfigT f = PayoutConfigId (B.C f Kernel.Prelude.Text) (B.C f Domain.Types.VehicleCategory.VehicleCategory) deriving (Generic, B.Beamable)
   primaryKey = PayoutConfigId <$> merchantOperatingCityId <*> vehicleCategory
 
 type PayoutConfig = PayoutConfigT Identity
 
-$(enableKVPG ''PayoutConfigT ['merchantOperatingCityId, 'vehicleCategory] [])
+$(enableKVPG (''PayoutConfigT) [('merchantOperatingCityId), ('vehicleCategory)] [])
 
-$(mkTableInstances ''PayoutConfigT "payout_config")
+$(mkTableInstances (''PayoutConfigT) "payout_config")

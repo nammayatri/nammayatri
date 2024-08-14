@@ -12,7 +12,7 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   Booking: Domain.Types.Booking
   Client: Domain.Types.Client
-  VehicleServiceTierType: Domain.Types.VehicleServiceTier
+  ServiceTierType: Domain.Types.ServiceTierType
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
@@ -62,7 +62,7 @@ Ride:
     vehicleModel: Text
     vehicleColor: Maybe Text
     vehicleVariant: VehicleVariant|NoRelation
-    vehicleServiceTierType: Maybe VehicleServiceTierType
+    vehicleServiceTierType: Maybe ServiceTierType
     otp: Text
     endOtp: Maybe Text
     trackingUrl: Maybe BaseUrl

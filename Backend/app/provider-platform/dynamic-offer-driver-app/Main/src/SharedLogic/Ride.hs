@@ -18,7 +18,6 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Client as DC
-import Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Merchant
@@ -32,6 +31,7 @@ import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Domain.Types.SearchTry
 import qualified Domain.Types.Vehicle as DVeh
+import Domain.Utils
 import Environment
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.External.Notification as Notification

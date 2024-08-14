@@ -39,7 +39,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
-import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified Kernel.Beam.Functions as B
@@ -121,7 +120,7 @@ softCancel bookingId _ = do
         transactionId = booking.transactionId,
         merchant = merchant,
         cancelStatus = show Enums.SOFT_CANCEL,
-        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
+        vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
         ..
       }
 
@@ -180,7 +179,7 @@ cancel booking mRide req cancellationSource = do
         transactionId = booking.transactionId,
         merchant = merchant,
         cancelStatus = show Enums.CONFIRM_CANCEL,
-        vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
+        vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
         ..
       }
   where
@@ -242,7 +241,7 @@ mkDomainCancelSearch personId estimateId = do
             estimateStatus = estStatus,
             sendToBpp = isEstimateNotNew && isValueAddNP,
             merchant = merchant,
-            vehicleVariant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType,
+            vehicleVariant = DVeh.castServiceTierToVariant estimate.vehicleServiceTierType,
             ..
           }
 

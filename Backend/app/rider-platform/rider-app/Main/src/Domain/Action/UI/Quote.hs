@@ -49,8 +49,8 @@ import qualified Domain.Types.Quote as SQuote
 import Domain.Types.QuoteBreakup
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as SSR
+import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
-import Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -80,7 +80,7 @@ import TransactionLogs.Types
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
-    vehicleVariant :: DVST.VehicleServiceTierType,
+    vehicleVariant :: DVST.ServiceTierType,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
     estimatedFare :: Money,

@@ -5,8 +5,9 @@ imports:
   MultipleRideSyncResp: Dashboard.Common.Ride
   LatLong: Kernel.External.Maps.Types
   Driver: Dashboard.Common
-  Variant: Dashboard.Common
+  VehicleVariant: Dashboard.Common
   Classification: Kernel.External.Ticket.Interface.Types
+  TripCategory: Domain.Types
 
 module: Ride
 
@@ -107,17 +108,18 @@ types:
     - customerPhoneNo: Text
     - driverName: Text
     - driverPhoneNo: Maybe Text
-    - tripCategory: TripCategory
+    - tripCategory: DeprecatedTripCategory # TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
+    - tripCategoryV2: TripCategory
     - vehicleNo: Text
     - fareDiff: Maybe Money
     - fareDiffWithCurrency: Maybe PriceAPIEntity
     - bookingStatus: BookingStatus
     - rideCreatedAt: UTCTime
+  DeprecatedTripCategory: # TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
+    - enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"
   BookingStatus:
     - enum: "UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, COMPLETED, CANCELLED"
     - derive: "Read, Kernel.Prelude.ToParamSchema"
-  TripCategory:
-    - enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"
   MultipleRideEndReq:
     - recordType: NewType
     - rides: [MultipleRideEndItem]
@@ -158,7 +160,8 @@ types:
     - actualDriverArrivalTime: Maybe UTCTime
     - rideStartTime: Maybe UTCTime
     - rideEndTime: Maybe UTCTime
-    - tripCategory: TripCategory
+    - tripCategory: DeprecatedTripCategory # TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
+    - tripCategoryV2: TripCategory
     - scheduledAt: Maybe UTCTime
     - rideDistanceEstimated: Maybe Meters
     - rideDistanceActual: Meters
@@ -186,7 +189,7 @@ types:
     - bookingToRideStartDuration: Maybe Minutes
     - distanceCalculationFailed: Maybe Bool
     - driverDeviatedFromRoute: Maybe Bool
-    - vehicleVariant: Maybe Variant
+    - vehicleVariant: Maybe VehicleVariant
     - vehicleServiceTierName: Text
     - nextStopLocation: Maybe LocationAPIEntity
     - lastStopLocation: Maybe LocationAPIEntity

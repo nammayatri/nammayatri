@@ -32,6 +32,7 @@ module Domain.Action.UI.Profile
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as BecknEnums
 import Control.Applicative ((<|>))
 import Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
@@ -41,7 +42,6 @@ import Data.List (nubBy)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
-import qualified Domain.Types.BecknConfig as BecknConfig
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.ClientPersonInfo as DCP
 import qualified Domain.Types.Merchant as Merchant
@@ -199,10 +199,10 @@ getPersonDetails (personId, _) mbToss = do
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person
   hasTakenValidRide <- QCP.findAllByPersonId personId
-  let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide BecknConfig.CAB
-      hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknConfig.AUTO_RICKSHAW
-      hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknConfig.MOTORCYCLE
-      hasTakenValidAmbulanceRide = validRideCount hasTakenValidRide BecknConfig.AMBULANCE
+  let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide BecknEnums.CAB
+      hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknEnums.AUTO_RICKSHAW
+      hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknEnums.MOTORCYCLE
+      hasTakenValidAmbulanceRide = validRideCount hasTakenValidRide BecknEnums.AMBULANCE
   newCustomerReferralCode <-
     if (isNothing person.customerReferralCode)
       then do
@@ -235,7 +235,7 @@ getPersonDetails (personId, _) mbToss = do
           ..
         }
 
-validRideCount :: [DCP.ClientPersonInfo] -> BecknConfig.VehicleCategory -> Bool
+validRideCount :: [DCP.ClientPersonInfo] -> BecknEnums.VehicleCategory -> Bool
 validRideCount hasTakenValidRide vehicleCategory =
   case find (\info -> info.vehicleCategory == Just vehicleCategory) hasTakenValidRide of
     Just info -> info.rideCount == 1

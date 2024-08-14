@@ -32,8 +32,8 @@ import qualified Data.Map as M
 import Data.Ord
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Maps as DMaps
+import Domain.Types
 import Domain.Types.BapMetadata
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
@@ -43,7 +43,6 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Environment
@@ -119,7 +118,7 @@ data DSearchReq = DSearchReq
 
 data ValidatedDSearchReq = ValidatedDSearchReq
   { transporterConfig :: DTMT.TransporterConfig,
-    possibleTripOption :: DTC.TripOption,
+    possibleTripOption :: TripOption,
     bapCity :: Context.City,
     merchantOpCityId :: Id DMOC.MerchantOperatingCity,
     distanceUnit :: DistanceUnit,
@@ -253,14 +252,9 @@ handler ValidatedDSearchReq {..} sReq = do
       ([DEst.Estimate], [DQuote.Quote]) ->
       Flow ([DEst.Estimate], [DQuote.Quote])
     processPolicy buildEstimateHelper buildQuoteHelper fp (estimates, quotes) =
-      case fp.tripCategory of
-        DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
-        DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
-        DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
-        DTC.Rental _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
-        DTC.InterCity _ _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
-        DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper True) fp >>= \est -> pure (est : estimates, quotes)
-        _ -> (buildQuoteHelper False) fp >>= \quote -> pure (estimates, quote : quotes)
+      case tripCategoryToPricingPolicy fp.tripCategory of
+        EstimateBased {..} -> (buildEstimateHelper nightShiftOverlapChecking) fp >>= \est -> pure (est : estimates, quotes)
+        QuoteBased {..} -> (buildQuoteHelper nightShiftOverlapChecking) fp >>= \quote -> pure (estimates, quote : quotes)
 
     buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates specialLocationName now = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
@@ -277,7 +271,7 @@ handler ValidatedDSearchReq {..} sReq = do
       where
         isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && autosAllowedOnTollRoute farePolicy
 
-        autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == DVST.AUTO_RICKSHAW then (fromMaybe True mbIsAutoRickshawAllowed) else True
+        autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == AUTO_RICKSHAW then (fromMaybe True mbIsAutoRickshawAllowed) else True
 
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
 
@@ -308,7 +302,7 @@ handler ValidatedDSearchReq {..} sReq = do
           }
 
 addNearestDriverInfo ::
-  (HasField "vehicleServiceTier" a DVST.ServiceTierType) =>
+  (HasField "vehicleServiceTier" a ServiceTierType) =>
   Id DMOC.MerchantOperatingCity ->
   (Maybe (NonEmpty DriverPoolResult)) ->
   [a] ->
@@ -322,8 +316,8 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
   traverse (matchInputWithNearestDriver mapOfDPRByServiceTier) estdOrQuotes
   where
     matchInputWithNearestDriver ::
-      (HasField "vehicleServiceTier" a DVST.ServiceTierType) =>
-      M.Map DVST.ServiceTierType (NonEmpty DriverPoolResult) ->
+      (HasField "vehicleServiceTier" a ServiceTierType) =>
+      M.Map ServiceTierType (NonEmpty DriverPoolResult) ->
       a ->
       Flow (a, DVST.VehicleServiceTier, Maybe NearestDriverInfo)
     matchInputWithNearestDriver driverPools input = do
@@ -369,14 +363,8 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
         driverPoolNotOnRide
           <> map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
   logDebug $ "Search handler: driver pool " <> show driverPool
-  let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` DVST.offUsVariants)) farePolicies
+  let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` offUsVariants)) farePolicies
   return (driverPool, onlyFPWithDrivers)
-
-skipDriverPoolCheck :: DTC.TripCategory -> Bool
-skipDriverPoolCheck (DTC.OneWay DTC.OneWayOnDemandStaticOffer) = False
-skipDriverPoolCheck (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) = False
-skipDriverPoolCheck (DTC.Ambulance DTC.OneWayOnDemandDynamicOffer) = False
-skipDriverPoolCheck _ = True
 
 buildSearchRequest ::
   ( CacheFlow m r,
@@ -491,7 +479,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
-      isTollApplicable = DTC.isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+      isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
     DQuote.Quote
       { id = quoteId,
@@ -532,7 +520,7 @@ buildEstimate ::
   m DEst.Estimate
 buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute mbEstimatedDuration nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
-      isAmbulanceEstimate = DTC.isAmbulanceTrip fullFarePolicy.tripCategory
+      isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
   (minFareParams, maxFareParams) <- do
     let params =
           CalculateFareParametersParams
@@ -571,7 +559,7 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
       minFare = fareSum minFareParams + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
       maxFare = fareSum maxFareParams + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
-  let isTollApplicable = DTC.isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
+  let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
     DEst.Estimate
       { id = estimateId,
@@ -624,7 +612,7 @@ validateRequest merchantId sReq = do
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
   return ValidatedDSearchReq {..}
 
-getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> DTC.TripOption
+getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
   let (schedule, isScheduled) =
         if tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
@@ -637,19 +625,19 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
               then do
                 if isCrossCity
                   then do
-                    [DTC.CrossCity DTC.OneWayOnDemandStaticOffer destinationTravelCityName]
-                      <> (if not isScheduled then [DTC.CrossCity DTC.OneWayRideOtp destinationTravelCityName, DTC.CrossCity DTC.OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                    [CrossCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                      <> (if not isScheduled then [CrossCity OneWayRideOtp destinationTravelCityName, CrossCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
                   else do
-                    [DTC.InterCity DTC.OneWayOnDemandStaticOffer destinationTravelCityName]
-                      <> (if not isScheduled then [DTC.InterCity DTC.OneWayRideOtp destinationTravelCityName, DTC.InterCity DTC.OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
+                    [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
+                      <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
               else do
-                [DTC.OneWay DTC.OneWayOnDemandStaticOffer, DTC.Rental DTC.OnDemandStaticOffer]
-                  <> (if not isScheduled then [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer, DTC.Ambulance DTC.OneWayOnDemandDynamicOffer, DTC.Rental DTC.RideOtp] else [])
+                [OneWay OneWayOnDemandStaticOffer, Rental OnDemandStaticOffer]
+                  <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp] else [])
           Nothing ->
-            [DTC.Rental DTC.OnDemandStaticOffer]
-              <> [DTC.Rental DTC.RideOtp | not isScheduled]
+            [Rental OnDemandStaticOffer]
+              <> [Rental RideOtp | not isScheduled]
 
-  DTC.TripOption {..}
+  TripOption {..}
 
 data NearestOperatingAndSourceCity = NearestOperatingAndSourceCity
   { nearestOperatingCity :: CityState,

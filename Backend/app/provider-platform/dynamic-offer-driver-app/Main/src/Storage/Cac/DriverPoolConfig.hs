@@ -21,11 +21,11 @@ import Data.Aeson as DA
 import Data.Text as Text hiding (find)
 import Data.Time
 import Data.Time.Calendar.WeekDate
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Cac as DTC
-import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis

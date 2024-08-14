@@ -7,7 +7,7 @@ module Domain.Types.Extra.Ride where
 
 import Data.Aeson
 import qualified Domain.Types.Ride
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -52,7 +52,7 @@ data RideAPIEntity = RideAPIEntity
     vehicleColor :: Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
-    vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.VehicleServiceTier.VehicleServiceTierType,
+    vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
     favCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     isAlreadyFav :: Kernel.Prelude.Maybe Kernel.Prelude.Bool

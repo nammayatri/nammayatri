@@ -26,8 +26,8 @@ where
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP

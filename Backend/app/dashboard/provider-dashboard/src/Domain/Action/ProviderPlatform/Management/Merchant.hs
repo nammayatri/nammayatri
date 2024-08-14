@@ -130,7 +130,7 @@ postMerchantConfigDriverPoolUpdate ::
   ApiTokenInfo ->
   Maybe HighPrecDistance ->
   Maybe DistanceUnit ->
-  Maybe Common.Variant ->
+  Maybe Common.VehicleVariant ->
   Maybe Text ->
   Meters ->
   SL.Area ->
@@ -149,7 +149,7 @@ postMerchantConfigDriverPoolCreate ::
   ApiTokenInfo ->
   Maybe HighPrecDistance ->
   Maybe DistanceUnit ->
-  Maybe Common.Variant ->
+  Maybe Common.VehicleVariant ->
   Maybe Text ->
   Meters ->
   SL.Area ->
@@ -189,7 +189,7 @@ getMerchantConfigOnboardingDocument ::
   City.City ->
   ApiTokenInfo ->
   Maybe Common.DocumentType ->
-  Maybe Common.Category ->
+  Maybe Common.VehicleCategory ->
   Flow Common.DocumentVerificationConfigRes
 getMerchantConfigOnboardingDocument merchantShortId opCity apiTokenInfo documentType category = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -200,7 +200,7 @@ postMerchantConfigOnboardingDocumentUpdate ::
   City.City ->
   ApiTokenInfo ->
   Common.DocumentType ->
-  Common.Category ->
+  Common.VehicleCategory ->
   Common.DocumentVerificationConfigUpdateReq ->
   Flow APISuccess
 postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity apiTokenInfo documentType category req = do
@@ -216,7 +216,7 @@ postMerchantConfigOnboardingDocumentCreate ::
   City.City ->
   ApiTokenInfo ->
   Common.DocumentType ->
-  Common.Category ->
+  Common.VehicleCategory ->
   Common.DocumentVerificationConfigCreateReq ->
   Flow APISuccess
 postMerchantConfigOnboardingDocumentCreate merchantShortId opCity apiTokenInfo documentType category req = do

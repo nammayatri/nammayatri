@@ -31,7 +31,7 @@ module SharedLogic.FareCalculator
 where
 
 import qualified BecknV2.OnDemand.Enums as Enums
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), Variant (..), WaitingChargeAPIEntity (..))
+import "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), VehicleVariant (..), WaitingChargeAPIEntity (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Domain.Types.CancellationFarePolicy as DTCFP
@@ -40,7 +40,6 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
-import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Prelude as KP

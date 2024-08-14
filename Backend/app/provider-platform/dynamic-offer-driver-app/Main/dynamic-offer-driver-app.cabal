@@ -259,6 +259,7 @@ library
       Domain.Types.Extra.TransporterConfig
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
+      Domain.Types.FarePolicy.Common
       Domain.Types.FarePolicy.DriverExtraFeeBounds
       Domain.Types.FarePolicy.FarePolicyAmbulanceDetails
       Domain.Types.FarePolicy.FarePolicyInterCityDetails
@@ -277,7 +278,6 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
-      Domain.Types.ServiceTierType
       Domain.Types.UtilsTH
       Environment
       Lib.DriverCoins.Coins

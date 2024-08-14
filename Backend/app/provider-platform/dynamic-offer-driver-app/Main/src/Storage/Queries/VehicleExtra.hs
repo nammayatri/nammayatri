@@ -8,7 +8,7 @@ import qualified Database.Beam as B
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Vehicle
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleVariant as Variant
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -65,7 +65,7 @@ findByAnyOf registrationNoM vehicleIdM =
         )
     ]
 
-findAllByVariantRegNumMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Variant.Variant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
+findAllByVariantRegNumMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Variant.VehicleVariant -> Maybe Text -> Integer -> Integer -> Id Merchant -> m [Vehicle]
 findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id merchantId') = do
   dbConf <- getMasterBeamConfig
   vehicles <-

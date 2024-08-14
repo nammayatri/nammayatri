@@ -62,6 +62,7 @@ import qualified Data.List.NonEmpty.Extra as NE
 import qualified Data.Text as T
 import Data.Tuple.Extra (snd3)
 import Domain.Action.UI.Route as DRoute
+import Domain.Types as DVST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
@@ -73,10 +74,9 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.RiderDetails (RiderDetails)
 import Domain.Types.SearchRequest
 import Domain.Types.SearchTry
-import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTC
-import qualified Domain.Types.Vehicle as DVeh
 import Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (find, id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types
@@ -811,7 +811,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
           let timeDifference = diffUTCTime latestScheduledBooking now
            in timeDifference < scheduledRideFilterExclusionThresholdInSecs
 
-getVehicleAvgSpeed :: DVeh.Variant -> DTC.AvgSpeedOfVechilePerKm -> Kilometers
+getVehicleAvgSpeed :: DVeh.VehicleVariant -> DTC.AvgSpeedOfVechilePerKm -> Kilometers
 getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.SEDAN -> avgSpeedOfVehicle.sedan
   DVeh.SUV -> avgSpeedOfVehicle.suv

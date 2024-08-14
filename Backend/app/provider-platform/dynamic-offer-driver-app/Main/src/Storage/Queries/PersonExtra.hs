@@ -24,7 +24,7 @@ import Domain.Types.Merchant hiding (MerchantAPIEntity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
-import Domain.Types.Vehicle as DV
+import Domain.Types.Vehicle
 import qualified EulerHS.Language as L
 import IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
