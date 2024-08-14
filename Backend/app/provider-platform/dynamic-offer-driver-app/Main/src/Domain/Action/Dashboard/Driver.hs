@@ -2261,8 +2261,8 @@ updateDriverTag merchantShortId opCity driverId req = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   let tag =
         if req.isAddingTag
-          then addDriverTag driver.driverTag (T.toUpper req.driverTag)
-          else removeDriverTag driver.driverTag (T.toUpper req.driverTag)
+          then addDriverTag driver.driverTag req.driverTag
+          else removeDriverTag driver.driverTag req.driverTag
   QPerson.updateTag personId tag
   pure Success
 

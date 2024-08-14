@@ -23,6 +23,7 @@ where
 import qualified Control.Monad as CM
 import Control.Monad.Extra (partitionM)
 import Data.Aeson as A
+import Data.Aeson.Types as A
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
@@ -550,12 +551,6 @@ previouslyAttemptedDrivers searchTryId consideOnRideDrivers = do
         return []
       a -> return a
 
-data TaggedDriverPoolInput = TaggedDriverPoolInput
-  { drivers :: [DriverPoolWithActualDistResult],
-    needOnRideDrivers :: Bool
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
 makeTaggedDriverPool ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -587,7 +582,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc onlyNewDrivers batchSize isOnRideP
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, ..}
 
     updateDriverPoolResult DriverPoolResult {..} =
-      DriverPoolResult {customerTags = convertTags <$> customerNammaTags, ..}
+      DriverPoolResult {customerTags = Just $ maybe A.emptyObject convertTags customerNammaTags, ..}
 
 sortWithDriverScore ::
   ( CacheFlow m r,

@@ -66,7 +66,7 @@ $(mkBeamInstancesForEnumAndList ''LogicDomain)
 
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
-    inputData :: Maybe Value,
+    inputData :: [Value],
     domain :: LogicDomain
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
