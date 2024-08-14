@@ -25,6 +25,9 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
 
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamFPSS.FullFarePolicySlabsDetailsSlab -> m ()
+create = createWithKV
+
 findAll' ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DFP.FarePolicy ->
