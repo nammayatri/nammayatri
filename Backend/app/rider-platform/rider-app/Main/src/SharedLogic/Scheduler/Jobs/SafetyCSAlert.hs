@@ -104,6 +104,8 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue = do
     issueDescription = case flow of
       DSos.Police -> "112 called"
       DSos.CSAlertSosTicket -> "SOS ticket created for night safety when rider didn't picked exotel call"
+      DSos.AudioRecording -> "Audio recording shared."
+      DSos.CustomerCare -> "Customer care called."
       _ -> "SOS activated"
 
 buildRideInfo :: DRide.Ride -> DP.Person -> Maybe Text -> Ticket.RideInfo

@@ -19,6 +19,7 @@ data SafetySettingsT f = SafetySettingsT
     falseSafetyAlarmCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     hasCompletedMockSafetyDrill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasCompletedSafetySetup :: B.C f Kernel.Prelude.Bool,
+    hasSetupRideOtp :: B.C f Kernel.Prelude.Bool,
     informPoliceSos :: B.C f Kernel.Prelude.Bool,
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     notifySafetyTeamForSafetyCheckFailure :: B.C f Kernel.Prelude.Bool,
