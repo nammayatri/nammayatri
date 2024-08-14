@@ -462,3 +462,31 @@ getDriverCoordinatesDetails ::
 getDriverCoordinatesDetails apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getDriverCoordinatesClient bppRideId (Just apiKey)) "GetDriverCoordinates" getDriverCoordinatesApi
+
+type PopulateTipAmountAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> Capture "tipAmount" HighPrecMoney
+    :> "populateTipAmount"
+    :> Header "token" Text
+    :> Post '[JSON] APISuccess
+
+populateTipAmountClient :: Text -> HighPrecMoney -> Maybe Text -> EulerClient APISuccess
+populateTipAmountClient = client populateTipAmountApi
+
+populateTipAmountApi :: Proxy PopulateTipAmountAPI
+populateTipAmountApi = Proxy
+
+populateTipAmount ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  HighPrecMoney ->
+  m APISuccess
+populateTipAmount apiKey internalUrl bppRideId tipAmount = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (populateTipAmountClient bppRideId tipAmount (Just apiKey)) "PopulateTipAmount" populateTipAmountApi

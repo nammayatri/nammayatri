@@ -39,7 +39,7 @@ import Tools.Client
 import "lib-dashboard" Tools.Metrics
 
 newtype FleetOperationsAPIs = FleetOperationsAPIs
-  { listDriverRidesForFleet :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Euler.EulerClient DARide.DriverRideListRes
+  { listDriverRidesForFleet :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Maybe Int -> Euler.EulerClient DARide.DriverRideListRes
   }
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs

@@ -246,7 +246,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         vehicleVariant = Just $ vehicle.variant,
         onlinePayment = onlinePayment,
         enableOtpLessRide = enableOtpLessRide,
-        cancellationFeeIfCancelled = Nothing
+        cancellationFeeIfCancelled = Nothing,
+        tipAmount = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

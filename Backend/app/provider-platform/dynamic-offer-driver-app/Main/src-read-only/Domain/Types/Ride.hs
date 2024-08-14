@@ -74,6 +74,7 @@ data Ride = Ride
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     status :: Domain.Types.Ride.RideStatus,
+    tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,

@@ -141,3 +141,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_fee_if_cancelled
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN previous_ride_trip_end_time timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN tip_amount double precision;
