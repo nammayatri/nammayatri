@@ -2039,12 +2039,12 @@ locationTagBarConfig state =
                 { height: V 32
                 , width: V 32
                 , imageWithFallback: fetchImage FF_ASSET item.image
-                , margin: MarginRight 8
+                , margin: MarginRight 4
                 }
             , textConfig:
                 { text: item.text
                 , fontStyle: FontStyle.SubHeading1
-                , fontSize: FontSize.a_14
+                , fontSize: FontSize.a_16
                 , color: Color.black800
                 }
             , stroke: "0," <> Color.grey700
@@ -2052,7 +2052,7 @@ locationTagBarConfig state =
             , background: item.background
             , height: WRAP_CONTENT
             , width: WRAP_CONTENT
-            , padding: PaddingVertical 16 16
+            , padding: item.padding
             , orientation: HORIZONTAL
             , enableRipple: true
             , rippleColor: Color.rippleShade
@@ -2066,12 +2066,23 @@ locationTagBarConfig state =
                 }
             , showBanner: item.showBanner
             , id: item.id
+            , pillConfig :
+                {
+                  text : getEN $ EVERY_AMOUNT_ONE_FREE $ "3" ,
+                  textSize : FontSize.a_12,
+                  color : Color.white900,
+                  background : Color.grapeFruitRed,
+                  cornerRadius  : Corners 20.0 true true true true
+                }
+              , showPill : item.showPill
+
             }
         )
-        ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
-          , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
+        ( [ 
+           { image: "ny_ic_new_rentals_logo", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE , showPill : false  ,  padding :  PaddingVertical 16 16 }
           ]
-            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
+            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE , showPill : false ,padding :PaddingVertical 16 16} ] else []
+            <> if state.data.currentCityConfig.isMetroEnabled then [ { image: "ny_ic_metro", text: (getString METRO_TICKETS), id: "METRO_TICKETS", background: Color.grayishRed, showBanner: GONE , showPill : true  , padding :  PaddingVertical 8 8 } ] else [  { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE , showPill : false  ,padding :Padding 12 16 12 16} ] 
         )
   in
     { tagList: locTagList }

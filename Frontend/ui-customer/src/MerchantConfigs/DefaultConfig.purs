@@ -483,6 +483,7 @@ config =
             , featureConfig {
                 enableCabBanner = false
               }
+            , isMetroEnabled = true 
           },
 
            defaultCityConfig 
@@ -763,7 +764,8 @@ config =
         defaultCityConfig
           { cityName = "Kochi",
             cityCode = "std:0484",
-            waitingChargeConfig = keralaWTC
+            waitingChargeConfig = keralaWTC,
+            isMetroEnabled = true
           },
         defaultCityConfig
           { cityName = "Trivandrum",
@@ -888,8 +890,9 @@ allCitiesDefCityConfig =
       , perMinCharges : 2.0
       }
     },
-    enableWaitingConfig : false
-  }
+    enableWaitingConfig : false,
+    isMetroEnabled :false
+  } 
 
 ysDefaultCityConfig :: CityConfig
 ysDefaultCityConfig = allCitiesDefCityConfig {

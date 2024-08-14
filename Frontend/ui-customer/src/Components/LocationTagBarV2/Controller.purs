@@ -44,7 +44,9 @@ type TagConfig = {
   rippleColor :: String,
   orientation :: Orientation,
   bannerConfig :: BannerConfig,
-  showBanner :: Visibility
+  showBanner :: Visibility,
+  pillConfig :: PillConfig,
+  showPill :: Boolean
   }
 type BannerConfig = {
   text :: String,
@@ -67,6 +69,15 @@ type TextConfig = {
   fontStyle :: Style,
   fontSize :: FontSize,
   color :: String
+}
+
+type PillConfig = {
+  text :: String,
+  textSize :: FontSize,
+  color :: String,
+  background :: String,
+  cornerRadius :: Corners
+
 }
 
 config :: LocationTagBarConfig 

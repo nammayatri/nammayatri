@@ -97,7 +97,16 @@ locationTagBarConfig state globalProps =
               cornerRadii : Corners 8.0 true true false false,
               background : Color.blue800
             },
-            showBanner : GONE
+            pillConfig : {
+                  text : "Every 3rd one free",
+                  textSize : FontSize.a_12,
+                  color : Color.white900,
+                  background : Color.grapeFruitRed,
+                  cornerRadius  : Corners 6.0 true true true true
+            },
+            showBanner : GONE,
+            showPill : false
+
           })
         [ { image : home.image, text : home.text, id : home.id },
           { image : work.image, text : work.text, id : work.id },

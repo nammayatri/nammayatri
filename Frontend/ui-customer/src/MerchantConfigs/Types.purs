@@ -427,7 +427,8 @@ type CityConfig = {
   waitingChargeConfig :: WaitingChargeConfig,
   rentalWaitingChargeConfig :: WaitingChargeConfig,
   intercityWaitingChargeConfig :: WaitingChargeConfig,
-  enableWaitingConfig :: Boolean
+  enableWaitingConfig :: Boolean,
+  isMetroEnabled :: Boolean
 }
 
 type CityBasedFeatures = {
