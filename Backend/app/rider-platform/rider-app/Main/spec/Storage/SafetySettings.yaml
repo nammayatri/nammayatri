@@ -17,12 +17,11 @@ SafetySettings:
     informPoliceSos : Bool
     autoCallDefaultContact : Bool
     notifySosWithEmergencyContacts : Bool
-    enableUnexpectedEventsCheck : Bool
-    enablePostRideSafetyCheck : Bool
+    enableUnexpectedEventsCheck : RideShareOptions
+    enablePostRideSafetyCheck : RideShareOptions
     notifySafetyTeamForSafetyCheckFailure : Bool
     shakeToActivate : Bool
-    enableOtpLessRide : Bool
-    hasSetupRideOtp : Bool
+    enableOtpLessRide : Maybe Bool
 
   beamType:
     falseSafetyAlarmCount: Maybe Int
@@ -47,8 +46,6 @@ SafetySettings:
     enablePostRideSafetyCheck : "false"
     notifySafetyTeamForSafetyCheckFailure : "false"
     shakeToActivate : "false"
-    enableOtpLessRide : "false"
-    hasSetupRideOtp : "false"
 
 
 
