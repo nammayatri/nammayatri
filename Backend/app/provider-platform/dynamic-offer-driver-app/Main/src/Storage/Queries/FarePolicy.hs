@@ -89,7 +89,8 @@ create farePolicy = do
   case farePolicy.farePolicyDetails of
     ProgressiveDetails fPPD ->
       QueriesFPPD.create (farePolicy.id, fPPD)
-    SlabsDetails _ -> pure () -- will do later :(
+    SlabsDetails fPSD ->
+      mapM_ (\fps -> QueriesFPSDS.create (farePolicy.id, fps)) (toList fPSD.slabs)
     AmbulanceDetails _ -> pure () -- can be done with slabs
     RentalDetails fPRD -> do
       QueriesFPRD.create (farePolicy.id, fPRD)
