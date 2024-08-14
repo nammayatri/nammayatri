@@ -719,6 +719,7 @@ data DriverGoHomeRequestError
   | DriverGoHomeRequestNotPresent
   | GoHomeFeaturePermanentlyDisabled
   | DriverCloseToHomeLocation
+  | CannotEnableGoHomeForDifferentCity
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverGoHomeRequestError
@@ -732,6 +733,7 @@ instance IsBaseError DriverGoHomeRequestError where
     DriverGoHomeRequestNotPresent -> Just "GoHome feature is not activated"
     GoHomeFeaturePermanentlyDisabled -> Just "GoHome feature is permanently disabled."
     DriverCloseToHomeLocation -> Just "Driver is close to home location."
+    CannotEnableGoHomeForDifferentCity -> Just "Cannot Enable Go To For a Location outside currentCity."
 
 instance IsHTTPError DriverGoHomeRequestError where
   toErrorCode = \case
@@ -742,6 +744,7 @@ instance IsHTTPError DriverGoHomeRequestError where
     DriverGoHomeRequestNotPresent -> "DRIVER_GO_HOME_REQUEST_NOT_PRESENT"
     GoHomeFeaturePermanentlyDisabled -> "GO_HOME_FEATURE_PERMANENTLY_DISABLED"
     DriverCloseToHomeLocation -> "DRIVER_CLOSE_TO_HOME_LOCATION"
+    CannotEnableGoHomeForDifferentCity -> "CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY"
   toHttpCode = \case
     DriverGoHomeRequestErrorNotFound _ -> E500
     DriverGoHomeRequestErrorDoesNotExist _ -> E400
@@ -750,6 +753,7 @@ instance IsHTTPError DriverGoHomeRequestError where
     DriverGoHomeRequestNotPresent -> E400
     GoHomeFeaturePermanentlyDisabled -> E400
     DriverCloseToHomeLocation -> E400
+    CannotEnableGoHomeForDifferentCity -> E400
 
 instance IsAPIError DriverGoHomeRequestError
 
