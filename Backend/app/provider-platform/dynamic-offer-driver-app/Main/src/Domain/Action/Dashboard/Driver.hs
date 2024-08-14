@@ -578,6 +578,9 @@ paymentStatus isExempted
   | isExempted = EXEMPTED
   | otherwise = COLLECTED_CASH
 
+recordPaymentLockKey :: Id Common.Driver -> Text
+recordPaymentLockKey driverId = "RP:LK:DId:-" <> driverId.getId
+
 recordPayment :: Bool -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> ServiceNames -> Flow APISuccess
 recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceName = do
   merchant <- findMerchantByShortId merchantShortId
@@ -585,28 +588,28 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
-
-  -- merchant access checking
-  let merchantId = driver.merchantId
-  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  driverFees <- findPendingFeesByDriverIdAndServiceName driverId serviceName
-  let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  QDriverInfo.updatePendingPayment False driverId
-  QDriverInfo.updateSubscription True driverId
-  mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
-  invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
-  mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) (concat invoices)
-  unless isExempted $ do
-    mapM_
-      ( \dFee -> do
-          invoice <- mkInvoice dFee
-          QINV.create invoice
-      )
-      driverFees
-  fork "sending dashboard sms - collected cash" $ do
-    Sms.sendDashboardSms merchantId merchantOpCityId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
+  Redis.whenWithLockRedis (recordPaymentLockKey reqDriverId) 30 $ do
+    -- merchant access checking
+    let merchantId = driver.merchantId
+    unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+    driverFees <- findPendingFeesByDriverIdAndServiceName driverId serviceName
+    let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
+    transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    QDriverInfo.updatePendingPayment False driverId
+    QDriverInfo.updateSubscription True driverId
+    mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
+    invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
+    mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) (concat invoices)
+    unless isExempted $ do
+      mapM_
+        ( \dFee -> do
+            invoice <- mkInvoice dFee
+            QINV.create invoice
+        )
+        driverFees
+    fork "sending dashboard sms - collected cash" $ do
+      Sms.sendDashboardSms merchantId merchantOpCityId Sms.CASH_COLLECTED Nothing personId Nothing totalFee
   pure Success
   where
     mkInvoice driverFee = do
