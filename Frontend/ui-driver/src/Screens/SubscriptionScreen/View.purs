@@ -59,7 +59,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), identity)
+import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), identity, (<$>))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
 import PrestoDOM (alignParentRight, alignParentLeft, Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
@@ -72,7 +72,7 @@ import Screens as ScreenNames
 import Screens.DriverProfileScreen.ScreenData (dummyDriverInfo)
 import Screens.SubscriptionScreen.Controller (Action(..), ScreenOutput, eval, getAllFareFromArray, getPlanPrice)
 import Screens.Types (AutoPayStatus(..), DueItem, GlobalProps, KioskLocation(..), MyPlanData, OfferBanner, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscriptionScreenState, SubscriptionSubview(..))
-import Services.API (ReelsResp, FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), DriverInfoReq(..), LastPaymentType(..))
+import Services.API (ReelsResp, FeeType(..), GetCurrentPlanResp(..), GetDriverInfoResp(..), KioskLocationRes(..), KioskLocationResp(..), OrderStatusRes(..), PaymentBreakUp(..), UiPlansResp(..), DriverInfoReq(..), LastPaymentType(..), CoinEntity(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
@@ -489,8 +489,8 @@ plansBottomView push state =
                   (\item ->
                     let selectedPlan = state.props.joinPlanProps.selectedPlanItem
                     in case selectedPlan of
-                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory []
-                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory []
+                        Just plan -> planCardView push item (item.id == plan.id) true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] Nothing
+                        Nothing -> planCardView push item false true ChoosePlan state.props.isSelectedLangTamil false false false Nothing state.props.joinPlanProps.isIntroductory [] Nothing
                   ) state.data.joinPlanData.allPlans)
           ]
         , PrimaryButton.view (push <<< JoinPlanAC) (joinPlanButtonConfig state)
@@ -734,6 +734,9 @@ myPlanBodyview push state =
       paddingBottom = case state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY , state.data.myPlanData.manualDueAmount > 0.0 of
                         true, true -> 290
                         _, _ -> 270
+      mbCoinDiscountUpto = case state.data.myPlanData.coinEntity of
+                            Just (CoinEntity coinEntity) -> Just coinEntity.coinDiscountUpto
+                            Nothing -> Nothing
   in 
   scrollView
   [ height MATCH_PARENT
@@ -780,7 +783,7 @@ myPlanBodyview push state =
         , paymentMethodView push state.data.myPlanData
       ]
     , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0) false
-    , planCardView push state.data.myPlanData.planEntity true (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false [] -- Always expended
+    , planCardView push state.data.myPlanData.planEntity true (not isFreezed) TogglePlanDescription state.props.isSelectedLangTamil false true true Nothing false [] mbCoinDiscountUpto  -- Always expended
     , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)) false state.props.offerBannerProps isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false isFreezed
@@ -1133,44 +1136,45 @@ paymentMethodView push state =
 
 managePlanBodyView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
 managePlanBodyView push state =
-  scrollView
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , scrollBarY false
-  ][ linearLayout
-     [ height MATCH_PARENT
-     , width MATCH_PARENT
-     , padding $ PaddingTop 24
-     , margin $ MarginHorizontal 16 16
-     , orientation VERTICAL
-     ][ textView $
-        [ text (getString CURRENT_PLAN)
-        , color Color.black700
-        , margin $ MarginBottom 12
-        ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
-      , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans
-      , textView $
-        [ text (getString ALTERNATE_PLAN)
-        , color Color.black700
-        , margin $ MarginVertical 32 12 
-        ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ](map(
-             (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)
-             ) state.data.managePlanData.alternatePlans)
-      , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
-     ]
-   ]
+    scrollView
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , scrollBarY false
+    ][ linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , padding $ PaddingTop 24
+      , margin $ MarginHorizontal 16 16
+      , orientation VERTICAL
+      ][ textView $
+          [ text (getString CURRENT_PLAN)
+          , color Color.black700
+          , margin $ MarginBottom 12
+          ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
+        , planCardView push state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans Nothing
+        , textView $
+          [ text (getString ALTERNATE_PLAN)
+          , color Color.black700
+          , margin $ MarginVertical 32 12 
+          ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ](map(
+              (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans Nothing)
+              ) state.data.managePlanData.alternatePlans)
+        , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
+      ]
+    ]
 
-planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (PlanCardConfig -> Action) -> Boolean -> Boolean -> Boolean -> Boolean -> Maybe OfferBanner -> Boolean -> Array String -> PrestoDOM (Effect Unit) w
-planCardView push state isSelected clickable' action isSelectedLangTamil showBanner isMyPlan isActivePlan offerBannerProps isIntroductory offerBannerPlans =
+planCardView :: forall w. (Action -> Effect Unit) -> PlanCardConfig -> Boolean -> Boolean -> (PlanCardConfig -> Action) -> Boolean -> Boolean -> Boolean -> Boolean -> Maybe OfferBanner -> Boolean -> Array String -> Maybe Number -> PrestoDOM (Effect Unit) w
+planCardView push state isSelected clickable' action isSelectedLangTamil showBanner isMyPlan isActivePlan offerBannerProps isIntroductory offerBannerPlans mbCoinDiscountUpto =
   -- PrestoAnim.animationSet                TODO :: Animations
   -- [ translateInXForwardAnim true] $
   let dummyOfferConfig = { showOfferBanner : false, offerBannerValidTill : "", offerBannerDeadline : ""}
       gradient' = Linear 180.0 if isSelected && not isMyPlan then ["#53BB6F", "#2194FF"] else ["#53BB6F", "#E5E7EB"]
+      coinDiscountUpto = maybe "" (\coinDiscount -> if coinDiscount > 0.0 then getFixedTwoDecimals coinDiscount else "") mbCoinDiscountUpto
   in
   relativeLayout
   [ height WRAP_CONTENT
@@ -1183,13 +1187,15 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
     , width MATCH_PARENT
     , padding $ Padding 1 1 1 1
     , margin cardMargin
-    , cornerRadius 8.0 
+    , cornerRadius 8.0
+    , orientation VERTICAL
    ] <> if isActivePlan then [gradient gradient'] else [])
    [ linearLayout
       [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.white900
         , cornerRadius 8.0
+        , cornerRadii $  if isActivePlan && coinDiscountUpto /= ""  then (Corners 8.0 true true false false) else (Corners 8.0 true true true true)
         ][
         linearLayout
         ([ height WRAP_CONTENT
@@ -1264,8 +1270,33 @@ planCardView push state isSelected clickable' action isSelectedLangTamil showBan
                   ]
               )state.offers)
           , offerCardBannerView push false (isJust offerBannerProps && (any (_ == state.id) offerBannerPlans) && showBanner) true (fromMaybe dummyOfferConfig offerBannerProps) false
+            
           ]
       ]
+      ,
+      linearLayout 
+        [height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , orientation HORIZONTAL
+        , visibility $ MP.boolToVisibility (isActivePlan && coinDiscountUpto /= "")
+        , background Color.blue600
+        , cornerRadii $ (Corners 8.0 false false true true)
+        , padding $ Padding 2 4 2 4
+        ]
+        [ 
+          imageView
+          [ width $ V 12
+          , height $ V 12
+          , margin (MarginRight 4)
+          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_discount"
+          ] 
+        , textView $
+          [ color Color.black800
+          , singleLine true
+          ,text $ getString $  DISCOUNT_POINTS_UPTO (coinDiscountUpto <> " ")
+          ]  <> (if isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy)
+        ]
     ]
    , linearLayout 
      [  height WRAP_CONTENT

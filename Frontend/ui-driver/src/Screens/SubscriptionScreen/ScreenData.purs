@@ -50,7 +50,8 @@ initData =
             manualDueAmount : 0.0,
             mandateStatus : "",
             selectedDue : "",
-            dueBoothCharges : Mb.Nothing
+            dueBoothCharges : Mb.Nothing,
+            coinEntity : Mb.Nothing
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,

@@ -724,7 +724,8 @@ getCityConfig cityConfig cityName = do
                             onboarding_auto_image : "ny_ic_auto_right_side_yellow",
                             empty_referral_auto : "",
                             empty_referral_cab : ""
-                          }
+                          },
+                          gstPercentage : "18"
                         }
   maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
   where 

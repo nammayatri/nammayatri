@@ -152,5 +152,6 @@ dummyCityConfig = {
                         onboarding_auto_image : "",
                         empty_referral_auto : "",
                         empty_referral_cab : ""
-                      }
+                      },
+                      gstPercentage : "18"
 }
