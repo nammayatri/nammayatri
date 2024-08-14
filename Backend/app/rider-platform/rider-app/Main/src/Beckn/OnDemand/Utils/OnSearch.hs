@@ -306,6 +306,11 @@ getPerDayMaxHourAllowance tagGroups = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_DAY_MAX_HOUR_ALLOWANCE tagGroups
   readMaybe $ T.unpack tagValue
 
+getPerDayMaxAllowanceInMins :: Maybe [Spec.TagGroup] -> Maybe Minutes
+getPerDayMaxAllowanceInMins tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_DAY_MAX_ALLOWANCE_IN_MINS tagGroups
+  readMaybe $ T.unpack tagValue
+
 getDeadKilometerFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getDeadKilometerFare tagGroups currency = do
   tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.DEAD_KILOMETER_FARE tagGroups

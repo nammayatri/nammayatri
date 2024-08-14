@@ -12,6 +12,7 @@ imports:
   DistanceUnit: Kernel.Types.Common
   HighPrecDistance: Kernel.Types.Common
   Hours: Kernel.Types.Common
+  Minutes: Kernel.Types.Common
 
 InterCityDetails:
   tableName: inter_city_details
@@ -29,6 +30,7 @@ InterCityDetails:
     plannedPerKmRateOneWay: Price
     plannedPerKmRateRoundTrip: Price
     perDayMaxHourAllowance: Hours
+    perDayMaxAllowanceInMins: Maybe Minutes
     nightShiftInfo: Maybe NightShiftInfo
     roundTrip: Maybe Bool
 
@@ -42,6 +44,7 @@ InterCityDetails:
     plannedPerKmRateOneWay: numeric(30, 2)
     plannedPerKmRateRoundTrip: numeric(30, 2)
     perDayMaxHourAllowance: int
+    perDayMaxAllowanceInMins: int
     nightShiftCharge: numeric(30, 2)
     currency: character varying(255)
 

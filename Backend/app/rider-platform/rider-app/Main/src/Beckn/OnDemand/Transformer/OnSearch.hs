@@ -72,9 +72,10 @@ buildInterCityQuoteInfo item quoteId_ currency = do
   let plannedPerKmRateOneWay = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRate itemTags currency)
   let plannedPerKmRateRoundTrip = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getPlannedPerKmRateRoundTrip itemTags currency)
   let perDayMaxHourAllowance = fromMaybe (Hours 0) (Beckn.OnDemand.Utils.OnSearch.getPerDayMaxHourAllowance itemTags)
+  let perDayMaxAllowanceInMins' = fromMaybe (Minutes 0) (Beckn.OnDemand.Utils.OnSearch.getPerDayMaxAllowanceInMins itemTags)
   let deadKmFare = fromMaybe defaultPrice (Beckn.OnDemand.Utils.OnSearch.getDeadKilometerFare itemTags currency)
   let nightShiftInfo = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item currency
-  Just $ Domain.Action.Beckn.OnSearch.InterCityQuoteDetails {..}
+  Just $ Domain.Action.Beckn.OnSearch.InterCityQuoteDetails {perDayMaxAllowanceInMins = Just perDayMaxAllowanceInMins', ..}
 
 tfQuotesInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.Provider -> [BecknV2.OnDemand.Types.Fulfillment] -> Kernel.Prelude.UTCTime -> BecknV2.OnDemand.Types.Item -> m (Either Domain.Action.Beckn.OnSearch.EstimateInfo Domain.Action.Beckn.OnSearch.QuoteInfo)
 tfQuotesInfo provider fulfillments validTill item = do

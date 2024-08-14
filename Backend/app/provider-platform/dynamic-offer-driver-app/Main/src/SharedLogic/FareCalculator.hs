@@ -375,14 +375,14 @@ calculateFareParameters params = do
     processFPInterCityDetails DFP.FPInterCityDetails {..} = do
       let estimatedDuration = maybe 0 (.getSeconds) params.estimatedRideDuration
           actualDuration = maybe estimatedDuration (.getSeconds) params.actualRideDuration
-          estimatedDurationInHr = estimatedDuration `div` 3600
-          perDayMaxHourAllowanceInHr = perDayMaxHourAllowance.getHours
-          allowanceHours' = maybe 0 (\rt -> (calculateAllowanceHours (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxHourAllowanceInHr params.rideTime rt) - estimatedDurationInHr) params.returnTime
-          defaultWaitTimeAtDestinationInHrs = defaultWaitTimeAtDestination.getMinutes `div` 60
-          allowanceHours = if params.roundTrip then max defaultWaitTimeAtDestinationInHrs allowanceHours' else 0
+          perDayMaxAllowanceInMins' = case perDayMaxAllowanceInMins of
+            Just allowance -> allowance.getMinutes
+            Nothing -> 840
+          allowanceMins' = maybe 0 (\rt -> (calculateAllowanceMins (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxAllowanceInMins' params.rideTime rt) - estimatedDuration) params.returnTime
+          allowanceMins = if params.roundTrip then max defaultWaitTimeAtDestination.getMinutes allowanceMins' else 0
           extraMins = max 0 (actualDuration - estimatedDuration) `div` 60
           extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
-          fareByTime = HighPrecMoney $ toRational (estimatedDurationInHr + allowanceHours) * perHourCharge.getHighPrecMoney
+          fareByTime = HighPrecMoney $ (toRational (estimatedDuration + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
 
       let perKmRate = if params.roundTrip then perKmRateRoundTrip else perKmRateOneWay
           estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
@@ -391,7 +391,8 @@ calculateFareParameters params = do
           actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
-          fareByDist = HighPrecMoney $ toRational ((max 0 (allowanceHours - defaultWaitTimeAtDestinationInHrs) * kmPerPlannedExtraHour.getKilometers) + estimatedDistanceInKm) * perKmRate.getHighPrecMoney
+          extraHoursSpent = max 0 (fromIntegral (allowanceMins' - defaultWaitTimeAtDestination.getMinutes) / 60.0) :: Double
+          fareByDist = HighPrecMoney $ toRational ((extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers) + fromIntegral estimatedDistanceInKm) * fromRational (perKmRate.getHighPrecMoney)
 
       ( [],
         baseFare,
@@ -667,26 +668,26 @@ utcToIst timeZoneDiff = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinute
 -- Calculates hours for a partial day
 hoursInDay :: UTCTime -> UTCTime -> LocalTime -> LocalTime -> Day -> Int
 hoursInDay startUtc endUtc start end day
-  | startDay == endDay = if startDay == day then diffHours else 0
+  | startDay == endDay = if startDay == day then diffMins else 0
   | otherwise =
     if day == startDay
-      then 24 - todHour startTod
+      then 1440 - todMin startTod
       else
         if day == endDay
-          then todHour endTod
-          else 24
+          then todMin endTod
+          else 1440
   where
     startDay = localDay start
     endDay = localDay end
     startTod = localTimeOfDay start
     endTod = localTimeOfDay end
     diffSeconds = nominalDiffTimeToSeconds $ diffUTCTime endUtc startUtc
-    diffHours = diffSeconds.getSeconds `div` 3600
+    diffMins = diffSeconds.getSeconds `div` 60
 
 -- Main function to calculate total hours with 14-hour daily cap
-calculateAllowanceHours :: Seconds -> Int -> UTCTime -> UTCTime -> Int
-calculateAllowanceHours timeDiffFromUtc perDayMaxHourAllowance startTime endTime =
-  sum $ map (min perDayMaxHourAllowance . hoursInDay startTime endTime startIST endIST) [startDay .. endDay]
+calculateAllowanceMins :: Seconds -> Int -> UTCTime -> UTCTime -> Int
+calculateAllowanceMins timeDiffFromUtc perDayMaxAllowanceInMins startTime endTime =
+  sum $ map (min perDayMaxAllowanceInMins . hoursInDay startTime endTime startIST endIST) [startDay .. endDay]
   where
     startIST = utcToIst (secondsToMinutes timeDiffFromUtc) startTime
     endIST = utcToIst (secondsToMinutes timeDiffFromUtc) endTime

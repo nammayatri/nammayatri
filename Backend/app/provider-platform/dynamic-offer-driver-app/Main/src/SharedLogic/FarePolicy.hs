@@ -281,10 +281,14 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
           perDayMaxHourAllowanceCaption = show Tags.PER_DAY_MAX_HOUR_ALLOWANCE
           perDayMaxHourAllowanceItem = mkBreakupItem perDayMaxHourAllowanceCaption . mkValue $ show det.perDayMaxHourAllowance
 
+          perDayMaxAllowanceInMinutesCaption = show Tags.PER_DAY_MAX_ALLOWANCE_IN_MINS
+          perDayMaxAllowanceInMinutesItem = mkBreakupItem perDayMaxAllowanceInMinutesCaption . mkValue <$> minutesToText det.perDayMaxAllowanceInMins
+
           pickupChargeCaption = show Tags.DEAD_KILOMETER_FARE
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
       [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
+        <> catMaybes [perDayMaxAllowanceInMinutesItem]
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 
@@ -555,6 +559,11 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
 
 utcToIst :: Minutes -> UTCTime -> LocalTime
 utcToIst timeZoneDiff utcTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) utcTime -- IST is UTC + 5:30
+
+minutesToText :: Maybe Minutes -> Maybe Text
+minutesToText mbMinutes = case mbMinutes of
+  Just minutes -> Just $ show minutes.getMinutes
+  _ -> Nothing
 
 localTimeToDayOfWeekAndHour :: LocalTime -> (DayOfWeek, Int)
 localTimeToDayOfWeekAndHour localTime =

@@ -324,11 +324,11 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 case bookingDetails of
                   DRB.OneWaySpecialZoneDetails details -> details.otpCode
                   _ -> Nothing
-              isconfirmedRentalRideOrIntercityBooking = case bookingDetails of
-                DRB.RentalDetails _ -> booking.status == DRB.CONFIRMED
+              isRentalOrInterCity = case bookingDetails of
+                DRB.RentalDetails _ -> True
                 DRB.InterCityDetails _ -> True
                 _ -> False
-           in isJust maybeRide || isJust otpCode || isconfirmedRentalRideOrIntercityBooking
+           in isJust maybeRide || isJust otpCode || isRentalOrInterCity
 
 findAllByRiderIdAndDriverNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> DbHash -> m [Ride]
 findAllByRiderIdAndDriverNumber (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driverNumber = do
