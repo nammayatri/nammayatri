@@ -32,8 +32,8 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Maps (getTripRoutes)
 
-mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Flow GetRoutesResp
-mkGetLocation _ rideId pickupLocationLat pickupLocationLon = do
+mkGetLocation :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> Bool -> Flow GetRoutesResp
+mkGetLocation _ rideId pickupLocationLat pickupLocationLon isPickUpRoute = do
   ride <- runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == Ride.NEW || ride.status == Ride.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
@@ -44,10 +44,14 @@ mkGetLocation _ rideId pickupLocationLat pickupLocationLon = do
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DRB.InterCityDetails details -> Just details.toLocation
         DRB.AmbulanceDetails details -> Just details.toLocation
-  bookingLocation <- mbToLocation & fromMaybeM (InvalidRequest "Drop location does not exist for this ride")
-  let merchantOperatingCityId = booking.merchantOperatingCityId
-  let fromLocation = LatLong pickupLocationLat pickupLocationLon
-  let toLocation = LatLong bookingLocation.lat bookingLocation.lon
+      merchantOperatingCityId = booking.merchantOperatingCityId
+      fromLocation = LatLong pickupLocationLat pickupLocationLon
+  targetLocation <-
+    bool
+      (mbToLocation & fromMaybeM (InvalidRequest "Drop location does not exist for this ride"))
+      (pure booking.fromLocation)
+      isPickUpRoute
+  let toLocation = LatLong targetLocation.lat targetLocation.lon
   let listOfLatLong = [fromLocation, toLocation]
   let waypointsList = NE.fromList listOfLatLong
   let mkGetRoutesResp =
