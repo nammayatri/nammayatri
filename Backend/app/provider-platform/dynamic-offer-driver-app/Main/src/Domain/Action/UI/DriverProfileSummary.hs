@@ -30,6 +30,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CancellationRate as CR
 import qualified SharedLogic.DriverOnboarding as SD
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as BQ
@@ -43,7 +44,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as RQ
 import qualified Storage.Queries.Vehicle as QVehicle
-import qualified SharedLogic.CancellationRate as CR
 
 data DriverProfleSummaryRes = DriverProfleSummaryRes
   { id :: Id Person,
