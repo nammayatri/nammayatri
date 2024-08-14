@@ -47,11 +47,13 @@ library
       API.RiderPlatform.Tickets
       App
       Domain.Action.RiderPlatform.Management.Booking
+      Domain.Action.RiderPlatform.Management.Invoice
       Domain.Action.RiderPlatform.Management.Merchant
       RiderPlatformClient.RiderApp.Operations
       RiderPlatformClient.RiderApp.RideBooking
       Storage.Beam.CommonInstances
       API.Action.RiderPlatform.Management.Booking
+      API.Action.RiderPlatform.Management.Invoice
       API.Action.RiderPlatform.Management.Merchant
   other-modules:
       Paths_rider_dashboard

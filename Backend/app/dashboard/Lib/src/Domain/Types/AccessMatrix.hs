@@ -262,6 +262,7 @@ data UserActionType
   | CREATE_NAMMA_TAG
   | CREATE_CHAKRA_QUERY
   | APP_DYNAMIC_LOGIC_VERIFY
+  | INVOICE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
