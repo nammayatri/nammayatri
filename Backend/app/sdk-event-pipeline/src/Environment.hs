@@ -44,7 +44,8 @@ data AppCfg = AppCfg
     driverSDKEventsKafkaTopic :: Text,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverAppConfig :: DriverAppConfig,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -88,10 +89,10 @@ buildAppEnv AppCfg {..} = do
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
   let modifierFunc = ("sdk-event:" <>)
-  hedisEnv <- connectHedisCluster hedisClusterCfg modifierFunc
-  hedisClusterEnv <- connectHedisCluster hedisClusterCfg modifierFunc
-  hedisNonCriticalEnv <- connectHedisCluster hedisClusterCfg modifierFunc
-  hedisNonCriticalClusterEnv <- connectHedisCluster hedisClusterCfg modifierFunc
+  hedisEnv <- connectHedisCluster hedisClusterCfg modifierFunc commonRedisPrefix
+  hedisClusterEnv <- connectHedisCluster hedisClusterCfg modifierFunc commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedisCluster hedisClusterCfg modifierFunc commonRedisPrefix
+  hedisNonCriticalClusterEnv <- connectHedisCluster hedisClusterCfg modifierFunc commonRedisPrefix
   let hedisMigrationStage = False
       enablePrometheusMetricLogging = False
       enableRedisLatencyLogging = False

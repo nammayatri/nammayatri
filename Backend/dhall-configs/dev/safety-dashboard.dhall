@@ -118,4 +118,5 @@ in  { esqDBCfg
     , cacConfig
     , kvConfigUpdateFrequency
     , kafkaProducerCfg
+    , commonRedisPrefix = ""
     }

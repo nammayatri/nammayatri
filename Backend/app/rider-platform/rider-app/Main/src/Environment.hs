@@ -141,7 +141,8 @@ data AppCfg = AppCfg
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
-    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -243,19 +244,19 @@ buildAppEnv cfg@AppCfg {..} = do
   kafkaEnvs <- buildBAPKafkaEnvs
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let nonCriticalModifierFunc = ("ab:n_c:" <>)
-  hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  hedisEnv <- connectHedis hedisCfg riderAppPrefix commonRedisPrefix
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc commonRedisPrefix
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg riderAppPrefix
+      else connectHedisCluster hedisClusterCfg riderAppPrefix commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffNonCriticalHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg nonCriticalModifierFunc
+      else connectHedisCluster hedisNonCriticalClusterCfg nonCriticalModifierFunc commonRedisPrefix
   let s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap

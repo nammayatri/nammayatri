@@ -137,7 +137,8 @@ data AppCfg = AppCfg
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
-    quoteRespondCoolDown :: Int
+    quoteRespondCoolDown :: Int,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -246,16 +247,16 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   eventRequestCounter <- registerEventRequestCounterMetric
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
-  hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
+  hedisEnv <- connectHedis hedisCfg modifierFunc commonRedisPrefix -- will be depreciated once data is migrated to cluster
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc commonRedisPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg modifierFunc
+      else connectHedisCluster hedisClusterCfg modifierFunc commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
+      else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc commonRedisPrefix
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools

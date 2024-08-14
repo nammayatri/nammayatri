@@ -104,7 +104,8 @@ data AppCfg = AppCfg
     healthCheckAppCfg :: Maybe HealthCheckAppCfg,
     kvConfigUpdateFrequency :: Int,
     metricsPort :: Int,
-    encTools :: EncTools
+    encTools :: EncTools,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -163,19 +164,19 @@ buildAppEnv :: AppCfg -> ConsumerType -> IO AppEnv
 buildAppEnv AppCfg {..} consumerType = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   version <- lookupDeploymentVersion
-  hedisEnv <- connectHedis hedisCfg id
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
+  hedisEnv <- connectHedis hedisCfg id commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id commonRedisPrefix
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Nothing
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg id
+      else connectHedisCluster hedisClusterCfg id commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg id
+      else connectHedisCluster hedisNonCriticalClusterCfg id commonRedisPrefix
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

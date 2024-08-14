@@ -106,16 +106,16 @@ buildHandlerEnv HandlerCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
-  hedisEnv <- connectHedis appCfg.hedisCfg ("rider-app-scheduler:" <>)
-  hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("ras:n_c:" <>)
+  hedisEnv <- connectHedis appCfg.hedisCfg ("rider-app-scheduler:" <>) commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("ras:n_c:" <>) commonRedisPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("rider-app-scheduler:" <>)
+      else connectHedisCluster hedisClusterCfg ("rider-app-scheduler:" <>) commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
+      else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>) commonRedisPrefix
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   coreMetrics <- registerCoreMetricsContainer

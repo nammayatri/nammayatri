@@ -71,7 +71,8 @@ data SchedulerConfig = SchedulerConfig
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     cacConfig :: CacConfig,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 

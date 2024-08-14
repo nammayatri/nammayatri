@@ -70,7 +70,8 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     cacConfig :: CacConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
-    kvConfigUpdateFrequency :: Int
+    kvConfigUpdateFrequency :: Int,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -133,16 +134,16 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
-  hedisEnv <- connectHedis hedisCfg modifierFunc
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc
+  hedisEnv <- connectHedis hedisCfg modifierFunc commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc commonRedisPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg modifierFunc
+      else connectHedisCluster hedisClusterCfg modifierFunc commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
+      else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc commonRedisPrefix
   isShuttingDown <- mkShutdown
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   cacAclMapRaw <- fromMaybe (error "AUTH_MAP not found in Env !!!!") <$> lookupEnv "AUTH_MAP"

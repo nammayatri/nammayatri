@@ -62,7 +62,8 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -117,16 +118,16 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
-  hedisEnv <- connectHedis hedisCfg publicTransportBapPrefix
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg publicTransportBapPrefix
+  hedisEnv <- connectHedis hedisCfg publicTransportBapPrefix commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg publicTransportBapPrefix commonRedisPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg publicTransportBapPrefix
+      else connectHedisCluster hedisClusterCfg publicTransportBapPrefix commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix
+      else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix commonRedisPrefix
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
