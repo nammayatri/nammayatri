@@ -11,30 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module SharedLogic.DriverPool.Types
-  ( PoolCalculationStage (..),
-    CalculateGoHomeDriverPoolReq (..),
-    CancellationScoreRelatedConfig (..),
-    DriverPoolResult (..),
-    DriverPoolResultCurrentlyOnRide (..),
-    DriverPoolWithActualDistResult (..),
-    DriverPoolWithActualDistResultWithFlags (..),
-    DriverSearchBatchInput (..),
-    TripQuoteDetail (..),
-    PoolType (..),
-    PoolRadiusStep,
-    PoolBatchNum,
-    castServiceTierToVariant,
-    castVariantToServiceTier,
-  )
-where
+module SharedLogic.DriverPool.Types where
 
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
+import Data.Default.Class
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
-import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores)
+import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
@@ -112,6 +99,34 @@ data DriverPoolResult = DriverPoolResult
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
+-- Used for Tagging logic testing
+instance Default DriverPoolResult where
+  def =
+    DriverPoolResult
+      { driverId = "",
+        language = Nothing,
+        driverDeviceToken = Nothing,
+        distanceToPickup = Meters 0,
+        variant = Vehicle.AUTO_RICKSHAW,
+        serviceTier = DVST.AUTO_RICKSHAW,
+        serviceTierDowngradeLevel = 0,
+        isAirConditioned = Nothing,
+        lat = 0.0,
+        lon = 0.0,
+        mode = Just DI.ONLINE,
+        vehicleAge = Nothing,
+        clientSdkVersion = Nothing,
+        clientBundleVersion = Nothing,
+        clientConfigVersion = Nothing,
+        clientDevice = Nothing,
+        backendConfigVersion = Nothing,
+        backendAppVersion = Nothing,
+        latestScheduledBooking = Nothing,
+        latestScheduledPickup = Nothing,
+        customerTags = Nothing,
+        driverTags = A.emptyObject
+      }
+
 data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
   { driverId :: Id Driver,
     language :: Maybe Maps.Language,
@@ -155,8 +170,43 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+-- Used for Tagging logic testing
+instance Default DriverPoolWithActualDistResult where
+  def =
+    DriverPoolWithActualDistResult
+      { driverPoolResult = def,
+        actualDistanceToPickup = Meters 0,
+        actualDurationToPickup = Seconds 0,
+        keepHiddenForSeconds = Seconds 0,
+        intelligentScores = def,
+        isPartOfIntelligentPool = False,
+        pickupZone = False,
+        specialZoneExtraTip = Nothing,
+        isForwardRequest = False,
+        previousDropGeoHash = Nothing,
+        goHomeReqId = Nothing
+      }
+
 instance HasCoordinates DriverPoolWithActualDistResult where
   getCoordinates r = getCoordinates r.driverPoolResult
+
+instance Default IntelligentScores where
+  def =
+    IntelligentScores
+      { acceptanceRatio = Nothing,
+        actualPickupDistanceScore = Nothing,
+        availableTime = Nothing,
+        cancellationRatio = Nothing,
+        driverSpeed = Nothing,
+        rideFrequency = Nothing,
+        rideRequestPopupDelayDuration = 0
+      }
+
+data TaggedDriverPoolInput = TaggedDriverPoolInput
+  { drivers :: [DriverPoolWithActualDistResult],
+    needOnRideDrivers :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags
   { driverPoolWithActualDistResult :: [DriverPoolWithActualDistResult],
