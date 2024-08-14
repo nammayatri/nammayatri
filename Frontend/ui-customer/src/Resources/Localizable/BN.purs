@@ -1340,3 +1340,4 @@ getBN stringKey =
         INTERCITY_BOOKING -> "আন্তঃনগর বুকিং"
         BOOKING -> "বুকিং"
         ADD -> "ಸೇರಿಸು"
+        MOVE_PIN_TO_SELECT_LOCATION -> "অবস্থান নির্বাচন করতে পিন সরান"

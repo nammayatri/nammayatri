@@ -1343,3 +1343,4 @@ getKN stringKey =
         BOOKING -> "ಬುಕ್"
         ADD -> "ಸೇರಿಸು"
         ADD_STOP -> "ನಿಲ್ಲಿಸಲು ಸೇರಿಸಿ"
+        MOVE_PIN_TO_SELECT_LOCATION -> "ಸ್ಥಳವನ್ನು ಆಯ್ಕೆ ಮಾಡಲು ಪಿನ್ ಅನ್ನು ಸರಿಸಿ"

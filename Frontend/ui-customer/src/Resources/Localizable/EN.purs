@@ -1342,4 +1342,5 @@ getEN stringKey =
         INTERCITY_BOOKING -> "Intercity Booking"
         BOOKING -> "Booking"
         ADD -> "Add"
+        MOVE_PIN_TO_SELECT_LOCATION -> "Move pin to select location"
         

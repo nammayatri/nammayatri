@@ -1343,3 +1343,4 @@ getML stringKey =
         BOOKING -> "ബുക്കിംഗ്"
         ADD -> "ചേർക്കുക"
         ADD_STOP -> "നിർത്തുക"
+        MOVE_PIN_TO_SELECT_LOCATION -> "ലൊക്കേഷൻ തിരഞ്ഞെടുക്കുന്നതിന് പിൻ നീക്കുക"

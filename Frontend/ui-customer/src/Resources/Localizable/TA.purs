@@ -1359,3 +1359,4 @@ getTA stringKey =
     BOOKING -> "பதிவு"
     ADD -> "சேர்"
     ADD_STOP -> "நிறுத்தத்தை சேர்க்கவும்"
+    MOVE_PIN_TO_SELECT_LOCATION -> "இருப்பிடத்தைத் தேர்ந்தெடுக்க பின்னை நகர்த்தவும்"

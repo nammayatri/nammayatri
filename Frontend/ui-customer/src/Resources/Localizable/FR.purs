@@ -1342,3 +1342,4 @@ getFR stringKey =
         INTERCITY_BOOKING -> "Réservation interurbaine"
         BOOKING -> "Réservation"
         ADD -> "ajouter"
+        MOVE_PIN_TO_SELECT_LOCATION -> "Déplacer l'épingle pour sélectionner l'emplacement"

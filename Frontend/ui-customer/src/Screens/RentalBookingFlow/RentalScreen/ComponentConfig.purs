@@ -25,7 +25,7 @@ import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
 import Components.RequestInfoCard as RequestInfoCard
 import Components.LocationListItem.Controller ( dummyAddress)
-import Data.Array ((!!), singleton, null)
+import Data.Array ((!!), singleton, null, mapWithIndex)
 import Data.Maybe as MB
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
@@ -141,8 +141,8 @@ mapInputViewConfig state =
         , suffixButtonVisibility = GONE --boolToVisibility isSelectPackageStage -- TODO :: enable this once scheduled ride is handled properly. -- MERCY 
         , imageLayoutVisibility = boolToVisibility isSelectPackageStage
         , inputLayoutPading = if isSelectPackageStage then PaddingLeft 8 else PaddingLeft 0
-        , inputView = map 
-            ( \item -> inputViewArray isSelectPackageStage item ) $ inputTextConfigArray isSelectPackageStage
+        , inputView = mapWithIndex 
+            ( \index item -> inputViewArray isSelectPackageStage item index) $ inputTextConfigArray isSelectPackageStage
         }
   in inputViewConfig'
   where 
@@ -151,8 +151,8 @@ mapInputViewConfig state =
       let startTime = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
       in EHC.convertUTCtoISC startTime formatSTR
   
-    inputViewArray :: Boolean -> InputView.InputTextConfig -> InputView.InputView
-    inputViewArray isSelectPackageStage item =
+    inputViewArray :: Boolean -> InputView.InputTextConfig -> Int -> InputView.InputView
+    inputViewArray isSelectPackageStage item index =
       { padding : Padding 5 5 0 5--Padding 8 7 8 7 
       , height : V 37--WRAP_CONTENT
       , canClearText : false
@@ -180,8 +180,8 @@ mapInputViewConfig state =
       , placeLat : 0.0
       , placeLong : 0.0
       , inputTextViewContainerMargin : Margin 0 0 0 0 
-      , index : 0
       , crossBtnEnabled : true
+      , index : index
       }
 
     inputTextConfigArray :: Boolean -> Array (InputView.InputTextConfig)

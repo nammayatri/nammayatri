@@ -1142,7 +1142,7 @@ homeScreenFlow = do
             Nothing -> defaultAddStopConfig
 
       -- Check if a place name is required
-      let searchWithoutPlaceName = any (_ == stateProps.rideSearchProps.sourceSelectType) [ST.MAP, ST.FAVOURITE, ST.RETRY_SEARCH, ST.SUGGESTION]
+      let searchWithoutPlaceName = any (_ == stateProps.rideSearchProps.sourceSelectType) [ST.MAP,ST.RETRY_SEARCH, ST.SUGGESTION] --  ST.FAVOURITE, 
       
       case searchWithoutPlaceName of
         true -> pure unit -- If no place name is required, return the new state
@@ -1241,7 +1241,7 @@ homeScreenFlow = do
 
       -- Add location to recent searches and update location lists
       -- when (addToRecents) $ do
-      --   addLocationToRecents item bothLocationChangedState serviceable
+      --   addLocationToRecents item bothLocationChangedState serviceable 
       --   fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
       --   pure unit
       -- Fetch global state and update recent search list
@@ -1811,7 +1811,8 @@ homeScreenFlow = do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq lat lon) ORIGIN
       let
         selectedIndex = state.props.selectedIndex
-        -- _ = spy "selectedindex" selectedIndex
+        _ = spy "selectedindex" state
+        _ = spy "lat update_loc_name" lat
         srcServiceable = sourceServiceabilityResp.serviceable
 
         (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
@@ -1837,6 +1838,14 @@ homeScreenFlow = do
         distanceBetweenLatLong = getDistanceBwCordinates lat lon cachedLat cachedLon
 
         isMoreThan20Meters = distanceBetweenLatLong > (state.data.config.mapConfig.locateOnMapConfig.apiTriggerRadius / 1000.0)
+
+        updatedInputView = mapWithIndex 
+                        (\idx inputField ->
+                            if idx == selectedIndex then
+                              inputField { placeLat = lat
+                                         , placeLong = lon
+                                         }
+                            else inputField)state.props.inputView
       modifyScreenState
         $ HomeScreenStateType
             ( \homeScreen ->
@@ -1845,18 +1854,19 @@ homeScreenFlow = do
                     { city = if state.props.isSource == Just true then cityName else AnyCity
                     , sourcePlaceId = if state.props.isSource == Just true then Nothing else homeScreen.props.sourcePlaceId
                     , destinationPlaceId = if state.props.isSource == Just false then Nothing else homeScreen.props.destinationPlaceId
-                    , destinationLat = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lat else state.props.destinationLat
-                    , destinationLong = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then lon else state.props.destinationLong
-                    , sourceLat = if state.props.isSource == Just true then lat else state.props.sourceLat
-                    , sourceLong = if state.props.isSource == Just true then lon else state.props.sourceLong
+                    , destinationLat = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation && selectedIndex == length state.props.inputView - 1 then lat else state.props.destinationLat
+                    , destinationLong = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation && selectedIndex == length state.props.inputView - 1 then lon else state.props.destinationLong
+                    , sourceLat = if state.props.isSource == Just true && selectedIndex == 0 then lat else state.props.sourceLat
+                    , sourceLong = if state.props.isSource == Just true && selectedIndex == 0 then lon else state.props.sourceLong
                     , confirmLocationCategory = getZoneType srcSpecialLocation.category
-                    , selectedIndex = state.props.selectedIndex
+                    , inputView = updatedInputView
                     }
                   }
             )
       (GlobalState globalState) <- getState
       let
         state = globalState.homeScreen
+        _ = spy "p" state
         selectedIndex = state.props.selectedIndex
         _ = spy "selectedIndex " selectedIndex
       if isMoreThan20Meters || cachedLocation == "" || (state.props.isSource == Just true && isJust gateAddress.address) then do
@@ -1873,23 +1883,13 @@ homeScreenFlow = do
                             if idx == 0 then
                               inputField { place = state.data.source
                                          , placeAddress = state.data.sourceAddress
-                                         , placeId = state.props.sourcePlaceId
-                                         , placeLat = state.props.sourceLat
-                                         , placeLong = state.props.sourceLong
                                          }
-                            -- else if idx == selectedIndex then
-                            --   inputField { place = fromMaybe "" currentLocationItem.placeName
-                            --               , placeAddress = fromMaybe "" currentLocationItem.address --encodeAddress (item.title <> ", " <> item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)
-                            --               , placeId = currentLocationItem.placeId
-                            --               , placeLat = fromMaybe 0.0 currentLocationItem.lat
-                            --               , placeLong = fromMaybe 0.0 currentLocationItem.lon
-                            --               }
+                            else if idx == selectedIndex then
+                              inputField { place = placeDetails.formattedAddress
+                                          }
                             else if idx == (length state.props.inputView - 1) then
                               inputField { place = state.data.destination
                                          , placeAddress = state.data.destinationAddress
-                                         , placeId = state.props.destinationPlaceId
-                                         , placeLat = state.props.destinationLat
-                                         , placeLong = state.props.destinationLong
                                          }
                             else inputField
                         ) state.props.inputView
@@ -1899,9 +1899,9 @@ homeScreenFlow = do
                   ( \homeScreen ->
                       homeScreen
                         { data
-                          { destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination
+                          { destination = if state.props.isSource == Just false && selectedIndex == length state.props.inputView - 1 && state.props.currentStage /= ConfirmingLocation then placeDetails.formattedAddress else homeScreen.data.destination
                           , selectedLocationListItem = currentLocationItem
-                          , source = if state.props.isSource == Just true then placeDetails.formattedAddress else homeScreen.data.source
+                          , source = if state.props.isSource == Just true && selectedIndex == 0 then placeDetails.formattedAddress else homeScreen.data.source
                           , sourceAddress =
                             case state.props.isSource, (state.props.currentStage /= ConfirmingLocation) of
                               Just true, true -> encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing lat lon
@@ -1918,14 +1918,30 @@ homeScreenFlow = do
                   )
           Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
       else do
+        let 
+          updatedInputView = mapWithIndex 
+                  (\idx inputField ->
+                      if idx == 0 then
+                        inputField { place = state.data.source
+                                  , placeAddress = state.data.sourceAddress
+                                  }
+                      else if idx == selectedIndex then
+                        inputField { place = ""
+                                    }
+                      else if idx == (length state.props.inputView - 1) then
+                        inputField { place = state.data.destination
+                                  , placeAddress = state.data.destinationAddress
+                                  }
+                      else inputField
+                  ) state.props.inputView
         void $ liftFlowBT $ logEvent logField_ "ny_user_placename_cache_lom_onDrag"
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->
                   homeScreen
                     { data
-                      { destination = if state.props.isSource == Just false && state.props.currentStage /= ConfirmingLocation then state.props.locateOnMapLocation.destination else homeScreen.data.destination
-                      , source = if state.props.isSource == Just true then state.props.locateOnMapLocation.source else homeScreen.data.source
+                      { destination = if state.props.isSource == Just false && selectedIndex == length state.props.inputView - 1 && state.props.currentStage /= ConfirmingLocation then state.props.locateOnMapLocation.destination else homeScreen.data.destination
+                      , source = if state.props.isSource == Just true && selectedIndex == 0 then state.props.locateOnMapLocation.source else homeScreen.data.source
                       , sourceAddress =
                         case state.props.isSource, (state.props.currentStage /= ConfirmingLocation) of
                           Just true, true -> state.props.locateOnMapLocation.sourceAddress
@@ -1934,6 +1950,10 @@ homeScreenFlow = do
                         case state.props.isSource, (state.props.currentStage /= ConfirmingLocation) of
                           Just false, true -> state.props.locateOnMapLocation.destinationAddress
                           _, _ -> state.data.destinationAddress
+                      }
+                    ,
+                    props{
+                      inputView = updatedInputView
                       }
                     }
               )
@@ -2988,7 +3008,7 @@ rideSearchFlow flowType = do
 
               routeResponse <- Remote.drawMapRoute updatedFinalState.props.sourceLat updatedFinalState.props.sourceLong updatedFinalState.props.destinationLat updatedFinalState.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) stopsView
               let _ = spy "routeResponse in flow" routeResponse
-              let _ = mapWithIndex (\index stop -> void $ showMarker (defaultMarkerConfig {markerId = "ny_ic_src_marker" <> show index, pointerIcon = "ny_ic_src_marker"}) stop.placeLat stop.placeLong 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")) stopsView
+              let _ = mapWithIndex (\index stop -> void $ showMarker (defaultMarkerConfig {markerId = "ny_ic_stop_marker" <> show index, pointerIcon = "ny_ic_stop_marker"}) stop.placeLat stop.placeLong 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")) stopsView
                       -- let 
                         -- markerConfig = defaultMarkerConfig {markerId = "ny_ic_src_marker" <> show index, pointerIcon = "ny_ic_src_marker"}
                       -- in

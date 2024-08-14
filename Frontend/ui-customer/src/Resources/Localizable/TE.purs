@@ -1356,3 +1356,4 @@ getTE stringKey =
     BOOKING -> "బుకింగ్"
     ADD -> "జోడించు"
     ADD_STOP -> "స్టాప్ జోడించండి"
+    MOVE_PIN_TO_SELECT_LOCATION -> "స్థానాన్ని ఎంచుకోవడానికి పిన్‌ని తరలించండి"

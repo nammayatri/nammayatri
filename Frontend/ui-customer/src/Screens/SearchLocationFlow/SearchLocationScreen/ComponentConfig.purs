@@ -54,6 +54,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Data.Lens ((^.))
 import Accessor (_amount)
+import Debug(spy)
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -276,7 +277,7 @@ mapInputViewConfig state isEditable =
           , padding = PaddingVertical 10 2 
           }
       , inputTextConfig : 
-         { textValue : item.textValue
+         { textValue : ""--item.textValue
          , isFocussed : item.isFocussed
          , id : show item.id
          , placeHolder : item.placeHolder 
@@ -286,17 +287,17 @@ mapInputViewConfig state isEditable =
          , textColor : Color.white900 --if DS.null item.textValue then Color.grey900 else Color.white900
          , prefixImageVisibility : GONE 
          , prefixImageConfig : InputView.dummyImageConfig
-         , hint : ""
+         , hint : getString ADD_STOP
          , postfixImageConfig : InputView.dummyImageConfig
          , swapImageConfig : InputView.dummyImageConfig
          }
       , placeAddress : dummyAddress 
-      , place : "" 
+      , place : item.textValue 
       , placeId : Nothing 
       , placeLat : 0.0 
       , placeLong : 0.0 
       , inputTextViewContainerMargin : Margin 0 0 0 0 
-      , index : 0 
+      , index : item.index
       , crossBtnEnabled : true
       }
 
@@ -318,6 +319,7 @@ mapInputViewConfig state isEditable =
           , id : ST.SearchLocPickup
           , isEditable : not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
           , index : 0
+          , prefixImageConfig : InputView.dummyImageConfig{imageName = getInputView.srcPrefixImageName}
           } ,
           { textValue : destLoc
           , isFocussed : dropLocFocussed
@@ -328,6 +330,7 @@ mapInputViewConfig state isEditable =
           , id : ST.SearchLocDrop
           , isEditable : true
           , index : 1
+          , prefixImageConfig : InputView.dummyImageConfig{imageName = getInputView.destPrefixImageName}
           }
         ]
       

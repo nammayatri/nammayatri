@@ -1341,3 +1341,4 @@ getHI stringKey =
         BOOKING -> "बुकिंग"
         ADD -> "जोड़ें"
         ADD_STOP -> "स्टॉप जोड़ें"
+        MOVE_PIN_TO_SELECT_LOCATION -> "स्थान चुनने के लिए पिन ले जाएँ"

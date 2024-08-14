@@ -18,11 +18,12 @@ module Components.SearchLocationModel.Controller where
 import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBarController
 import Components.PrimaryButton as PrimaryButton
+import Common.Types.App as CTA
 import Data.Maybe (Maybe(..))
 import Prelude (show)
 import Effect (Effect)
 import PrestoDOM (Visibility(..), Padding(..), Gravity(..), Prop)
-import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
+import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..), ZoneType(..), Stage(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
@@ -31,6 +32,7 @@ import Foreign.Object (Object)
 import Foreign (Foreign)
 import Components.InputView (InputViewConfig(..))
 import Components.InputView.Controller as InputViewController
+import JBridge (Location)
 
 data Action = GoBack
             | NoAction
@@ -80,6 +82,20 @@ type SearchLocationModelState = {
   , headerText :: String
   , selectedBoxId :: Maybe Int
   , inputViewConfig :: InputViewController.InputViewConfig
+  , isSpecialPickUpGate :: Boolean
+  , hotSpot :: HotSpotProps
+  , confirmLocationCategory :: ZoneType
+  , defaultPickUpPoint :: String
+  , currentStage :: Stage
+  , confirmPickUpLocationBorder :: String
+  , nearByPickUpPoints :: Array Location
+  , selectedIndex :: Int
+  , isConfirmJourneyEnabled :: Boolean
+}
+
+type HotSpotProps = {
+    selectedSpot :: Maybe Location
+  , centroidPoint :: Maybe CTA.Paths
 }
 
 type ButtonLayoutConfig = 

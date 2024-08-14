@@ -19,7 +19,7 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), Accessiblity(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor, layoutGravity, relativeLayout, frameLayout, alignParentBottom, root, accessibility, accessibilityHint)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), Accessiblity(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor, layoutGravity, relativeLayout, frameLayout, alignParentBottom, root, accessibility, accessibilityHint, setCursorAtEnd, focus)
 import Data.Array (mapWithIndex, length, head, any, notElem)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
@@ -33,21 +33,23 @@ import Debug (spy)
 import Data.Maybe
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
+import Screens.Types
 
 view :: forall w. (Action -> Effect Unit) -> InputViewConfig -> PrestoDOM (Effect Unit) w
 view push state = 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation VERTICAL
+    , orientation if state.headerText /= "" then VERTICAL else HORIZONTAL
     , padding $ PaddingHorizontal 16 16
     , background Color.black900 
     ][  if state.headerVisibility then backPressView state push else emptyTextView
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , padding $ PaddingVertical 16 16
+        , padding $ PaddingVertical 0 16
         , gravity CENTER_VERTICAL
+        -- , background Color.red900
         ][  if not state.headerVisibility then backPressView state push else emptyTextView
           -- , if state.imageLayoutVisibility == VISIBLE then inputImageView push state else emptyTextView
           , inputLayoutViews push state]
@@ -56,8 +58,10 @@ backPressView :: forall w. InputViewConfig -> (Action -> Effect Unit) -> PrestoD
 backPressView config push = 
   linearLayout
     [ height MATCH_PARENT
-    , width $ if config.headerVisibility then MATCH_PARENT else WRAP_CONTENT
+    , width WRAP_CONTENT-- $ if config.headerVisibility then MATCH_PARENT else WRAP_CONTENT
     , padding $ config.backIcon.padding 
+    -- , background Color.green900
+    , margin $ MarginTop 10
     ][  imageView
         [ height $ config.backIcon.height 
         , width $ config.backIcon.width
@@ -101,7 +105,7 @@ inputImageView push config =
       [ imageView
           [ height $ config.prefixImage.height
           , width $ config.prefixImage.width
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET config.prefixImage.imageName
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET (spy "prefixImage" config.prefixImage.imageName)
           ]
       -- , if showSeparator then SeparatorView.view (config.imageSeparator) else emptyTextView
       ]
@@ -113,6 +117,7 @@ inputLayoutViews push config =
   , width MATCH_PARENT
   , padding $ config.inputLayoutPading
   , gravity CENTER_VERTICAL
+  -- , background Color.red900
   ][linearLayout
     [ height WRAP_CONTENT
     , orientation VERTICAL
@@ -133,6 +138,7 @@ inputLayoutViews push config =
 inputImageView2 push config =
   let
     len = length (config.inputView)
+    val = if config.headerText /= "" then 15 else 5
     textHeight = case head config.inputView of 
                   Nothing -> 37
                   Just item -> getHeight item.height
@@ -140,9 +146,9 @@ inputImageView2 push config =
                   Nothing -> 17
                   Just item -> getVerticalMargins item.inputTextConfig.margin
     offset = (textHeight / 2) + 6
-    marginTop = 15 + offset
+    marginTop = offset + val
     bottomPadding = offset
-    actualHeight = textHeight + 15
+    actualHeight = textHeight + val
     maxHeight = spy "maxHeight" $ (actualHeight * len) - ((actualHeight - 48) *(len - 1) )- bottomPadding - marginTop
   in
     linearLayout
@@ -215,7 +221,7 @@ nonEditableTextView push config config' index = let
   linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ MarginTop 15
+    , margin $ if config'.headerText == "" then MarginTop 5 else MarginTop 15
     ][ prefixDotImageView push config (length config'.inputView)
   , linearLayout 
     [ height WRAP_CONTENT
@@ -259,14 +265,15 @@ inputTextField :: forall w. (Action -> Effect Unit ) -> InputView -> InputViewCo
 inputTextField push config config' index =
   let _ = spy  "InputView -> " config.index
       _ = spy "config'" config'
-      marginTop = 48 * index
+      marginTop = (48 * index) - (if config'.headerText == "" && index /= 0 then 10 else 0)
   in 
     linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , margin $ MarginTop marginTop
+  , margin $ MarginTop  marginTop
+  -- , background Color.red900
   ][ linearLayout[
       height WRAP_CONTENT
     , weight 1.0
@@ -277,11 +284,12 @@ inputTextField push config config' index =
   frameLayout[
       height WRAP_CONTENT
     , width MATCH_PARENT 
+    -- , background Color.green900
     ][
   linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ MarginTop 15
+    , margin $ spy "marginTop in" $ if config'.headerText == "" && index == 0 then MarginTop 5 else MarginTop 15
     ][ prefixDotImageView push config (length config'.inputView)
   , linearLayout 
     [ height WRAP_CONTENT
@@ -309,10 +317,13 @@ inputTextField push config config' index =
           , hint config.inputTextConfig.hint
           , hintColor $ Color.blueGrey
           , pattern "[^\n]*,255"
+          , setCursorAtEnd true
+          , id $ getNewIDWithTag config.inputTextConfig.id 
           , text config.place
+          , focus config.inputTextConfig.isFocussed
           , onChange (\action -> do 
               case action of 
-                InputChanged _ text -> if text /= "false" && text /= config.inputTextConfig.textValue then do 
+                InputChanged _ text -> if text /= "false" && text /= config.inputTextConfig.textValue then do --config.place 
                   void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.inputTextConfig.isFocussed
                   void $ push action
                   else pure unit 
@@ -348,6 +359,7 @@ inputTextField push config config' index =
       , width MATCH_PARENT
       ,  gravity RIGHT
       , margin $ Margin 0 0 15 0
+      -- , background Color.green900
       ]( if (notElem config.index [0,1, length config'.inputView] && length config'.inputView > 2) 
       then [swapButtonView push config]
       else []
@@ -365,6 +377,7 @@ swapButtonView push config =
         width WRAP_CONTENT
       , height WRAP_CONTENT
       , layoutGravity "bottom"
+      -- , margin $ MarginBottom 25
     ][
       linearLayout 
       [ width config.inputTextConfig.swapImageConfig.layoutWidth 

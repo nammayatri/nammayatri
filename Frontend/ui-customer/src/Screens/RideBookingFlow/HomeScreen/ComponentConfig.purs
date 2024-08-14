@@ -1257,6 +1257,15 @@ searchLocationModelViewState state =
     , isDestViewEditable : true
     , selectedBoxId : state.data.selectedBoxId
     , inputViewConfig : getInputViewConfig state 
+    , isSpecialPickUpGate : state.props.locateOnMapProps.isSpecialPickUpGate
+    , hotSpot : state.props.hotSpot
+    , confirmLocationCategory : state.props.confirmLocationCategory
+    , defaultPickUpPoint : state.props.defaultPickUpPoint
+    , currentStage : state.props.currentStage
+    , confirmPickUpLocationBorder : state.data.config.confirmPickUpLocationBorder
+    , nearByPickUpPoints : state.data.nearByPickUpPoints
+    , selectedIndex : state.props.selectedIndex
+    , isConfirmJourneyEnabled : state.props.isConfirmJourneyEnabled
     }
   where
   formatDate :: String -> String
@@ -1314,7 +1323,7 @@ defaultAddStopConfig = {
   , index : 0
   , inputTextConfig : {
       textValue : "ADD" 
-    , isFocussed : true
+    , isFocussed : false
     , imageName : ""
     , margin : Margin 0 12 0 5 
     , placeHolder : getString WHERE_TO
@@ -1405,6 +1414,15 @@ editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.
                                     , isDestViewEditable : state.props.currentStage == EditingDestinationLoc
                                     , selectedBoxId : Nothing
                                     , inputViewConfig : getInputViewConfig state
+                                    , isSpecialPickUpGate : state.props.locateOnMapProps.isSpecialPickUpGate
+                                    , hotSpot : state.props.hotSpot
+                                    , confirmLocationCategory : state.props.confirmLocationCategory
+                                    , defaultPickUpPoint : state.props.defaultPickUpPoint
+                                    , currentStage : state.props.currentStage
+                                    , confirmPickUpLocationBorder : state.data.config.confirmPickUpLocationBorder
+                                    , nearByPickUpPoints : state.data.nearByPickUpPoints
+                                    , selectedIndex : state.props.selectedIndex
+                                    , isConfirmJourneyEnabled : state.props.isConfirmJourneyEnabled
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState

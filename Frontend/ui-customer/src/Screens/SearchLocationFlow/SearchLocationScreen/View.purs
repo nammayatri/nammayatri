@@ -444,7 +444,7 @@ inputView push state isEditable globalProps =
   linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT 
-  , background Color.black900
+  , background Color.red900--Color.black900
   , padding $ PaddingTop EHC.safeMarginTop
   ][
   InputView.view (push <<< InputViewAC globalProps ) $ mapInputViewConfig state isEditable]

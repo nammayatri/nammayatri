@@ -431,6 +431,7 @@ view push state =
     showLabel = not $ DS.null state.props.defaultPickUpPoint
     isEditDestination = spy "isEditDestination -> " $ any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
     extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else 0
+    selectedIndex = state.props.selectedIndex
   in
   (if os == "IOS" then emptyScreenAnimation else PrestoAnim.animationSet[])  $ 
   frameLayout
@@ -516,9 +517,16 @@ view push state =
                         [ width $ V 35
                         , height $ V 35
                         , accessibility DISABLE
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
-                            true  -> "ny_ic_src_marker"
-                            false -> "ny_ic_dest_marker"
+                        -- , mageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
+                        --     true  -> "ny_ic_src_marker"
+                        --     false -> "ny_ic_dest_marker"
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ 
+                            if selectedIndex == 0 then
+                              "ny_ic_src_marker"
+                            else if selectedIndex == (length state.props.inputView - 1) then
+                              "ny_ic_dest_marker"
+                            else
+                              "ny_ic_stop_marker"
                         , visibility $ boolToVisibility ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
                         ]
                     ]
@@ -550,13 +558,33 @@ view push state =
                     , orientation VERTICAL
                     , visibility $ boolToVisibility $ state.data.config.feature.enableSpecialPickup && ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
                     ]
-                    [ imageView
+                    [ textView
+                        [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , background Color.white900
+                        , color Color.black900
+                        , accessibility DISABLE_DESCENDANT
+                        , text "Move pin to select location"--getString MOVE_PIN_TO_SELECT_LOCATION
+                        , padding (Padding 5 5 5 5)
+                        , margin (MarginBottom 5)
+                        , cornerRadius 5.0
+                        , visibility if state.props.currentStage /= SettingPrice then VISIBLE else GONE
+                        , id (getNewIDWithTag "LocateOnMapPin")
+                        ]
+                      , imageView
                         [ width $ V 35
                         , height $ V 35
                         , accessibility DISABLE
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
-                            true  -> "ny_ic_src_marker"
-                            false -> "ny_ic_dest_marker"
+                        -- , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case (state.props.currentStage == ConfirmingLocation) || state.props.isSource == (Just true) of
+                        --     true  -> "ny_ic_src_marker"
+                        --     false -> "ny_ic_dest_marker"
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ 
+                            if selectedIndex == 0 || state.props.currentStage == ConfirmingLocation then
+                              "ny_ic_src_marker"
+                            else if selectedIndex == (length state.props.inputView - 1) then
+                              "ny_ic_dest_marker"
+                            else
+                              "ny_ic_stop_marker"
                         , visibility $ boolToVisibility ((state.props.currentStage == ConfirmingLocation) || state.props.locateOnMap)
                         ]
                     ]
@@ -2321,7 +2349,7 @@ locationTrackingData lazyCheck =
 confirmPickUpLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 confirmPickUpLocationView push state =
   let zonePadding = if os == "IOS" then 0 else (ceil (toNumber (screenWidth unit))/8)
-      confirmLocationCategory = getConfirmLocationCategory state
+      confirmLocationCategory = getConfirmLocationCategory state.props.locateOnMapProps.isSpecialPickUpGate state.props.hotSpot state.props.confirmLocationCategory
       tagConfig = specialZoneTagConfig confirmLocationCategory
       tagVisibility = confirmLocationCategory /= NOZONE && (not (DS.null state.props.defaultPickUpPoint) || any (_ == confirmLocationCategory) [HOTSPOT true, HOTSPOT false])
   in
