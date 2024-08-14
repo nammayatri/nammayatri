@@ -1354,3 +1354,5 @@ getTA stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "ஆவணம் வெற்றிகரமாக பதிவேற்றப்பட்டது"
         REGISTER_YOUR_BIKE -> "உங்கள் பைக் பதிவு செய்யவும்"
         BIKE_TAXI -> "பைக் டாக்ஸி"
+        APP_UPDATE ->  "பயன்பாட்டு புதுப்பிப்பு"
+        APP_UPDATE_MESSAGE -> "தொடர உங்கள் விண்ணப்பத்தைப் புதுப்பிக்கவும்"

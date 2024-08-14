@@ -54,3 +54,6 @@ registration = do
     SelectLang updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SELECT_LANG_FROM_REGISTRATION)
+    GoToAppUpdatePopUpScreen updatedState -> do
+      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_APP_UPDATE_POPUP_SCREEN updatedState)

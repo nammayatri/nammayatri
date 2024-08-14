@@ -1355,3 +1355,5 @@ getML stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "പ്രമാണം വിജയകരമായി അപ്‌ലോഡ് ചെയ്തു"
         REGISTER_YOUR_BIKE -> "നിങ്ങളുടെ ബൈക്ക് രജിസ്റ്റർ ചെയ്യുക"
         BIKE_TAXI -> "ബൈക്ക് ടാക്സി"
+        APP_UPDATE ->  "ആപ്പ് അപ്ഡേറ്റ്"
+        APP_UPDATE_MESSAGE -> "തുടരാൻ നിങ്ങളുടെ അപേക്ഷ അപ്‌ഡേറ്റ് ചെയ്യുക"

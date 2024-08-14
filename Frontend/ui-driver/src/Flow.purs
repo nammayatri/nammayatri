@@ -274,16 +274,16 @@ checkVersion versioncode = do
       UpdateNow -> checkVersion versioncode
       Later -> pure unit
 
-appUpdatedFlow :: FCMBundleUpdate -> FlowBT String Unit
-appUpdatedFlow payload = do
+appUpdatedFlow :: FCMBundleUpdate -> ST.AppUpdatePoppupFlowType -> FlowBT String Unit
+appUpdatedFlow payload flowType = do
   liftFlowBT hideSplash
-  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image}})
+  modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image, popupFlowType = flowType}})
   fl <- UI.handleAppUpdatePopUp
   case fl of
     UpdateNow -> do 
       liftFlowBT showSplash
       liftFlowBT reboot
-    Later -> pure unit
+    Later -> if flowType == ST.REG_PROF_PAN_AADHAAR then onBoardingFlow else pure unit
 
 checkTimeSettings :: FlowBT String Unit
 checkTimeSettings = do
@@ -621,6 +621,7 @@ onBoardingFlow = do
     PERMISSION_SCREEN state -> do
       modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
       permissionsScreenFlow Nothing Nothing
+    GO_TO_APP_UPDATE_POPUP_SCREEN _ -> appUpdatedFlow {title : (getString APP_UPDATE), description : (getString APP_UPDATE_MESSAGE), image : ""} ST.REG_PROF_PAN_AADHAAR
     LOGOUT_FROM_REGISTERATION_SCREEN -> logoutFlow
     GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN -> getDriverInfoFlow Nothing Nothing false
     REFRESH_REGISTERATION_SCREEN -> do

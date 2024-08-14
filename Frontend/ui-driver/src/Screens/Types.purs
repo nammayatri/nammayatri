@@ -350,6 +350,12 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
+data AppUpdatePoppupFlowType = REG_PROF_PAN_AADHAAR | NORMAL
+
+derive instance genericAppUpdatePoppupFlowType :: Generic AppUpdatePoppupFlowType _
+instance showAppUpdatePoppupFlowType :: Show AppUpdatePoppupFlowType where show = genericShow
+instance eqAppUpdatePoppupFlowType :: Eq AppUpdatePoppupFlowType where eq = genericEq
+
 data VehicleCategory = AutoCategory | CarCategory | BikeCategory
 
 derive instance genericVehicleCategory :: Generic VehicleCategory _
@@ -1625,7 +1631,8 @@ type AppUpdatedViewState = {
   primaryText :: String,
   secondaryText :: String,
   optionTwoText :: String,
-  coverImageUrl :: String
+  coverImageUrl :: String,
+  popupFlowType :: AppUpdatePoppupFlowType
 }
 
 data UpdatePopupType =  AppVersion

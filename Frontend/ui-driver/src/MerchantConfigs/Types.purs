@@ -41,7 +41,8 @@ type AppConfigDriver a =
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
     chooseCity :: ChooseCityScreenConfig,
     safetyRide :: SafetyRideConfig,
-    clientName :: String
+    clientName :: String,
+    appUpdatePopupUrl :: String
     | a
   } 
 

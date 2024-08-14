@@ -4,6 +4,7 @@ import Prelude
 import Screens.Types (UpdatePopupType(..), AppUpdatePopUpScreenState)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Screens.Types as ST
 
 initData :: AppUpdatePopUpScreenState
 initData =
@@ -14,6 +15,7 @@ initData =
             primaryText : "App Update",
             secondaryText : "",
             optionTwoText : getString UPDATE,
-            coverImageUrl : ""
+            coverImageUrl : "",
+            popupFlowType : ST.NORMAL
         }
     }

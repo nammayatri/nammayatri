@@ -98,6 +98,7 @@ data ScreenOutput = GoBack
                   | ReferralCode RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
+                  | GoToAppUpdatePopUpScreen RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -148,9 +149,9 @@ eval (RegistrationAction step ) state = do
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit $ GoToOnboardSubscription state
-          PROFILE_PHOTO -> exit $ DocCapture state item -- Launch hyperverge
-          AADHAAR_CARD -> exit $ DocCapture state item -- Launch hyperverge
-          PAN_CARD  -> exit $ DocCapture state item -- Launch hyperverge
+          PROFILE_PHOTO -> exit $ GoToAppUpdatePopUpScreen state
+          AADHAAR_CARD -> exit $ GoToAppUpdatePopUpScreen state
+          PAN_CARD  -> exit $ GoToAppUpdatePopUpScreen state
           VEHICLE_PERMIT  -> exit $ DocCapture state item
           FITNESS_CERTIFICATE  -> exit $ DocCapture state item
           VEHICLE_INSURANCE -> exit $ DocCapture state item

@@ -111,6 +111,7 @@ window.getMerchantConfig = function () {
     , "vehicle" : {
       "validationPrefix" :  "KL"
     }
+    , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner&pcampaignid=web_share"
     , "banners" :{
       "autoPay" : false
     }

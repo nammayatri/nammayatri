@@ -1354,3 +1354,5 @@ getTE stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "పత్రం విజయవంతంగా అప్‌లోడ్ చేయబడింది"
         REGISTER_YOUR_BIKE -> "మీ బైక్ నమోదు చేయండి"
         BIKE_TAXI -> "బైక్ టాక్సీ"
+        APP_UPDATE ->  "యాప్ అప్‌డేట్"
+        APP_UPDATE_MESSAGE -> "దయచేసి కొనసాగడానికి మీ అప్లికేషన్‌ను అప్‌డేట్ చేయండి"

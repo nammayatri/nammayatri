@@ -258,6 +258,7 @@ window.getMerchantConfig = function () {
           "defCity" : "Kolkata"
         }
       }
+    , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver&pcampaignid=web_share"
     , "permissions" : {
       "locationPermission" : true,
       "notification" : false

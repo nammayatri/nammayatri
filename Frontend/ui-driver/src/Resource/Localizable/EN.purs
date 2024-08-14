@@ -1354,3 +1354,5 @@ getEN stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "Document uploaded successfully"
         REGISTER_YOUR_BIKE -> "Register your bike"
         BIKE_TAXI -> "Bike Taxi"
+        APP_UPDATE ->  "App Update"
+        APP_UPDATE_MESSAGE -> "Please Update Your App to proceed"

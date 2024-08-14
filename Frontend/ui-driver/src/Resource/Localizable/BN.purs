@@ -1355,3 +1355,5 @@ getBN stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "নথিপত্র সফলভাবে আপলোড হয়েছে"
         REGISTER_YOUR_BIKE -> "আপনার বাইক নিবন্ধন করুন"
         BIKE_TAXI -> "বাইক ট্যাক্সি"
+        APP_UPDATE ->  "অ্যাপ আপডেট।"
+        APP_UPDATE_MESSAGE -> "অনুগ্রহ করে এগিয়ে যেতে আপনার অ্যাপ আপডেট করুন।"

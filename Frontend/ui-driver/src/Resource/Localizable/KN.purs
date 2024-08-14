@@ -1354,3 +1354,7 @@ getKN stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "ಡಾಕ್ಯುಮೆಂಟ್ ಯಶಸ್ವಿಯಾಗಿ ಅಪ್‌ಲೋಡ್ ಆಗಿದೆ"
         REGISTER_YOUR_BIKE -> "ನಿಮ್ಮ ಬೈಕನ್ನು ನೋಂದಣಿ ಮಾಡಿ"
         BIKE_TAXI -> "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"
+        APP_UPDATE ->  "ಅಪ್ಲಿಕೇಶನ್ ನವೀಕರಣ"
+        APP_UPDATE_MESSAGE -> "ಮುಂದುವರೆಯಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ನವೀಕರಿಸಿ"
+        APP_UPDATE ->  "ಅಪ್ಲಿಕೇಶನ್ ನವೀಕರಣ"
+        APP_UPDATE_MESSAGE -> "ಮುಂದುವರೆಯಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಅಪ್ಲಿಕೇಶನ್ ಅನ್ನು ನವೀಕರಿಸಿ"

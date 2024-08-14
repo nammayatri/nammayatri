@@ -321,6 +321,7 @@ data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
                                 | REFERRAL_CODE_SUBMIT RegistrationScreenState
                                 | DOCUMENT_CAPTURE_FLOW RegistrationScreenState RegisterationStep
                                 | SELECT_LANG_FROM_REGISTRATION
+                                | GO_TO_APP_UPDATE_POPUP_SCREEN RegistrationScreenState
 
 data UPLOAD_DRIVER_LICENSE_SCREENOUTPUT = VALIDATE_DL_DETAILS UploadDrivingLicenseState 
                                           | VALIDATE_DATA_API UploadDrivingLicenseState 

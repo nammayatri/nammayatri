@@ -1354,3 +1354,5 @@ getHI stringKey =
         DOCUMENT_UPLOADED_SUCCESSFULLY -> "दस्तावेज़ सफलतापूर्वक अपलोड किया गया"
         REGISTER_YOUR_BIKE -> "अपनी बाइक पंजीकृत करें"
         BIKE_TAXI -> "बाइक टैक्सी"
+        APP_UPDATE ->  "ऐप अपडेट"
+        APP_UPDATE_MESSAGE -> "आगे बढ़ने के लिए कृपया अपना आवेदन अपडेट करें"

@@ -437,6 +437,7 @@ window.getMerchantConfig = function () {
         }
       }
   ]
+  , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , "dashboard" : {
         "enable" : true,
         "url" : "https://nammayatri.in/open?source=in-app"
