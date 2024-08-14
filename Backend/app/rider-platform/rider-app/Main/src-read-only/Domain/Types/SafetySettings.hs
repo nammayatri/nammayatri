@@ -18,6 +18,7 @@ data SafetySettings = SafetySettings
     falseSafetyAlarmCount :: Kernel.Prelude.Int,
     hasCompletedMockSafetyDrill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasCompletedSafetySetup :: Kernel.Prelude.Bool,
+    hasSetupRideOtp :: Kernel.Prelude.Bool,
     informPoliceSos :: Kernel.Prelude.Bool,
     nightSafetyChecks :: Kernel.Prelude.Bool,
     notifySafetyTeamForSafetyCheckFailure :: Kernel.Prelude.Bool,

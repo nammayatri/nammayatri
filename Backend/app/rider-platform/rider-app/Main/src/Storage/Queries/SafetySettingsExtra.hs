@@ -3,6 +3,7 @@
 
 module Storage.Queries.SafetySettingsExtra where
 
+import Control.Applicative ((<|>))
 import Domain.Types.Person
 import qualified Domain.Types.SafetySettings as DSafety
 import Kernel.Beam.Functions
@@ -28,7 +29,8 @@ data UpdateEmergencyInfo = UpdateEmergencyInfo
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
-    enableOtpLessRide :: Maybe Bool
+    enableOtpLessRide :: Maybe Bool,
+    hasSetupRideOtp :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -57,6 +59,7 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
             <> [Se.Set BeamP.shakeToActivate (fromJust shakeToActivate) | isJust shakeToActivate]
             <> [Se.Set BeamP.safetyCenterDisabledOnDate safetyCenterDisabledOnDate]
             <> [Se.Set BeamP.enableOtpLessRide (fromJust enableOtpLessRide) | isJust enableOtpLessRide]
+            <> [Se.Set BeamP.hasSetupRideOtp (fromJust hasSetupRideOtp) | isJust hasSetupRideOtp]
         )
         [Se.Is BeamP.personId (Se.Eq personId)]
     else do
@@ -77,7 +80,8 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
                 safetyCenterDisabledOnDate = bool person.safetyCenterDisabledOnDate safetyCenterDisabledOnDate (isJust safetyCenterDisabledOnDate),
                 shakeToActivate = fromMaybe False shakeToActivate,
                 updatedAt = now,
-                enableOtpLessRide = maybe (fromMaybe False person.enableOtpLessRide) identity enableOtpLessRide
+                enableOtpLessRide = fromMaybe False (enableOtpLessRide <|> person.enableOtpLessRide),
+                hasSetupRideOtp = False
               }
       createWithKV safetySettings
 
@@ -116,6 +120,7 @@ findSafetySettingsWithFallback personId mbPerson = do
                 shakeToActivate = False,
                 updatedAt = now,
                 enableOtpLessRide = fromMaybe False person.enableOtpLessRide,
+                hasSetupRideOtp = False,
                 ..
               }
       _ <- createWithKV safetySettings
