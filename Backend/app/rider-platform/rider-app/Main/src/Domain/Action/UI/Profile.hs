@@ -435,7 +435,8 @@ data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
-    enableOtpLessRide :: Maybe Bool
+    enableOtpLessRide :: Maybe Bool,
+    hasSetupRideOtp :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -465,6 +466,7 @@ updateEmergencySettings personId req = do
             QSafety.UpdateEmergencyInfo
               { autoCallDefaultContact = setContactField autoCallDefaultContact,
                 notifySosWithEmergencyContacts = setContactField notifySosWithEmergencyContacts,
+                hasSetupRideOtp = hasSetupRideOtp >>= \val -> if val then Just val else Nothing,
                 ..
               }
       void $ QSafety.upsert personId emergencyInfo
@@ -486,7 +488,9 @@ data EmergencySettingsRes = EmergencySettingsRes
     informPoliceSos :: Bool,
     notifySafetyTeamForSafetyCheckFailure :: Bool,
     shakeToActivate :: Bool,
-    safetyCenterDisabledOnDate :: Maybe UTCTime
+    safetyCenterDisabledOnDate :: Maybe UTCTime,
+    enableOtpLessRide :: Bool,
+    hasSetupRideOtp :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

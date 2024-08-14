@@ -26,3 +26,13 @@ ALTER TABLE atlas_app.safety_settings ADD COLUMN enable_otp_less_ride boolean ;
 
 ALTER TABLE atlas_app.safety_settings ALTER COLUMN enable_otp_less_ride SET DEFAULT false;
 ALTER TABLE atlas_app.safety_settings ALTER COLUMN enable_otp_less_ride SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.safety_settings ADD COLUMN has_setup_ride_otp boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.safety_settings ALTER COLUMN has_setup_ride_otp SET NOT NULL;

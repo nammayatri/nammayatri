@@ -187,7 +187,7 @@ createTicketForNewSos person ride riderConfig trackLink req = do
     Just sosDetails -> do
       void $ QSos.updateStatus DSos.Pending sosDetails.id
       void $ callUpdateTicket person sosDetails $ Just "SOS Re-Activated"
-      CQSos.cacheSosIdByRideId ride.id $ sosDetails {DSos.status = DSos.Pending}
+      when (req.flow == DSos.SafetyFlow) $ CQSos.cacheSosIdByRideId ride.id $ sosDetails {DSos.status = DSos.Pending}
       return sosDetails.id
     Nothing -> do
       phoneNumber <- mapM decrypt person.mobileNumber
@@ -300,7 +300,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
           trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
           kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue))
+        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.AudioRecording riderConfig.kaptureConfig.disposition kaptureQueue))
       createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
 
 createMediaEntry :: Common.AddLinkAsMedia -> Flow AddSosVideoRes
