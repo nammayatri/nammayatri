@@ -19,6 +19,9 @@ black650 = "#868B98"
 black700 :: Color
 black700 = "#6D7280"
 
+black712 :: Color
+black712 = "#806D7280"
+
 black9000 :: Color
 black9000 = "#CC2C2F3A"
 
@@ -218,6 +221,9 @@ yellowOpacity10 = "#1AFCC32C"
 
 greenOpacity16 :: Color
 greenOpacity16 = "#2953BB6F"
+
+redOpacity30 :: Color
+redOpacity30 = "#4DE55454"
 
 redOpacity20 :: Color
 redOpacity20 = "#33E55454"

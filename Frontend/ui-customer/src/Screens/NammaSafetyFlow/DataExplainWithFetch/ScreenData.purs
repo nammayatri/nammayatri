@@ -21,7 +21,7 @@ import Data.Function.Uncurried (runFn3)
 import Data.Maybe (fromMaybe, Maybe(..))
 import DecodeUtil (getAnyFromWindow)
 import Engineering.Helpers.Commons as EHC
-import Language.Strings (getString)
+import Language.Strings (getString, getStringWithoutNewLine)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
 import Prelude ((==), ($))
@@ -58,6 +58,8 @@ initData =
             , shareTripWithEmergencyContactOption: neverShareRideOption
             , onRide: false
             , priority: 1
+            , contactPersonId: Nothing
+            , isFollowing: Nothing
             }
         }
     , props:
@@ -181,13 +183,13 @@ stageData stage = case stage of
                 titleConfig { titleText = getString MORE_EMERGENCY_ACTIONS }
             , NoteBox
                 noteBoxConfig
-                  { noteText = getString CALL_POLICE
+                  { noteText = getStringWithoutNewLine CALL_POLICE
                   , noteSubTitle = getString CALL_POLICE_DESC
                   , noteImageIcon = "ny_ic_police_siren"
                   }
             , NoteBox
                 noteBoxConfig
-                  { noteText = getString RECORD_AUDIO
+                  { noteText = getStringWithoutNewLine RECORD_AUDIO
                   , noteSubTitle = getString RECORD_AUDIO_DESC
                   , noteImageIcon = "ny_ic_safety_microphone"
                   }
@@ -197,7 +199,7 @@ stageData stage = case stage of
                   , noteSubTitle = getString SIREN_DESC
                   , noteImageIcon = "ny_ic_volume_safety"
                   }
-            , NoteBox noteBoxConfig { noteText = getString CALL_SAFETY_TEAM, noteSubTitle = getString CALL_SAFETY_TEAM_DESC, noteImageIcon = "ny_ic_safety_headphone" }
+            , NoteBox noteBoxConfig { noteText = getStringWithoutNewLine CALL_SAFETY_TEAM, noteSubTitle = getString CALL_SAFETY_TEAM_DESC, noteImageIcon = "ny_ic_safety_headphone" }
             ]
         , imageUrl: "ny_ic_emergency_actions_4"
         , primaryButtonText: getString DONE
@@ -216,7 +218,7 @@ stageData stage = case stage of
             ]
         , imageUrl: "ny_ic_safety_drill_setup"
         , primaryButtonText: getString NEXT
-        , primaryButtonAction: ""
+        , primaryButtonAction: "SafetyTestDrill"
         }
       ]
   TrustedContactsActions _ ->
@@ -240,13 +242,13 @@ stageData stage = case stage of
             , SubTitle subTitleConfig { subTitleText = getString EMERGENCY_ACTIONS_SUB }
             , NoteBox
                 noteBoxConfig
-                  { noteText = getString CALL_POLICE
+                  { noteText = getStringWithoutNewLine CALL_POLICE
                   , noteSubTitle = getString CALL_POLICE_DESC
                   , noteImageIcon = "ny_ic_police_siren"
                   }
             , NoteBox
                 noteBoxConfig
-                  { noteText = getString CALL_SAFETY_TEAM
+                  { noteText = getStringWithoutNewLine CALL_SAFETY_TEAM
                   , noteSubTitle = getString CALL_SAFETY_TEAM_DESC
                   , noteImageIcon = "ny_ic_safety_headphone"
                   }
@@ -364,6 +366,8 @@ checkBoxSelectionConfig =
       , shareTripWithEmergencyContactOption: neverShareRideOption
       , onRide: false
       , priority: 1
+      , contactPersonId: Nothing
+      , isFollowing: Nothing
       }
   }
 

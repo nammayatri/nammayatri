@@ -453,7 +453,9 @@ type Banners = {
 }
 
 type Safety = {
-  pastRideInterval :: Int
+  pastRideInterval :: Int,
+  followingInterval :: Int,
+  safetyTeamNumber :: String
 }
 
 type InteroperabilityConfig = {

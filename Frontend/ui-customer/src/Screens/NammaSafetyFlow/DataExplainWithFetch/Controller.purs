@@ -47,6 +47,7 @@ data ScreenOutput
   = Exit DataFetchScreenState
   | AddEmergencyContacts DataFetchScreenState
   | UpdateEmergencyContacts DataFetchScreenState
+  | GoToSafetyDrill DataFetchScreenState
 
 data Action
   = AfterRender
@@ -96,6 +97,7 @@ eval (PrimaryButtonAC PrimaryButton.OnClick) state =
     else case currentStageConfig.primaryButtonAction of
       "AddContactsFlow" -> updateAndExit state $ AddEmergencyContacts state
       "UpdateEmergencyContacts" -> updateAndExit state $ UpdateEmergencyContacts state
+      "SafetyTestDrill" -> updateAndExit state $ GoToSafetyDrill state
       _ ->
         if index < state.config.stageSteps then
           continue state { config { currentStep = index } }

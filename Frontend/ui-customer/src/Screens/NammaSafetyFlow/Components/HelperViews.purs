@@ -82,7 +82,7 @@ safetyPartnerView _lazy =
 
 shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
-  relativeLayout
+  linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
@@ -94,7 +94,7 @@ shimmerView state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , alignParentBottom "true,-1"
+        , margin $ MarginTop 16
         ]
         [ sfl (V 80) 130 3 (getValueToLocalStore IS_SOS_ACTIVE == "true")
         , sfl (V 80) 130 1 (getValueToLocalStore IS_SOS_ACTIVE /= "true")

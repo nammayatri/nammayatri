@@ -33,7 +33,8 @@ type MenuItemData = {
     image :: String,
     textdata :: String,
     action :: String,
-    isVisible :: Boolean
+    isVisible :: Boolean,
+    color :: String
 }
 
 type Config = {
@@ -47,12 +48,14 @@ type Config = {
     itemHeight :: Length,
     itemPadding :: Padding,
     cornerRadius :: Number,
-    enableAnim :: Boolean
+    enableAnim :: Boolean,
+    strokeColor :: String,
+    showStroke :: Boolean
 }
 
 config :: Config
 config = {
-  menuItems : [{image : "", textdata : "", action : "", isVisible : false}],
+  menuItems : [{image : "", textdata : "", action : "", isVisible : false, color : ""}],
   backgroundColor : Color.transparent,
   menuBackgroundColor : Color.white900,
   gravity : RIGHT,
@@ -62,5 +65,7 @@ config = {
   itemHeight : V 50,
   itemPadding : Padding 16 16 16 16,
   cornerRadius : 4.0,
-  enableAnim : false
+  enableAnim : false,
+  showStroke : true,
+  strokeColor : Color.grey700
 }

@@ -469,7 +469,7 @@ userSettingsView state push visibility' =
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     ]
-                    (mapWithIndex (\index item -> ContactCircle.view (ContactCircle.getContactConfig item index false) (push <<< ContactAction)) state.data.emergencyContactsList)
+                    (mapWithIndex (\index item -> ContactCircle.view (ContactCircle.getContactConfig item index false true) (push <<< ContactAction)) state.data.emergencyContactsList)
                 , textView
                     $ [ text $ getString if null state.data.emergencyContactsList then ADD_CONTACTS else EDIT
                       , color Color.blue900
@@ -525,7 +525,7 @@ userSettingsView state push visibility' =
                           , margin $ Margin 16 16 0 0
                           , gravity CENTER_VERTICAL
                           ]
-                          [ ContactCircle.view (ContactCircle.getContactConfig item index false) (push <<< ContactAction)
+                          [ ContactCircle.view (ContactCircle.getContactConfig item index false true) (push <<< ContactAction)
                           , toggleSwitchViewLayout (ChangeFollowing index) item.enableForFollowing item.name push true 12
                           ]
                     )

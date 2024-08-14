@@ -8,12 +8,13 @@
 -}
 module Screens.NammaSafetyFlow.SosActiveScreen.View where
 
-import Animation (screenAnimationFadeInOut)
-import Prelude (Unit, const, discard, not, pure, unit, void, ($), (&&), (<<<), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width, accessibilityHint)
-import Screens.NammaSafetyFlow.ComponentConfig (cancelSOSBtnConfig)
-import Screens.NammaSafetyFlow.Components.HelperViews (layoutWithWeight, safetyPartnerView, separatorView)
-import Common.Types.App (LazyCheck(..))
+import PrestoDOM.Animation as PrestoAnim
+import Animation (screenAnimationFadeInOut, fadeIn)
+import Prelude (Unit, const, discard, not, pure, unit, void, ($), (&&), (<<<), (<>), (==), (<#>), map, (/), (-), (/=), show, when)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width, accessibilityHint, maxLines, ellipsize, fillViewport)
+import Screens.NammaSafetyFlow.ComponentConfig (cancelSOSBtnConfig, safetyAudioRecordingConfig)
+import Screens.NammaSafetyFlow.Components.HelperViews (layoutWithWeight, safetyPartnerView, separatorView, emptyTextView)
+import Common.Types.App as CTA
 import Components.PrimaryButton as PrimaryButton
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -28,7 +29,7 @@ import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage, getLocationName, getAssetsBaseUrl)
 import JBridge as JB
-import Language.Strings (getString)
+import Language.Strings (getString, getStringWithoutNewLine)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Presto.Core.Types.Language.Flow (doAff)
@@ -38,7 +39,16 @@ import Screens.NammaSafetyFlow.SosActiveScreen.Controller (Action(..), ScreenOut
 import Screens.Types as ST
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import Screens.NammaSafetyFlow.Components.SafetyUtils (getVehicleDetails)
+import Screens.NammaSafetyFlow.Components.SafetyUtils (getVehicleDetails, getPrimaryContact)
+import Components.Safety.SosButtonAndDescription as SosButtonAndDescription
+import Data.Maybe as Mb
+import Components.Safety.SafetyActionTileView as SafetyActionTileView
+import Components.Safety.Utils as SU
+import Components.RecordAudioModel.View as RecordAudioModel
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple as DT
+import Effect.Uncurried (runEffectFn2)
+import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
 
 screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -49,8 +59,9 @@ screen initialState =
       [ ( \push -> do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
               $ do
-                  lift $ lift $ doAff do liftEffect $ push $ PlaceCall
+                  when initialState.data.autoCallDefaultContact $ lift $ lift $ doAff do liftEffect $ push $ PlaceCall
                   pure unit
+            void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
             pure $ pure unit
         )
       ]
@@ -79,9 +90,10 @@ view push state =
         )
         (const NoAction)
     ]
-    [ case state.props.showTestDrill of
+    [ Header.view (push <<< SafetyHeaderAction) headerConfig
+    , case state.props.showTestDrill of
         true -> Header.testSafetyHeaderView (push <<< SafetyHeaderAction)
-        false -> Header.view (push <<< SafetyHeaderAction) headerConfig
+        false -> emptyTextView
     , case state.props.showCallPolice of
         true -> dialPoliceView state push
         false -> sosActiveView state push
@@ -90,34 +102,124 @@ view push state =
   padding' = if EHC.os == "IOS" then (PaddingVertical EHC.safeMarginTop (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
   headerConfig =
-    (Header.config Language)
+    (Header.config CTA.Language)
       { useLightColor = true
-      , title = getString $ if not state.props.showCallPolice then EMERGENCY_SOS else CALL_POLICE
+      , title = getStringWithoutNewLine $ if not state.props.showCallPolice then EMERGENCY_SOS else CALL_POLICE
       , learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY
       , showLearnMore = false
       }
 
-------------------------------------- dashboardView -----------------------------------
 sosActiveView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 sosActiveView state push =
   linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    [ sosDescriptionView state push
-    , sosActionsView state push
-    , separatorView Color.black800 $ MarginTop 0
-    , linearLayout
-        [ height WRAP_CONTENT
+  [ weight 1.0
+  , width MATCH_PARENT
+  ]
+  [ scrollView
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , fillViewport true
+    ][ linearLayout
+        [ weight 1.0
         , width MATCH_PARENT
-        , margin $ Margin 16 16 16 16
         , orientation VERTICAL
         ]
-        [ callPoliceView state push CALL_POLICE
-        , PrimaryButton.view (push <<< MarkRideAsSafe) (cancelSOSBtnConfig state)
+        [ SosButtonAndDescription.view (push <<< SosButtonAndDescriptionAction) $ emergencySosConfig state   
+        , emergencyContactsView state push
+        , SafetyAudioRecording.view (push <<< SafetyAudioRecordingAction) $ safetyAudioRecordingConfig state
+        , sosActionTilesView state push
+        , layoutWithWeight
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , margin $ Margin 16 16 16 16
+            , orientation VERTICAL
+            ]
+            [ separatorView Color.black800 $ MarginTop 0
+            , PrimaryButton.view (push <<< MarkRideAsSafe) (cancelSOSBtnConfig state)
+            ]
         ]
     ]
+  ]
+  
+
+emergencySosConfig :: ST.NammaSafetyScreenState -> SosButtonAndDescription.Config
+emergencySosConfig state =
+  SosButtonAndDescription.config
+  { 
+    sosDescription = [ measureViewConfig {text' = getString SAFETY_TEAM_CALLBACK_REQUESTED}
+                      , measureViewConfig {text' = getString EMERGENCY_CONTACTS_NOTIFIED}
+                      ] <> case contactName of
+                          Mb.Just name -> [ measureViewConfig {text' = getString CALL_PLACED <> ": " <> name} ]
+                          Mb.Nothing -> []
+  , descriptionText = getString EMERGENCY_SOS_ACTIVATED
+  , showSosButton = false
+  }
+  where
+    measureViewConfig =
+      { text': ""
+      , isActive: true
+      , textColor: Color.white900
+      , useMargin: true
+      , useFullWidth: true
+      , usePadding: false
+      , image: Mb.Nothing
+      , visibility: true
+      , textStyle: FontStyle.Tags
+      , showBullet: false
+      }
+
+    contactName = (getPrimaryContact state) <#> _.name
+
+sosActionTilesView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+sosActionTilesView state push =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , visibility $ boolToVisibility $ not state.props.isAudioRecordingActive 
+    ]
+    [ safetyActionRow actionsRow1 push
+    , safetyActionRow actionsRow2 push
+    ]
+
+  where
+    actionsRow1 =
+        [ { text: getStringWithoutNewLine CALL_POLICE , image: "ny_ic_police" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill }
+        , { text: getStringWithoutNewLine RECORD_AUDIO, image: "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false }
+        ]
+
+    actionsRow2 =
+        [ { text: getString SIREN, image: sirenImage, backgroundColor: sirenTileBackgroundColor, strokeColor: sirenTileStrokeColor, push : push <<< ToggleSiren, isDisabled: false }
+        , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: "ny_ic_police_alert", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill }
+        ]
+
+    safetyActionRow actionItems push =
+      linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , gravity CENTER
+        , margin $ Margin 10 12 10 0
+        ]
+        [ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , gravity CENTER
+            ]
+            ( map
+                ( \item ->
+                    SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (EHC.screenWidth unit - 44) / 2) true item.isDisabled Color.white900
+                )
+                actionItems
+            )
+        ]
+      
+    sirenImage = if state.props.triggerSiren then "ny_ic_full_volume" else "ny_ic_no_volume"
+    sirenTileBackgroundColor = if state.props.triggerSiren then Color.black712 else Color.blackOpacity12
+    sirenTileStrokeColor = if state.props.triggerSiren then Color.black700 else Color.black800
 
 sosDescriptionView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 sosDescriptionView state push =
@@ -141,14 +243,14 @@ sosDescriptionView state push =
                 $ [ text title
                   , color Color.white900
                   ]
-                <> FontStyle.h3 TypoGraphy
+                <> FontStyle.h3 CTA.TypoGraphy
             , textView
                 $ [ text desc
                   , color Color.white900
                   , margin $ MarginTop 8
                   , gravity CENTER
                   ]
-                <> FontStyle.body1 TypoGraphy
+                <> FontStyle.body1 CTA.TypoGraphy
             , linearLayout
                 [ width $ V if not $ null state.data.emergencyContactsList then 200 else 250
                 , height $ V if not $ null state.data.emergencyContactsList then 180 else 250
@@ -160,7 +262,7 @@ sosDescriptionView state push =
                         [ id $ EHC.getNewIDWithTag "SafetylottieAnimationView"
                         , onAnimationEnd
                             ( \_ -> do
-                                void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/ny_ic_sos_active.json", lottieId = EHC.getNewIDWithTag "SafetylottieAnimationView", scaleType = "FIT_CENTER", repeat = true }
+                                void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { rawJson = (getAssetsBaseUrl CTA.FunctionCall) <> "lottie/ny_ic_sos_active.json", lottieId = EHC.getNewIDWithTag "SafetylottieAnimationView", scaleType = "FIT_CENTER", repeat = true }
                             )
                             (const NoAction)
                         , height MATCH_PARENT
@@ -202,7 +304,7 @@ sosActionsView state push =
               , color Color.white900
               , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
               ]
-            <> FontStyle.paragraphText TypoGraphy
+            <> FontStyle.paragraphText CTA.TypoGraphy
         , emergencyContactsView state push
         ]
     ]
@@ -215,49 +317,41 @@ emergencyContactsView state push =
     , stroke $ "1," <> Color.black700
     , background Color.blackOpacity12
     , orientation VERTICAL
-    , margin $ MarginTop 8
-    , padding $ Padding 16 14 16 14
+    , margin $ Margin 16 8 16 0
     , cornerRadius 12.0
     , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
     ]
-    [ linearLayout
+    [ textView $ 
+      [ text $ getString TAP_TO_CALL_OTHER_EMERGENCY_CONTACTS
+      , color Color.white900
+      , margin $ Margin 16 8 16 0
+      ]
+      <> FontStyle.tags CTA.TypoGraphy
+    , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , orientation VERTICAL
+        , margin $ Margin 16 16 10 16
+        , gravity CENTER_HORIZONTAL
         ]
         ( mapWithIndex
             ( \index item ->
                 linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , margin $ MarginVertical 10 10
-                  , gravity CENTER_VERTICAL
-                  ]
-                  [ ContactCircle.view (ContactCircle.getContactConfig item index false) (push <<< ContactCircleAction)
-                  , textView
-                      $ [ text item.name
-                        , color Color.white900
-                        ]
-                      <> FontStyle.body1 TypoGraphy
-                  , layoutWithWeight
-                  , linearLayout
-                      [ height WRAP_CONTENT
-                      , width WRAP_CONTENT
-                      , gravity CENTER_VERTICAL
-                      , background Color.green900
-                      , cornerRadius if EHC.os == "IOS" then 18.0 else 24.0
-                      , padding $ Padding 8 8 8 8
-                      , onClick push $ const $ CallContact index
-                      , rippleColor Color.rippleShade
-                      , accessibilityHint "Call Button"
+                [ height WRAP_CONTENT
+                , width $ V $ (EHC.screenWidth unit - 70) / 3
+                , gravity CENTER
+                , orientation VERTICAL
+                , onClick push $ const $ CallContact index
+                , margin $ MarginRight 6
+                ]
+                [ ContactCircle.view (ContactCircle.getContactConfig item index false false) (push <<< ContactCircleAction)
+                , textView
+                    $ [ text item.name
+                      , color Color.white900
+                      , maxLines 2
+                      , ellipsize true
                       ]
-                      [ imageView
-                          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_call_white_unfilled"
-                          , width $ V 20
-                          , height $ V 20
-                          ]
-                      ]
-                  ]
+                    <> FontStyle.body1 CTA.TypoGraphy
+                ]
             )
             state.data.emergencyContactsList
         )
@@ -274,7 +368,7 @@ callPoliceView state push text' =
       , background Color.redOpacity20
       , accessibilityHint "Call Police Button"
       ]
-        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const $ if state.props.showCallPolice then CallPolice else ShowPoliceView ]
+        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const $ if state.props.showCallPolice then CallPolice else ShowPoliceView SafetyActionTileView.OnClick ]
     )
     [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_police"
@@ -287,7 +381,7 @@ callPoliceView state push text' =
           , color Color.white900
           , margin $ MarginLeft 6
           ]
-        <> FontStyle.subHeading2 TypoGraphy
+        <> FontStyle.subHeading2 CTA.TypoGraphy
     ]
 
 type ImageTextViewConfig
@@ -338,13 +432,13 @@ dialPoliceView state push =
                     $ [ text $ getString YOUR_CURRENT_LOCATION
                       , color Color.white900
                       ]
-                    <> FontStyle.subHeading1 TypoGraphy
+                    <> FontStyle.subHeading1 CTA.TypoGraphy
                 , textView
                     $ [ text state.data.currentLocation
                       , color Color.white900
                       , margin $ MarginTop 4
                       ]
-                    <> FontStyle.paragraphText TypoGraphy
+                    <> FontStyle.paragraphText CTA.TypoGraphy
                 ]
             ]
         , linearLayout
@@ -368,13 +462,13 @@ dialPoliceView state push =
                     $ [ text $ getString YOUR_VEHICLE_INFO
                       , color Color.white900
                       ]
-                    <> FontStyle.subHeading1 TypoGraphy
+                    <> FontStyle.subHeading1 CTA.TypoGraphy
                 , textView
                     $ [ text $ getVehicleDetails state
                       , color Color.white900
                       , margin $ MarginTop 4
                       ]
-                    <> FontStyle.paragraphText TypoGraphy
+                    <> FontStyle.paragraphText CTA.TypoGraphy
                 ]
             ]
         , separatorView Color.black500 $ Margin 16 16 16 16
@@ -393,7 +487,7 @@ dialPoliceView state push =
                 $ [ text $ getString POLICE_VIEW_INSTRUCTION
                   , color Color.black500
                   ]
-                <> FontStyle.tags TypoGraphy
+                <> FontStyle.tags CTA.TypoGraphy
             ]
         ]
     , linearLayout
@@ -403,7 +497,7 @@ dialPoliceView state push =
         , orientation VERTICAL
         , margin $ MarginBottom 16
         ]
-        [ safetyPartnerView Language
-        , callPoliceView state push DIAL_NOW
+        [ safetyPartnerView CTA.Language
+        , callPoliceView state push (DIALING_POLICE_IN_TIME $ show state.props.policeCallTimerValue)
         ]
     ]

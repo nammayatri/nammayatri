@@ -1497,7 +1497,8 @@ newtype ContactDetails = ContactDetails {
   enableForFollowing :: Maybe Boolean,
   enableForShareRide :: Maybe Boolean,
   shareTripWithEmergencyContactOption:: Maybe RideShareOptions,
-  onRide :: Maybe Boolean
+  onRide :: Maybe Boolean,
+  contactPersonId :: Maybe String
 }
 
 
@@ -1919,7 +1920,8 @@ newtype UserSosReq = UserSosReq
   {
      flow :: UserSosFlow,
      rideId :: String,
-     isRideEnded :: Boolean
+     isRideEnded :: Boolean,
+     notifyAllContacts :: Boolean
   }
 
 newtype UserSosFlow = UserSosFlow
@@ -2779,7 +2781,6 @@ data GetEmergencySettingsReq = GetEmergencySettingsReq
 
 newtype GetEmergencySettingsRes = GetEmergencySettingsRes
   {
-    shareEmergencyContacts :: Boolean,
     nightSafetyChecks :: Boolean,
     hasCompletedSafetySetup :: Boolean,
     defaultEmergencyNumbers :: Array ContactDetails,
@@ -3704,3 +3705,62 @@ instance standardEncodeMetroBookingConfigRes :: StandardEncode MetroBookingConfi
 instance showMetroBookingConfigRes :: Show MetroBookingConfigRes where show = genericShow
 instance decodeMetroBookingConfigRes :: Decode MetroBookingConfigRes where decode = defaultDecode
 instance encodeMetroBookingConfigRes :: Encode MetroBookingConfigRes where encode = defaultEncode
+
+data EmergencyContactsTrackingReq = EmergencyContactsTrackingReq String
+
+newtype EmergencyContactsTrackingRes = EmergencyContactsTrackingRes {
+  details :: Array CurrentTrackingDetails
+}
+
+newtype CurrentTrackingDetails = CurrentTrackingDetails {
+  personId :: String,
+  updateTime :: String
+}
+
+instance makeEmergencyContactsTrackingReq :: RestEndpoint EmergencyContactsTrackingReq where
+ makeRequest reqBody@(EmergencyContactsTrackingReq rideId) headers = defaultMakeRequest GET (EP.getEmergencyContactsTrackingStatus rideId) headers reqBody Nothing
+ encodeRequest req = defaultEncode req
+
+derive instance genericEmergencyContactsTrackingReq :: Generic EmergencyContactsTrackingReq _
+instance standardEncodeEmergencyContactsTrackingReq :: StandardEncode EmergencyContactsTrackingReq where standardEncode (EmergencyContactsTrackingReq reqBody) = standardEncode reqBody
+
+derive instance genericEmergencyContactsTrackingRes :: Generic EmergencyContactsTrackingRes _
+derive instance newtypeEmergencyContactsTrackingRes :: Newtype EmergencyContactsTrackingRes _
+instance standardEncodeEmergencyContactsTrackingRes :: StandardEncode EmergencyContactsTrackingRes where standardEncode (EmergencyContactsTrackingRes resp) = standardEncode resp
+instance showEmergencyContactsTrackingRes :: Show EmergencyContactsTrackingRes where show = genericShow
+instance decodeEmergencyContactsTrackingRes :: Decode EmergencyContactsTrackingRes where decode = defaultDecode
+instance encodeEmergencyContactsTrackingRes :: Encode EmergencyContactsTrackingRes where encode = defaultEncode
+
+derive instance genericCurrentTrackingDetails :: Generic CurrentTrackingDetails _
+derive instance newtypeCurrentTrackingDetails :: Newtype CurrentTrackingDetails _
+instance standardEncodeCurrentTrackingDetails :: StandardEncode CurrentTrackingDetails where standardEncode (CurrentTrackingDetails resp) = standardEncode resp
+instance showCurrentTrackingDetails :: Show CurrentTrackingDetails where show = genericShow
+instance decodeCurrentTrackingDetails :: Decode CurrentTrackingDetails where decode = defaultDecode
+instance encodeCurrentTrackingDetails :: Encode CurrentTrackingDetails where encode = defaultEncode
+
+----------------------------- GetManualFollowerDetails -----------------------------------------------------
+
+data GetManuallySharedDetailsReq = GetManuallySharedDetailsReq String
+
+newtype GetManuallySharedDetailsRes = GetManuallySharedDetailsRes {
+  bookingId :: String,
+  customerName :: String,
+  customerPhone :: String
+}
+
+instance makeGetManuallySharedDetailsReq :: RestEndpoint GetManuallySharedDetailsReq where
+ makeRequest reqBody@(GetManuallySharedDetailsReq rideId) headers = defaultMakeRequest GET (EP.getManuallySharedRideDetails rideId) headers reqBody Nothing
+ encodeRequest req = defaultEncode req
+
+derive instance genericGetManuallySharedDetailsReq :: Generic GetManuallySharedDetailsReq _
+instance standardEncodeGetManuallySharedDetailsReq :: StandardEncode GetManuallySharedDetailsReq where standardEncode (GetManuallySharedDetailsReq resp) = standardEncode resp
+instance showGetManuallySharedDetailsReq :: Show GetManuallySharedDetailsReq where show = genericShow
+instance decodeGetManuallySharedDetailsReq :: Decode GetManuallySharedDetailsReq where decode = defaultDecode
+instance encodeGetManuallySharedDetailsReq :: Encode GetManuallySharedDetailsReq where encode = defaultEncode
+
+derive instance genericGetManuallySharedDetailsRes :: Generic GetManuallySharedDetailsRes _
+derive instance newtypeGetManuallySharedDetailsRes :: Newtype GetManuallySharedDetailsRes _
+instance standardEncodeGetManuallySharedDetailsRes :: StandardEncode GetManuallySharedDetailsRes where standardEncode (GetManuallySharedDetailsRes resp) = standardEncode resp
+instance showGetManuallySharedDetailsRes :: Show GetManuallySharedDetailsRes where show = genericShow
+instance decodeGetManuallySharedDetailsRes :: Decode GetManuallySharedDetailsRes where decode = defaultDecode
+instance encodeGetManuallySharedDetailsRes :: Encode GetManuallySharedDetailsRes where encode = defaultEncode

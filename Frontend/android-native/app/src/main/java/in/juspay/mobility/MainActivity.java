@@ -27,6 +27,8 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -165,7 +167,6 @@ public class MainActivity extends AppCompatActivity {
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     ActivityResultLauncher<HyperKycConfig> launcher;
     private String registeredCallBackForHV;
-
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
@@ -331,14 +332,14 @@ public class MainActivity extends AppCompatActivity {
         Vector<String> res = handleDeepLinkIfAvailable(getIntent());
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(getIntent());
 
-        String viewParam = null, deepLinkJson =null;
+        String viewParam = null, deepLinkJSON =null;
         if (res!=null ){
             viewParam = res.get(0);
-            deepLinkJson = res.get(1);
+            deepLinkJSON = res.get(1);
         }
         else if (notificationDeepLinkVector != null) {
             viewParam = notificationDeepLinkVector.get(0);
-            deepLinkJson = notificationDeepLinkVector.get(1);
+            deepLinkJSON = notificationDeepLinkVector.get(1);
         }
 
         if (MERCHANT_TYPE.equals("DRIVER")) {
@@ -359,7 +360,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             if (viewParam != null) results.put("viewParam", viewParam);
             if (viewParam != null) results.put("view_param", viewParam);
-            if (deepLinkJson != null) results.put("deepLinkJSON", deepLinkJson);
+            if (deepLinkJSON != null) results.put("deepLinkJSON", deepLinkJSON);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -765,19 +766,19 @@ public class MainActivity extends AppCompatActivity {
                             if(preInitFutureTaskResult != null) {
                                 Log.i("APP_PERF", "PRE_INIT : " + System.currentTimeMillis());
                                 viewParam = preInitFutureTaskResult.optString("viewParam");
-                                deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                                deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
                             } else {
                                 try {
                                     JSONObject preInitFutureTaskResult = preInitFutureTask.get(4500, TimeUnit.MILLISECONDS);
                                     Log.i("APP_PERF", "PRE_INIT_NO_EXCEPTION : " + System.currentTimeMillis());
                                     viewParam = preInitFutureTaskResult.optString("viewParam");
-                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
                                 } catch (InterruptedException | ExecutionException | TimeoutException e) {
                                     preInitFutureTask.cancel(true);
                                     JSONObject preInitFutureTaskResult = preInitFlow();
                                     Log.i("APP_PERF", "PRE_INIT_EXCEPTION : " + System.currentTimeMillis());
                                     viewParam = preInitFutureTaskResult.optString("viewParam");
-                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJson");
+                                    deepLinkJSON = preInitFutureTaskResult.optString("deepLinkJSON");
                                 }
                                 try {
                                     JSONObject driverInfoFutureTaskResult = driverInfoFutureTask.get(4500, TimeUnit.MILLISECONDS);
@@ -913,7 +914,7 @@ public class MainActivity extends AppCompatActivity {
         if(appLinkIntent==null) return null;
         Vector<String> res = new Vector<>();
         Uri appLinkData = appLinkIntent.getData();
-        String deepLinkJson = null, viewParam = null;
+        String deepLinkJSON = null, viewParam = null;
         if (appLinkData != null && appLinkData.getQuery() != null) {
             String query = appLinkData.getQuery();
             HashMap<String, String> query_params = getQueryMap(query);
@@ -927,21 +928,21 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             Gson gson = new Gson();
-            deepLinkJson = gson.toJson(query_params);
+            deepLinkJSON = gson.toJson(query_params);
         } else return null;
-        if(viewParam==null || deepLinkJson == null) return null;
+        if(viewParam==null || deepLinkJSON == null) return null;
         res.add(viewParam);
-        res.add(deepLinkJson);
+        res.add(deepLinkJSON);
         return res;
     }
 
-    private void processDeeplink(String viewParam, String deepLinkJson){
+    private void processDeeplink(String viewParam, String deepLinkJSON){
         try {
             JSONObject processPayloadDL = new JSONObject();
             JSONObject innerPayloadDL = getInnerPayload(new JSONObject(),"process");
-            if (viewParam != null && deepLinkJson != null) {
+            if (viewParam != null && deepLinkJSON != null) {
                 innerPayloadDL.put("view_param", viewParam)
-                        .put("deepLinkJSON", deepLinkJson)
+                        .put("deepLinkJSON", deepLinkJSON)
                         .put("viewParamNewIntent", viewParam)
                         .put("onNewIntent", true);
                 processPayloadDL.put("service", getService())
@@ -1013,15 +1014,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         Vector<String> res = handleDeepLinkIfAvailable(intent);
         Vector<String> notificationDeepLinkVector = notificationTypeHasDL(intent);
-        String viewParam = null, deepLinkJson =null;
+        String viewParam = null, deepLinkJSON =null;
         if (res!=null ){
             viewParam = res.get(0);
-            deepLinkJson = res.get(1);
+            deepLinkJSON = res.get(1);
         } else if (notificationDeepLinkVector != null) {
             viewParam = notificationDeepLinkVector.get(0);
-            deepLinkJson = notificationDeepLinkVector.get(1);
+            deepLinkJSON = notificationDeepLinkVector.get(1);
         }
-        processDeeplink(viewParam, deepLinkJson);
+        processDeeplink(viewParam, deepLinkJSON);
         if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
             try {
                 JSONObject proccessPayload = new JSONObject().put("service", getService())

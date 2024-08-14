@@ -4,7 +4,7 @@ import Common.Types.App (LazyCheck(..))
 import Data.Array (take, (!!))
 import Data.Maybe (fromMaybe, Maybe(..))
 import Prelude (Unit, const, ($), (&&), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), PrestoDOM, alignParentRight, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, relativeLayout, text, textView, visibility, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), PrestoDOM, alignParentRight, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, relativeLayout, text, textView, visibility, width, clickable)
 import Screens.Types (NewContacts)
 import Styles.Types (Color)
 import Data.String as DS
@@ -37,6 +37,7 @@ view config push =
             , cornerRadius if EHC.os == "IOS" then 16.0 else 20.0
             , gravity CENTER
             , onClick push $ const $ OnClick config.index
+            , clickable config.isClickable
             ]
               <> if config.enableCheckmark then [ margin $ MarginTop 10 ] else []
           )
@@ -81,6 +82,7 @@ type Config
   = { contact :: NewContacts
     , index :: Int
     , enableCheckmark :: Boolean
+    , isClickable :: Boolean
     }
 
 config :: Config
@@ -94,16 +96,20 @@ config =
       , enableForShareRide: false
       , shareTripWithEmergencyContactOption: neverShareRideOption
       , onRide : false
+      , contactPersonId : Nothing
+      , isFollowing: Nothing
       }
   , index: 0
   , enableCheckmark: true
+  , isClickable: true
   }
 
-getContactConfig :: NewContacts -> Int -> Boolean -> Config
-getContactConfig contact index enableCheckmark =
+getContactConfig :: NewContacts -> Int -> Boolean -> Boolean -> Config
+getContactConfig contact index enableCheckmark clickable =
   { contact: contact
   , index: index
   , enableCheckmark: enableCheckmark
+  , isClickable: clickable
   }
 
 contactColorsList :: Array (Array Color)

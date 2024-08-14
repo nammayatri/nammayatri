@@ -36,6 +36,10 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(..))
+import JBridge as JB
+import Components.OptionsMenu as OptionsMenuConfig
+import Common.Types.App as CTA
+import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
 
 startNSOnboardingButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startNSOnboardingButtonConfig state =
@@ -70,7 +74,7 @@ cancelSOSBtnConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 cancelSOSBtnConfig state =
   PrimaryButton.config
     { textConfig
-      { text = getString MARK_RIDE_AS_SAFE
+      { text = getString if state.props.showTestDrill then DONE else MARK_RIDE_AS_SAFE
       , color = Color.white900
       , accessibilityHint = "Mark ride as safe button"
       }
@@ -93,8 +97,8 @@ activateSoSButtonConfig state =
 dismissSoSButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 dismissSoSButtonConfig state =
   PrimaryButton.config
-    { textConfig { text = getString CANCEL_, color = Color.black900 }
-    , margin = Margin 16 24 16 24
+    { textConfig { text = getString if state.props.showTestDrill then DONE else CANCEL_, color = Color.black900 }
+    , margin = Margin 16 0 16 16
     , stroke = "1," <> Color.white900
     , background = Color.white900
     , id = "SafetyScreenDismissSosButton"
@@ -192,9 +196,10 @@ shareTripPopupConfig :: NammaSafetyScreenState -> PopupWithCheckboxController.Co
 shareTripPopupConfig state =
   PopupWithCheckboxController.config
     { title = getString SHARE_TRIP_NOTIFICATONS
-    , secondaryButtonText = getString SAVE
+    -- , secondaryButtonText = getString SAVE --check
     , checkboxList = checkBoxData state
     , primaryButtonConfig = shareTripPopupBtnConfig state
+    , checkBoxType = PopupWithCheckboxController.Checkbox
     }
 
 shareTripPopupBtnConfig :: NammaSafetyScreenState -> PrimaryButton.Config
@@ -339,3 +344,63 @@ genericHeaderConfig state =
         }
   in
     genericHeaderConfig'
+    
+shareAudioButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
+shareAudioButtonConfig state = let 
+  disableButton = state.props.showTestDrill
+  in PrimaryButton.config
+    { textConfig
+      { text = getString SHARE_WITH_SAFETY_TEAM
+      , accessibilityHint = "Share Recorded Audio Button"
+      , color = Color.blue800
+      }
+    , background = Color.transparent
+    , margin = Margin 16 16 16 0
+    , id = "SafetyScreenShareAudioButton"
+    , enableLoader = JB.getBtnLoader "SafetyScreenShareAudioButton"
+    , enableRipple = true
+    , alpha = if disableButton then 0.5 else 1.0
+    , isClickable = not disableButton
+    , visibility = boolToVisibility $ state.props.audioRecordingStatus == CTA.RECORDED 
+    }
+
+optionsMenuConfig :: NammaSafetyScreenState -> OptionsMenuConfig.Config
+optionsMenuConfig state = OptionsMenuConfig.config {
+  menuItems = [
+    {image : fetchImage FF_ASSET "ny_ic_issue_box", textdata : getString REPORT_SAFETY_ISSUE, action : "report_safety_issue", isVisible : not state.props.showTestDrill, color : Color.white900},
+    {image : fetchImage FF_ASSET "ny_ic_safety_drill", textdata : getString START_TEST_DRILL, action : "start_test_drill", isVisible : not state.props.showTestDrill, color : Color.white900},
+    {image : fetchImage FF_ASSET "ny_ic_board_menu", textdata : getString LEARN_ABOUT_NAMMA_SAFETY, action : "learn_about_safety", isVisible : true, color : Color.white900}
+  ],
+  backgroundColor = Color.blackLessTrans,
+  menuBackgroundColor = Color.black900,
+  gravity = RIGHT,
+  menuExpanded = true,
+  width = WRAP_CONTENT,
+  marginRight = 16,
+  itemHeight = V 50,
+  itemPadding = Padding 16 16 16 16,
+  cornerRadius = 4.0,
+  enableAnim = true,
+  showStroke = false
+}
+
+safetyAudioRecordingConfig :: NammaSafetyScreenState -> SafetyAudioRecording.Config
+safetyAudioRecordingConfig state = {
+  isAudioRecordingActive : state.props.isAudioRecordingActive,
+  audioRecordingStatus : state.props.audioRecordingStatus,
+  recordingTimer : state.props.recordingTimer,
+  shareAudioButtonConfig : shareAudioButtonConfig state
+}
+
+defaultCallContactPopupConfig :: NammaSafetyScreenState -> PopupWithCheckboxController.Config
+defaultCallContactPopupConfig state = PopupWithCheckboxController.config {
+  title = getString DEFAULT_CALL_CONTACT,
+  primaryOptionBackground = Color.blue600,
+  contactList = state.data.emergencyContactsList,
+  primaryButtonConfig {visibility = GONE},
+  checkBoxType = PopupWithCheckboxController.Radio,
+  headerBackground = Color.white900,
+  titleStyle = FontStyle.Tags,
+  showDismissButton = false,
+  headerPadding = Padding 16 16 16 0
+}

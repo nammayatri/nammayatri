@@ -51,5 +51,7 @@ listItem1 = {
   enableForShareRide: false,
   shareTripWithEmergencyContactOption: neverShareRideOption,
   onRide: false,
-  priority : 1
+  priority : 1,
+  contactPersonId : Nothing,
+  isFollowing: Nothing
 }

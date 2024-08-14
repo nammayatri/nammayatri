@@ -39,7 +39,7 @@ import Data.String.Pattern (Pattern(Pattern))
 import Data.TraversableWithIndex (forWithIndex)
 import Effect.Aff (makeAff, nonCanceler)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn3 , runEffectFn4, runEffectFn7)
+import Effect.Uncurried (runEffectFn1, runEffectFn5 , runEffectFn4, runEffectFn7)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, getNewIDWithTag)
 import JBridge ( addMediaFile, hideKeyboardOnNavigation, scrollToEnd, startLottieProcess, toast, uploadFile, lottieAnimationConfig, clearFocus, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, stopAudioRecording, uploadMultiPartData)
 import Language.Strings (getString)
@@ -292,7 +292,7 @@ eval (ImageUploadCallback image imageName imagePath) state = do
                 else
                   snoc state.data.addImagesState.images { image, imageName }
   continueWithCmd state { data { addImagesState { images = images',  isLoading = true } } } [do
-    void $  runEffectFn3 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image"
+    void $  runEffectFn5 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "fileId" "file"
     pure NoAction
   ]
 
@@ -350,7 +350,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
     case state.data.recordAudioState.recordedFile of
       Just url -> do
                   res <- runEffectFn1 saveAudioFile url
-                  void $  runEffectFn3 uploadMultiPartData res (EndPoint.uploadFile "") "Audio"
+                  void $  runEffectFn5 uploadMultiPartData res (EndPoint.uploadFile "") "Audio" "fileId" "file"
                   pure $  UpdateState state { data  { recordedAudioUrl = Just res}}
       Nothing  -> do
                   if state.data.recordAudioState.openAddAudioModel

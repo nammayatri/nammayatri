@@ -412,7 +412,11 @@ screen initialState =
               pure (pure unit)
         ),
         (\push -> do
-            when (Arr.elem initialState.props.currentStage [RideStarted, RideAccepted]) $ push UpdateRateCardCache
+            when (Arr.elem initialState.props.currentStage [RideStarted, RideAccepted]) $ do
+              push UpdateRateCardCache
+              runEffectFn3 JB.initialiseShakeListener push ShakeActionCallback JB.defaultShakeListenerConfig
+              void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push
+              pure unit
             pure (pure unit))
           
       ]
@@ -1098,7 +1102,7 @@ sosView push state =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
-    , visibility $ boolToVisibility $ state.props.currentStage == RideStarted && state.data.config.feature.enableSafetyFlow
+    , visibility $ boolToVisibility $ Arr.elem state.props.currentStage [RideAccepted, RideStarted] && state.data.config.feature.enableSafetyFlow
     , margin $ MarginRight 16
     ]
     [ linearLayout
@@ -1117,6 +1121,7 @@ sosView push state =
               , color Color.white900
               , margin $ MarginVertical 5 3
               , gravity CENTER
+              , visibility GONE -- Not required now.
               ]
             <> FontStyle.body17 TypoGraphy
         ]
@@ -1124,7 +1129,7 @@ sosView push state =
         [ height WRAP_CONTENT
         , width $ WRAP_CONTENT
         , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
-        , background Color.white900
+        , background if state.props.currentStage == RideStarted && onUsRide then Color.blue900 else Color.white900
         , cornerRadius 20.0
         , onClick push $ const (if onUsRide then OpenEmergencyHelp else OpenOffUsSOS)
         -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
@@ -1142,11 +1147,11 @@ sosView push state =
       , width WRAP_CONTENT
       , gravity CENTER
       , visibility vis
-      , accessibilityHint $ "Safety Center Button"
+      , accessibilityHint $ "Emergency Button"
       , accessibility ENABLE
       ]
       [ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET if onUsRide then "ny_ic_sos" else "ny_ic_sos_related"
+          [ imageWithFallback $ fetchImage FF_ASSET shieldImage
           , height $ V 24
           , width $ V 24
           , margin $ MarginRight 8
@@ -1155,13 +1160,24 @@ sosView push state =
           -- , clickable onUsRide -- need to remove once @Kavyashree's changes are megred
           ]
       , textView
-          $ [ text $ getString SAFETY_CENTER
-            , color if onUsRide then Color.blue900 else Color.black800
+          $ [ text $ getString EMERGENCY
+            , color emergencyTextColor
             , margin $ MarginBottom 1
             , accessibility DISABLE
             ]
           <> FontStyle.body6 TypoGraphy
       ]
+  emergencyTextColor = case (not onUsRide), state.props.currentStage of
+                        true, _ -> Color.black800
+                        false, RideAccepted -> Color.blue900
+                        false, RideStarted -> Color.white900
+                        _,_ -> Color.white900 
+
+  shieldImage = if onUsRide 
+                  then if state.props.currentStage == RideStarted 
+                         then "ny_ic_shield_blue" 
+                         else "ny_ic_sos"
+                  else "ny_ic_sos_related"
 
 liveStatsDashboardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 liveStatsDashboardView push state =
@@ -1616,6 +1632,7 @@ topLeftIconView state push =
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
       isEditDestination = any (_ == state.props.currentStage) [EditingDestinationLoc, ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
       isVisible = state.data.config.showHamMenu && not isEditDestination && not ((not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen])
+      manuallySharedFollowers = fromMaybe [] state.data.manuallySharedFollowers
   in 
   linearLayout
     [ width MATCH_PARENT
@@ -1625,9 +1642,7 @@ topLeftIconView state push =
     , margin $ MarginTop if followerBar then 0 else safeMarginTop
     ]
     $ []
-    <> ( case state.data.followers of
-          Nothing -> []
-          Just followers -> if followerBar then [ followRideBar push followers (MATCH_PARENT) true false] else []
+    <> ( if isFollowEnabled state && followerBar then [ followRideBar push (getFollowers state) (MATCH_PARENT) true false] else []
       )
     <> ( [ linearLayout
             [ width MATCH_PARENT
@@ -3500,11 +3515,9 @@ homeScreenContent push state =  let
        , height WRAP_CONTENT
        , orientation VERTICAL
        , id $ getNewIDWithTag "homescreenContent"
-      ][ case state.data.followers of
-            Nothing -> emptyTextView state
-            Just followers -> if showFollowerBar followers state 
-                                then followView push followers
-                                else emptyTextView state
+      ][ if isFollowEnabled state
+            then followView push $ getFollowers state
+            else emptyTextView state
           , mapView' push state "CustomerHomeScreenMap" 
           , contentView state
           , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
@@ -4455,19 +4468,16 @@ locationUnserviceableView push state =
         , margin $ MarginTop 8
         ] <> (FontStyle.paragraphText TypoGraphy)
       ]
-    ] <> case state.data.followers of
-            Nothing -> []
-            Just followers ->
-              if showFollowerBar followers state then
-                [ linearLayout
-                    [ width MATCH_PARENT
-                    , height WRAP_CONTENT
-                    , gravity CENTER
-                    ]
-                    [ followRideBar push followers (V 328) false false]
-                ]
-              else
-                []
+    ] <> if isFollowEnabled state then
+            [ linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , gravity CENTER
+              ]
+              [ followRideBar push (getFollowers state) (V 328) false false]
+            ]
+          else
+            []
   , linearLayout [
       width MATCH_PARENT
     , height WRAP_CONTENT
@@ -4651,7 +4661,7 @@ shareRideOptionView push state index contact =
         , width $ V 16
         , margin $ MarginRight 10
         ]
-    , ContactCircle.view (ContactCircle.getContactConfig contact index false) (push <<< ContactAction)
+    , ContactCircle.view (ContactCircle.getContactConfig contact index false false) (push <<< ContactAction)
     , textView
         $ [ text contact.name
           , color Color.black800
@@ -4924,3 +4934,21 @@ exploreCityCard push state index locationItem =
           , accessibility DISABLE
           ] <> FontStyle.body3 TypoGraphy
     ]
+
+fetchEmergencySettings :: (Action -> Effect Unit) -> Flow GlobalState Unit
+fetchEmergencySettings push = do
+  resp <- Remote.getEmergencySettings ""
+  case resp of
+    Right (GetEmergencySettingsRes response) -> do
+      liftFlow $ push $ UpdateShakePermission response.shakeToActivate
+      pure unit
+    Left err -> pure unit
+
+isFollowEnabled :: HomeScreenState -> Boolean
+isFollowEnabled state = (state.props.followsRide && isJust state.data.followers) || isJust state.data.manuallySharedFollowers
+
+getFollowers :: HomeScreenState -> Array Followers
+getFollowers state = do
+  let automaticallySharedFollowers = fromMaybe [] state.data.followers 
+      manuallySharedFollowers = fromMaybe [] state.data.manuallySharedFollowers
+  Arr.nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers manuallySharedFollowers

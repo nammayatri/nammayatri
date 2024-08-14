@@ -1590,3 +1590,7 @@ getTE stringKey =
         YES_PAY_TO_THIS_ACCOUNT -> "సరే, ఈ ఖాతాకు చెల్లించండి"
         I_WILL_ADD_DIFFERENT_ACCOUNT -> "నేను వేరొక ఖాతాను జోడిస్తాను"
         ADD_NOW -> "ఇప్పుడే జోడించండి"
+        RECORDING_AUDIO -> "ఆడియో రికార్డింగ్"
+        RECORDED_AUDIO -> "ఆడియో రికార్డ్ చేయబడింది"
+        SHARE_WITH_SAFETY_TEAM -> "సురక్షా టీమ్‌తో భాగంగా పంపండి"
+        RECORD_AUDIO -> "ఆడియో రికార్డ్ చేయండి"

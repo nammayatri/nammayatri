@@ -95,36 +95,25 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             , shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe NEVER_SHARE item.shareTripWithEmergencyContactOption
             , priority: fromMaybe 1 item.priority
             , onRide : fromMaybe false item.onRide
+            , contactPersonId : item.contactPersonId
+            , isFollowing : Nothing
             }
         )
         response.defaultEmergencyNumbers
   void $ pure $ JB.setCleverTapUserProp [ { key: "Safety Setup Completed", value: unsafeToForeign response.hasCompletedSafetySetup } ]
-  void $ pure $ JB.setCleverTapUserProp [ { key: "Auto Share Night Ride", value: unsafeToForeign response.shareTripWithEmergencyContacts } ]
+  -- void $ pure $ JB.setCleverTapUserProp [ { key: "Auto Share Night Ride", value: unsafeToForeign response.shareTripWithEmergencyContacts } ]
   void $ pure $ JB.setCleverTapUserProp [ { key: "Mock Safety Drill Completed", value: unsafeToForeign response.hasCompletedMockSafetyDrill } ]
   void $ pure $ JB.setCleverTapUserProp [ { key: "Night Safety Check Enabled", value: unsafeToForeign response.nightSafetyChecks } ]
   continue
     state
       { data
         { hasCompletedSafetySetup = response.hasCompletedSafetySetup
-        , shareToEmergencyContacts = response.shareEmergencyContacts
         , nightSafetyChecks = response.nightSafetyChecks
         , hasCompletedMockSafetyDrill = response.hasCompletedMockSafetyDrill
-        , shareTripWithEmergencyContactOption = shareTripOption response.shareTripWithEmergencyContactOption
-        , shareOptionCurrent = shareTripOption response.shareTripWithEmergencyContactOption
         , emergencyContactsList = getDefaultPriorityList contacts
         }
       , props { enableLocalPoliceSupport = response.enablePoliceSupport, localPoliceNumber = fromMaybe "" response.localPoliceNumber }
       }
-  where
-  shareTripOption val = case val of -- Handling Backward compatibility
-    Just option -> option
-    Nothing -> case response.shareTripWithEmergencyContacts of
-      Just shareTrip ->
-        if shareTrip then
-          SHARE_WITH_TIME_CONSTRAINTS
-        else
-          NEVER_SHARE
-      Nothing -> NEVER_SHARE
 
 eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 
@@ -169,9 +158,9 @@ eval (StartTestDrill PrimaryButtonController.OnClick) state =
     $ GoToActivateSosScreen
         state
           { props
-            { confirmTestDrill = true
+            { confirmTestDrill = false
             , triggeringSos = false
-            , showTestDrill = false
+            , showTestDrill = true
             , showShimmer = true
             }
           }

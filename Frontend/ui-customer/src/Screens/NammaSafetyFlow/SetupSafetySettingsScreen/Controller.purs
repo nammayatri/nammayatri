@@ -74,6 +74,8 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             , shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe NEVER_SHARE item.shareTripWithEmergencyContactOption
             , priority: fromMaybe 1 item.priority
             , onRide : fromMaybe false item.onRide
+            , contactPersonId : item.contactPersonId
+            , isFollowing: Nothing
             }
         )
         response.defaultEmergencyNumbers
@@ -81,25 +83,12 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
     state
       { data
         { hasCompletedSafetySetup = response.hasCompletedSafetySetup
-        , shareToEmergencyContacts = response.shareEmergencyContacts || (not $ DA.null contacts)
         , nightSafetyChecks = response.nightSafetyChecks
         , hasCompletedMockSafetyDrill = response.hasCompletedMockSafetyDrill
-        , shareTripWithEmergencyContactOption = shareTripOption response.shareTripWithEmergencyContactOption
-        , shareOptionCurrent = shareTripOption response.shareTripWithEmergencyContactOption
         , emergencyContactsList = getDefaultPriorityList contacts
         }
       , props { enableLocalPoliceSupport = response.enablePoliceSupport, localPoliceNumber = fromMaybe "" response.localPoliceNumber }
       }
-  where
-  shareTripOption val = case val of -- Handling Backward compatibility
-    Just option -> option
-    Nothing -> case response.shareTripWithEmergencyContacts of
-      Just shareTrip ->
-        if shareTrip then
-          SHARE_WITH_TIME_CONSTRAINTS
-        else
-          NEVER_SHARE
-      Nothing -> NEVER_SHARE
 
 
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state

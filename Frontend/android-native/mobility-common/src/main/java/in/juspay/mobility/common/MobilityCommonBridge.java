@@ -62,6 +62,8 @@ import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.icu.util.Calendar;
 import android.location.Address;
 import android.location.Geocoder;
@@ -279,6 +281,9 @@ public class MobilityCommonBridge extends HyperBridge {
     // Others
     private LottieAnimationView animationView;
     protected Method[] methods = null;
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private ShakeDetector shakeDetector;
     protected class PolylineDataPoints {
         public Polyline polyline = null;
         public Polyline overlayPolylines = null;
@@ -4554,7 +4559,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void uploadMultiPartData(String filePath, String uploadUrl, String fileType) {
+    public void uploadMultiPartData(String filePath, String uploadUrl, String fileType, String outputField, String formDataField) {
         try {
             String boundary = UUID.randomUUID().toString();
 
@@ -4572,7 +4577,7 @@ public class MobilityCommonBridge extends HyperBridge {
             DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
 
             outputStream.writeBytes("--" + boundary + "\r\n");
-            outputStream.writeBytes(("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + "\r\n"));
+            outputStream.writeBytes(("Content-Disposition: form-data; name=\""+formDataField+"\"; filename=\"" + fileName + "\"" + "\r\n"));
             if (fileType.equals("Image"))
                 outputStream.writeBytes("Content-Type: image/jpeg\r\n");
             else if (fileType.equals("Audio"))
@@ -4616,12 +4621,13 @@ public class MobilityCommonBridge extends HyperBridge {
                 JSONObject jsonObject;
                 try {
                     jsonObject = new JSONObject(res);
-                    res = jsonObject.getString("fileId");
+
+                    res = jsonObject.getString(outputField);
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
             } else {
-                Toast.makeText(bridgeComponents.getContext(), bridgeComponents.getContext().getString(R.string.unable_to_upload_image), Toast.LENGTH_SHORT).show();
+                Toast.makeText(bridgeComponents.getContext(), bridgeComponents.getContext().getString(R.string.unable_to_upload_media), Toast.LENGTH_SHORT).show();
             }
             callUploadMultiPartCallBack(fileType, res);
         }catch(Exception e){
@@ -4906,9 +4912,9 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public boolean startAudioRecording() {
+    public boolean startAudioRecording(String fileName) {
         if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        return mediaPlayer.startAudioRecording();
+        return mediaPlayer.startAudioRecording(fileName);
     }
 
     @JavascriptInterface
@@ -5118,4 +5124,47 @@ public class MobilityCommonBridge extends HyperBridge {
         storeContactsCallBack = callback;
     }
 
+    @JavascriptInterface
+    public void initialiseShakeListener (String callback, String config){
+        try {
+            JSONObject shakeListenerConfig = new JSONObject(config);
+            sensorManager = (SensorManager) bridgeComponents.getContext().getSystemService(Context.SENSOR_SERVICE);
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
+            float shakeAccelerationThreshold = (float) shakeListenerConfig.optDouble("shakeAccelerationThreshold", 5);
+            int consecutiveShakeInterval = shakeListenerConfig.optInt("consecutiveShakeInterval", 500);
+            int shakeCountResetTime = shakeListenerConfig.optInt("shakeCountResetTime", 3000);
+            shakeDetector = new ShakeDetector(shakeAccelerationThreshold, consecutiveShakeInterval, shakeCountResetTime);
+            shakeDetector.setOnShakeListener(new ShakeDetector.OnShakeListener() {
+                @Override
+                public void onShake(int count) {
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                            callback, count);
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            });
+        } catch (Exception e) {
+            Log.e(LOG_TAG, e.getMessage());
+        }
+    }
+
+    @JavascriptInterface
+    public void unregisterShakeListener (){
+        sensorManager.unregisterListener(shakeDetector);
+    }
+
+    @JavascriptInterface
+    public void registerShakeListener(){
+        sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
+    }
+
+    @JavascriptInterface
+    public String fetchFilesFromFolderPath(String path){
+        File[] files = FileUtils.getFilesInFolderPath(path);
+        String[] filePaths = files != null ? new String[files.length] : new String[0];
+        for(int i = 0; i < files.length; i++){
+            filePaths[i] = files[i].getAbsolutePath();
+        }
+        return Arrays.toString(filePaths);
+    }
 }

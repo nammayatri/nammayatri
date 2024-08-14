@@ -120,7 +120,8 @@ contactCardView push contact index =
   contactConfig = {
     contact : contact,
     index : index,
-    enableCheckmark : false
+    enableCheckmark : false,
+    isClickable : false
   }
 
 data Action

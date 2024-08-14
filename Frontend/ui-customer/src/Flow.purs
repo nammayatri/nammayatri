@@ -270,6 +270,9 @@ dataFetchScreenFlow stageConfig stepVal = do
     DataExplainWithFetchC.Exit state -> do
       updateSafetySettings state
       nammaSafetyFlow
+    DataExplainWithFetchC.GoToSafetyDrill state -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
+      activateSafetyScreenFlow
     _ -> homeScreenFlow
 
 nammaSafetyFlow :: FlowBT String Unit
@@ -354,7 +357,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "tkts" -> hideSplashAndCallFlow placeListFlow
         "safety" -> hideSplashAndCallFlow safetySettingsFlow
         "smd" -> do
-          modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { confirmTestDrill = true } })
+          modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
         "sedu" -> do
           case globalPayload ^. _payload ^. _deepLinkJSON of
@@ -368,6 +371,20 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
             _ -> pure unit
           hideSplashAndCallFlow safetyEducationFlow
         "mt" -> hideSplashAndCallFlow metroTicketBookingFlow
+        "shareRide" ->  do
+          case globalPayload ^. _payload ^. _deepLinkJSON of
+            Just (CTA.QueryParam queryParam) -> do
+              case queryParam.rideId of
+                Just rId -> do
+                  res <- lift $ lift $ HelpersAPI.callApi $ GetManuallySharedDetailsReq rId
+                  case res of
+                    Right (GetManuallySharedDetailsRes rideDetails) -> do
+                      let follower = { name : Just rideDetails.customerName, bookingId : rideDetails.bookingId, mobileNumber : rideDetails.customerPhone, priority : 0 }
+                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Just [follower], manuallySharedFollowers = Just [follower] } })
+                      updateFollower false true Nothing
+                    Left _ -> currentFlowStatus
+                _ -> currentFlowStatus
+            _ -> pure unit
         _ -> do
           case breakPrefixAndId screen of
             Just ( Tuple "metroBooking" bookingId )-> do
@@ -2053,15 +2070,15 @@ homeScreenFlow = do
                 _ -> modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { selectedLocationListItem = Just selectedLocationListItem { lat = Just (placeLatLong.lat), lon = Just (placeLatLong.lon) } } })
               getDistanceDiff state { data { saveFavouriteCard { selectedItem { lat = Just (placeLatLong.lat), lon = Just (placeLatLong.lon) } }, selectedLocationListItem = Just selectedLocationListItem { lat = Just (placeLatLong.lat), lon = Just (placeLatLong.lon) } } } (placeLatLong.lat) (placeLatLong.lon)
     GO_TO_CALL_EMERGENCY_CONTACT state -> do
-      (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "EmergencyContact" state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo) state.data.driverInfoCardState.rideId false)
+      (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "EmergencyContact" state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo) state.data.driverInfoCardState.rideId false false)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state { props { emergencyHelpModelState { sosId = res.sosId } } })
       homeScreenFlow
     GO_TO_CALL_POLICE state -> do
-      (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "Police" "") state.data.driverInfoCardState.rideId false)
+      (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "Police" "") state.data.driverInfoCardState.rideId false false)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state { props { emergencyHelpModelState { sosId = res.sosId } } })
       homeScreenFlow
     GO_TO_CALL_SUPPORT state -> do
-      (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "CustomerCare" "") state.data.driverInfoCardState.rideId false)
+      (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "CustomerCare" "") state.data.driverInfoCardState.rideId false false) 
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state { props { emergencyHelpModelState { sosId = res.sosId } } })
       homeScreenFlow
     GO_TO_SOS_STATUS state -> do
@@ -2081,6 +2098,8 @@ homeScreenFlow = do
                 , enableForShareRide: fromMaybe false item.enableForShareRide
                 , shareTripWithEmergencyContactOption : EmergencyContactsScreenData.getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE item.shareTripWithEmergencyContactOption
                 , onRide: fromMaybe false item.onRide
+                , contactPersonId : item.contactPersonId
+                , isFollowing : Nothing
                 }
             )
             res.defaultEmergencyNumbers
@@ -2188,16 +2207,16 @@ homeScreenFlow = do
             )
       rentalScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
-    -- GO_TO_NAMMASAFETY state triggerSos showtestDrill -> do
-    --   updateSafetyScreenState state defaultTimerValue triggerSos showtestDrill
-    --   case (triggerSos || showtestDrill) of
-    --     true -> do
-    --       let
-    --         isRideCompleted = state.props.currentStage == RideCompleted
-    --       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] state.data.config else Nothing } })
-    --       activateSafetyScreenFlow
-    --     false -> safetySettingsFlow
-    GO_TO_NAMMASAFETY state triggerSos showtestDrill -> nammaSafetyFlow
+    GO_TO_NAMMASAFETY state triggerSos showtestDrill -> do
+      updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos
+      case (triggerSos || showtestDrill) of
+        true -> do
+          let
+            isRideCompleted = state.props.currentStage == RideCompleted
+          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] state.data.config else Nothing } })
+          activateSafetyScreenFlow
+        false -> nammaSafetyFlow
+    -- GO_TO_NAMMASAFETY state triggerSos showtestDrill -> nammaSafetyFlow
       -- modifyScreenState
       --   $ NammaSafetyScreenStateType
       --       ( \nammaSafetyScreen ->
@@ -2247,11 +2266,21 @@ homeScreenFlow = do
       contacts <- getFormattedContacts
       let
         appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-      if null contacts then do
-        void $ pure $ shareTextMessage "" $ getString $ STR.TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "t?i=" <> state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
-        void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
-      else do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { contactList = Just contacts }, props { showShareRide = true } })
+      (res :: (Either ErrorResponse EmergencyContactsTrackingRes)) <- lift $ lift $ HelpersAPI.callApi $ EmergencyContactsTrackingReq state.data.driverInfoCardState.rideId
+      
+      let contactsWithstatus = case res of
+            Left _ -> contacts
+            Right res -> do
+                map (\contactItem -> let
+                      (EmergencyContactsTrackingRes statusDetails) = res
+                      contactStatus = Arr.find (\(CurrentTrackingDetails item) -> isJust contactItem.contactPersonId && contactItem.contactPersonId == Just item.personId ) statusDetails.details
+                      in case contactStatus of
+                        Just (CurrentTrackingDetails details) -> do
+                          let isWithinTimeLimit = runFn2 JB.differenceBetweenTwoUTCInMinutes (getCurrentUTC "") details.updateTime < state.data.config.safety.followingInterval
+                          contactItem { isFollowing = Just isWithinTimeLimit }
+                        Nothing -> contactItem { isFollowing = Nothing }
+                ) contacts
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> state { data { contactList = Just contactsWithstatus }, props { showShareRide = true } })
       homeScreenFlow
     GO_TO_NOTIFY_RIDE_SHARE state -> do
       let
@@ -2524,8 +2553,9 @@ findEstimates updatedState = do
 updateFollower :: Boolean -> Boolean -> Maybe String -> FlowBT String Unit
 updateFollower callFollowersApi callInitUi eventType = do
   (GlobalState allState) <- getState
-  followers <- getFollowers allState
+  automaticallySharedFollowers <- getFollowers allState
   let
+    followers = nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers (fromMaybe [] allState.homeScreen.data.manuallySharedFollowers)
     noOfFollowers = Arr.length followers
   setValueToLocalStore TRACKING_DRIVER "False"
   setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
@@ -3104,6 +3134,8 @@ emergencyScreenFlow = do
                     , shareTripWithEmergencyContactOption: EmergencyContactsScreenData.getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE item.shareTripWithEmergencyContactOption
                     , onRide: fromMaybe false item.onRide
                     , priority: fromMaybe 1 item.priority
+                    , contactPersonId : item.contactPersonId
+                    , isFollowing : Nothing
                     }
                 )
                 res.defaultEmergencyNumbers
@@ -4055,6 +4087,7 @@ updateUserInfoToState state =
                 , tripSuggestions = state.data.tripSuggestions
                 , followers = state.data.followers
                 , famousDestinations = state.data.famousDestinations
+                , manuallySharedFollowers = state.data.manuallySharedFollowers
                 }
               , props
                 { isBanner = state.props.isBanner
@@ -5416,13 +5449,13 @@ activateSafetyScreenFlow = do
     ActivateSafetyScreen.GoToEmergencyContactScreen state -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { props { fromSosFlow = true, appName = state.props.appName }, data { emergencyContactsList = state.data.emergencyContactsList } })
       emergencyScreenFlow
-    ActivateSafetyScreen.CreateSos state isPoliceFlow -> do
+    ActivateSafetyScreen.CreateSos state flow -> do
       let
         rideId = case state.data.lastRideDetails of
           Nothing -> state.data.rideId
           Just ride -> ride.rideId
 
-        flowType = if isPoliceFlow then "Police" else "SafetyFlow"
+        flowType = show flow
       (GlobalState gState) <- getState
       if state.props.showTestDrill then do
         void $ lift $ lift $ Remote.createMockSos (gState.homeScreen.props.currentStage == RideStarted) false
@@ -5430,16 +5463,16 @@ activateSafetyScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { sosBannerType = Nothing } })
         pure unit
       else do
-        (UserSosRes res) <- Remote.userSosBT $ Remote.makeUserSosReq (Remote.createUserSosFlow flowType "") rideId state.props.reportPastRide
+        (UserSosRes res) <- Remote.userSosBT $ Remote.makeUserSosReq (Remote.createUserSosFlow flowType "") rideId state.props.reportPastRide $ flow == SafetyFlow
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { contactList = Nothing } })
-        if (not isPoliceFlow) then do
+        if flow == SafetyFlow then do
           modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { sosId = res.sosId } })
           void $ pure $ cleverTapCustomEventWithParams "ny_user_sos_activated" "current_time" (getCurrentUTC "")
         else
           void $ pure $ cleverTapCustomEvent "ny_user_call_police_activated"
         setValueToLocalStore IS_SOS_ACTIVE "true"
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { shouldCallAutomatically = true }, data { sosType = Just $ if isPoliceFlow then Police else SafetyFlow } })
-      if isPoliceFlow then activateSafetyScreenFlow else sosActiveFlow
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { shouldCallAutomatically = true }, data { sosType = Just flow } })
+      if flow /= SafetyFlow then activateSafetyScreenFlow else sosActiveFlow
     ActivateSafetyScreen.GoToSosScreen state -> sosActiveFlow
     ActivateSafetyScreen.GoToEducationScreen state -> safetyEducationFlow
     ActivateSafetyScreen.GoToIssueScreen state -> do

@@ -32,6 +32,7 @@ import Resources.Localizable.FR (getFR)
 import Resources.Localizable.TE (getTE)
 import Locale.Utils
 import Prelude
+import Data.String as DS
 
 getString :: STR -> String
 getString key = 
@@ -68,3 +69,6 @@ getStringFromLocal language key =
 
 getVarString :: STR -> Array String -> String
 getVarString key vals = getStringWithVar (getString key) vals
+
+getStringWithoutNewLine :: STR -> String
+getStringWithoutNewLine str = DS.replace (DS.Pattern "\n") (DS.Replacement " ") $ getString str

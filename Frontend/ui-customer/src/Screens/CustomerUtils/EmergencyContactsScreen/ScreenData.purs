@@ -24,6 +24,8 @@ initData =
           , shareTripWithEmergencyContactOption: neverShareRideOption
           , onRide: false
           , priority: 1
+          , contactPersonId: Nothing
+          , isFollowing: Nothing
           }
       , searchResult: []
       , prestoListArrayItems: []
@@ -39,6 +41,8 @@ initData =
           , shareTripWithEmergencyContactOption: neverShareRideOption
           , onRide: false
           , priority: 1
+          , contactPersonId: Nothing
+          , isFollowing: Nothing
           }
       , editedText: ""
       , logField: empty

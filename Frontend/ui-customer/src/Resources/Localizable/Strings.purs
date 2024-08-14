@@ -31,6 +31,7 @@ import Resources.Localizable.FR (getFR)
 import Resources.Localizable.TA (getTA)
 import Resources.Localizable.TE (getTE)
 import Locale.Utils
+import Data.String as DS
 
 getString :: STR -> String
 getString key = 
@@ -57,3 +58,6 @@ getStringFromLocal language key =
     "TA_IN" -> getTA key
     "TE_IN" -> getTE key
     _       -> getEN key
+
+getStringWithoutNewLine :: STR -> String
+getStringWithoutNewLine str = DS.replace (DS.Pattern "\n") (DS.Replacement " ") $ getString str

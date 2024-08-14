@@ -59,6 +59,7 @@ import Timers (clearTimerWithId)
 import Storage (getValueToLocalStore)
 import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
+import Components.Safety.SafetyActionTileView as SafetyActionTileView
 
 instance showAction :: Show Action where
   show _ = ""
@@ -94,7 +95,7 @@ data Action
   | InitializeChat
   | ScrollToBottom
   | BackPressed
-  | CallPolice
+  | CallPolice SafetyActionTileView.Action
   | StopAudioPlayer
   | StartAudioPlayer
   | OnAudioCompleted String
@@ -110,6 +111,7 @@ data Action
   | ResetSheetState
   | MessageExpiryTimer Int String String
   | AllChatsLoaded
+  | CallSafetyTeam SafetyActionTileView.Action
 
 eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState
 eval action state = case action of
@@ -176,7 +178,7 @@ eval action state = case action of
       then startAudioPlayerCmd [] state { data { emergencyAudioStatus = RESTARTED } }
       else continueWithCmd state [ pure StopAudioPlayer]
   UpdateRoute route -> continue state { data { route = Just route } }
-  CallPolice -> do
+  CallPolice SafetyActionTileView.OnClick -> do
     void $ pure $ performHapticFeedback unit
     pure $ showDialer "112" false
     continue state
@@ -371,6 +373,9 @@ eval action state = case action of
       PrimaryButton.OnClick -> exit $ Exit state
       _ -> continue state
   ResetSheetState -> continue state { props { sheetState = Nothing } }
+  CallSafetyTeam SafetyActionTileView.OnClick -> do
+    pure $ showDialer state.data.config.safety.safetyTeamNumber false
+    continue state
   _ -> continue state
   
 updateMessagesWithCmd :: FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState

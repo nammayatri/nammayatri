@@ -27,6 +27,7 @@ import DecodeUtil (getAnyFromWindow)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
+import Common.Types.App as CTA
 
 initData :: NammaSafetyScreenState
 initData =
@@ -55,6 +56,8 @@ initData =
             , shareTripWithEmergencyContactOption: neverShareRideOption
             , onRide: false
             , priority: 1
+            , contactPersonId: Nothing
+            , isFollowing: Nothing
             }
         , currentLocation: "Loading..."
         , vehicleDetails: "Loading..."
@@ -120,12 +123,12 @@ initData =
               , navigation: SafetyDrill []
               }
             ]
+          , autoCallDefaultContact : false
         }
     , props:
         { setupStage: SetDefaultEmergencyContacts
         , timerId: ""
         , timerValue: defaultTimerValue
-        , recordingState: NOT_RECORDING
         , triggeringSos: false
         , confirmPopup: false
         , showInfoPopUp: false
@@ -147,6 +150,16 @@ initData =
         , reportPastRide: false
         , appName: fromMaybe config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
         , isOffUs: false
+        , triggerSiren : false
+        , isAudioRecordingActive : false
+        , audioRecordingStatus : CTA.NOT_RECORDING
+        , recordingTimer : "00 : 00"
+        , recordingTimerId : ""
+        , recordedAudioUrl : Nothing
+        , showMenu : false
+        , policeCallTimerValue : 5
+        , policeCallTimerId : ""
+        , defaultCallPopup : false
         }
     }
 
@@ -156,8 +169,7 @@ defaultTimerValue = if EHC.os == "IOS" then 5 else 6
 invalidSettingsAPIResponse :: API.GetEmergencySettingsRes
 invalidSettingsAPIResponse =
   API.GetEmergencySettingsRes
-    { shareEmergencyContacts: false
-    , nightSafetyChecks: false
+    { nightSafetyChecks: false
     , hasCompletedSafetySetup: false
     , defaultEmergencyNumbers: []
     , enablePoliceSupport: false

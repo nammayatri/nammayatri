@@ -1588,3 +1588,8 @@ getTA stringKey =
         YES_PAY_TO_THIS_ACCOUNT -> "சரி, இந்தக் கணக்கில் செலுத்துங்கள்"
         I_WILL_ADD_DIFFERENT_ACCOUNT -> "நான் வேறு கணக்கைச் சேர்ப்பேன்"
         ADD_NOW -> "இப்போது சேர்"
+        DISCOUNT_POINTS_UPTO discountPoints -> "நீங்கள் "<> discountPoints <>" தள்ளுபடி புள்ளிகள் வரை தகுதியுடையவர்"
+        RECORDING_AUDIO -> "ஒலி பதிவு"
+        RECORDED_AUDIO -> "பதிவு செய்யப்பட்ட ஒலி"
+        SHARE_WITH_SAFETY_TEAM -> "பாதுகாப்பு குழுவுடன் பகிரவும்"
+        RECORD_AUDIO -> "ஒலி பதிவு"

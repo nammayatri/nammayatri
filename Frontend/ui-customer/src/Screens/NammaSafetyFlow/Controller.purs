@@ -239,6 +239,8 @@ transformContactDetailsToNewContacts (API.GetEmergencySettingsRes settingsResp) 
           , onRide: fromMaybe false contact.onRide
           , priority: mbPriority
           , shareTripWithEmergencyContactOption: EmergencyContactsScreenData.getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE contact.shareTripWithEmergencyContactOption
+          , contactPersonId: contact.contactPersonId
+          , isFollowing: Nothing
           }
     )
     settingsResp.defaultEmergencyNumbers

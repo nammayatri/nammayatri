@@ -139,7 +139,8 @@ newtype Payload = Payload
 
 newtype QueryParam = QueryParam {
   option :: Maybe String,
-  bookingId :: Maybe String
+  bookingId :: Maybe String,
+  rideId :: Maybe String
 }
 
 newtype DeeplinkOptions = DeeplinkOptions {
@@ -651,3 +652,9 @@ type RateCard =
     waitingTimeInfo :: WaitingTimeInfo,
     serviceTierName :: Maybe String
   }
+
+data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED | RECORDED
+
+derive instance genericRecordingState :: Generic RecordingState _
+instance eqRecordingState :: Eq RecordingState where eq = genericEq
+instance showRecordingState :: Show RecordingState where show = genericShow

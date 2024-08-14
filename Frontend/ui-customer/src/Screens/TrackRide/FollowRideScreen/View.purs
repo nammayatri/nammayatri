@@ -50,7 +50,7 @@ import Common.Types.App as Common
 import Components.GenericHeader as GenericHeader
 import Data.String (take)
 import Font.Style as FontStyle
-import Language.Strings (getString)
+import Language.Strings (getString, getStringWithoutNewLine)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (Flow, getState, modifyState)
 import Helpers.Pooling(delay)
@@ -73,7 +73,8 @@ import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
 import Foreign (unsafeToForeign)
 import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon)
 import Screens.Types as ST
-
+import Components.Safety.SafetyActionTileView as SafetyActionTileView
+import Components.Safety.Utils as SU
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput
 screen initialState globalState =
@@ -704,12 +705,29 @@ emergencyActionsView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , background Color.white900
-    , padding $ Padding 16 12 16 12
+    , padding $ Padding 10 12 10 12
     , margin $ Margin 16 6 16 12
     , cornerRadius 8.0
+
     ]
-    [ buttonView push state
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity CENTER_VERTICAL
+        ]
+        ( map
+            ( \item ->
+                SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (screenWidth unit - 76) / 2) true item.isDisabled Color.black900
+            )
+            safetyActions
+        )
     ]
+  where   
+    safetyActions =
+      [ { text: getStringWithoutNewLine CALL_POLICE , image: "ny_ic_ny_support" , backgroundColor: Color.white900, strokeColor: Color.grey900, push : push <<< CallPolice, isDisabled: false }
+      , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: "ny_ic_help_and_support_dark", backgroundColor: Color.white900, strokeColor: Color.grey900, push : push <<< CallSafetyTeam, isDisabled: false }
+      ]
+    
 
 buttonView ::
   forall w.
@@ -724,7 +742,7 @@ buttonView push state =
     , cornerRadius 24.0
     , gravity CENTER
     , padding $ Padding 16 12 16 12
-    , onClick push $ const CallPolice
+    , onClick push $ const $ CallPolice SafetyActionTileView.OnClick
     , alpha $ if state.props.isMock  then 0.5 else 1.0
     , clickable $ not state.props.isMock
     ]

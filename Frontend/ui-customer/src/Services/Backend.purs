@@ -738,6 +738,7 @@ postContactsReq contacts = EmergContactsReq {
       enableForFollowing: Just item.enableForFollowing,
       enableForShareRide: Just item.enableForShareRide,
       shareTripWithEmergencyContactOption: Just item.shareTripWithEmergencyContactOption.key,
+      contactPersonId : Nothing,
       onRide : Nothing
   }) contacts
 }
@@ -954,11 +955,12 @@ callbackRequestBT lazyCheck = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
-makeUserSosReq :: UserSosFlow -> String -> Boolean -> UserSosReq
-makeUserSosReq flow rideId isRideEnded = UserSosReq {
+makeUserSosReq :: UserSosFlow -> String -> Boolean -> Boolean -> UserSosReq
+makeUserSosReq flow rideId isRideEnded notifyAllContacts = UserSosReq {
      "flow" : flow,
      "rideId" : rideId,
-     "isRideEnded" : isRideEnded
+     "isRideEnded" : isRideEnded,
+     "notifyAllContacts" : notifyAllContacts
 }
 
 createUserSosFlow :: String -> String -> UserSosFlow

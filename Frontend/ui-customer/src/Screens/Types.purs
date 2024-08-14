@@ -67,7 +67,9 @@ type NewContacts = {
   enableForShareRide:: Boolean,
   onRide :: Boolean,
   priority :: Int,
-  shareTripWithEmergencyContactOption :: DropDownOptions
+  shareTripWithEmergencyContactOption :: DropDownOptions,
+  contactPersonId :: Maybe String,
+  isFollowing :: Maybe Boolean
 }
 
 type NewContactsProp = {
@@ -658,6 +660,7 @@ type HomeScreenStateData =
   , bannerData :: BannerCarousalData
   , contactList :: Maybe (Array NewContacts)
   , followers :: Maybe (Array Followers)
+  , manuallySharedFollowers :: Maybe (Array Followers)
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
   , startTimeUTC :: String
@@ -947,6 +950,7 @@ type HomeScreenStateProps =
   , isContactSupportPopUp :: Boolean
   , isSharedLocationFlow :: Boolean
   , isOtpRideFlow :: Boolean
+  , isShakeEnabled :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2314,12 +2318,12 @@ type NammaSafetyScreenData =  {
   lastRideDetails :: Maybe IndividualRideCardState,
   bannerData :: BannerCarousalData,
   safetySetupSteps :: Array SafetyStepsConfig,
-  extraSafetyExplaination :: Array SafetyStepsConfig
+  extraSafetyExplaination :: Array SafetyStepsConfig,
+  autoCallDefaultContact :: Boolean
  }
 
 type NammaSafetyScreenProps =  {
   setupStage :: SafetySetupStage,
-  recordingState :: RecordingState,
   confirmPopup :: Boolean,
   timerId :: String,
   timerValue :: Int,
@@ -2342,7 +2346,17 @@ type NammaSafetyScreenProps =  {
   checkPastRide :: Boolean,
   reportPastRide :: Boolean,
   appName :: String,
-  isOffUs :: Boolean
+  isOffUs :: Boolean,
+  triggerSiren :: Boolean,
+  isAudioRecordingActive :: Boolean,
+  audioRecordingStatus :: CTA.RecordingState,
+  recordingTimerId :: String,
+  recordingTimer :: String,
+  recordedAudioUrl :: Maybe String,
+  showMenu :: Boolean,
+  policeCallTimerValue :: Int,
+  policeCallTimerId :: String,
+  defaultCallPopup :: Boolean
 }
 
 type DataFetchScreenState = {
@@ -2389,11 +2403,6 @@ type SafetyStepsConfig
     , navigation :: NammaSafetyStage
     }
 
-data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
-
-derive instance genericRecordingState :: Generic RecordingState _
-instance eqRecordingState :: Eq RecordingState where eq = genericEq
-instance showRecordingState :: Show RecordingState where show = genericShow
 
 data FollowRideScreenStage = PersonList | FollowingRide | ChatWithEM | MockFollowRide | RideCompletedStage
 

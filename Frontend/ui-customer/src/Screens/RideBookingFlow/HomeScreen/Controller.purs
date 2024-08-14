@@ -1464,7 +1464,7 @@ eval ShareRide state = do
   continueWithCmd state
         [ do
             let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "t?i="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
+            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "u?vp=shareRide&rideId="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
             void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]
@@ -2537,7 +2537,7 @@ eval (ShareRideAction PopupWithCheckboxController.DismissPopup) state = continue
 
 eval (ShareRideAction (PopupWithCheckboxController.ClickPrimaryButton PrimaryButtonController.OnClick)) state = exit $ GoToNotifyRideShare state
 
-eval (ShareRideAction (PopupWithCheckboxController.ClickSecondaryButton)) state = continueWithCmd state [pure ShareRide]
+eval (ShareRideAction (PopupWithCheckboxController.ClickSecondaryButton PrimaryButtonController.OnClick)) state = continueWithCmd state [pure ShareRide]
 
 eval (ShareRideAction (PopupWithCheckboxController.ToggleSelect index)) state = do 
   let contacts = fromMaybe [] state.data.contactList
@@ -2549,6 +2549,14 @@ eval (ShareRideAction (PopupWithCheckboxController.ToggleSelect index)) state = 
           contactList = updatedContactList
         }
       }
+    Nothing -> continue state
+
+eval (ShareRideAction (PopupWithCheckboxController.CallContact index)) state = do 
+  let contacts = fromMaybe [] state.data.contactList
+  case contacts !! index of 
+    Just contact -> do
+      void $ pure $ showDialer contact.number true
+      continue state
     Nothing -> continue state
 
 eval (UpdateBookingDetails (RideBookingRes response)) state = do
@@ -2819,6 +2827,14 @@ eval (ShimmerTimer seconds status timerID) state = do
     void $ pure $ clearTimerWithId timerID
     continue state{props{shimmerViewTimerId = "", showShimmer = false}}
   else update state{props{shimmerViewTimer = seconds, shimmerViewTimerId = timerID}}
+
+eval (ShakeActionCallback count) state = do
+  if count >= 2 && any (_ == state.props.currentStage) [RideAccepted, RideStarted] then do
+    void $ pure $ performHapticFeedback unit
+    exit $ GoToNammaSafety state true false 
+  else continue state
+
+eval (UpdateShakePermission isAllowed) state = continue state{props{isShakeEnabled = isAllowed}}
 
 eval _ state = update state
 
