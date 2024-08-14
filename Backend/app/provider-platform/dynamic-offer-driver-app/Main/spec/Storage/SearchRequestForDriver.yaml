@@ -140,8 +140,8 @@ SearchRequestForDriver:
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     vehicleServiceTier: Kernel.Prelude.fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
-    createdAt: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
-    searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
+    searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
     baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount <$> baseFare|E
     driverMinExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMinExtraFeeAmount <$> driverMinExtraFee|E
     driverMaxExtraFee: Kernel.Types.Common.mkAmountWithDefault driverMaxExtraFeeAmount <$> driverMaxExtraFee|E
@@ -164,7 +164,7 @@ SearchRequestForDriver:
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     vehicleServiceTier: Kernel.Prelude.Just|I
-    createdAt: Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill|E
+    createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
     searchRequestValidTill: Data.Time.utcToLocalTime Data.Time.utc searchRequestValidTill|E
     baseFare: Kernel.Prelude.roundToIntegral <$> baseFare|E
     baseFareAmount: baseFare|E
