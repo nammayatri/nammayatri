@@ -43,6 +43,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as RQ
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified SharedLogic.CancellationRate as CR
 
 data DriverProfleSummaryRes = DriverProfleSummaryRes
   { id :: Id Person,
@@ -63,12 +64,16 @@ data DriverProfleSummaryRes = DriverProfleSummaryRes
     missedOpp :: DriverInfo.DriverMissedOpp,
     feedbackBadges :: DriverInfo.DriverBadges,
     languagesSpoken :: Maybe [Text],
-    hometown :: Maybe Text
+    hometown :: Maybe Text,
+    cancellationRateInWindow :: Maybe Int,
+    cancelledRidesCountInWindow :: Maybe Int,
+    assignedRidesCountInWindow :: Maybe Int,
+    windowSize :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 getDriverProfileSummary :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m DriverProfleSummaryRes
-getDriverProfileSummary (driverId, _, _) = do
+getDriverProfileSummary (driverId, _, mocId) = do
   person <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehicleMB <- B.runInReplica $ QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
@@ -119,6 +124,7 @@ getDriverProfileSummary (driverId, _, _) = do
       Just vehicle -> do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
         return ((.serviceTierType) <$> (find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers))
+  cancellationRateData <- CR.getCancellationRateData mocId driverId
   return $
     DriverProfleSummaryRes
       { id = person.id,
@@ -137,6 +143,10 @@ getDriverProfileSummary (driverId, _, _) = do
         feedbackBadges = generateFeedbackBadge feedbackBadgeList,
         languagesSpoken = person.languagesSpoken,
         hometown = person.hometown,
+        cancellationRateInWindow = cancellationRateData.cancellationRate,
+        cancelledRidesCountInWindow = cancellationRateData.cancelledCount,
+        assignedRidesCountInWindow = cancellationRateData.assignedCount,
+        windowSize = cancellationRateData.windowSize,
         ..
       }
   where
