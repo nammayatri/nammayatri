@@ -6,6 +6,7 @@
 module Storage.Beam.SafetySettings where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -13,13 +14,12 @@ import Tools.Beam.UtilsTH
 
 data SafetySettingsT f = SafetySettingsT
   { autoCallDefaultContact :: B.C f Kernel.Prelude.Bool,
-    enableOtpLessRide :: B.C f Kernel.Prelude.Bool,
-    enablePostRideSafetyCheck :: B.C f Kernel.Prelude.Bool,
-    enableUnexpectedEventsCheck :: B.C f Kernel.Prelude.Bool,
+    enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enablePostRideSafetyCheck :: B.C f Domain.Types.Person.RideShareOptions,
+    enableUnexpectedEventsCheck :: B.C f Domain.Types.Person.RideShareOptions,
     falseSafetyAlarmCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     hasCompletedMockSafetyDrill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasCompletedSafetySetup :: B.C f Kernel.Prelude.Bool,
-    hasSetupRideOtp :: B.C f Kernel.Prelude.Bool,
     informPoliceSos :: B.C f Kernel.Prelude.Bool,
     nightSafetyChecks :: B.C f Kernel.Prelude.Bool,
     notifySafetyTeamForSafetyCheckFailure :: B.C f Kernel.Prelude.Bool,

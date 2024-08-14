@@ -427,16 +427,15 @@ data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
     nightSafetyChecks :: Maybe Bool,
     hasCompletedSafetySetup :: Maybe Bool,
     autoCallDefaultContact :: Maybe Bool,
-    enablePostRideSafetyCheck :: Maybe Bool,
-    enableUnexpectedEventsCheck :: Maybe Bool,
+    enablePostRideSafetyCheck :: Maybe Person.RideShareOptions,
+    enableUnexpectedEventsCheck :: Maybe Person.RideShareOptions,
     hasCompletedMockSafetyDrill :: Maybe Bool,
     informPoliceSos :: Maybe Bool,
     notifySafetyTeamForSafetyCheckFailure :: Maybe Bool,
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
-    enableOtpLessRide :: Maybe Bool,
-    hasSetupRideOtp :: Maybe Bool
+    enableOtpLessRide :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -466,7 +465,6 @@ updateEmergencySettings personId req = do
             QSafety.UpdateEmergencyInfo
               { autoCallDefaultContact = setContactField autoCallDefaultContact,
                 notifySosWithEmergencyContacts = setContactField notifySosWithEmergencyContacts,
-                hasSetupRideOtp = hasSetupRideOtp >>= \val -> if val then Just val else Nothing,
                 ..
               }
       void $ QSafety.upsert personId emergencyInfo
@@ -483,14 +481,13 @@ data EmergencySettingsRes = EmergencySettingsRes
     localPoliceNumber :: Maybe Text,
     autoCallDefaultContact :: Bool,
     notifySosWithEmergencyContacts :: Bool,
-    enablePostRideSafetyCheck :: Bool,
-    enableUnexpectedEventsCheck :: Bool,
+    enablePostRideSafetyCheck :: Person.RideShareOptions,
+    enableUnexpectedEventsCheck :: Person.RideShareOptions,
     informPoliceSos :: Bool,
     notifySafetyTeamForSafetyCheckFailure :: Bool,
     shakeToActivate :: Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
-    enableOtpLessRide :: Bool,
-    hasSetupRideOtp :: Bool
+    enableOtpLessRide :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

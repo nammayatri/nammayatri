@@ -19,8 +19,8 @@ import qualified Storage.Queries.Person as QPerson
 
 data UpdateEmergencyInfo = UpdateEmergencyInfo
   { autoCallDefaultContact :: Maybe Bool,
-    enablePostRideSafetyCheck :: Maybe Bool,
-    enableUnexpectedEventsCheck :: Maybe Bool,
+    enablePostRideSafetyCheck :: Maybe RideShareOptions,
+    enableUnexpectedEventsCheck :: Maybe RideShareOptions,
     hasCompletedMockSafetyDrill :: Maybe Bool,
     hasCompletedSafetySetup :: Maybe Bool,
     informPoliceSos :: Maybe Bool,
@@ -29,8 +29,7 @@ data UpdateEmergencyInfo = UpdateEmergencyInfo
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
-    enableOtpLessRide :: Maybe Bool,
-    hasSetupRideOtp :: Maybe Bool
+    enableOtpLessRide :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -58,8 +57,7 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
             <> [Se.Set BeamP.notifySosWithEmergencyContacts (fromJust notifySosWithEmergencyContacts) | isJust notifySosWithEmergencyContacts]
             <> [Se.Set BeamP.shakeToActivate (fromJust shakeToActivate) | isJust shakeToActivate]
             <> [Se.Set BeamP.safetyCenterDisabledOnDate safetyCenterDisabledOnDate]
-            <> [Se.Set BeamP.enableOtpLessRide (fromJust enableOtpLessRide) | isJust enableOtpLessRide]
-            <> [Se.Set BeamP.hasSetupRideOtp (fromJust hasSetupRideOtp) | isJust hasSetupRideOtp]
+            <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
         )
         [Se.Is BeamP.personId (Se.Eq personId)]
     else do
@@ -67,8 +65,8 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
       let safetySettings =
             DSafety.SafetySettings
               { autoCallDefaultContact = fromMaybe person.shareEmergencyContacts autoCallDefaultContact,
-                enablePostRideSafetyCheck = fromMaybe False enablePostRideSafetyCheck,
-                enableUnexpectedEventsCheck = fromMaybe False enableUnexpectedEventsCheck,
+                enablePostRideSafetyCheck = fromMaybe NEVER_SHARE enablePostRideSafetyCheck,
+                enableUnexpectedEventsCheck = fromMaybe NEVER_SHARE enableUnexpectedEventsCheck,
                 falseSafetyAlarmCount = person.falseSafetyAlarmCount,
                 hasCompletedMockSafetyDrill = bool person.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill (isJust hasCompletedMockSafetyDrill),
                 hasCompletedSafetySetup = fromMaybe person.hasCompletedSafetySetup hasCompletedSafetySetup,
@@ -80,8 +78,7 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
                 safetyCenterDisabledOnDate = bool person.safetyCenterDisabledOnDate safetyCenterDisabledOnDate (isJust safetyCenterDisabledOnDate),
                 shakeToActivate = fromMaybe False shakeToActivate,
                 updatedAt = now,
-                enableOtpLessRide = fromMaybe False (enableOtpLessRide <|> person.enableOtpLessRide),
-                hasSetupRideOtp = False
+                enableOtpLessRide = enableOtpLessRide <|> person.enableOtpLessRide
               }
       createWithKV safetySettings
 
@@ -107,8 +104,8 @@ findSafetySettingsWithFallback personId mbPerson = do
       let safetySettings =
             DSafety.SafetySettings
               { autoCallDefaultContact = person.shareEmergencyContacts,
-                enablePostRideSafetyCheck = False,
-                enableUnexpectedEventsCheck = False,
+                enablePostRideSafetyCheck = NEVER_SHARE,
+                enableUnexpectedEventsCheck = NEVER_SHARE,
                 falseSafetyAlarmCount = person.falseSafetyAlarmCount,
                 hasCompletedMockSafetyDrill = person.hasCompletedMockSafetyDrill,
                 hasCompletedSafetySetup = person.hasCompletedSafetySetup,
@@ -119,8 +116,7 @@ findSafetySettingsWithFallback personId mbPerson = do
                 safetyCenterDisabledOnDate = person.safetyCenterDisabledOnDate,
                 shakeToActivate = False,
                 updatedAt = now,
-                enableOtpLessRide = fromMaybe False person.enableOtpLessRide,
-                hasSetupRideOtp = False,
+                enableOtpLessRide = person.enableOtpLessRide,
                 ..
               }
       _ <- createWithKV safetySettings

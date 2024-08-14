@@ -12,13 +12,12 @@ import qualified Tools.Beam.UtilsTH
 
 data SafetySettings = SafetySettings
   { autoCallDefaultContact :: Kernel.Prelude.Bool,
-    enableOtpLessRide :: Kernel.Prelude.Bool,
-    enablePostRideSafetyCheck :: Kernel.Prelude.Bool,
-    enableUnexpectedEventsCheck :: Kernel.Prelude.Bool,
+    enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enablePostRideSafetyCheck :: Domain.Types.Person.RideShareOptions,
+    enableUnexpectedEventsCheck :: Domain.Types.Person.RideShareOptions,
     falseSafetyAlarmCount :: Kernel.Prelude.Int,
     hasCompletedMockSafetyDrill :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasCompletedSafetySetup :: Kernel.Prelude.Bool,
-    hasSetupRideOtp :: Kernel.Prelude.Bool,
     informPoliceSos :: Kernel.Prelude.Bool,
     nightSafetyChecks :: Kernel.Prelude.Bool,
     notifySafetyTeamForSafetyCheckFailure :: Kernel.Prelude.Bool,

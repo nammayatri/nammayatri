@@ -128,7 +128,7 @@ onInit req = do
             nightSafetyCheck = safetySettings.nightSafetyChecks,
             enableFrequentLocationUpdates = any (\item -> checkSharedOptions item riderConfig now) personENList,
             paymentId = req.paymentId,
-            enableOtpLessRide = safetySettings.enableOtpLessRide,
+            enableOtpLessRide = fromMaybe False safetySettings.enableOtpLessRide,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
