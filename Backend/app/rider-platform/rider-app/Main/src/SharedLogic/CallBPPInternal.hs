@@ -350,7 +350,8 @@ reportIssue apiKey internalUrl bppRideId issueReportType = do
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (reportIssueClient bppRideId issueReportType (Just apiKey)) "ReportIssue" reportIssueApi
 
 data DriverReview = DriverReview
-  { review :: Maybe Text,
+  { riderName :: Maybe Text,
+    review :: Maybe Text,
     feedBackPills :: [Text],
     rating :: Int,
     tripDate :: UTCTime
@@ -376,8 +377,8 @@ data DriverProfileRes = DriverProfileRes
     driverStats :: DriverStatSummary,
     languages :: [Text],
     aspirations :: [Text],
-    vehicleNum :: Text,
-    vechicleVariant :: Text,
+    vehicleNum :: Maybe Text,
+    vechicleVariant :: Maybe Text,
     vehicleTags :: [Text],
     images :: [Text],
     profileImage :: Maybe Text,

@@ -215,3 +215,6 @@ updatePaymentId bookingId paymentId = do
   updateOneWithKV
     [Se.Set BeamB.paymentId $ Just paymentId, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+findBookingsFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> m [Booking]
+findBookingsFromDB bookingIds = findAllWithKV [Se.Is BeamB.id $ Se.In (getId <$> bookingIds)]

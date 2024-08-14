@@ -643,3 +643,6 @@ notOnRide (Id driverId) = do
     ]
     Nothing
     <&> null
+
+findRidesFromDB :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Ride] -> m [Ride]
+findRidesFromDB rideIds = findAllWithDb [Se.Is BeamR.id $ Se.In (getId <$> rideIds)]
