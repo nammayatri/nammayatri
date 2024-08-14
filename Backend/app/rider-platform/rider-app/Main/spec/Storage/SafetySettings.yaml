@@ -22,6 +22,7 @@ SafetySettings:
     notifySafetyTeamForSafetyCheckFailure : Bool
     shakeToActivate : Bool
     enableOtpLessRide : Bool
+    hasSetupRideOtp : Bool
 
   beamType:
     falseSafetyAlarmCount: Maybe Int
@@ -47,6 +48,8 @@ SafetySettings:
     notifySafetyTeamForSafetyCheckFailure : "false"
     shakeToActivate : "false"
     enableOtpLessRide : "false"
+    hasSetupRideOtp : "false"
+
 
 
   queries:
