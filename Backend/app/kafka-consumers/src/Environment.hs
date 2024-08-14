@@ -155,7 +155,8 @@ data HealthCheckAppCfg = HealthCheckAppCfg
     driverInactiveSmsTemplate :: Text,
     loggerConfig :: LoggerConfig,
     batchSize :: Integer,
-    numberOfShards :: Integer
+    numberOfShards :: Integer,
+    enabledMerchantCityIds :: [Text]
   }
   deriving (Generic, FromDhall)
 
