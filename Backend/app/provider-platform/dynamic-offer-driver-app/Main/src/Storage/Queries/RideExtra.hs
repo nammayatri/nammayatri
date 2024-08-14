@@ -142,11 +142,27 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
 findOneByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> m [(Ride, Booking)]
-findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
+findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> Maybe Int -> m [(Ride, Booking)]
+findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays = do
   let limitVal = maybe 10 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
       isOnlyActive = Just True == mbOnlyActive
+      startDay = mbDay
+      endDay = addDays . fromIntegral <$> mbNumOfDays <*> startDay
+  let dateFilters = case (startDay, endDay) of
+        (Just sd, Just ed) ->
+          [ Se.And
+              [ Se.Is BeamR.updatedAt $ Se.GreaterThanOrEq (minDayTime sd),
+                Se.Is BeamR.updatedAt $ Se.LessThanOrEq (maxDayTime ed)
+              ]
+          ]
+        (Just sd, Nothing) ->
+          [ Se.And
+              [ Se.Is BeamR.updatedAt $ Se.GreaterThanOrEq (minDayTime sd),
+                Se.Is BeamR.updatedAt $ Se.LessThanOrEq (maxDayTime sd)
+              ]
+          ]
+        _ -> []
   rides <-
     findAllWithOptionsKV
       [ Se.And
@@ -156,7 +172,7 @@ findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
                 else
                   []
                     <> ([Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus])
-                    <> ([Se.And [Se.Is BeamR.updatedAt $ Se.GreaterThanOrEq (minDayTime (fromJust mbDay)), Se.Is BeamR.updatedAt $ Se.LessThanOrEq (maxDayTime (fromJust mbDay))] | isJust mbDay])
+                    <> (dateFilters)
           )
       ]
       (Se.Desc BeamR.createdAt)

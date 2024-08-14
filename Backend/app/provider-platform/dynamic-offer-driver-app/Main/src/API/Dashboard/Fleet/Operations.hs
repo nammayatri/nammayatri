@@ -41,10 +41,11 @@ type ListDriverRidesForFleetAPI =
     :> QueryParam "status" DRide.RideStatus
     :> QueryParam "day" Day
     :> QueryParam "fleetOwnerId" Text
+    :> QueryParam "numOfDays" Int
     :> Get '[JSON] DARide.DriverRideListRes
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler = listDriverRidesForFleet
 
-listDriverRidesForFleet :: ShortId DM.Merchant -> Context.City -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> FlowHandler DARide.DriverRideListRes
-listDriverRidesForFleet _ _ driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId = withFlowHandlerAPI $ DARide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId
+listDriverRidesForFleet :: ShortId DM.Merchant -> Context.City -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Maybe Int -> FlowHandler DARide.DriverRideListRes
+listDriverRidesForFleet _ _ driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays = withFlowHandlerAPI $ DARide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays

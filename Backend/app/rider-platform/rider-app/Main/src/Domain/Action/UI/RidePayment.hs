@@ -25,7 +25,9 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Error
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.Payment as Payment
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QPerson
@@ -159,7 +161,7 @@ postPaymentAddTip ::
     API.Types.UI.RidePayment.AddTipRequest ->
     Environment.Flow APISuccess
   )
-postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
+postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
   Redis.whenWithLockRedis addTipLockKey 60 $ do
     personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -189,6 +191,8 @@ postPaymentAddTip (mbPersonId, _) rideId tipRequest = do
     Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
     -- QRide.markPaymentDone True rideId
     createFareBreakup
+    merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount
   return Success
   where
     tipFareBreakupTitle :: Text

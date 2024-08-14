@@ -48,3 +48,14 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN toll_charges double pr
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN bounus_earnings double precision ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN tip_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN cancellation_charges double precision ;
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN total_ride_time integer;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN bonus_earnings double precision ;

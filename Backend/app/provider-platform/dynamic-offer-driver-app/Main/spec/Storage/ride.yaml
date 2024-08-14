@@ -103,6 +103,7 @@ Ride:
     onlinePayment: Bool
     enableOtpLessRide: Maybe Bool
     cancellationFeeIfCancelled: Maybe HighPrecMoney
+    tipAmount: Maybe HighPrecMoney
 
   sqlType:
     id: character(36)
@@ -232,6 +233,10 @@ Ride:
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
       params: [cancellationFeeIfCancelled]
+      where: id
+    updateTipAmountField:
+      kvFunction: updateOneWithKV
+      params: [tipAmount]
       where: id
     updatePreviousRideTripEndPosAndTime:
       kvFunction: updateOneWithKV

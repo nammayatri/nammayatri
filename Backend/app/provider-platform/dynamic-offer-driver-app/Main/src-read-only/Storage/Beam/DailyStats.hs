@@ -19,6 +19,7 @@ import Tools.Beam.UtilsTH
 data DailyStatsT f = DailyStatsT
   { activatedValidRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     bonusEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    cancellationCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverId :: B.C f Data.Text.Text,
@@ -30,10 +31,12 @@ data DailyStatsT f = DailyStatsT
     payoutStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DailyStats.PayoutStatus),
     referralCounts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     referralEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    tipAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalDistance :: B.C f Kernel.Types.Common.Meters,
     totalEarnings :: B.C f Kernel.Types.Common.Money,
     totalEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    totalRideTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

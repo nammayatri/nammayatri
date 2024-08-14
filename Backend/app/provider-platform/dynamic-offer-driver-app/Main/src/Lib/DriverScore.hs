@@ -17,6 +17,7 @@ module Lib.DriverScore
   )
 where
 
+import Control.Applicative (liftA2)
 import Data.Time (utctDay)
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverStats as DS
@@ -31,7 +32,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (CacheFlow, Currency, DistanceUnit, Forkable (fork), HighPrecMoney, MonadGuid (generateGUIDText), fromMaybeM, getCurrentTime, getLocalCurrentTime, highPrecMetersToMeters, logDebug)
+import Kernel.Utils.Common (CacheFlow, Currency, DistanceUnit, Forkable (fork), HighPrecMoney, MonadGuid (generateGUIDText), diffUTCTime, fromMaybeM, getCurrentTime, getLocalCurrentTime, highPrecMetersToMeters, logDebug)
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DriverPool as DP
@@ -145,6 +146,7 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
             AmbulanceDetails _ -> Nothing
         )
           =<< fareParameter
+      rideDuration = maybe 0 (round . uncurry diffUTCTime) $ liftA2 (,) ride.tripEndTime ride.tripStartTime
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   ds <- SQDS.findByDriverIdAndDate driverId (utctDay localTime)
   case ds of
@@ -170,7 +172,10 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 tollCharges = fromMaybe 0.0 ride.tollCharges,
                 bonusEarnings = fromMaybe 0.0 (fareParameter >>= (.driverSelectedFare)) + fromMaybe 0.0 (fareParameter >>= (.customerExtraFee)) + fromMaybe 0.0 deadKmFares,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                cancellationCharges = 0.0,
+                tipAmount = 0.0,
+                totalRideTime = rideDuration
               }
       SQDS.create dailyStatsOfDriver'
     Just dailyStats -> do
@@ -180,7 +185,8 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
           merchantLocalDate = utctDay localTime
           tollCharges = dailyStats.tollCharges + fromMaybe 0.0 ride.tollCharges
           bonusEarnings = dailyStats.bonusEarnings + fromMaybe 0.0 (fareParameter >>= (.driverSelectedFare)) + fromMaybe 0.0 (fareParameter >>= (.customerExtraFee)) + fromMaybe 0.0 deadKmFares
-      SQDS.updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings driverId merchantLocalDate
+          totalRideDuration = dailyStats.totalRideTime + rideDuration
+      SQDS.updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings totalRideDuration driverId merchantLocalDate
 
 createDriverStat :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Currency -> DistanceUnit -> Id DP.Person -> m DS.DriverStats
 createDriverStat currency distanceUnit driverId = do

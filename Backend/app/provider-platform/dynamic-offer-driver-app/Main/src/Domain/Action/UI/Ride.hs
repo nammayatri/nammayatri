@@ -40,6 +40,7 @@ import qualified Domain.Action.UI.Location as DLoc
 import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -90,6 +91,7 @@ import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Location as QLoc
@@ -208,7 +210,10 @@ data DriverRideRes = DriverRideRes
     bookingType :: BookingType,
     enableFrequentLocationUpdates :: Maybe Bool,
     fleetOwnerId :: Maybe Text,
-    enableOtpLessRide :: Bool
+    enableOtpLessRide :: Bool,
+    cancellationSource :: Maybe DBCR.CancellationSource,
+    tipAmount :: Maybe PriceAPIEntity,
+    penalityCharge :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -233,12 +238,13 @@ listDriverRides ::
   Maybe DRide.RideStatus ->
   Maybe Day ->
   Maybe Text ->
+  Maybe Int ->
   m DriverRideListRes
-listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId = do
+listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays = do
   rides <-
     if mbOnlyActive == Just True
       then runInReplica $ QRide.getActiveBookingAndRideByDriverId driverId
-      else runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay
+      else runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
@@ -282,6 +288,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
+  cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
   return $
     DriverRideRes
       { id = ride.id,
@@ -356,7 +363,10 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         isValueAddNP,
         enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates,
         fleetOwnerId = rideDetails.fleetOwnerId,
-        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide
+        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide,
+        cancellationSource = fmap (\cr -> cr.source) cancellationReason,
+        tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
+        penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled
       }
 
 calculateLocations ::

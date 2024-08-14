@@ -64,6 +64,7 @@ library
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.KnowYourDriver
+      API.Internal.PopulateTipAmount
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.UI
@@ -167,6 +168,7 @@ library
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.KnowYourDriver
+      Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.UI.Cac

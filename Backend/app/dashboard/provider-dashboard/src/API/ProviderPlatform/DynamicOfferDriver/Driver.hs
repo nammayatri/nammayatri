@@ -78,11 +78,11 @@ buildManagementServerTransaction ::
 buildManagementServerTransaction endpoint apiTokenInfo driverId =
   T.buildTransaction (DT.DriverAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing
 
-listDriverRidesForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe DT.Day -> Maybe Text -> FlowHandler DARide.DriverRideListRes
-listDriverRidesForFleet merchantShortId opCity apiTokenInfo driverId mbLimit mbOffset mbOnlyActive mbStatus mbDate mbFleetOwnerId =
+listDriverRidesForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe DT.Day -> Maybe Text -> Maybe Int -> FlowHandler DARide.DriverRideListRes
+listDriverRidesForFleet merchantShortId opCity apiTokenInfo driverId mbLimit mbOffset mbOnlyActive mbStatus mbDate mbFleetOwnerId mbNumOfDays =
   withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.listDriverRidesForFleet) driverId mbLimit mbOffset mbOnlyActive mbStatus mbDate mbFleetOwnerId
+    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.listDriverRidesForFleet) driverId mbLimit mbOffset mbOnlyActive mbStatus mbDate mbFleetOwnerId mbNumOfDays
 
 updateSubscriptionDriverFeeAndInvoice ::
   ShortId DM.Merchant ->

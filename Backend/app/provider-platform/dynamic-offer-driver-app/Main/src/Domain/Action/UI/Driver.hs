@@ -461,7 +461,8 @@ data DriverStatsRes = DriverStatsRes
     totalEarningsOfDayPerKmWithCurrency :: PriceAPIEntity,
     bonusEarningWithCurrency :: PriceAPIEntity,
     coinBalance :: Int,
-    totalValidRidesOfDay :: Int
+    totalValidRidesOfDay :: Int,
+    tipsEarning :: PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1320,6 +1321,7 @@ getStats (driverId, _, merchantOpCityId) date = do
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
 
   let totalEarningsOfDay = maybe 0.0 (.totalEarnings) driverDailyStats
+      tipsEarningOfDay = maybe 0.0 (.tipAmount) driverDailyStats
       totalDistanceTravelledInKilometers = maybe 0 (.totalDistance) driverDailyStats `div` 1000
       totalEarningOfDayExcludingTollCharges = totalEarningsOfDay - maybe 0.0 (.tollCharges) driverDailyStats
       bonusEarning = maybe 0.0 (.bonusEarnings) driverDailyStats
@@ -1330,6 +1332,7 @@ getStats (driverId, _, merchantOpCityId) date = do
   return $
     DriverStatsRes
       { coinBalance = coinBalance_,
+        tipsEarning = PriceAPIEntity tipsEarningOfDay currency,
         totalRidesOfDay = maybe 0 (.numRides) driverDailyStats,
         totalEarningsOfDay = roundToIntegral totalEarningsOfDay,
         totalEarningsOfDayWithCurrency = PriceAPIEntity totalEarningsOfDay currency,
