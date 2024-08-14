@@ -266,6 +266,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+        "gstPercentage" : "18",
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -324,6 +325,7 @@ window.getMerchantConfig = function () {
            },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",        
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -369,6 +371,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+      "gstPercentage" : "18",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -427,6 +430,7 @@ window.getMerchantConfig = function () {
          },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" :  "18",         
          "assets" :{
            "auto_image" : "ic_auto_rickshaw",
            "onboarding_auto_image" : "ny_ic_auto_side",
@@ -485,6 +489,7 @@ window.getMerchantConfig = function () {
          },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" :  "18",         
          "assets" :{
            "auto_image" :  "ny_ic_black_yellow_auto_side_view",
            "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -530,6 +535,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" :  "18",     
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -575,6 +581,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" :  "18",     
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -620,6 +627,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+      "gstPercentage" : "18",
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -665,6 +673,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" :  "18",     
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -710,6 +719,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" :  "18",      
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side",
@@ -755,6 +765,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" :  "18",     
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -800,6 +811,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",       
         "assets" : {
           "auto_image" : "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
@@ -846,6 +858,7 @@ window.getMerchantConfig = function () {
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
       "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" :  "18",     
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black",
@@ -903,6 +916,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",       
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side",
@@ -961,6 +975,7 @@ window.getMerchantConfig = function () {
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",        
         "assets": {
           "auto_image": "ic_auto_rickshaw",
           "onboarding_auto_image": "ny_ic_auto_side",
@@ -1006,6 +1021,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",       
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black",
@@ -1051,6 +1067,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",        
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black",
@@ -1096,6 +1113,7 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig": defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : defRateCardConfig,
+        "gstPercentage" :  "18",       
         "assets": {
           "auto_image": "ny_ic_auto_side_view",
           "onboarding_auto_image": "ny_ic_auto_right_side_black",
@@ -1110,9 +1128,10 @@ window.getMerchantConfig = function () {
     "eightPlusRidesCoins" : "+25",
     "purpleRideCoins" : "+5",
     "customerReferralCoins" : "+200",
-    "whatAreYatriCoinFAQ" : "https://www.youtube.com/shorts/vt_Z4wu4otY",
-    "howToEarnYatriCoinFAQ" : "https://www.youtube.com/shorts/teQyPdP1fRc",
-    "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/shorts/dU3XxAisGjo",
+    "whatAreYatriCoinFAQ" : "https://www.youtube.com/shorts/nc_oicjF9eI",
+    "coinTermsAndConditions" : "https://docs.google.com/document/u/0/d/1hLnxlJLlC8bZIsm3WCoQFf7lsdffy-do",
+    "howToEarnYatriCoinFAQ" : "https://www.youtube.com/shorts/hpmYpwfOG_E",
+    "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/watch?v=XW4WSWQpq80",
     "eightRideCoinEvent" : true,
     "prupleRideCoinEvent" : true,
     "driverToCustomerRefCoinEvent" : true

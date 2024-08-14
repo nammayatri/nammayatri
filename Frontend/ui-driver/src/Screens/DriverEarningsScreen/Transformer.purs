@@ -57,7 +57,7 @@ getEventName state event bulkUploadTitle = case event of
                        "ML_IN" -> title.ml
                        "BN_IN" -> title.bn
                        _       -> title.en
-    Nothing -> getString BONUS_COINS
+    Nothing -> getString BONUS_POINTS
   API.BulkUploadFunctionV2 -> case bulkUploadTitle of
     Just (API.BulkCoinTitleTranslations title) -> case getLanguageLocale languageKey of
                        "HI_IN" -> title.hi
@@ -68,7 +68,7 @@ getEventName state event bulkUploadTitle = case event of
                        "ML_IN" -> title.ml
                        "BN_IN" -> title.bn
                        _       -> title.en
-    Nothing -> getString BONUS_COINS
+    Nothing -> getString BONUS_POINTS
 
 
 checkPopupShowToday :: ST.CoinEarnedPopupType -> AppConfig -> ST.HomeScreenState -> ST.CoinEarnedPopupType

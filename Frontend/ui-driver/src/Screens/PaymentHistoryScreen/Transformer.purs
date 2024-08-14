@@ -19,7 +19,7 @@ import Prelude
 
 import Domain.Payments
 import Data.Array (length, mapWithIndex, (!!), filter)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -30,11 +30,12 @@ import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
 import Data.Int as INT
+import Data.Number as NUM
 import Styles.Colors as Color
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
 
-buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> Boolean -> ST.TransactionInfo
-buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig showFeeBreakup =
+buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> Boolean -> String -> ST.TransactionInfo
+buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig showFeeBreakup gstPercentage =
     let filteredDriverFees = if (resp.feeType == AUTOPAY_REGISTRATION && length resp.driverFeeInfo > 1)  then filter (\ (API.DriverFeeInfoEntity driverFee) -> driverFee.driverFeeAmount > 0.0) resp.driverFeeInfo else resp.driverFeeInfo
         (API.DriverFeeInfoEntity driverFee') = case (filteredDriverFees !! 0) of
                                                   Just (API.DriverFeeInfoEntity driverFee) -> (API.DriverFeeInfoEntity driverFee)
@@ -43,7 +44,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
         boothCharges specialZoneRideCount totalSpecialZoneCharges = case specialZoneRideCount,totalSpecialZoneCharges of
                       Just count, Just charges | count /= 0 && charges /= 0.0 -> Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
                       _, _ -> Nothing
-        fareBreakup fee = getFeeBreakup fee.maxRidesEligibleForCharge (max 0.0 (fee.planAmount - (fromMaybe 0.0 fee.totalSpecialZoneCharges))) fee.totalRides
+        fareBreakup fee = getFeeBreakup fee.maxRidesEligibleForCharge fee.coinDiscountAmount (max 0.0 (fee.driverFeeAmount - (fromMaybe 0.0 fee.totalSpecialZoneCharges))) fee.totalRides
         autoPaySpecificKeys = do
           let offerAndPlanDetails = fromMaybe "" driverFee'.offerAndPlanDetails
               planOfferData = decodeOfferPlan $ offerAndPlanDetails
@@ -91,6 +92,13 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                     val : getFixedTwoDecimals $ case driverFee'.isCoinCleared of
                                                 true -> driverFee'.driverFeeAmount
                                                 false -> fromMaybe 0.0 driverFee'.coinDiscountAmount
+                  },
+                  {
+                    key : "GST",
+                    title : getString $ GST_WITH_PERCENTAGE $ maybe gstPercentage (\percentage -> show $ 100.0 * percentage) driverFee'.gstPercentage,
+                    val : case driverFee'.gst of
+                            Just gst -> if gst > 0.0 then getFixedTwoDecimals gst else ""
+                            Nothing -> ""
                   }
                 ]
               false -> []
@@ -106,6 +114,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
             feeType : resp.feeType,
             numOfDriverFee : length filteredDriverFees,
             isCoinCleared : driverFee'.isCoinCleared,
+            isCoinDiscountApplied : isJust driverFee'.coinDiscountAmount &&  driverFee'.coinDiscountAmount /= Just 0.0,
             details : [
               {
                 key : "TXN_ID",
@@ -208,13 +217,15 @@ dummyDriverFee =
       totalSpecialZoneCharges : Nothing,
       maxRidesEligibleForCharge : Nothing,
       isCoinCleared : false,
-      coinDiscountAmount : Nothing
+      coinDiscountAmount : Nothing,
+      gst : Nothing,
+      gstPercentage : Nothing
   }
 
 coinsOfferConfig :: String -> PromoConfig
 coinsOfferConfig amount = 
     {  
-    title : Just $ "₹ " <> amount <> " " <> getString PAID_BY_YATRI_COINS,
+    title : Just $ amount <> " " <> getString DISCOUNT_POINTS_SMALL,
     isGradient : true,
     gradient : [Color.yellowCoinGradient1, Color.yellowCoinGradient2],
     hasImage : false,
