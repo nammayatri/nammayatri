@@ -24,6 +24,7 @@ module Lib.Payment.Domain.Action
     buildSDKPayload,
     refundService,
     createPaymentIntentService,
+    cancelPaymentIntentService,
     chargePaymentIntentService,
     createPayoutService,
     payoutStatusService,
@@ -129,7 +130,7 @@ createPaymentIntentService ::
   m Payment.CreatePaymentIntentResp
 createPaymentIntentService merchantId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall = do
   let rideShortId = ShortId rideShortIdText
-  let cardFixedCharges = HighPrecMoney 0.3 -- 30 cents, we have to fix it later properly
+  -- let cardFixedCharges = HighPrecMoney 0.3 -- 30 cents, we have to fix it later properly
   mbExistingOrder <- QOrder.findById (cast rideId)
   case mbExistingOrder of
     Nothing -> do
@@ -146,8 +147,8 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
         Nothing -> createNewTransaction existingOrder -- if previous all payment intents are already charged or cancelled, then create a new payment intent
         Just transaction -> do
           paymentIntentId <- transaction.txnId & fromMaybeM (InternalError "Transaction doesn't have txnId") -- should never happen
-          let newTransactionAmount = transaction.amount + createPaymentIntentReq.amount
-          let newApplicationFeeAmount = transaction.applicationFeeAmount + createPaymentIntentReq.applicationFeeAmount - cardFixedCharges -- card fixed charges already included in application fee
+          let newTransactionAmount = createPaymentIntentReq.amount -- changing whole amount
+          let newApplicationFeeAmount = createPaymentIntentReq.applicationFeeAmount -- changing application fee amount
           if newTransactionAmount > transaction.amount
             then do
               resp <- try @_ @SomeException (updatePaymentIntentAmountCall paymentIntentId newTransactionAmount newApplicationFeeAmount)
@@ -164,7 +165,7 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
     createNewTransaction :: (EncFlow m r, BeamFlow m r) => DOrder.PaymentOrder -> m Payment.CreatePaymentIntentResp
     createNewTransaction existingOrder = do
       createPaymentIntentResp <- createPaymentIntentCall createPaymentIntentReq -- api call
-      let newOrderAmount = existingOrder.amount + createPaymentIntentReq.amount
+      let newOrderAmount = createPaymentIntentReq.amount
       transaction <- buildTransaction existingOrder createPaymentIntentResp
       QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount createPaymentIntentResp.paymentIntentId
       QTransaction.create transaction
@@ -173,7 +174,7 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
     updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder transaction = do
       mbClientSecret <- mapM decrypt existingOrder.clientAuthToken
       clientSecret <- mbClientSecret & fromMaybeM (InternalError "Client secret not found") -- should never happen
-      let newOrderAmount = existingOrder.amount + createPaymentIntentReq.amount
+      let newOrderAmount = createPaymentIntentReq.amount
       QOrder.updateAmountAndPaymentIntentId existingOrder.id newOrderAmount paymentIntentId
       QTransaction.updateAmount transaction.id newTransactionAmount newApplicationFeeAmount
       let paymentIntentStatus = Payment.caseToPaymentIntentStatus transaction.status

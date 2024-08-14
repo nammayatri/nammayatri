@@ -108,11 +108,18 @@ paymentErrorHandler booking exec = do
       void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
 
 makeCancellationPayment ::
-  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  Id Person.Person ->
-  Ride.Ride ->
-  PriceAPIEntity ->
+  Payment.PaymentIntentId ->
+  HighPrecMoney ->
   m ()
-makeCancellationPayment _ _ _ _ _ = logDebug "Cancellation payment not implemented yet."
+makeCancellationPayment merchantId merchantOpCityId paymentIntentId cancellationAmount = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
+  DPayment.cancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount

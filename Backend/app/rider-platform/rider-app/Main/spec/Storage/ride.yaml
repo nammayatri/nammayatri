@@ -106,6 +106,7 @@ Ride:
     safetyJourneyStatus: Maybe SosJourneyStatus
     destinationReachedAt: Maybe UTCTime
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
+    tipAmount: Maybe Price
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -136,6 +137,7 @@ Ride:
     vehicleVariant: character varying(60)
     driverNumberHash: bytea
     driverAlternateNumberHash: bytea
+    tipAmount: numeric(30,2)
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:
@@ -171,6 +173,8 @@ Ride:
     estimatedEndTimeRange:
       estimatedEndTimeRangeStart: Maybe UTCTime
       estimatedEndTimeRangeEnd: Maybe UTCTime
+    tipAmount:
+      tipAmount: Maybe HighPrecMoney
 
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -193,6 +197,7 @@ Ride:
     driverPhoneNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
     driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
     estimatedEndTimeRange: Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
+    tipAmount: fmap (Kernel.Types.Common.mkPrice currency) tipAmount|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -224,6 +229,7 @@ Ride:
     driverAlternateNumberHash: (driverAlternateNumber <&> (.hash))|E
     estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
     estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
+    tipAmount: Kernel.Prelude.fmap (.amount)|I
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -237,6 +243,7 @@ Ride:
     onlinePayment: Maybe Bool
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    tipAmount: Maybe HighPrecMoney
 
   constraints:
     id: PrimaryKey
@@ -268,6 +275,9 @@ Ride:
     updateDestinationReachedAt:
       kvFunction: updateOneWithKV
       params: [destinationReachedAt]
+    updateTipByRideId:
+      kvFunction: updateOneWithKV
+      params: [tipAmount]
       where: id
     updateEstimatedEndTimeRange:
       kvFunction: updateOneWithKV

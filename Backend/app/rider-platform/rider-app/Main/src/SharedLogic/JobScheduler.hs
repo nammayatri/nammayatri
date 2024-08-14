@@ -30,6 +30,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Price
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
@@ -40,6 +41,8 @@ data RiderJobType
   | CallPoliceApi
   | CheckExotelCallStatusAndNotifyBPP
   | SafetyCSAlert
+  | ExecutePaymentIntent
+  | CancelExecutePaymentIntent
   | OtherJobTypes
   | MetroIncentivePayout
   | ScheduledRidePopupToRider
@@ -59,6 +62,8 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
   restoreAnyJobInfo SMetroIncentivePayout jobData = AnyJobInfo <$> restoreJobInfo SMetroIncentivePayout jobData
   restoreAnyJobInfo SScheduledRidePopupToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRidePopupToRider jobData
+  restoreAnyJobInfo SExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SExecutePaymentIntent jobData
+  restoreAnyJobInfo SCancelExecutePaymentIntent jobData = AnyJobInfo <$> restoreJobInfo SCancelExecutePaymentIntent jobData
 
 data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
   { bookingId :: Id Booking,
@@ -171,3 +176,26 @@ newtype ScheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData
 instance JobInfoProcessor 'ScheduledRidePopupToRider
 
 type instance JobContent 'ScheduledRidePopupToRider = ScheduledRidePopupToRiderJobData
+data ExecutePaymentIntentJobData = ExecutePaymentIntentJobData
+  { rideId :: Id DRide.Ride,
+    personId :: Id Person,
+    fare :: Price,
+    applicationFeeAmount :: HighPrecMoney
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ExecutePaymentIntent
+
+type instance JobContent 'ExecutePaymentIntent = ExecutePaymentIntentJobData
+
+data CancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData
+  { bookingId :: Id Booking,
+    personId :: Id Person,
+    cancellationAmount :: PriceAPIEntity,
+    rideId :: Id DRide.Ride
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CancelExecutePaymentIntent
+
+type instance JobContent 'CancelExecutePaymentIntent = CancelExecutePaymentIntentJobData

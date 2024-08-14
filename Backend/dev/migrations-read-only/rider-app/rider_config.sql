@@ -114,3 +114,6 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words text [] ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_size integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_delay integer ;
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN execute_payment_delay integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_payment_delay integer ;
