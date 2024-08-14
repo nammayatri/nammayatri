@@ -116,9 +116,10 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
 locationUpdateConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 locationUpdateConsumer flowRt appEnv kafkaConsumer = do
   let batchSize = maybe 100 (\healthCheckAppCfg -> fromIntegral healthCheckAppCfg.batchSize) appEnv.healthCheckAppCfg
+  let enabledMerchantCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
   readMessages kafkaConsumer
     & S.chunksOf batchSize addToList
-    & S.mapM processRealtimeLocationUpdates'
+    & S.mapM (processRealtimeLocationUpdates' enabledMerchantCityIds)
     & S.drain
   where
     addToList ::
@@ -132,10 +133,10 @@ locationUpdateConsumer flowRt appEnv kafkaConsumer = do
         step !acc (!val, !key, _) = SF.Partial ((val, key) : acc)
         start = SF.Partial []
         extract = reverse . DL.nubBy ((==) `on` snd)
-    processRealtimeLocationUpdates' locationUpdate =
+    processRealtimeLocationUpdates' enabledMerchantCityIds locationUpdate =
       runFlowR flowRt appEnv . withLogTag "pushing location batch to redis" $
         generateGUID
-          >>= flip withLogTag (LCProcessor.processLocationData locationUpdate)
+          >>= flip withLogTag (LCProcessor.processLocationData enabledMerchantCityIds locationUpdate)
 
 readMessages ::
   (FromJSON message, ConvertUtf8 messageKey ByteString) =>
