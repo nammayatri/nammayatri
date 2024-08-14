@@ -21,7 +21,8 @@ import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -30,7 +31,6 @@ import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTR
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as EMaps

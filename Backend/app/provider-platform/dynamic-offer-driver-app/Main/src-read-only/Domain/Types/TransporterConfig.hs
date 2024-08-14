@@ -12,7 +12,7 @@ import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
 import qualified Kernel.External.Notification.FCM.Types
 import qualified Kernel.External.Types
@@ -183,12 +183,12 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     useOfferListCache :: Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: Kernel.Prelude.Bool,
-    variantsToEnableForSubscription :: [Domain.Types.Vehicle.Variant],
+    variantsToEnableForSubscription :: [Domain.Types.VehicleVariant.VehicleVariant],
     volunteerSmsSendingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit
   }
   deriving (Generic, Show)
 
-data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read)
+data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, (Show), (ToJSON), (FromJSON), (Read))
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   { ambulance :: Kernel.Types.Common.Kilometers,
@@ -204,12 +204,12 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
     taxi :: Kernel.Types.Common.Kilometers,
     taxiplus :: Kernel.Types.Common.Kilometers
   }
-  deriving (Generic, Show, ToJSON, FromJSON, Read)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read))
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
-  deriving (Generic, Show, ToJSON, FromJSON, Read)
+  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read))
 
-type TransporterConfig = TransporterConfigD 'Safe
+type TransporterConfig = TransporterConfigD ('Safe)
 
 instance FromJSON (TransporterConfigD 'Unsafe)
 

@@ -13,9 +13,9 @@ import Domain.Types.Common
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
-import Domain.Types.ServiceTierType as DVST
-import Domain.Types.Vehicle as DV
 import Domain.Types.VehicleServiceTier as DVST
+import Domain.Types.VehicleVariant as DV
+import Domain.Utils
 import Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types
@@ -58,8 +58,8 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     language :: Maybe Maps.Language,
     onRide :: Bool,
     distanceToDriver :: Meters,
-    variant :: DV.Variant,
-    serviceTier :: DVST.ServiceTierType,
+    variant :: DV.VehicleVariant,
+    serviceTier :: ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
     lat :: Double,

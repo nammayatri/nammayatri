@@ -5,7 +5,7 @@ module Storage.Queries.DriverQuoteExtra where
 
 import qualified Data.Text as T
 import qualified Data.Time as T
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
 import Domain.Types.DriverQuote
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Estimate as DEstimate

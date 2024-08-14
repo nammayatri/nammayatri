@@ -24,6 +24,7 @@ import Dashboard.Common as Reexport
 import qualified Dashboard.Common as DP
 import Dashboard.Common.Ride as Reexport
 import Data.Aeson
+import Domain.Types
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
@@ -57,8 +58,6 @@ type RideInfoAPI =
     :> Capture "rideId" (Id DP.Ride)
     :> Get '[JSON] RideInfoRes
 
-data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | INTER_CITY | ONE_WAY_SPECIAL_ZONE | AMBULANCE_FLOW deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
-
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Id Ride,
     bookingId :: Id Booking,
@@ -78,10 +77,11 @@ data ShareRideInfoRes = ShareRideInfoRes
     fromLocation :: Location,
     toLocation :: Maybe Location,
     sosStatus :: Maybe SosStatus,
-    vehicleVariant :: Variant,
+    vehicleVariant :: VehicleVariant,
     nextStopLocation :: Maybe Location,
     rideScheduledAt :: UTCTime,
-    fareProductType :: FareProductType
+    fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    tripCategory :: TripCategory
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
@@ -99,7 +99,7 @@ data RideInfoRes = RideInfoRes
     driverRegisteredAt :: Maybe UTCTime,
     vehicleNo :: Text,
     vehicleModel :: Text,
-    vehicleVariant :: Variant,
+    vehicleVariant :: VehicleVariant,
     vehicleServiceTierName :: Maybe Text,
     rideBookingTime :: UTCTime,
     actualDriverArrivalTime :: Maybe UTCTime,
@@ -121,7 +121,8 @@ data RideInfoRes = RideInfoRes
     cancelledBy :: Maybe CancellationSource,
     nextStopLocation :: Maybe Location,
     rideScheduledAt :: UTCTime,
-    fareProductType :: FareProductType,
+    fareProductType :: FareProductType, -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    tripCategory :: TripCategory,
     endOtp :: Maybe Text,
     estimateFareBP :: Maybe [EstimateBreakup],
     merchantOperatingCityId :: Maybe Text,
@@ -235,7 +236,8 @@ data RideListItem = RideListItem
     bookingStatus :: BookingStatus,
     nextStopLocation :: Maybe Location,
     rideScheduledAt :: UTCTime,
-    fareProductType :: FareProductType,
+    fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    tripCategory :: TripCategory,
     endOtp :: Maybe Text
   }
   deriving stock (Show, Generic)
@@ -340,7 +342,8 @@ data RideInfo = RideInfo
     personId :: Id Customer,
     nextStopLocation :: Maybe Location,
     rideScheduledAt :: UTCTime,
-    fareProductType :: FareProductType,
+    fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    tripCategory :: TripCategory,
     endOtp :: Maybe Text,
     classification :: Ticket.Classification
   }

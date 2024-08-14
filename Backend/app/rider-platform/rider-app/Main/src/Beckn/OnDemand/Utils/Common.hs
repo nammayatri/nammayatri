@@ -24,12 +24,11 @@ import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
-import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.External.Maps as Maps
@@ -338,27 +337,7 @@ makeStop stop =
           stopTime = Nothing
         }
 
-mapVariantToVehicle :: VehVar.VehicleVariant -> VehicleCategory
-mapVariantToVehicle variant = do
-  case variant of
-    VehVar.SEDAN -> CAB
-    VehVar.HATCHBACK -> CAB
-    VehVar.TAXI -> CAB
-    VehVar.SUV -> CAB
-    VehVar.TAXI_PLUS -> CAB
-    VehVar.PREMIUM_SEDAN -> CAB
-    VehVar.BLACK -> CAB
-    VehVar.BLACK_XL -> CAB
-    VehVar.BIKE -> MOTORCYCLE
-    VehVar.AUTO_RICKSHAW -> AUTO_RICKSHAW
-    VehVar.AMBULANCE_TAXI -> AMBULANCE
-    VehVar.AMBULANCE_TAXI_OXY -> AMBULANCE
-    VehVar.AMBULANCE_AC -> AMBULANCE
-    VehVar.AMBULANCE_AC_OXY -> AMBULANCE
-    VehVar.AMBULANCE_VENTILATOR -> AMBULANCE
-    VehVar.SUV_PLUS -> CAB
-
-getServiceTierType :: Spec.Item -> Maybe DVST.VehicleServiceTierType
+getServiceTierType :: Spec.Item -> Maybe DVST.ServiceTierType
 getServiceTierType item = item.itemDescriptor >>= (.descriptorCode) >>= (readMaybe . T.unpack)
 
 getServiceTierName :: Spec.Item -> Maybe Text

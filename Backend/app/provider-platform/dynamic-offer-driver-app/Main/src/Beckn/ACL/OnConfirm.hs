@@ -14,11 +14,11 @@
 
 module Beckn.ACL.OnConfirm (buildOnConfirmMessageV2) where
 
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enum
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
 import qualified Domain.Action.Beckn.Confirm as DConfirm
@@ -68,7 +68,7 @@ tfFulfillments res =
           fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
           fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode,
           fulfillmentTags = Nothing,
-          fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
+          fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
           fulfillmentVehicle = tfVehicle res
         }
     ]

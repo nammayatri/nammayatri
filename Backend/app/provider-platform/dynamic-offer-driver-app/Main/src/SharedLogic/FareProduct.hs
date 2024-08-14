@@ -9,11 +9,11 @@
 
 module SharedLogic.FareProduct where
 
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude

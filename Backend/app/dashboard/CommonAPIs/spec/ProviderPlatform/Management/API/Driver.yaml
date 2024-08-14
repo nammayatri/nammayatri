@@ -4,8 +4,8 @@ imports:
   DriverIds: Dashboard.Common.Driver
   Ride: Dashboard.Common
   Image: Dashboard.Common
-  Category: Dashboard.Common
-  Variant: Dashboard.Common
+  VehicleCategory: Dashboard.Common
+  VehicleVariant: Dashboard.Common
   DriverGoHomeRequest: Dashboard.Common
   DriverHomeLocation: Dashboard.Common
   VerificationStatus: Dashboard.Common
@@ -407,15 +407,15 @@ types:
     - derive: "'HideSecrets"
   UpdateRCInvalidStatusReq:
     - rcId: Text
-    - vehicleVariant: Variant
+    - vehicleVariant: VehicleVariant
     - derive: "'HideSecrets"
   UpdateVehicleVariantReq:
     - rcId: Text
-    - vehicleVariant: Variant
+    - vehicleVariant: VehicleVariant
     - derive: "'HideSecrets"
   ReviewRCVariantReq:
     - rcId: Text
-    - vehicleVariant: Maybe Variant
+    - vehicleVariant: Maybe VehicleVariant
     - markReviewed: Maybe Bool
   ReviewRCVariantRes:
     - rcId: Text

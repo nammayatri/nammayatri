@@ -4,7 +4,7 @@ module Storage.CachedQueries.Plan where
 
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
-import qualified Domain.Types.Vehicle as Vehicle
+import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -75,7 +75,7 @@ findByMerchantOpCityIdAndTypeWithServiceNameAndVariant ::
   Id DMOC.MerchantOperatingCity ->
   PaymentMode ->
   ServiceNames ->
-  Maybe Vehicle.Variant ->
+  Maybe Vehicle.VehicleVariant ->
   Maybe Bool ->
   m [Plan]
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant (Id merchantOperatingCityId) paymentMode serviceName mbVehicleVariant mbIsDeprecated =
@@ -88,7 +88,7 @@ cacheByMerchantIdAndTypeAndVariant ::
   Id DMOC.MerchantOperatingCity ->
   PaymentMode ->
   ServiceNames ->
-  Maybe Vehicle.Variant ->
+  Maybe Vehicle.VehicleVariant ->
   Maybe Bool ->
   [Plan] ->
   m ()
@@ -131,7 +131,7 @@ makeMerchantIdAndTypeKey merchantOpCityId planType serviceName = "driver-offer:C
 makeMerchantIdKey :: Id DMOC.MerchantOperatingCity -> ServiceNames -> Text
 makeMerchantIdKey merchantOpCityId serviceName = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":ServiceName-" <> show serviceName
 
-makeMerchantIdAndPaymentModeAndVariantKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> Maybe Vehicle.Variant -> Maybe Bool -> Text
+makeMerchantIdAndPaymentModeAndVariantKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> Maybe Vehicle.VehicleVariant -> Maybe Bool -> Text
 makeMerchantIdAndPaymentModeAndVariantKey merchantOpCityId paymentMode serviceName mbVehicleVariant mbIsDeprecated =
   "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-"
     <> merchantOpCityId.getId

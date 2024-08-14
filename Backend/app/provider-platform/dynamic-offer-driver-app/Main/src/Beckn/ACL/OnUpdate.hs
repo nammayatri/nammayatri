@@ -21,9 +21,8 @@ where
 
 import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
 import qualified Beckn.OnDemand.Utils.Common as BUtils
-import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapServiceTierToCategory)
 import qualified BecknV2.OnDemand.Utils.Context as CU
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM

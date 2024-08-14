@@ -4,7 +4,7 @@
 
 module Storage.Queries.ClientPersonInfo where
 
-import qualified Domain.Types.BecknConfig
+import qualified BecknV2.OnDemand.Enums
 import qualified Domain.Types.ClientPersonInfo
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
@@ -23,17 +23,17 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.ClientPersonInfo.ClientPersonInfo] -> m ())
 createMany = traverse_ create
 
-findAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.ClientPersonInfo.ClientPersonInfo])
+findAllByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.ClientPersonInfo.ClientPersonInfo]))
 findAllByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPersonIdAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory -> m (Maybe Domain.Types.ClientPersonInfo.ClientPersonInfo))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory -> m (Maybe Domain.Types.ClientPersonInfo.ClientPersonInfo))
 findByPersonIdAndVehicleCategory personId vehicleCategory = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory]]
 
 updateHasTakenValidRideCount ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory -> m ())
+  (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory -> m ())
 updateHasTakenValidRideCount rideCount personId vehicleCategory = do
   _now <- getCurrentTime
   updateOneWithKV

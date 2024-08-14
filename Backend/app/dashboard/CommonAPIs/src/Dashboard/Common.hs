@@ -13,9 +13,12 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.Common
   ( module Dashboard.Common,
+    module Domain.Types.VehicleVariant,
+    module Domain.Types.VehicleCategory,
     module Reexport,
   )
 where
@@ -25,11 +28,12 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Csv as Csv
 import Data.OpenApi
 import qualified Data.Text as T
+import Domain.Types.VehicleCategory
+import Domain.Types.VehicleVariant
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data Customer
 
@@ -60,18 +64,6 @@ data DriverHomeLocation
 data DriverGoHomeRequest
 
 data Document
-
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | PREMIUM_SEDAN | BLACK | BLACK_XL | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''Variant)
-
-data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY | AMBULANCE
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''Category)
 
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)

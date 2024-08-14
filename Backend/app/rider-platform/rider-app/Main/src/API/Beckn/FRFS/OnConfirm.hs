@@ -19,9 +19,9 @@ import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import qualified BecknV2.OnDemand.Enums as OnDemandEnums
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DOnConfirm
-import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Environment
@@ -50,7 +50,7 @@ onConfirm _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just ticketBooking.merchantId) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just ticketBooking.merchantId) (show Spec.FRFS) OnDemandEnums.METRO >>= fromMaybeM (InternalError "Beckn Config not found")
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq req

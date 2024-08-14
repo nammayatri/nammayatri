@@ -38,6 +38,7 @@ import qualified Beckn.Types.Core.Taxi.Common.RideCompletedQuote as Quote
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import qualified Data.List as L
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.BecknConfig as DBC
@@ -144,7 +145,7 @@ mkFulfillment mbDriver mbDriverStats ride booking mbVehicle mbImage tags personT
           )
             <$> booking.toLocation,
         agent,
-        _type = Common.mkFulfillmentType booking.tripCategory,
+        _type = UtilsV2.tripCategoryToFulfillmentType booking.tripCategory,
         vehicle = veh,
         ..
       }

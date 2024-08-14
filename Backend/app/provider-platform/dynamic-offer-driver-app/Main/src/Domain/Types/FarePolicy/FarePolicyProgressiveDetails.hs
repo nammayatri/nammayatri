@@ -26,6 +26,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Me
 import Data.Aeson.Types
 import Data.List.NonEmpty
 import Domain.Types.Common
+import Domain.Types.FarePolicy.Common
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection as Reexport
 import Kernel.Prelude as KP

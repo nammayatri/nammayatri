@@ -6,6 +6,7 @@ module Storage.Queries.OrphanInstances.SearchRequestForDriver where
 import qualified Data.Text
 import qualified Data.Time
 import qualified Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -15,17 +16,16 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Version
-import qualified SharedLogic.DriverPool.Types
 import qualified Storage.Beam.SearchRequestForDriver as Beam
 import Storage.Queries.Transformers.SearchRequestForDriver
 import qualified Storage.Queries.Transformers.SearchRequestForDriver
 
 instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDriver.SearchRequestForDriver where
   fromTType' (Beam.SearchRequestForDriverT {..}) = do
-    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId
     pure $
       Just
@@ -40,7 +40,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             cancellationRatio = cancellationRatio,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientSdkVersion = clientSdkVersion',
             createdAt = Data.Time.localTimeToUTC Data.Time.utc createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
@@ -81,7 +81,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             totalRides = Kernel.Prelude.fromMaybe 0 totalRides,
             updatedAt = updatedAt,
             vehicleAge = vehicleAge,
-            vehicleServiceTier = Kernel.Prelude.fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
+            vehicleServiceTier = Kernel.Prelude.fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier,
             vehicleServiceTierName = vehicleServiceTierName,
             vehicleVariant = vehicleVariant
           }
@@ -100,10 +100,10 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.cancellationRatio = cancellationRatio,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = Data.Time.utcToLocalTime Data.Time.utc createdAt,
         Beam.currency = Kernel.Prelude.Just currency,

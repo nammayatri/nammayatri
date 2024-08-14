@@ -28,7 +28,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
     merchantOperatingCityId' <- (backfillMOCId merchantOperatingCityId merchantId)
     providerUrl' <- Kernel.Prelude.parseBaseUrl providerUrl
     quoteBreakupList' <- Storage.Queries.QuoteBreakup.findAllByQuoteIdT id
-    quoteDetails' <- (Storage.Queries.Transformers.Quote.getQuoteDetails fareProductType distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)
+    quoteDetails' <- (Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)
     tripTerms' <- getTripTerms tripTermsId
     pure $
       Just
@@ -62,6 +62,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             specialLocationName = specialLocationName,
             specialLocationTag = specialLocationTag,
             tollChargesInfo = mkTollChargesInfo tollCharges tollNames currency,
+            tripCategory = tripCategory,
             tripTerms = tripTerms',
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
             validTill = validTill,
@@ -85,12 +86,12 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.createdAt = createdAt,
         Beam.currency = (Just ((.currency) estimatedFare)),
         Beam.discount = (discount <&> (.amount)),
-        Beam.distanceToNearestDriver = (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails))),
-        Beam.distanceToNearestDriverValue = (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
-        Beam.driverOfferId = (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
-        Beam.fareProductType = (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
-        Beam.rentalDetailsId = (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
-        Beam.specialZoneQuoteId = (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.getQuoteDetails' quoteDetails)),
+        Beam.distanceToNearestDriver = (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))),
+        Beam.distanceToNearestDriverValue = (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.driverOfferId = (Storage.Queries.Transformers.Quote.getDriverOfferId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.fareProductType = (Storage.Queries.Transformers.Quote.getfareProduct (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.rentalDetailsId = (Storage.Queries.Transformers.Quote.getRentalDetailsId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
+        Beam.specialZoneQuoteId = (Storage.Queries.Transformers.Quote.getSpecialZoneQuoteId (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.estimatedFare = ((.amount) estimatedFare),
         Beam.estimatedPickupDuration = estimatedPickupDuration,
@@ -111,6 +112,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.specialLocationTag = specialLocationTag,
         Beam.tollCharges = ((tollChargesInfo <&> ((.amount) . (.tollCharges)))),
         Beam.tollNames = (tollChargesInfo <&> (.tollNames)),
+        Beam.tripCategory = tripCategory,
         Beam.tripTermsId = (Kernel.Types.Id.getId <$> (tripTerms <&> (.id))),
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,
         Beam.validTill = validTill,

@@ -18,7 +18,7 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import Domain.Types.Vehicle (Variant)
+import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -46,7 +46,7 @@ data NearByReq = NearByReq
   { lat :: Double,
     lon :: Double,
     onRide :: Maybe Bool,
-    vehicleType :: Maybe Variant,
+    vehicleType :: Maybe VehicleVariant,
     radius :: Int,
     merchantId :: Id DM.Merchant
   }

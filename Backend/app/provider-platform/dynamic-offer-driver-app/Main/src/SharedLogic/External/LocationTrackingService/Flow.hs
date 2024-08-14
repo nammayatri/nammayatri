@@ -18,7 +18,7 @@ import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
-import Domain.Types.Vehicle (Variant)
+import Domain.Types.VehicleVariant
 import EulerHS.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.APISuccess (APISuccess)
@@ -68,7 +68,7 @@ rideEnd rideId lat lon merchantId driverId = do
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Double -> Double -> Maybe Bool -> Maybe Variant -> Int -> Id DM.Merchant -> m [DriverLocation]
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Double -> Double -> Maybe Bool -> Maybe VehicleVariant -> Int -> Id DM.Merchant -> m [DriverLocation]
 nearBy lat lon onRide vt radius merchantId = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url

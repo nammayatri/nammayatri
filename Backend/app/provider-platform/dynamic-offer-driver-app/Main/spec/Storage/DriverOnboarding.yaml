@@ -5,8 +5,8 @@ imports:
   UTCTime: Kernel.Prelude
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
-  Variant: Domain.Types.Vehicle
-  Category: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
+  VehicleCategory: Domain.Types.VehicleCategory
   Value: Data.Aeson
   DocumentType: Domain.Types.DocumentVerificationConfig
   Image: Domain.Types.Image
@@ -26,7 +26,7 @@ IdfyVerification:
     driverId: Id Person
     requestId: Text
     docType: DocumentType
-    vehicleCategory: Maybe Category
+    vehicleCategory: Maybe VehicleCategory
     status: Text
     issueDateOnDoc: Maybe UTCTime
     driverDateOfBirth: Maybe UTCTime
@@ -174,7 +174,7 @@ VehicleRegistrationCertificate:
     pucExpiry: Maybe UTCTime
     insuranceValidity: Maybe UTCTime
     vehicleClass: Maybe Text
-    vehicleVariant: Maybe Variant
+    vehicleVariant: Maybe VehicleVariant|NoRelation
     failedRules: '[Text]'
     vehicleManufacturer: Maybe Text
     vehicleCapacity: Maybe Int
@@ -194,7 +194,7 @@ VehicleRegistrationCertificate:
     luggageCapacity: Maybe Int
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
-    userPassedVehicleCategory: Maybe Category
+    userPassedVehicleCategory: Maybe VehicleCategory
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
@@ -342,7 +342,7 @@ DocumentVerificationConfig:
     VehicleClassVariantMap:
       vehicleClass: Text
       vehicleCapacity: Maybe Int
-      vehicleVariant: Variant
+      vehicleVariant: VehicleVariant
       manufacturer: Maybe Text
       manufacturerModel: Maybe Text
       vehicleModel: Maybe Text
@@ -359,7 +359,7 @@ DocumentVerificationConfig:
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
-    vehicleCategory: Category
+    vehicleCategory: VehicleCategory|NoRelation
     documentType: DocumentType
     title: Text
     description: Maybe Text

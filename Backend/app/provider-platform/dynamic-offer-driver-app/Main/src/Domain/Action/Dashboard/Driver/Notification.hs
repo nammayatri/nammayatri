@@ -21,13 +21,13 @@ where
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchReqLocation as DSSL
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
@@ -37,7 +37,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.DriverPool.Types
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
@@ -86,7 +85,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   void $ TN.sendSearchRequestToDriverNotification driver.merchantId fallBackCity driver.id notificationData
   pure Success
 
-mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> Bool -> USRD.SearchRequestForDriverAPIEntity
+mkDummyNotificationEntityData :: UTCTime -> DVeh.VehicleVariant -> DLoc.DummyLocationInfo -> DLoc.DummyLocationInfo -> Bool -> Bool -> USRD.SearchRequestForDriverAPIEntity
 mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowDriverAdditions isValueAddNP =
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation now fromLocData
@@ -114,7 +113,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowD
           keepHiddenForSeconds = Seconds 0,
           requestedVehicleVariant = driverVehicle,
           airConditioned = Nothing,
-          vehicleServiceTier = Just $ show $ castVariantToServiceTier driverVehicle,
+          vehicleServiceTier = Just $ show $ DVeh.castVariantToServiceTier driverVehicle,
           bapName = Nothing,
           bapLogo = Nothing,
           customerExtraFee = Nothing,

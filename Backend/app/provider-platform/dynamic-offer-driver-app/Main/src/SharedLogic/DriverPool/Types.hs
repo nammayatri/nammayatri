@@ -18,7 +18,8 @@ module SharedLogic.DriverPool.Types where
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import Data.Default.Class
-import qualified Domain.Types.Common as DTC
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
@@ -28,9 +29,8 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTC
-import qualified Domain.Types.Vehicle as Vehicle
+import qualified Domain.Types.VehicleVariant as Vehicle
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -78,7 +78,7 @@ data DriverPoolResult = DriverPoolResult
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     distanceToPickup :: Meters,
     -- durationToPickup :: Seconds,
-    variant :: Vehicle.Variant,
+    variant :: Vehicle.VehicleVariant,
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
@@ -131,7 +131,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
   { driverId :: Id Driver,
     language :: Maybe Maps.Language,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
-    variant :: Vehicle.Variant,
+    variant :: Vehicle.VehicleVariant,
     serviceTier :: DVST.ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
@@ -238,42 +238,3 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     messageId :: Text,
     isRepeatSearch :: Bool
   }
-
-castServiceTierToVariant :: DVST.ServiceTierType -> Vehicle.Variant
-castServiceTierToVariant = \case
-  DVST.SEDAN -> Vehicle.SEDAN
-  DVST.HATCHBACK -> Vehicle.HATCHBACK
-  DVST.TAXI -> Vehicle.TAXI
-  DVST.SUV -> Vehicle.SUV
-  DVST.TAXI_PLUS -> Vehicle.TAXI_PLUS
-  DVST.AUTO_RICKSHAW -> Vehicle.AUTO_RICKSHAW
-  DVST.PREMIUM_SEDAN -> Vehicle.PREMIUM_SEDAN
-  DVST.BLACK -> Vehicle.BLACK
-  DVST.BLACK_XL -> Vehicle.BLACK_XL
-  DVST.BIKE -> Vehicle.BIKE
-  DVST.AMBULANCE_TAXI -> Vehicle.AMBULANCE_TAXI
-  DVST.AMBULANCE_TAXI_OXY -> Vehicle.AMBULANCE_TAXI_OXY
-  DVST.AMBULANCE_AC -> Vehicle.AMBULANCE_AC
-  DVST.AMBULANCE_AC_OXY -> Vehicle.AMBULANCE_AC_OXY
-  DVST.AMBULANCE_VENTILATOR -> Vehicle.AMBULANCE_VENTILATOR
-  DVST.SUV_PLUS -> Vehicle.SUV_PLUS
-  _ -> Vehicle.SEDAN
-
-castVariantToServiceTier :: Vehicle.Variant -> DVST.ServiceTierType
-castVariantToServiceTier = \case
-  Vehicle.SEDAN -> DVST.SEDAN
-  Vehicle.HATCHBACK -> DVST.HATCHBACK
-  Vehicle.TAXI -> DVST.TAXI
-  Vehicle.SUV -> DVST.SUV
-  Vehicle.TAXI_PLUS -> DVST.TAXI_PLUS
-  Vehicle.PREMIUM_SEDAN -> DVST.PREMIUM_SEDAN
-  Vehicle.BLACK -> DVST.BLACK
-  Vehicle.BLACK_XL -> DVST.BLACK_XL
-  Vehicle.AUTO_RICKSHAW -> DVST.AUTO_RICKSHAW
-  Vehicle.BIKE -> DVST.BIKE
-  Vehicle.AMBULANCE_TAXI -> DVST.AMBULANCE_TAXI
-  Vehicle.AMBULANCE_TAXI_OXY -> DVST.AMBULANCE_TAXI_OXY
-  Vehicle.AMBULANCE_AC -> DVST.AMBULANCE_AC
-  Vehicle.AMBULANCE_AC_OXY -> DVST.AMBULANCE_AC_OXY
-  Vehicle.AMBULANCE_VENTILATOR -> DVST.AMBULANCE_VENTILATOR
-  Vehicle.SUV_PLUS -> DVST.SUV_PLUS

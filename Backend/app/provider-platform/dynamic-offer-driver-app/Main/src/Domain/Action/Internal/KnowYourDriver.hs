@@ -22,7 +22,7 @@ import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import Domain.Types.Ride
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import qualified Kernel.Beam.Functions as B
@@ -74,7 +74,7 @@ data DriverProfileRes = DriverProfileRes
     languages :: [Text],
     aspirations :: [Text],
     vehicleNum :: Maybe Text,
-    vechicleVariant :: Maybe DVeh.Variant,
+    vechicleVariant :: Maybe DVeh.VehicleVariant,
     vehicleTags :: [Text],
     profileImage :: Maybe Text,
     images :: [Text],

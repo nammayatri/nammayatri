@@ -4,7 +4,7 @@ imports:
   Area: Lib.Types.SpecialLocation
   TimeBound: Kernel.Types.TimeBound
   FarePolicy: Domain.Types.FarePolicy
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   TripCategory: Domain.Types.Common
 
 

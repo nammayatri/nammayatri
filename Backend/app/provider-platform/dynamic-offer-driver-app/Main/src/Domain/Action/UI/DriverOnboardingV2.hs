@@ -29,9 +29,8 @@ import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig
-import qualified Domain.Types.Vehicle as DTV
+import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleServiceTier
 import Environment
 import qualified Environment
@@ -116,10 +115,10 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) mbOnlyVehicle = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personLangauge = fromMaybe ENGLISH person.language
-  cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.CAR
-  autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AUTO_CATEGORY
-  bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.MOTORCYCLE
-  ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AMBULANCE
+  cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.CAR
+  autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AUTO_CATEGORY
+  bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE
+  ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE
 
   cabConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
   autoConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
@@ -151,7 +150,7 @@ getDriverRateCard ::
     ) ->
     Kernel.Prelude.Maybe Meters ->
     Kernel.Prelude.Maybe Minutes ->
-    Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType ->
+    Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType ->
     Environment.Flow [API.Types.UI.DriverOnboardingV2.RateCardResp]
   )
 getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDuration mbServiceTierType = do
@@ -184,7 +183,7 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
 
-    getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.ServiceTierType.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
+    getRateCardForServiceTier :: Maybe Meters -> Maybe Minutes -> Maybe TransporterConfig -> TripCategory -> DistanceUnit -> Domain.Types.Common.ServiceTierType -> Environment.Flow (Maybe API.Types.UI.DriverOnboardingV2.RateCardResp)
     getRateCardForServiceTier mbDistance mbDuration transporterConfig tripCategory distanceUnit serviceTierType = do
       now <- getCurrentTime
       eitherFullFarePolicy <- try @_ @SomeException $ getFarePolicy Nothing merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing

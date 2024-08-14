@@ -10,7 +10,7 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -83,14 +83,14 @@ data RideE e = Ride
     vehicleColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
-    vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.VehicleServiceTier.VehicleServiceTierType,
+    vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic)
 
-type Ride = RideE 'AsEncrypted
+type Ride = RideE ('AsEncrypted)
 
-type DecryptedRide = RideE 'AsUnencrypted
+type DecryptedRide = RideE ('AsUnencrypted)
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -248,10 +248,10 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))

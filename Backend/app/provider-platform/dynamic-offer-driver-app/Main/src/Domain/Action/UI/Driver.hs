@@ -107,9 +107,10 @@ import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -137,10 +138,10 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (VehicleAPIEntity)
-import qualified Domain.Types.Vehicle as SV
+import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, state)
@@ -913,22 +914,22 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
           availableUpiApps = req.availableUpiApps <|> driverInfo.availableUpiApps
           selectedServiceTiers =
             case vehicle.variant of
-              SV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
-              SV.TAXI -> [DVST.TAXI]
-              SV.HATCHBACK -> [DVST.HATCHBACK, DVST.ECO] <> [DVST.TAXI | canDowngradeToTaxi]
-              SV.SEDAN -> [DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
-              SV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
-              SV.TAXI_PLUS -> [DVST.TAXI_PLUS]
-              SV.PREMIUM_SEDAN -> [DVST.PREMIUM_SEDAN]
-              SV.BLACK -> [DVST.BLACK]
-              SV.BLACK_XL -> [DVST.BLACK_XL]
-              SV.BIKE -> [DVST.BIKE]
-              SV.AMBULANCE_TAXI -> [DVST.AMBULANCE_TAXI] -- deprecated, only for compilation
-              SV.AMBULANCE_TAXI_OXY -> [DVST.AMBULANCE_TAXI_OXY]
-              SV.AMBULANCE_AC -> [DVST.AMBULANCE_AC]
-              SV.AMBULANCE_AC_OXY -> [DVST.AMBULANCE_AC_OXY]
-              SV.AMBULANCE_VENTILATOR -> [DVST.AMBULANCE_VENTILATOR]
-              SV.SUV_PLUS -> [DVST.SUV_PLUS]
+              DV.AUTO_RICKSHAW -> [DVST.AUTO_RICKSHAW]
+              DV.TAXI -> [DVST.TAXI]
+              DV.HATCHBACK -> [DVST.HATCHBACK, DVST.ECO] <> [DVST.TAXI | canDowngradeToTaxi]
+              DV.SEDAN -> [DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
+              DV.SUV -> [DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
+              DV.TAXI_PLUS -> [DVST.TAXI_PLUS]
+              DV.PREMIUM_SEDAN -> [DVST.PREMIUM_SEDAN]
+              DV.BLACK -> [DVST.BLACK]
+              DV.BLACK_XL -> [DVST.BLACK_XL]
+              DV.BIKE -> [DVST.BIKE]
+              DV.AMBULANCE_TAXI -> [DVST.AMBULANCE_TAXI] -- deprecated, only for compilation
+              DV.AMBULANCE_TAXI_OXY -> [DVST.AMBULANCE_TAXI_OXY]
+              DV.AMBULANCE_AC -> [DVST.AMBULANCE_AC]
+              DV.AMBULANCE_AC_OXY -> [DVST.AMBULANCE_AC_OXY]
+              DV.AMBULANCE_VENTILATOR -> [DVST.AMBULANCE_VENTILATOR]
+              DV.SUV_PLUS -> [DVST.SUV_PLUS]
 
       QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity availableUpiApps person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
@@ -950,20 +951,20 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     -- logic is deprecated, should be handle from driver service tier options now, kept it for backward compatibility
     checkIfCanDowngrade vehicle = do
       when
-        ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI || vehicle.variant == SV.HATCHBACK)
+        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.TAXI || vehicle.variant == DV.HATCHBACK)
             && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)
         )
         $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
-      when (vehicle.variant == SV.SUV && req.canDowngradeToTaxi == Just True) $
+      when (vehicle.variant == DV.SUV && req.canDowngradeToTaxi == Just True) $
         throwError $ InvalidRequest $ "Can't downgrade to NON-AC TAXI from " <> (show vehicle.variant)
       when
-        ( (vehicle.variant == SV.AUTO_RICKSHAW || vehicle.variant == SV.TAXI)
+        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.TAXI)
             && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
         )
         $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
-      when (vehicle.variant == SV.SEDAN && (req.canDowngradeToSedan == Just True)) $
+      when (vehicle.variant == DV.SEDAN && (req.canDowngradeToSedan == Just True)) $
         throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
-      when (vehicle.variant == SV.TAXI_PLUS && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)) $
+      when (vehicle.variant == DV.TAXI_PLUS && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)) $
         throwError $ InvalidRequest "Driver with TAXI_PLUS can't downgrade to either sedan or hatchback"
 
 updateMetaData ::
@@ -984,7 +985,7 @@ makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   mbVehicle <- QVehicle.findById id
-  let vehicleCategory = fromMaybe SV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   bankDetails <-
@@ -1106,12 +1107,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             Accept -> do
               whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
               pullList <-
-                case searchTry.tripCategory of
-                  DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-                  DTC.CrossCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-                  DTC.InterCity DTC.OneWayOnDemandDynamicOffer _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-                  DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
-                  _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
+                case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
+                  DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
+                  DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
               QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource sReqFD.id
               return pullList
             Reject -> do

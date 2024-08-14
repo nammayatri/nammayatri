@@ -157,7 +157,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.PARKING_CHARGE)
                    ]
-        DFParams.Ambulance -> True
+        _ -> True
 
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment
 mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do

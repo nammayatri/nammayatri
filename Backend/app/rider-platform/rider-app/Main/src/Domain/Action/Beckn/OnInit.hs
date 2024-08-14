@@ -14,13 +14,13 @@
 
 module Domain.Action.Beckn.OnInit where
 
+import Domain.Types
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person as Person
-import qualified Domain.Types.VehicleServiceTier as DVST
-import qualified Domain.Types.VehicleVariant as Veh
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
@@ -55,7 +55,7 @@ data OnInitRes = OnInitRes
     bppBookingId :: Maybe (Id DRB.BPPBooking),
     bookingDetails :: DRB.BookingDetails,
     paymentUrl :: Maybe Text,
-    vehicleVariant :: Veh.VehicleVariant,
+    vehicleVariant :: DV.VehicleVariant,
     itemId :: Text,
     fulfillmentId :: Maybe Text,
     bppId :: Text,
@@ -74,7 +74,8 @@ data OnInitRes = OnInitRes
     isValueAddNP :: Bool,
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
-    enableOtpLessRide :: Bool
+    enableOtpLessRide :: Bool,
+    tripCategory :: Maybe TripCategory
   }
   deriving (Generic, Show)
 
@@ -101,19 +102,13 @@ onInit req = do
   riderConfig <- CQRC.findByMerchantOperatingCityId decRider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
-  let mbToLocation = case booking.bookingDetails of
-        DRB.RentalDetails _ -> Nothing
-        DRB.OneWayDetails details -> Just details.toLocation
-        DRB.DriverOfferDetails details -> Just details.toLocation
-        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
-        DRB.InterCityDetails details -> Just details.toLocation
-        DRB.AmbulanceDetails details -> Just details.toLocation
-  let onInitRes =
+      mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
+      onInitRes =
         OnInitRes
           { bookingId = booking.id,
             paymentUrl = booking.paymentUrl,
             itemId = booking.bppEstimateId,
-            vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType,
+            vehicleVariant = DV.castServiceTierToVariant booking.vehicleServiceTierType,
             fulfillmentId = booking.fulfillmentId,
             bookingDetails = booking.bookingDetails,
             bppId = booking.providerId,
@@ -129,6 +124,7 @@ onInit req = do
             enableFrequentLocationUpdates = any (\item -> checkSharedOptions item riderConfig now) personENList,
             paymentId = req.paymentId,
             enableOtpLessRide = fromMaybe False safetySettings.enableOtpLessRide,
+            tripCategory = booking.tripCategory,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId
@@ -142,3 +138,11 @@ onInit req = do
         Just ALWAYS_SHARE -> True
         Just SHARE_WITH_TIME_CONSTRAINTS -> checkTimeConstraintForFollowRide riderConfig now
         _ -> False
+
+    getToLocationFromBookingDetails = \case
+      DRB.RentalDetails _ -> Nothing
+      DRB.OneWayDetails details -> Just details.toLocation
+      DRB.DriverOfferDetails details -> Just details.toLocation
+      DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+      DRB.InterCityDetails details -> Just details.toLocation
+      DRB.AmbulanceDetails details -> Just details.toLocation

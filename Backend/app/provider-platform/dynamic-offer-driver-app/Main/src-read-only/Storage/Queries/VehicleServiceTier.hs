@@ -4,8 +4,8 @@
 
 module Storage.Queries.VehicleServiceTier where
 
+import qualified Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleServiceTier
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -24,12 +24,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.VehicleServiceTier.VehicleServiceTier]))
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByServiceTierTypeAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.ServiceTierType.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
+  (Domain.Types.Common.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
 findByServiceTierTypeAndCityId serviceTierType merchantOperatingCityId = do
   findOneWithKV
     [ Se.And

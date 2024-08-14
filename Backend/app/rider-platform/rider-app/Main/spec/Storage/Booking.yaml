@@ -18,16 +18,16 @@ imports:
   Quote: Domain.Types.Quote
   MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
   TripTerms: Domain.Types.TripTerms
-  VehicleVariant: Domain.Types.VehicleVariant
   PaymentStatus: BecknV2.OnDemand.Enums
   BaseUrl: Kernel.Types.Common
   FareProductType: Domain.Types.FarePolicy.FareProductType
+  TripCategory: Domain.Types.Common
   HighPrecMeters: Kernel.Types.Common
   HighPrecDistance: Kernel.Types.Common
   Distance: Kernel.Types.Common
   DistanceUnit: Kernel.Types.Common
-  VehicleServiceTier: Domain.Types.VehicleServiceTier
-  VehicleServiceTierType: Domain.Types.VehicleServiceTier
+  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.ServiceTierType
   HighPrecMoney: Kernel.Types.Common
   PaymentMethodId: Kernel.External.Payment.Interface.Types
 
@@ -174,7 +174,7 @@ Booking:
     discount: Maybe Price
     estimatedTotalFare: Price
     isScheduled: Bool
-    vehicleServiceTierType: VehicleServiceTierType|NoRelation
+    vehicleServiceTierType: ServiceTierType|NoRelation
     vehicleServiceTierSeatingCapacity: Maybe Int
     vehicleServiceTierAirConditioned: Maybe Double
     isAirConditioned: Maybe Bool
@@ -196,6 +196,7 @@ Booking:
     clientDevice: Maybe Device
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
+    tripCategory: Maybe TripCategory
 
   beamFields:
     estimatedDistance:
@@ -205,11 +206,11 @@ Booking:
     distanceUnit:
       distanceUnit: Maybe DistanceUnit
     vehicleServiceTierType:
-      vehicleVariant: VehicleServiceTierType
+      vehicleVariant: ServiceTierType
     transactionId:
       riderTransactionId: Text
     bookingDetails:
-      fareProductType: FareProductType
+      fareProductType: FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
       toLocationId: Maybe Text
       distance: Maybe HighPrecMeters
       stopLocationId: Maybe Text
@@ -335,15 +336,15 @@ Booking:
       - distance: getDistance bookingDetails|E
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
-      - fromLocationAndBookingDetails': Storage.Queries.Transformers.Booking.fromLocationAndBookingDetails id merchantId merchantOperatingCityId mappings distance fareProductType toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue|EM #check
+      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue|EM #check
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E
-    fromLocation: (fst fromLocationAndBookingDetails')|E
-    bookingDetails: (snd fromLocationAndBookingDetails')|E
+    fromLocation: (fst toBookingDetailsAndFromLocation')|E
+    bookingDetails: (snd toBookingDetailsAndFromLocation')|E
     tripTerms: if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing|EM
     merchantOperatingCityId: Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId|EM
-    initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst fromLocationAndBookingDetails')|EM
+    initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst toBookingDetailsAndFromLocation')|EM
     estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
     estimatedTotalFare: (Kernel.Types.Common.mkPrice currency estimatedTotalFare)|E

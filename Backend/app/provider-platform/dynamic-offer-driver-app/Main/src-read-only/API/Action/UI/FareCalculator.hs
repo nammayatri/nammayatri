@@ -29,7 +29,7 @@ type API =
            "dropLatLon"
            Kernel.External.Maps.Types.LatLong
       :> MandatoryQueryParam "pickupLatLon" Kernel.External.Maps.Types.LatLong
-      :> Get '[JSON] API.Types.UI.FareCalculator.FareResponse
+      :> Get ('[JSON]) API.Types.UI.FareCalculator.FareResponse
   )
 
 handler :: Environment.FlowServer API

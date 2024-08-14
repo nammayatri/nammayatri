@@ -16,9 +16,9 @@ import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Database.Beam.Postgres
+import Domain.Types as DTC
 import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
-import Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM

@@ -6,7 +6,7 @@ module Storage.Queries.Plan (module Storage.Queries.Plan, module ReExport) where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -38,7 +38,7 @@ findByIdAndPaymentModeWithServiceName id paymentMode serviceName = do
 
 findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Plan.ServiceNames -> m ([Domain.Types.Plan.Plan]))
 findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceName = do
   findAllWithKV
     [ Se.And
@@ -50,7 +50,7 @@ findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId planType serviceNa
 
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant -> m ([Domain.Types.Plan.Plan]))
 findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentMode serviceName vehicleVariant = do
   findAllWithKV
     [ Se.And
@@ -63,7 +63,7 @@ findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentM
 
 findByMerchantOpCityIdWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.ServiceNames -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.ServiceNames -> m ([Domain.Types.Plan.Plan]))
 findByMerchantOpCityIdWithServiceName merchantOpCityId serviceName = do
   findAllWithKV
     [ Se.And

@@ -160,7 +160,6 @@ library:
     - mobility-core
     - haskell-cac
     - beckn-spec
-    - beckn-services
     - special-zone-a
     - special-zone
     - payment

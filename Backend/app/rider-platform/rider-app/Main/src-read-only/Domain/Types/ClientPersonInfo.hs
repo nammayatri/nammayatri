@@ -4,8 +4,8 @@
 
 module Domain.Types.ClientPersonInfo where
 
+import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
-import qualified Domain.Types.BecknConfig
 import qualified Domain.Types.Client
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -23,6 +23,6 @@ data ClientPersonInfo = ClientPersonInfo
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     rideCount :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.BecknConfig.VehicleCategory
+    vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

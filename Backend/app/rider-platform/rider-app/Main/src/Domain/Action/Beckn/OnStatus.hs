@@ -32,7 +32,7 @@ import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DV
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -299,7 +299,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       merchantOperatingCityId = Just booking.merchantOperatingCityId
       bookingId = booking.id
       status = DRide.NEW
-      vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType
+      vehicleVariant = DV.castServiceTierToVariant booking.vehicleServiceTierType
       vehicleServiceTierType = Just booking.vehicleServiceTierType
       trackingUrl = Nothing
       fare = Nothing

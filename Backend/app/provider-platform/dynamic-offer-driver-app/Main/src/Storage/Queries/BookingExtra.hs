@@ -5,9 +5,10 @@ module Storage.Queries.BookingExtra where
 
 import qualified Data.Text as T
 import qualified Data.Time as DT -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import Domain.Types.Booking
 import qualified Domain.Types.BookingLocation as DBBL
-import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -15,7 +16,6 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

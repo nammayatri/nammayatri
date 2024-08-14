@@ -18,8 +18,8 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import Domain.Types as DTC
 import Domain.Types.Booking (BookingStatus (..))
-import Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)

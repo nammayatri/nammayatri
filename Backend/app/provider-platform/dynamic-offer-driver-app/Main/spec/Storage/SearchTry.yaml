@@ -2,7 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   SearchRequest: Domain.Types.SearchRequest
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   TripCategory: Domain.Types.Common
   Money: Kernel.Types.Common
 

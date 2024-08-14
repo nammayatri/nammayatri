@@ -14,7 +14,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -92,7 +92,7 @@ data Ride = Ride
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -103,8 +103,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator deriving
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))

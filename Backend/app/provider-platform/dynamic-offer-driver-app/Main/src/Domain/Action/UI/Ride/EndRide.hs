@@ -31,8 +31,9 @@ import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
+import qualified Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
@@ -42,7 +43,6 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTConf
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)

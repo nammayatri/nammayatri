@@ -31,13 +31,10 @@ import Data.Maybe
 import qualified Data.Text as T
 import Domain.Action.Beckn.Search
 import qualified Domain.Action.UI.Person as SP
-import Domain.Types
-import Domain.Types.BecknConfig
+import qualified Domain.Types as DT
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import qualified Domain.Types.Common as DCT
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFParams
@@ -51,11 +48,10 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
-import qualified Domain.Types.Vehicle as Variant
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as Variant
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
@@ -69,7 +65,6 @@ import qualified Kernel.Types.Common as Common
 import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (mkPrice)
-import SharedLogic.DriverPool.Types
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import Tools.Error
@@ -78,11 +73,11 @@ data Pricing = Pricing
   { pricingId :: Text,
     pricingMaxFare :: HighPrecMoney,
     pricingMinFare :: HighPrecMoney,
-    vehicleServiceTier :: DVST.ServiceTierType,
+    vehicleServiceTier :: DT.ServiceTierType,
     serviceTierName :: Text,
     serviceTierDescription :: Maybe Text,
-    vehicleVariant :: Variant.Variant,
-    tripCategory :: DTC.TripCategory,
+    vehicleVariant :: Variant.VehicleVariant,
+    tripCategory :: DT.TripCategory,
     fareParams :: Maybe Params.FareParameters,
     farePolicy :: Maybe Policy.FarePolicy,
     estimatedDistance :: Maybe Meters,
@@ -207,7 +202,7 @@ mkBppUri merchantId =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId)
 
-castVariant :: Variant.Variant -> (Text, Text)
+castVariant :: Variant.VehicleVariant -> (Text, Text)
 castVariant Variant.SEDAN = (show Enums.CAB, "SEDAN")
 castVariant Variant.HATCHBACK = (show Enums.CAB, "HATCHBACK")
 castVariant Variant.SUV = (show Enums.CAB, "SUV")
@@ -225,15 +220,6 @@ castVariant Variant.AMBULANCE_AC_OXY = (show Enums.AMBULANCE, "AMBULANCE_AC_OXY"
 castVariant Variant.AMBULANCE_VENTILATOR = (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
 castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
 
-mkFulfillmentType :: DCT.TripCategory -> Text
-mkFulfillmentType = \case
-  DCT.OneWay DCT.OneWayRideOtp -> show Enums.RIDE_OTP
-  DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
-  DCT.Rental _ -> show Enums.RENTAL
-  DCT.InterCity _ _ -> show Enums.INTER_CITY
-  DCT.Ambulance _ -> show Enums.AMBULANCE_FLOW
-  _ -> show Enums.DELIVERY
-
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
 
@@ -241,7 +227,7 @@ castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
 castDPaymentType DMPM.POSTPAID = show Enums.ON_FULFILLMENT
 
-parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe Variant.Variant
+parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe Variant.VehicleVariant
 parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "SEDAN") -> Just Variant.SEDAN
   (Just "CAB", Just "SUV") -> Just Variant.SUV
@@ -359,7 +345,7 @@ data DriverInfo = DriverInfo
     tags :: Maybe [Spec.TagGroup]
   }
 
-showVariant :: DVeh.Variant -> Maybe Text
+showVariant :: Variant.VehicleVariant -> Maybe Text
 showVariant = A.decode . A.encode
 
 -- common for on_update & on_status
@@ -443,7 +429,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
         fulfillmentStops = mkStopsOUS booking ride rideOtp,
-        fulfillmentType = Just $ mkFulfillmentType booking.tripCategory,
+        fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $
             Spec.Agent
@@ -920,29 +906,6 @@ buildAddressFromText fullAddress = do
 replaceEmpty :: Maybe Text -> Maybe Text
 replaceEmpty string = if string == Just "" then Nothing else string
 
-mapServiceTierToCategory :: DVST.ServiceTierType -> VehicleCategory
-mapServiceTierToCategory serviceTier =
-  case serviceTier of
-    DVST.SEDAN -> CAB
-    DVST.HATCHBACK -> CAB
-    DVST.TAXI -> CAB
-    DVST.SUV -> CAB
-    DVST.TAXI_PLUS -> CAB
-    DVST.COMFY -> CAB
-    DVST.ECO -> CAB
-    DVST.PREMIUM -> CAB
-    DVST.PREMIUM_SEDAN -> CAB
-    DVST.BLACK -> CAB
-    DVST.BLACK_XL -> CAB
-    DVST.AUTO_RICKSHAW -> AUTO_RICKSHAW
-    DVST.BIKE -> MOTORCYCLE
-    DVST.AMBULANCE_TAXI -> AMBULANCE
-    DVST.AMBULANCE_TAXI_OXY -> AMBULANCE
-    DVST.AMBULANCE_AC -> AMBULANCE
-    DVST.AMBULANCE_AC_OXY -> AMBULANCE
-    DVST.AMBULANCE_VENTILATOR -> AMBULANCE
-    DVST.SUV_PLUS -> CAB
-
 mapRideStatus :: Maybe DRide.RideStatus -> Enums.FulfillmentState
 mapRideStatus rideStatus =
   case rideStatus of
@@ -1080,8 +1043,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
-        DFParams.InterCity -> True
-        DFParams.Ambulance -> True
+        _ -> True
 
 type MerchantShortId = Text
 
@@ -1146,12 +1108,10 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
       pricingMinFare = minFare,
-      fulfillmentType = case tripCategory of
-        DTC.Ambulance _ -> show Enums.AMBULANCE
-        _ -> show Enums.DELIVERY,
+      fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
@@ -1167,23 +1127,16 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       pricingMinFare = estimatedFare,
       estimatedDistance = distance,
       fareParams = Just fareParams,
-      fulfillmentType = mapToFulfillmentType tripCategory,
+      fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
       ..
     }
-  where
-    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = show Enums.RIDE_OTP
-    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
-    mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
-    mapToFulfillmentType (DTC.InterCity _ _) = show Enums.INTER_CITY
-    mapToFulfillmentType (DTC.Ambulance _) = show Enums.AMBULANCE_FLOW
-    mapToFulfillmentType _ = show Enums.RIDE_OTP -- backward compatibility
 
 convertBookingToPricing :: DVST.VehicleServiceTier -> DBooking.Booking -> Pricing
 convertBookingToPricing serviceTier DBooking.Booking {..} =
@@ -1194,12 +1147,10 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       tripCategory = tripCategory,
       fareParams = Just fareParams,
       farePolicy = Nothing,
-      fulfillmentType = case tripCategory of
-        DTC.Ambulance _ -> show Enums.AMBULANCE
-        _ -> show Enums.DELIVERY,
+      fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,
@@ -1419,7 +1370,7 @@ tfCancellationTerms cancellationFee state =
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
-  let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
+  let mkParams :: Maybe DT.BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
   Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee
 
 tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
@@ -1460,7 +1411,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
         fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) (Just rideOtp),
-        fulfillmentType = Just $ mkFulfillmentType booking.tripCategory,
+        fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $
             Spec.Agent

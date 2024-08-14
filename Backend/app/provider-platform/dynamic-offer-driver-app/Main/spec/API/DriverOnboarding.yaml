@@ -2,7 +2,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   DocumentVerificationConfig: Domain.Types.DocumentVerificationConfig
   DocumentType: Domain.Types.DocumentVerificationConfig
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common

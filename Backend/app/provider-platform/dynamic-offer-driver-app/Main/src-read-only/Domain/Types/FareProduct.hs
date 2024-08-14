@@ -9,7 +9,6 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
@@ -26,10 +25,10 @@ data FareProduct = FareProduct
     searchSource :: Domain.Types.FareProduct.SearchSource,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     tripCategory :: Domain.Types.Common.TripCategory,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data SearchSource = ALL | DASHBOARD | MOBILE_APP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchSource))

@@ -38,9 +38,9 @@ where
 
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
+import Domain.Types
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
-import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverFee (DriverFeeStatus)
 import qualified Domain.Types.DriverHomeLocation as DDHL
 import Domain.Types.DriverInformation as DI
@@ -222,7 +222,7 @@ type API =
              :> QueryParam "offset" Integer
              :> QueryParam "from" Day
              :> QueryParam "to" Day
-             :> QueryParam "tripCategory" DTC.TripCategory
+             :> QueryParam "tripCategory" TripCategory
              :> Get '[JSON] DDriver.ScheduledBookingRes
            :<|> "accept"
              :> "scheduledBooking"
@@ -372,7 +372,7 @@ getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate = withF
 getDummyRideRequest :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 getDummyRideRequest = withFlowHandlerAPI . DDriver.getDummyRideRequest
 
-listScheduledBookings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Day -> Maybe Day -> Maybe DTC.TripCategory -> FlowHandler DDriver.ScheduledBookingRes
+listScheduledBookings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Day -> Maybe Day -> Maybe TripCategory -> FlowHandler DDriver.ScheduledBookingRes
 listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory = withFlowHandlerAPI $ DDriver.listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory
 
 acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Id DRB.Booking -> FlowHandler APISuccess

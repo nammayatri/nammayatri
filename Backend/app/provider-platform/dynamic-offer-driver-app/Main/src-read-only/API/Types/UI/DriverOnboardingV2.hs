@@ -9,7 +9,6 @@ import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Image
-import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -101,7 +100,7 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
     name :: Kernel.Prelude.Text,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
+    serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
@@ -137,7 +136,7 @@ data RateCardResp = RateCardResp
     perKmRate :: Kernel.Types.Common.PriceAPIEntity,
     perMinuteRate :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     rateCardItems :: [API.Types.UI.DriverOnboardingV2.RateCardItem],
-    serviceTierType :: Domain.Types.ServiceTierType.ServiceTierType,
+    serviceTierType :: Domain.Types.Common.ServiceTierType,
     totalFare :: Kernel.Types.Common.PriceAPIEntity,
     tripCategory :: Domain.Types.Common.TripCategory
   }

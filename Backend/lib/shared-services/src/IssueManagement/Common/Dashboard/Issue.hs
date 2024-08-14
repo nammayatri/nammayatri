@@ -308,7 +308,7 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     isActive :: Maybe Bool,
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
-    restrictedVariants :: Maybe [Variant],
+    restrictedVariants :: Maybe [VehicleVariant],
     showOnlyWhenUserBlocked :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
@@ -382,7 +382,7 @@ data UpdateIssueOptionReq = UpdateIssueOptionReq
     label :: Maybe Text,
     isActive :: Maybe Bool,
     translations :: [Translation],
-    restrictedVariants :: Maybe [Variant],
+    restrictedVariants :: Maybe [VehicleVariant],
     showOnlyWhenUserBlocked :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)

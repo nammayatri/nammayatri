@@ -134,7 +134,7 @@ castRideInfo merchantId _ rideId = do
           driverName = res.driverName,
           driverPhoneNo = res.driverPhoneNo,
           vehicleNo = res.vehicleNo,
-          vehicleVariant = Just (castVehicleVariant res.vehicleVariant),
+          vehicleVariant = Just res.vehicleVariant,
           vehicleServiceTier = res.vehicleServiceTierName,
           actualFare = res.actualFare,
           bookingStatus = Nothing,
@@ -173,25 +173,6 @@ castRideInfo merchantId _ rideId = do
       DRR.BOOKING -> Common.BOOKING
       DRR.RIDE -> Common.RIDE
       DRR.INITIAL_BOOKING -> Common.INITIAL_BOOKING
-
-    castVehicleVariant :: DRR.Variant -> Common.Variant
-    castVehicleVariant = \case
-      DRR.SEDAN -> Common.SEDAN
-      DRR.SUV -> Common.SUV
-      DRR.SUV_PLUS -> Common.SUV_PLUS
-      DRR.HATCHBACK -> Common.HATCHBACK
-      DRR.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
-      DRR.TAXI -> Common.TAXI
-      DRR.TAXI_PLUS -> Common.TAXI_PLUS
-      DRR.PREMIUM_SEDAN -> Common.PREMIUM_SEDAN
-      DRR.BLACK -> Common.BLACK
-      DRR.BLACK_XL -> Common.BLACK_XL
-      DRR.BIKE -> Common.BIKE
-      DRR.AMBULANCE_TAXI -> Common.AMBULANCE_TAXI
-      DRR.AMBULANCE_TAXI_OXY -> Common.AMBULANCE_TAXI_OXY
-      DRR.AMBULANCE_AC -> Common.AMBULANCE_AC
-      DRR.AMBULANCE_AC_OXY -> Common.AMBULANCE_AC_OXY
-      DRR.AMBULANCE_VENTILATOR -> Common.AMBULANCE_VENTILATOR
 
     makeRideInfoCacheKey :: Text
     makeRideInfoCacheKey = "CachedQueries:RideInfo:RideId-" <> show rideId.getId

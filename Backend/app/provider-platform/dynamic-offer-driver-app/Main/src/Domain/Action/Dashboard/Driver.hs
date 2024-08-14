@@ -76,7 +76,6 @@ module Domain.Action.Dashboard.Driver
     bulkReviewRCVariant,
     updateDriverTag,
     registerRCForFleetWithoutDriver,
-    castVehicleVariant,
     updateFleetOwnerInfo,
     getFleetOwnerInfo,
     linkRCWithDriverForFleet,
@@ -106,7 +105,6 @@ import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Vector as V
-import qualified Domain.Action.Dashboard.Management.Merchant as DashboardMerchant
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
 import Domain.Action.UI.DriverGoHomeRequest (CachedGoHomeRequest (..))
@@ -142,6 +140,7 @@ import Domain.Types.TransporterConfig
 import qualified Domain.Types.Vehicle as DVeh
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -968,7 +967,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
       driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now
       QVehicle.create vehicle
-      when (vehicle.variant == DVeh.SUV) $
+      when (vehicle.variant == DV.SUV) $
         QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
@@ -1213,7 +1212,7 @@ getFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset 
                   ..
                 }
         pure ls
-    getVehicleDetails :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => VehicleRegistrationCertificate -> m (Maybe Text, Maybe Common.Variant)
+    getVehicleDetails :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => VehicleRegistrationCertificate -> m (Maybe Text, Maybe Common.VehicleVariant)
     getVehicleDetails vrc = do
       decryptedVehicleRC <- decrypt vrc.certificateNumber
       let vehicleType = castVehicleVariantDashboard vrc.vehicleVariant
@@ -1425,9 +1424,6 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
 
 runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Flow ()
 runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = do
-  let vehicleCategory = case req.vehicleCategory of
-        Just category -> Just $ DashboardMerchant.castCategory category
-        Nothing -> Nothing
   let imageId = maybe "" cast req.imageId
   let rcReq =
         DomainRC.DriverRCReq
@@ -1440,47 +1436,28 @@ runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = d
             ventilator = req.ventilator,
             multipleRC = Nothing,
             vehicleDetails = Nothing,
-            vehicleCategory = vehicleCategory
+            vehicleCategory = req.vehicleCategory
           }
   void $ DomainRC.verifyRC (not isFleet) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
 
-castVehicleVariant :: Common.Variant -> DVeh.Variant
-castVehicleVariant = \case
-  Common.SUV -> DVeh.SUV
-  Common.HATCHBACK -> DVeh.HATCHBACK
-  Common.SEDAN -> DVeh.SEDAN
-  Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
-  Common.TAXI -> DVeh.TAXI
-  Common.TAXI_PLUS -> DVeh.TAXI_PLUS
-  Common.PREMIUM_SEDAN -> DVeh.PREMIUM_SEDAN
-  Common.BLACK -> DVeh.BLACK
-  Common.BLACK_XL -> DVeh.BLACK_XL
-  Common.BIKE -> DVeh.BIKE
-  Common.AMBULANCE_TAXI -> DVeh.AMBULANCE_TAXI
-  Common.AMBULANCE_TAXI_OXY -> DVeh.AMBULANCE_TAXI_OXY
-  Common.AMBULANCE_AC -> DVeh.AMBULANCE_AC
-  Common.AMBULANCE_AC_OXY -> DVeh.AMBULANCE_AC_OXY
-  Common.AMBULANCE_VENTILATOR -> DVeh.AMBULANCE_VENTILATOR
-  Common.SUV_PLUS -> DVeh.SUV_PLUS
-
-castVehicleVariantDashboard :: Maybe DVeh.Variant -> Maybe Common.Variant
+castVehicleVariantDashboard :: Maybe DV.VehicleVariant -> Maybe Common.VehicleVariant
 castVehicleVariantDashboard = \case
-  Just DVeh.SUV -> Just Common.SUV
-  Just DVeh.HATCHBACK -> Just Common.HATCHBACK
-  Just DVeh.SEDAN -> Just Common.SEDAN
-  Just DVeh.AUTO_RICKSHAW -> Just Common.AUTO_RICKSHAW
-  Just DVeh.TAXI -> Just Common.TAXI
-  Just DVeh.TAXI_PLUS -> Just Common.TAXI_PLUS
-  Just DVeh.PREMIUM_SEDAN -> Just Common.PREMIUM_SEDAN
-  Just DVeh.BLACK -> Just Common.BLACK
-  Just DVeh.BLACK_XL -> Just Common.BLACK_XL
-  Just DVeh.BIKE -> Just Common.BIKE
-  Just DVeh.AMBULANCE_TAXI -> Just Common.AMBULANCE_TAXI
-  Just DVeh.AMBULANCE_TAXI_OXY -> Just Common.AMBULANCE_TAXI_OXY
-  Just DVeh.AMBULANCE_AC -> Just Common.AMBULANCE_AC
-  Just DVeh.AMBULANCE_AC_OXY -> Just Common.AMBULANCE_AC_OXY
-  Just DVeh.AMBULANCE_VENTILATOR -> Just Common.AMBULANCE_VENTILATOR
-  Just DVeh.SUV_PLUS -> Just Common.SUV_PLUS
+  Just DV.SUV -> Just Common.SUV
+  Just DV.HATCHBACK -> Just Common.HATCHBACK
+  Just DV.SEDAN -> Just Common.SEDAN
+  Just DV.AUTO_RICKSHAW -> Just Common.AUTO_RICKSHAW
+  Just DV.TAXI -> Just Common.TAXI
+  Just DV.TAXI_PLUS -> Just Common.TAXI_PLUS
+  Just DV.PREMIUM_SEDAN -> Just Common.PREMIUM_SEDAN
+  Just DV.BLACK -> Just Common.BLACK
+  Just DV.BLACK_XL -> Just Common.BLACK_XL
+  Just DV.BIKE -> Just Common.BIKE
+  Just DV.AMBULANCE_TAXI -> Just Common.AMBULANCE_TAXI
+  Just DV.AMBULANCE_TAXI_OXY -> Just Common.AMBULANCE_TAXI_OXY
+  Just DV.AMBULANCE_AC -> Just Common.AMBULANCE_AC
+  Just DV.AMBULANCE_AC_OXY -> Just Common.AMBULANCE_AC_OXY
+  Just DV.AMBULANCE_VENTILATOR -> Just Common.AMBULANCE_VENTILATOR
+  Just DV.SUV_PLUS -> Just Common.SUV_PLUS
   _ -> Nothing
 
 ---------------------------------------------------------------------
@@ -2219,18 +2196,16 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
 updateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Common.UpdateRCInvalidStatusReq -> Flow APISuccess
 updateRCInvalidStatus _ _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
-  let variant = castVehicleVariant req.vehicleVariant
-  RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing (Just True)
+  RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
   pure Success
 
 updateVehicleVariant :: ShortId DM.Merchant -> Context.City -> Common.UpdateVehicleVariantReq -> Flow APISuccess
 updateVehicleVariant _ _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
   rcNumber <- decrypt vehicleRC.certificateNumber
-  let variant = castVehicleVariant req.vehicleVariant
   mVehicle <- QVehicle.findByRegistrationNo rcNumber
-  RCQuery.updateVehicleVariant vehicleRC.id (Just variant) Nothing Nothing
-  whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier variant vehicle
+  RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
+  whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier req.vehicleVariant vehicle
   pure Success
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]
@@ -2246,14 +2221,13 @@ bulkReviewRCVariant _ _ req = do
   where
     processRCReq rcReq = do
       vehicleRC <- RCQuery.findById (Id rcReq.rcId) >>= fromMaybeM (VehicleNotFound rcReq.rcId)
-      let mbVariant = castVehicleVariant <$> rcReq.vehicleVariant
       rcNumber <- decrypt vehicleRC.certificateNumber
       mVehicle <- QVehicle.findByRegistrationNo rcNumber
-      RCQuery.updateVehicleVariant vehicleRC.id mbVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
+      RCQuery.updateVehicleVariant vehicleRC.id rcReq.vehicleVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
       whenJust mVehicle $ \vehicle -> do
-        whenJust mbVariant $ \variant -> updateVehicleVariantAndServiceTier variant vehicle
+        whenJust rcReq.vehicleVariant $ \variant -> updateVehicleVariantAndServiceTier variant vehicle
 
-updateVehicleVariantAndServiceTier :: DVeh.Variant -> DVeh.Vehicle -> Flow ()
+updateVehicleVariantAndServiceTier :: DV.VehicleVariant -> DVeh.Vehicle -> Flow ()
 updateVehicleVariantAndServiceTier variant vehicle = do
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   driverInfo' <- QDriverInfo.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound

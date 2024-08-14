@@ -13,7 +13,6 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.RiderDetails
-import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
@@ -66,7 +65,7 @@ data Booking = Booking
     transactionId :: Kernel.Prelude.Text,
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierName :: Kernel.Prelude.Text,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
@@ -77,8 +76,8 @@ data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED d
 
 data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
 
-$(mkHttpInstancesForEnum ''BookingStatus)
+$(mkHttpInstancesForEnum (''BookingStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingType))

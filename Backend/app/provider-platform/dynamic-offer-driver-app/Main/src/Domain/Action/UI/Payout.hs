@@ -28,7 +28,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Vehicle as DV
+import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption (decrypt)
@@ -146,7 +146,7 @@ payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId
 processPreviousPayoutAmount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> Maybe Text -> Id DMOC.MerchantOperatingCity -> m ()
 processPreviousPayoutAmount personId mbVpa merchOpCity = do
   mbVehicle <- QV.findById personId
-  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
   when payoutConfig.isPayoutEnabled $ do
     redisLockDriverId <- Redis.tryLockRedis lockKey 10800

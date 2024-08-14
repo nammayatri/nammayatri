@@ -7,7 +7,7 @@ imports:
   Maybe: Kernel.Prelude
   LmsBonus: Domain.Types.LmsModule
   Person: Domain.Types.Person
-  Variant: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
   QuizQuestion: Domain.Types.LmsEnumTypes
   Value: Data.Aeson
   ReelRowButtonConfig: Domain.Types.ReelsData
@@ -28,7 +28,7 @@ LmsModule:
     duration : Int
     noOfVideos : Int
     rank : Int
-    variant : Maybe Variant
+    variant : Maybe VehicleVariant|NoRelation
     moduleCompletionCriteria : ModuleCompletionCriteria
     languagesAvailableForQuiz : "[Language]"
     languagesAvailableForVideos : "[Language]"

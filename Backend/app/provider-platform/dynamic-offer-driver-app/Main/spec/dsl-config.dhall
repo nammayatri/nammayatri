@@ -169,6 +169,7 @@ let defaultImports =
           [ "Kernel.Prelude"
           , "Tools.Beam.UtilsTH"
           , "Kernel.External.Encryption"
+          , "Domain.Types.Common ()"
           ]
         , _qualifiedImports = [ "Database.Beam as B" ]
         , _packageImports = [] : List PackageImport

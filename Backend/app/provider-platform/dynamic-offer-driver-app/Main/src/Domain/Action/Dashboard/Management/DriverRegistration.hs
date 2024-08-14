@@ -29,7 +29,6 @@ module Domain.Action.Dashboard.Management.DriverRegistration
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
-import Domain.Action.Dashboard.Driver (castVehicleVariant)
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
@@ -312,7 +311,7 @@ approveAndUpdateRC req = do
   certificateNumber <- mapM encrypt req.vehicleNumberPlate
   let udpatedRC =
         rc
-          { DRC.vehicleVariant = (castVehicleVariant <$> req.vehicleVariant) <|> rc.vehicleVariant,
+          { DRC.vehicleVariant = req.vehicleVariant <|> rc.vehicleVariant,
             DRC.verificationStatus = VALID,
             DRC.certificateNumber = fromMaybe rc.certificateNumber certificateNumber,
             DRC.vehicleManufacturer = req.vehicleManufacturer <|> rc.vehicleManufacturer,

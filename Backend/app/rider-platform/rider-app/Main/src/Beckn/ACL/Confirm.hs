@@ -19,7 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.OnDemand.Utils.Payment as OUP
 import BecknV2.Utils
@@ -29,7 +29,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
-import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
@@ -84,17 +83,10 @@ tfFulfillments res =
           fulfillmentState = Nothing,
           fulfillmentStops = Utils.mkStops' (Just res.fromLocation) res.mbToLocation,
           fulfillmentTags = Nothing,
-          fulfillmentType = Just $ mkFulfillmentType res.bookingDetails,
+          fulfillmentType = Utils.tripCategoryToFulfillmentType <$> res.tripCategory,
           fulfillmentVehicle = tfVehicle res
         }
     ]
-  where
-    mkFulfillmentType = \case
-      DRB.OneWaySpecialZoneDetails _ -> show Enums.RIDE_OTP
-      DRB.RentalDetails _ -> show Enums.RENTAL
-      DRB.InterCityDetails _ -> show Enums.INTER_CITY
-      DRB.AmbulanceDetails _ -> show Enums.AMBULANCE_FLOW
-      _ -> show Enums.DELIVERY
 
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
 tfItems res =

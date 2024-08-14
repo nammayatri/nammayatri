@@ -22,11 +22,11 @@ import Data.Time.Calendar ()
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Domain.Action.UI.Person
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
-import Domain.Types.Common hiding (monthDiff)
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as SP
+import Domain.Utils hiding (monthDiff)
 import GHC.Num.Integer (integerToInt)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude

@@ -23,8 +23,8 @@ import Domain.Types.Person
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest
-import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
@@ -168,7 +168,7 @@ triggerEstimateEvent ::
   EstimateEventData ->
   m ()
 triggerEstimateEvent estimateData = do
-  let estimatePayload = Estimates {eId = estimateData.estimate.id, srId = estimateData.estimate.requestId, vehVar = DVST.castServiceTierToVariant estimateData.estimate.vehicleServiceTierType, cAt = estimateData.estimate.createdAt}
+  let estimatePayload = Estimates {eId = estimateData.estimate.id, srId = estimateData.estimate.requestId, vehVar = DV.castServiceTierToVariant estimateData.estimate.vehicleServiceTierType, cAt = estimateData.estimate.createdAt}
   estEnvt <- createEvent (Just $ getId estimateData.personId) (getId estimateData.merchantId) Estimate RIDER_APP System (Just estimatePayload) (Just $ getId estimateData.estimate.id) (getId <$> estimateData.estimate.merchantOperatingCityId)
   triggerEvent estEnvt
 

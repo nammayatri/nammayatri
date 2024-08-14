@@ -4,8 +4,8 @@ imports:
   SearchRequest: Domain.Types.SearchRequest
   SearchTry: Domain.Types.SearchTry
   Money: Kernel.Types.Common
-  Variant: Domain.Types.Vehicle
-  ServiceTierType: Domain.Types.ServiceTierType
+  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.Common
   DriverGoHomeRequest: Domain.Types.DriverGoHomeRequest
   Version: Kernel.Types.Version
   Device: Kernel.Types.Version
@@ -46,7 +46,7 @@ SearchRequestForDriver:
     actualDistanceToPickup : Meters
     straightLineDistanceToPickup : Meters
     durationToPickup : Seconds
-    vehicleVariant : Variant
+    vehicleVariant : VehicleVariant|NoRelation
     vehicleServiceTier : ServiceTierType|NoRelation
     vehicleServiceTierName : Maybe Text
     airConditioned : Maybe Bool
@@ -139,7 +139,7 @@ SearchRequestForDriver:
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
-    vehicleServiceTier: Kernel.Prelude.fromMaybe (SharedLogic.DriverPool.Types.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
+    vehicleServiceTier: Kernel.Prelude.fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
     createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
     searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
     baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount <$> baseFare|E

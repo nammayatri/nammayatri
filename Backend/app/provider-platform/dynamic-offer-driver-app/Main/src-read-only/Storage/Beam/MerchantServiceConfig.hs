@@ -7,6 +7,7 @@ module Storage.Beam.MerchantServiceConfig where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.MerchantServiceConfig
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -14,12 +15,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantServiceConfigT f = MerchantServiceConfigT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    configJSON :: B.C f Data.Aeson.Value,
-    serviceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    configJSON :: (B.C f Data.Aeson.Value),
+    serviceName :: (B.C f Domain.Types.MerchantServiceConfig.ServiceName),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +30,6 @@ instance B.Table MerchantServiceConfigT where
 
 type MerchantServiceConfig = MerchantServiceConfigT Identity
 
-$(enableKVPG ''MerchantServiceConfigT ['merchantId, 'serviceName] [])
+$(enableKVPG (''MerchantServiceConfigT) [('merchantId), ('serviceName)] [])
 
-$(mkTableInstances ''MerchantServiceConfigT "merchant_service_config")
+$(mkTableInstances (''MerchantServiceConfigT) "merchant_service_config")

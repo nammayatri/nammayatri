@@ -8,6 +8,7 @@ module Domain.Types.Booking (module Domain.Types.Booking, module ReExport) where
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
+import qualified Domain.Types.Common
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
@@ -15,8 +16,8 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.TripTerms
-import qualified Domain.Types.VehicleServiceTier
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -69,11 +70,12 @@ data Booking = Booking
     startTime :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.Extra.Booking.BookingStatus,
     transactionId :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    vehicleServiceTierType :: Domain.Types.VehicleServiceTier.VehicleServiceTierType
+    vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }
   deriving (Generic, Show)
 

@@ -7,6 +7,7 @@ module Domain.Types.Quote where
 import Data.Aeson
 import qualified Domain.Action.UI.DriverOffer
 import qualified Domain.Action.UI.SpecialZoneQuote
+import qualified Domain.Types.Common
 import qualified Domain.Types.DriverOffer
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant
@@ -14,9 +15,9 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.QuoteBreakup
 import qualified Domain.Types.RentalDetails
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.SpecialZoneQuote
 import qualified Domain.Types.TripTerms
-import qualified Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -53,14 +54,15 @@ data Quote = Quote
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Quote.TollChargesInfo,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    vehicleServiceTierType :: Domain.Types.VehicleServiceTier.VehicleServiceTierType
+    vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   { distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters,
@@ -92,4 +94,4 @@ data QuoteDetails
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   deriving (Generic, Show)
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))

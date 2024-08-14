@@ -5,13 +5,13 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import Data.Text as T
 import qualified Domain.Types.MerchantPaymentMethod as DMPM (PaymentCollector (..), PaymentInstrument (..), PaymentMethodInfo (..), PaymentType (..))
-import qualified Domain.Types.Vehicle as VehVar
+import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Utils.Common (decodeFromText, fromMaybeM)
 
-castVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.Variant
+castVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVariant) of
   (Just "CAB", Just "SEDAN") -> Just VehVar.SEDAN
   (Just "CAB", Just "SUV") -> Just VehVar.SUV

@@ -7,7 +7,7 @@ import Domain.Types.Booking
 import Domain.Types.BusinessEvent
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride
-import Domain.Types.Vehicle (Variant)
+import Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -24,7 +24,7 @@ logBusinessEvent ::
   EventType ->
   Maybe (Id Booking) ->
   Maybe WhenPoolWasComputed ->
-  Maybe Variant ->
+  Maybe VehicleVariant ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe (Id Ride) ->

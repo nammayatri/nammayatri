@@ -24,6 +24,7 @@ import qualified Data.Text as Text
 import qualified Domain.Action.UI.EditBooking as EditBooking
 import qualified Domain.Action.UI.Location as DL
 import Domain.Action.UI.Ride.EndRide.Internal
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.FareParameters as DFP
@@ -36,7 +37,6 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.OnUpdate
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRoute as RR
-import qualified Domain.Types.ServiceTierType as DVST
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
 import Kernel.Beam.Functions as B

@@ -8,6 +8,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
+import Domain.Types
 import Domain.Types.Booking as Booking
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
@@ -193,7 +194,8 @@ data RideItem = RideItem
     ride :: Ride,
     bookingStatus :: Common.BookingStatus,
     bookingDetails :: BookingDetails,
-    rideScheduledAt :: UTCTime
+    rideScheduledAt :: UTCTime,
+    tripCategory :: Maybe TripCategory
   }
 
 instance BeamBackend.BeamSqlBackend be => B.HasSqlEqualityCheck be Common.BookingStatus
@@ -275,6 +277,7 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
         { bookingStatus = mkBookingStatus now ride,
           rideScheduledAt = booking.startTime,
           bookingDetails = booking.bookingDetails,
+          tripCategory = booking.tripCategory,
           ..
         }
 

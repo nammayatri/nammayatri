@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverOffer.DriverOffer] -> m ())
 createMany = traverse_ create
 
-findByBPPQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.DriverOffer.DriverOffer])
+findByBPPQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.DriverOffer.DriverOffer]))
 findByBPPQuoteId bppQuoteId = do findAllWithKV [Se.Is Beam.bppQuoteId $ Se.Eq bppQuoteId]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.DriverOffer.DriverOffer -> m (Maybe Domain.Types.DriverOffer.DriverOffer))
@@ -41,8 +41,8 @@ updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
   updateWithKV
     [ Se.Set Beam.bppQuoteId bppQuoteId,
       Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.distanceToPickup (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup),
-      Se.Set Beam.distanceToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup),
+      Se.Set Beam.distanceToPickup ((Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup)),
+      Se.Set Beam.distanceToPickupValue ((Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup)),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverName driverName,
       Se.Set Beam.durationToPickup durationToPickup,
@@ -84,8 +84,8 @@ instance ToTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
     Beam.DriverOfferT
       { Beam.bppQuoteId = bppQuoteId,
         Beam.createdAt = Kernel.Prelude.Just createdAt,
-        Beam.distanceToPickup = Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup,
-        Beam.distanceToPickupValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup,
+        Beam.distanceToPickup = (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup),
+        Beam.distanceToPickupValue = (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup),
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverName = driverName,
         Beam.durationToPickup = durationToPickup,

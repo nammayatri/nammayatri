@@ -13,7 +13,7 @@ import qualified Domain.Types.LmsModuleVideoInformation
 import qualified Domain.Types.QuestionInformation
 import qualified Domain.Types.QuestionModuleMapping
 import qualified Domain.Types.ReelsData
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
@@ -60,7 +60,7 @@ data LmsModuleRes = LmsModuleRes
     noOfVideosCompleted :: Kernel.Prelude.Int,
     rank :: Kernel.Prelude.Int,
     thumbnailImage :: Data.Text.Text,
-    variant :: Data.Maybe.Maybe Domain.Types.Vehicle.Variant
+    variant :: Data.Maybe.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -98,7 +98,7 @@ data LmsTranslatedModuleInfoRes = LmsTranslatedModuleInfoRes
     noOfVideos :: Kernel.Prelude.Int,
     rank :: Kernel.Prelude.Int,
     thumbnailImage :: Data.Text.Text,
-    variant :: Data.Maybe.Maybe Domain.Types.Vehicle.Variant
+    variant :: Data.Maybe.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module BecknV2.OnDemand.Enums where
 
@@ -18,6 +19,7 @@ import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
 import Kernel.Prelude
 import Kernel.Utils.JSON
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Prelude (show)
 
 -- #################################################################
@@ -31,8 +33,11 @@ data VehicleCategory
     AUTO_RICKSHAW
   | CAB
   | MOTORCYCLE
+  | METRO
   | AMBULANCE
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Read, ToSchema)
+
+$(mkHttpInstancesForEnum ''VehicleCategory)
 
 data FulfillmentType
   = -- ..fulfillment.type

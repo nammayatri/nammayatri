@@ -34,8 +34,8 @@ imports:
   FCMActions: Kernel.External.Notification.FCM.Types
   BookingStatus: Domain.Types.Booking
   FCMNotificationType: Kernel.External.Notification.FCM.Types
-  ServiceTierType: Domain.Types.ServiceTierType
-  Category: Domain.Types.Vehicle
+  ServiceTierType: Domain.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
 Merchant:
@@ -792,7 +792,7 @@ TransporterConfig:
     scheduledRideFilterExclusionThresholdHours: Hours
     fakeOtpMobileNumbers: '[Text]'
     fakeOtpEmails: '[Text]'
-    variantsToEnableForSubscription: '[Domain.Types.Vehicle.Variant]'
+    variantsToEnableForSubscription: '[Domain.Types.VehicleVariant.VehicleVariant]'
     considerDriversForSearch: Bool
     dlNumberVerification: Maybe Bool
     pastDaysRideCounter: Int
@@ -1279,7 +1279,7 @@ PayoutConfig:
     isPayoutEnabled: Bool
     thresholdPayoutAmountPerPerson: HighPrecMoney
     batchLimit: Int
-    vehicleCategory: Category
+    vehicleCategory: VehicleCategory|NoRelation
     maxRetryCount: Int
     payoutRegistrationFee: HighPrecMoney
     payoutRegistrationCgst: HighPrecMoney

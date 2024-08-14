@@ -31,7 +31,7 @@ data IssueOptionT f = IssueOptionT
     label :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     isActive :: B.C f Bool,
-    restrictedVariants :: B.C f [Common.Variant],
+    restrictedVariants :: B.C f [Common.VehicleVariant],
     showOnlyWhenUserBlocked :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime

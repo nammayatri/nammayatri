@@ -4,6 +4,7 @@
 
 module Domain.Types.BecknConfig where
 
+import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -34,7 +35,7 @@ data BecknConfig = BecknConfig
     subscriberId :: Kernel.Prelude.Text,
     subscriberUrl :: Servant.Client.Core.BaseUrl,
     uniqueKeyId :: Kernel.Prelude.Text,
-    vehicleCategory :: Domain.Types.BecknConfig.VehicleCategory,
+    vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -44,8 +45,4 @@ data BecknConfig = BecknConfig
 
 data PaymentCollectedBy = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VehicleCategory = CAB | AUTO_RICKSHAW | METRO | MOTORCYCLE | AMBULANCE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleCategory)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentCollectedBy))

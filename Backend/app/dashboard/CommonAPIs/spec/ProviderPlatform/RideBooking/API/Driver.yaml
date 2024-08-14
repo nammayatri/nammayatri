@@ -1,7 +1,7 @@
 imports:
   Driver: Dashboard.Common
   Image: Dashboard.Common
-  Variant: Dashboard.Common
+  VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
   DriverLicense: Dashboard.Common.Driver
   VehicleRegistrationCertificate: Dashboard.Common.Driver
@@ -268,6 +268,6 @@ types:
     - manufacturerModel: Maybe Text
     - verificationStatus: VerificationStatus
     - fleetOwnerId: Maybe Text
-    - vehicleVariant: Maybe Variant
+    - vehicleVariant: Maybe VehicleVariant
     # - createdAt: UTCTime # do we need it?
     # - updatedAt UTCTime

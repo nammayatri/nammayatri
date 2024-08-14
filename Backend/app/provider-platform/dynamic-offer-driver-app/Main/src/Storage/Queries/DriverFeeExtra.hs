@@ -6,8 +6,8 @@ module Storage.Queries.DriverFeeExtra where
 import Data.List (maximumBy)
 import Data.Ord (comparing)
 import Data.Time (Day, UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
+import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Merchant

@@ -7,7 +7,7 @@ module Domain.Types.LmsModule where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleVariant
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -25,7 +25,7 @@ data LmsModule = LmsModule
     noOfVideos :: Kernel.Prelude.Int,
     rank :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
-    variant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant,
+    variant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -34,6 +34,6 @@ data LmsCategory = Safety | Financial | Training deriving (Eq, Ord, Show, Read, 
 
 data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LmsCategory)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''LmsCategory))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionCriteria)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionCriteria))

@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,15 +15,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.ServiceTierType where
 
 import Data.Aeson
-import qualified EulerHS.Prelude
-import Kernel.Prelude
-import Kernel.Utils.TH
-import qualified Tools.Beam.UtilsTH
+import Data.OpenApi hiding (name)
+import EulerHS.Prelude hiding (length, map, readMaybe)
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data ServiceTierType
   = COMFY
@@ -43,8 +46,7 @@ data ServiceTierType
   | SUV_PLUS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
+$(mkHttpInstancesForEnum ''ServiceTierType)
+
 offUsVariants :: [ServiceTierType]
 offUsVariants = [AUTO_RICKSHAW, SEDAN, HATCHBACK, SUV]
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierType)
-$(mkHttpInstancesForEnum ''ServiceTierType)

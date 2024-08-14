@@ -18,10 +18,10 @@ import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Location as Domain
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.ServiceTierType as DVST
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude

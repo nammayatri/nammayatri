@@ -23,7 +23,7 @@ where
 
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
-import Domain.Types.Vehicle
+import Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -33,7 +33,7 @@ import qualified Storage.Queries.PayoutConfig as Queries
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PayoutConfig -> m ()
 create = Queries.create
 
-findByPrimaryKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Category -> m (Maybe PayoutConfig)
+findByPrimaryKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m (Maybe PayoutConfig)
 findByPrimaryKey id vehicleCategory =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKeyAndCategory id vehicleCategory) >>= \case
     Just a -> return a
@@ -45,7 +45,7 @@ findByMerchantOpCityIdAndIsPayoutEnabled id isPayoutEnabled =
     Just a -> return a
     Nothing -> cachePayoutConfigForCity id isPayoutEnabled /=<< Queries.findByMerchantOpCityIdAndIsPayoutEnabled id isPayoutEnabled
 
-cachePayoutConfigForCityAndVehicleCategory :: CacheFlow m r => Id MerchantOperatingCity -> Category -> Maybe PayoutConfig -> m ()
+cachePayoutConfigForCityAndVehicleCategory :: CacheFlow m r => Id MerchantOperatingCity -> VehicleCategory -> Maybe PayoutConfig -> m ()
 cachePayoutConfigForCityAndVehicleCategory id vehicleCategory cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeMerchantOpCityIdKeyAndCategory id vehicleCategory
@@ -57,7 +57,7 @@ cachePayoutConfigForCity id isPayoutEnabled cfg = do
   let idKey = makeMerchantOpCityIdKey id isPayoutEnabled
   Hedis.setExp idKey cfg expTime
 
-makeMerchantOpCityIdKeyAndCategory :: Id MerchantOperatingCity -> Category -> Text
+makeMerchantOpCityIdKeyAndCategory :: Id MerchantOperatingCity -> VehicleCategory -> Text
 makeMerchantOpCityIdKeyAndCategory id vehicleCategory = "driver-offer:CachedQueries:MerchantPayoutConfig:MerchantOperatingCityId-" <> id.getId <> ":Category-" <> show vehicleCategory
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Bool -> Text

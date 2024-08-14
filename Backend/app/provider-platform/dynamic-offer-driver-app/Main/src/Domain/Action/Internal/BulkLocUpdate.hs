@@ -15,7 +15,7 @@
 module Domain.Action.Internal.BulkLocUpdate where
 
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.Common as DC
+import qualified Domain.Types as DC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment

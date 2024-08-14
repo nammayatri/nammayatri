@@ -10,8 +10,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module IssueManagement.Common where
+module IssueManagement.Common (module IssueManagement.Common, module Domain.Types.VehicleVariant) where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -22,6 +23,7 @@ import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField
+import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 import Kernel.External.Encryption
@@ -130,7 +132,7 @@ data RideInfoRes = RideInfoRes
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
-    vehicleVariant :: Maybe Variant,
+    vehicleVariant :: Maybe VehicleVariant,
     vehicleServiceTier :: Maybe Text,
     actualFare :: Maybe Money,
     bookingStatus :: Maybe BookingStatus,
@@ -146,9 +148,6 @@ data RideInfoRes = RideInfoRes
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | PREMIUM_SEDAN | BLACK | BLACK_XL | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
-
 data FareBreakup = FareBreakup
   { amount :: Price,
     description :: Text,
@@ -160,12 +159,8 @@ data FareBreakup = FareBreakup
 data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
 
-$(mkHttpInstancesForEnum ''Variant)
-
-$(mkBeamInstancesForEnumAndList ''Variant)
-
+$(mkBeamInstancesForEnumAndList ''VehicleVariant)
 $(mkBeamInstancesForEnum ''IssueStatus)
-
 $(mkHttpInstancesForEnum ''IssueStatus)
 
 data ChatType = IssueMessage | IssueOption | MediaFile | IssueDescription

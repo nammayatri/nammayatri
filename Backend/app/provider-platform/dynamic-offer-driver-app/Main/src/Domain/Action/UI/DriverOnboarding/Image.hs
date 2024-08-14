@@ -25,7 +25,7 @@ import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Vehicle as Vehicle
+import Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Environment
 import qualified EulerHS.Language as L
@@ -60,7 +60,7 @@ data ImageValidateRequest = ImageValidateRequest
     rcNumber :: Maybe Text, -- for PUC, Permit, Insurance and Fitness
     validationStatus :: Maybe Domain.ValidationStatus,
     workflowTransactionId :: Maybe Text,
-    vehicleCategory :: Maybe Vehicle.Category
+    vehicleCategory :: Maybe VehicleCategory
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -174,7 +174,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
       docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType
       return $ maybe True (.isImageValidationRequired) docConfigs
     _ -> do
-      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe Vehicle.CAR vehicleCategory)
+      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory)
       return $ maybe True (.isImageValidationRequired) docConfigs
   if isImageValidationRequired && isNothing validationStatus
     then do

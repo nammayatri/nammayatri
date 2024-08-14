@@ -34,7 +34,7 @@ import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
-import Domain.Types.Vehicle
+import Domain.Types.VehicleCategory
 import Environment
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -68,7 +68,7 @@ data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
     operatingCity :: Text,
     driverDateOfBirth :: UTCTime,
-    vehicleCategory :: Maybe Category,
+    vehicleCategory :: Maybe VehicleCategory,
     imageId1 :: Id Image.Image,
     imageId2 :: Maybe (Id Image.Image),
     dateOfIssue :: Maybe UTCTime
@@ -185,7 +185,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
           rideDescription = Nothing
         }
 
-verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe Category -> Flow ()
+verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Flow ()
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard mbVehicleCategory = do
   now <- getCurrentTime
   let imageExtractionValidation =

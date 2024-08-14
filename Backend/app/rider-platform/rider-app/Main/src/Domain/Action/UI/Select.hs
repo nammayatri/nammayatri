@@ -35,14 +35,14 @@ import qualified Domain.Action.UI.Estimate as UEstimate
 import Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Quote as UQuote
 import Domain.Types.Booking
+import Domain.Types.Common
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified Domain.Types.VehicleServiceTier as DVST
-import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -97,7 +97,7 @@ data DSelectRes = DSelectRes
     remainingEstimateBppIds :: [Id DEstimate.BPPEstimate],
     providerId :: Text,
     providerUrl :: BaseUrl,
-    variant :: VehicleVariant,
+    variant :: DV.VehicleVariant,
     customerExtraFee :: Maybe Money,
     customerExtraFeeWithCurrency :: Maybe PriceAPIEntity,
     merchant :: DM.Merchant,
@@ -107,7 +107,8 @@ data DSelectRes = DSelectRes
     isValueAddNP :: Bool,
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
-    toUpdateDeviceIdInfo :: Bool
+    toUpdateDeviceIdInfo :: Bool,
+    tripCategory :: Maybe TripCategory
   }
 
 newtype DSelectResultRes = DSelectResultRes
@@ -206,8 +207,9 @@ select2 personId estimateId req@DSelectReq {..} = do
     DSelectRes
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
-        variant = DVST.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
+        variant = DV.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
         isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
+        tripCategory = estimate.tripCategory,
         ..
       }
   where

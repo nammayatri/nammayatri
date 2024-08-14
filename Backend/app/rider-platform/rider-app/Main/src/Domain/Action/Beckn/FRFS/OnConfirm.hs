@@ -17,6 +17,7 @@ module Domain.Action.Beckn.FRFS.OnConfirm where
 import qualified Beckn.ACL.FRFS.Cancel as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as OnDemandEnums
 import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
@@ -65,7 +66,7 @@ validateRequest DOrder {..} = do
   if booking.validTill < now
     then do
       -- Booking is expired
-      bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
+      bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) OnDemandEnums.METRO >>= fromMaybeM (InternalError "Beckn Config not found")
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
       void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
@@ -118,7 +119,7 @@ onConfirm merchant booking' dOrder = do
 
 buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> [Ticket.FRFSTicket] -> Maybe Text -> Flow ()
 buildReconTable merchant booking _dOrder tickets mRiderNumber = do
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) OnDemandEnums.METRO >>= fromMaybeM (InternalError "Beckn Config not found")
   quote <- runInReplica $ QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
   fromStation <- runInReplica $ QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "Station not found")
   toStation <- runInReplica $ QStation.findById booking.toStationId >>= fromMaybeM (InternalError "Station not found")

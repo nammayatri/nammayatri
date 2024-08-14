@@ -15,8 +15,9 @@
 module Domain.Action.UI.SearchRequestForDriver where
 
 import Control.Applicative ((<|>))
+import Domain.Types as DTC
+import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
-import Domain.Types.Common as DTC
 import Domain.Types.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
@@ -24,13 +25,11 @@ import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.ServiceTierType as DVST
-import qualified Domain.Types.Vehicle as Variant
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import SharedLogic.DriverPool.Types
 
 data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
   { searchRequestId :: Id DST.SearchTry, -- TODO: Deprecated, to be removed
@@ -81,7 +80,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     disabilityTag :: Maybe Text,
     keepHiddenForSeconds :: Seconds,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    requestedVehicleVariant :: Variant.Variant,
+    requestedVehicleVariant :: DV.VehicleVariant,
     vehicleServiceTier :: Maybe Text,
     airConditioned :: Maybe Bool,
     isTranslated :: Bool,
@@ -100,7 +99,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge =
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge = do
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = (\a -> if a == 0 then Nothing else Just a) =<< min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
       driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
@@ -153,7 +152,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           specialZoneExtraTipWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> specialZoneExtraTip, -- TODO :: Deprecate this after UI stops consuming
           vehicleServiceTier = nearbyReq.vehicleServiceTierName,
           airConditioned = nearbyReq.airConditioned,
-          requestedVehicleVariant = castServiceTierToVariant requestedVehicleServiceTier,
+          requestedVehicleVariant = DV.castServiceTierToVariant requestedVehicleServiceTier,
           tollCharges = if isTollApplicable then searchRequest.tollCharges else Nothing,
           tollChargesWithCurrency = flip PriceAPIEntity searchRequest.currency <$> if isTollApplicable then searchRequest.tollCharges else Nothing,
           tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,

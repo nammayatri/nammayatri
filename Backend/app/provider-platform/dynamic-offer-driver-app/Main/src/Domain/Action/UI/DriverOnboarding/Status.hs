@@ -38,8 +38,9 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
-import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as RC
+import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -100,8 +101,8 @@ data StatusRes = StatusRes
 
 data VehicleDocumentItem = VehicleDocumentItem
   { registrationNo :: Text,
-    userSelectedVehicleCategory :: DVeh.Category,
-    verifiedVehicleCategory :: Maybe DVeh.Category,
+    userSelectedVehicleCategory :: DVC.VehicleCategory,
+    verifiedVehicleCategory :: Maybe DVC.VehicleCategory,
     isVerified :: Bool,
     isActive :: Bool,
     vehicleModel :: Maybe Text,
@@ -193,8 +194,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
       return $
         VehicleDocumentItem
           { registrationNo,
-            userSelectedVehicleCategory = fromMaybe (maybe DVeh.CAR getCategory processedVehicle.vehicleVariant) processedVehicle.userPassedVehicleCategory,
-            verifiedVehicleCategory = getCategory <$> processedVehicle.vehicleVariant,
+            userSelectedVehicleCategory = fromMaybe (maybe DVC.CAR DV.castVehicleVariantToVehicleCategory processedVehicle.vehicleVariant) processedVehicle.userPassedVehicleCategory,
+            verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant,
             isVerified = False,
             isActive,
             vehicleModel = processedVehicle.vehicleModel,
@@ -215,8 +216,8 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
             return $
               [ VehicleDocumentItem
                   { registrationNo = vehicle.registrationNo,
-                    userSelectedVehicleCategory = getCategory vehicle.variant,
-                    verifiedVehicleCategory = Just $ getCategory vehicle.variant,
+                    userSelectedVehicleCategory = DV.castVehicleVariantToVehicleCategory vehicle.variant,
+                    verifiedVehicleCategory = Just $ DV.castVehicleVariantToVehicleCategory vehicle.variant,
                     isVerified = True,
                     isActive = True,
                     vehicleModel = Just vehicle.model,
@@ -253,7 +254,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
                 return
                   [ VehicleDocumentItem
                       { registrationNo,
-                        userSelectedVehicleCategory = fromMaybe DVeh.CAR verificationReq.vehicleCategory,
+                        userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReq.vehicleCategory,
                         verifiedVehicleCategory = Nothing,
                         isVerified = False,
                         isActive = False,
@@ -353,7 +354,7 @@ activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
           }
   void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
 
-checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVeh.Category -> ResponseStatus -> Flow Bool
+checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVC.VehicleCategory -> ResponseStatus -> Flow Bool
 checkIfDocumentValid merchantOperatingCityId docType category status = do
   mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId docType category
   case mbVerificationConfig of

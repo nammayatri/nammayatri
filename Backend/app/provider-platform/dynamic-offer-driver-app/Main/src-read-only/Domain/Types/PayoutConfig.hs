@@ -7,7 +7,7 @@ module Domain.Types.PayoutConfig where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Vehicle
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -27,7 +27,7 @@ data PayoutConfig = PayoutConfig
     remark :: Kernel.Prelude.Text,
     thresholdPayoutAmountPerPerson :: Kernel.Types.Common.HighPrecMoney,
     timeDiff :: Kernel.Prelude.NominalDiffTime,
-    vehicleCategory :: Domain.Types.Vehicle.Category,
+    vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

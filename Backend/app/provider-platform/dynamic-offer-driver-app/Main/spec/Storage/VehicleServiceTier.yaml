@@ -1,9 +1,9 @@
 imports:
-  Variant: Domain.Types.Vehicle
+  VehicleVariant: Domain.Types.VehicleVariant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
   Centesimal: Kernel.Types.Common
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
@@ -26,9 +26,9 @@ VehicleServiceTier:
     vehicleRating: Maybe Double
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
-    allowedVehicleVariant: '[Variant]'
-    autoSelectedVehicleVariant: '[Variant]'
-    defaultForVehicleVariant: '[Variant]'
+    allowedVehicleVariant: '[VehicleVariant]'
+    autoSelectedVehicleVariant: '[VehicleVariant]'
+    defaultForVehicleVariant: '[VehicleVariant]'
     priority: Int
   sqlType:
     allowedVehicleVariant: text[]

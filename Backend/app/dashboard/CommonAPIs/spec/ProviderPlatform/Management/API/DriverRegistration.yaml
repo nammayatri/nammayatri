@@ -2,7 +2,7 @@ imports:
   Driver: Dashboard.Common
   Summary: Dashboard.Common
   Image: Dashboard.Common
-  Variant: Dashboard.Common
+  VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
   Document: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
@@ -258,7 +258,7 @@ types:
     - testDate: Maybe UTCTime
   RCApproveDetails:
     - documentImageId: Id Image
-    - vehicleVariant: Maybe Variant
+    - vehicleVariant: Maybe VehicleVariant
     - vehicleNumberPlate: Maybe Text
     - vehicleManufacturer: Maybe Text
     - vehicleModel: Maybe Text

@@ -30,14 +30,13 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ri
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
-import qualified Domain.Action.Dashboard.Management.Merchant as DM
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
+import qualified Domain.Types as DTC
 import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
-import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -135,7 +134,8 @@ buildRideListItem QRide.RideItem {..} = do
         driverName = rideDetails.driverName,
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
-        tripCategory = castTripCategory tripCategory,
+        tripCategory = castTripCategory tripCategory, -- TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
+        tripCategoryV2 = tripCategory,
         fareDiff = fareDiff <&> (.amountInt),
         fareDiffWithCurrency = mkPriceAPIEntity <$> fareDiff,
         bookingStatus,
@@ -331,11 +331,12 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         cancellationReason,
         driverInitiatedCallCount = -1,
         scheduledAt = Just booking.startTime,
-        tripCategory = castTripCategory booking.tripCategory,
+        tripCategory = castTripCategory booking.tripCategory, -- TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
+        tripCategoryV2 = booking.tripCategory,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
         driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
-        vehicleVariant = DM.castDVehicleVariant <$> rideDetails.vehicleVariant,
+        vehicleVariant = rideDetails.vehicleVariant,
         nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
         lastStopLocation = mkLocationAPIEntity <$> lastStopLoc,
         vehicleServiceTierName = booking.vehicleServiceTierName,
@@ -345,6 +346,16 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         merchantOperatingCityId = Just ride.merchantOperatingCityId.getId,
         rideCreatedAt = ride.createdAt
       }
+
+-- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
+castTripCategory :: DTC.TripCategory -> Common.DeprecatedTripCategory
+castTripCategory = \case
+  DTC.Rental _ -> Common.Rental
+  DTC.RideShare _ -> Common.RideShare
+  DTC.InterCity _ _ -> Common.InterCity
+  DTC.CrossCity _ _ -> Common.CrossCity
+  DTC.Ambulance _ -> Common.Ambulance
+  _ -> Common.OneWay
 
 calculateLocations ::
   ( CacheFlow m r,
@@ -389,15 +400,6 @@ castCancellationSource = \case
   DBCReason.ByMerchant -> Common.ByMerchant
   DBCReason.ByAllocator -> Common.ByAllocator
   DBCReason.ByApplication -> Common.ByApplication
-
-castTripCategory :: DTC.TripCategory -> Common.TripCategory
-castTripCategory = \case
-  DTC.OneWay _ -> Common.OneWay
-  DTC.Rental _ -> Common.Rental
-  DTC.RideShare _ -> Common.RideShare
-  DTC.InterCity _ _ -> Common.InterCity
-  DTC.CrossCity _ _ -> Common.CrossCity
-  DTC.Ambulance _ -> Common.Ambulance
 
 timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
 timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1

@@ -132,7 +132,7 @@ castRideInfo merchantId merchantOpCityId rideId = do
           driverName = res.driverName,
           driverPhoneNo = res.driverPhoneNo,
           vehicleNo = res.vehicleNo,
-          vehicleVariant = castVehicleVariant <$> res.vehicleVariant,
+          vehicleVariant = res.vehicleVariant,
           vehicleServiceTier = Just $ show res.vehicleServiceTierName,
           actualFare = res.actualFare,
           bookingStatus = Just $ castBookingStatus res.bookingStatus,
@@ -153,25 +153,6 @@ castRideInfo merchantId merchantOpCityId rideId = do
       DRide.ONGOING_6HRS -> Common.ONGOING_6HRS
       DRide.COMPLETED -> Common.COMPLETED
       DRide.CANCELLED -> Common.CANCELLED
-
-    castVehicleVariant :: DRide.Variant -> Common.Variant
-    castVehicleVariant = \case
-      DRide.SEDAN -> Common.SEDAN
-      DRide.SUV -> Common.SUV
-      DRide.SUV_PLUS -> Common.SUV_PLUS
-      DRide.HATCHBACK -> Common.HATCHBACK
-      DRide.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
-      DRide.TAXI -> Common.TAXI
-      DRide.TAXI_PLUS -> Common.TAXI_PLUS
-      DRide.PREMIUM_SEDAN -> Common.PREMIUM_SEDAN
-      DRide.BLACK -> Common.BLACK
-      DRide.BLACK_XL -> Common.BLACK_XL
-      DRide.BIKE -> Common.BIKE
-      DRide.AMBULANCE_TAXI -> Common.AMBULANCE_TAXI
-      DRide.AMBULANCE_TAXI_OXY -> Common.AMBULANCE_TAXI_OXY
-      DRide.AMBULANCE_AC -> Common.AMBULANCE_AC
-      DRide.AMBULANCE_AC_OXY -> Common.AMBULANCE_AC_OXY
-      DRide.AMBULANCE_VENTILATOR -> Common.AMBULANCE_VENTILATOR
 
     castLocationAPIEntity ent =
       Common.LocationAPIEntity

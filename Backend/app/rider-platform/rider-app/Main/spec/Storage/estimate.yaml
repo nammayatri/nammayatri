@@ -6,7 +6,7 @@ imports:
   BaseUrl: Servant.Client.Core
   Centesimal: Kernel.Types.Common
   LatLong: Kernel.External.Maps
-  VehicleServiceTierType: Domain.Types.VehicleServiceTier
+  ServiceTierType: Domain.Types.ServiceTierType
   TripTerms: Domain.Types.TripTerms
   PrettyShow: Kernel.Utils.GenericPretty
   Money: Kernel.Types.Common
@@ -17,6 +17,7 @@ imports:
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
   Minutes: Kernel.Types.Common
+  TripCategory: Domain.Types.Common
 
 Estimate:
   tableName: estimate
@@ -82,7 +83,7 @@ Estimate:
     providerName : Text
     providerMobileNumber : Text
     providerCompletedRidesCount : Int
-    vehicleServiceTierType : VehicleServiceTierType
+    vehicleServiceTierType : ServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
     isAirConditioned: Maybe Bool
@@ -107,6 +108,7 @@ Estimate:
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
     distanceUnit: DistanceUnit
+    tripCategory: Maybe TripCategory
     updatedAt : UTCTime
     createdAt : UTCTime
     validTill : UTCTime
@@ -132,7 +134,7 @@ Estimate:
       clientManufacturer: Maybe Text
 
     vehicleServiceTierType:
-      vehicleVariant: VehicleServiceTierType
+      vehicleVariant: ServiceTierType
 
     estimatedDistance:
       estimatedDistance: Maybe HighPrecMeters

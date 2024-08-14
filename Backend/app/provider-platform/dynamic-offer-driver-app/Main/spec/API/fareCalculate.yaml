@@ -5,7 +5,7 @@ imports:
   FareParameters: Domain.Types.FareParameters
   FarePolicy: Domain.Types.FarePolicy
   TripCategory: Domain.Types.Common
-  ServiceTierType: Domain.Types.ServiceTierType
+  ServiceTierType: Domain.Types.Common
   SearchRequest: Domain.Types.SearchRequest
   Money: Kernel.Types.Common
   Estimate: Domain.Types.Estimate
