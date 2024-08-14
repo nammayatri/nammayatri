@@ -207,8 +207,8 @@ getDriverProfile person = do
 
     mkRatingWithBookingId rides ratingWithBooking rating =
       ratingWithBooking
-        <> [(rating, fromMaybe "" $ (find (\ride -> ride.id == rating.rideId) rides) <&> (.bookingId))]
+        <> [(rating, fromMaybe "" $ find (\ride -> ride.id == rating.rideId) rides <&> (.bookingId))]
 
     mkRatingWithRiderName bookings ratingWithBooking (rating, bookingId) =
       ratingWithBooking
-        <> [(rating, fromMaybe Nothing $ (find (\booking -> booking.id == bookingId) bookings) <&> (.riderName))]
+        <> [(rating, fromMaybe Nothing $ find (\booking -> booking.id == bookingId) bookings <&> (.riderName))]

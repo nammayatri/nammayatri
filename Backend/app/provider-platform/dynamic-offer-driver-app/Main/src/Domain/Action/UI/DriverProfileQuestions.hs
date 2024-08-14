@@ -80,13 +80,13 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
     ratingStat driverStats =
       let avgRating = divideMaybe driverStats.totalRatingScore driverStats.totalRatings
        in if avgRating > Just 4.82 && isJust avgRating
-            then ("I have an average rating of " <> T.pack (show $ fromJust avgRating) <> " and is among the top 10 percentile. ")
+            then "I have an average rating of " <> T.pack (show $ fromJust avgRating) <> " and is among the top 10 percentile. "
             else ""
 
     cancellationStat driverStats =
       let cancRate = divideMaybe driverStats.ridesCancelled driverStats.totalRidesAssigned
        in if (cancRate < Just 0.04 && isJust cancRate)
-            then (if ratingStat driverStats == "" then "" else "Also, ") <> "I have a very low cancellation rate of " <> (T.pack $ show $ fromJust cancRate) <> " that ranks among top 10 percentile. "
+            then if ratingStat driverStats == "" then "" else "Also, " <> "I have a very low cancellation rate of " <> (T.pack $ show $ fromJust cancRate) <> " that ranks among top 10 percentile. "
             else ""
 
     genAspirations aspirations' = "With the earnings from my trips, I aspire to " <> T.toLower (T.intercalate ", " aspirations')
