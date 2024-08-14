@@ -1139,7 +1139,7 @@ public class MobilityAppBridge extends HyperBridge {
         bridgeComponents.getContext().startActivity(intent);
     }
 
-
+    @JavascriptInterface
     public void askRequestedPermissions(String[] requests) {
         PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
     }

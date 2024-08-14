@@ -1588,3 +1588,7 @@ getML stringKey =
         YES_PAY_TO_THIS_ACCOUNT -> "ശരി, ഈ അക്കൗണ്ടിലേക്ക് പണമടയ്ക്കുക"
         I_WILL_ADD_DIFFERENT_ACCOUNT -> "ഞാൻ മറ്റൊരു അക്കൗണ്ട് ചേർക്കും"
         ADD_NOW  -> "ആഡ് ചെയ്യുക"
+        RECORDING_AUDIO -> "ഓഡിയോ റെക്കോർഡുചെയ്യുക"
+        RECORDED_AUDIO -> "ഓഡിയോ റെക്കോർഡുചെയ്തു"
+        SHARE_WITH_SAFETY_TEAM -> "സുരക്ഷാ ടീമിനു പങ്കിടുക"
+        RECORD_AUDIO -> "ഓഡിയോ റെക്കോർഡുചെയ്യുക"

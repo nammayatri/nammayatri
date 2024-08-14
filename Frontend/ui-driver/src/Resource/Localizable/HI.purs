@@ -1588,3 +1588,7 @@ getHI stringKey =
         YES_PAY_TO_THIS_ACCOUNT -> "हा, इस खाते में भुगतान करें"
         I_WILL_ADD_DIFFERENT_ACCOUNT -> "मैं अलग खाता जोड़ूंगा" 
         ADD_NOW -> "अभी जोड़ें"
+        RECORDING_AUDIO -> "ऑडियो रिकॉर्ड कर रहा है"
+        RECORDED_AUDIO -> "ऑडियो रिकॉर्ड किया गया"
+        SHARE_WITH_SAFETY_TEAM -> "सुरक्षा टीम के साथ साझा करें"
+        RECORD_AUDIO -> "ऑडियो रिकॉर्ड करें"

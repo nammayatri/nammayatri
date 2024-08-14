@@ -40,3 +40,6 @@ dataFetchScreen = do
     UpdateEmergencyContacts state -> do
       modifyScreenState $ DataFetchScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> (pure $ act)
+    GoToSafetyDrill state -> do
+      modifyScreenState $ DataFetchScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> (pure $ act)

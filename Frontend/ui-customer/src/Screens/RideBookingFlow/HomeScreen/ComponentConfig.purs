@@ -2138,35 +2138,61 @@ shareRideConfig state =
     config = PopupWithCheckboxController.config
 
     appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-
+    contactList = fromMaybe [] state.data.contactList
+    trustedContactsNotSetup = DA.null contactList || not state.data.settingSideBar.hasCompletedSafetySetup
     shareRideConfig' =
       config
         { title = getString SHARE_RIDE
-        , description = getString $ SHARE_RIDE_DESCRIPTION appName
-        , secondaryButtonText = getString SHARE_LINK
-        , secondaryButtonImage = HU.fetchImage HU.FF_ASSET "ny_ic_share"
-        , secondaryButtonVisibliity = true
-        , contactList = fromMaybe [] state.data.contactList
-        , primaryButtonConfig = shareRideButtonConfig state
+        , description = getString if trustedContactsNotSetup then TRACKING_NO_SETUP else AUTOMATIC_LIVE_TRACKING_DESC
+        , primaryOptionTitle = getString AUTOMATIC_LIVE_TRACKING
+        , contactList = contactList
+        , primaryButtonConfig = shareRideButtonConfig state trustedContactsNotSetup
+        , secondaryOption {
+            buttonConfig = shareLinkButtonConfig state,
+            title = getString MANUAL_LIVE_TRACKING,
+            description = getString MANUAL_LIVE_TRACKING_DESC,
+            visibility = true,
+            background = Color.blue600,
+            padding = Padding 12 12 12 12,
+            margin = Margin 16 16 16 16
+          }
+        , primaryOptionBackground = Color.blue600
         }
   in
     shareRideConfig'
 
-shareRideButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
-shareRideButtonConfig state =
+shareRideButtonConfig :: ST.HomeScreenState -> Boolean -> PrimaryButton.Config
+shareRideButtonConfig state trustedContactsNotSetup =
   PrimaryButton.config
     { textConfig
-      { text = getString $ SHARE_RIDE_WITH_CONTACT $ show numberOfSelectedContacts
-      , accessibilityHint = "Share Ride Button"
+      { text = getString SETUP_NOW
+      , accessibilityHint = "Setup Now Button"
+      , color = Color.blue800
       }
-    , id = "ShareRideButton"
-    , enableLoader = (JB.getBtnLoader "ShareRideButton")
+    , background = Color.transparent
+    , stroke = "1," <> Color.blue800
+    , id = "SetupSafetyButton"
     , margin = MarginTop 20
-    , isClickable = numberOfSelectedContacts /= 0
-    , alpha = if numberOfSelectedContacts /= 0 then 1.0 else 0.5
+    , visibility = boolToVisibility trustedContactsNotSetup
     }
   where
   numberOfSelectedContacts = DA.length $ DA.filter (\contact -> contact.isSelected) $ fromMaybe [] state.data.contactList
+
+shareLinkButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+shareLinkButtonConfig state =
+  PrimaryButton.config
+    { textConfig
+      { text = getString SHARE_LINK
+      , accessibilityHint = "Share Ride Link Button"
+      }
+    , id = "ShareRideLinkButton"
+    , margin = MarginTop 20
+    , prefixImageConfig {
+        imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_share_yellow"
+      , margin = MarginRight 8
+      }
+    , isPrefixImage = true
+    }
 
 referralPopUpConfig :: ST.HomeScreenState -> ST.ReferralComponentState
 referralPopUpConfig state =

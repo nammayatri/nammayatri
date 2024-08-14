@@ -38,6 +38,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Animation.Config as AnimConfig
 import PrestoDOM.Animation as PrestoAnim
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -85,13 +86,14 @@ view push config =
                     , textView $ [
                       text item.textdata
                       , margin $ MarginBottom 1
-                      , color Color.black800
+                      , color item.color
                     ] <> FontStyle.paragraphText TypoGraphy
                   ]
                   , linearLayout [
                       width MATCH_PARENT
                       , height $ V 2
-                      , background Color.grey700
+                      , background config.strokeColor
+                      , visibility $ boolToVisibility config.showStroke
                       , margin $ MarginHorizontal 16 16
                     ][]
                 ]) config.menuItems)

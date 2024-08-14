@@ -67,5 +67,7 @@ config =
       , shareTripWithEmergencyContactOption: neverShareRideOption
       , onRide: false
       , priority: 0
+      , contactPersonId: Nothing
+      , isFollowing: Nothing
       }
   }

@@ -1589,3 +1589,7 @@ getBN stringKey =
         YES_PAY_TO_THIS_ACCOUNT -> "হ্যাঁ, এই অ্যাকাউন্টে অর্থ প্রদান করুন"
         I_WILL_ADD_DIFFERENT_ACCOUNT -> "আমি বিভিন্ন অ্যাকাউন্ট যোগ করব"
         ADD_NOW  -> "এখন যোগ করুন"
+        RECORDING_AUDIO -> "অডিও রেকর্ডিং"
+        RECORDED_AUDIO -> "অডিও রেকর্ড করা হয়েছে"
+        SHARE_WITH_SAFETY_TEAM -> "সুরক্ষা দলের সাথে ভাগাভাগি করুন"
+        RECORD_AUDIO -> "অডিও রেকর্ড করুন"

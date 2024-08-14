@@ -1587,3 +1587,8 @@ getKN stringKey =
         YES_PAY_TO_THIS_ACCOUNT -> "ಸರಿ, ಈ ಖಾತೆಗೆ ಪಾವತಿಸಿ"
         I_WILL_ADD_DIFFERENT_ACCOUNT -> "ನಾನು ಬೇರೆ ಖಾತೆಯನ್ನು ಸೇರಿಸುತ್ತೇನೆ"
         ADD_NOW -> "ಈಗ ಸೇರಿಸಿ"
+        DISCOUNT_POINTS_UPTO discountPoints -> "ನೀವು "<> discountPoints<>" ವರೆಗಿನ ರಿಯಾಯಿತಿ ಪಾಯಿಂಟ್‌ಗಳಿಗೆ ಅರ್ಹರಾಗಿದ್ದೀರಿ"
+        RECORDING_AUDIO -> "ಧ್ವನಿ ದಾಖಲಿಸುತ್ತಿದೆ"
+        RECORDED_AUDIO -> "ಧ್ವನಿ ದಾಖಲಿಸಲಾಗಿದೆ"
+        SHARE_WITH_SAFETY_TEAM -> "ಸುರಕ್ಷತಾ ತಂಡದೊಂದಿಗೆ ಹಂಚಿಕೊಳ್ಳಿ"
+        RECORD_AUDIO -> "ಧ್ವನಿ ದಾಖಲಿಸಿ"

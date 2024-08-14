@@ -139,6 +139,7 @@ cancelEstimate estimateId = (getBaseUrl "35") <> "/estimate/" <> estimateId <> "
 
 emergencyContacts :: String -> String
 emergencyContacts dummy = (getBaseUrl "36") <> "/profile/defaultEmergencyNumbers"
+
 userSos :: String -> String
 userSos _ = (getBaseUrl "36") <> "/sos/create"
 
@@ -214,8 +215,8 @@ updateEmergencySettings dummy = (getBaseUrl "48") <> "/profile/updateEmergencySe
 updateSafeRide :: String -> String
 updateSafeRide sosId = (getBaseUrl "49") <> "/sos/markRideAsSafe/" <> sosId
 
-updateSosVideo :: String -> String
-updateSosVideo sosId = (getBaseUrl "50") <> "/sos/" <> sosId <> "/addVideo"
+updateSosMedia :: String -> String
+updateSosMedia sosId = (getBaseUrl "50") <> "/sos/" <> sosId <> "/upload"
 
 getSosDetails :: String -> String
 getSosDetails rideId = (getBaseUrl "51") <> "/sos/getDetails/" <> rideId
@@ -291,3 +292,9 @@ confirmEditLocResult bookingUpdateRequestId = (getBaseUrl "60") <> "/edit/result
 
 getMetroBookingConfig :: String -> String
 getMetroBookingConfig city = (getBaseUrl "58") <> "/frfs/config?city=" <> city
+
+getEmergencyContactsTrackingStatus :: String -> String
+getEmergencyContactsTrackingStatus rideId = (getBaseUrl "59") <> "/followRide/ECStatus/" <> rideId
+
+getManuallySharedRideDetails :: String -> String
+getManuallySharedRideDetails rideId = (getBaseUrl "60") <> "/followRide/" <> rideId <> "/customerDetails"

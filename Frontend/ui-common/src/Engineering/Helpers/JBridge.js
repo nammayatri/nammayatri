@@ -1014,18 +1014,26 @@ export const renderBase64ImageFile = function (base64Image, id, fitCenter, imgSc
   }
 }
 
-export const uploadMultiPartData = function (path, url, fileType) {
+export const uploadMultiPartData = function (path, url, fileType, outputField, inputFieldName) {
   if (window.JBridge.uploadMultiPartData){
-    JBridge.uploadMultiPartData(path, url, fileType);
+    try {
+      JBridge.uploadMultiPartData(path, url, fileType, outputField, inputFieldName);
+    } catch (err) {
+      JBridge.uploadMultiPartData(path, url, fileType);
+    }
   }
 }
 
-export const startAudioRecording = function (id) {
+export const startAudioRecording = function (fileName) {
   if (window.JBridge.startAudioRecording){
     if (window.__OS == "IOS") {
       return JBridge.startAudioRecording() == "0" ? false : true;
     } else {
-      return JBridge.startAudioRecording();
+      try {
+        return JBridge.startAudioRecording(fileName);
+      } catch (err) {
+        return JBridge.startAudioRecording();
+      }
     }
   }
 };
@@ -2799,4 +2807,35 @@ export const makeSdkTokenExpiry = function (delta) {
 
 export const getAppName = function () {
   return window.appName;
+}
+
+export const initialiseShakeListener = (cb, action, config) => {
+  const callback = callbackMapper.map(function (count) {
+    cb(action(parseInt(count)))();
+  });
+  console.log("initialiseShakeListener", JSON.stringify(config));
+  if (window.JBridge.initialiseShakeListener) {
+    console.log("initialiseShakeListener", JSON.stringify(config));
+    window.JBridge.initialiseShakeListener(callback, JSON.stringify(config));
+  }
+}
+
+export const unregisterShakeListener = () => {
+  if (window.JBridge.unregisterShakeListener) {
+    window.JBridge.unregisterShakeListener();
+  }
+}
+
+export const registerShakeListener = () => {
+  if (window.JBridge.registerShakeListener) {
+    window.JBridge.registerShakeListener();
+  }
+}
+
+export const fetchFilesFromFolderPath = (folderPath) => {
+  if (window.JBridge.fetchFilesFromFolderPath) {
+    const files = window.JBridge.fetchFilesFromFolderPath(folderPath);
+    console.log("files ", files);
+    return JSON.parse(files);
+  }
 }

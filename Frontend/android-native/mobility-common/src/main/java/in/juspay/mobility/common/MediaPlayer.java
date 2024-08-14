@@ -117,11 +117,10 @@ public class MediaPlayer {
         return ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
     }
 
-    public boolean startAudioRecording() {
+    public boolean startAudioRecording(String fileName) {
         if (isMicrophonePermissionEnabled()) {
             audioRecorder = new MediaPlayerView.AudioRecorder();
-            audioRecorder.startRecording(bridgeComponents.getContext());
-            System.out.println("Started recording");
+            audioRecorder.startRecording(bridgeComponents.getContext(), fileName);
             return true;
         } else {
             if (bridgeComponents.getActivity() != null) {

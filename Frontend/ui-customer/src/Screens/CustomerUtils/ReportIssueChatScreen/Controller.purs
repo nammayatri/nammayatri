@@ -36,7 +36,7 @@ import Data.String.Pattern (Pattern(Pattern))
 import Data.TraversableWithIndex (forWithIndex)
 import Debug (spy)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn3, runEffectFn1, runEffectFn4)
+import Effect.Uncurried (runEffectFn5, runEffectFn1, runEffectFn4)
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, toast, uploadFile, uploadMultiPartData, openUrlInApp)
 import Language.Strings (getString)
@@ -309,7 +309,7 @@ eval (ImageUploadCallback image imageName imagePath) state = do
                 else
                   snoc state.data.addImagesState.images { image, imageName }
   continueWithCmd state { data { addImagesState { images = images',  isLoading = true } } } [do
-    void $ runEffectFn3 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image"
+    void $ runEffectFn5 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "fileId" "file"
     pure NoAction
   ]
 
@@ -367,7 +367,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
     case state.data.recordAudioState.recordedFile of
       Just url -> do
                   res <- runEffectFn1 saveAudioFile url
-                  void $ runEffectFn3 uploadMultiPartData res (EndPoint.uploadFile "") "Audio"
+                  void $ runEffectFn5 uploadMultiPartData res (EndPoint.uploadFile "") "Audio" "fileId" "file"
                   pure $  UpdateState state { data  { recordedAudioUrl = Just res}}
       Nothing  -> do
                   if state.data.recordAudioState.openAddAudioModel
@@ -408,7 +408,7 @@ eval (RecordAudioModelAction RecordAudioModel.BackPressed) state = do
 
 eval (UpdateRecordModelPlayer url) state = do
   continueWithCmd state { data { recordAudioState { recordedFile = Just url } } } [do
-    void $ runEffectFn7  addMediaFile (getNewIDWithTag "recordedAudioViewUniqueOne") url (getNewIDWithTag "actionButtonRecord") "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false
+    void $ runEffectFn7  addMediaFile (getNewIDWithTag "recordedAudioViewUniqueOne") url "-1" "ny_ic_play_recorded_audio" "ny_ic_pause_recorded_audio" "-1" false
     pure NoAction
   ]
 

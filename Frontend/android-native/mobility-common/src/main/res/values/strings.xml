@@ -18,7 +18,6 @@
     <string name="upload_image">Upload Image</string>
     <string name="TIME_STAMP_FILE_UPLOAD" translatable="false">TIME_STAMP_FILE_UPLOAD</string>
     <string name="please_allow_permission_to_capture_the_image">Please allow permissions to capture the image</string>
-    <string name="unable_to_upload_image">Unable to Upload Image</string>
     <string name="crop_image_activity_title" translatable="false"></string>
     <string name="crop_image_menu_rotate_left" translatable="false">Rotate counter clockwise</string>
     <string name="crop_image_menu_rotate_right" translatable="false">Rotate</string>
@@ -28,4 +27,5 @@
     <string name="crop_image_menu_flip_vertically" translatable="false">Flip vertically</string>
     <string name="pick_image_intent_chooser_title" translatable="false">Select source</string>
     <string name="crop_image_activity_no_permissions" translatable="false">Cancelling, required permissions are not granted</string>
+    <string name="unable_to_upload_media">Unable to Upload media</string>
 </resources>

@@ -158,6 +158,7 @@ initData = let
     } 
     , contactList : Nothing
     , followers : Nothing
+    , manuallySharedFollowers : Nothing
     , vehicleVariant : ""
     , hotSpotInfo : []
     , iopState : {
@@ -377,6 +378,7 @@ initData = let
     , isContactSupportPopUp : false
     , isSharedLocationFlow : false
     , isOtpRideFlow : false
+    , isShakeEnabled : false
   }
 }
 

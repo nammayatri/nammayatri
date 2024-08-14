@@ -18,4 +18,6 @@ getContact contact =
   , shareTripWithEmergencyContactOption: neverShareRideOption
   , onRide: false
   , priority: 1
-  }
+  , contactPersonId : Nothing
+  , isFollowing: Nothing
+}

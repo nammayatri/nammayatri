@@ -65,7 +65,7 @@ import Data.Functor
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn3)
+import Effect.Uncurried (runEffectFn4, runEffectFn1, runEffectFn5)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
@@ -704,7 +704,7 @@ eval (CallBackImageUpload image imageName imagePath) state = do
                   pure state{props{startRideOdometerImage = Just image,currentStage= ST.RideStarted,odometerImageUploading = false}}
     
     continueWithCmd newState [do
-        void $  runEffectFn3 JB.uploadMultiPartData imagePath (EP.uploadOdometerImage "") "Image"
+        void $ runEffectFn5 JB.uploadMultiPartData imagePath (EP.uploadOdometerImage "") "Image" "fileId" "file"
         pure NoAction
       ]
 

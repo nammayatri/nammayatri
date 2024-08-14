@@ -80,6 +80,7 @@ updateRepeatRideDetails state = do
     , savedLocations = homeScreen.data.savedLocations
     , destinationAddress = state.destinationAddress 
     , famousDestinations = homeScreen.data.famousDestinations
+    , manuallySharedFollowers = homeScreen.data.manuallySharedFollowers
     , settingSideBar {
         gender = globalState.homeScreen.data.settingSideBar.gender 
       , email = globalState.homeScreen.data.settingSideBar.email
@@ -111,9 +112,9 @@ updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos = do
                   { props
                     { triggeringSos = false
                     , timerValue = defaultTimerValue
-                    , showTestDrill = false
+                    , showTestDrill = showtestDrill
                     , showShimmer = true
-                    , confirmTestDrill = showtestDrill
+                    , confirmTestDrill = false
                     , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
                     , checkPastRide = state.props.currentStage == HomeScreen
                     , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false

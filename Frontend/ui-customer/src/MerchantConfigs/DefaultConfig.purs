@@ -801,7 +801,9 @@ config =
         , customerAppId : "in.juspay.nammayatri"
       }
   , safety : {
-      pastRideInterval : 15
+      pastRideInterval : 60,
+      followingInterval : 5,
+      safetyTeamNumber : "08069724911"
   }
   , enableBookAny : true
   , acPopupConfig : {

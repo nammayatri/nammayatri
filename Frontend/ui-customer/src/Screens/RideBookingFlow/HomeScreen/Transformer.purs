@@ -846,7 +846,9 @@ getFormattedContacts = do
       enableForShareRide: fromMaybe false item.enableForShareRide,
       shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE item.shareTripWithEmergencyContactOption,
       onRide : fromMaybe false item.onRide,
-      priority: fromMaybe 1 item.priority
+      priority: fromMaybe 1 item.priority,
+      contactPersonId : item.contactPersonId, 
+      isFollowing: Nothing
     }) res.defaultEmergencyNumbers
 
 

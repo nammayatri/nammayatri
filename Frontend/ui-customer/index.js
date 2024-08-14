@@ -289,6 +289,7 @@ window.internetListeners = {};
 
 window.onPause = function () {
   console.error("onEvent onPause");
+  JBridge.unregisterShakeListener();
 }
 function checkInternet() {
   return window.__OS === "IOS" ? JBridge.isNetworkAvailable() === "1" : JBridge.isInternetAvailable();
@@ -303,6 +304,7 @@ window.onResume = function () {
     if(window.scrollAction) {
       window.scrollAction();
     }
+    JBridge.registerShakeListener();
   }
 }
 

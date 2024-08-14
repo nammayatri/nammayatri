@@ -93,10 +93,9 @@ import Screens.Types as ST
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
-  let enableShareRide = state.data.config.feature.enableShareRide && (not $ rideNotStarted state)
-      _ = spy "DriverInfoCardView enableShareRide" enableShareRide
-      _ = spy "DriverInfoCardView rideNotStarted" $ show $ not $ rideNotStarted state
-      enableSupport = state.data.config.feature.enableSupport && (Array.any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
+  let enableShareRide = state.data.config.feature.enableShareRide && isStageAfterRideAccepted
+      enableSupport = state.data.config.feature.enableSupport && isStageAfterRideAccepted
+      isStageAfterRideAccepted = (Array.any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
   in
   PrestoAnim.animationSet
           [ scaleYAnimWithDelay 10] $ linearLayout
@@ -116,6 +115,7 @@ view push state =
           , clickable true
           ][ otpAndWaitView push state 
             , endOTPView push state
+            , linearLayout [weight 1.0] []
             -- , if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then trackRideView push state else dummyView push -- TODO: may use in future: Ashish Singh
             , if enableShareRide then shareRideButton push state else if enableSupport then contactSupport push state else dummyView push -- TEMP FIX UNTIL THE NEW DESIGN IS DONE
             ]
@@ -260,36 +260,36 @@ sizedBox height' width' =
 shareRideButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 shareRideButton push state = 
   linearLayout
-    [ height $ WRAP_CONTENT
-    , width $ MATCH_PARENT
-    , gravity RIGHT
-    , orientation VERTICAL
-    , clickable $ state.data.providerType == ONUS
-    , accessibility DISABLE
-    , clipChildren false
-    ][ linearLayout
-      [ width $ V 40
-      , height $ V 40
-      , gravity CENTER
-      , background Color.white900
-      , stroke $ "1,"<> Color.grey900
-      , cornerRadius if os == "IOS" then 20.0 else 32.0
-      , clickable $ state.data.providerType == ONUS
-      , accessibilityHint "Share Ride : Button : Select to share ride details"
-      , accessibility ENABLE
-      , onClick push $ const ShareRide
-      , margin $ Margin 8 8 8 8
-      , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-      , rippleColor Color.rippleShade
-      ][ imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
-        , height $ V 16
-        , width $ V 16
-        , accessibility DISABLE
-        , alpha if state.data.providerType == ONUS then 1.0 else 0.5
-        ]
-      ]
-    ]
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , gravity RIGHT
+  , orientation VERTICAL
+  , clickable $ state.data.providerType == ONUS
+  , accessibility DISABLE
+  , clipChildren false
+  ][ linearLayout
+     [ width $ V 40
+     , height $ V 40
+     , gravity CENTER
+     , background Color.white900
+     , stroke $ "1,"<> Color.grey900
+     , cornerRadius if os == "IOS" then 20.0 else 32.0
+     , clickable $ state.data.providerType == ONUS
+     , accessibilityHint "Share Ride : Button : Select to share ride details"
+     , accessibility ENABLE
+     , onClick push $ const ShareRide
+     , margin $ Margin 8 8 8 8
+     , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+     , rippleColor Color.rippleShade
+     ][ imageView
+       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
+       , height $ V 16
+       , width $ V 16
+       , accessibility DISABLE
+       , alpha if state.data.providerType == ONUS then 1.0 else 0.5
+       ]
+     ]
+  ]
 
 contactSupport :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 contactSupport push state =
@@ -328,15 +328,14 @@ contactSupport push state =
 otpAndWaitView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 otpAndWaitView push state =
   horizontalScrollView
-  [ height $ V 56
-  , width MATCH_PARENT
+  ([ height $ V 56
   , disableKeyboardAvoidance true
   , scrollBarX false
   , scrollBarY false
   , visibility $ boolToVisibility $ (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted))
   , gravity CENTER
   , accessibility DISABLE
-  ][ linearLayout
+  ] <> if os == "IOS" then [width MATCH_PARENT] else [weight 1.0])[ linearLayout
      [ height$ V 56
      , width WRAP_CONTENT
      , orientation HORIZONTAL

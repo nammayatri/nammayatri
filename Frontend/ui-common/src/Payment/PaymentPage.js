@@ -26,6 +26,9 @@ function getInitiatPayload () {
   const initiatePayload = Object.assign({},window.__payload);
   innerPayload["action"] = "initiate";
   innerPayload["merchantId"] = "nammayatri";
+  if (innerPayload.clientId.includes("_ios")) {
+    innerPayload["clientId"] = innerPayload.clientId.replace("_ios","");
+  }
   initiatePayload["payload"] = innerPayload;
   initiatePayload["service"] = "in.juspay.hyperpay";
   return initiatePayload;
@@ -193,6 +196,8 @@ export const startPP = function (payload) {
           console.log("%cHyperpay Request ", "background:darkblue;color:white;font-size:13px;padding:2px", payload);
           if (JBridge.processPP) {
             window.processCallBack = cb;
+            console.log("%cHyperpay Callback ", "background:darkblue;color:white;font-size:13px;padding:2px", cb);
+            console.log("inside process call", JSON.stringify(payload));
             JBridge.processPP(JSON.stringify(payload));
           } else {
             if (JOS.isMAppPresent("in.juspay.hyperpay")()){

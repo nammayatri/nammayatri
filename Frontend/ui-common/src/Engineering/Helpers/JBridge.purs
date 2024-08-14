@@ -216,7 +216,7 @@ foreign import clearFocus :: EffectFn1 String Unit
 foreign import removeMediaPlayer :: EffectFn1 String Unit
 foreign import renderBase64ImageFile :: EffectFn4 String String Boolean String Unit
 foreign import saveAudioFile :: EffectFn1 String String
-foreign import uploadMultiPartData :: EffectFn3 String String String Unit
+foreign import uploadMultiPartData :: EffectFn5 String String String String String Unit
 foreign import startAudioRecording :: EffectFn1 String Boolean
 foreign import stopAudioRecording :: EffectFn1 String String
 foreign import differenceBetweenTwoUTC :: Fn2 String String Int
@@ -293,6 +293,10 @@ foreign import getFromUTC :: String -> String -> String
 foreign import getDeviceID :: Unit -> String
 foreign import getAndroidId :: Unit -> String
 foreign import getAppName :: String
+foreign import initialiseShakeListener :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) ShakeListenerConfig Unit
+foreign import unregisterShakeListener :: Unit -> Unit
+foreign import registerShakeListener :: Unit -> Unit
+foreign import fetchFilesFromFolderPath :: String -> Array String
 
 type SliderConfig = { 
   id :: String,
@@ -937,3 +941,16 @@ instance eqRouteKeysType :: Eq RouteKeysType where eq = genericEq
 
 encodeToBase64Type :: String -> Int ->  Aff (Maybe String)
 encodeToBase64Type url delay =  makeAff (\cb -> runEffectFn5 encodeToBase64 url delay (Just) (Nothing) ((cb <<< Right)) $> nonCanceler)
+
+type ShakeListenerConfig = {
+  shakeAccelerationThreshold :: Number,
+  consecutiveShakeInterval :: Int,
+  shakeCountResetTime :: Int
+}
+
+defaultShakeListenerConfig :: ShakeListenerConfig
+defaultShakeListenerConfig = {
+  shakeAccelerationThreshold : 4.0,
+  consecutiveShakeInterval : 500,
+  shakeCountResetTime : 3000
+}

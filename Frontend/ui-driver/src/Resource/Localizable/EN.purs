@@ -1585,3 +1585,7 @@ getEN stringKey =
         YES_PAY_TO_THIS_ACCOUNT -> "Yes, pay to this account"
         I_WILL_ADD_DIFFERENT_ACCOUNT -> "I will add different account"
         ADD_NOW -> "Add Now"
+        RECORDING_AUDIO -> "Recording Audio"
+        RECORDED_AUDIO -> "Recorded Audio"
+        SHARE_WITH_SAFETY_TEAM -> "Share with safety team"
+        RECORD_AUDIO -> "Record Audio"
