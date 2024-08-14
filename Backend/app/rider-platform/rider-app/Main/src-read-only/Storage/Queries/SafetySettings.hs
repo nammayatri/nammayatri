@@ -52,7 +52,6 @@ updateByPrimaryKey (Domain.Types.SafetySettings.SafetySettings {..}) = do
       Se.Set Beam.falseSafetyAlarmCount (Just falseSafetyAlarmCount),
       Se.Set Beam.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill,
       Se.Set Beam.hasCompletedSafetySetup hasCompletedSafetySetup,
-      Se.Set Beam.hasSetupRideOtp hasSetupRideOtp,
       Se.Set Beam.informPoliceSos informPoliceSos,
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
       Se.Set Beam.notifySafetyTeamForSafetyCheckFailure notifySafetyTeamForSafetyCheckFailure,
