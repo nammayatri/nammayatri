@@ -20,9 +20,11 @@ import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.ACL.Update as ACL
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import BecknV2.Utils
+import Data.Maybe
 import Data.OpenApi (ToSchema (..))
 import qualified Data.Time as DT
 import qualified Domain.Action.UI.Cancel as DCancel
+import Domain.Action.UI.Serviceability
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -40,9 +42,9 @@ import qualified Domain.Types.Ride as DTR
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude hiding (id, pack)
-import Kernel.Beam.Functions
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import Kernel.External.Maps (LatLong)
+import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude (intToNominalDiffTime)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -179,7 +181,8 @@ processStop :: Id SRB.Booking -> StopReq -> Id Merchant -> Bool -> Flow ()
 processStop bookingId loc merchantId isEdit = do
   booking <- runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
   uuid <- generateGUID
-  validateStopReq booking isEdit
+  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  validateStopReq booking isEdit loc merchant
   location <- buildLocation loc
   prevOrder <- QLM.maxOrderByEntity booking.id.getId
   locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId) prevOrder
@@ -187,7 +190,6 @@ processStop bookingId loc merchantId isEdit = do
   QLM.create locationMapping
   QRB.updateStop booking (Just location)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
-  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let details =
         if isEdit
           then do
@@ -214,8 +216,8 @@ processStop bookingId loc merchantId isEdit = do
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
 
-validateStopReq :: (MonadFlow m) => SRB.Booking -> Bool -> m ()
-validateStopReq booking isEdit = do
+validateStopReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Bool -> StopReq -> Merchant.Merchant -> m ()
+validateStopReq booking isEdit loc merchant = do
   unless (booking.status `elem` SRB.activeBookingStatus) $ throwError (RideInvalidStatus $ "Cannot edit/add stop in this booking " <> booking.id.getId)
   case booking.bookingDetails of
     SRB.OneWayDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in static offer on demand rides"
@@ -227,6 +229,12 @@ validateStopReq booking isEdit = do
     SRB.OneWaySpecialZoneDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in special zone rides"
     SRB.InterCityDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in intercity rides"
     SRB.AmbulanceDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in ambulance rides"
+
+  nearestCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) loc.gps (CityState {city = merchant.defaultCity, state = merchant.defaultState})
+  fromLocCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) (LatLong booking.fromLocation.lat booking.fromLocation.lon) (CityState {city = merchant.defaultCity, state = merchant.defaultState})
+  case (nearestCity, fromLocCity) of
+    (Just nearest, Just source) -> unless (nearest.currentCity.city == source.currentCity.city) $ throwError (InvalidRequest "Outside city stops are allowed in Intercity rides only.")
+    _ -> throwError (InvalidRequest "Ride Unserviceable")
 
 buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StopReq -> m Location
 buildLocation req = do

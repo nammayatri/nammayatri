@@ -295,7 +295,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
         )
   let merchantOperatingCityId = merchantOperatingCity.id
   searchRequestId <- generateGUID
-  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip req
+  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip req originCity
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops
   searchRequest <-
@@ -384,19 +384,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       whenJust returnTime $ \rt -> do
         when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
       unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
-    getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip = \case
+    getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity = \case
       OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq stopsLatLong now sourceLatLong roundTrip
       AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq stopsLatLong now sourceLatLong roundTrip
       InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq stopsLatLong now sourceLatLong roundTrip
-      RentalSearch rentalReq ->
-        return $
-          RouteDetails
-            { longestRouteDistance = Nothing,
-              shortestRouteDistance = Just rentalReq.estimatedRentalDistance,
-              shortestRouteDuration = Just rentalReq.estimatedRentalDuration,
-              shortestRouteInfo = Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []),
-              multipleRoutes = Nothing
-            }
+      RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
 
     extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
     extractSearchDetails now = \case
@@ -439,6 +431,14 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       destinationLatLong <- listToMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
       let latLongs = if roundTrip then [sourceLatLong, destinationLatLong, sourceLatLong] else [sourceLatLong, destinationLatLong]
       calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now
+
+    processRentalSearch person rentalReq stopsLatLong originCity = do
+      case stopsLatLong of
+        [] -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
+        (stop : _) -> do
+          stopCity <- Serviceability.validateServiceability stop [] person
+          unless (stopCity == originCity) $ throwError RideNotServiceable
+          return $ RouteDetails (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
 
     updateRideSearchHotSpot :: DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> Flow ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
