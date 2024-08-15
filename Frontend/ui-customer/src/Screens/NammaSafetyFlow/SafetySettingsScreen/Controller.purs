@@ -40,6 +40,7 @@ import Components.PopUpModal as PopUpModal
 import Screens.RideSelectionScreen.Transformer (myRideListTransformer)
 import Helpers.Utils as HU
 import Common.Resources.Constants as Constants
+import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKeyEM)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -91,6 +92,7 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             , isSelected: true
             , enableForFollowing: fromMaybe false item.enableForFollowing
             , enableForShareRide: fromMaybe false item.enableForShareRide
+            , shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe NEVER_SHARE item.shareTripWithEmergencyContactOption
             , priority: fromMaybe 1 item.priority
             , onRide : fromMaybe false item.onRide
             }

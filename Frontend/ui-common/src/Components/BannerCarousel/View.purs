@@ -45,14 +45,22 @@ view push config =
 
 imageBannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w
 imageBannerView push config = 
-  imageView $ [
-    height $ V 130
-  , width MATCH_PARENT
-  , imageUrlHolder "imageBannerUrl"
-  , visibilityHolder "imageBannerVisibility"
-  , accessibilityHintHolder "accessibilityHint"
-  , margin $ MarginTop if os == "IOS" then  15 else 0
-  ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action
+  let bannerHeight = 
+        case config.bannerSize of
+          Just "small" -> V 130
+          Just "medium" -> V 130
+          Just "large" -> V 280
+          Just _ -> V 130
+          Nothing -> V 130
+  in 
+    imageView $ [
+      height bannerHeight
+    , width MATCH_PARENT
+    , imageUrlHolder "imageBannerUrl"
+    , visibilityHolder "imageBannerVisibility"
+    , accessibilityHintHolder "accessibilityHint"
+    , margin $ MarginTop if os == "IOS" then  15 else 0
+    ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action
 
 
 bannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w

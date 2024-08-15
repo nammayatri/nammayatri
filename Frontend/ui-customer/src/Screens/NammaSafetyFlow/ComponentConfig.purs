@@ -17,6 +17,7 @@ module Screens.NammaSafetyFlow.ComponentConfig where
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
+import Components.GenericHeader as GenericHeader
 import Engineering.Helpers.Commons as EHC
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -218,7 +219,8 @@ checkBoxData state =
     )
     labelData
 
-type Label = { label :: String, type :: RideShareOptions }
+type Label
+  = { label :: String, type :: RideShareOptions }
 
 labelData :: Array Label
 labelData =
@@ -234,58 +236,59 @@ labelData =
   ]
 
 pastRideSOSConfirmationPopConfig :: NammaSafetyScreenState -> PopUpModal.Config
-pastRideSOSConfirmationPopConfig state = PopUpModal.config
-        { optionButtonOrientation = "VERTICAL"
-        , buttonLayoutMargin = Margin 24 0 24 20
-        , gravity = CENTER
-        , margin = MarginHorizontal 20 20
-        , primaryText
-          { text = getString SAFETY_CENTER
-          , margin = Margin 16 16 16 10
-          }
-        , secondaryText
-          { text = getString RECENT_RIDE_ISSUE_DESC
-          , margin = MarginHorizontal 16 16
-          }
-        , option1
-          { text = getString I_NEED_HELP_WITH_MY_RECENT_RIDE
-          , color = Color.black700
-          , background = Color.white900
-          , width = MATCH_PARENT
-          , margin = MarginVertical 20 10
-          , enableRipple = true
-          }
-        , option2
-          { text = getString CONTINUE_WITH_SAFETY_SETTINGS
-          , color = Color.yellow900
-          , background = Color.black900
-          , strokeColor = Color.transparent
-          , width = MATCH_PARENT
-          , margin = MarginBottom 10
-          , enableRipple = true
-          }
-        , cornerRadius = Corners 15.0 true true true true
-        , coverImageConfig
-          { visibility = GONE
-          }
-        , backgroundClickable = false
-        }
-
+pastRideSOSConfirmationPopConfig state =
+  PopUpModal.config
+    { optionButtonOrientation = "VERTICAL"
+    , buttonLayoutMargin = Margin 24 0 24 20
+    , gravity = CENTER
+    , margin = MarginHorizontal 20 20
+    , primaryText
+      { text = getString SAFETY_CENTER
+      , margin = Margin 16 16 16 10
+      }
+    , secondaryText
+      { text = getString RECENT_RIDE_ISSUE_DESC
+      , margin = MarginHorizontal 16 16
+      }
+    , option1
+      { text = getString I_NEED_HELP_WITH_MY_RECENT_RIDE
+      , color = Color.black700
+      , background = Color.white900
+      , width = MATCH_PARENT
+      , margin = MarginVertical 20 10
+      , enableRipple = true
+      }
+    , option2
+      { text = getString CONTINUE_WITH_SAFETY_SETTINGS
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , width = MATCH_PARENT
+      , margin = MarginBottom 10
+      , enableRipple = true
+      }
+    , cornerRadius = Corners 15.0 true true true true
+    , coverImageConfig
+      { visibility = GONE
+      }
+    , backgroundClickable = false
+    }
 
 sourceToDestinationConfig :: IndividualRideCardState -> SourceToDestination.Config
-sourceToDestinationConfig ride = SourceToDestination.config {
-      margin = (Margin 0 13 16 0)
+sourceToDestinationConfig ride =
+  SourceToDestination.config
+    { margin = (Margin 0 13 16 0)
     , width = MATCH_PARENT
     , lineMargin = (Margin 4 6 0 0)
     , id = Just $ "PostRideSafetySTDC_" <> ride.rideId
     , sourceMargin = (Margin 0 0 0 14)
     , sourceBackground = Color.transparent
-    , sourceImageConfig {
-        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
+    , sourceImageConfig
+      { imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
       , margin = (MarginTop 5)
       }
-    , sourceTextConfig {
-        text = ride.source
+    , sourceTextConfig
+      { text = ride.source
       , padding = (Padding 0 0 0 0)
       , margin = (Margin 7 0 15 0)
       , color = Color.white900
@@ -294,12 +297,12 @@ sourceToDestinationConfig ride = SourceToDestination.config {
       , maxLines = 1
       }
     , destinationBackground = Color.transparent
-    , destinationImageConfig {
-        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
+    , destinationImageConfig
+      { imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
       , margin = (MarginTop 4)
       }
-    , destinationTextConfig {
-        text = ride.destination
+    , destinationTextConfig
+      { text = ride.destination
       , padding = (Padding 0 0 0 0)
       , margin = (Margin 7 0 15 0)
       , color = Color.white900
@@ -309,3 +312,30 @@ sourceToDestinationConfig ride = SourceToDestination.config {
       }
     , overrideSeparatorCount = 2
     }
+
+genericHeaderConfig :: NammaSafetyScreenState -> GenericHeader.Config
+genericHeaderConfig state =
+  let
+    genericHeaderConfig' =
+      GenericHeader.config
+        { height = WRAP_CONTENT
+        , prefixImageConfig
+          { height = V 25
+          , width = V 25
+          , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+          , visibility = VISIBLE
+          , margin = Margin 8 8 8 8
+          , layoutMargin = Margin 4 4 4 4
+          , enableRipple = true
+          }
+        , textConfig
+          { text = (getString SAFETY)
+          , color = Color.darkCharcoal
+          }
+        , suffixImageConfig
+          { visibility = GONE
+          }
+        , visibility = VISIBLE --titleVisibility
+        }
+  in
+    genericHeaderConfig'

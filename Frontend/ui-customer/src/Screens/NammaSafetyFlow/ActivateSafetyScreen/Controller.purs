@@ -36,6 +36,7 @@ import Services.Config (getSupportNumber)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
 import Components.SourceToDestination as SourceToDestination
 import Common.Resources.Constants as Constants
+import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKeyEM)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -93,6 +94,7 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
                 , isSelected: true
                 , enableForFollowing: fromMaybe false item.enableForFollowing
                 , enableForShareRide: fromMaybe false item.enableForShareRide
+                , shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe NEVER_SHARE item.shareTripWithEmergencyContactOption
                 , onRide : fromMaybe false item.onRide
                 , priority: fromMaybe 1 item.priority
                 }

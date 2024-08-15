@@ -30,6 +30,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactList
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), RideShareOptions(..))
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
+import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKeyEM)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -70,6 +71,7 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             , isSelected: true
             , enableForFollowing: fromMaybe false item.enableForFollowing
             , enableForShareRide: fromMaybe false item.enableForShareRide
+            , shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe NEVER_SHARE item.shareTripWithEmergencyContactOption
             , priority: fromMaybe 1 item.priority
             , onRide : fromMaybe false item.onRide
             }

@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -52,7 +52,8 @@ import JBridge (Location)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
-import Services.API (DeadKmFare)
+import Services.API as API
+
 type Contacts = {
   name :: String,
   number :: String
@@ -65,7 +66,8 @@ type NewContacts = {
   enableForFollowing :: Boolean,
   enableForShareRide:: Boolean,
   onRide :: Boolean,
-  priority :: Int
+  priority :: Int,
+  shareTripWithEmergencyContactOption :: DropDownOptions
 }
 
 type NewContactsProp = {
@@ -1199,6 +1201,7 @@ type EmergencyContactsScreenData = {
   emergencyContactsList :: Array NewContacts,
   storedContactsList :: Array NewContacts,
   selectedContacts :: Array NewContacts,
+  selectedContact :: NewContacts,
   searchResult :: Array NewContacts,
   prestoListArrayItems :: Array NewContactsProp,
   loadMoreDisabled :: Boolean,
@@ -1213,7 +1216,11 @@ type EmergencyContactsScreenProps = {
   showContactList :: Boolean,
   showInfoPopUp :: Boolean,
   fromSosFlow :: Boolean,
-  appName :: String
+  fromNewSafetyFlow :: Boolean,
+  appName :: String,
+  showDropDown :: Boolean,
+  getDefaultContacts :: Boolean,
+  saveEmergencyContacts :: Boolean
 }
 
 type ContactDetail = {
@@ -2214,6 +2221,68 @@ data SafetySetupStage =  SetNightTimeSafetyAlert
                         | SetDefaultEmergencyContacts
                         | SetPersonalSafetySettings
 
+data NammaSafetyStage = 
+    TrustedContacts (Array SafetyStageConfig)
+  | SafetyCheckIn (Array SafetyStageConfig)
+  | EmergencyActions (Array SafetyStageConfig)
+  | SafetyDrill (Array SafetyStageConfig)
+  | TrustedContactsActions (Array SafetyStageConfig)
+  | DriverSafetyStandards (Array SafetyStageConfig)
+
+data Component --TODO:: Discuss if this concept can be used and moved to a new component file all the components can be defined :)
+  = BoxContainer BoxContainerConfig
+  | DropDownWithHeader DropDownWithHeaderConfig
+  | NoteBox NoteBoxConfig
+  | Title TitleConfig
+  | SubTitle SubTitleConfig
+  | CheckBoxSelection CheckBoxSelectionConfig 
+
+type CheckBoxSelectionConfig = {
+  title :: String,
+  contacts :: Array NewContacts,
+  selectedContact :: NewContacts
+}
+
+type BoxContainerConfig = {
+  title :: String,
+  subTitle :: String,
+  toggleButton :: Boolean,
+  noteText :: String,
+  noteImageIcon :: String
+}
+
+type NoteBoxConfig = {
+  noteText :: String,
+  noteImageIcon :: String,
+  noteSubTitle :: String
+}
+
+type TitleConfig = {
+  titleText :: String
+}
+
+type SubTitleConfig = {
+  subTitleText :: String
+}
+
+type DropDownWithHeaderConfig = {
+  headerText :: String,
+  currentValue :: DropDownOptions,
+  dropDownItems :: Array DropDownOptions
+}
+
+type SafetyStageConfig = {
+  dynamicViewData :: Array Component,
+  imageUrl :: String,
+  primaryButtonText :: String,
+  primaryButtonAction :: String
+}
+
+type DropDownOptions = {
+  key :: RideShareOptions,
+  value :: String
+}
+
 derive instance genericSafetySetupStage :: Generic SafetySetupStage _
 instance eqSafetySetupStage :: Eq SafetySetupStage where eq = genericEq
 instance showSafetySetupStage :: Show SafetySetupStage where show = genericShow
@@ -2226,6 +2295,7 @@ type NammaSafetyScreenState = {
 type NammaSafetyScreenData =  {
   shareToEmergencyContacts :: Boolean,
   nightSafetyChecks :: Boolean,
+  settingsAPIResponse :: API.GetEmergencySettingsRes,
   hasCompletedMockSafetyDrill :: Boolean,
   shareTripWithEmergencyContactOption :: RideShareOptions,
   shareOptionCurrent :: RideShareOptions,
@@ -2241,7 +2311,10 @@ type NammaSafetyScreenData =  {
   videoList :: Array RC.SafetyVideoConfig,
   sosType :: Maybe SosFlow,
   config :: AppConfig,
-  lastRideDetails :: Maybe IndividualRideCardState
+  lastRideDetails :: Maybe IndividualRideCardState,
+  bannerData :: BannerCarousalData,
+  safetySetupSteps :: Array SafetyStepsConfig,
+  extraSafetyExplaination :: Array SafetyStepsConfig
  }
 
 type NammaSafetyScreenProps =  {
@@ -2271,6 +2344,51 @@ type NammaSafetyScreenProps =  {
   appName :: String,
   isOffUs :: Boolean
 }
+
+type DataFetchScreenState = {
+  data :: DataFetchScreenData,
+  props :: DataFetchScreenProps,
+  config :: DataFetchScreenConfigs
+}
+
+type DataFetchScreenConfigs = {
+  appConfig :: AppConfig,
+  stage :: NammaSafetyStage,
+  stageSteps :: Int,
+  currentStep :: Int
+}
+
+type DataFetchScreenData = {
+  headerValue :: String,
+  bannerData :: BannerCarousalData,
+  emergencyContactsList :: Array NewContacts,
+  defaultSelectedContact :: NewContacts,
+  unExpectedEventChecks :: RideShareOptions,
+  postRideCheck :: RideShareOptions,
+  notifySafetyTeam :: Boolean,
+  emergencySOSShake :: Boolean,
+  autoCallDefaultContact :: Boolean,
+  informPoliceSos :: Boolean,
+  notifySosWithEmergencyContacts :: Boolean
+}
+
+type DataFetchScreenProps = {
+    showLoader :: Boolean
+  , showDropDown :: Boolean
+  , dropDownAction :: String
+  , stageSetUpCompleted :: Boolean
+}
+
+type SafetyStepsConfig
+  = { title :: String
+    , prefixImage :: String
+    , stepNumber :: String
+    , isCompleted :: Boolean
+    , prefixImageCompleted :: String
+    , labelText :: Maybe String
+    , navigation :: NammaSafetyStage
+    }
+
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 
 derive instance genericRecordingState :: Generic RecordingState _

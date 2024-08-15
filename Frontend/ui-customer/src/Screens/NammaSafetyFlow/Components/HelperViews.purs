@@ -30,14 +30,15 @@ separatorView color' margin' =
     ]
     []
 
-recommendContactsToInstallView :: forall w. String -> PrestoDOM (Effect Unit) w
-recommendContactsToInstallView appName =
+recommendContactsToInstallView :: forall w. String -> Boolean -> PrestoDOM (Effect Unit) w
+recommendContactsToInstallView appName visible =
   textView
-    $ [ text $ getString $ RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL appName
+    $ [ text "You can also share manually with anybody using the share button"
       , color Color.black700
+      , visibility $ boolToVisibility visible
       , background Color.blue600
-      , padding $ Padding 8 12 8 12
-      , margin $ MarginVertical 16 16
+      , padding $ Padding 16 12 16 12
+      , margin $ Margin 16 16 16 16
       , cornerRadius 8.0
       ]
     <> FontStyle.body1 LanguageStyle

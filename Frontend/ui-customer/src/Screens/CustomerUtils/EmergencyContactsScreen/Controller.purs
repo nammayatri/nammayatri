@@ -11,7 +11,7 @@ import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppS
 import Screens (ScreenName(..), getScreen)
 import JBridge (toast, hideKeyboardOnNavigation)
 import Screens.Types (Contacts, EmergencyContactsScreenState, NewContacts, NewContactsProp)
-import Data.Array (catMaybes, delete, dropEnd, elem, filter, head, last, length, mapWithIndex, nub, null, slice, snoc, sortBy, tail, updateAt, (!!))
+import Data.Array (catMaybes, delete, dropEnd, elem, filter, head, last, length, mapWithIndex, nubByEq, null, slice, snoc, sortBy, tail, updateAt, (!!))
 import Helpers.Utils (contactPermission, setEnabled, setRefreshing, setText)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Language.Strings (getString)
@@ -33,6 +33,9 @@ import Mobility.Prelude (boolToInt)
 import Data.String.Regex (regex, replace)
 import Data.String.Regex.Flags (global)
 import Data.Either (Either(..))
+import Components.DropDownWithHeader as DropDownWithHeader
+import Services.API as API
+import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -90,18 +93,36 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | ContactListScrollStateChanged ScrollState
             | NewContactActionController NewContactController.Action
             | ContactListAction ContactsList.Action
+            | DropDownWithHeaderAC DropDownWithHeader.Action
+            | RemoveButtonClicked NewContacts
+            | DefaultContactSelected NewContacts
 
 data ScreenOutput = GoToSafetyScreen EmergencyContactsScreenState
                   | PostContacts EmergencyContactsScreenState Boolean
+                  | PostContactsSafety EmergencyContactsScreenState Boolean
                   | GetContacts EmergencyContactsScreenState
+                  | UpdateDefaultContacts EmergencyContactsScreenState
                   | Refresh EmergencyContactsScreenState
 
 eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
 
 eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = 
-  if null state.data.emergencyContactsList 
+  if null state.data.selectedContacts 
     then continueWithCmd state [pure AddContacts]
-    else updateAndExit state $ PostContacts state{data{selectedContacts = state.data.emergencyContactsList}} true
+    else if state.props.getDefaultContacts 
+      then updateAndExit state $ UpdateDefaultContacts state
+    else updateAndExit state $ PostContactsSafety state true
+
+eval (DropDownWithHeaderAC (DropDownWithHeader.OnExpand contact action)) state = continue state { data{ selectedContact = contact }, props { showDropDown = not state.props.showDropDown } }
+
+eval (DefaultContactSelected contact) state = 
+  let updatedContactList = map (\ct -> if ct.number == contact.number then ct{priority = 0} else ct {priority = 1}  ) state.data.selectedContacts
+  in continue state { data { selectedContacts = updatedContactList } }
+
+eval (DropDownWithHeaderAC (DropDownWithHeader.OnSelect dropDownOption action)) state =
+  let selectedContactValue = state.data.selectedContact { shareTripWithEmergencyContactOption = dropDownOption}
+      updatedSelectedContacts = map (\a -> if a.number == selectedContactValue.number then a {shareTripWithEmergencyContactOption = dropDownOption} else a) state.data.selectedContacts
+  in continue state { data{ selectedContacts = updatedSelectedContacts }, props { showDropDown = not state.props.showDropDown } }
 
 eval AddContacts state = continueWithCmd state
       [do
@@ -116,7 +137,7 @@ eval AddContacts state = continueWithCmd state
       ]
 
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
-  let newContacts = delete state.data.removedContactDetail state.data.emergencyContactsList
+  let newContacts = delete state.data.removedContactDetail state.data.selectedContacts
   exit $ PostContacts state{data{selectedContacts = getDefaultPriorityList newContacts}} false
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}}
@@ -140,13 +161,13 @@ eval (ContactsCallback allContacts) state = do
                                 case getContactFromEMList formattedContact state.data.emergencyContactsList of
                                   Nothing -> formattedContact
                                   Just contact -> formattedContact{isSelected = true, priority = contact.priority, enableForFollowing = contact.enableForFollowing}) $ getContactList updatedContactList
-        unionNewContacts = nub filteredContacts
+        unionNewContacts = nubByEq (\a b -> a.number == b.number)  filteredContacts
         bufferCardDataPrestoList = contactListTransformerProp unionNewContacts
     if null unionNewContacts then do
       _ <- pure $ toast (getString NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD)
       removeLoader
     else do
-      let newState = state{data{storedContactsList = unionNewContacts, searchResult = unionNewContacts, prestoListArrayItems = bufferCardDataPrestoList, selectedContacts = state.data.emergencyContactsList}, props{showContactList = true}}
+      let newState = state{data{storedContactsList = unionNewContacts, searchResult = unionNewContacts, prestoListArrayItems = bufferCardDataPrestoList}, props{showContactList = true}}
       continue newState
   where
     removeLoader =     
@@ -178,7 +199,7 @@ eval (ContactListClearText) state = continueWithCmd state { data { editedText = 
   ]
 
 eval (NewContactActionController (NewContactController.ContactSelected index)) state = do
-  let contact = getValidContact $ fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, enableForShareRide:false, onRide: false, priority : 0} (state.data.searchResult !! index)
+  let contact = getValidContact $ fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, enableForShareRide:false, onRide: false, priority : 0, shareTripWithEmergencyContactOption: neverShareRideOption} (state.data.searchResult !! index)
   let item = (getValidContact contact){isSelected = not contact.isSelected}
   if (length state.data.selectedContacts) >= 3 && not contact.isSelected then do
     _ <- pure $ toast $ getString LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED
@@ -216,6 +237,7 @@ eval FetchContacts state =
   updateAndExit state $ GetContacts state
 
 eval (ContactListAction (ContactsList.RemoveButtonClicked contactDetail)) state = continue state{props{showInfoPopUp = true}, data{removedContactDetail = contactDetail}}
+eval (RemoveButtonClicked contactDetail) state = continue state{props{showInfoPopUp = true}, data{removedContactDetail = contactDetail}}
 
 eval (ContactListAction (ContactsList.ContactCardClicked index)) state = do
   let

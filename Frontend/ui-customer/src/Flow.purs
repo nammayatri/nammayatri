@@ -18,6 +18,7 @@ import Accessor
 import Engineering.Helpers.LogEvent
 import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
+import Services.API as API
 import Common.Resources.Constants (zoomLevel)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..))
 import Common.Types.App as CTA
@@ -87,7 +88,6 @@ import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSave
 import Screens.AddNewAddressScreen.ScreenData (dummyLocation) as AddNewAddressScreenData
 import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
-import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
@@ -106,6 +106,9 @@ import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..), LocationType(..), Station(..), MetroTicketBookingStage(..), MetroStations(..), SearchResultType(..), RentalScreenStage(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
+import Screens.NammaSafetyFlow.Controller as NammaSafetyFlowScreenOutput
+import Screens.DataExplainWithFetch.ScreenData as DataExplainWithFetchSD
+import Screens.DataExplainWithFetch.Controller as DataExplainWithFetchC
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig, getTipViewData)
 import Screens.RideSelectionScreen.Controller (getTitle)
@@ -172,6 +175,7 @@ import Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller as ActivateSafety
 import Screens.NammaSafetyFlow.SosActiveScreen.Controller as SosActiveScreen
 import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller as SafetyEducationScreen
 import Screens.NammaSafetyFlow.Components.SafetyUtils
+-- import Screens.NammaSafetyFlow.Controller as NammaSafetyFlow
 import RemoteConfig as RC
 import Engineering.Helpers.RippleCircles (clearMap)
 import Data.Array (groupBy, fromFoldable, singleton, sort)
@@ -247,6 +251,92 @@ baseAppFlow gPayload callInitUI = do
         welcomeScreenFlow
       else
         enterMobileNumberScreenFlow
+
+dataFetchScreenFlow :: NammaSafetyStage -> Int -> FlowBT String Unit
+dataFetchScreenFlow stageConfig stepVal = do
+  let stageConfigSteps = DataExplainWithFetchSD.getStepsNumber stageConfig
+      newHeaderValue = DataExplainWithFetchSD.getHeaderValue stageConfig
+  modifyScreenState $ DataFetchScreenStateType (\dataFetchScreen -> dataFetchScreen { config { stage = stageConfig, stageSteps = stageConfigSteps, currentStep = stepVal}, data { headerValue = newHeaderValue } })
+  flow <- UI.dataFetchScreen
+  
+  case flow of
+    DataExplainWithFetchC.AddEmergencyContacts state -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { props { fromNewSafetyFlow= true} })
+      emergencyScreenFlow
+    DataExplainWithFetchC.UpdateEmergencyContacts state -> do
+      void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.emergencyContactsList
+      pure $ toast $ "ContactsUpdated"
+      nammaSafetyFlow
+    DataExplainWithFetchC.Exit state -> do
+      updateSafetySettings state
+      nammaSafetyFlow
+    _ -> homeScreenFlow
+
+nammaSafetyFlow :: FlowBT String Unit
+nammaSafetyFlow = do
+  flow <- UI.nammaSafetyScreen
+  case flow of
+    NammaSafetyFlowScreenOutput.Navigate updatedState navigationConfig -> do
+      updateDataFetchScreenState updatedState navigationConfig.isCompleted
+      case navigationConfig.navigation of
+        TrustedContacts _ -> do
+          let emergencyContactLength = Arr.length updatedState.data.emergencyContactsList 
+          modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { data{ selectedContacts = updatedState.data.emergencyContactsList },props { fromNewSafetyFlow= true, saveEmergencyContacts = true, getDefaultContacts = if emergencyContactLength > 1 then true else false } })
+          emergencyScreenFlow --dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ TrustedContacts []) 0
+        SafetyCheckIn _ -> do
+          
+          dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ SafetyCheckIn []) 0
+        EmergencyActions _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ EmergencyActions []) 0
+        SafetyDrill _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ SafetyDrill []) 0
+        TrustedContactsActions _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ TrustedContactsActions []) 0
+        DriverSafetyStandards _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ DriverSafetyStandards []) 0
+    _ -> homeScreenFlow
+
+updateSafetySettings :: ST.DataFetchScreenState -> FlowBT String Unit
+updateSafetySettings state = do
+  let
+    req =
+      UpdateEmergencySettingsReq
+        { shareEmergencyContacts: Nothing
+        , shareTripWithEmergencyContactOption: Nothing
+        , nightSafetyChecks: Nothing
+        , hasCompletedSafetySetup: Nothing
+        , autoCallDefaultContact: Just state.data.autoCallDefaultContact
+        , enableOtpLessRide: Nothing
+        , enablePostRideSafetyCheck: Just state.data.postRideCheck
+        , enableUnexpectedEventsCheck: Just state.data.unExpectedEventChecks
+        , hasCompletedMockSafetyDrill: Nothing
+        , informPoliceSos: Just state.data.informPoliceSos
+        , notifySafetyTeamForSafetyCheckFailure: Just state.data.notifySafetyTeam
+        , notifySosWithEmergencyContacts: Nothing
+        , shakeToActivate: Just state.data.emergencySOSShake
+        , shareTripWithEmergencyContacts: Nothing
+        }
+  void $ lift $ lift $ Remote.updateEmergencySettings req
+  pure unit
+
+
+updateDataFetchScreenState :: ST.NammaSafetyScreenState -> Boolean -> FlowBT String Unit
+updateDataFetchScreenState safetyScreenState setupCompleted = do
+  let (API.GetEmergencySettingsRes emergencySettings) = safetyScreenState.data.settingsAPIResponse
+  modifyScreenState
+    $ DataFetchScreenStateType
+        ( \dataFetchScreen ->
+            dataFetchScreen
+              { data
+                { unExpectedEventChecks = emergencySettings.enableUnexpectedEventsCheck
+                , postRideCheck = emergencySettings.enablePostRideSafetyCheck
+                , notifySafetyTeam = emergencySettings.notifySafetyTeamForSafetyCheckFailure
+                , emergencySOSShake = emergencySettings.shakeToActivate
+                , autoCallDefaultContact = emergencySettings.autoCallDefaultContact
+                , informPoliceSos = emergencySettings.informPoliceSos
+                , notifySosWithEmergencyContacts = emergencySettings.notifySosWithEmergencyContacts
+                , emergencyContactsList = safetyScreenState.data.emergencyContactsList
+                },
+                props { stageSetUpCompleted = setupCompleted}
+              }
+        )
+  pure unit
 
 handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
 handleDeepLinks mBGlobalPayload skipDefaultCase = do
@@ -1989,6 +2079,7 @@ homeScreenFlow = do
                 , priority: fromMaybe 1 item.priority
                 , enableForFollowing: fromMaybe false item.enableForFollowing
                 , enableForShareRide: fromMaybe false item.enableForShareRide
+                , shareTripWithEmergencyContactOption : EmergencyContactsScreenData.getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE item.shareTripWithEmergencyContactOption
                 , onRide: fromMaybe false item.onRide
                 }
             )
@@ -2097,15 +2188,43 @@ homeScreenFlow = do
             )
       rentalScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
-    GO_TO_NAMMASAFETY state triggerSos showtestDrill -> do
-      updateSafetyScreenState state defaultTimerValue triggerSos showtestDrill
-      case (triggerSos || showtestDrill) of
-        true -> do
-          let
-            isRideCompleted = state.props.currentStage == RideCompleted
-          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] state.data.config else Nothing } })
-          activateSafetyScreenFlow
-        false -> safetySettingsFlow
+    -- GO_TO_NAMMASAFETY state triggerSos showtestDrill -> do
+    --   updateSafetyScreenState state defaultTimerValue triggerSos showtestDrill
+    --   case (triggerSos || showtestDrill) of
+    --     true -> do
+    --       let
+    --         isRideCompleted = state.props.currentStage == RideCompleted
+    --       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] state.data.config else Nothing } })
+    --       activateSafetyScreenFlow
+    --     false -> safetySettingsFlow
+    GO_TO_NAMMASAFETY state triggerSos showtestDrill -> nammaSafetyFlow
+      -- modifyScreenState
+      --   $ NammaSafetyScreenStateType
+      --       ( \nammaSafetyScreen ->
+      --           nammaSafetyScreen
+      --             { props
+      --               { triggeringSos = false
+      --               , timerValue = defaultTimerValue
+      --               , showTestDrill = false
+      --               , showShimmer = true
+      --               , confirmTestDrill = showtestDrill
+      --               , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+      --               , checkPastRide = state.props.currentStage == HomeScreen
+      --               , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false
+      --               }
+      --             , data
+      --               { rideId = state.data.driverInfoCardState.rideId
+      --               , vehicleDetails = state.data.driverInfoCardState.registrationNumber
+      --               }
+      --             }
+      --       )
+      -- case (triggerSos || showtestDrill) of
+      --   true -> do
+      --     let
+      --       isRideCompleted = state.props.currentStage == RideCompleted
+      --     modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] state.data.config else Nothing } })
+      --     activateSafetyScreenFlow
+      --   false -> safetySettingsFlow
     GO_TO_SAFETY_SETTING_SCREEN -> do
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { isOffUs = true } })
       safetySettingsFlow
@@ -2926,6 +3045,27 @@ emergencyScreenFlow :: FlowBT String Unit
 emergencyScreenFlow = do
   flow <- UI.emergencyContactsScreen
   case flow of
+    UPDATE_DEFAULT_CONTACTS state -> do
+      void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
+      if state.props.showInfoPopUp then
+          pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
+        else
+          pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
+      modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false, saveEmergencyContacts = true, getDefaultContacts = true } })
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
+      modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
+      nammaSafetyFlow
+    POST_CONTACTS_SAFETY state shouldGoToSafetyScreen -> do
+      void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
+      when (not shouldGoToSafetyScreen)
+        $ if state.props.showInfoPopUp then
+            pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
+          else
+            pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
+      modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false, saveEmergencyContacts = false, getDefaultContacts = true } })
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
+      modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
+      emergencyScreenFlow --dataFetchScreenFlow  (DataExplainWithFetchSD.stageData $ TrustedContacts []) 0
     POST_CONTACTS state shouldGoToSafetyScreen -> do
       void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
       when (not shouldGoToSafetyScreen)
@@ -2933,14 +3073,22 @@ emergencyScreenFlow = do
             pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
           else
             pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
-      modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false } })
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
+      let contactsCount = length state.data.selectedContacts
+      if contactsCount < 1 
+        then 
+          modifyScreenState $ EmergencyContactsScreenStateType (\_ -> EmergencyContactsScreenData.initData{props { fromNewSafetyFlow= true, saveEmergencyContacts = true } })
+        else do
+          modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false } })
+          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
+          modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
       (GlobalState globalState) <- getState
-      case globalState.nammaSafetyScreen.data.hasCompletedSafetySetup, shouldGoToSafetyScreen, state.props.fromSosFlow of
-        _, _, true -> activateSafetyScreenFlow
-        false, true, _ -> setupSafetySettingsFlow
-        true, true, _ -> safetySettingsFlow
-        _, _, _ -> emergencyScreenFlow
+      case globalState.nammaSafetyScreen.data.hasCompletedSafetySetup, shouldGoToSafetyScreen, state.props.fromSosFlow, state.props.fromNewSafetyFlow of
+        _, _, true, _ -> activateSafetyScreenFlow
+        -- false, true, _, true -> dataFetchScreenFlow  (DataExplainWithFetchSD.stageData $ TrustedContacts []) 1
+        -- false, true, _, _ -> setupSafetySettingsFlow
+        true, true, _, _ -> safetySettingsFlow
+        -- _, _, _, true -> dataFetchScreenFlow  (DataExplainWithFetchSD.stageData $ TrustedContacts []) 1
+        _, _, _, _ -> emergencyScreenFlow
     GET_CONTACTS state -> do
       (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
       let
@@ -2953,6 +3101,7 @@ emergencyScreenFlow = do
                     , isSelected: true
                     , enableForFollowing: fromMaybe false item.enableForFollowing
                     , enableForShareRide: fromMaybe false item.enableForShareRide
+                    , shareTripWithEmergencyContactOption: EmergencyContactsScreenData.getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE item.shareTripWithEmergencyContactOption
                     , onRide: fromMaybe false item.onRide
                     , priority: fromMaybe 1 item.priority
                     }
@@ -5407,6 +5556,16 @@ updateEmergencySettings state = do
         , shareTripWithEmergencyContactOption: Just state.data.shareTripWithEmergencyContactOption
         , nightSafetyChecks: Just state.data.nightSafetyChecks
         , hasCompletedSafetySetup: Just true
+        , autoCallDefaultContact: Nothing
+        , enableOtpLessRide: Nothing
+        , enablePostRideSafetyCheck: Nothing
+        , enableUnexpectedEventsCheck: Nothing
+        , hasCompletedMockSafetyDrill: Just state.data.hasCompletedMockSafetyDrill
+        , informPoliceSos: Nothing
+        , notifySafetyTeamForSafetyCheckFailure: Nothing
+        , notifySosWithEmergencyContacts: Nothing
+        , shakeToActivate: Nothing
+        , shareTripWithEmergencyContacts: Nothing
         }
 
     wasSetupAlreadyDone = state.data.hasCompletedSafetySetup

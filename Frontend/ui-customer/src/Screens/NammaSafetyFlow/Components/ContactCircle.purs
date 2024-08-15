@@ -2,7 +2,7 @@ module Screens.NammaSafetyFlow.Components.ContactCircle where
 
 import Common.Types.App (LazyCheck(..))
 import Data.Array (take, (!!))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, Maybe(..))
 import Prelude (Unit, const, ($), (&&), (<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), PrestoDOM, alignParentRight, background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, relativeLayout, text, textView, visibility, width)
 import Screens.Types (NewContacts)
@@ -15,6 +15,8 @@ import Font.Style as FontStyle
 import Helpers.Utils as HU
 import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
+import Services.API as API
+import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -90,6 +92,7 @@ config =
       , isSelected: false
       , enableForFollowing: false
       , enableForShareRide: false
+      , shareTripWithEmergencyContactOption: neverShareRideOption
       , onRide : false
       }
   , index: 0

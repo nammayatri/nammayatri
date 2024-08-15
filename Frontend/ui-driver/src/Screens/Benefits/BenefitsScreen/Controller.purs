@@ -245,7 +245,7 @@ getRemoteBannerConfigs action = do
       variant = getValueToLocalStore VEHICLE_VARIANT
       configName = "driver_referral_banner" <> language
       datas = (RC.carouselConfigData location configName "driver_referral_banner_en" (getValueFromWindow "DRIVER_ID") "" variant)
-  BannerCarousel.remoteConfigTransformer datas action
+  BannerCarousel.remoteConfigTransformer datas action Nothing
   where
     getLanguage :: String -> String
     getLanguage lang = 

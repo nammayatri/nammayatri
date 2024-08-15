@@ -53,6 +53,7 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySett
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), FareBreakupAPIEntity(..))
 import Services.Backend as Remote
+import Services.API as API
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
@@ -85,6 +86,7 @@ import Screens.Types (FareProductType(..)) as FPT
 import Helpers.TipConfig
 import RemoteConfig as RC
 import Screens.Types as ST
+import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKeyEM)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -842,6 +844,7 @@ getFormattedContacts = do
       isSelected: true,
       enableForFollowing: fromMaybe false item.enableForFollowing,
       enableForShareRide: fromMaybe false item.enableForShareRide,
+      shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE item.shareTripWithEmergencyContactOption,
       onRide : fromMaybe false item.onRide,
       priority: fromMaybe 1 item.priority
     }) res.defaultEmergencyNumbers
