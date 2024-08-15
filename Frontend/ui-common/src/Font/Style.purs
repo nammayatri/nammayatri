@@ -176,103 +176,139 @@ feFont style = fontByOS "FEFont" "FE-Font" "Arial"
 
 h1 :: LazyCheck -> forall properties. (Array (Prop properties))
 h1 typography = [
-  textSize FontSize.a_22
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_20
+    _ -> FontSize.a_22
 , lineHeight "28"
 ] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 
 heading :: LazyCheck -> forall properties. (Array (Prop properties))
 heading typography = [
-  textSize FontSize.a_32
+  textSize  case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_30
+    _ -> FontSize.a_32
 , lineHeight "28"
 ] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 h2 :: LazyCheck -> forall properties. (Array (Prop properties))
 h2 typography = [
-  textSize FontSize.a_18
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_16
+    _ -> FontSize.a_18
 , lineHeight "23"
 ] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 h3 :: LazyCheck ->  forall properties. (Array (Prop properties))
 h3 typography = [
-   textSize FontSize.a_18
+   textSize  case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_16
+    _ -> FontSize.a_18
 , lineHeight "23"
 ] <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 subHeading1 :: LazyCheck -> forall properties. (Array (Prop properties))
 subHeading1 typography = [
-  textSize if (getLanguageFromLocalStore unit) == "TA_IN"  then FontSize.a_13 else FontSize.a_16
+  textSize  case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_13
+    "TA_IN" -> FontSize.a_13
+    _ -> FontSize.a_16
 , lineHeight "24"
 ] <> if (getFontType "")  == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 subHeading3 :: LazyCheck -> forall properties. (Array (Prop properties))
 subHeading3 typography = [
-  textSize FontSize.a_16
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_14
+    _ -> FontSize.a_16
 , lineHeight "20"
 ] <> if (getFontType "")  == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 subHeading2 :: LazyCheck ->  forall properties. (Array (Prop properties))
 subHeading2 typography = [
-  textSize FontSize.a_16
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_14
+    _ -> FontSize.a_16
 , lineHeight "24"
 ] <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body1 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body1 typography = [
-  textSize $ if (getLanguageFromLocalStore unit) == "TA_IN" then FontSize.a_12 else FontSize.a_14
+  textSize $ case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_12 
+    "TA_IN" -> FontSize.a_12 
+    _ ->  FontSize.a_14
 , lineHeight "18"
 ] <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body2 :: LazyCheck -> forall properties. (Array (Prop properties))
 body2 typography = [
- textSize FontSize.a_14
+ textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_12 
+    _ -> FontSize.a_14
 , lineHeight "20"
 ] <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body20 :: LazyCheck -> forall properties. (Array (Prop properties))
 body20 typography = [
- textSize FontSize.a_14
+ textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_12  
+    _ -> FontSize.a_14
 , lineHeight "18"
 ] <> if getFontType "" == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body3 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body3 typography = [
-  textSize FontSize.a_12
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_10 
+    _ -> FontSize.a_12
 , lineHeight "16"
 ] <> if (getFontType "") == Assets then [fontStyle $ regular LanguageStyle] else [fontWeight $ FontWeight 400]
 
 paragraphText :: LazyCheck -> forall properties. (Array (Prop properties))
 paragraphText typography = [
-  textSize FontSize.a_14
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_12  
+    _ -> FontSize.a_14
 , lineHeight "18"
 ]  <> if (getFontType "") == Assets then [fontStyle $ regular LanguageStyle] else [fontWeight $ FontWeight 400]
 
 tags ::  LazyCheck -> forall properties. (Array (Prop properties))
 tags typography = [
-  textSize FontSize.a_12
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_12  
+    _ -> FontSize.a_12
 , lineHeight "15"
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 captions ::  LazyCheck ->  forall properties. (Array (Prop properties))
 captions typography = [
-  textSize FontSize.a_10
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_9 
+    _ -> FontSize.a_10
 , lineHeight "13"
 ]  <> if (getFontType "") == Assets then [fontStyle $ regular LanguageStyle] else [fontWeight $ FontWeight 400]
 
 body21 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body21 typography = [
-  textSize FontSize.a_10
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_9
+    _ -> FontSize.a_10
 ]  <> if getFontType "" == Assets then [fontStyle $ regular LanguageStyle] else [fontWeight $ FontWeight 400]
 
 priceFont ::  LazyCheck -> forall properties. (Array (Prop properties))
 priceFont typography = [
-    textSize FontSize.a_40
+    textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_36
+    _ -> FontSize.a_40
   , lineHeight "40"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 priceFont_big :: LazyCheck -> forall properties. (Array (Prop properties))
 priceFont_big typography = [
-    textSize FontSize.a_44
+    textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_40
+    _ -> FontSize.a_44
   , lineHeight "40"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
@@ -285,175 +321,243 @@ fontByOS android ios web
 
 body4 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body4 typography = [
-  textSize FontSize.a_14
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_12 
+  _ -> FontSize.a_14
 , lineHeight "18"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700] 
 
 body5 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body5 typography = [
-  textSize FontSize.a_16
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_14 
+  _ ->FontSize.a_16
 ]  <> if (getFontType "") == Assets then [fontStyle $ regular LanguageStyle] else [fontWeight $ FontWeight 400]
 
 body6 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body6 typography = [
-  textSize FontSize.a_14
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_12
+  _ -> FontSize.a_14
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body7 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body7 typography = [
-  textSize  if (getLanguageFromLocalStore unit) == "TA_IN" then FontSize.a_14 else FontSize.a_16
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_14
+  "TA_IN" ->  FontSize.a_14
+  _ -> FontSize.a_16
 , lineHeight "20"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body8 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body8 typography = [
-  textSize FontSize.a_20
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_17
+  _ ->  FontSize.a_20
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body9 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body9 typography = [
   lineHeight "22"
-, textSize FontSize.a_12
+, textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_10
+    _ -> FontSize.a_12
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body10 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body10 typography = [
-  textSize FontSize.a_20
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_17 
+  _ -> FontSize.a_20
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body11 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body11 typography = [
-  textSize FontSize.a_20
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_17
+  _ -> FontSize.a_20
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body12 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body12 typography = [
-  textSize FontSize.a_20
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_17 
+    _ -> FontSize.a_20
 ]  <> if (getFontType "") == Assets then [fontStyle $ regular LanguageStyle] else [fontWeight $ FontWeight 400]
 
 body13 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body13 typography = [
-  textSize FontSize.a_18
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_16
+    _ -> FontSize.a_18
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body14 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body14 typography = [
-  textSize FontSize.a_18
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_16
+    _ -> FontSize.a_18
 ]  <> if (getFontType "") == Assets then [fontStyle $ regular LanguageStyle] else [fontWeight $ FontWeight 400]
 
 body15 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body15 typography = [
-  textSize FontSize.a_12
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_10
+  _ -> FontSize.a_12
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body16 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body16 typography = [
-  textSize FontSize.a_10
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_8 
+  _ -> FontSize.a_10
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body17 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body17 typography = [
-  textSize FontSize.a_10
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_8 
+  _ -> FontSize.a_10
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body19 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body19 typography = [
-  textSize FontSize.a_10
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_8 
+  _ -> FontSize.a_10
 ]  <> if getFontType "" == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body18 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body18 typography = [
-  textSize FontSize.a_8 
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_7 
+  _ -> FontSize.a_8 
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body22 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body22 typography = [
-  textSize FontSize.a_14
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_12 
+  _ -> FontSize.a_14
 ]  <> if getFontType "" == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700] 
 
 body23 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body23 typography = [
-  textSize FontSize.a_16
+  textSize case getLanguageFromLocalStore unit of 
+  "ML_IN" -> FontSize.a_14 
+  _ -> FontSize.a_16
   , lineHeight "19"
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body24 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body24 typography = [
   lineHeight "12"
-, textSize FontSize.a_12
+, textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_10
+    _ -> FontSize.a_12
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body25 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body25 typography = [
   lineHeight "20"
-, textSize FontSize.a_16
+, textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_14
+    _ -> FontSize.a_16
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body26 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body26 typography = [
-  textSize FontSize.a_14
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_12
+    _ -> FontSize.a_14
 , lineHeight "15"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body27 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body27 typography = [
-  textSize FontSize.a_12
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_10 
+    _ -> FontSize.a_12
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body28 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body28 typography = [
-  textSize FontSize.a_48
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_44
+    _ -> FontSize.a_48
   , lineHeight "40"
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
 
 body29 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body29 typography = [
-  textSize FontSize.a_13
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_11 
+    _ -> FontSize.a_13
   , lineHeight "16"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body30 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body30 typography = [
-  textSize FontSize.a_20
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_18 
+    _ -> FontSize.a_20
   , lineHeight "26" 
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body31 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body31 typography = [
-  textSize FontSize.a_8 
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_6 
+    _ -> FontSize.a_8 
   , lineHeight "10"
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 500]
 
 body32 :: LazyCheck -> forall properties. (Array (Prop properties))
 body32 typography = [
-  textSize FontSize.a_16
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_14 
+    _ -> FontSize.a_16
   , lineHeight "19"
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 400]
 
 h0 :: LazyCheck -> forall properties. (Array (Prop properties))
 h0 typography = [
-  textSize FontSize.a_24
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_21 
+    _ -> FontSize.a_24
 , lineHeight "28"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 h4 :: LazyCheck ->  forall properties. (Array (Prop properties))
-h4 typography = [fontStyle $ feFont LanguageStyle, textSize $ FontSize.a_44]
+h4 typography = [
+  fontStyle $ feFont LanguageStyle, 
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_40
+    _  -> FontSize.a_44
+]
 
 title0 :: LazyCheck -> forall properties. (Array (Prop properties))
 title0 typography = [
-  textSize FontSize.a_72
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_66
+    _ -> FontSize.a_72
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 title1 :: LazyCheck -> forall properties. (Array (Prop properties))
 title1 typography = [
-  textSize FontSize.a_28
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_25 
+    _ ->  FontSize.a_28
 , lineHeight "40"
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 600]
 
 
 title2 :: LazyCheck -> forall properties. (Array (Prop properties))
 title2 typography = [
-  textSize FontSize.a_32
+  textSize case getLanguageFromLocalStore unit of 
+    "ML_IN" -> FontSize.a_30
+    _ -> FontSize.a_32
 , lineHeight "40"
 ] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
 
