@@ -15,6 +15,7 @@ import Components.NewContact.View as NewContact
 import Engineering.Helpers.Commons (liftFlow)
 import PrestoDOM.Core (getPushFn)
 import Data.Maybe (Maybe(..))
+import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
 
 
 emergencyContactsScreen:: FlowBT String EMERGECY_CONTACTS_SCREEN_OUTPUT
@@ -30,6 +31,12 @@ emergencyContactsScreen = do
     PostContacts updatedState shouldGoToSosFlow -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ POST_CONTACTS updatedState shouldGoToSosFlow)
+    PostContactsSafety updatedState shouldGoToSosFlow -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ POST_CONTACTS_SAFETY updatedState shouldGoToSosFlow)
+    UpdateDefaultContacts updatedState -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ UPDATE_DEFAULT_CONTACTS updatedState)
     GetContacts updatedState -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GET_CONTACTS updatedState)
@@ -42,6 +49,7 @@ listItem1 = {
   isSelected: false,
   enableForFollowing: false,
   enableForShareRide: false,
+  shareTripWithEmergencyContactOption: neverShareRideOption,
   onRide: false,
   priority : 1
 }

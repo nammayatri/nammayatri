@@ -104,6 +104,7 @@ bannerCarouselAC action state =
             CRT.NoAction -> update state
             CRT.Rentals -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "RENTALS")]
             CRT.Intercity -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "INTER_CITY")]
+            CRT.SafetyExplaination -> update state
           Nothing -> update state
 
 

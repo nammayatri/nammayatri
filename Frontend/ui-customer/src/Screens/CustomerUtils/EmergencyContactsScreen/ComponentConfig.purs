@@ -12,12 +12,15 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>), (==))
+import Prelude (not, (<>), (==), ($), (&&), (>), (<))
 import PrestoDOM (Length(..), Margin(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, height, margin, padding, text, textSize, width, imageUrl, visibility, stroke)
-import Screens.Types (EmergencyContactsScreenState)
+import Screens.Types (EmergencyContactsScreenState, DropDownWithHeaderConfig, NewContacts)
 import Styles.Colors as Color
 import Data.Show (show)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Components.DropDownWithHeader as DropDownWithHeader
+import Mobility.Prelude (boolToVisibility)
+import Screens.EmergencyContactsScreen.ScreenData as EMData
 
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
@@ -57,16 +60,17 @@ primaryButtonConfig :: EmergencyContactsScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
   let
     config = PrimaryButton.config
-
+    conditionForPrimaryButtonText = state.props.saveEmergencyContacts && not state.props.getDefaultContacts && length state.data.selectedContacts > 0
+    defaultContactCondition = state.props.getDefaultContacts
     primaryButtonConfig' =
       config
         { textConfig
-          { text = if null state.data.emergencyContactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)
-          , accessibilityHint = (if null state.data.emergencyContactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
+          { text = if null state.data.selectedContacts then "Add Contacts" else if conditionForPrimaryButtonText then "Next" else if defaultContactCondition then "Done" else (getString CONFIRM_EMERGENCY_CONTACTS)
+          , accessibilityHint = (if null state.data.selectedContacts then "Add Contacts" else if conditionForPrimaryButtonText then "Next" else if defaultContactCondition then "Done" else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)
-        , margin = (MarginBottom 24)
+        , margin = (MarginBottom 0)
         , id = "ConfirmEmergencyContactsButton"
         , enableRipple = true
         , rippleColor = Color.rippleShade
@@ -74,6 +78,22 @@ primaryButtonConfig state =
   in
     primaryButtonConfig'
 
+
+dropDownWithHeaderConfig :: EmergencyContactsScreenState -> NewContacts -> DropDownWithHeader.Config
+dropDownWithHeaderConfig state contact =
+  let
+    dropDownWithHeaderConfig' =
+      DropDownWithHeader.config
+        { listVisibility = boolToVisibility $ state.data.selectedContact.number == contact.number && state.props.showDropDown
+        , headerText = ""
+        , selectedValue = contact.shareTripWithEmergencyContactOption
+        , boxPadding = Padding 0 0 0 0
+        , boxBackground = Color.white900
+        , selectedContact = contact
+        , dropDownOptions = [EMData.alwaysShareRideOptionEM, EMData.shareWithTimeContraintsRideOptionEM, EMData.neverShareRideOptionEM]
+        }
+  in
+    dropDownWithHeaderConfig'
 
 --------------------------------------------------- removeContactPopUpModelConfig -----------------------------------------------------
 removeContactPopUpModelConfig :: EmergencyContactsScreenState -> PopUpModal.Config

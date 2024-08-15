@@ -1496,13 +1496,14 @@ newtype ContactDetails = ContactDetails {
   priority :: Maybe Int,
   enableForFollowing :: Maybe Boolean,
   enableForShareRide :: Maybe Boolean,
+  shareTripWithEmergencyContactOption:: Maybe RideShareOptions,
   onRide :: Maybe Boolean
 }
 
 
 instance makeEmergContactsReq :: RestEndpoint EmergContactsReq  where
   makeRequest reqBody headers = defaultMakeRequest POST (EP.emergencyContacts "") headers reqBody Nothing
-  encodeRequest req = standardEncode req
+  encodeRequest req = encode req
 
 derive instance genericEmergContactsReq :: Generic EmergContactsReq _
 derive instance newtypeEmergContactsReq :: Newtype EmergContactsReq _
@@ -2786,19 +2787,34 @@ newtype GetEmergencySettingsRes = GetEmergencySettingsRes
     localPoliceNumber :: Maybe String,
     hasCompletedMockSafetyDrill :: Boolean,
     shareTripWithEmergencyContacts :: Maybe Boolean,
-    shareTripWithEmergencyContactOption :: Maybe RideShareOptions
+    shareTripWithEmergencyContactOption :: Maybe RideShareOptions,
+    autoCallDefaultContact :: Boolean,
+    enableOtpLessRide :: Maybe Boolean,
+    enablePostRideSafetyCheck :: RideShareOptions,
+    enableUnexpectedEventsCheck :: RideShareOptions,
+    informPoliceSos :: Boolean,
+    notifySafetyTeamForSafetyCheckFailure :: Boolean,
+    notifySosWithEmergencyContacts :: Boolean,
+    shakeToActivate :: Boolean
   }
-
 
 newtype UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
   {
     shareEmergencyContacts :: Maybe Boolean,
     shareTripWithEmergencyContactOption :: Maybe RideShareOptions,
     nightSafetyChecks :: Maybe Boolean,
-    hasCompletedSafetySetup :: Maybe Boolean
+    hasCompletedSafetySetup :: Maybe Boolean,
+    autoCallDefaultContact :: Maybe Boolean,
+    enableOtpLessRide :: Maybe Boolean,
+    enablePostRideSafetyCheck :: Maybe RideShareOptions,
+    enableUnexpectedEventsCheck :: Maybe RideShareOptions,
+    hasCompletedMockSafetyDrill :: Maybe Boolean,
+    informPoliceSos :: Maybe Boolean,
+    notifySafetyTeamForSafetyCheckFailure :: Maybe Boolean,
+    notifySosWithEmergencyContacts :: Maybe Boolean,
+    shakeToActivate :: Maybe Boolean,
+    shareTripWithEmergencyContacts :: Maybe Boolean
   }
-
-
 
 data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE
 

@@ -43,6 +43,7 @@ import Screens.InvoiceScreen.ScreenData as InvoiceScreenData
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.MyRidesScreen.ScreenData as MyRideScreenData
 import Screens.NammaSafetyFlow.ScreenData as NammaSafetyScreenData
+import Screens.DataExplainWithFetch.ScreenData as DataExplainWithFetchScreenData
 import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
@@ -53,7 +54,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, DataFetchScreenState) 
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
@@ -127,6 +128,7 @@ newtype GlobalState = GlobalState {
   , globalFlowCache :: GlobalFlowCache
   , rentalScreen :: RentalScreenState
   , pickupInstructionsScreen :: PickupInstructionsScreenState
+  , dataExplainWithFetch :: DataFetchScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -161,6 +163,7 @@ defaultGlobalState = GlobalState {
   , rideSelectionScreen : RideSelectionScreenData.initData
   , reportIssueChatScreen : ReportIssueChatScreenData.initData
   , nammaSafetyScreen : NammaSafetyScreenData.initData
+  , dataExplainWithFetch : DataExplainWithFetchScreenData.initData
   , metroTicketDetailsScreen : MetroTicketDetailsScreenData.initData
   , metroMyTicketsScreen : MetroMyTicketsScreenData.initData
   , searchLocationScreen : SearchLocationScreenData.initData
@@ -198,6 +201,8 @@ data ABOUT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_ABOUT
 
 data EMERGECY_CONTACTS_SCREEN_OUTPUT = POST_CONTACTS EmergencyContactsScreenState Boolean
                                       | GET_CONTACTS EmergencyContactsScreenState
+                                      | POST_CONTACTS_SAFETY EmergencyContactsScreenState Boolean
+                                      | UPDATE_DEFAULT_CONTACTS EmergencyContactsScreenState
                                       | REFRESH_EMERGECY_CONTACTS_SCREEN EmergencyContactsScreenState
 
 data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
@@ -396,3 +401,4 @@ data ScreenType =
   | GlobalFlowCacheType (GlobalFlowCache -> GlobalFlowCache)
   | RentalScreenStateType (RentalScreenState -> RentalScreenState)
   | PickupInstructionsScreenStateType (PickupInstructionsScreenState -> PickupInstructionsScreenState)
+  | DataFetchScreenStateType (DataFetchScreenState -> DataFetchScreenState)

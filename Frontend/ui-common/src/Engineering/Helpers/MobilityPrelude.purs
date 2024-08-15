@@ -53,6 +53,9 @@ boolToInvisibility :: Boolean -> PD.Visibility
 boolToInvisibility true = PD.VISIBLE
 boolToInvisibility false = PD.INVISIBLE
 
+toggleVisibility :: PD.Visibility -> PD.Visibility
+toggleVisibility visibility = if visibility == PD.VISIBLE then PD.GONE else PD.VISIBLE
+
 catMaybeStrings :: Array (Maybe String) -> String
 catMaybeStrings arr = 
   trim $ foldl 

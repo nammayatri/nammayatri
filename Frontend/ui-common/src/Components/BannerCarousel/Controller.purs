@@ -43,6 +43,11 @@ data BannerType = AutoPay
   | CabLaunch
   | RentalsAndIntercity
   | AdvancedRide
+  | SafetyExplaination
+
+data BannerSize = Small --TODO:: Move string to BannerSize for bannerSize param
+  | Medium
+  | Large
 
 type CarouselConfig a = {
     item :: ListItem
@@ -84,6 +89,7 @@ type Config a = {
   actionBottomArrowIconVisibility :: Boolean,
   accessibilityHint :: Maybe String
 , imageBannerUrl :: String
+, bannerSize :: Maybe String
 , dynamicAction :: Maybe RemoteAC
 }
 
@@ -123,6 +129,7 @@ config action = {
     actionBottomArrowIconVisibility : false,
     accessibilityHint : Nothing
 , imageBannerUrl : ""
+, bannerSize : Nothing
 , dynamicAction : Nothing
 }
 
@@ -150,7 +157,8 @@ type PropConfig = (
   actionBottomArrowIconVisibility :: PropValue,
   imageBannerUrl :: PropValue,
   imageBannerVisibility :: PropValue,
-  accessibilityHint :: PropValue
+  accessibilityHint :: PropValue,
+  bannerSize :: PropValue
 )
 
 
@@ -184,12 +192,13 @@ bannerTransformer =
 , imageBannerUrl : toPropValue $ imageBannerUrl
 , imageBannerVisibility : toPropValue $ if DS.null $ imageBannerUrl then "gone" else "visible"
 , accessibilityHint : toPropValue $ fromMaybe "banner" item.accessibilityHint
+, bannerSize : toPropValue $ fromMaybe "small" item.bannerSize
   }
 )
 
 
-remoteConfigTransformer :: forall a. Array RCCarousel -> (Action -> a) -> Array (Config (Action -> a))
-remoteConfigTransformer remoteConfig action = 
+remoteConfigTransformer :: forall a. Array RCCarousel -> (Action -> a) -> Maybe String -> Array (Config (Action -> a))
+remoteConfigTransformer remoteConfig action mbBannerSize = 
   map (\(RCCarousel remoteConfig) -> 
     let
       config' = config action
@@ -213,6 +222,7 @@ remoteConfigTransformer remoteConfig action =
         actionBottomArrowIconVisibility = DS.null remoteConfig.cta_image_url,
         imageBannerUrl = fromMaybe "" remoteConfig.image_banner,
         dynamicAction = remoteConfig.dynamic_action,
-        accessibilityHint = remoteConfig.accessibilityHint
+        accessibilityHint = remoteConfig.accessibilityHint,
+        bannerSize = mbBannerSize
       }
     in config'') remoteConfig

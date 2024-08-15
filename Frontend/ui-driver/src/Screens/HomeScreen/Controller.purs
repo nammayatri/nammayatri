@@ -1765,7 +1765,7 @@ getBannerConfigs state =
           language = getLanguage $ getLanguageLocale languageKey
           configName = "driver_carousel_banner" <> language
           datas = RC.carouselConfigData driverLocation configName "driver_carousel_banner_en" (getValueFromWindow "DRIVER_ID") state.data.linkedVehicleCategory state.data.linkedVehicleVariant
-      BannerCarousel.remoteConfigTransformer datas BannerCarousal
+      BannerCarousel.remoteConfigTransformer datas BannerCarousal Nothing
     getLanguage :: String -> String
     getLanguage lang = 
       let language = toLower $ take 2 lang

@@ -737,6 +737,7 @@ postContactsReq contacts = EmergContactsReq {
       priority: Just item.priority,
       enableForFollowing: Just item.enableForFollowing,
       enableForShareRide: Just item.enableForShareRide,
+      shareTripWithEmergencyContactOption: Just item.shareTripWithEmergencyContactOption.key,
       onRide : Nothing
   }) contacts
 }
