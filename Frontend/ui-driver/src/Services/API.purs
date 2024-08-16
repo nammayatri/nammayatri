@@ -1089,7 +1089,7 @@ instance encodeValidateImageRes  :: Encode ValidateImageRes where encode = defau
 
 
 -- DriverRegistrationStatus API request, response types
-data DriverRegistrationStatusReq = DriverRegistrationStatusReq { }
+data DriverRegistrationStatusReq = DriverRegistrationStatusReq Boolean
 
 newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
@@ -1117,7 +1117,7 @@ newtype DocumentStatusItem = DocumentStatusItem
   }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.driverRegistrationStatus "") headers reqBody Nothing
+    makeRequest reqBody@(DriverRegistrationStatusReq queryParam) headers = defaultMakeRequest GET (EP.driverRegistrationStatus queryParam) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericVehicleDocumentItem :: Generic VehicleDocumentItem _
@@ -4194,7 +4194,7 @@ instance decodeGateInfoFull :: Decode GateInfoFull where decode = defaultDecode
 instance encodeGateInfoFull :: Encode GateInfoFull where encode = defaultEncode
 
 
-data OnboardingDocsReq = OnboardingDocsReq String
+data OnboardingDocsReq = OnboardingDocsReq Boolean Boolean
 
 newtype OnboardingDocsRes = OnboardingDocsRes {
   autos :: Maybe (Array OnboardingDoc),
@@ -4216,11 +4216,11 @@ newtype OnboardingDoc = OnboardingDoc {
 }
 
 instance makeOnboardingDocsReq :: RestEndpoint OnboardingDocsReq where
-  makeRequest reqBody@(OnboardingDocsReq qp) headers = defaultMakeRequest GET (EP.onBoardingConfigs qp) headers reqBody Nothing
-  encodeRequest req = standardEncode req
+  makeRequest reqBody@(OnboardingDocsReq makeAadhaarSelfieMandatory onlyVehicle) headers = defaultMakeRequest GET (EP.onBoardingConfigs makeAadhaarSelfieMandatory onlyVehicle) headers reqBody Nothing
+  encodeRequest req = defaultEncode req
 
 derive instance genericOnboardingDocsReq :: Generic OnboardingDocsReq _
-instance standardEncodeOnboardingDocsReq :: StandardEncode OnboardingDocsReq where standardEncode (OnboardingDocsReq qp) = standardEncode {}
+instance standardEncodeOnboardingDocsReq :: StandardEncode OnboardingDocsReq where standardEncode req = standardEncode req
 instance showOnboardingDocsReq :: Show OnboardingDocsReq where show = genericShow
 instance decodeOnboardingDocsReq :: Decode OnboardingDocsReq where decode = defaultDecode
 instance encodeOnboardingDocsReq  :: Encode OnboardingDocsReq where encode = defaultEncode
