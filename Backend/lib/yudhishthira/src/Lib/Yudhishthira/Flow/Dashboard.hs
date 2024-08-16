@@ -3,8 +3,10 @@
 
 module Lib.Yudhishthira.Flow.Dashboard where
 
+import qualified Data.Aeson as A
 import qualified Data.List as DL
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -84,3 +86,20 @@ postQueryCreate queryRequest = do
 
 verifyDynamicLogic :: (BeamFlow m r, ToJSON a) => [Value] -> a -> m Lib.Yudhishthira.Types.AppDynamicLogicResp
 verifyDynamicLogic logics data_ = runLogics logics data_
+
+verifyTag :: BeamFlow m r => Text -> m ()
+verifyTag fullTag = do
+  case T.splitOn "#" fullTag of
+    [name, tagValueText] -> do
+      tag <- QNT.findByPrimaryKey name >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
+      let mbTagValue = textToMaybeValue tagValueText
+      case tag.possibleValues of
+        Lib.Yudhishthira.Types.Tags values ->
+          case mbTagValue of
+            Just (A.String str) -> unless (str `elem` values) $ throwError (InvalidRequest $ "Tag value should be one of " <> show values)
+            _ -> throwError $ InvalidRequest "Tag value should be a string"
+        Lib.Yudhishthira.Types.Range start end ->
+          case mbTagValue of
+            Just (A.Number num) -> unless (num >= realToFrac start && num <= realToFrac end) $ throwError (InvalidRequest $ "Tag value should be between " <> show start <> " and " <> show end)
+            _ -> throwError $ InvalidRequest "Tag value should be a number"
+    _ -> throwError $ InvalidRequest "Tag should have format of name#value"

@@ -1,9 +1,12 @@
 module Lib.Yudhishthira.Tools.Utils where
 
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as DBL
 import qualified Data.String.Conversions as CS
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DTE
 import qualified Data.Text.Lazy as DTE
-import qualified Data.Text.Lazy.Encoding as DTE
+import qualified Data.Text.Lazy.Encoding as DTLE
 import JsonLogic
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -26,7 +29,7 @@ getChakraQueryFields chakra = do
 
 decodeTextToValue :: Text -> Either String Value
 decodeTextToValue text =
-  let byteString = DTE.encodeUtf8 $ DTE.fromStrict text
+  let byteString = DTLE.encodeUtf8 $ DTE.fromStrict text
    in A.eitherDecode byteString
 
 getAppDynamicLogic ::
@@ -75,3 +78,13 @@ runLogics logics data_ = do
     )
     startingPoint
     logics
+
+decodeText :: Text -> Maybe A.Value
+decodeText txt = A.decode (DBL.fromStrict . DTE.encodeUtf8 $ txt)
+
+-- Function to convert Text to Maybe Value
+textToMaybeValue :: Text -> Maybe A.Value
+textToMaybeValue txt =
+  case decodeText txt of
+    Just value -> Just value
+    Nothing -> decodeText (T.concat ["\"", txt, "\""])

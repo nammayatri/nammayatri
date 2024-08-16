@@ -159,6 +159,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
+import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
@@ -170,6 +171,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQGHC
@@ -2244,6 +2246,7 @@ updateDriverTag merchantShortId opCity driverId req = do
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  Yudhishthira.verifyTag req.driverTag
   let tag =
         if req.isAddingTag
           then addDriverTag driver.driverTag req.driverTag

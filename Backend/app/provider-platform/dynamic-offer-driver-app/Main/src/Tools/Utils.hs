@@ -2,10 +2,9 @@ module Tools.Utils where
 
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as A
-import Data.ByteString.Lazy (fromStrict)
 import qualified Data.Text as T
-import Data.Text.Encoding (encodeUtf8)
-import Kernel.Prelude hiding (encodeUtf8)
+import Kernel.Prelude
+import Lib.Yudhishthira.Tools.Utils
 
 convertTags :: [Text] -> A.Value
 convertTags input = A.object $ map toObject pairs
@@ -16,13 +15,3 @@ convertTags input = A.object $ map toObject pairs
     toObject xs = do
       let reconstructed = T.intercalate "#" xs
       (A.fromText $ T.strip reconstructed :: A.Key) A..= A.Null
-
-decodeText :: Text -> Maybe A.Value
-decodeText txt = A.decode (fromStrict . encodeUtf8 $ txt)
-
--- Function to convert Text to Maybe Value
-textToMaybeValue :: Text -> Maybe A.Value
-textToMaybeValue txt =
-  case decodeText txt of
-    Just value -> Just value
-    Nothing -> decodeText (T.concat ["\"", txt, "\""])
