@@ -55,3 +55,9 @@ type CancellationThresholdConfig  = {
   warning1 :: Int,
   warning2 :: Int
 }
+
+type ReferralPopUpDelays = {
+  refer_now :: Int,
+  add_upi :: Int, 
+  verify_upi :: Int
+}

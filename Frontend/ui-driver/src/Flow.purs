@@ -3689,13 +3689,13 @@ updateBannerAndPopupFlags = do
     
     payoutVpaStatus = getDriverInfoResp.payoutVpaStatus
 
-    showReferNowPopUp = isPayoutEnabled && showReferralPopUp REFER_NOW_LAST_SHOWN && isJust payoutVpa && case payoutVpaStatus of 
+    showReferNowPopUp = isPayoutEnabled && showReferralPopUp REFER_NOW_LAST_SHOWN ST.ReferNow && isJust payoutVpa && case payoutVpaStatus of 
                                                                                                             Just status -> status == VIA_WEBHOOK || status == VERIFIED_BY_USER
                                                                                                             Nothing -> false
   
-    showAddUPIPopUp = isPayoutEnabled && showReferralPopUp ADD_UPI_LAST_SHOWN && isNothing payoutVpa
+    showAddUPIPopUp = isPayoutEnabled && showReferralPopUp ADD_UPI_LAST_SHOWN ST.AddUPI && isNothing payoutVpa
 
-    showVerifyUPIPopUp = isPayoutEnabled && showReferralPopUp VERIFY_UPI_LAST_SHOWN && isJust payoutVpa && case payoutVpaStatus of 
+    showVerifyUPIPopUp = isPayoutEnabled && showReferralPopUp VERIFY_UPI_LAST_SHOWN ST.VerifyUPI && isJust payoutVpa && case payoutVpaStatus of 
                                                                                                               Just status -> status == MANUALLY_ADDED
                                                                                                               Nothing -> false
 
@@ -3738,9 +3738,7 @@ updateBannerAndPopupFlags = do
               }
         )
   where 
-    showReferralPopUp popUpType =
-      let showPopUp = (HU.isMoreThan24Hours $ getValueToLocalStore popUpType) || (getValueToLocalStore popUpType == "__failed")
-      in showPopUp
+    showReferralPopUp storeKey popUpType = runFn2 HU.isMoreThanXMs (getValueToLocalStore storeKey) (RC.getReferralPopUpDelays popUpType)
 
 callGetPastDaysData :: AppConfig -> HomeScreenState -> FlowBT String ST.CoinEarnedPopupType
 callGetPastDaysData appConfig hsState = do

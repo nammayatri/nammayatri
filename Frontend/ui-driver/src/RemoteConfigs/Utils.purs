@@ -23,10 +23,12 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig)
+import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Common.RemoteConfig.Utils
+import Screens.Types as ST
+import Resource.Constants (oneDayInMS)
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
@@ -107,3 +109,20 @@ defaultCancellationThresholdConfig = {
   warning1 : 30,
   warning2 : 60
 }
+
+defaultReferralPopUpDelays :: ReferralPopUpDelays
+defaultReferralPopUpDelays = {
+  refer_now : oneDayInMS,
+  add_upi : oneDayInMS,
+  verify_upi : oneDayInMS
+}
+
+getReferralPopUpDelays :: ST.HomeScreenPopUpTypes -> Int
+getReferralPopUpDelays popUpType = do
+    let config = fetchRemoteConfigString "referral_pop_up_delays"
+        value = decodeForeignObject (parseJSON config) defaultReferralPopUpDelays
+    case popUpType of 
+      ST.ReferNow -> value.refer_now
+      ST.AddUPI -> value.add_upi
+      ST.VerifyUPI -> value.verify_upi
+      _ -> oneDayInMS
