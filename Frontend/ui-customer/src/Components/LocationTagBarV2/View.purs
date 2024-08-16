@@ -26,9 +26,11 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility , boolToInvisibility)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Styles.Colors as Color
+import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarConfig -> PrestoDOM (Effect Unit) w 
 view push state = let 
@@ -48,6 +50,7 @@ tagView item isLast push =
   let 
     textConfig = item.textConfig
     imageConfig = item.imageConfig
+    pillConfig = item.pillConfig
     rightMargin = if isLast then 0 else 8
   in linearLayout
       ([ height item.height 
@@ -89,10 +92,30 @@ tagView item isLast push =
             , imageWithFallback imageConfig.imageWithFallback
             , margin $ imageConfig.margin
             ]
-        , textView $
+        , linearLayout [
+          width $ V 10 
+        ][]
+        , linearLayout [
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation VERTICAL
+
+        ][
+         textView $
             [ text textConfig.text
             , textSize textConfig.fontSize
             , color textConfig.color 
             , padding $ PaddingBottom 2
             ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
+        , textView $ 
+            [ text pillConfig.text
+            , textSize pillConfig.textSize
+            , background pillConfig.background
+            , cornerRadii pillConfig.cornerRadius
+            , visibility $ boolToVisibility item.showPill
+            , color pillConfig.color
+            , padding $ Padding 4 2 4 2 
+            ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
+
+        ]
       ]]
