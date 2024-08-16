@@ -62,6 +62,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.rcNumberPrefixList rcNumberPrefixList,
       Se.Set Beam.supportedVehicleClassesJSON (getConfigJSON supportedVehicleClasses),
       Se.Set Beam.title title,
+      Se.Set Beam.validateUsing validateUsing,
       Se.Set Beam.vehicleClassCheckType vehicleClassCheckType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

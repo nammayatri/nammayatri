@@ -60,7 +60,8 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isHidden :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
-    title :: Kernel.Prelude.Text
+    title :: Kernel.Prelude.Text,
+    validateUsing :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.ValidationSource
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
