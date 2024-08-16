@@ -17,7 +17,7 @@ imports:
   BaseUrl: Servant.Client.Core
   Minutes: Kernel.Types.Common
   Image: Domain.Types.Image
-
+  ValidationSource: Domain.Types.DocumentVerificationConfig
 module: DriverOnboardingV2
 types:
   ValidationStatus:
@@ -40,6 +40,7 @@ types:
     checkExtraction: Bool
     checkExpiry: Bool
     rcNumberPrefixList: '[Text]'
+    validateUsing: Maybe ValidationSource
   UpdateAirConditionUpdateRequest:
     recordType: NewType
     isAirConditioned: Bool
@@ -123,6 +124,7 @@ apis:
       endpoint: /onboarding/configs
       query:
         onlyVehicle: Bool
+        makeSelfieAadhaarPanMandatory: Bool
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: DocumentVerificationConfigList
