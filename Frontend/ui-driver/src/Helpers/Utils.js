@@ -420,15 +420,15 @@ export const isYesterday = function (dateString){
   return false;
 }
 
-export const isMoreThan24Hours = function(timestamp) {
+export const isMoreThanXMs = function(timestamp, millis) {
   try {
+    if(timestamp === "__failed") return true;
     const timestampDate = new Date(timestamp);
     const now = Date.now();
     const timestampTime = timestampDate.getTime();
     const timeDifference = now - timestampTime;
-    const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
     
-    return timeDifference > twentyFourHoursInMs;
+    return timeDifference > millis;
   } catch (error) {
     console.log(error);
     return false

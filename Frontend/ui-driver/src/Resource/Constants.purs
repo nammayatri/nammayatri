@@ -269,3 +269,6 @@ defaultSliderDist = 4
 
 hvSdkTokenExp :: Int
 hvSdkTokenExp = 86400
+
+oneDayInMS :: Int
+oneDayInMS = 86400000
