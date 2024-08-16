@@ -19,7 +19,7 @@ import Control.Monad
 import Data.Aeson
 import Data.Default.Class
 import qualified Data.List.NonEmpty as NE
-import Data.OpenApi hiding (Header)
+import Data.OpenApi hiding (Header, description, email)
 import qualified Data.OpenApi as OpenApi hiding (Header)
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as TE
@@ -265,7 +265,7 @@ search ::
   Bool ->
   Bool ->
   Flow SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion clientId device isDashboardRequest_ makeMultiModalSearch = do
+search personId req bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ makeMultiModalSearch = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   validateStartAndReturnTime now startTime returnTime
@@ -311,7 +311,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
       roundTrip
       bundleVersion
       clientVersion
-      clientConfigVersion
+      clientConfigVersion_
       device
       tag
       shortestRouteDuration
@@ -327,7 +327,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   QPFS.clearCache person.id
 
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
-
+  let updatedPerson = backfillCustomerNammaTags person
   when makeMultiModalSearch $ do
     fork "multi-modal search" $ multiModalSearch searchRequest
   return $
@@ -338,10 +338,18 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest person shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest,
+        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest,
         ..
       }
   where
+    backfillCustomerNammaTags :: Person.Person -> Person.Person
+    backfillCustomerNammaTags Person.Person {..} =
+      if isNothing customerNammaTags
+        then do
+          let genderTag = "Gender#" <> show gender -- handle it properly later
+          Person.Person {customerNammaTags = Just [genderTag], ..}
+        else Person.Person {..}
+
     getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       Just $
