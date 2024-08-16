@@ -95,8 +95,8 @@ deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
 callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
-driverRegistrationStatus :: String -> String
-driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status"
+driverRegistrationStatus :: Boolean -> String
+driverRegistrationStatus queryParam = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -327,8 +327,8 @@ dummyRideRequest _ =  (getBaseUrl "") <> "/driver/getDummyRideRequest"
 specialLocationList :: String -> String
 specialLocationList _ = (if isDebugBuild unit then (getBaseUrl "") else (getSpecialZoneBaseUrl "")) <> "/specialLocation/list"
 
-onBoardingConfigs :: String -> String
-onBoardingConfigs qp = (getBaseUrl "") <> "/onboarding/configs" <> qp
+onBoardingConfigs :: Boolean -> Boolean -> String
+onBoardingConfigs showAadhaarProfilePan onlyVehicle = (getBaseUrl "") <> "/onboarding/configs?makeSelfieAadhaarPanMandatory=" <> show showAadhaarProfilePan <> "&onlyVehicle=" <> show onlyVehicle
 
 driverVehicleServiceTier :: String -> String
 driverVehicleServiceTier _ = (getBaseUrl "") <> "/driver/vehicleServiceTiers"
