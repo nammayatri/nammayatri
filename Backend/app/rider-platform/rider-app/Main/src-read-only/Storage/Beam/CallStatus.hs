@@ -7,6 +7,7 @@ module Storage.Beam.CallStatus where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.CallStatus
+import Domain.Types.Common ()
 import qualified Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption

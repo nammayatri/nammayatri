@@ -6,6 +6,7 @@
 module Storage.Beam.Issue where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified IssueManagement.Common
 import Kernel.External.Encryption
 import Kernel.Prelude

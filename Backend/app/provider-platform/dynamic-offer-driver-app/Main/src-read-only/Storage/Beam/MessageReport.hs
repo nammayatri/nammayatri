@@ -8,6 +8,7 @@ module Storage.Beam.MessageReport where
 import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.MessageReport
 import Kernel.External.Encryption
 import Kernel.Prelude

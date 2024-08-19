@@ -61,6 +61,6 @@ data VehicleAPIEntity = VehicleAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RegistrationCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RegistrationCategory)
 
-$(mkHttpInstancesForEnum (''RegistrationCategory))
+$(mkHttpInstancesForEnum ''RegistrationCategory)

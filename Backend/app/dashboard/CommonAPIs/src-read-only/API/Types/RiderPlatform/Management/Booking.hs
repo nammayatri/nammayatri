@@ -7,6 +7,7 @@ import qualified Dashboard.Common.Booking
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
+import Kernel.Types.Common
 import Servant
 import Servant.Client
 

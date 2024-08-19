@@ -15,18 +15,18 @@ import qualified Kernel.Utils.Common
 import Tools.Beam.UtilsTH
 
 data CancellationFarePolicyT f = CancellationFarePolicyT
-  { currency :: (B.C f Kernel.Utils.Common.Currency),
-    description :: (B.C f Kernel.Prelude.Text),
-    freeCancellationTimeSeconds :: (B.C f Kernel.Types.Common.Seconds),
-    id :: (B.C f Kernel.Prelude.Text),
-    maxCancellationCharge :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    maxWaitingTimeAtPickupSeconds :: (B.C f Kernel.Types.Common.Seconds),
-    minCancellationCharge :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    perMetreCancellationCharge :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    perMinuteCancellationCharge :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    percentageOfRideFareToBeCharged :: (B.C f Kernel.Types.Common.Centesimal),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { currency :: B.C f Kernel.Utils.Common.Currency,
+    description :: B.C f Kernel.Prelude.Text,
+    freeCancellationTimeSeconds :: B.C f Kernel.Types.Common.Seconds,
+    id :: B.C f Kernel.Prelude.Text,
+    maxCancellationCharge :: B.C f Kernel.Types.Common.HighPrecMoney,
+    maxWaitingTimeAtPickupSeconds :: B.C f Kernel.Types.Common.Seconds,
+    minCancellationCharge :: B.C f Kernel.Types.Common.HighPrecMoney,
+    perMetreCancellationCharge :: B.C f Kernel.Types.Common.HighPrecMoney,
+    perMinuteCancellationCharge :: B.C f Kernel.Types.Common.HighPrecMoney,
+    percentageOfRideFareToBeCharged :: B.C f Kernel.Types.Common.Centesimal,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table CancellationFarePolicyT where
 
 type CancellationFarePolicy = CancellationFarePolicyT Identity
 
-$(enableKVPG (''CancellationFarePolicyT) [('id)] [])
+$(enableKVPG ''CancellationFarePolicyT ['id] [])
 
-$(mkTableInstances (''CancellationFarePolicyT) "cancellation_fare_policy")
+$(mkTableInstances ''CancellationFarePolicyT "cancellation_fare_policy")

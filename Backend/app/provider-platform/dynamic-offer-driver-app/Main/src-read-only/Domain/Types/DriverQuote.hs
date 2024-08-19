@@ -59,8 +59,8 @@ data DriverQuote = DriverQuote
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data DriverQuoteStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverQuoteStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverQuoteStatus)

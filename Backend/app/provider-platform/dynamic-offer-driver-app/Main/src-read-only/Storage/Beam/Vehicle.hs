@@ -18,30 +18,30 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleT f = VehicleT
-  { airConditioned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    capacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    category :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)),
-    color :: (B.C f Kernel.Prelude.Text),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    energyType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    luggageCapacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    mYManufacturing :: (B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day)),
-    make :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    model :: (B.C f Kernel.Prelude.Text),
-    oxygen :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    registrationCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory)),
-    registrationNo :: (B.C f Kernel.Prelude.Text),
-    selectedServiceTiers :: (B.C f [Domain.Types.Common.ServiceTierType]),
-    size :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    variant :: (B.C f Domain.Types.VehicleVariant.VehicleVariant),
-    vehicleClass :: (B.C f Kernel.Prelude.Text),
-    vehicleName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleRating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    ventilator :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { airConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    capacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    category :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    color :: B.C f Kernel.Prelude.Text,
+    driverId :: B.C f Kernel.Prelude.Text,
+    energyType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    mYManufacturing :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
+    make :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    model :: B.C f Kernel.Prelude.Text,
+    oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    registrationCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory),
+    registrationNo :: B.C f Kernel.Prelude.Text,
+    selectedServiceTiers :: B.C f [Domain.Types.Common.ServiceTierType],
+    size :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    variant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,
+    vehicleClass :: B.C f Kernel.Prelude.Text,
+    vehicleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -51,6 +51,6 @@ instance B.Table VehicleT where
 
 type Vehicle = VehicleT Identity
 
-$(enableKVPG (''VehicleT) [('driverId)] [[('registrationNo)]])
+$(enableKVPG ''VehicleT ['driverId] [['registrationNo]])
 
-$(mkTableInstances (''VehicleT) "vehicle")
+$(mkTableInstances ''VehicleT "vehicle")

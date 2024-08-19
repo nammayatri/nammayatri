@@ -8,6 +8,7 @@ module Storage.Beam.TicketBookingService where
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
+import Domain.Types.Common ()
 import qualified Domain.Types.TicketBookingService
 import Kernel.External.Encryption
 import Kernel.Prelude

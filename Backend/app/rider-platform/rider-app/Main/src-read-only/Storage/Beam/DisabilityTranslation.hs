@@ -6,6 +6,7 @@
 module Storage.Beam.DisabilityTranslation where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude

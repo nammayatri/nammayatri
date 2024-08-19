@@ -24,7 +24,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverModuleCompletion.DriverModuleCompletion] -> m ())
 createMany = traverse_ create
 
-findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.DriverModuleCompletion.DriverModuleCompletion]))
+findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.DriverModuleCompletion.DriverModuleCompletion])
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findByDriverIdAndModuleId ::
@@ -34,7 +34,7 @@ findByDriverIdAndModuleId driverId moduleId = do findOneWithKV [Se.And [Se.Is Be
 
 findByDriverIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverModuleCompletion.ModuleCompletionStatus -> m ([Domain.Types.DriverModuleCompletion.DriverModuleCompletion]))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DriverModuleCompletion.ModuleCompletionStatus -> m [Domain.Types.DriverModuleCompletion.DriverModuleCompletion])
 findByDriverIdAndStatus driverId status = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.status $ Se.Eq status]]
 
 updateEntitiesCompleted ::

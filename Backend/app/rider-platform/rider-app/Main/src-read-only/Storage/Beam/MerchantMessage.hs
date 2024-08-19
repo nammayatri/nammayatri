@@ -7,6 +7,7 @@ module Storage.Beam.MerchantMessage where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.MerchantMessage
 import Kernel.External.Encryption
 import Kernel.Prelude

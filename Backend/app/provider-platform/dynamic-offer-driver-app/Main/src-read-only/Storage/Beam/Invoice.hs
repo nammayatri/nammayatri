@@ -6,6 +6,7 @@
 module Storage.Beam.Invoice where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Invoice
 import qualified Domain.Types.Plan
 import Kernel.External.Encryption

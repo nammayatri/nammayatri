@@ -6,6 +6,7 @@
 module Storage.Beam.RideRelatedNotificationConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.RideRelatedNotificationConfig
 import Kernel.External.Encryption

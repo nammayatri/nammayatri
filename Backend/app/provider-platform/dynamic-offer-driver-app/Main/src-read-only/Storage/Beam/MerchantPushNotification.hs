@@ -15,15 +15,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantPushNotificationT f = MerchantPushNotificationT
-  { body :: (B.C f Kernel.Prelude.Text),
-    fcmNotificationType :: (B.C f Kernel.External.Notification.FCM.Types.FCMNotificationType),
-    key :: (B.C f Kernel.Prelude.Text),
-    language :: (B.C f Kernel.External.Types.Language),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    title :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { body :: B.C f Kernel.Prelude.Text,
+    fcmNotificationType :: B.C f Kernel.External.Notification.FCM.Types.FCMNotificationType,
+    key :: B.C f Kernel.Prelude.Text,
+    language :: B.C f Kernel.External.Types.Language,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    title :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +35,6 @@ instance B.Table MerchantPushNotificationT where
 
 type MerchantPushNotification = MerchantPushNotificationT Identity
 
-$(enableKVPG (''MerchantPushNotificationT) [('key), ('language), ('merchantOperatingCityId)] [])
+$(enableKVPG ''MerchantPushNotificationT ['key, 'language, 'merchantOperatingCityId] [])
 
-$(mkTableInstances (''MerchantPushNotificationT) "merchant_push_notification")
+$(mkTableInstances ''MerchantPushNotificationT "merchant_push_notification")

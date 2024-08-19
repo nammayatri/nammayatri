@@ -7,6 +7,7 @@ module Storage.Beam.Exophone where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Exophone
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption

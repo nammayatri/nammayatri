@@ -6,6 +6,7 @@
 module Storage.Beam.CancellationReason where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Extra.CancellationReason
 import Kernel.External.Encryption
 import Kernel.Prelude
