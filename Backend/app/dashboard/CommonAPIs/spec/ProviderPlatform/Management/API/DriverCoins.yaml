@@ -23,7 +23,7 @@ apis:
       endpoint: coinHistory/{driverId}
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_HISTORY
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       query:
         - limit: Integer
         - offset: Integer

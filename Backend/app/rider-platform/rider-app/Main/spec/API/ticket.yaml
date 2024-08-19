@@ -144,7 +144,7 @@ types:
     updatedBookedSeats: Int
 
   TicketServiceCancelReq:
-    businessHourId : (Id BusinessHour)
+    businessHourId : Id BusinessHour
     date : Day
     description : Maybe Text
     ticketServiceId : Id TicketService

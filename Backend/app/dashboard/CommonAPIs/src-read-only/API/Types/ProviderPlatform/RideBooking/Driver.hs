@@ -175,11 +175,10 @@ type PostDriverCollectCashHelper =
   )
 
 type PostDriverV2CollectCash =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "v2" :> "collectCash"
-      :> Capture
-           "serviceName"
-           Dashboard.Common.Driver.ServiceNames
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "v2" :> "collectCash" :> Capture "serviceName" Dashboard.Common.Driver.ServiceNames
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverCollectCashV2Helper =

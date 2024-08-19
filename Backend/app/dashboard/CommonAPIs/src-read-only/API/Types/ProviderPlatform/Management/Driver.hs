@@ -357,11 +357,10 @@ type PostDriverUpdateName =
   )
 
 type PostDriverDeleteRC =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "deleteRC"
-      :> ReqBody
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "deleteRC" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Driver.DeleteRCReq
+      :> Post
            '[JSON]
-           API.Types.ProviderPlatform.Management.Driver.DeleteRCReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type GetDriverClearStuckOnRide = ("clearStuck" :> "onRide" :> QueryParam "dbSyncTime" Kernel.Prelude.Int :> Get '[JSON] API.Types.ProviderPlatform.Management.Driver.ClearOnRideStuckDriversRes)

@@ -16,21 +16,21 @@ apis:
       endpoint: /{driverId}/documents/list
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENT_LIST
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: DocumentsListResponse
   - GET: # GetDocumentAPI
       endpoint: /getDocument/{imageId}
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DOCUMENT
       params:
-        imageId: (Id Image)
+        imageId: Id Image
       response:
         type: GetDocumentResponse
   - POST: # UploadDocumentAPI
       endpoint: /{driverId}/document/upload
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPLOAD_DOCUMENT
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: UploadDocumentReq
       response:
@@ -39,7 +39,7 @@ apis:
       endpoint: /{driverId}/register/dl
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_DL
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: RegisterDLReq
       response:
@@ -48,7 +48,7 @@ apis:
       endpoint: /{driverId}/register/rc
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REGISTER_RC
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: RegisterRCReq
       response:
@@ -57,7 +57,7 @@ apis:
       endpoint: /{driverId}/register/generateAadhaarOtp
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GENERATE_AADHAAR_OTP
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: GenerateAadhaarOtpReq
       response:
@@ -66,7 +66,7 @@ apis:
       endpoint: /{driverId}/register/verifyAadhaarOtp
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS VERIFY_AADHAAR_OTP
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: VerifyAadhaarOtpReq
       response:
@@ -75,7 +75,7 @@ apis:
       endpoint: /underReviewDrivers
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNDER_REVIEW_DRIVERS_LIST
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       query:
         - limit: Int
         - offset: Int
@@ -85,7 +85,7 @@ apis:
       endpoint: /{driverId}/documents/info
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DOCUMENT_INFO
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: "[DriverDocument]"
   - POST: # UpdateDocumentAPI

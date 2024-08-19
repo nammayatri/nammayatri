@@ -284,7 +284,7 @@ apis:
   - POST: # UpsertSpecialLocationAPI
       endpoint: /specialLocation/upsert
       query:
-        - specialLocationId: (Id SpecialLocation)
+        - specialLocationId: Id SpecialLocation
       auth:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
       multipart:
@@ -295,7 +295,7 @@ apis:
         - POST:
             endpoint: /specialLocation/upsert
             query:
-              - specialLocationId: (Id SpecialLocation)
+              - specialLocationId: Id SpecialLocation
             auth: # TODO remove
               ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
             request:
