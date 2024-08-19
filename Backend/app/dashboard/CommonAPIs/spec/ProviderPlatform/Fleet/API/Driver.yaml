@@ -100,7 +100,7 @@ apis:
       endpoint: /{driverId}/{vehicleNo}/fleet/unlink
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_UNLINK_VEHICLE
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
         vehicleNo: Text
       response:
         type: APISuccess
@@ -109,7 +109,7 @@ apis:
             endpoint: /{fleetOwnerId}/{driverId}/{vehicleNo}/fleet/unlink
             auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_UNLINK_VEHICLE
             params:
-              driverId: (Id Driver)
+              driverId: Id Driver
               vehicleNo: Text
               fleetOwnerId: Text
             response:
@@ -134,7 +134,7 @@ apis:
       endpoint: /{driverId}/fleet/remove/driver
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_DRIVER
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: APISuccess
       helperApi:
@@ -142,7 +142,7 @@ apis:
             endpoint: /{fleetOwnerId}/{driverId}/fleet/remove/driver
             auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_DRIVER
             params:
-              driverId: (Id Driver)
+              driverId: Id Driver
               fleetOwnerId: Text
             response:
               type: APISuccess
@@ -318,7 +318,7 @@ apis:
       endpoint: /{driverId}/fleet/vehicleDriverRCstatus
       auth:  ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: RCStatusReq
       response:
@@ -328,7 +328,7 @@ apis:
             endpoint: /{driverId}/{fleetOwnerId}/fleet/vehicleDriverRCstatus
             auth:  ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
             params:
-              driverId: (Id Driver)
+              driverId: Id Driver
               fleetOwnerId: Text
             request:
               type: RCStatusReq
@@ -338,7 +338,7 @@ apis:
       endpoint: /{driverId}/updateFleetOwnerInfo
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET UPDATE_FLEET_OWNER_INFO
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: UpdateFleetOwnerInfoReq
       response:
@@ -347,7 +347,7 @@ apis:
       endpoint: /{driverId}/fleetOwnerInfo
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_FLEET_OWNER_INFO
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: FleetOwnerInfoRes
   - POST: # SendFleetJoiningOtpAPI

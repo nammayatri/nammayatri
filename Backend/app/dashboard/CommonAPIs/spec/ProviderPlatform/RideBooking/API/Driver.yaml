@@ -27,14 +27,14 @@ apis:
       endpoint: /{driverId}/enable
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS ENABLE
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: APISuccess
   - POST: # DriverCashCollectionAPI
       endpoint: /{driverId}/collectCash
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: APISuccess
       helperApi:
@@ -42,7 +42,7 @@ apis:
             endpoint: /{driverId}/collectCash
             auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
             params:
-              driverId: (Id Driver)
+              driverId: Id Driver
             request:
               type: Text
             response:
@@ -51,7 +51,7 @@ apis:
       endpoint: /{driverId}/v2/collectCash/{serviceName}
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
         serviceName: ServiceNames
       response:
         type: APISuccess
@@ -60,7 +60,7 @@ apis:
             endpoint: /{driverId}/collectCash/v2/{token}/{serviceName}
             auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
             params:
-              driverId: (Id Driver)
+              driverId: Id Driver
               token: Text
               serviceName: ServiceNames
             response:
@@ -69,7 +69,7 @@ apis:
       endpoint: /{driverId}/exemptCash
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: APISuccess
       helperApi:
@@ -77,7 +77,7 @@ apis:
             endpoint: /{driverId}/exemptCash
             auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
             params:
-              driverId: (Id Driver)
+              driverId: Id Driver
             request:
               type: Text
             response:
@@ -86,7 +86,7 @@ apis:
       endpoint: /{driverId}/v2/exemptCash/{serviceName}
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
         serviceName: ServiceNames
       response:
         type: APISuccess
@@ -95,7 +95,7 @@ apis:
             endpoint: /{driverId}/exemptCash/v2/{token}/{serviceName}
             auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
             params:
-              driverId: (Id Driver)
+              driverId: Id Driver
               token: Text
               serviceName: ServiceNames
             response:
@@ -110,7 +110,7 @@ apis:
         - dlNumber: Text
         - rcNumber: Text
         - email: Text
-        - personId: (Id Driver)
+        - personId: Id Driver
       response:
         type: DriverInfoRes
       helperApi:
@@ -124,7 +124,7 @@ apis:
               - dlNumber: Text
               - rcNumber: Text
               - email: Text
-              - personId: (Id Driver)
+              - personId: Id Driver
             params:
               fleetOwnerId: Text
               mbFleet: Bool
@@ -134,21 +134,21 @@ apis:
       endpoint: /{driverId}/unlinkVehicle
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS UNLINK_VEHICLE
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: APISuccess
   - POST: # EndRCAssociationAPI
       endpoint: /{driverId}/endRCAssociation
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS END_RC_ASSOCIATION
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: APISuccess
   - POST: # AddVehicleAPI
       endpoint: /{driverId}/addVehicle
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS ADD_VEHICLE
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: AddVehicleReq
       response:
@@ -158,7 +158,7 @@ apis:
       endpoint: /{driverId}/setRCStatus
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS SET_RC_STATUS
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: RCStatusReq
       response:

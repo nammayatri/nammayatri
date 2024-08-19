@@ -18,7 +18,7 @@ apis:
         limit: Int
         offset: Int
         bookingStatus: BookingStatus
-        rideShortId: (ShortId Ride)
+        rideShortId: ShortId Ride
         customerPhoneNo: Text
         driverPhoneNo: Text
         fareDiff: HighPrecMoney
@@ -54,7 +54,7 @@ apis:
       auth:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_INFO
       params:
-        rideId: (Id Ride)
+        rideId: Id Ride
       response:
         type: RideInfoRes
   - POST: # RideSyncAPI
@@ -62,7 +62,7 @@ apis:
       auth:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_SYNC
       params:
-        rideId: (Id Ride)
+        rideId: Id Ride
       response:
         type: RideSyncRes
   - POST: # MultipleRideSyncAPI
@@ -79,7 +79,7 @@ apis:
       auth:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_ROUTE
       params:
-        rideId: (Id Ride)
+        rideId: Id Ride
       response:
         type: RideRouteRes
   - GET: # TicketRideListAPI
@@ -87,7 +87,7 @@ apis:
       auth:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES TICKET_RIDE_LIST_API
       query:
-        - rideShortId: (ShortId Ride)
+        - rideShortId: ShortId Ride
         - countryCode: Text
         - phoneNumber: Text
         - supportPhoneNumber: Text

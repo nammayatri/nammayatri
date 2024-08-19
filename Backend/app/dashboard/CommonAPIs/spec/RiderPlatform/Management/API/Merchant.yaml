@@ -87,7 +87,7 @@ apis:
   - POST: # UpsertSpecialLocationAPI
       endpoint: /specialLocation/upsert
       query:
-        specialLocationId: (Id SpecialLocation)
+        specialLocationId: Id SpecialLocation
       auth:
         ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
       multipart:
@@ -98,7 +98,7 @@ apis:
         - POST:
             endpoint: /specialLocation/upsert
             query:
-              specialLocationId: (Id SpecialLocation)
+              specialLocationId: Id SpecialLocation
             auth:
               ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION # TODO serverName move to dhall
             request:

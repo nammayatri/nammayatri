@@ -11,14 +11,14 @@ apis:
       endpoint: /{driverId}/getHomeLocation
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_HOME_LOCATION
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: GetHomeLocationsRes
   - POST: # UpdateDriverHomeLocationAPI
       endpoint: /{driverId}/updateHomeLocation
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_HOME_LOCATION
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       request:
         type: UpdateDriverHomeLocationReq
       response:
@@ -27,14 +27,14 @@ apis:
       endpoint: /{driverId}/incrementGoToCount
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS INCREMENT_DRIVER_GO_TO_COUNT
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: APISuccess
   - GET: # GetDriverGoHomeInfoAPI
       endpoint: /{driverId}/getGoHomeInfo
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_GO_HOME_INFO
       params:
-        driverId: (Id Driver)
+        driverId: Id Driver
       response:
         type: CachedGoHomeRequestInfoRes
 types:
