@@ -10,6 +10,7 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
+import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Types.SpecialLocation
 import Servant

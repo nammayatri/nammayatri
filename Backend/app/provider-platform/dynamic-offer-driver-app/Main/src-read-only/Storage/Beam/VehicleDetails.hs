@@ -15,13 +15,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleDetailsT f = VehicleDetailsT
-  { acAvailable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    capacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    id :: (B.C f Data.Text.Text),
-    make :: (B.C f Data.Text.Text),
-    model :: (B.C f Data.Text.Text),
-    vehicleVariant :: (B.C f Domain.Types.VehicleVariant.VehicleVariant),
-    year :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int))
+  { acAvailable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    capacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    id :: B.C f Data.Text.Text,
+    make :: B.C f Data.Text.Text,
+    model :: B.C f Data.Text.Text,
+    vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,
+    year :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table VehicleDetailsT where
 
 type VehicleDetails = VehicleDetailsT Identity
 
-$(enableKVPG (''VehicleDetailsT) [('id)] [])
+$(enableKVPG ''VehicleDetailsT ['id] [])
 
-$(mkTableInstances (''VehicleDetailsT) "vehicle_details")
+$(mkTableInstances ''VehicleDetailsT "vehicle_details")

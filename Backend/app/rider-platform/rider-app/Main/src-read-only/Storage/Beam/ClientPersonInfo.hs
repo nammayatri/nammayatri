@@ -14,15 +14,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data ClientPersonInfoT f = ClientPersonInfoT
-  { clientId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    rideCount :: (B.C f Kernel.Prelude.Int),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory))
+  { clientId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    rideCount :: B.C f Kernel.Prelude.Int,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table ClientPersonInfoT where
 
 type ClientPersonInfo = ClientPersonInfoT Identity
 
-$(enableKVPG (''ClientPersonInfoT) [('id)] [[('personId)]])
+$(enableKVPG ''ClientPersonInfoT ['id] [['personId]])
 
-$(mkTableInstances (''ClientPersonInfoT) "client_person_info")
+$(mkTableInstances ''ClientPersonInfoT "client_person_info")

@@ -7,6 +7,7 @@ module Storage.Beam.BookingUpdateRequest where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.BookingUpdateRequest
+import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude

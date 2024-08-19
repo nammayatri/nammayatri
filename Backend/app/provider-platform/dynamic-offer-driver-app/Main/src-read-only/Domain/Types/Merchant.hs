@@ -58,7 +58,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED deriving (Eq, Ord, Show
 
 data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-type Merchant = MerchantD ('Safe)
+type Merchant = MerchantD 'Safe
 
 instance FromJSON (MerchantD 'Unsafe)
 
@@ -68,6 +68,6 @@ instance FromJSON (MerchantD 'Safe)
 
 instance ToJSON (MerchantD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Status))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)
 
-$(mkHttpInstancesForEnum (''Status))
+$(mkHttpInstancesForEnum ''Status)

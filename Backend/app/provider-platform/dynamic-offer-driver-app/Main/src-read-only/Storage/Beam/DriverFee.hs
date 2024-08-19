@@ -6,6 +6,7 @@
 module Storage.Beam.DriverFee where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.DriverFee
 import qualified Domain.Types.Plan
 import Kernel.External.Encryption

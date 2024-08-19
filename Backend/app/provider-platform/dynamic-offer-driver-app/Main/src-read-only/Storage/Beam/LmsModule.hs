@@ -16,19 +16,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data LmsModuleT f = LmsModuleT
-  { category :: (B.C f Domain.Types.LmsModule.LmsCategory),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    duration :: (B.C f Kernel.Prelude.Int),
-    id :: (B.C f Kernel.Prelude.Text),
-    languagesAvailableForQuiz :: (B.C f [Kernel.External.Types.Language]),
-    languagesAvailableForVideos :: (B.C f [Kernel.External.Types.Language]),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    moduleCompletionCriteria :: (B.C f Domain.Types.LmsModule.ModuleCompletionCriteria),
-    noOfVideos :: (B.C f Kernel.Prelude.Int),
-    rank :: (B.C f Kernel.Prelude.Int),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    variant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant)),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { category :: B.C f Domain.Types.LmsModule.LmsCategory,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    duration :: B.C f Kernel.Prelude.Int,
+    id :: B.C f Kernel.Prelude.Text,
+    languagesAvailableForQuiz :: B.C f [Kernel.External.Types.Language],
+    languagesAvailableForVideos :: B.C f [Kernel.External.Types.Language],
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    moduleCompletionCriteria :: B.C f Domain.Types.LmsModule.ModuleCompletionCriteria,
+    noOfVideos :: B.C f Kernel.Prelude.Int,
+    rank :: B.C f Kernel.Prelude.Int,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    variant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +38,6 @@ instance B.Table LmsModuleT where
 
 type LmsModule = LmsModuleT Identity
 
-$(enableKVPG (''LmsModuleT) [('id)] [])
+$(enableKVPG ''LmsModuleT ['id] [])
 
-$(mkTableInstances (''LmsModuleT) "lms_module")
+$(mkTableInstances ''LmsModuleT "lms_module")

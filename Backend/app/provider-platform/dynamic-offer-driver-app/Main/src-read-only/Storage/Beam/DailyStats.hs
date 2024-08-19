@@ -8,6 +8,7 @@ module Storage.Beam.DailyStats where
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.DailyStats
 import Kernel.External.Encryption
 import qualified Kernel.External.Payout.Juspay.Types.Payout

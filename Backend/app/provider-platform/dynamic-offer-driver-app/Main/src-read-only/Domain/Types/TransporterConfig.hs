@@ -188,7 +188,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
   }
   deriving (Generic, Show)
 
-data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, (Show), (ToJSON), (FromJSON), (Read))
+data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   { ambulance :: Kernel.Types.Common.Kilometers,
@@ -204,12 +204,12 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
     taxi :: Kernel.Types.Common.Kilometers,
     taxiplus :: Kernel.Types.Common.Kilometers
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read))
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
-  deriving (Generic, (Show), (ToJSON), (FromJSON), (Read))
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
-type TransporterConfig = TransporterConfigD ('Safe)
+type TransporterConfig = TransporterConfigD 'Safe
 
 instance FromJSON (TransporterConfigD 'Unsafe)
 

@@ -7,6 +7,7 @@ module Storage.Beam.Person where
 
 import qualified Data.Time
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption

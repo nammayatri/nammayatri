@@ -6,6 +6,7 @@
 module Storage.Beam.SubscriptionConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan

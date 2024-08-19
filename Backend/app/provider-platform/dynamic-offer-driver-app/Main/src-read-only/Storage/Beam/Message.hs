@@ -7,6 +7,7 @@ module Storage.Beam.Message where
 
 import qualified Data.Time
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.Message
 import Kernel.External.Encryption
 import Kernel.Prelude

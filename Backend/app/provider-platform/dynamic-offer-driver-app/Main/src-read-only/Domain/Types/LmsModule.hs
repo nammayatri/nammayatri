@@ -34,6 +34,6 @@ data LmsCategory = Safety | Financial | Training deriving (Eq, Ord, Show, Read, 
 
 data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''LmsCategory))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LmsCategory)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionCriteria))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionCriteria)

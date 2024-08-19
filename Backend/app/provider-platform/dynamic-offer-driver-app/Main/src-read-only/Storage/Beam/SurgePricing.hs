@@ -15,14 +15,14 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data SurgePricingT f = SurgePricingT
-  { dayOfWeek :: (B.C f Kernel.Prelude.Text),
-    hourOfDay :: (B.C f Kernel.Prelude.Int),
-    id :: (B.C f Kernel.Prelude.Text),
-    sourceHex :: (B.C f Kernel.Prelude.Text),
-    surgeMultiplier :: (B.C f Kernel.Types.Common.Centesimal),
-    vehicleServiceTier :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { dayOfWeek :: B.C f Kernel.Prelude.Text,
+    hourOfDay :: B.C f Kernel.Prelude.Int,
+    id :: B.C f Kernel.Prelude.Text,
+    sourceHex :: B.C f Kernel.Prelude.Text,
+    surgeMultiplier :: B.C f Kernel.Types.Common.Centesimal,
+    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table SurgePricingT where
 
 type SurgePricing = SurgePricingT Identity
 
-$(enableKVPG (''SurgePricingT) [('id)] [])
+$(enableKVPG ''SurgePricingT ['id] [])
 
-$(mkTableInstances (''SurgePricingT) "surge_pricing")
+$(mkTableInstances ''SurgePricingT "surge_pricing")

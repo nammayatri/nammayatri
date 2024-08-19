@@ -6,6 +6,7 @@
 module Storage.Beam.TicketPlace where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.TicketPlace
 import Kernel.External.Encryption
 import Kernel.Prelude

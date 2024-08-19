@@ -315,31 +315,31 @@ type GetRideList =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Ride.RideListRes
   )
 
-type PostRideEndMultiple = ("end" :> ReqBody ('[JSON]) API.Types.ProviderPlatform.Management.Ride.MultipleRideEndReq :> Post ('[JSON]) API.Types.ProviderPlatform.Management.Ride.MultipleRideEndResp)
+type PostRideEndMultiple = ("end" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Ride.MultipleRideEndReq :> Post '[JSON] API.Types.ProviderPlatform.Management.Ride.MultipleRideEndResp)
 
 type PostRideCancelMultiple =
-  ( "cancel" :> ReqBody ('[JSON]) API.Types.ProviderPlatform.Management.Ride.MultipleRideCancelReq
+  ( "cancel" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Ride.MultipleRideCancelReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Ride.MultipleRideCancelResp
   )
 
-type GetRideInfo = (Capture "rideId" ((Kernel.Types.Id.Id Dashboard.Common.Ride)) :> "info" :> Get ('[JSON]) API.Types.ProviderPlatform.Management.Ride.RideInfoRes)
+type GetRideInfo = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "info" :> Get '[JSON] API.Types.ProviderPlatform.Management.Ride.RideInfoRes)
 
-type PostRideSync = (Capture "rideId" ((Kernel.Types.Id.Id Dashboard.Common.Ride)) :> "sync" :> Post ('[JSON]) API.Types.ProviderPlatform.Management.Ride.RideSyncRes)
+type PostRideSync = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "sync" :> Post '[JSON] API.Types.ProviderPlatform.Management.Ride.RideSyncRes)
 
 type PostRideSyncMultiple =
-  ( "sync" :> ReqBody ('[JSON]) API.Types.ProviderPlatform.Management.Ride.MultipleRideSyncReq
+  ( "sync" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Ride.MultipleRideSyncReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Ride.MultipleRideSyncRes
   )
 
-type PostRideRoute = (Capture "rideId" ((Kernel.Types.Id.Id Dashboard.Common.Ride)) :> "route" :> Post ('[JSON]) API.Types.ProviderPlatform.Management.Ride.RideRouteRes)
+type PostRideRoute = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "route" :> Post '[JSON] API.Types.ProviderPlatform.Management.Ride.RideRouteRes)
 
 type GetRideKaptureList =
   ( "kapture" :> "list" :> QueryParam "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride) :> QueryParam "countryCode" Kernel.Prelude.Text
@@ -348,19 +348,19 @@ type GetRideKaptureList =
            Kernel.Prelude.Text
       :> QueryParam "supportPhoneNumber" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Ride.TicketRideListRes
   )
 
 data RideAPIs = RideAPIs
-  { getRideList :: (Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Ride.BookingStatus) -> Kernel.Prelude.Maybe (Kernel.Types.Common.Currency) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId Dashboard.Common.Ride)) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideListRes),
-    postRideEndMultiple :: (API.Types.ProviderPlatform.Management.Ride.MultipleRideEndReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.MultipleRideEndResp),
-    postRideCancelMultiple :: (API.Types.ProviderPlatform.Management.Ride.MultipleRideCancelReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.MultipleRideCancelResp),
-    getRideInfo :: ((Kernel.Types.Id.Id Dashboard.Common.Ride) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideInfoRes),
-    postRideSync :: ((Kernel.Types.Id.Id Dashboard.Common.Ride) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideSyncRes),
-    postRideSyncMultiple :: (API.Types.ProviderPlatform.Management.Ride.MultipleRideSyncReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.MultipleRideSyncRes),
-    postRideRoute :: ((Kernel.Types.Id.Id Dashboard.Common.Ride) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideRouteRes),
-    getRideKaptureList :: (Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId Dashboard.Common.Ride)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.TicketRideListRes)
+  { getRideList :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Ride.BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideListRes,
+    postRideEndMultiple :: API.Types.ProviderPlatform.Management.Ride.MultipleRideEndReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.MultipleRideEndResp,
+    postRideCancelMultiple :: API.Types.ProviderPlatform.Management.Ride.MultipleRideCancelReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.MultipleRideCancelResp,
+    getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideInfoRes,
+    postRideSync :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideSyncRes,
+    postRideSyncMultiple :: API.Types.ProviderPlatform.Management.Ride.MultipleRideSyncReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.MultipleRideSyncRes,
+    postRideRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.RideRouteRes,
+    getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Ride.TicketRideListRes
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)

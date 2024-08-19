@@ -6,6 +6,7 @@
 module Storage.Beam.FRFSTicketBooking where
 
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Station
