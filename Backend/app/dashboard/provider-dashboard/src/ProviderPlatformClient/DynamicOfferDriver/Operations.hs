@@ -33,7 +33,7 @@ import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
 import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
 import qualified Dashboard.ProviderPlatform.Management.Driver as Driver
 import qualified Data.ByteString.Lazy as LBS
-import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Management.Subscription as DSubscription
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Overlay as Overlay
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Payment as APayment
@@ -108,7 +108,7 @@ data SubscriptionAPIs = SubscriptionAPIs
     getPaymentHistoryV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
     getPaymentHistoryEntityDetailsV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
     updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.ServiceNames -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
-    sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DDriver.SendSmsReq -> Euler.EulerClient APISuccess,
+    sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DSubscription.SendSmsReq -> Euler.EulerClient APISuccess,
     planList :: Id Driver.Driver -> Euler.EulerClient Subscription.PlanListAPIRes,
     planSelect :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient APISuccess,
     planSuspend :: Id Driver.Driver -> Euler.EulerClient APISuccess,

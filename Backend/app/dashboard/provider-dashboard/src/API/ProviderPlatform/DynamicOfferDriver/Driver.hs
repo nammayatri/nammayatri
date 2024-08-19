@@ -21,7 +21,7 @@ import qualified "dynamic-offer-driver-app" API.Dashboard.Fleet.Operations as Fl
 import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Subscription as ADSubscription
 import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified Data.Time as DT
-import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
+import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Management.Subscription as DSubscription
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride as DARide
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
@@ -98,9 +98,9 @@ updateSubscriptionDriverFeeAndInvoice merchantShortId opCity apiTokenInfo driver
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.updateSubscriptionDriverFeeAndInvoice) driverId serviceName req
 
-sendMessageToDriverViaDashboard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> DDriver.SendSmsReq -> FlowHandler APISuccess
+sendMessageToDriverViaDashboard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> DSubscription.SendSmsReq -> FlowHandler APISuccess
 sendMessageToDriverViaDashboard merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildManagementServerTransaction Common.SendMessageToDriverViaDashboardEndPoint apiTokenInfo driverId (Just $ DDriver.VolunteerTransactionStorageReq apiTokenInfo.personId.getId driverId.getId (show req.messageKey) (show req.channel) (show $ fromMaybe "" req.overlayKey) (show $ fromMaybe "" req.messageId))
+  transaction <- buildManagementServerTransaction Common.SendMessageToDriverViaDashboardEndPoint apiTokenInfo driverId (Just $ DSubscription.VolunteerTransactionStorageReq apiTokenInfo.personId.getId driverId.getId (show req.messageKey) (show req.channel) (show $ fromMaybe "" req.overlayKey) (show $ fromMaybe "" req.messageId))
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.sendMessageToDriverViaDashboard) driverId apiTokenInfo.personId.getId req

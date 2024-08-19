@@ -26,7 +26,6 @@ imports:
 
 module: Driver
 
-# TODO add validation
 apis:
   - GET: # DriverDocumentsInfoAPI
       endpoint: /documents/info
