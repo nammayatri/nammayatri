@@ -52,7 +52,8 @@ import qualified Tools.Payout as TP
 
 data DailyStatsWithVpa = DailyStatsWithVpa
   { dailyStats :: DS.DailyStats,
-    payoutVpa :: Maybe Text
+    payoutVpa :: Maybe Text,
+    dInfo :: DI.DriverInformation
   }
   deriving (Generic, Show)
 
@@ -82,7 +83,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
   mapM_ (updateManualStatus transporterConfig) dailyStatsForEveryDriverList
   let dStatsList = filter (\ds -> ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) dailyStatsForEveryDriverList -- filtering the max referral flagged payouts
   statsWithVpaList <- mapM getStatsWithVpaList dStatsList
-  let dailyStatsWithVpaList = filter (\dsv -> isJust dsv.payoutVpa) statsWithVpaList
+  let dailyStatsWithVpaList = filter (\dsv -> isJust dsv.payoutVpa && dsv.dInfo.payoutVpaStatus /= (Just DI.MANUALLY_ADDED)) statsWithVpaList
   logDebug $ "DriverStatsWithVpaList: " <> show dailyStatsWithVpaList
   if null dailyStatsForEveryDriverList
     then do
@@ -113,7 +114,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       when (isNothing dInfo.payoutVpa || dInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED) do
         Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey dStats.driverId.getId) 1 1 $ do
           QDailyStats.updatePayoutStatusById DS.PendingForVpa dStats.id
-      pure $ DailyStatsWithVpa {dailyStats = dStats, payoutVpa = dInfo.payoutVpa}
+      pure $ DailyStatsWithVpa {dailyStats = dStats, payoutVpa = dInfo.payoutVpa, dInfo = dInfo}
 
     updateManualStatus transporterConfig dStats = do
       when (dStats.activatedValidRides > transporterConfig.maxPayoutReferralForADay) do
