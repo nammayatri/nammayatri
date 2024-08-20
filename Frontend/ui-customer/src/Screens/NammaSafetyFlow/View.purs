@@ -94,6 +94,7 @@ view push state =
     $ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
+        , onBackPressed push $ const BackPressed
         , orientation VERTICAL
         , background Color.white900
         , afterRender push (const AfterRender)
@@ -162,7 +163,7 @@ safetySetupSection state push =
               $ [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , padding $ Padding 0 0 0 0
-                , text $ stepsCompleted <> "/" <> totalSteps <> (getString COMPLETE)
+                , text $ stepsCompleted <> "/" <> totalSteps <> " " <> (getString COMPLETE)
                 , color Color.black700
                 ]
               <> FontStyle.body2 TypoGraphy

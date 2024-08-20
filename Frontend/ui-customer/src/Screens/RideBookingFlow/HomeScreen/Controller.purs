@@ -2886,8 +2886,8 @@ updateFeedback feedbackId feedbackItem feedbackList =
 
 showPersonMarker :: HomeScreenState -> String -> JB.Location -> Effect Unit
 showPersonMarker state marker location = do
-  when (state.props.currentStage == HomeScreen) $ do
-    void $ showMarkerOnMap (getCurrentLocationMarker $ getValueToLocalStore VERSION_NAME) location.lat location.lng
+  -- when (state.props.currentStage == HomeScreen) $ do -- TODO:: Unify the implementation of markers
+  --   void $ showMarkerOnMap (getCurrentLocationMarker $ getValueToLocalStore VERSION_NAME) location.lat location.lng
   void $ pure $ printLog "Location :: " location
   animateCamera location.lat location.lng zoomLevel "ZOOM"
 
