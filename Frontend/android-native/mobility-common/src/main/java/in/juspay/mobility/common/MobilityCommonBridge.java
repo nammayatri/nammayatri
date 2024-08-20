@@ -63,6 +63,8 @@ import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ShapeDrawable;
+import android.graphics.drawable.shapes.RoundRectShape;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.icu.util.Calendar;
@@ -5087,6 +5089,7 @@ public class MobilityCommonBridge extends HyperBridge {
             String id = configObj.optString("id", "");
             String scaleType = configObj.optString("scaleType", "CENTER_CROP");
             int inSampleSize = configObj.optInt("inSampleSize", 1);
+            int cornerRadius = configObj.optInt("cornerRadius", 0);
 
             // call api to get base64image
             String base64Image = source.startsWith("http") ? MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
@@ -5108,8 +5111,13 @@ public class MobilityCommonBridge extends HyperBridge {
                             imageView.setImageBitmap(decodedByte);
                             imageView.setScaleType(getScaleTypes(scaleType));
                             imageView.setAdjustViewBounds(true);
-                            imageView.setClipToOutline(true);
 
+                            // adding corner Radius
+                            ShapeDrawable roundedDrawable = new ShapeDrawable(new RoundRectShape(
+                                    new float[]{cornerRadius, cornerRadius, cornerRadius, cornerRadius,
+                                            cornerRadius, cornerRadius, cornerRadius, cornerRadius}, null, null));
+                            imageView.setBackground(roundedDrawable);
+                            imageView.setClipToOutline(true);
                             layout.removeAllViews();
                             layout.addView(imageView);
                         }

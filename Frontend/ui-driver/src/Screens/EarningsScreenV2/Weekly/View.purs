@@ -179,6 +179,14 @@ weeklyEarningContentView push state =
             ]
             [ earnignsTopView push state
             , rideHistoryView push state
+            , textView $ 
+              [ height $ WRAP_CONTENT
+              , width WRAP_CONTENT
+              , text "Earnings Summary"
+              , color Color.black800
+              , padding $ PaddingHorizontal 16 16
+              , margin $ MarginBottom 16
+              ] <> FontStyle.subHeading1 TypoGraphy
             , earningSummary push state
             , seeHistoryButtons push state
             ]
@@ -194,7 +202,8 @@ earnignsTopView push state =
     , gradient $ Linear 180.0 [ "#E0D1FF", "#E0D1FF", "#F9F6FF" ]
     , orientation VERTICAL
     ]
-    [ linearLayout
+    [ 
+      linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , visibility INVISIBLE
@@ -241,6 +250,7 @@ earnignsTopView push state =
                 $ [ text $ getText state
                   , color Color.black800
                   , minHeight 24
+                  , color Color.black900
                   ]
                 <> FontStyle.subHeading1 TypoGraphy
             , textView
@@ -249,12 +259,6 @@ earnignsTopView push state =
                   , color Color.black800
                   ]
                 <> FontStyle.priceFont TypoGraphy
-            -- , textView -- TODO Enable after Tips
-            --     $ [ text "$72 in Tips Included"
-            --       , margin $ MarginTop 16
-            --       , color Color.black800
-            --       ]
-            --     <> FontStyle.subHeading2 TypoGraphy
             ]
         , linearLayout
             [ height MATCH_PARENT
@@ -343,7 +347,7 @@ ridesStatsView push state =
                                     , margin $ MarginTop 4
                                     , color Color.black800
                                     ]
-                                  <> FontStyle.tags TypoGraphy
+                                  <> FontStyle.subHeading1 TypoGraphy
                               ]
                           ]
                     ]
@@ -402,6 +406,7 @@ rideHistoryView push state =
               , weight 1.0
               , text $ getText state
               , gravity CENTER
+              , color Color.black900
               ]
             <> FontStyle.subHeading1 TypoGraphy
         , linearLayout
@@ -523,18 +528,13 @@ dottedLineView push margintop earnings =
           , margin $ MarginLeft 4
           , text $ "$" <> (show earnings)
           ]
-        <> FontStyle.paragraphText TypoGraphy
+        <> FontStyle.body21 TypoGraphy
     ]
 
 barView :: forall w. (Action -> Effect Unit) -> Int -> WeeklyEarning -> State -> PrestoDOM (Effect Unit) w
 barView push index item state =
   let
     selectedIndex = state.props.selectedBarIndex
-
-    setMargin = case index of
-      0 -> MarginHorizontal 3 6
-      6 -> MarginHorizontal 3 (EHC.screenWidth unit / 8)
-      _ -> MarginHorizontal 6 6
   in
     linearLayout
       [ weight 1.0
@@ -616,14 +616,7 @@ earningSummary push state =
       , stroke $ "1," <> Color.grey900
       , cornerRadius 8.0
       ]
-      [ textView
-          $ [ height $ WRAP_CONTENT
-            , width WRAP_CONTENT
-            , text "Earnings Summary"
-            , color Color.black800
-            ]
-          <> FontStyle.subHeading1 TypoGraphy
-      , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 0) [] true
+      [ tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 0) [] true
       , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 17) [] true
       , dropDown push "Adjustments" state.data.adjustmentRotation state.data.prevAdjustmentRotation ShowAdjustments
       , tableViewCell state (FontStyle.body6 TypoGraphy) Color.black800 (MarginTop 13) [ Anim.expandWithDuration 150 showAdj, Anim.collapseWithDuration 150 (not showAdj) ] showAdj
@@ -651,6 +644,7 @@ dropDown push content rotate prevRotate action =
         $ [ height $ WRAP_CONTENT
           , weight 1.0
           , text $ content
+          , color Color.black900
           ]
         <> FontStyle.subHeading1 TypoGraphy
     , PrestoAnim.animationSet
@@ -724,8 +718,9 @@ seeHistoryButtons push state =
                         ( [ height WRAP_CONTENT
                           , weight 1.0
                           , text $ item
+                          , color $ Color.black900
                           ]
-                            <> FontStyle.subHeading1 TypoGraphy
+                            <> FontStyle.body1 TypoGraphy
                         )
                     , imageView
                         [ height $ V 24
