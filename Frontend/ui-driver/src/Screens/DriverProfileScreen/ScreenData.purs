@@ -92,7 +92,13 @@ initData =
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
       },
-    config
+    config,
+    cancellationRate : 0,
+    assignedRides : 0,
+    cancelledRides : 0,
+    cancellationWindow : Nothing,
+    missedEarnings : 0,
+    driverInfoResponse : Nothing
     },
 
   props: {
@@ -222,6 +228,10 @@ dummyDriverInfo = GetDriverInfoResp {
     , isPayoutEnabled       : Nothing
     , payoutRewardAmount    : Nothing
     , payoutVpaBankAccount  : Nothing
+    , cancellationRateInWindow : Nothing
+    , cancelledRidesCountInWindow : Nothing
+    , assignedRidesCountInWindow : Nothing
+    , windowSize : Nothing
 }
 
 organizationInfo :: OrganizationInfo

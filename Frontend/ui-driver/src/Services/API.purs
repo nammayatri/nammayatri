@@ -456,6 +456,10 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isPayoutEnabled       :: Maybe Boolean
     , payoutRewardAmount    :: Maybe Int
     , payoutVpaBankAccount  :: Maybe String
+    , cancellationRateInWindow :: Maybe Int
+    , cancelledRidesCountInWindow :: Maybe Int
+    , assignedRidesCountInWindow :: Maybe Int
+    , windowSize :: Maybe Int
     }
 
 
@@ -2212,6 +2216,10 @@ newtype DriverProfileSummaryRes
   , feedbackBadges :: DriverBadges
   , languagesSpoken :: Maybe (Array String)
   , hometown :: Maybe String
+  , cancellationRateInWindow :: Maybe Int
+  , cancelledRidesCountInWindow :: Maybe Int
+  , assignedRidesCountInWindow :: Maybe Int
+  , windowSize :: Maybe Int
   }
 
 newtype DriverSummary
