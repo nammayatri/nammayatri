@@ -155,6 +155,11 @@ function callInitiateResult () {
 }
 
 function refreshFlow(){
+  const dontCallRefresh = (window.JBridge.getKeysInSharedPref("DONT_CALL_REFRESH") == "true");
+  if (dontCallRefresh) {
+    window.JBridge.setKeysInSharedPrefs("DONT_CALL_REFRESH", "false");
+    return;
+  }
   const currentDate = new Date();
   const diff = Math.abs(previousDateObject - currentDate) / 1000;
   const token = window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN");
@@ -192,6 +197,7 @@ window.onMerchantEvent = function (_event, payload) {
   const clientPaylod = JSON.parse(payload);
   const clientId = clientPaylod.payload.clientId;
   const appName = clientPaylod.payload.appName;
+  window.loadDynamicModule = clientPaylod.payload.loadDynamicModule;
   window.appName = appName;
   window.isCUGUser = JOSFlags.isCUGUser;
   if (_event == "initiate") {
@@ -287,6 +293,8 @@ window.onMerchantEvent = function (_event, payload) {
       } else if (parsedPayload.payload.action == "process_hv_resp" && parsedPayload.payload.callback && parsedPayload.payload.hv_response) {
         console.log(parsedPayload.payload.callback);
         window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.hv_response);
+      } else if (parsedPayload.payload.action == "gl_process" && parsedPayload.payload.callback && parsedPayload.payload.value) {
+        window.callUICallback(parsedPayload.payload.callback, parsedPayload.payload.value);
       } else {
         purescript.main(makeEvent("", ""))(parsedPayload.payload.driverInfoResponse)();
       }

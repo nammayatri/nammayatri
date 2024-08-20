@@ -2532,6 +2532,24 @@ export const addCarouselImpl = function (carouselModalJson, id) {
   }
 };
 
+let arr = [];
+export const updateQueue = function (key, lat, lon, handler) {
+  if (arr.length > 0) {
+    arr = [];
+  }
+  arr.push(function () {
+    handler(key)(lat)(lon)();
+  })
+}
+
+export const triggerCallBackQueue = function () {
+  const a = arr.shift();
+  if (a) {
+    a();
+    triggerCallBackQueue();
+  }
+}
+
 export const storeCallBackLocateOnMap = function (push, cb) {
   try {
     triggerCallBackQueue();
@@ -2547,24 +2565,6 @@ export const storeCallBackLocateOnMap = function (push, cb) {
     window.JBridge.storeCallBackLocateOnMap(callback);
   } catch (error) {
     console.log("Error occurred ", error);
-  }
-}
-
-let arr = [];
-export const updateQueue = function (key,lat,lon,handler) {
-  if (arr.length > 0) {
-    arr = [];
-  }
-    arr.push(function(){
-    handler(key)(lat)(lon)();
-  })
-}
-
-export const triggerCallBackQueue = function () {
-  let a = arr.shift();
-  if (a) {
-    a();
-    triggerCallBackQueue();
   }
 }
 
@@ -2873,4 +2873,11 @@ export const requestUninstallPackage = function (packageName) {
     return window.JBridge.requestUninstallPackage(packageName);
   }
   return false;
+}
+
+export const emitJOSEventWithCb = function (eventName, innerPayload, cb, action) {
+  const callback = callbackMapper.map(function (stringifyPayload) {
+    cb(action(stringifyPayload))();
+  });
+  return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({ event: eventName, action: callback, innerPayload: JSON.stringify(innerPayload)}))()();
 }

@@ -140,6 +140,7 @@ config =
               cityCode : "std:080",
               showSubscriptions : true,
               enableAdvancedBooking : true,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 12.971599,
@@ -203,6 +204,7 @@ config =
               cityCode : "std:040",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 17.387140,
@@ -266,6 +268,7 @@ config =
               cityCode : "std:0821",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 12.295810,
@@ -329,6 +332,7 @@ config =
               cityCode : "std:011",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 28.644800,
@@ -392,6 +396,7 @@ config =
               cityCode : "std:044",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 13.067439,
@@ -455,6 +460,7 @@ config =
               cityCode : "std:0422",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 11.004556,
@@ -518,6 +524,7 @@ config =
               cityCode : "std:0413",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 11.943852,
@@ -581,6 +588,7 @@ config =
               cityCode : "std:0124",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 28.457523,
@@ -644,6 +652,7 @@ config =
               cityCode : "std:01189",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 28.535517,
@@ -707,6 +716,7 @@ config =
               cityCode :  "std:0422",
               showSubscriptions : false,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 11.1271,
@@ -770,6 +780,7 @@ config =
               cityCode : "std:033",
               showSubscriptions : true,
               enableAdvancedBooking : false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink : "" , --- Dummy link need to change
               callDriverInfoPost : false,
               cityLat : 22.5354064,
@@ -848,6 +859,7 @@ config =
               cityLat : 9.931233,
               cityLong : 76.267303,
               enableAdvancedBooking: false,
+              enableGullak : false,
               advancedRidePopUpYoutubeLink: "",
               callDriverInfoPost: false,
               supportNumber : "",
@@ -1172,6 +1184,7 @@ allCitiesDefaultCityConfig = {
   },
   gstPercentage : "18",
   enableHvSdk : false,
+  enableGullak : false,
   purpleRideConfig : {
     purpleRideConfigForAuto : {
       vehicleVariant : "Auto",
@@ -1250,6 +1263,7 @@ ysDefaultCityConfig =
         }
       }
     , enableHvSdk = true -- Hyperverge Integration Activation at launch
+    , enableGullak = false
     , purpleRideConfig = {
         purpleRideConfigForAuto : {
           vehicleVariant : "Auto",

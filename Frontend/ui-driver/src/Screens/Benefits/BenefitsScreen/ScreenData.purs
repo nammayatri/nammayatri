@@ -22,6 +22,8 @@ import Services.API (ModuleCompletionCriteria(..), LmsModuleRes(..), LmsCategory
 import Foreign.Object (empty)
 import ConfigProvider
 import Prelude
+import Screens.RegistrationScreen.ScreenData as RSD
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: BenefitsScreenState
 initData = {
@@ -33,6 +35,7 @@ initData = {
          , referralCode : ""
          , rank : Nothing
          , totalEligibleDrivers : Nothing
+         , cityConfig : defaultCityConfig
          , moduleList : {
             completed : [],
             remaining : []
@@ -51,6 +54,7 @@ initData = {
       selectedModule : Nothing,
       showShimmer : true,
       isPayoutEnabled: Nothing,
-      bannerLength : 0
+      bannerLength : 0,
+      glBannerClickable : true
     }
 }

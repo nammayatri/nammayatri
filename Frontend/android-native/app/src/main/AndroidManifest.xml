@@ -36,8 +36,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="${isUsesCleartextTraffic}"
-        tools:replace="android:allowBackup"
-        android:name="com.clevertap.android.sdk.Application">
+        tools:replace="android:allowBackup,android:theme" >
 
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"
@@ -55,7 +54,7 @@
 
         <meta-data
             android:name="CLEVERTAP_REGION"
-            android:value="@string/clevertap_region" />
+            android:value="@string/clevertap_region"/>
 
         <activity
             android:name="com.facebook.FacebookActivity"
