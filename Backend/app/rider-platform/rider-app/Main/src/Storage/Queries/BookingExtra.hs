@@ -189,15 +189,15 @@ findAssignedByRiderId (Id personId) = findOneWithKV [Se.And [Se.Is BeamB.riderId
 
 findBookingIdAssignedByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> [BookingStatus] -> m (Maybe Booking)
 findBookingIdAssignedByEstimateId (Id estimateId) statusList = do
-  driverOfferIds <- map (Just . getId . (.id)) <$> findAllWithKV [Se.Is BeamDO.estimateId $ Se.Eq estimateId]
+  driverOfferIds <- map (Just . getId . (.id)) <$> findAllWithKVAndConditionalDB [Se.Is BeamDO.estimateId $ Se.Eq estimateId] Nothing
   if null driverOfferIds
     then return Nothing
     else do
-      quoteIds <- map (Just . getId . (.id)) <$> findAllWithKV [Se.Is BeamQ.driverOfferId $ Se.In driverOfferIds]
+      quoteIds <- map (Just . getId . (.id)) <$> findAllWithKVAndConditionalDB [Se.Is BeamQ.driverOfferId $ Se.In driverOfferIds] Nothing
       if null quoteIds
         then return Nothing
         else do
-          bookings <- findAllWithKV [Se.Is BeamB.quoteId $ Se.In quoteIds, Se.Is BeamB.status $ Se.In statusList]
+          bookings <- findAllWithKVAndConditionalDB [Se.Is BeamB.quoteId $ Se.In quoteIds, Se.Is BeamB.status $ Se.In statusList] Nothing
           return $ listToMaybe bookings
 
 updatePaymentInfo :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Price -> Maybe Price -> Price -> Maybe Text -> m ()
