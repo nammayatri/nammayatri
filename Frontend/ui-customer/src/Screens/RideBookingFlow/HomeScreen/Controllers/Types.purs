@@ -277,7 +277,7 @@ data Action = NoAction
   | UpdateRepeatTrips RideBookingListRes 
   | RemoveShimmer 
   | ReportIssueClick
-  | EditLocation String
+  | EditLocation DriverInfoCardController.LocationType
   | DateTimePickerAction String Int Int Int String Int Int
   | ChooseSingleVehicleAction ChooseVehicleController.Action
   | LocationTagBarAC LocationTagBarV2Controller.Action
