@@ -63,3 +63,4 @@ import Screens.DocumentCaptureScreen.Handler (documentCaptureScreen) as UI
 import Screens.DocumentDetailsScreen.Handler (documentDetailsScreen) as UI
 import Screens.RateCardScreen.Handler (rateCardScreen) as UI
 import Screens.CustomerReferralTrackerScreen.Handler (customerReferralTrackerScreen) as UI
+import Screens.CancellationRateScreen.Handler (cancellationRateScreen) as UI

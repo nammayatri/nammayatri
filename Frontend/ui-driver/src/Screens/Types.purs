@@ -459,7 +459,13 @@ type DriverProfileScreenData = {
   autoPayStatus :: AutoPayStatus,
   config :: AppConfig,
   goHomeActive :: Boolean,
-  cachedVehicleCategory :: VehicleCategory
+  cachedVehicleCategory :: VehicleCategory,
+  cancellationRate :: Int,
+  assignedRides :: Int,
+  cancelledRides :: Int,
+  cancellationWindow :: Maybe Int,
+  missedEarnings :: Int,
+  driverInfoResponse :: Maybe GetDriverInfoResp
 }
 
 type RcData = {
@@ -945,6 +951,21 @@ type AboutUsScreenProps = {
   enableDemoModeCount :: Int
 }
 
+--------------------------------------------- CancellationRateScreenState -------------------------
+
+type CancellationRateScreenState = {
+  appConfig :: AppConfig,
+  data :: CancellationRateScreenData
+}
+
+type CancellationRateScreenData = {
+  cancellationRate :: Int,
+  assignedRides :: Int,
+  cancelledRides :: Int,
+  cancellationWindow :: Maybe Int,
+  missedEarnings :: Int
+}
+
 --------------------------------------------- SelectLanguageScreenState ---------------------------
 type SelectLanguageScreenState = {
   data :: SelectLanguageScreenData,
@@ -1024,6 +1045,7 @@ type HomeScreenData =  {
   isPayoutEnabled :: Maybe Boolean,
   payoutRewardAmount :: Maybe Int,
   payoutVpaBankAccount :: Maybe String
+, cancellationRate :: Int
 }
 
 type ParkingData = {

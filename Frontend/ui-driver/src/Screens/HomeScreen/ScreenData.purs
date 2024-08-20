@@ -156,6 +156,7 @@ initData =
       , isPayoutEnabled : Nothing
       , payoutRewardAmount : Nothing
       , payoutVpaBankAccount : Nothing
+      , cancellationRate : 10
     }
   , props:
       { isFreeRide: false
