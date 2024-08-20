@@ -15,6 +15,7 @@ import qualified API.Internal.DriverReferee as DriverReferee
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
+import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import Environment
@@ -36,6 +37,7 @@ type API =
            :<|> FavouriteDrivers.API
            :<|> KnowYourDriver.API
            :<|> DriverCoordinates.API
+           :<|> PopulateTipAmount.API
        )
 
 handler :: FlowServer API
@@ -53,3 +55,4 @@ handler =
     :<|> FavouriteDrivers.handler
     :<|> KnowYourDriver.handler
     :<|> DriverCoordinates.handler
+    :<|> PopulateTipAmount.handler

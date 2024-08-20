@@ -19,7 +19,7 @@ type API =
     :> Capture "tipAmount" HighPrecMoney
     :> "populateTipAmount"
     :> Header "token" Text
-    :> Get '[JSON] APISuccess
+    :> Post '[JSON] APISuccess
 
 handler :: FlowServer API
 handler =
