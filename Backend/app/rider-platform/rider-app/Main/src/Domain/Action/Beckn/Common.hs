@@ -685,6 +685,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide, person.mobileCountryCode) of
         (Just True, Just ride, Just countryCode) -> do
+          when (isNothing ride.cancellationFeeIfCancelled) $ do
+            QRide.updateCancellationFeeIfCancelledField (Just fee.amount) ride.id
           SPayment.makeCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.riderId ride fee
           --TODO: We can move this to stripe confirmation of payment
           void $
