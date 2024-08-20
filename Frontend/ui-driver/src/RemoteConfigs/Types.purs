@@ -21,6 +21,10 @@ module RemoteConfig.Types (
 import Prelude
 import Data.Maybe(Maybe(..))
 import Common.Types.App(ReelButtonConfig(..), ReelItem(..), ReelVideoThresholdConfig(..)) as Reexport
+import Data.Generic.Rep (class Generic)
+import Data.Eq.Generic (genericEq)
+import Foreign.Generic (class Decode, class Encode)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 type RCSubscription = {
     max_dues_limit :: Number,
@@ -32,4 +36,25 @@ type HVConfigs = {
   selfie_flow_id :: String,
   pan_flow_id :: String,
   aadhaar_flow_id :: String
+}
+
+data CancellationRateEntity = HOW_TO_REDUCE | WHAT_HAPPENS
+
+derive instance genericCancellationRateEntity :: Generic CancellationRateEntity _
+instance decodeCancellationRateEntity :: Decode CancellationRateEntity where decode = defaultEnumDecode
+instance encodeCancellationRateEntity :: Encode CancellationRateEntity where encode = defaultEnumEncode
+instance eqCancellationRateEntity :: Eq CancellationRateEntity where eq = genericEq
+instance showCancellationRateEntity :: Show CancellationRateEntity where
+  show (HOW_TO_REDUCE) = "How to Reduce"
+  show (WHAT_HAPPENS) = "What happens"
+
+type CancellationRateConfig = {
+  title :: String,
+  description :: String,
+  entity_type :: CancellationRateEntity
+}
+
+type CancellationThresholdConfig  = {
+  warning1 :: Int,
+  warning2 :: Int
 }

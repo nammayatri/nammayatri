@@ -1315,7 +1315,9 @@ driverProfileFlow = do
   modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{isRideActive = getValueToLocalStore IS_RIDE_ACTIVE == "true"} })
   action <- UI.driverProfileScreen
   case action of
-    GO_TO_HOME_FROM_PROFILE -> homeScreenFlow
+    GO_TO_HOME_FROM_PROFILE state -> do 
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = state.data.driverInfoResponse}
+      homeScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN -> referralFlow
     DRIVER_DETAILS_SCREEN -> driverDetailsFlow
     VEHICLE_DETAILS_SCREEN -> vehicleDetailsFlow
@@ -1421,6 +1423,7 @@ driverProfileFlow = do
       pure $ toast $ (getString CALL_REQUEST_HAS_BEEN_PLACED)
       driverProfileFlow
     TA.GO_HOME state -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = state.data.driverInfoResponse}
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {gender = fromMaybe "UNKNOWN" state.data.driverGender}})
       homeScreenFlow
     DRIVER_ALTERNATE_CALL_API1 updatedState -> do
@@ -1529,6 +1532,11 @@ driverProfileFlow = do
       setValueToLocalStore ENTERED_RC rcNumber
       modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Just vehicleCategory }, data { linkedRc = Nothing}})
       onBoardingFlow
+    
+    CANCELLATION_RATE_SCREEN updatedState -> do
+      let (GlobalState defaultEpassState') = defaultGlobalState
+      modifyScreenState $ CancellationRateScreenStateType (\_ -> updatedState)
+      cancellationRateFlow
 
 documentDetailsScreen :: FlowBT String Unit
 documentDetailsScreen = do
@@ -1656,6 +1664,9 @@ aboutUsFlow = do
   case action of
     GO_TO_DRIVER_HOME_SCREEN -> homeScreenFlow
   pure unit
+
+cancellationRateFlow :: FlowBT String Unit
+cancellationRateFlow = UI.cancellationRateScreen
 
 goToLocationFlow :: FlowBT String Unit
 goToLocationFlow = do
@@ -2363,7 +2374,7 @@ homeScreenFlow = do
   case action of
     GO_TO_PROFILE_SCREEN updatedState -> do
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
-      modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data { cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType}}
+      modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data { cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
       driverProfileFlow
     GO_TO_VEHICLE_DETAILS_SCREEN -> do 
       modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
@@ -3734,6 +3745,7 @@ updateBannerAndPopupFlags = do
                 , config = appConfig
                 , isVehicleSupported = fromMaybe true getDriverInfoResp.isVehicleSupported
                 , cityConfig = cityConfig
+                , cancellationRate = fromMaybe 0 getDriverInfoResp.cancellationRateInWindow
                 }
               , props
                 { autoPayBanner = autopayBannerType

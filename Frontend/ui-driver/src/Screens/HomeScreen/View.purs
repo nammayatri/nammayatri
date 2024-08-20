@@ -110,6 +110,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
+import RemoteConfig.Utils (cancellationThresholds)
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -1039,13 +1040,16 @@ driverProfile push state =
           "MALE" | (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AmbulanceCategory -> "ny_ic_new_avatar_profile" -- To be fixed as per new mascot for ambulance
           "FEMALE" -> "ny_ic_profile_female"
           _ -> "ny_ic_generic_mascot"
+      city = getValueToLocalStore DRIVER_LOCATION
+      configs = cancellationThresholds "cancellation_rate_thresholds" city
+      cancellationR = state.data.cancellationRate
   in
    linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
     , padding $ Padding 16 20 12 16
-    ][ linearLayout [
+    ][ relativeLayout [
         width $ V 42
       , height $ V 42
       , onClick push $ const GoToProfile
@@ -1053,6 +1057,18 @@ driverProfile push state =
           [ width $ V 42
           , height $ V 42
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
+          ]
+        , imageView
+          [ width $ V 42
+          , height $ V 42
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_orange_pfp_ring"
+          , visibility $ boolToVisibility (state.data.cancellationRate > configs.warning1)
+          ]
+        , imageView
+          [ width $ V 42
+          , height $ V 42
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_red_pfp_ring"
+          , visibility $ boolToVisibility (state.data.cancellationRate > configs.warning2)
           ]
         ]
     ]

@@ -38,10 +38,9 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!), take, range)
 import Data.Either (Either(..))
 import Data.Enum (enumFromThenTo)
-import Data.Int (toNumber)
+import Data.Int (toNumber, round)
 import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Number (round)
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
@@ -62,7 +61,7 @@ import MerchantConfig.Utils as MU
 import Mobility.Prelude as MP
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport, rotation)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -761,11 +760,18 @@ driverDetailsView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginHorizontal 16 16
-    ]
-    [ driverAnalyticsView state push
-    , missedOpportunityView state push
-    , badgeLayoutView state
-    ]
+    ] $ if state.data.cancellationRate > 40 then cancellationRateOnTop else cancellationRateOnBottom
+  where
+    cancellationRateOnTop = 
+      [ cancellationRateView state push
+      , driverAnalyticsView state push
+      , badgeLayoutView state
+      ]
+    cancellationRateOnBottom =
+      [ driverAnalyticsView state push
+      , badgeLayoutView state
+      , cancellationRateView state push
+      ]
 
 ------------------------------------------- MISSED OPPORTUNITY VIEW -----------------------------------------
 missedOpportunityView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -886,6 +892,104 @@ addRcView state push =
     , if (getVerifiedVehicleCount state.data.vehicleDetails < state.data.config.rcLimit) then PrimaryButton.view (push <<< AddRcButtonAC) (addRCButtonConfig state) else dummyTextView
     , PrimaryButton.view (push <<< ManageVehicleButtonAC) (addRCButtonConfigs state)
     ]
+
+------------------------------ CANCELLATION RATE VIEW ---------------------------------------------
+
+cancellationRateView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+cancellationRateView state push =
+  let cancellationRate = if (isJust state.data.cancellationWindow) then state.data.cancellationRate else state.data.analyticsData.cancellationRate
+  in
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , background Color.aliceBlueLight
+      , cornerRadius 24.0
+      , margin $ Margin 0 20 0 0
+      , padding $ Padding 16 16 16 16
+      ]
+      [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        , margin if cancellationRate > 70 then MarginBottom 16 else MarginBottom 0
+        ] 
+        [ 
+          relativeLayout
+          [ height $ V 103
+          , width $ V $ ((screenWidth unit)/ 2) - 32
+          , gravity CENTER
+          ][ 
+            imageView 
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_gauge_image"
+            , width $ V $ ((screenWidth unit)/ 2) - 32
+            , height $ V 100
+            , gravity LEFT
+            ]
+          , linearLayout
+            [ gravity CENTER
+            , width MATCH_PARENT
+            ][
+              imageView
+              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_gauge_tip"
+              , width $ V $ round (((toNumber (screenWidth unit - 32)/ 2.0) ) * (11.0 / 75.0))
+              , height $ V 120
+              , rotation (((toNumber cancellationRate) * 1.8) - 90.0)
+              , margin $ MarginTop 35
+              ]
+            ]
+            ]
+        , linearLayout
+          [ height MATCH_PARENT
+          , weight 1.0
+          , orientation VERTICAL
+          , gravity CENTER
+          ] [ 
+              textView $
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , text $ show cancellationRate <> "%"
+              , color Color.black900
+              , padding $ PaddingBottom 4
+              , textSize FontSize.a_24
+              , gravity CENTER
+              ] <> FontStyle.body8 LanguageStyle
+            , textView $
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , text (getString CANCELLATION_RATE)
+              , color Color.black700
+              , textSize FontSize.a_14
+              , padding $ Padding 11 0 11 8
+              , gravity CENTER
+              ] <> FontStyle.body3 LanguageStyle
+            , textView $
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , text "View more"
+              , color Color.blue800
+              , textSize FontSize.a_14
+              , gravity CENTER
+              , onClick push $ const $ OpenCancellationRateScreen
+              ] <> FontStyle.body3 LanguageStyle
+          ]
+        ]
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , cornerRadius 8.0
+          , background Color.surfaceRed
+          , padding $ Padding 0 8 0 8
+          , gravity CENTER
+          , visibility if cancellationRate > 70 then VISIBLE else GONE
+          ] 
+          [ textView $
+            [ text (getString HIGH_CANCELLATION_RATE)
+            , textSize FontSize.a_14
+            , color Color.black800
+            ] <> FontStyle.body3 LanguageStyle
+          ]
+      ]
 
 ------------------------------ CHIP RAIL LAYOUT ---------------------------------------------
 chipRailView :: forall w. ST.ChipRailData -> PrestoDOM (Effect Unit) w
