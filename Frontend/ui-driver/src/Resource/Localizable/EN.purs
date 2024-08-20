@@ -1589,3 +1589,4 @@ getEN stringKey =
         RECORDED_AUDIO -> "Recorded Audio"
         SHARE_WITH_SAFETY_TEAM -> "Share with safety team"
         RECORD_AUDIO -> "Record Audio"
+        CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Cannot Enable Go-To for different City."

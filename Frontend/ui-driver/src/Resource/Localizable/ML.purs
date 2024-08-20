@@ -1592,3 +1592,4 @@ getML stringKey =
         RECORDED_AUDIO -> "ഓഡിയോ റെക്കോർഡുചെയ്തു"
         SHARE_WITH_SAFETY_TEAM -> "സുരക്ഷാ ടീമിനു പങ്കിടുക"
         RECORD_AUDIO -> "ഓഡിയോ റെക്കോർഡുചെയ്യുക"
+        CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To വ്യത്യസ്ത നഗരങ്ങൾക്കായി പ്രവർത്തനക്ഷമമാക്കാൻ കഴിയില്ല"

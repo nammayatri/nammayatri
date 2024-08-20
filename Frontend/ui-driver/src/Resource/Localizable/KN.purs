@@ -1592,3 +1592,4 @@ getKN stringKey =
         RECORDED_AUDIO -> "ಧ್ವನಿ ದಾಖಲಿಸಲಾಗಿದೆ"
         SHARE_WITH_SAFETY_TEAM -> "ಸುರಕ್ಷತಾ ತಂಡದೊಂದಿಗೆ ಹಂಚಿಕೊಳ್ಳಿ"
         RECORD_AUDIO -> "ಧ್ವನಿ ದಾಖಲಿಸಿ"
+        CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To ಬೇರೆ ಬೇರೆ ನಗರಗಳಿಗೆ ಸಕ್ರಿಯಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ"

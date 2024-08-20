@@ -1593,3 +1593,4 @@ getTA stringKey =
         RECORDED_AUDIO -> "பதிவு செய்யப்பட்ட ஒலி"
         SHARE_WITH_SAFETY_TEAM -> "பாதுகாப்பு குழுவுடன் பகிரவும்"
         RECORD_AUDIO -> "ஒலி பதிவு"
+        CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To வெவ்வேறு நகரங்களுக்கு செயல்படுத்த முடியாது"
