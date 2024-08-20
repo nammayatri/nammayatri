@@ -18,7 +18,9 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Esqueleto.Functions as F
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import Lib.Tabular.SpecialLocation
 import qualified Lib.Types.GateInfo as GD
@@ -52,8 +54,20 @@ makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
   let gatesInfoFull = map (\(GD.GateInfo {point = gatePoint, id = gateId, createdAt = _gateCreatedAt, geom = _gateGeom, updatedAt = _gateUpdatedAt, ..}, gateShape) -> GD.GateInfoFull {GD.id = gateId, GD.point = gatePoint, GD.geoJson = gateShape, ..}) gatesWithShape
   pure $ SpecialLocationFull {gatesInfo = gatesInfoFull, geoJson = Just specialShape, ..}
 
-findFullSpecialLocationsByMerchantOperatingCityId :: Transactionable m => Text -> m [SpecialLocationFull]
+fullSpecialLocationRedisKey :: Text
+fullSpecialLocationRedisKey = "SpecialLocation:Full"
+
+findFullSpecialLocationsByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r) => Text -> m [SpecialLocationFull]
 findFullSpecialLocationsByMerchantOperatingCityId mocId = do
+  Hedis.safeGet fullSpecialLocationRedisKey >>= \case
+    Just a -> pure a
+    Nothing -> do
+      specialLocations <- findFullSpecialLocationsByMerchantOperatingCityId' mocId
+      Hedis.set fullSpecialLocationRedisKey specialLocations
+      pure specialLocations
+
+findFullSpecialLocationsByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r) => Text -> m [SpecialLocationFull]
+findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
   mbRes <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
