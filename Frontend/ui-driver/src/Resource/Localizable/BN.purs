@@ -1593,3 +1593,4 @@ getBN stringKey =
         RECORDED_AUDIO -> "অডিও রেকর্ড করা হয়েছে"
         SHARE_WITH_SAFETY_TEAM -> "সুরক্ষা দলের সাথে ভাগাভাগি করুন"
         RECORD_AUDIO -> "অডিও রেকর্ড করুন"
+        CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To ভিন্ন শহরের জন্য সক্ষম করা যাবে না।"

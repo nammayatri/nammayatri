@@ -1592,3 +1592,4 @@ getHI stringKey =
         RECORDED_AUDIO -> "ऑडियो रिकॉर्ड किया गया"
         SHARE_WITH_SAFETY_TEAM -> "सुरक्षा टीम के साथ साझा करें"
         RECORD_AUDIO -> "ऑडियो रिकॉर्ड करें"
+        CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To अलग-अलग शहर के लिए सक्षम नहीं किया जा सकता।"

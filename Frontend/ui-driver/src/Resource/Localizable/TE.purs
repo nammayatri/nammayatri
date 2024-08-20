@@ -1594,3 +1594,4 @@ getTE stringKey =
         RECORDED_AUDIO -> "ఆడియో రికార్డ్ చేయబడింది"
         SHARE_WITH_SAFETY_TEAM -> "సురక్షా టీమ్‌తో భాగంగా పంపండి"
         RECORD_AUDIO -> "ఆడియో రికార్డ్ చేయండి"
+        CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To వివిధ నగరాల కోసం ప్రారంభించబడదు"
