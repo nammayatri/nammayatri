@@ -2646,6 +2646,7 @@ type BenefitsScreenData = {
   , totalEligibleDrivers :: Maybe Int
   , moduleList :: LmsModuleList
   , bannerData :: BannerCarousalData
+  , cityConfig :: CityConfig
 }
 
 type BenefitsScreenProps = {
@@ -2657,6 +2658,7 @@ type BenefitsScreenProps = {
 , showShimmer :: Boolean
 , isPayoutEnabled :: Maybe Boolean
 , bannerLength :: Int
+, glBannerClickable :: Boolean
 }
 
 type LmsModuleList =
@@ -2942,3 +2944,11 @@ data AppUpdatePoppupFlowType = REG_PROF_PAN_AADHAAR | NORMAL
 derive instance genericAppUpdatePoppupFlowType :: Generic AppUpdatePoppupFlowType _
 instance showAppUpdatePoppupFlowType :: Show AppUpdatePoppupFlowType where show = genericShow
 instance eqAppUpdatePoppupFlowType :: Eq AppUpdatePoppupFlowType where eq = genericEq
+
+type GullakSDKResp = {
+  amount :: Number,
+  quantity :: String,
+  responseMessage :: String,
+  responseCode :: Int,
+  isNewUser :: Boolean
+}

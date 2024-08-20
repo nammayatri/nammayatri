@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -257,3 +257,15 @@ subscriptionsConfigVariantLevel city variant = do
         "TAXI_PLUS" -> config.taxiPlus
         "BOOK_ANY" -> config.bookAny
         _ -> config.default
+
+defaultGullakConfig :: GullakConfig
+defaultGullakConfig = 
+  { image: "",
+    enabled : false
+  }
+
+gullakConfig :: String -> GullakConfig
+gullakConfig city = do
+    let config = fetchRemoteConfigString "gullak_config"
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultGullakConfig
+    getCityBasedConfig value $ toLower city

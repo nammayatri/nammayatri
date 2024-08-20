@@ -251,6 +251,7 @@ type CityConfig = {
   gstPercentage :: String,
   assets :: Assets,
   enableHvSdk :: Boolean,
+  enableGullak :: Boolean,
   purpleRideConfig :: PurpleRideConfigForVehicle
 }
 

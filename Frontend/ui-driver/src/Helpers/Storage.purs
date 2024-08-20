@@ -150,6 +150,8 @@ data KeyStore = USER_NAME
                 | REFER_NOW_LAST_SHOWN
                 | ADD_UPI_LAST_SHOWN
                 | VERIFY_UPI_LAST_SHOWN
+                | GULLAK_TOKEN
+                | DONT_CALL_REFRESH
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

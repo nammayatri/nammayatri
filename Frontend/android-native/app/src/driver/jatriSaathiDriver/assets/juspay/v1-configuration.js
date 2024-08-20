@@ -361,6 +361,7 @@ window.getMerchantConfig = function () {
       "enableIntercity" : true,
       "showSubscriptions" : true,
       "enableAdvancedBooking" : true,
+      "enableGullak": false,
       "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 22.5354064,
@@ -454,6 +455,7 @@ window.getMerchantConfig = function () {
       "cityCode" : "std:0353",
       "showSubscriptions" : false,
       "enableAdvancedBooking" : false,
+      "enableGullak": false,
       "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
       "cityLat" : 26.708845,
@@ -539,6 +541,7 @@ window.getMerchantConfig = function () {
       "showCustomerReferral" : true,
       "uploadRCandDL" : true,
       "enableYatriCoins" : false,
+      "enableGullak": false,
       "vehicleNSImg" : "ny_ic_location_unserviceable",
       "registration" : {
           "supportWAN" : "918618963188",
