@@ -627,7 +627,7 @@ bridgeStatsView push state =
                   )
         )
         []
-        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "0" , infoView: false} ]
+        [ { title: "Trips", value: show state.data.totalRidesOfDay , infoView: false}, { title: "Earnings", value: intPriceToBeDisplayed state.data.totalEarningsOfDayWithCurrency true, infoView: false}, { title: "Tips Earned", value: (getCurrency appConfig) <> "0" , infoView: true} ]
     )
     , bridgeLocationUpdateview push state
     ]
@@ -1155,14 +1155,26 @@ driverProfile push state =
           "MALE" | (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AmbulanceCategory -> "ny_ic_new_avatar_profile" -- To be fixed as per new mascot for ambulance
           "FEMALE" -> "ny_ic_profile_female"
           _ -> "ny_ic_generic_mascot"
+      profileImg = if DA.any (_ == getValueToLocalNativeStore PROFILE_IMAGE) ["__failed", ""] then fromMaybe "" state.data.profileImg else getValueToLocalNativeStore PROFILE_IMAGE 
   in
-   linearLayout
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , gravity CENTER
-    , padding $ Padding 16 20 12 16
-    ][ linearLayout [
-        width $ V 42
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , gravity CENTER
+  , padding $ Padding 16 20 12 16
+  ]( if isJust state.data.profileImg then 
+    [ PrestoAnim.animationSet [ Anim.fadeIn true ]
+    $ linearLayout
+      [ width $ V 42
+      , height $ V 42
+      , onClick push $ const GoToProfile
+      , afterRender (\action -> runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = profileImg, id = (getNewIDWithTag "driver_profile_image"), scaleType =  "CENTER_CROP", inSampleSize = 1, cornerRadius = 90}) (const NoAction)
+      , id (getNewIDWithTag "driver_profile_image")
+      ][]
+    ]
+    else 
+    [ linearLayout 
+      [ width $ V 42
       , height $ V 42
       , onClick push $ const GoToProfile
       ][ imageView
@@ -1171,7 +1183,7 @@ driverProfile push state =
           , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
           ]
         ]
-    ]
+    ])
 
 
 tripStageTopBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

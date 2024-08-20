@@ -1778,3 +1778,12 @@ initiateDriverBGV req = do
   withAPIResult (EP.initiateDriverBGV "") unwrapResponse $ callAPI headers req
   where
     unwrapResponse x = x
+
+-------------------------------------------------- getBase64Image -------------------------------------------------
+
+getBase64FromUrl :: String -> Flow GlobalState (Either ErrorResponse GetBase64FromUrlResp)
+getBase64FromUrl req = do
+    headers <- getHeaders "" false
+    withAPIResult (req)  unwrapResponse $ callAPI headers (GetBase64FromUrlReq req)
+    where
+        unwrapResponse x = x        

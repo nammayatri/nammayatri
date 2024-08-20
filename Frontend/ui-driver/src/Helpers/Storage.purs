@@ -34,6 +34,7 @@ data KeyStore = USER_NAME
                 | BASE_URL
                 | TEST_FLOW_FOR_REGISTRATOION
                 | MOBILE_NUMBER_KEY
+                | PROFILE_IMAGE
                 | IS_RIDE_ACTIVE
                 | IS_DRIVER_STATS_CALLED
                 | NEW_ADD_STOP
