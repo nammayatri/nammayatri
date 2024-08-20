@@ -63,6 +63,7 @@ data RideT f = RideT
     numberOfSnapToRoadCalls :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onlinePayment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otp :: B.C f Kernel.Prelude.Text,
+    passedThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     pickupDropOutsideOfThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     previousRideTripEndLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     previousRideTripEndLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

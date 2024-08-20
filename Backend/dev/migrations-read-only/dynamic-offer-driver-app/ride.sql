@@ -146,3 +146,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN previous_ride_trip_end_time t
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN tip_amount double precision;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN passed_through_destination boolean ;

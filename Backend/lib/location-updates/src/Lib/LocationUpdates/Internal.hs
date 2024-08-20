@@ -30,6 +30,7 @@ module Lib.LocationUpdates.Internal
     wrapDistanceCalculationImplementation,
     processWaypoints,
     mkRideInterpolationHandler,
+    getPassedThroughDrop,
   )
 where
 
@@ -102,15 +103,16 @@ processWaypoints ::
   Maybe MapsServiceConfig ->
   Bool ->
   Bool ->
+  Bool ->
   NonEmpty LatLong ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints = do
+processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications passedThroughDrop waypoints = do
   calculationFailed <- isDistanceCalculationFailed driverId
   when calculationFailed do
     logWarning "Failed to calculate actual distance for this ride, ignoring"
   wrapDistanceCalculation driverId $ do
     addPoints driverId waypoints
-    recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed
+    recalcDistanceBatches ih ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop
 
 lastTwoOnRidePointsRedisKey :: Id person -> Text
 lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId
@@ -119,7 +121,8 @@ data SnapToRoadState = SnapToRoadState
   { distanceTravelled :: HighPrecMeters,
     googleSnapToRoadCalls :: Int,
     osrmSnapToRoadCalls :: Int,
-    numberOfSelfTuned :: Maybe Int
+    numberOfSelfTuned :: Maybe Int,
+    passThroughDropThreshold :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON)
 
@@ -153,8 +156,9 @@ recalcDistanceBatches ::
   Bool ->
   NonEmpty LatLong ->
   Bool ->
+  Bool ->
   m ()
-recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed = do
+recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist estTollCharges estTollNames pickupDropOutsideThreshold rectifyDistantPointsFailureUsing isTollApplicable enableTollCrossedNotifications waypoints calculationFailed passedThroughDrop = do
   prevBatchTwoEndPoints :: Maybe [LatLong] <- Redis.safeGet $ lastTwoOnRidePointsRedisKey driverId
   let modifiedWaypoints =
         case prevBatchTwoEndPoints of
@@ -168,7 +172,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
       sendTollCrossedNotificationToDriver driverId
       sendTollCrossedUpdateToBAP driverId
   let recomputeIfPickupDropNotOutsideOfThreshold = getRecomputeIfPickupDropNotOutsideOfThreshold
-  let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold || isJust rectifyDistantPointsFailureUsing || isJust estTollCharges || tollRouteDeviation
+  let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold || isJust rectifyDistantPointsFailureUsing || isJust estTollCharges || tollRouteDeviation || passedThroughDrop
   if ending
     then do
       if snapToRoadCallCondition
@@ -203,13 +207,16 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           let googleCalled = Google `elem` servicesUsed
               osrmCalled = OSRM `elem` servicesUsed
               selfTunedCount = SelfTuned `elem` servicesUsed
+              isPassedThroughDrop = bool passThroughDropThreshold (Just True) passedThroughDrop
           if snapCallFailed
-            then pure (SnapToRoadState distanceTravelled (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned), snapCallFailed)
-            else recalcDistanceBatches' (SnapToRoadState (distanceTravelled + dist) (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned)) snapCallFailed
+            then pure (SnapToRoadState distanceTravelled (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop, snapCallFailed)
+            else recalcDistanceBatches' (SnapToRoadState (distanceTravelled + dist) (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop) snapCallFailed
         else pure (snapToRoad', snapToRoadCallFailed)
 
     processSnapToRoadCall = do
-      prevSnapToRoadState :: SnapToRoadState <- (Redis.safeGet $ onRideSnapToRoadStateKey driverId) >>= pure . fromMaybe (SnapToRoadState 0 0 0 (Just 0))
+      prevSnapToRoadState :: SnapToRoadState <-
+        Redis.safeGet (onRideSnapToRoadStateKey driverId)
+          <&> fromMaybe (SnapToRoadState 0 0 0 (Just 0) (Just passedThroughDrop))
       (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' prevSnapToRoadState False
       when snapToRoadCallFailed $ do
         updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
@@ -285,15 +292,9 @@ mkRideInterpolationHandler isEndRide updateDistance updateTollChargesAndNames up
       getInterpolatedPoints = getInterpolatedPointsImplementation,
       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
       interpolatePointsAndCalculateDistanceAndToll = interpolatePointsAndCalculateDistanceAndTollImplementation isEndRide snapToRoadCall getTollInfoOnTheRoute,
-      updateDistance,
-      updateRouteDeviation,
-      updateTollChargesAndNames,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
-      getTravelledDistanceAndTollInfo,
-      getRecomputeIfPickupDropNotOutsideOfThreshold,
-      sendTollCrossedNotificationToDriver,
-      sendTollCrossedUpdateToBAP
+      ..
     }
 
 makeWaypointsRedisKey :: Id person -> Text
@@ -388,3 +389,10 @@ isAllPointsEqual (x : xs) = all (\t -> (abs (x.lat - t.lat) <= eps) && (abs (x.l
 
 eps :: Double
 eps = 0.0001
+
+getPassedThroughDrop :: (HedisFlow m env) => Id person -> m Bool
+getPassedThroughDrop driverId = do
+  prevSnapToRoadState :: SnapToRoadState <-
+    Redis.safeGet (onRideSnapToRoadStateKey driverId)
+      <&> fromMaybe (SnapToRoadState 0 0 0 (Just 0) (Just False))
+  fromMaybe False <$> pure prevSnapToRoadState.passThroughDropThreshold

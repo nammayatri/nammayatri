@@ -104,6 +104,7 @@ Ride:
     enableOtpLessRide: Maybe Bool
     cancellationFeeIfCancelled: Maybe HighPrecMoney
     tipAmount: Maybe HighPrecMoney
+    passedThroughDestination: Maybe Bool
 
   sqlType:
     id: character(36)
