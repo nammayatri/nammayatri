@@ -114,9 +114,9 @@ getFollowRideECStatus (mbPersonId, _merchantId) rideId = do
   return $ EmergencyContactsStatusRes keyValues
 
 getFollowRideCustomerDetails :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id DRide.Ride -> Flow FollowRideCustomerDetailsRes
-getFollowRideCustomerDetails (mbPersonId, _merchantId) rideId = do
-  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+getFollowRideCustomerDetails (_, _) rideId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- Booking.findByPrimaryKey ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   customerPhone <- mapM decrypt person.mobileNumber
   return $ FollowRideCustomerDetailsRes {bookingId = ride.bookingId, customerName = SLP.getName person, ..}
