@@ -74,7 +74,7 @@ findDOfferByEstimateId (Id estimateId) status = findAllWithKV [Se.And [Se.Is Bea
 
 findAllQuotesBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> DriverOfferStatus -> m [Quote]
 findAllQuotesBySRId (Id srId) status = do
-  allQuotes <- findAllWithKV [Se.Is BeamQ.requestId $ Se.Eq srId]
+  allQuotes <- findAllWithKVAndConditionalDB [Se.Is BeamQ.requestId $ Se.Eq srId] Nothing
   return $
     mapMaybe
       ( \quote ->
