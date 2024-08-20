@@ -96,6 +96,7 @@ import Styles.Colors as Color
 import Data.Int
 import Components.CommonComponentConfig as CommonComponentConfig
 import RemoteConfig as RemoteConfig
+import MerchantConfig.Types
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -2470,20 +2471,26 @@ scheduledRideExistsPopUpConfig state =
   formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
 
 
-getPickupMarkerActionImageConifg :: Boolean -> Boolean -> JB.ActionImageConfig 
-getPickupMarkerActionImageConifg pickupFeatureEnabled driverWithinPickupThreshold = 
-  if ((any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver]) && pickupFeatureEnabled && driverWithinPickupThreshold) then 
+getMarkerActionImageConifg :: ST.HomeScreenState -> Boolean -> JB.ActionImageConfig 
+getMarkerActionImageConifg state driverWithinPickupThreshold = do
+  let conditionForPickupImage = any (\stage -> isLocalStageOn stage) [ RideAccepted, ChatWithDriver] && state.data.config.feature.enableEditPickupLocation && driverWithinPickupThreshold
+      conditionForDestinationImage = isLocalStageOn RideStarted && state.data.config.feature.enableEditDestination
+      imageName = if conditionForPickupImage then "ic_edit_pencil_white" else if conditionForDestinationImage then "ic_pencil_blue" else ""
+      bgForPickupMarker = if EHC.os == "IOS" then Color.blue800 else "ic_blue_bg"
+      bgForDestMarker = if EHC.os == "IOS" then Color.blue600 else "ic_blue600_bg"
+      backgroundColor = if conditionForPickupImage then bgForPickupMarker else if conditionForDestinationImage then bgForDestMarker else ""
+  if conditionForPickupImage || conditionForDestinationImage then
     JB.defaultActionImageConfig {
-      image = "ic_edit_pencil_white",
+      image = imageName,
       height = 30,
       width = 30,
-      background = if EHC.os == "IOS" then "#2194FF" else "ic_blue_bg",
+      background = backgroundColor,
       orientation = "HORIZONTAL",
       padding = if EHC.os == "IOS" then {left : 12, top : 12, right : 12, bottom : 12} else {left : 16, top : 16, right : 16, bottom : 16},
       layoutMargin = {left : 15, top : 13, right : 15, bottom : 15},
       layoutPadding = {left : 0, top : 0, right : 0, bottom : 0}
     }
-    else JB.defaultActionImageConfig
+  else JB.defaultActionImageConfig
 
 nammaServices :: LazyCheck -> Array RemoteConfig.Service
 nammaServices dummy = 

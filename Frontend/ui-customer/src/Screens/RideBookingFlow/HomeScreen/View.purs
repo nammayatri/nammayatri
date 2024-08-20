@@ -3149,11 +3149,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                 routeDurationAdvanced = fromMaybe 0 routeDuration
                                 distanceBwDriverAndPickup = (getDistanceBwCordinates srcLat srcLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng) * 1000.0
                                 driverWithinPickupThreshold = distanceBwDriverAndPickup > state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
-                                callback = if state.data.config.feature.enableEditPickupLocation then runFn2 getMarkerCallback push MarkerLabelOnClick else ""
+                                callback = runFn2 getMarkerCallback push MarkerLabelOnClick
                                 srcMarkerConfig = defaultMarkerConfig{ markerId = markers'.srcMarker, pointerIcon = markers'.srcMarker }
                                 srcMarkerConfig' = defaultMarkerConfig{ markerId = "dummy_src", pointerIcon = "" , primaryText = "", anchorV = 1.0  }
                                 destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "Completing ride nearby" , anchorV = 0.8, markerSize = if os == "IOS" then 30.0 else 70.0, labelMaxWidth = 350, useMarkerSize = true, useAnchorConfig = true, markerSizeWidth = 30.0 , markerSizeHeight = 30.0}  --- markerSizeWidth, markerSizeHeight use in case of ios
-                                destMarkerConfig' = defaultMarkerConfig{ markerId = markers'.destMarker, pointerIcon = markers'.destMarker, primaryText = state.data.driverInfoCardState.source, anchorV = 1.0, markerCallback = callback, actionImage = getPickupMarkerActionImageConifg state.data.config.feature.enableEditPickupLocation driverWithinPickupThreshold}
+                                destMarkerConfig' = defaultMarkerConfig{ markerId = markers'.destMarker, pointerIcon = markers'.destMarker, primaryText = state.data.driverInfoCardState.source, anchorV = 1.0, markerCallback = callback, actionImage = getMarkerActionImageConifg state driverWithinPickupThreshold}
                                 normalRoutePoints = fromMaybe {points : []} newPoints
                                 normalAdvRoutePoints = fromMaybe {points : []} newPointsAdv
                                 normalRoute = mkRouteConfig normalRoutePoints srcMarkerConfig destMarkerConfig Nothing "DRIVER_LOCATION_UPDATE" "LineString" true JB.DEFAULT mapRouteConfig{isAnimation = true}
@@ -3168,7 +3168,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) Nothing--state.data.driverInfoCardState.destinationLng
                             let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
                                 rentalRoute = route 
-                                callback = if state.data.config.feature.enableEditPickupLocation then runFn2 getMarkerCallback push MarkerLabelOnClick else ""
+                                callback = runFn2 getMarkerCallback push MarkerLabelOnClick
                                 distanceBwDriverAndPickup = (getDistanceBwCordinates srcLat srcLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng) * 1000.0
                                 driverWithinPickupThreshold = distanceBwDriverAndPickup > state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
                                 rentalDistance = routeDistance
@@ -3179,7 +3179,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             if (srcLat /= 0.0 && srcLon /= 0.0 && destLat /= 0.0 && destLon /= 0.0) then do 
                               when (not $ isLocalStageOn EditPickUpLocation) $ void $ pure $ removeAllPolylines ""
                               let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker, primaryText = getMarkerPrimaryText routes.distance }
-                                  destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = state.data.driverInfoCardState.source, anchorV = 1.0, markerCallback = callback, actionImage = getPickupMarkerActionImageConifg state.data.config.feature.enableEditPickupLocation driverWithinPickupThreshold }
+                                  destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = state.data.driverInfoCardState.source, anchorV = 1.0, markerCallback = callback, actionImage = getMarkerActionImageConifg state driverWithinPickupThreshold }
                                   srcRentalMarkerConfig = defaultMarkerConfig{ markerId = "", pointerIcon = "" , primaryText = ""}
                                   destRentalMarkerConfig = defaultMarkerConfig{ markerId = "ny_ic_blue_marker", pointerIcon = "ny_ic_blue_marker", primaryText = "", anchorV = 1.0  }
                                   normalRoutePoints = fromMaybe {points : []} points
@@ -3221,8 +3221,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                                         else
                                                           specialLocationConfig "" destSpecialTagIcon false getPolylineAnimationConfig
                                   mapRouteConfig = if onUsRide then specialLocationTag else specialLocationTag{dashUnit = 30, gapUnit = 20}
-                                  callback = if state.data.config.feature.enableEditPickupLocation then runFn2 getMarkerCallback push MarkerLabelOnClick else ""
-                                  destMarkerConfig =  defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = if hasCurrentLocAndPrevDropLoc then "dummy_dest" else markers.destMarker, markerCallback = callback, actionImage = getPickupMarkerActionImageConifg state.data.config.feature.enableEditPickupLocation driverWithinPickupThreshold}
+                                  callback = runFn2 getMarkerCallback push MarkerLabelOnClick
+                                  destMarkerConfig =  defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = if hasCurrentLocAndPrevDropLoc then "dummy_dest" else markers.destMarker, markerCallback = callback, actionImage = getMarkerActionImageConifg state driverWithinPickupThreshold}
                                   eta = if not hasCurrentLocAndPrevDropLoc || any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then getMarkerPrimaryText (locationResp.distance + fromMaybe 0 (fromString $  getValueToLocalStore ADVANCED_ROUTE_DISTANCE)) else ""
                               void $ pure $ setValueToLocalStore DRIVER_WITHIN_PICKUP_THRESHOLD $ if driverWithinPickupThreshold then "true" else "false"
                               liftFlow $ runEffectFn1 updateRoute updateRouteConfig { json = newPoints, destMarkerConfig = destMarkerConfig, locationName = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.source else state.data.driverInfoCardState.destination, eta = eta, srcMarker = markers.srcMarker, specialLocation = mapRouteConfig, zoomLevel = zoomLevel, pureScriptID = (getNewIDWithTag "CustomerHomeScreen"),  polylineKey = "DEFAULT"}

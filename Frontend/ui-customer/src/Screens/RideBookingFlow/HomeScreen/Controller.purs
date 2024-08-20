@@ -325,7 +325,8 @@ eval (MarkerLabelOnClick markerName) state =
     let isSource = Just (markerName == "ny_ic_src_marker")
     let updatedState = state{props{isSource = isSource, hasEstimateBackpoint = true, currentStage = SearchLocationModel}}
     continue updatedState
-  else if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then continueWithCmd state [pure $ EditLocation ""]
+  else if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) && state.data.config.feature.enableEditPickupLocation then continueWithCmd state [pure $ EditLocation DriverInfoCardController.SOURCE]
+  else if state.props.currentStage == RideStarted && state.data.config.feature.enableEditDestination then continueWithCmd state [pure $ EditLocation DriverInfoCardController.DESTINATION]
   else continue state
 
 eval (Scroll item) state = do
@@ -450,17 +451,21 @@ eval (UpdateCurrentStageStatus stage (RideBookingStatusRes resp)) newState = do
                        else continue newState
     _             -> continue newState
 
-
-eval (EditLocation editLocation) state = do
-  if (getValueToLocalNativeStore DRIVER_WITHIN_PICKUP_THRESHOLD)  == "false" then do
-    void $ pure $ toast $ getString DRIVER_ALMOST_AT_PICKUP
-    continue state
-  else if (state.data.driverInfoCardState.editPickupAttemptsLeft <= 0) then do
-    void $ pure $ toast $ getString MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED
-    continue state
-  else do 
-    void $ pure $ updateLocalStage EditPickUpLocation
-    exit $ EditLocationScreenOutput state{props{currentStage = EditPickUpLocation}}
+eval (EditLocation isEditingPickup) state = do
+  case isEditingPickup of
+    DriverInfoCardController.SOURCE -> do
+      if (getValueToLocalNativeStore DRIVER_WITHIN_PICKUP_THRESHOLD)  == "false" then do
+        void $ pure $ toast $ getString DRIVER_ALMOST_AT_PICKUP
+        continue state
+      else if (state.data.driverInfoCardState.editPickupAttemptsLeft <= 0) then do
+        void $ pure $ toast $ getString MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED
+        continue state
+      else do 
+        void $ pure $ updateLocalStage EditPickUpLocation
+        exit $ EditLocationScreenOutput state{props{currentStage = EditPickUpLocation}}
+    DriverInfoCardController.DESTINATION -> do
+      void $ pure $ deleteValueFromLocalStore TRACKING_ID
+      continue state {props {currentStage = EditingDestinationLoc, isSource = Just false, isSearchLocation = SearchLocation}}
 
 eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
   _ <- pure $ spy "updateCurrentStage" stage
@@ -1487,12 +1492,7 @@ eval OpenOffUsSOS state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.EditingLocation isEditingPickup)) state = do
-  case isEditingPickup of
-    DriverInfoCardController.SOURCE -> continueWithCmd state [pure $ EditLocation ""]
-    DriverInfoCardController.DESTINATION -> do
-      void $ pure $ deleteValueFromLocalStore TRACKING_ID
-      continue state {props {currentStage = EditingDestinationLoc, isSource = Just false, isSearchLocation = SearchLocation}}
+eval (DriverInfoCardActionController (DriverInfoCardController.EditingLocation isEditingPickup)) state = continueWithCmd state [pure $ EditLocation isEditingPickup]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShareRide)) state = 
   if state.props.isOffline then do
