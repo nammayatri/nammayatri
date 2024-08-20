@@ -200,6 +200,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | SubscriptionScreen
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
                     | GoToPendingVehicle DriverProfileScreenState String ST.VehicleCategory
+                    | GoToCancellationRateScreen DriverProfileScreenState
 
 data Action = BackPressed
             | NoAction
@@ -256,6 +257,7 @@ data Action = BackPressed
             | ShareQR PrimaryButtonController.Action
             | ManageVehicleButtonAC PrimaryButtonController.Action
             | PendingVehicle String ST.VehicleCategory
+            | OpenCancellationRateScreen
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
@@ -354,7 +356,7 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {p
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = exit $ GoToLogout
 
-eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
+eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state = do
   let (SA.Vehicle linkedVehicle) = (fromMaybe dummyVehicleObject driverProfileResp.linkedVehicle)
   let (SA.DriverGoHomeInfo driverGoHomeInfo) =  driverProfileResp.driverGoHomeInfo
   continue state {data = state.data {driverName = driverProfileResp.firstName,
@@ -370,7 +372,12 @@ eval (GetDriverInfoResponse (SA.GetDriverInfoResp driverProfileResp)) state = do
                                       driverGender = driverProfileResp.gender,
                                       payerVpa = fromMaybe "" driverProfileResp.payerVpa,
                                       autoPayStatus = getAutopayStatus driverProfileResp.autoPayStatus,
-                                      goHomeActive = driverGoHomeInfo.status == Just "ACTIVE"
+                                      goHomeActive = driverGoHomeInfo.status == Just "ACTIVE",
+                                      driverInfoResponse = Just resp,
+                                      cancellationRate = fromMaybe 0 driverProfileResp.cancellationRateInWindow,
+                                      assignedRides = fromMaybe 0 driverProfileResp.assignedRidesCountInWindow,
+                                      cancelledRides = fromMaybe 0 driverProfileResp.cancelledRidesCountInWindow,
+                                      cancellationWindow = driverProfileResp.windowSize
                                       },
                     props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity}}
 
@@ -530,6 +537,8 @@ eval (DeactivateRc rcType regNumber) state = do
 eval (UpdateRC rcNo rcStatus) state  = continue state{props{activateRcView = true}, data{rcNumber = rcNo, isRCActive = rcStatus}}
 
 eval (PendingVehicle rcNumber vehicleCategory) state = exit $ GoToPendingVehicle state rcNumber vehicleCategory
+
+eval (OpenCancellationRateScreen) state = exit $ GoToCancellationRateScreen state
 
 eval (OpenRcView idx) state  = do
   let val = if elem idx state.data.openInactiveRCViewOrNotArray then filter(\x -> x/=idx) state.data.openInactiveRCViewOrNotArray else state.data.openInactiveRCViewOrNotArray <> [idx]

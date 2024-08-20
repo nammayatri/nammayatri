@@ -75,6 +75,7 @@ import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.CustomerReferralTrackerScreen.ScreenData as CustomerReferralTrackerScreenData
+import Screens.CancellationRateScreen.ScreenData as CancellationRateScreenData
 import Screens.CustomerReferralTrackerScreen.Types as CustomerReferralScreenTypes
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -130,6 +131,7 @@ newtype GlobalState = GlobalState {
   , documentDetailsScreen :: DocumentDetailsScreenState
   , rateCardScreen :: RateCardScreenState
   , customerReferralTrackerScreen :: CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
+  , cancellationRateScreen :: CancellationRateScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -184,6 +186,7 @@ defaultGlobalState = GlobalState {
 , documentDetailsScreen : DocumentDetailsScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
 , customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
+, cancellationRateScreen : CancellationRateScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -248,6 +251,7 @@ data ScreenType =
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CustomerReferralTrackerScreenStateType (CustomerReferralScreenTypes.CustomerReferralTrackerScreenState -> CustomerReferralScreenTypes.CustomerReferralTrackerScreenState)
+  | CancellationRateScreenStateType (CancellationRateScreenState -> CancellationRateScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -293,7 +297,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_LOGOUT
                                     | SELECT_LANGUAGE_SCREEN
                                     | HELP_AND_SUPPORT_SCREEN
-                                    | GO_TO_HOME_FROM_PROFILE
+                                    | GO_TO_HOME_FROM_PROFILE DriverProfileScreenState
                                     | GO_TO_DRIVER_HISTORY_SCREEN
                                     | GO_TO_EDIT_BANK_DETAIL_SCREEN
                                     | ON_BOARDING_FLOW
@@ -315,6 +319,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | SAVED_LOCATIONS_SCREEN
                                     | GO_HOME DriverProfileScreenState
                                     | VIEW_PENDING_VEHICLE String VehicleCategory
+                                    | CANCELLATION_RATE_SCREEN CancellationRateScreenState
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState

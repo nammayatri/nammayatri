@@ -23,8 +23,10 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs)
+import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig)
+import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
+import Common.RemoteConfig.Utils
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
@@ -88,3 +90,20 @@ defaultReelsData = []
 
 defaultReelButtonConfig :: Maybe ReelButtonConfig
 defaultReelButtonConfig = Nothing
+
+reduceCancellationRate :: String -> Array CancellationRateConfig
+reduceCancellationRate key =
+  let cancellationDataString = fetchRemoteConfigString key
+  in decodeForeignAny (parseJSON cancellationDataString) []
+
+cancellationThresholds :: String -> String -> CancellationThresholdConfig
+cancellationThresholds key city = 
+  let cancellationDataString = fetchRemoteConfigString key
+      decodedConfg = decodeForeignAny (parseJSON cancellationDataString) $ defaultRemoteConfig defaultCancellationThresholdConfig
+  in getCityBasedConfig decodedConfg city
+
+defaultCancellationThresholdConfig :: CancellationThresholdConfig
+defaultCancellationThresholdConfig = {
+  warning1 : 30,
+  warning2 : 60
+}
