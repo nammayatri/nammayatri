@@ -1,2 +1,0 @@
-update atlas_driver_offer_bpp.document_verification_config set validate_using = 'BACKEND' where document_type not in ('AadhaarCard', 'PanCard', 'ProfilePhoto') or merchant_id in (SELECT id from atlas_driver_offer_bpp.merchant where short_id = 'BRIDGE_CABS_PARTNER');
-update atlas_driver_offer_bpp.document_verification_config set validate_using = 'FRONTEND' where document_type in ('AadhaarCard', 'PanCard', 'ProfilePhoto') and merchant_id not in (SELECT id from atlas_driver_offer_bpp.merchant where short_id = 'BRIDGE_CABS_PARTNER');

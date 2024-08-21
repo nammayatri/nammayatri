@@ -35,7 +35,6 @@ data DocumentVerificationConfigT f = DocumentVerificationConfigT
     rcNumberPrefixList :: B.C f [Kernel.Prelude.Text],
     supportedVehicleClassesJSON :: B.C f Data.Aeson.Value,
     title :: B.C f Kernel.Prelude.Text,
-    validateUsing :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.ValidationSource),
     vehicleCategory :: B.C f Domain.Types.VehicleCategory.VehicleCategory,
     vehicleClassCheckType :: B.C f Domain.Types.DocumentVerificationConfig.VehicleClassCheckType,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

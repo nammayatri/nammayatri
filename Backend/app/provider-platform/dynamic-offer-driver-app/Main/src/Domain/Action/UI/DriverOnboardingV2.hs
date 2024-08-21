@@ -109,10 +109,9 @@ getOnboardingConfigs ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
-getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
+getOnboardingConfigs (mbPersonId, _, merchantOpCityId) mbOnlyVehicle = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personLangauge = fromMaybe ENGLISH person.language
@@ -121,10 +120,11 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanManda
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE
   ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE
 
-  cabConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
-  autoConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
-  bikeConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
-  ambulanceConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments ambulanceConfigsRaw)
+  cabConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
+  autoConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
+  bikeConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
+  ambulanceConfigs <- mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments ambulanceConfigsRaw)
+
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       { cabs = toMaybe cabConfigs,
@@ -142,8 +142,6 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanManda
       if mbOnlyVehicle == Just True
         then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
         else docs
-    filterInCompatibleFlows :: [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity] -> [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity]
-    filterInCompatibleFlows = filter (\doc -> (doc.validateUsing /= Just DTO.FRONTEND) || fromMaybe False makeSelfieAadhaarPanMandatory || doc.documentType `notElem` [DTO.ProfilePhoto, DTO.AadhaarCard, DTO.PanCard])
 
 getDriverRateCard ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -27,16 +27,14 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "onboarding" :> "configs" :> QueryParam "makeSelfieAadhaarPanMandatory" Kernel.Prelude.Bool :> QueryParam "onlyVehicle" Kernel.Prelude.Bool
+  ( TokenAuth :> "onboarding" :> "configs" :> QueryParam "onlyVehicle" Kernel.Prelude.Bool
       :> Get
            '[JSON]
            API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       :<|> TokenAuth
       :> "driver"
       :> "rateCard"
-      :> QueryParam
-           "distance"
-           Kernel.Types.Common.Meters
+      :> QueryParam "distance" Kernel.Types.Common.Meters
       :> QueryParam
            "durationInMin"
            Kernel.Types.Common.Minutes
@@ -143,10 +141,9 @@ getOnboardingConfigs ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
-getOnboardingConfigs a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getOnboardingConfigs a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverOnboardingV2.getOnboardingConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverRateCard ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
