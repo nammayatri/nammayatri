@@ -82,6 +82,7 @@ import DecodeUtil (getAnyFromWindow)
 import Resource.Constants as RC
 import ConfigProvider 
 import Data.Int 
+import Debug
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -2038,6 +2039,10 @@ accountBlockedPopup state = PopUpModal.config {
 vehicleNotSupportedPopup :: ST.HomeScreenState -> PopUpModal.Config
 vehicleNotSupportedPopup state = 
   let cityConfig = state.data.cityConfig
+      vehicle = state.data.vehicleType
+      vehicleIs = case vehicle of
+        _ | elem vehicle ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] -> getString AMBULANCE
+        _ -> HU.getVehicleType vehicle
   in PopUpModal.config {
       gravity = CENTER,
       backgroundClickable = false,
@@ -2045,11 +2050,11 @@ vehicleNotSupportedPopup state =
       buttonLayoutMargin = Margin 16 0 16 20,
       margin = MarginHorizontal 25 25, 
       primaryText {
-        text = if state.data.cityConfig.cityName == "Kolkata" then getString AMBULANCE_IS_NOT_SUPPORTED_YET else getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE
+        text = vehicleIs <> getString IS_NOT_SUPPORTED_YET
       , textStyle = Heading2
       , margin = Margin 16 0 16 10},
       secondaryText{
-        text = if state.data.cityConfig.cityName == "Kolkata" then getString WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE else getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC
+        text = getString $ WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE vehicleIs
       , textStyle = Body5
       , margin = Margin 16 0 16 15 },
       option1 {
@@ -2061,7 +2066,11 @@ vehicleNotSupportedPopup state =
       },
       cornerRadius = PTD.Corners 15.0 true true true true,
       coverImageConfig {
-        imageUrl = fetchImage FF_ASSET cityConfig.vehicleNSImg
+        imageUrl = case state.data.linkedVehicleCategory of 
+                   "BIKE" -> fetchImage FF_ASSET "ny_ic_bike_not_supported"
+                   "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto_not_supported"
+                   _ | elem state.data.linkedVehicleCategory ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] -> fetchImage FF_ASSET "ny_ic_ambulance_not_supported"
+                   _ -> fetchImage FF_ASSET cityConfig.vehicleNSImg
       , visibility = VISIBLE
       , margin = MarginHorizontal 16 16
       , width = V 300

@@ -372,7 +372,7 @@ window.getMerchantConfig = function () {
       "showCustomerReferral" : true,
       "uploadRCandDL" : true, 
       "enableYatriCoins" : false,
-      "vehicleNSImg" : "ny_ic_ambulance_image",
+      "vehicleNSImg" : "ny_ic_location_unserviceable",
       "showEarningSection" : true,
       "registration" : {
           "supportWAN" : "918088065549",
@@ -443,7 +443,7 @@ window.getMerchantConfig = function () {
       "showCustomerReferral" : true,
       "uploadRCandDL" : true,
       "enableYatriCoins" : false,
-      "vehicleNSImg" : "",
+      "vehicleNSImg" : "ny_ic_location_unserviceable",
       "enableRentals" : true,
       "enableIntercity" : true,
       "registration" : {
