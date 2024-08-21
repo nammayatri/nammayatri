@@ -5,7 +5,7 @@ module Domain.Action.UI.ReferralPayout where
 
 import qualified API.Types.UI.ReferralPayout
 import Data.OpenApi (ToSchema)
-import Data.Text hiding (filter, map)
+import Data.Text hiding (elem, filter, map)
 import Data.Time.Calendar
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
@@ -146,19 +146,20 @@ getPayoutOrderStatus ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
     Data.Text.Text ->
     m Payout.PayoutOrderStatusResp
   )
-getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) mbDailyStatsId orderId = do
+getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  _payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId) -- validation Of OrderId
+  payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId}
       serviceName = DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)
-  whenJust mbDailyStatsId $ \dStatsId -> do
-    Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey personId.getId) 3 3 $ do
-      let dPayoutStatus = DAP.castPayoutOrderStatus statusResp.status
-      QDS.updatePayoutStatusById dPayoutStatus dStatsId
+  when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do
+    whenJust payoutOrder.entityIds $ \dStatsIds -> do
+      forM_ dStatsIds $ \dStatsId -> do
+        Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey personId.getId) 3 3 $ do
+          let dPayoutStatus = DAP.castPayoutOrderStatus statusResp.status
+          QDS.updatePayoutStatusById dPayoutStatus dStatsId
   pure statusResp

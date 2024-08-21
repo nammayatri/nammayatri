@@ -34,3 +34,8 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ALTER COLUMN first_ride_id TYPE
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN is_device_id_exists boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN is_flag_confirmed boolean ;

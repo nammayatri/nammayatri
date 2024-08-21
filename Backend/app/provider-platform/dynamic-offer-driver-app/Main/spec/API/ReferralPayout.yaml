@@ -71,7 +71,5 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       mandatoryQuery:
         orderId: Text
-      query:
-        dailyStatsId: Text
       response:
         type: PayoutOrderStatusResp

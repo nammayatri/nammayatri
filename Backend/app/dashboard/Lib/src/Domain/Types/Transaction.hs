@@ -38,6 +38,7 @@ import qualified "dashboard-helper-api" Dashboard.Common.NammaTag as Common
 import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverReferral as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Payout as Payout
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
@@ -122,6 +123,7 @@ data Endpoint
   | TicketsAPI ADT.TicketBookingEndpoint
   | MapAPI BPP.MapEndPoint
   | SafetyAPI Safety.SafetyEndpoint
+  | PayoutAPI Payout.PayoutEndpoint
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''Endpoint)
@@ -250,6 +252,10 @@ instance Read Endpoint where
                ]
             ++ [ (SafetyAPI v1, r2)
                  | r1 <- stripPrefix "SafetyAPI " r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (PayoutAPI v1, r2)
+                 | r1 <- stripPrefix "PayoutAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
       )
