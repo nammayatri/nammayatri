@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel/prodHotPush-Common";
+      url = "github:nammayatri/shared-kernel/backend/refresh-logger-context-hotpush";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
