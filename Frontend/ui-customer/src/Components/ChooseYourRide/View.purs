@@ -612,6 +612,7 @@ quoteListView push config =
   let variantBasedList = filterVariantAndEstimate config.quoteList
       topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
       viewHeight = getScrollViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList
+      selectedEstimatedConfig = fromMaybe ChooseVehicle.config $ config.quoteList !! config.activeIndex 
   in 
   frameLayout
     [ height MATCH_PARENT
@@ -621,7 +622,7 @@ quoteListView push config =
     , margin $ MarginBottom if EHC.os == "IOS" then 44 else 0
     ]
     [scrollView
-      [ nestedScrollView $ length config.quoteList > 3
+      [ nestedScrollView $ if selectedEstimatedConfig.vehicleVariant == "BOOK_ANY" then length config.quoteList > 4 else length config.quoteList > 5
       , width MATCH_PARENT
       , height $ V if null config.quoteList then 200 else viewHeight
       ]

@@ -3500,7 +3500,7 @@ homeScreenContent push state =  let
                                 then followView push followers
                                 else emptyTextView state
           , mapView' push state "CustomerHomeScreenMap" 
-          -- , contentView state
+          , contentView state
           , if state.data.config.feature.enableAdditionalServices || cityConfig.enableRentals then additionalServicesView push state else linearLayout[visibility GONE][]
           , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
           , suggestionsView push state
