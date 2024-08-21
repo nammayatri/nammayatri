@@ -1,0 +1,103 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Driver: Dashboard.Common
+  Ride: Dashboard.Common
+  LocalTime: Data.Time
+  PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
+
+module: Payout
+
+apis:
+  - GET:
+      endpoint: /payout/referral/history
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      query:
+        limit: Int
+        offset: Int
+        areActivatedRidesOnly: Bool
+        customerPhoneNo: Text
+        referredByDriver: (Id Driver)
+        from: UTCTime
+        to: UTCTime
+      response:
+        type: PayoutReferralHistoryRes
+
+  - GET:
+      endpoint: /payout/history
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      query:
+        limit: Int
+        offset: Int
+        driverId: (Id Driver)
+        driverPhoneNo: Text
+        from: UTCTime
+        to: UTCTime
+      response:
+        type: PayoutHistoryRes
+
+  - POST: # to unmark as fraud and pay
+      endpoint: payout/verifyFraudStatus
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      request:
+        type: UpdateFraudStatusReq
+      response:
+        type: APISuccess
+
+  - POST: # to pay the failed ones
+      endpoint: payout/retryFailed
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      request:
+        type: FailedRetryPayoutReq
+      response:
+        type: APISuccess
+
+  - POST: # retry all for given status
+      endpoint: payout/retryAllWithStatus
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      request:
+        type: RetryPayoutsReq
+      response:
+        type: APISuccess
+
+types:
+
+  PayoutReferralHistoryRes:
+    - history: [ReferralHistoryItem]
+  ReferralHistoryItem:
+    - referralDate: UTCTime
+    - customerPhone: Maybe Text
+    - riderDetailsId: Text
+    - hasTakenValidActivatedRide: Bool
+    - dateOfActivation: Maybe LocalTime
+    - fraudFlaggedReason: Maybe PayoutFlagReason
+    - rideId : Maybe (Id Ride)
+    - referredByDriver: Maybe (Id Driver)
+    - isReviewed: Bool
+
+  PayoutHistoryRes:
+    - history: [PayoutHistoryItem]
+  PayoutFlagReason:
+    - enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists"
+  EntityName:
+    - enum: "MANUAL,DRIVER_DAILY_STATS,BACKLOG,DAILY_STATS_VIA_DASHBOARD,RETRY_VIA_DASHBOARD"
+  PayoutHistoryItem:
+    - driverName: Text
+    - driverPhoneNo: Text
+    - driverId: Id Driver
+    - payoutAmount: HighPrecMoney
+    - payoutStatus: Text
+    - payoutTime: LocalTime
+    - payoutEntity: Maybe EntityName
+  UpdateFraudStatusReq:
+    - isFlagConfirmed: Bool # false means pay
+    - firstRideId: Id Ride
+    - riderDetailsId: Text
+    - driverId: Id Driver
+    - derive: "'HideSecrets"
+  FailedRetryPayoutReq:
+    - payoutOrderId: Text
+    - derive: "'HideSecrets"
+  RetryPayoutsReq:
+    - status: PayoutOrderStatus
+    - derive: "'HideSecrets"
+

@@ -23,6 +23,7 @@ import qualified API.Action.Dashboard.Management.DriverRegistration as DriverReg
 import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
 import qualified API.Action.Dashboard.Management.Message as MessageDSL
 import qualified API.Action.Dashboard.Management.NammaTag as NammaTagDSL
+import qualified API.Action.Dashboard.Management.Payout as PayoutDSL
 import qualified API.Action.Dashboard.Management.Revenue as RevenueDSL
 import qualified API.Action.Dashboard.Management.Ride as RideDSL
 import qualified API.Dashboard.Management.Issue as Issue
@@ -51,6 +52,7 @@ type API =
            :<|> DriverReferralDSL.API
            :<|> DriverRegistrationDSL.API
            :<|> BookingDSL.API
+           :<|> PayoutDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -69,3 +71,4 @@ handler merchantId city _ =
     :<|> DriverReferralDSL.handler merchantId city
     :<|> DriverRegistrationDSL.handler merchantId city
     :<|> BookingDSL.handler merchantId city
+    :<|> PayoutDSL.handler merchantId city

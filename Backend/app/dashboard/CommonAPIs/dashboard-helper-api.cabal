@@ -44,6 +44,7 @@ library
       Dashboard.ProviderPlatform.Management.DriverRegistration
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
+      Dashboard.ProviderPlatform.Management.Payout
       Dashboard.ProviderPlatform.Management.Ride
       Dashboard.ProviderPlatform.RideBooking.Driver
       Dashboard.ProviderPlatform.Volunteer
@@ -61,6 +62,7 @@ library
       API.Types.ProviderPlatform.Management.Merchant
       API.Types.ProviderPlatform.Management.Message
       API.Types.ProviderPlatform.Management.NammaTag
+      API.Types.ProviderPlatform.Management.Payout
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.RideBooking.Driver

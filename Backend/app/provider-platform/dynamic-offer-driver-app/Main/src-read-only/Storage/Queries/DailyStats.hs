@@ -50,6 +50,11 @@ updateByDriverId totalEarnings numRides totalDistance tollCharges bonusEarnings 
 updatePayoutOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Text.Text -> Data.Text.Text -> m ())
 updatePayoutOrderId payoutOrderId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.payoutOrderId payoutOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
 
+updatePayoutOrderIdAndStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Text.Text -> Domain.Types.DailyStats.PayoutStatus -> Data.Text.Text -> m ())
+updatePayoutOrderIdAndStatus payoutOrderId payoutStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.payoutOrderId payoutOrderId, Se.Set Beam.payoutStatus (Kernel.Prelude.Just payoutStatus), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq id]
+
 updatePayoutStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DailyStats.PayoutStatus -> Data.Text.Text -> m ())
 updatePayoutStatusById payoutStatus id = do
   _now <- getCurrentTime
