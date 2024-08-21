@@ -597,7 +597,6 @@ types:
     - maxFeeWithCurrency: Maybe PriceAPIEntity
     - stepFeeWithCurrency: Maybe PriceAPIEntity
     - defaultStepFeeWithCurrency: Maybe PriceAPIEntity
-    - validateUsing: Maybe ValidationSource
     - derive: "'HideSecrets"
   CreateFPDriverExtraFeeReq:
     - minFee: Money
@@ -674,8 +673,6 @@ types:
     - recordType: NewType
     - file: FilePath
     - derive: "'HideSecrets"
-  ValidationSource:
-    - enum: "BACKEND, FRONTEND"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -85,8 +85,7 @@ data DocumentVerificationConfigCreateReq = DocumentVerificationConfigCreateReq
     minFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     maxFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     stepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
-    defaultStepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
-    validateUsing :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Merchant.ValidationSource
+    defaultStepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -462,12 +461,6 @@ instance Kernel.Types.HideSecrets.HideSecrets UpsertFarePolicyReq where
 
 data UpsertFarePolicyResp = UpsertFarePolicyResp {unprocessedFarePolicies :: [Kernel.Prelude.Text], success :: Kernel.Prelude.Text}
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data ValidationSource
-  = BACKEND
-  | FRONTEND
-  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehicleClassCheckType

@@ -356,8 +356,6 @@ DocumentVerificationConfig:
       enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
-    ValidationSource:
-      enum: "BACKEND, FRONTEND"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
@@ -380,7 +378,6 @@ DocumentVerificationConfig:
     isImageValidationRequired: Bool
     doStrictVerifcation: Bool
     order: Int
-    validateUsing: Maybe ValidationSource
   default:
     order: "0"
     doStrictVerifcation: "true"
