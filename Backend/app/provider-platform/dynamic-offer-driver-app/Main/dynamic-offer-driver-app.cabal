@@ -395,6 +395,7 @@ library
       Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Cac.GoHomeConfig
+      Storage.Cac.MerchantServiceUsageConfig
       Storage.Cac.TransporterConfig
       Storage.CachedQueries.BapMetadata
       Storage.CachedQueries.BecknConfig

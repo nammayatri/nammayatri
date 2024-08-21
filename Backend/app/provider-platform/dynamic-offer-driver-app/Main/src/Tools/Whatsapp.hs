@@ -33,8 +33,8 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 
 whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GupShup.OptApiReq -> m APISuccess
 whatsAppOptAPI _merchantId merchantOpCityId req = do
@@ -44,7 +44,7 @@ whatsAppOptAPI _merchantId merchantOpCityId req = do
     handler = GupShup.WhatsappHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
       when (null whatsappServiceProviders) $ throwError $ InternalError ("No whatsapp service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
       pure whatsappServiceProviders
@@ -63,7 +63,7 @@ whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId = GupShup.whats
     handler = GupShup.WhatsappHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       let whatsappServiceProviders = merchantConfig.whatsappProvidersPriorityList
       when (null whatsappServiceProviders) $ throwError $ InternalError ("No whatsapp service provider configured for the merchant, merchantId:" <> merchantId.getId)
       pure whatsappServiceProviders

@@ -42,10 +42,10 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
 
@@ -975,7 +975,7 @@ runWithServiceConfigForProviders merchantOpCityId req iosModifier = Notification
     handler = Notification.NotficationServiceHandler {..}
 
     getNotificationServiceList = do
-      merchantServiceUsageConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      merchantServiceUsageConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       let sendSearchReqNotificationList = merchantServiceUsageConfig.sendSearchRequestToDriver
       when (null sendSearchReqNotificationList) $ throwError $ InternalError ("No notification service provider configured for the merchant Op city : " <> merchantOpCityId.getId)
       pure sendSearchReqNotificationList

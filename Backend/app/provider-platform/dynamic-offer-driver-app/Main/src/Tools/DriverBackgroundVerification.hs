@@ -25,8 +25,8 @@ import Kernel.External.Verification.SafetyPortal.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Tools.Error
 
 searchAgent ::
@@ -48,7 +48,7 @@ runWithServiceConfig ::
 runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
   logDebug $ "runWithServiceConfig: merchantId: " <> merchantId.getId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> "WE REACHED TILL HERE!"
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
   merchantServiceConfig <-
