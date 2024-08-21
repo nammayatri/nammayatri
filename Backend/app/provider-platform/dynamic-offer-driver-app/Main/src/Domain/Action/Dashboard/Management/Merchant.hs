@@ -982,7 +982,11 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     platformFeeChargeType :: Text,
     platformFeeCharge :: Text,
     platformFeeCgst :: Text,
-    platformFeeSgst :: Text
+    platformFeeSgst :: Text,
+    platformFeeChargeFarePolicyLevel :: Text,
+    platformFeeCgstFarePolicyLevel :: Text,
+    platformFeeSgstFarePolicyLevel :: Text,
+    platformFeeChargesBy :: Text
   }
   deriving (Show)
 
@@ -1036,6 +1040,10 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "platform_fee_charge"
       <*> r .: "platform_fee_cgst"
       <*> r .: "platform_fee_sgst"
+      <*> r .: "platform_fee_charge_fare_policy_level"
+      <*> r .: "platform_fee_cgst_fare_policy_level"
+      <*> r .: "platform_fee_sgst_pare_policy_level"
+      <*> r .: "platform_fee_charges_by"
 
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
@@ -1198,6 +1206,10 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let perMinuteRideExtraTimeCharge = Nothing
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
+      let platformFeeChargeFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeChargeFarePolicyLevel "Platform Fee Charge"
+      let platformFeeCgstFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeCgstFarePolicyLevel "Platform Fee CGST Amount"
+      let platformFeeSgstFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeSgstFarePolicyLevel "Platform Fee SGST Amount"
+      let platformFeeChargesBy :: Maybe FarePolicy.PlatformFeeMethods = readMaybeCSVField idx row.platformFeeChargesBy "Platform Fee Charges By"
       description <- cleanCSVField idx row.description "Description"
       let mbCongestionChargeMultiplierValue :: (Maybe Centesimal) = readMaybeCSVField idx row.congestionChargeMultiplier "Congestion Charge Multiplier"
       let congestionChargeMultiplier =
@@ -1324,7 +1336,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return $ (city, vehicleServiceTier, tripCategory, area, timeBound, FarePolicy.FarePolicy {id = Id idText, description = Just description, ..})
+      return $ (city, vehicleServiceTier, tripCategory, area, timeBound, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, ..})
 
     makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> Text
     makeKey cityId vehicleServiceTier tripCategory area =

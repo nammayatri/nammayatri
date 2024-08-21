@@ -49,6 +49,7 @@ import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
 import qualified Domain.Types.FareParameters as DFare
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -509,12 +510,14 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
-  let (platformFee, cgst, sgst, isSpecialZoneCharge) = case newFareParams.fareParametersDetails of
-        DFare.ProgressiveDetails _ -> (0, 0, 0, False)
-        DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
-        DFare.RentalDetails _ -> (0, 0, 0, False)
-        DFare.InterCityDetails _ -> (0, 0, 0, False)
-        DFare.AmbulanceDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, False)
+  when (newFareParams.platformFeeChargesBy == DFP.None) $ pure ()
+  (platformFee, cgst, sgst, isSpecialZoneCharge) <- case newFareParams.platformFeeChargesBy of
+    DFP.SlabBased -> case newFareParams.fareParametersDetails of
+      DFare.SlabDetails fpDetails -> return (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
+      _ -> return (0, 0, 0, False)
+    DFP.Subscription -> return (0, 0, 0, False)
+    DFP.FixedAmount -> return (fromMaybe 0.0 newFareParams.platformFee, fromMaybe 0.0 newFareParams.cgst, fromMaybe 0.0 newFareParams.sgst, True)
+    _ -> return (0, 0, 0, False)
   let totalDriverFee = govtCharges + platformFee + cgst + sgst
   mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft isSpecialZoneCharge
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -536,7 +539,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
       Nothing -> do
         QDF.create driverFee
         return 1
-    plan <- getPlan mbDriverPlan serviceName merchantOpCityId
+    plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
     fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
     scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
@@ -594,6 +597,7 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
                     scheduleManualPaymentLink = Just True,
                     scheduleDriverFeeCalc = Just True,
                     createChildJobs = Just True,
+                    recalculateManualReview = Nothing,
                     endTime = driverFee.endTime
                   }
               setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId driverFee.serviceName dfCalculationJobTs
@@ -635,7 +639,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
       (specialZoneRideCount, specialZoneAmount) = specialZoneMetricsIntialization totalFee
       numRides = if serviceName == YATRI_SUBSCRIPTION then 1 else 0
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
-  plan <- getPlan mbDriverPlan serviceName transporterConfig.merchantOperatingCityId
+  plan <- getPlan mbDriverPlan serviceName transporterConfig.merchantOperatingCityId Nothing
   return $
     DF.DriverFee
       { status = DF.ONGOING,
@@ -681,10 +685,13 @@ getPlan ::
   Maybe DriverPlan ->
   ServiceNames ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe Bool ->
   m (Maybe Plan)
-getPlan mbDriverPlan serviceName merchantOpCityId = do
+getPlan mbDriverPlan serviceName merchantOpCityId recalculateManualReview = do
   case mbDriverPlan of
-    Just dp -> CQP.findByIdAndPaymentModeWithServiceName dp.planId dp.planType serviceName
+    Just dp -> do
+      let planType = if fromMaybe False recalculateManualReview then MANUAL else dp.planType
+      CQP.findByIdAndPaymentModeWithServiceName dp.planId planType serviceName
     Nothing -> do
       plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId DEFAULT serviceName
       case plans of

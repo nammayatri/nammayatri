@@ -90,12 +90,13 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       endTime = jobData.endTime
       serviceName = fromMaybe YATRI_SUBSCRIPTION jobData.serviceName
       applyOfferCall = TPayment.offerApply merchantId
+      recalculateManualReview = fromMaybe False jobData.recalculateManualReview
   now <- getCurrentTime
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
-  driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig
+  driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
   driverFeesToProccess <-
     mapMaybeM
@@ -114,7 +115,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
     for_ driverFeesToProccess $ \driverFee -> do
       mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
-      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId
+      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview)
       mbDriverStat <- QDS.findById (cast driverFee.driverId)
       case mbPlan of
         Nothing -> pure ()
@@ -383,11 +384,13 @@ getOrGenerateDriverFeeDataBasedOnServiceName ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   TransporterConfig ->
+  Bool ->
   m [DriverFee]
-getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOperatingCityId transporterConfig = do
+getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOperatingCityId transporterConfig recalculateManualReview = do
   now <- getCurrentTime
+  let statusToCheck = if recalculateManualReview then MANUAL_REVIEW_NEEDED else ONGOING
   case serviceName of
-    YATRI_SUBSCRIPTION -> QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName
+    YATRI_SUBSCRIPTION -> QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName
     YATRI_RENTAL -> do
       when (startTime >= endTime) $ throwError (InternalError "Invalid time range for driver fee calculation")
       let mbStartTime = Just startTime
@@ -461,7 +464,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
   let timeDiffNormalFlowLinkSendJob = addUTCTime subscriptionConfigs.paymentLinkJobTime endTime
   let dfCalculationJobTs = if timeDiffNormalFlow > now then diffUTCTime timeDiffNormalFlow now else 5 * 60 --- 5 min
   let paymentLinkSendJobTs = if timeDiffNormalFlowLinkSendJob > now then diffUTCTime timeDiffNormalFlowLinkSendJob now else 5 * 60 --- 5 min
-      scheduleChildJobs = fromMaybe True jobData.createChildJobs
+      scheduleChildJobs = fromMaybe True jobData.createChildJobs && not (fromMaybe False jobData.recalculateManualReview)
       scheduleNotification = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleNotification
       scheduleOverlay = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleOverlay
       scheduleManualPaymentLink = scheduleChildJobs && fromMaybe scheduleChildJobs jobData.scheduleManualPaymentLink
@@ -544,6 +547,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
                   scheduleOverlay = Just True,
                   scheduleManualPaymentLink = Just True,
                   scheduleDriverFeeCalc = Just True,
+                  recalculateManualReview = Nothing,
                   createChildJobs = Just True
                 }
             setDriverFeeCalcJobCache startTime endTime' merchantOpCityId serviceName dfCalculationJobTs
