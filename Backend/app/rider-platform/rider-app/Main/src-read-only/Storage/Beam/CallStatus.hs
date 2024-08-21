@@ -26,6 +26,7 @@ data CallStatusT f = CallStatusT
     dtmfNumberUsed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     recordingUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Kernel.External.Call.Interface.Types.CallStatus,

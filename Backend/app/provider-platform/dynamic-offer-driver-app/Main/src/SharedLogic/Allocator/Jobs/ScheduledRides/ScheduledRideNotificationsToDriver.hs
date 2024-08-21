@@ -142,6 +142,7 @@ sendScheduledRideNotificationsToDriver Job {id, jobInfo} = withLogTag ("JobId-" 
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Just booking.providerId.getId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             callService = Just Exotel,
             callAttempt = Just SCS.Resolved,
             callError = Nothing,
