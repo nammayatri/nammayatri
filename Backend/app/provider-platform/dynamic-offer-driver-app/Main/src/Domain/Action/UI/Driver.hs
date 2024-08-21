@@ -659,7 +659,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
   dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
   whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
   unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
-  whenM (checkIfGoToInDifferentGeometry merchant driverLocation homePos) $ throwError CannotEnableGoHomeForDifferentCity
+  unlessM (checkIfGoToInDifferentGeometry merchant driverLocation homePos) $ throwError CannotEnableGoHomeForDifferentCity
   activateDriverGoHomeRequest merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
   pure APISuccess.Success
   where
