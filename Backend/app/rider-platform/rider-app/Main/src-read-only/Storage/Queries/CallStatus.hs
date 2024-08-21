@@ -85,6 +85,7 @@ updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
       Se.Set Beam.customerIvrResponse customerIvrResponse,
       Se.Set Beam.dtmfNumberUsed dtmfNumberUsed,
       Se.Set Beam.merchantId merchantId,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.recordingUrl recordingUrl,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
       Se.Set Beam.status status,

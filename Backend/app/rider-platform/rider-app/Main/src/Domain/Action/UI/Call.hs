@@ -153,6 +153,7 @@ initiateCallToDriver rideId = do
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Just booking.merchantId.getId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             callService = Just Call.Exotel,
             callError = Nothing,
             callAttempt = dCallStatus,
@@ -218,14 +219,14 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
     case mbRiderDetails of
       Just (dtmfNumberUsed, booking) -> do
         ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
-        ensureCallStatusExists id callSid ride.id callStatus
+        ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId
         decRide <- decrypt ride
         number <- getNumberBasedOnType driverNumberType decRide
         return (number, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
       Nothing -> do
         ride <- runInReplica $ QRide.findLatestByDriverPhoneNumber callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-        ensureCallStatusExists id callSid ride.id callStatus
         booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+        ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId
         isValueAddNP <- CQVAN.isValueAddNP booking.providerId
         when isValueAddNP $
           throwCallError id (PersonWithPhoneNotFound callFrom) (Just exophone.merchantId.getId) (Just exophone.callService)
@@ -249,14 +250,14 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
             Nothing -> pure Nothing
             Just activeBooking -> return $ Just (Nothing, activeBooking)
 
-    ensureCallStatusExists id callId rideId callStatus' =
+    ensureCallStatusExists id callId rideId callStatus' merchantOperatingCityId =
       QCallStatus.findOneByRideId (Just $ getId rideId) >>= \case
         Nothing -> do
-          callStatusObj <- buildCallStatus id callId (Just rideId) (exotelStatusToInterfaceStatus callStatus')
+          callStatusObj <- buildCallStatus id callId (Just rideId) (exotelStatusToInterfaceStatus callStatus') merchantOperatingCityId
           void $ QCallStatus.create callStatusObj
         Just _ -> QCallStatus.updateCallStatusCallId callId id
 
-    buildCallStatus id exotelCallId rideId exoStatus = do
+    buildCallStatus id exotelCallId rideId exoStatus merchantOperatingCityId = do
       now <- getCurrentTime
       return $
         CallStatus
@@ -268,6 +269,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Nothing,
+            merchantOperatingCityId = Just merchantOperatingCityId,
             callService = Nothing,
             customerIvrResponse = Nothing,
             callAttempt = Just Pending,
@@ -288,12 +290,12 @@ callOnClickTracker rideId = do
   ride <- runInReplica $ QRide.findById (ID.Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  buildCallStatus <- callStatusObj
+  buildCallStatus <- callStatusObj booking.merchantOperatingCityId
   QCallStatus.create buildCallStatus
   scheduleJobs ride booking.merchantId maxShards (riderConfig.exotelStatusCheckSchedulerDelay)
   return Success
   where
-    callStatusObj = do
+    callStatusObj merchantOperatingCityId = do
       id <- generateGUID
       callId <- generateGUID -- added random placeholder for backward compatibility
       now <- getCurrentTime
@@ -308,6 +310,7 @@ callOnClickTracker rideId = do
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Nothing,
+            merchantOperatingCityId = Just merchantOperatingCityId,
             callService = Nothing,
             callError = Nothing,
             createdAt = now,

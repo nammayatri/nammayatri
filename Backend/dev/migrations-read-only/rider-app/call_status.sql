@@ -19,3 +19,8 @@ ALTER TABLE atlas_app.call_status ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.call_status ADD COLUMN customer_ivr_response text ;
 ALTER TABLE atlas_app.call_status ADD COLUMN call_attempt text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.call_status ADD COLUMN merchant_operating_city_id character varying(36) ;

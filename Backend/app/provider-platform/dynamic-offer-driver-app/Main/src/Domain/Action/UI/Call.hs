@@ -156,6 +156,7 @@ initiateCallToCustomer rideId merchantOpCityId = do
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Just booking.providerId.getId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             callService = Just Exotel,
             callAttempt = dCallStatus,
             callError = Nothing,
@@ -179,11 +180,11 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
   exotelResponse <- initiateCall merchantId merchantOpCityId callReq
   let dCallStatus = Just $ handleCallStatus exotelResponse.callStatus
   sendFCMToBAPOnFailedCallStatus dCallStatus (Left rcActiveAssociation.driverId)
-  callStatus <- buildCallStatus callStatusId exotelResponse dCallStatus (Just vehicleRC.id.getId)
+  callStatus <- buildCallStatus callStatusId exotelResponse dCallStatus (Just vehicleRC.id.getId) merchantOpCityId
   QCallStatus.create callStatus
   return $ CallRes callStatusId
   where
-    buildCallStatus callStatusId exotelResponse dCallStatus rcId' = do
+    buildCallStatus callStatusId exotelResponse dCallStatus rcId' merchantOpCityId' = do
       now <- getCurrentTime
       return $
         SCS.CallStatus
@@ -195,6 +196,7 @@ getDriverMobileNumber (driverId, merchantId, merchantOpCityId) rcNo = do
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Just merchantId.getId,
+            merchantOperatingCityId = Just merchantOpCityId',
             callError = Nothing,
             callService = Just Exotel,
             callAttempt = dCallStatus,
@@ -271,7 +273,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
         return (person, Just dtmfNumber)
 
   activeRide <- runInReplica (QRide.getActiveByDriverId driver.id) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  ensureCallStatusExists callStatusId callSid activeRide.id callStatus dtmfNumberUsed
+  ensureCallStatusExists callStatusId callSid activeRide.id callStatus dtmfNumberUsed activeRide.merchantOperatingCityId
 
   activeBooking <-
     runInReplica (QRB.findById activeRide.bookingId)
@@ -288,7 +290,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
 
   return requestorPhone
   where
-    ensureCallStatusExists callStatusId callId rideId callStatus' dtmfNumberUsed =
+    ensureCallStatusExists callStatusId callId rideId callStatus' dtmfNumberUsed merchantOperatingCityId' =
       QCallStatus.findOneByEntityId (Just $ getId rideId) >>= \case
         Just _ -> QCallStatus.updateCallStatusCallId callId callStatusId
         Nothing -> do
@@ -303,6 +305,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
                     conversationDuration = 0,
                     recordingUrl = Nothing,
                     merchantId = Nothing,
+                    merchantOperatingCityId = Just merchantOperatingCityId',
                     callService = Nothing,
                     callError = Nothing,
                     callAttempt = Just DCallStatus.Pending,
@@ -321,7 +324,7 @@ callOnClickTracker rideId = do
   transporterConfig <-
     CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
       >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  callStatusObj <- buildCallStatus
+  callStatusObj <- buildCallStatus booking.merchantOperatingCityId
   QCallStatus.create callStatusObj
   createJobIn @_ @'CheckExotelCallStatusAndNotifyBAP (fromIntegral transporterConfig.exotelStatusCheckSchedulerDelay) maxShards $
     CheckExotelCallStatusAndNotifyBAPJobData
@@ -329,7 +332,7 @@ callOnClickTracker rideId = do
       }
   return Success
   where
-    buildCallStatus = do
+    buildCallStatus merchantOpCityId = do
       callStatusId <- generateGUID
       callId <- generateGUID -- added random placeholder for backward compatibility
       now <- getCurrentTime
@@ -343,6 +346,7 @@ callOnClickTracker rideId = do
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = Nothing,
+            merchantOperatingCityId = Just merchantOpCityId,
             callService = Nothing,
             callError = Nothing,
             callAttempt = Just DCallStatus.Attempted,
