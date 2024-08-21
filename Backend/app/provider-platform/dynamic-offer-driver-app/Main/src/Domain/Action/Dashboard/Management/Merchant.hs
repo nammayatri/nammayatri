@@ -738,15 +738,10 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isDefaultEnabledOnManualVerification = fromMaybe True isDefaultEnabledOnManualVerification,
         isImageValidationRequired = fromMaybe True isImageValidationRequired,
         doStrictVerifcation = fromMaybe True doStrictVerifcation,
-        validateUsing = castToDomain <$> validateUsing,
         updatedAt = now,
         createdAt = now,
         ..
       }
-  where
-    castToDomain = \case
-      Common.FRONTEND -> DVC.FRONTEND
-      Common.BACKEND -> DVC.BACKEND
 
 ---------------------------------------------------------------------
 postMerchantServiceConfigMapsUpdate ::

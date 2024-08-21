@@ -32,7 +32,6 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     supportedVehicleClasses :: Domain.Types.DocumentVerificationConfig.SupportedVehicleClasses,
     title :: Kernel.Prelude.Text,
-    validateUsing :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.ValidationSource,
     vehicleCategory :: Domain.Types.Vehicle.Category,
     vehicleClassCheckType :: Domain.Types.DocumentVerificationConfig.VehicleClassCheckType,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -65,8 +64,6 @@ data SupportedVehicleClasses
   | RCValidClasses [Domain.Types.DocumentVerificationConfig.VehicleClassVariantMap]
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data ValidationSource = BACKEND | FRONTEND deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data VehicleClassVariantMap = VehicleClassVariantMap
@@ -85,7 +82,5 @@ data VehicleClassVariantMap = VehicleClassVariantMap
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ValidationSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)
