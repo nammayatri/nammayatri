@@ -90,7 +90,7 @@ findByEntityId entityId =
   findAllWithKVAndConditionalDB
     [ Se.Is BeamLM.entityId $ Se.Eq entityId
     ]
-    (Just (Se.Desc BeamLM.createdAt))
+    Nothing
 
 updateVersion :: (MonadFlow m, EsqDBFlow m r) => Id LocationMapping -> Text -> m ()
 updateVersion id version = do
