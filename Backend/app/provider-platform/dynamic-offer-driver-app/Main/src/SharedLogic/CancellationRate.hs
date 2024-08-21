@@ -91,17 +91,17 @@ getCancellationRateData ::
   m CancellationRateData
 getCancellationRateData mocId driverId = do
   merchantConfig <- CTC.findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-  let windowSize = findWindowSize merchantConfig
-      minimumRides = findMinimumRides merchantConfig
-  (assignedCount, cancelledCount, cancellationRate) <- do
+  let minimumRides = findMinimumRides merchantConfig
+  (assignedCount, cancelledCount, cancellationRate, windowSize) <- do
+    let windowSize = findWindowSize merchantConfig
     assignedCount <- getAssignedCount windowSize driverId
     if (isJust merchantConfig.cancellationRateWindow) && (assignedCount > minimumRides)
       then do
         cancelledCount <- getCancellationCount windowSize driverId
         let cancellationRate = (cancelledCount * 100) `div` max 1 assignedCount
-        pure (Just $ fromInteger assignedCount, Just $ fromInteger cancelledCount, Just $ fromInteger cancellationRate)
-      else pure (Nothing, Nothing, Nothing)
-  pure $ CancellationRateData assignedCount cancelledCount cancellationRate merchantConfig.cancellationRateWindow
+        pure (Just $ fromInteger assignedCount, Just $ fromInteger cancelledCount, Just $ fromInteger cancellationRate, merchantConfig.cancellationRateWindow)
+      else pure (Nothing, Nothing, Nothing, Nothing)
+  pure $ CancellationRateData assignedCount cancelledCount cancellationRate windowSize
   where
     findWindowSize merchantConfig = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     findMinimumRides merchantConfig = toInteger $ fromMaybe 5 merchantConfig.cancellationRateCalculationThreshold
