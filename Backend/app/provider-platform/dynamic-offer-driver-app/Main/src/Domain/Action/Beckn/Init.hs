@@ -34,10 +34,10 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
@@ -46,6 +46,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
+import Utils.Common.CacUtils
 
 data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
 
@@ -147,7 +148,7 @@ handler merchantId req validatedReq = do
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
-      exophone <- findRandomExophone searchRequest.merchantOperatingCityId
+      exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
       pure
         DRB.Booking
@@ -202,9 +203,9 @@ handler merchantId req validatedReq = do
         mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
       pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
 
-findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
-findRandomExophone merchantOpCityId = do
-  merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DSR.SearchRequest -> m DExophone.Exophone
+findRandomExophone merchantOpCityId sr = do
+  merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sr.transactionId))) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone DExophone.CALL_RIDE
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOpCityId.getId

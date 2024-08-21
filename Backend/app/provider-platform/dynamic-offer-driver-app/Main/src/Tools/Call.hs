@@ -29,8 +29,8 @@ import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Error
 
 initiateCall ::
@@ -52,7 +52,7 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
-  merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantCallServiceConfig <-
     QMSC.findByServiceAndCity (DMSC.CallService $ getCfg merchantConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "call" (show $ getCfg merchantConfig))

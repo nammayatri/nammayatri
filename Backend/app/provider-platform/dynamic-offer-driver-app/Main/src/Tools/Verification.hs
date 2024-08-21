@@ -45,8 +45,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.GovtDataRC ()
+import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import Tools.Error
 
 verifyDLAsync ::
@@ -64,7 +64,7 @@ verifyRC ::
   VerifyRCReq ->
   m VerifyRCResp
 verifyRC merchantId merchantOptCityId req = do
-  config <- CQMSUC.findByMerchantOpCityId merchantOptCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
+  config <- CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
   runWithServiceConfig (Verification.verifyRC config.verificationProvidersPriorityList) (.verificationService) merchantId merchantOptCityId req
 
 validateImage ::
@@ -117,7 +117,7 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity (DMSC.VerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
