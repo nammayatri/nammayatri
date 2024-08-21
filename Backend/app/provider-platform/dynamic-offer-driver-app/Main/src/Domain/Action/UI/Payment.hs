@@ -299,7 +299,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
   let totalDue = sum $ calcDueAmount dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
-  plan <- getPlan mbDriverPlan serviceName merchantOpCityId
+  plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
   case plan of
     Nothing -> QDI.updateSubscription True (cast driverId)
     Just plan_ -> when (totalDue < plan_.maxCreditLimit && plan_.subscribedFlagToggleAllowed) $ QDI.updateSubscription True (cast driverId)
@@ -469,7 +469,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       QM.updateMandateDetails mandateId DM.ACTIVE payerVpa' payerApp payerAppName mandatePaymentFlow
       QDP.updatePaymentModeByDriverIdAndServiceName DP.AUTOPAY (cast driverId) serviceName
       QDP.updateMandateSetupDateByDriverIdAndServiceName (Just now) (cast driverId) serviceName
-      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId
+      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
       let subcribeToggleAllowed = maybe False (.subscribedFlagToggleAllowed) mbPlan
       when subcribeToggleAllowed $ QDI.updateSubscription True (cast driverId)
       ADPlan.updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (castAutoPayStatus mandateStatus) payerVpa'

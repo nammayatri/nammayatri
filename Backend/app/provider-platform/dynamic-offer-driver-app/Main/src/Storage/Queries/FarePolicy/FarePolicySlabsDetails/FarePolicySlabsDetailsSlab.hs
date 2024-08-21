@@ -80,9 +80,9 @@ instance ToTType' BeamFPSS.FarePolicySlabsDetailsSlab BeamFPSS.FullFarePolicySla
         baseFareAmount = Just baseFare,
         currency = Just currency,
         distanceUnit = Just distanceUnit,
-        platformFeeCharge = DFP.platformFeeCharge <$> platformFeeInfo,
-        platformFeeCgst = DFP.cgst <$> platformFeeInfo,
-        platformFeeSgst = DFP.sgst <$> platformFeeInfo,
+        platformFeeCharge = (.platformFeeCharge) <$> platformFeeInfo,
+        platformFeeCgst = (.cgst) <$> platformFeeInfo,
+        platformFeeSgst = (.sgst) <$> platformFeeInfo,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
         freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo

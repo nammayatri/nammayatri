@@ -17,6 +17,7 @@ module Storage.Beam.FareParameters where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FareParameters as Domain
+import qualified Domain.Types.FarePolicy as FP
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -49,6 +50,10 @@ data FareParametersT f = FareParametersT
     insuranceCharge :: B.C f (Maybe HighPrecMoney),
     cardChargeOnFare :: B.C f (Maybe HighPrecMoney),
     fixedCardCharge :: B.C f (Maybe HighPrecMoney),
+    platformFee :: B.C f (Maybe HighPrecMoney),
+    sgst :: B.C f (Maybe HighPrecMoney),
+    cgst :: B.C f (Maybe HighPrecMoney),
+    platformFeeChargesBy :: B.C f (Maybe FP.PlatformFeeMethods),
     currency :: B.C f (Maybe Currency),
     updatedAt :: B.C f (Maybe UTCTime)
   }

@@ -130,8 +130,10 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
         BeamFP.description = description,
         BeamFP.cancellationFarePolicyId = getId <$> cancellationFarePolicyId,
+        BeamFP.platformFeeChargesBy = Just platformFeeChargesBy,
         BeamFP.createdAt = createdAt,
-        BeamFP.updatedAt = updatedAt
+        BeamFP.updatedAt = updatedAt,
+        ..
       }
 
 instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
@@ -230,7 +232,9 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
                     },
               description = description,
               cancellationFarePolicyId = Id <$> cancellationFarePolicyId,
+              platformFeeChargesBy = fromMaybe Subscription platformFeeChargesBy,
               createdAt = createdAt,
-              updatedAt = updatedAt
+              updatedAt = updatedAt,
+              ..
             }
     Nothing -> return Nothing

@@ -15,6 +15,7 @@
 
 module Domain.Types.FareParameters where
 
+import qualified Domain.Types.FarePolicy as FP
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -39,6 +40,10 @@ data FareParameters = FareParameters
     congestionCharge :: Maybe HighPrecMoney,
     insuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
+    platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney,
+    platformFeeChargesBy :: FP.PlatformFeeMethods,
     currency :: Currency,
     updatedAt :: UTCTime
   }
