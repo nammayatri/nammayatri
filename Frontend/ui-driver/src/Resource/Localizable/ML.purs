@@ -1600,4 +1600,6 @@ getML stringKey =
         CANCELLATION_RATE_TRIVIA_2 -> "നിങ്ങൾ റൈഡ് റദ്ദാക്കുന്നതിനുള്ള നിരക്ക് കുറയ്ക്കുന്നതിനുള്ള വഴികൾ:"
         LIFETIME_STATS -> "ജീവിത സ്റ്റാറ്റ്സ്"
         TOTAL_RIDES_CANCELLED -> "മൊത്തം റൈഡുകൾ റദ്ദാക്കി"
-        TOTAL_EARNINGS_MISSED -> "മൊത്തം ലഭ്യമായ വരുമാനം കളയി"
+        TOTAL_EARNINGS_MISSED -> "മൊത്തം ലഭ്യമായ വരുമാനം കളയി"        
+        COLLECT_CASH_AT_DROP -> "ഡ്രോപ്പിൽ പണം ശേഖരിക്കുക"
+        MORE_DETAILS -> "കൂടുതൽ വിവരങ്ങൾ"

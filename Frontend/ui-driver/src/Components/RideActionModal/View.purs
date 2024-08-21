@@ -966,6 +966,7 @@ normalRideInfoView push config =
           ]
       , if config.estimatedTollCharges > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_blue_toll") (getString $ RIDE_TOLL_FARE_INCLUDES $ (getCurrency appConfig) <> (show $ round config.estimatedTollCharges)) else noView 
       , if config.parkingCharge > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_blue") (getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <> (show $ round config.parkingCharge) ) else noView
+      , if config.isDelivery then collectDeliveryCashView else noView
       ] 
   ]
 
@@ -1039,7 +1040,37 @@ sourceDestinationTextView push config =
     , height WRAP_CONTENT
     , margin (MarginLeft 25)
     , afterRender push $ const NoAction
-    ][  textView $
+    ][  
+        linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          , visibility $ boolToVisibility $ config.isDelivery
+          ][
+        textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ Maybe.maybe "" (\delivery -> delivery.sender.name) config.delivery
+        , id (getNewIDWithTag "sendersName")
+        , color Color.black800
+        , ellipsize true
+        , singleLine true
+        , afterRender push $ const NoAction
+        , visibility $ boolToVisibility $ config.isDelivery
+        ] <> FontStyle.subHeading1 TypoGraphy
+        , textView $
+        [
+          height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ getString MORE_DETAILS
+        , id (getNewIDWithTag "moreDetails")
+        , color Color.blue800
+        , afterRender push $ const NoAction
+        , onClick push (const $ MoreDetails true)
+        , visibility $ boolToInvisibility config.isSourceExpanded
+        ] <> FontStyle.body1 TypoGraphy
+          ]
+      , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text config.sourceAddress.titleText
@@ -1055,10 +1086,21 @@ sourceDestinationTextView push config =
         , text config.sourceAddress.detailText
         , id (getNewIDWithTag "sourceAddress")
         , color Color.black650
-        , margin (MarginBottom 25)
+        , margin $ if config.isDelivery then (MarginBottom 8) else (MarginBottom 25)
         , ellipsize true
         , singleLine true
         , afterRender push $ const NoAction
+        ] <> FontStyle.body1 TypoGraphy
+      , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ maybe "" (\delivery -> "Pickup Instruction: " <> fromMaybe "" delivery.sender.instructions) config.delivery
+        , id (getNewIDWithTag "sourceInstructions")
+        , color Color.seaGreen 
+        , margin (MarginBottom 16)
+        , ellipsize false
+        , singleLine false
+        , visibility $ boolToVisibility $ config.isDelivery
         ] <> FontStyle.body1 TypoGraphy
         ,destAddressTextView config push
       ] 
@@ -1297,3 +1339,24 @@ stopImageView  config push =
     ]
 isWaitingTimeStarted :: Config -> Boolean
 isWaitingTimeStarted config =  config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+
+collectDeliveryCashView :: forall w. PrestoDOM (Effect Unit) w
+collectDeliveryCashView = 
+  linearLayout[
+    height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , margin $ MarginTop 12
+  ][
+    imageView[
+      height $ V 20
+    , width $ V 20
+    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_money_outline"
+    ]
+  , textView $ [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , text $ getString COLLECT_CASH_AT_DROP
+    , color Color.blue800
+    , margin $ MarginLeft 4
+    ] <> FontStyle.body1 TypoGraphy
+  ]

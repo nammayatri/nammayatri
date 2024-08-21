@@ -1603,3 +1603,5 @@ getTE stringKey =
         LIFETIME_STATS -> "జీవిత సమాచారం"
         TOTAL_RIDES_CANCELLED -> "మొత్తం రైడ్‌లను రద్దు చేసారు"
         TOTAL_EARNINGS_MISSED -> "మొత్తం సంపాదించని ధరలు"
+        COLLECT_CASH_AT_DROP -> "డ్రాప్ వద్ద నగదు సేకరించండి"
+        MORE_DETAILS -> "మరిన్ని వివరాలు"

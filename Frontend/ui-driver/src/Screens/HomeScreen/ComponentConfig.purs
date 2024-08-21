@@ -93,6 +93,9 @@ rideActionModalConfig state =
   Tuple stage rideData = case state.props.bookingStage, state.data.advancedRideData of
                               ADVANCED, Just advRideInfo -> Tuple state.props.advancedRideStage advRideInfo
                               _, _  -> Tuple state.props.currentStage state.data.activeRide
+  isDelivery = state.data.activeRide.tripType == ST.Delivery
+  sourceAddressTitleText = fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") (rideData.source)) DA.!! 0)) rideData.sourceArea
+  destinationAddressTitleText = (\destination -> fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0)) rideData.destinationArea)
   rideActionModalConfig' = config {
     startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) ),
     arrivedStopActive = state.props.arrivedAtStop,
@@ -102,11 +105,11 @@ rideActionModalConfig state =
                       else
                         (fromMaybe "" ((DS.split (DS.Pattern " ") (rideData.riderName)) DA.!! 0)),
     sourceAddress  {
-      titleText = fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") (rideData.source)) DA.!! 0)) rideData.sourceArea,
+      titleText = if isDelivery then fromMaybe sourceAddressTitleText rideData.extraFromLocationInfo else sourceAddressTitleText,
       detailText = rideData.source
     },
     destinationAddress = (\destination -> {
-      titleText : fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0)) rideData.destinationArea,
+      titleText : if isDelivery then fromMaybe (destinationAddressTitleText destination) rideData.extraToLocationInfo else destinationAddressTitleText destination,
       detailText : destination
     }) <$> state.data.activeRide.destination,
     stopAddress = (\stop -> {
@@ -147,8 +150,30 @@ rideActionModalConfig state =
                   Just (SA.Route obj) ->  obj.distance
                   Nothing -> 0
   , parkingCharge = state.data.activeRide.parkingCharge
+  , isDelivery = isDelivery
+  , delivery = if isDelivery then getDeliveryDetails state else Nothing
+  , isSourceExpanded = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then true else false
   }
   in rideActionModalConfig'
+
+getDeliveryDetails :: ST.HomeScreenState -> Maybe RideActionModal.DeliveryDetails
+getDeliveryDetails state = 
+  Just $ {
+    sender : ({
+      name : maybe "" (\(SA.PersonDetails pd) -> pd.name) state.data.activeRide.senderPersonDetails,
+      phoneNumber : maybe "" (\(SA.PersonDetails pd) -> pd.phoneNumber) state.data.activeRide.senderPersonDetails,
+      premises : state.data.activeRide.extraFromLocationInfo,
+      exophoneNumber : Nothing,
+      instructions : state.data.activeRide.senderInstructions
+    }:: RideActionModal.PersonAndDeliveryInfo),
+    receiver : ( {
+      name : maybe "" (\(SA.PersonDetails pd) -> pd.name) state.data.activeRide.receiverPersonDetails,
+      phoneNumber : maybe "" (\(SA.PersonDetails pd) -> pd.phoneNumber) state.data.activeRide.receiverPersonDetails,
+      premises : state.data.activeRide.extraToLocationInfo,
+      exophoneNumber : Nothing,
+      instructions : state.data.activeRide.receiverInstructions
+    } :: RideActionModal.PersonAndDeliveryInfo)
+  }
 
 ---------------------------------------- endRidePopUp -----------------------------------------
 endRidePopUp :: ST.HomeScreenState -> PopUpModal.Config

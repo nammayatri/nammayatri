@@ -1600,4 +1600,6 @@ getHI stringKey =
         CANCELLATION_RATE_TRIVIA_2 -> "अगर आप नहीं करते हैं तो क्या होता है?"
         LIFETIME_STATS -> "जीवनकाल सांख्यिकी"
         TOTAL_RIDES_CANCELLED -> "कुल राइड रद्द"
-        TOTAL_EARNINGS_MISSED -> "कुल कमाई छूट गई"
+        TOTAL_EARNINGS_MISSED -> "कुल कमाई छूट गई"        
+        COLLECT_CASH_AT_DROP -> "ड्रॉप पर नकद इकट्ठा करें"
+        MORE_DETAILS -> "अधिक जानकारी"

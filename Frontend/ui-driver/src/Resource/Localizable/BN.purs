@@ -1601,4 +1601,6 @@ getBN stringKey =
         CANCELLATION_RATE_TRIVIA_2 -> "বাতিলের হার কমানোর উপায়:"
         LIFETIME_STATS -> "জীবনকালীন পরিসংখ্যান"
         TOTAL_RIDES_CANCELLED -> "মোট রাইড বাতিল"
-        TOTAL_EARNINGS_MISSED -> "মোট উপার্জন হারানো"
+        TOTAL_EARNINGS_MISSED -> "মোট উপার্জন হারানো"        
+        COLLECT_CASH_AT_DROP -> "ড্রপে নগদ সংগ্রহ করুন"
+        MORE_DETAILS -> "আরো বিস্তারিত"

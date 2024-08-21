@@ -93,7 +93,7 @@ import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideT
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..))
-import Services.Accessor (_lat, _lon, _area)
+import Services.Accessor (_lat, _lon, _area, _extras, _instructions)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -1644,8 +1644,15 @@ activeRideDetail state (RidesInfo ride) =
   estimatedTollCharges :  fromMaybe 0.0 ride.estimatedTollCharges,
   acRide : ride.isVehicleAirConditioned,
   bapName : transformBapName $ fromMaybe "" ride.bapName,
-  bookingFromOtherPlatform : not ride.isValueAddNP
-, parkingCharge : fromMaybe 0.0 ride.parkingCharge
+  bookingFromOtherPlatform : not ride.isValueAddNP,
+  parkingCharge : fromMaybe 0.0 ride.parkingCharge,
+  extraFromLocationInfo : (ride.fromLocation) ^. _extras,
+  extraToLocationInfo : ride.toLocation >>= (\toLocation -> (toLocation ^. _extras)),
+  senderInstructions : (ride.fromLocation) ^. _instructions,
+  receiverInstructions : ride.toLocation >>= (\toLocation -> toLocation ^. _instructions),
+  senderPersonDetails : ride.senderDetails,
+  receiverPersonDetails : ride.receiverDetails,
+  deliveryInitiatedAs : ride.initiatedAs
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

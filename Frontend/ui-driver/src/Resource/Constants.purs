@@ -198,7 +198,9 @@ constructLocationInfo (latitude) (longitude) =
                         lat : latitude',
                         city :  Just "",
                         areaCode :  Just "",
-                        lon : longitude'
+                        lon : longitude',
+                        instructions : Nothing,
+                        extras : Nothing
                 }
         _,_ -> Nothing
 
@@ -215,7 +217,9 @@ getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, ar
                 lat : lat,
                 city :  city,
                 areaCode :  areaCode,
-                lon : lon
+                lon : lon,
+                instructions : Nothing,
+                extras : Nothing
         }
 
 getHomeStageFromString :: String -> ST.HomeScreenStage
@@ -262,6 +266,7 @@ serviceTierMapping tierName acRide =
   case acRide, tierName of
     Just true, "AC Mini" -> "Mini"
     Just false, "Non-AC Mini" -> "Mini"
+    _ , "BIKE_DELIVERY" -> "Delivery"
     _ , _ -> tierName
 
 defaultSliderDist :: Int

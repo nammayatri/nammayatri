@@ -1590,7 +1590,6 @@ getEN stringKey =
         SHARE_WITH_SAFETY_TEAM -> "Share with safety team"
         RECORD_AUDIO -> "Record Audio"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Cannot Enable Go-To for different City."        
-
         RIDE_CANCELLATION_RATE -> "Ride Cancellation Rate"
         CANCELLATION_RATE_TRIVIA -> "How to Reduce the Cancellation Rate:"
         HIGH_CANCELLATION_RATE -> "Cancellation rate is higher than 90% of drivers"
@@ -1599,3 +1598,5 @@ getEN stringKey =
         LIFETIME_STATS -> "Lifetime Stats"
         TOTAL_RIDES_CANCELLED -> "Total Rides Cancelled"
         TOTAL_EARNINGS_MISSED -> "Total Earnings Missed"
+        COLLECT_CASH_AT_DROP -> "Collect cash at drop"
+        MORE_DETAILS -> "More Details"

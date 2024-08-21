@@ -1599,4 +1599,6 @@ getKN stringKey =
         CANCELLATION_RATE_TRIVIA_2 -> "ನೀವು ರದ್ದು ಮಾಡದಿದ್ದರೆ ಏನು ಆಗುತ್ತದೆ?"
         LIFETIME_STATS -> "ಜೀವನದ ಸ್ಟ್ಯಾಟಿಸ್ಟಿಕ್ಸ್"
         TOTAL_RIDES_CANCELLED -> "ಒಟ್ಟು ಸವಾರಿಗಳನ್ನು ರದ್ದು ಮಾಡಲಾಗಿದೆ"
-        TOTAL_EARNINGS_MISSED -> "ಒಟ್ಟು ಆದಾಯವನ್ನು ಮಿಸ್ ಮಾಡಲಾಗಿದೆ"
+        TOTAL_EARNINGS_MISSED -> "ಒಟ್ಟು ಆದಾಯವನ್ನು ಮಿಸ್ ಮಾಡಲಾಗಿದೆ"        
+        COLLECT_CASH_AT_DROP -> "ಡ್ರಾಪ್‌ನಲ್ಲಿ ನಗದು ಸಂಗ್ರಹಿಸಿ"
+        MORE_DETAILS -> "ಹೆಚ್ಚಿನ ವಿವರಗಳು"

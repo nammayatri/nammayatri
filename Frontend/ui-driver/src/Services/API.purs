@@ -561,6 +561,20 @@ instance decodeGetDriverInfoResp :: Decode GetDriverInfoResp where decode = defa
 instance encodeGetDriverInfoResp :: Encode GetDriverInfoResp where encode = defaultEncode
 -----------------------------------------------GET RIDES HISTORY---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+data InitiatedAs = AsSender | AsReciever | AsSomeoneElse
+
+derive instance genericInitiatedAs :: Generic InitiatedAs _
+instance showInitiatedAs :: Show InitiatedAs where show = genericShow
+instance decodeInitiatedAs :: Decode InitiatedAs where decode = defaultEnumDecode
+instance encodeInitiatedAs :: Encode InitiatedAs where encode = defaultEnumEncode
+instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
+instance standardInitiatedAs :: StandardEncode InitiatedAs
+  where
+  standardEncode AsSender = standardEncode $ show AsSender
+  standardEncode AsReciever = standardEncode $ show AsReciever
+  standardEncode AsSomeoneElse = standardEncode $ show AsSomeoneElse
+  standardEncode _ = standardEncode $ show AsSender
+
 data GetRidesHistoryReq = GetRidesHistoryReq String String String String String
 
 newtype GetRidesHistoryResp = GetRidesHistoryResp
@@ -622,8 +636,25 @@ newtype RidesInfo = RidesInfo
       bookingType :: Maybe BookingTypes,
       bapName :: Maybe String,
       isValueAddNP :: Boolean,
-      parkingCharge :: Maybe Number
+      parkingCharge :: Maybe Number,
+      senderDetails :: Maybe PersonDetails,
+      receiverDetails :: Maybe PersonDetails,
+      initiatedAs :: Maybe InitiatedAs
   }
+
+
+newtype PersonDetails = PersonDetails
+  {
+    name :: String,
+    phoneNumber :: String
+  }
+
+derive instance genericPersonDetails :: Generic PersonDetails _
+derive instance newtypePersonDetails :: Newtype PersonDetails _
+instance standardEncodePersonDetails :: StandardEncode PersonDetails where standardEncode (PersonDetails req) = standardEncode req
+instance showPersonDetails :: Show PersonDetails where show = genericShow
+instance decodePersonDetails :: Decode PersonDetails where decode = defaultDecode
+instance encodePersonDetails :: Encode PersonDetails where encode = defaultEncode
 
 newtype OdometerReading = OdometerReading
   {
@@ -697,7 +728,9 @@ newtype LocationInfo = LocationInfo
         lat :: Number,
         city :: Maybe String,
         areaCode :: Maybe String,
-        lon :: Number
+        lon :: Number,
+        instructions :: Maybe String,
+        extras :: Maybe String
       }
 
 data BookingTypes = CURRENT | ADVANCED

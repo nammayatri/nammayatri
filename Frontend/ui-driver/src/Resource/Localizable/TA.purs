@@ -1600,4 +1600,6 @@ getTA stringKey =
         CANCELLATION_RATE_TRIVIA_2 -> "நீங்கள் செய்யாவிட்டால் என்ன நடக்கும்?"
         LIFETIME_STATS -> "உயர்ந்த ரத்து விகிதம் உள்ளது"
         TOTAL_RIDES_CANCELLED -> "மொத்த சவாரிகள் ரத்து செய்யப்பட்டன"
-        TOTAL_EARNINGS_MISSED -> "மொத்த சம்பாதிக்கை விட குறைந்தது"
+        TOTAL_EARNINGS_MISSED -> "மொத்த சம்பாதிக்கை விட குறைந்தது"        
+        COLLECT_CASH_AT_DROP -> "டிராப் செய்யும் போது பணத்தை சேகரிக்கவும்"
+        MORE_DETAILS -> "மேலும் விவரங்கள்"

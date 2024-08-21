@@ -1216,8 +1216,15 @@ type ActiveRide = {
   estimatedTollCharges :: Number,
   acRide :: Maybe Boolean,
   bapName :: String,
-  bookingFromOtherPlatform :: Boolean
-, parkingCharge :: Number
+  bookingFromOtherPlatform :: Boolean,
+  parkingCharge :: Number,
+  extraFromLocationInfo :: Maybe String,
+  extraToLocationInfo :: Maybe String,
+  senderInstructions :: Maybe String,
+  receiverInstructions :: Maybe String,
+  senderPersonDetails :: Maybe API.PersonDetails,
+  receiverPersonDetails :: Maybe API.PersonDetails,
+  deliveryInitiatedAs :: Maybe API.InitiatedAs
 }
 
 type HomeScreenProps =  {
@@ -1328,7 +1335,7 @@ instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = ge
 instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
 instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
 
-data TripType = OneWay | RoundTrip | Rental | Intercity | RideShare
+data TripType = OneWay | RoundTrip | Rental | Intercity | RideShare | Delivery
 
 derive instance genericTripType :: Generic TripType _
 instance eqTripType :: Eq TripType where eq = genericEq
