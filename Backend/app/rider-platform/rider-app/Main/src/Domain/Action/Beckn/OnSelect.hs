@@ -194,6 +194,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
   where
     buildDriverQuoteDetails = \case
       Ambulance _ -> DQuote.AmbulanceDetails <$> buildDriverOffer estimate.id quoteDetails req tripCategory
+      Delivery _ -> DQuote.DeliveryDetails <$> buildDriverOffer estimate.id quoteDetails req tripCategory
       _ -> DQuote.DriverOfferDetails <$> buildDriverOffer estimate.id quoteDetails req tripCategory
 
 buildDriverOffer ::

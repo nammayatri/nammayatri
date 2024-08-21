@@ -58,3 +58,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_dashboard_reques
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_namma_tags text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN trip_category text ;

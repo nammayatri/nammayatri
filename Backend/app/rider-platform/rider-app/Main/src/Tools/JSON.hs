@@ -39,4 +39,5 @@ fareProductConstructorModifier = \case
   "InterCityAPIDetails" -> "INTER_CITY"
   "DriverOfferAPIDetails" -> "DRIVER_OFFER"
   "AmbulanceAPIDetails" -> "AMBULANCE"
+  "DeliveryAPIDetails" -> "DELIVERY" -- for now change accordingly
   x -> x

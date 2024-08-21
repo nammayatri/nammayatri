@@ -14,8 +14,10 @@
 
 module Domain.Action.Beckn.Init where
 
+import BecknV2.OnDemand.Enums as Enums
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.DeliveryPersonDetails as DPD
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
@@ -150,6 +152,10 @@ handler merchantId req validatedReq = do
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
       exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
+      (initiatedAs, senderDetails, receiverDetails) <- do
+        case tripCategory of
+          Delivery _ -> fetchDeliveryDetails searchRequest
+          _ -> pure (Nothing, Nothing, Nothing)
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
@@ -194,6 +200,15 @@ handler merchantId req validatedReq = do
             isDashboardRequest = searchRequest.isDashboardRequest,
             ..
           }
+    fetchDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DSR.SearchRequest -> m (Maybe Enums.DeliveryInitiation, Maybe DPD.DeliveryPersonDetails, Maybe DPD.DeliveryPersonDetails)
+    fetchDeliveryDetails searchRequest = do
+      searchRequestDetails <- fromMaybeM (InternalError "SearchRequestDetails not found") searchRequest.searchRequestDetails
+      case searchRequestDetails of
+        DSR.DeliveryDetails _srDeliveryDetails -> do
+          let senderDetails = _srDeliveryDetails.senderDetails
+              receiverDetails = _srDeliveryDetails.receiverDetails
+              initiatedAs = _srDeliveryDetails.initiatedAs
+          return (Just initiatedAs, Just senderDetails, Just receiverDetails)
 
     fetchPaymentMethodAndUrl merchantOpCityId = do
       mbPaymentMethod <- forM req.paymentMethodInfo $ \paymentMethodInfo -> do

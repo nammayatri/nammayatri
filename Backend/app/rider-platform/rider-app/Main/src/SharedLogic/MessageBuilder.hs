@@ -33,6 +33,9 @@ module SharedLogic.MessageBuilder
     buildFRFSTicketBookedMessage,
     BuildSendRideEndOTPMessageReq (..),
     buildSendRideEndOTPMessage,
+    BuildDeliveryMessageReq (..),
+    DeliveryMessageRequestType (..),
+    buildDeliveryDetailsMessage,
   )
 where
 
@@ -213,3 +216,29 @@ buildFRFSTicketBookedMessage pOrgId req = do
         msg
           & T.replace (templateText "TICKET_PLURAL") ticketPlural
           & T.replace (templateText "URL") url
+
+data DeliveryMessageRequestType = SenderReq | ReceiverReq
+
+data BuildDeliveryMessageReq = BuildDeliveryMessageReq
+  { driverName :: Text,
+    driverNumber :: Text,
+    trackingUrl :: Text,
+    otp :: Text,
+    deliveryMessageType :: DeliveryMessageRequestType
+  }
+
+buildDeliveryDetailsMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildDeliveryMessageReq -> m SmsReqBuilder
+buildDeliveryDetailsMessage merchantOperatingCityId req = do
+  let merchantMessageKey = case req.deliveryMessageType of
+        SenderReq -> DMM.SMS_DELIVERY_DETAILS_SENDER
+        ReceiverReq -> DMM.SMS_DELIVERY_DETAILS_RECEIVER
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
+  buildSendSmsReq
+    merchantMessage
+    [ ("driverName", req.driverName),
+      ("driverNumber", req.driverNumber),
+      ("trackingUrl", req.trackingUrl),
+      ("otp", req.otp)
+    ]

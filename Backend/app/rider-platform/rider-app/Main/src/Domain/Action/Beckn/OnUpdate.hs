@@ -532,6 +532,7 @@ validateRequest = \case
       DRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on ride otp rides"
       DRB.InterCityDetails _ -> throwError $ InvalidRequest "Stops are not present in intercity rides"
       DRB.AmbulanceDetails _ -> throwError $ InvalidRequest "Stops are not present in ambulance rides"
+      DRB.DeliveryDetails _ -> throwError $ InvalidRequest "Stops are not present in delivery rides"
       DRB.RentalDetails DRB.RentalBookingDetails {..} -> do
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}

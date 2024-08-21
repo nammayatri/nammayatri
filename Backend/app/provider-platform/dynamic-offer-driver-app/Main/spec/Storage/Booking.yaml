@@ -15,9 +15,11 @@ imports:
   Country: Kernel.Types.Beckn.Context
   Currency: Kernel.Utils.Common
   Estimate: Domain.Types.Estimate
+  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
+  DeliveryInitiation: BecknV2.OnDemand.Enums
 
 Booking:
-  derives: "Generic,ToJSON,FromJSON"
+  derives: "Generic"
   types:
     BookingStatus:
       enum: "NEW,TRIP_ASSIGNED,COMPLETED,CANCELLED,REALLOCATED"
@@ -72,6 +74,9 @@ Booking:
     estimateId: Maybe (Id Estimate)
     paymentId: Maybe Text
     isDashboardRequest: Bool
+    senderDetails: Maybe DeliveryPersonDetails
+    receiverDetails: Maybe DeliveryPersonDetails
+    initiatedAs: Maybe DeliveryInitiation
 
   excludedFields:
     - merchantId
@@ -102,6 +107,12 @@ Booking:
       vehicleVariant: ServiceTierType
     fareParams:
       fareParametersId: Text
+    senderDetails:
+      senderId: Maybe (Id RiderDetails)
+      senderName: Maybe Text
+    receiverDetails:
+      receiverId: Maybe (Id RiderDetails)
+      receiverName: Maybe Text
 
   toTType:
     currency: Just currency|E
@@ -119,12 +130,17 @@ Booking:
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     distanceUnit: Kernel.Prelude.Just|I
     isDashboardRequest: (Just isDashboardRequest)|E
+    senderId: (Kernel.Types.Id.getId <$> (senderDetails <&> (.id)))|E
+    senderName: (senderDetails <&> (.name))|E
+    receiverId: (Kernel.Types.Id.getId <$> (receiverDetails <&> (.id)))|E
+    receiverName: (receiverDetails <&> (.name))|E
 
   intermediateTransformers:
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
       - fromAndToLocation': Storage.Queries.Transformers.Booking.fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId|EM
       - merchant: Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)|EM
+      - senderAndReceiverDetails: Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName receiverId receiverName|EM
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     tripCategory: getTripCategory
@@ -140,6 +156,8 @@ Booking:
     distanceToPickup: Kernel.Prelude.roundToIntegral <$> distanceToPickup|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     isDashboardRequest: fromMaybe False isDashboardRequest|E
+    senderDetails: fst <$> senderAndReceiverDetails|E
+    receiverDetails: snd <$> senderAndReceiverDetails|E
 
   sqlType:
     status: character varying(255)
@@ -194,6 +212,8 @@ BookingLocation:
       building: Maybe Text
       areaCode: Maybe Text
       area: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
       derive': "Generic,Show,Eq"
     BookingLocationAPIEntity:
       lat: Double
@@ -205,6 +225,8 @@ BookingLocation:
       building: Maybe Text
       areaCode: Maybe Text
       area: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
       derive': "Generic,FromJSON,ToJSON,Show,Data.OpenApi.ToSchema"
 
   fields:
@@ -225,6 +247,8 @@ BookingLocation:
       building: Maybe Text
       areaCode: Maybe Text
       area: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
 
   toTType:
     street: (.street)|I
@@ -235,6 +259,8 @@ BookingLocation:
     building: (.building)|I
     areaCode: (.areaCode)|I
     area: (.area)|I
+    instructions: (.instructions)|I
+    extras: (.extras)|I
 
   fromTType:
     address: mkLocationAddress

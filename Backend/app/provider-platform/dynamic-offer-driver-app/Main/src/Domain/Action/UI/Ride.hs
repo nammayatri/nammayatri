@@ -212,7 +212,15 @@ data DriverRideRes = DriverRideRes
     enableOtpLessRide :: Bool,
     cancellationSource :: Maybe DBCR.CancellationSource,
     tipAmount :: Maybe PriceAPIEntity,
-    penalityCharge :: Maybe PriceAPIEntity
+    penalityCharge :: Maybe PriceAPIEntity,
+    senderDetails :: Maybe DeliveryPersonDetailsAPIEntity,
+    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DeliveryPersonDetailsAPIEntity = DeliveryPersonDetailsAPIEntity
+  { name :: Text,
+    phone :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -365,7 +373,9 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         enableOtpLessRide = fromMaybe False ride.enableOtpLessRide,
         cancellationSource = fmap (\cr -> cr.source) cancellationReason,
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
-        penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled
+        penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
+        senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) Nothing),
+        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) Nothing)
       }
 
 calculateLocations ::

@@ -823,6 +823,7 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.BLACK -> avgSpeedOfVehicle.black
   DVeh.BLACK_XL -> avgSpeedOfVehicle.blackxl
   DVeh.BIKE -> avgSpeedOfVehicle.bike
+  DVeh.DELIVERY_BIKE -> avgSpeedOfVehicle.bike
   DVeh.AMBULANCE_TAXI -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_TAXI_OXY -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_AC -> avgSpeedOfVehicle.ambulance

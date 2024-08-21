@@ -165,6 +165,7 @@ confirm DConfirmReq {..} = do
     getBppQuoteId now = \case
       DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
       DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
+      DQuote.DeliveryDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.RentalDetails rentalDetails -> pure rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.OneWaySpecialZoneDetails details -> pure details.quoteId
@@ -278,6 +279,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
     buildBookingDetails = case quote.quoteDetails of
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
       DQuote.AmbulanceDetails _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails
+      DQuote.DeliveryDetails _ -> DRB.DeliveryDetails <$> buildDeliveryDetails
       DQuote.RentalDetails _ -> pure $ DRB.RentalDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, ..})
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
@@ -303,6 +305,20 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWaySpecialZoneBookingDetails {..}
+    buildDeliveryDetails = do
+      searchRequestDetails <- searchRequest.searchRequestDetails & fromMaybeM (InternalError "searchRequestDetails is null for delivery search request")
+      case searchRequestDetails of
+        DSReq.DeliveryDetails deliveryDetails -> do
+          -- we need to throw errors here because of some redundancy of our domain model
+          toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
+          distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+          pure
+            DRB.DeliveryBookingDetails
+              { DRB.initiatedAs = deliveryDetails.initiatedAs,
+                DRB.senderDetails = deliveryDetails.senderDetails,
+                DRB.receiverDetails = deliveryDetails.receiverDetails,
+                ..
+              }
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do

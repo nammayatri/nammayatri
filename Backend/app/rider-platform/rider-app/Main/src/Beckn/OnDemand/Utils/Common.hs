@@ -199,6 +199,7 @@ castVehicleVariant = \case
   VehVar.BLACK -> (show Enums.CAB, "BLACK")
   VehVar.BLACK_XL -> (show Enums.CAB, "BLACK_XL")
   VehVar.BIKE -> (show Enums.TWO_WHEELER, "BIKE") -- When parsing from beckn to domain, convert to MOTORCYCLE
+  VehVar.DELIVERY_BIKE -> (show Enums.TWO_WHEELER, "DELIVERY_BIKE")
   VehVar.AMBULANCE_TAXI -> (show Enums.AMBULANCE, "AMBULANCE_TAXI")
   VehVar.AMBULANCE_TAXI_OXY -> (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
   VehVar.AMBULANCE_AC -> (show Enums.AMBULANCE, "AMBULANCE_AC")
@@ -220,6 +221,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "PREMIUM_SEDAN") -> Just VehVar.PREMIUM_SEDAN
     (Just "MOTORCYCLE", Just "BIKE") -> Just VehVar.BIKE -- becomes redundant, TODO : remove in next release
     (Just "TWO_WHEELER", Just "BIKE") -> Just VehVar.BIKE
+    (Just "TWO_WHEELER", Just "DELIVERY_BIKE") -> Just VehVar.DELIVERY_BIKE
     (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just VehVar.AMBULANCE_TAXI
     (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just VehVar.AMBULANCE_TAXI_OXY
     (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just VehVar.AMBULANCE_AC

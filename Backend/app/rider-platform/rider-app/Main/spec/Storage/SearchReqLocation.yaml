@@ -33,6 +33,8 @@ SearchReqLocation:
       area: Maybe Text
       ward: Maybe Text
       placeId: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
 
   sqlType:
     street: character varying(255)
@@ -56,6 +58,8 @@ SearchReqLocation:
     area: Domain.Types.LocationAddress.area|I
     ward: Domain.Types.LocationAddress.ward|I
     placeId: Domain.Types.LocationAddress.placeId|I
+    instructions: Domain.Types.LocationAddress.instructions|I
+    extras: Domain.Types.LocationAddress.extras|I
 
   fromTType:
     address: mkLocationAddress

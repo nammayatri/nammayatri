@@ -13,6 +13,7 @@ import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.FarePolicy.FareProductType
 import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -26,7 +27,14 @@ data BookingT f = BookingT
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
+    initiatedAs :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.DeliveryInitiation),
     otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    receiverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    receiverPhoneNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    receiverPhoneNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    senderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    senderPhoneNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    senderPhoneNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

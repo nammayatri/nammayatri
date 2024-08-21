@@ -80,7 +80,7 @@ import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 
-data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -119,6 +119,7 @@ fareProductConstructorModifier = \case
   "RentalSearch" -> "RENTAL"
   "InterCitySearch" -> "INTER_CITY"
   "AmbulanceSearch" -> "AMBULANCE"
+  "DeliverySearch" -> "DELIVERY"
   x -> x
 
 data OneWaySearchReq = OneWaySearchReq
@@ -388,6 +389,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq stopsLatLong now sourceLatLong roundTrip
       AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq stopsLatLong now sourceLatLong roundTrip
       InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq stopsLatLong now sourceLatLong roundTrip
+      DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq stopsLatLong now sourceLatLong roundTrip
       RentalSearch rentalReq ->
         return $
           RouteDetails
@@ -426,6 +428,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       AmbulanceSearch OneWaySearchReq {..} ->
         SearchDetails
           { riderPreferredOption = SearchRequest.Ambulance,
+            roundTrip = False,
+            stops = [destination],
+            startTime = fromMaybe now startTime,
+            returnTime = Nothing,
+            ..
+          }
+      DeliverySearch OneWaySearchReq {..} ->
+        SearchDetails
+          { riderPreferredOption = SearchRequest.Delivery,
             roundTrip = False,
             stops = [destination],
             startTime = fromMaybe now startTime,
@@ -538,7 +549,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         riderPreferredOption, -- this is just to store the rider preference for the ride type to handle backward compatibility
         distanceUnit,
         totalRidesCount,
-        isDashboardRequest = Just isDashboardRequest
+        isDashboardRequest = Just isDashboardRequest,
+        searchRequestDetails = Nothing -- for now nothing will fix it later
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

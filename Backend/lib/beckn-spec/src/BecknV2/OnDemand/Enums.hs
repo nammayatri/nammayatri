@@ -17,6 +17,7 @@ module BecknV2.OnDemand.Enums where
 
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
 import Kernel.Prelude
 import Kernel.Utils.JSON
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -49,6 +50,14 @@ data FulfillmentType
   | INTER_CITY
   | AMBULANCE_FLOW
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
+
+data DeliveryInitiation
+  = Sender
+  | Receiver
+  | SomeoneElse
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read, ToSchema, Ord)
+
+$(mkBeamInstancesForEnumAndList (''DeliveryInitiation))
 
 data StopType
   = -- ..fulfillments.stops.type

@@ -289,6 +289,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
         DB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DB.InterCityDetails details -> Just details.toLocation
         DB.AmbulanceDetails details -> Just details.toLocation
+        DB.DeliveryDetails details -> Just details.toLocation
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   driverPhoneNumber' <- encrypt driverMobileNumber

@@ -1,14 +1,18 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.SearchRequest where
+module Domain.Types.SearchRequest (module Domain.Types.SearchRequest, module ReExport) where
 
 import Data.Aeson
+import Domain.Types.Extra.SearchRequest as ReExport
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderDetails
+import qualified Domain.Types.SearchRequestDeliveryDetails
+import qualified Domain.Types.Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
@@ -50,12 +54,16 @@ data SearchRequest = SearchRequest
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    searchRequestDetails :: Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchRequestDetails,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     transactionId :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show)
+
+data SearchRequestDetails = DeliveryDetails Domain.Types.SearchRequestDeliveryDetails.SearchRequestDeliveryDetails deriving (Generic, Show)

@@ -15,3 +15,9 @@ ALTER TABLE atlas_driver_offer_bpp.location ADD COLUMN lat double precision NOT 
 ALTER TABLE atlas_driver_offer_bpp.location ADD COLUMN lon double precision NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.location ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.location ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.location ADD COLUMN instructions text ;
+ALTER TABLE atlas_driver_offer_bpp.location ADD COLUMN extras text ;

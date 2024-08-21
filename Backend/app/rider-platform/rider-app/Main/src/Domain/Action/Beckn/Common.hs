@@ -34,6 +34,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -70,6 +71,7 @@ import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
+import qualified Storage.Queries.RiderConfig as QRC
 import Tools.Error
 import Tools.Event
 import Tools.Maps (LatLong)
@@ -247,6 +249,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DRB.InterCityDetails details -> Just details.toLocation
         DRB.AmbulanceDetails details -> Just details.toLocation
+        DRB.DeliveryDetails details -> Just details.toLocation
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
@@ -408,6 +411,27 @@ rideAssignedReqHandler req = do
       notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
       notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
 
+      -- Notify sender of delivery booking
+      when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
+        case booking.bookingDetails of
+          BT.DeliveryDetails details ->
+            when (details.initiatedAs /= BecknEnums.Sender) $
+              fork "Sending Delivery Details SMS to Sender" $ do
+                riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+                let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+                let senderSmsReq =
+                      MessageBuilder.BuildDeliveryMessageReq
+                        { MessageBuilder.driverName = ride.driverName,
+                          MessageBuilder.driverNumber = ride.driverMobileNumber,
+                          MessageBuilder.trackingUrl = trackLink,
+                          MessageBuilder.otp = ride.otp,
+                          MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
+                        }
+                buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderSmsReq
+                senderMobileNumber <- decrypt details.senderDetails.phone
+                Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq senderMobileNumber) >>= Sms.checkSmsResult
+          _ -> throwError $ InternalError ("Delivery Booking details not found for " <> booking.id.getId)
+
 rideStartedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -451,8 +475,26 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   case booking.bookingDetails of
     DRB.RentalDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
     DRB.InterCityDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
+    DRB.DeliveryDetails deliveryDetails -> do
+      when (deliveryDetails.initiatedAs /= BecknEnums.Receiver) $ sendDeliveryDetailsToReceiver deliveryDetails
     _ -> pure ()
   where
+    sendDeliveryDetailsToReceiver deliveryDetails = fork "Sending Delivery Details SMS to Receiver" $ do
+      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      endOtp <- fromMaybeM (InternalError "EndOtp not found to be send in sms for delivery receiver") endOtp_
+      let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+      let receiverSmsReq =
+            MessageBuilder.BuildDeliveryMessageReq
+              { MessageBuilder.driverName = ride.driverName,
+                MessageBuilder.driverNumber = ride.driverMobileNumber,
+                MessageBuilder.trackingUrl = trackLink,
+                MessageBuilder.otp = endOtp,
+                MessageBuilder.deliveryMessageType = MessageBuilder.ReceiverReq
+              }
+      buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
+      receiverMobileNumber <- decrypt deliveryDetails.receiverDetails.phone
+      Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq receiverMobileNumber) >>= Sms.checkSmsResult
+
     sendRideEndOTPMessage = fork "sending ride end otp sms" $ do
       let merchantOperatingCityId = booking.merchantOperatingCityId
       merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)

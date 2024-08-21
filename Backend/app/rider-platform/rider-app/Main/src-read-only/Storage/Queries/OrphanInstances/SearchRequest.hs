@@ -26,6 +26,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.SearchRequest.getFromLocation id
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId
+    searchRequestDetails' <- Storage.Queries.Transformers.SearchRequest.getSearchRequestDetails id riderPreferredOption
     toLocation' <- Storage.Queries.Transformers.SearchRequest.getToLocation id
     pure $
       Just
@@ -59,6 +60,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             riderId = Kernel.Types.Id.Id riderId,
             riderPreferredOption = fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption,
             roundTrip = roundTrip,
+            searchRequestDetails = searchRequestDetails',
             selectedPaymentMethodId = selectedPaymentMethodId,
             startTime = startTime,
             toLocation = toLocation',

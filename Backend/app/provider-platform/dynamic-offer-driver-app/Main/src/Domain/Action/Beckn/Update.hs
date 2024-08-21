@@ -333,7 +333,9 @@ buildLocation location = do
               building = location.address.building,
               areaCode = location.address.area_code,
               area = location.address.locality,
-              fullAddress = mkFullAddress location.address
+              fullAddress = mkFullAddress location.address,
+              instructions = Nothing,
+              extras = Nothing
             }
       }
 
@@ -375,7 +377,9 @@ mkLocationAPIEntity location =
       building = location.address.building,
       areaCode = location.address.area_code,
       area = location.address.ward,
-      fullAddress = mkFullAddress location.address
+      fullAddress = mkFullAddress location.address,
+      instructions = Nothing,
+      extras = Nothing
     }
 
 processStop :: DBooking.Booking -> DL.Location -> Bool -> Flow ()

@@ -591,3 +591,14 @@ flow:
     functions:
       common: isEndOtpRequired
     # End otp only required for Delivery
+
+exotel:
+api:
+  POST:
+    driver/ride/:rideId/customer?customerType=Sender|Reciever
+  handler:
+    backendInitateCallhandler
+
+dashboard:
+  rideInfoApi:
+     Send driver number for triop category delivery

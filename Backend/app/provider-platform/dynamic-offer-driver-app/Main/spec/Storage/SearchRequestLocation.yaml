@@ -20,6 +20,8 @@ SearchReqLocation:
     areaCode : Maybe Text
     area : Maybe Text
     full_address : Maybe Text
+    instructions : Maybe Text
+    extras : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
 

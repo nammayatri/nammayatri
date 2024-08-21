@@ -7,6 +7,7 @@ module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -56,6 +57,7 @@ data SearchRequestT f = SearchRequestT
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     transactionId :: B.C f Kernel.Prelude.Text,
+    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory),
     validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

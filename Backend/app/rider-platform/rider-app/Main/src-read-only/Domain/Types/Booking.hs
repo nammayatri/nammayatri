@@ -9,6 +9,7 @@ import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
 import qualified Domain.Types.Common
+import qualified Domain.Types.DeliveryPersonDetails
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
@@ -90,7 +91,18 @@ data BookingDetails
   | OneWaySpecialZoneDetails Domain.Types.Booking.OneWaySpecialZoneBookingDetails
   | InterCityDetails Domain.Types.Booking.InterCityBookingDetails
   | AmbulanceDetails Domain.Types.Booking.AmbulanceBookingDetails
+  | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
   deriving (Show)
+
+data DeliveryBookingDetails = DeliveryBookingDetails
+  { distance :: Kernel.Types.Common.Distance,
+    initiatedAs :: BecknV2.OnDemand.Enums.DeliveryInitiation,
+    otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    receiverDetails :: Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
+    senderDetails :: Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
+    toLocation :: Domain.Types.Location.Location
+  }
+  deriving (Generic, Show)
 
 data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Show)

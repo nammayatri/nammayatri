@@ -17,6 +17,9 @@ module Domain.Action.UI.Select
   ( DSelectReq (..),
     DSelectRes (..),
     DSelectResultRes (..),
+    DSelectResDetails (..),
+    DeliveryDetails (..),
+    PersonDetails (..),
     SelectListRes (..),
     QuotesResultResponse (..),
     CancelAPIResponse (..),
@@ -27,6 +30,7 @@ module Domain.Action.UI.Select
   )
 where
 
+import BecknV2.OnDemand.Enums (DeliveryInitiation)
 import Control.Applicative ((<|>))
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
@@ -36,12 +40,15 @@ import Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Quote as UQuote
 import Domain.Types.Booking
 import Domain.Types.Common
+import qualified Domain.Types.DeliveryPersonDetails as DPD
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
+import Domain.Types.LocationAddress (LocationAddress)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Domain.Types.SearchRequestDeliveryDetails
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
@@ -65,9 +72,11 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.SearchRequestDeliveryDetails as QSRDD
 import Tools.Error
 
 data DSelectReq = DSelectReq
@@ -77,7 +86,24 @@ data DSelectReq = DSelectReq
     autoAssignEnabledV2 :: Maybe Bool,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
-    isAdvancedBookingEnabled :: Maybe Bool
+    isAdvancedBookingEnabled :: Maybe Bool,
+    deliveryDetails :: Maybe DeliveryDetails
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DeliveryDetails = DeliveryDetails
+  { senderDetails :: PersonDetails,
+    receiverDetails :: PersonDetails,
+    initiatedAs :: DeliveryInitiation
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PersonDetails = PersonDetails
+  { name :: Text,
+    phoneNumber :: Text,
+    address :: LocationAddress
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -108,8 +134,11 @@ data DSelectRes = DSelectRes
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     toUpdateDeviceIdInfo :: Bool,
-    tripCategory :: Maybe TripCategory
+    tripCategory :: Maybe TripCategory,
+    selectResDetails :: Maybe DSelectResDetails
   }
+
+data DSelectResDetails = DSelectResDelivery DeliveryDetails
 
 newtype DSelectResultRes = DSelectResultRes
   { selectTtl :: Int
@@ -177,6 +206,31 @@ select2 personId estimateId req@DSelectReq {..} = do
     QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
+  dselectResDetails <- case DEstimate.tripCategory estimate of
+    Just (Delivery _) -> do
+      when (isNothing deliveryDetails) $ throwError $ InvalidRequest "Delivery details not found for trip category Delivery"
+      let validDeliveryDetails = fromJust deliveryDetails
+      let senderLocationId = searchRequest.fromLocation.id
+      when (isNothing searchRequest.toLocation) $ throwError $ InvalidRequest "Receiver location not found for trip category Delivery"
+      let receiverLocationId = fromJust (searchRequest.toLocation <&> (.id))
+      let senderLocationAddress = validDeliveryDetails.senderDetails.address
+          receiverLocationAddress = validDeliveryDetails.receiverDetails.address
+      QLoc.updateInstructionsAndExtrasById senderLocationAddress.instructions senderLocationAddress.extras senderLocationId
+      QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
+      encSenderPhoneNumber <- encrypt validDeliveryDetails.senderDetails.phoneNumber
+      encReceiverPhoneNumber <- encrypt validDeliveryDetails.receiverDetails.phoneNumber
+      let searchRequestDeliveryDetails =
+            SearchRequestDeliveryDetails
+              { searchRequestId = searchRequestId.getId,
+                initiatedAs = validDeliveryDetails.initiatedAs,
+                receiverDetails = DPD.DeliveryPersonDetails validDeliveryDetails.receiverDetails.name encReceiverPhoneNumber,
+                senderDetails = DPD.DeliveryPersonDetails validDeliveryDetails.senderDetails.name encSenderPhoneNumber,
+                createdAt = now,
+                updatedAt = now
+              }
+      QSRDD.create searchRequestDeliveryDetails
+      pure $ Just (DSelectResDelivery validDeliveryDetails)
+    _ -> pure Nothing
   QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
@@ -210,6 +264,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         variant = DV.castServiceTierToVariant estimate.vehicleServiceTierType, -- TODO: fix later
         isAdvancedBookingEnabled = fromMaybe False isAdvancedBookingEnabled,
         tripCategory = estimate.tripCategory,
+        selectResDetails = dselectResDetails,
         ..
       }
   where

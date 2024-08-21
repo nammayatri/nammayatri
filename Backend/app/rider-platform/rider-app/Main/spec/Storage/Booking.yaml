@@ -30,6 +30,9 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   HighPrecMoney: Kernel.Types.Common
   PaymentMethodId: Kernel.External.Payment.Interface.Types
+  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
+  DbHash: Kernel.External.Encryption
+  DeliveryInitiation: BecknV2.OnDemand.Enums
 
 BookingLocation:
   tableName: booking_location
@@ -56,6 +59,8 @@ BookingLocation:
       area: Maybe Text
       ward: Maybe Text
       placeId: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
 
   beamFields:
     address:
@@ -69,6 +74,8 @@ BookingLocation:
       area: Maybe Text
       ward: Maybe Text
       placeId: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
 
   toTType:
     street: Domain.Types.LocationAddress.street|I
@@ -81,9 +88,11 @@ BookingLocation:
     area: Domain.Types.LocationAddress.area|I
     ward: Domain.Types.LocationAddress.ward|I
     placeId: Domain.Types.LocationAddress.placeId|I
+    instructions: Domain.Types.LocationAddress.instructions|I
+    extras: Domain.Types.LocationAddress.extras|I
 
   fromTType:
-    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId}|E
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,extras}|E
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -121,7 +130,7 @@ Booking:
   types:
     BPPBooking: {}
     BookingDetails:
-      enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails
+      enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails, DeliveryDetails DeliveryBookingDetails
       derive': Show
     OneWayBookingDetails:
       toLocation: Location
@@ -145,6 +154,14 @@ Booking:
       toLocation: Location
       distance: Distance
       derive': Show
+    DeliveryBookingDetails:
+      derive': Generic,Show
+      toLocation: Location
+      distance: Distance
+      otpCode: Maybe Text
+      senderDetails: DeliveryPersonDetails
+      receiverDetails: DeliveryPersonDetails
+      initiatedAs: DeliveryInitiation
 
   fields:
     id: Id Booking
@@ -215,6 +232,13 @@ Booking:
       distance: Maybe HighPrecMeters
       stopLocationId: Maybe Text
       otpCode: Maybe Text
+      senderPhoneNumberEncrypted: Maybe Text
+      senderPhoneNumberHash: Maybe DbHash
+      senderName: Maybe Text
+      receiverPhoneNumberEncrypted: Maybe Text
+      receiverPhoneNumberHash: Maybe DbHash
+      receiverName: Maybe Text
+      initiatedAs: Maybe DeliveryInitiation
     fromLocation:
       fromLocationId: Maybe Text
     tripTerms:
@@ -330,13 +354,21 @@ Booking:
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     bppEstimateId: itemId|E
+    senderPhoneNumberEncrypted: (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.senderDetails)) <&> (unEncrypted . (.encrypted))|E
+    senderPhoneNumberHash: (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.senderDetails)) <&> (.hash)|E
+    senderName: deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.name . Domain.Types.Booking.senderDetails)|E
+    receiverPhoneNumberEncrypted: (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.receiverDetails)) <&> (unEncrypted . (.encrypted))|E
+    receiverPhoneNumberHash: (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.receiverDetails)) <&> (.hash)|E
+    receiverName: deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.name . Domain.Types.Booking.receiverDetails)|E
+    initiatedAs: deliveryBookingInfo <&> (.initiatedAs)|E
 
   intermediateTransformers:
     toTType:
       - distance: getDistance bookingDetails|E
+      - deliveryBookingInfo: getDeliveryBookingInfo bookingDetails|E
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
-      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue|EM #check
+      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue senderPhoneNumberEncrypted senderPhoneNumberHash senderName receiverPhoneNumberEncrypted receiverPhoneNumberHash receiverName initiatedAs|EM #check
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E

@@ -1,5 +1,6 @@
 module Storage.Queries.Transformers.Booking where
 
+import BecknV2.OnDemand.Enums (DeliveryInitiation)
 import Control.Applicative
 import Data.List (sortBy)
 import Data.Ord
@@ -7,9 +8,11 @@ import Domain.Types.Booking
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.Common
+import Domain.Types.DeliveryPersonDetails
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -26,6 +29,7 @@ getDistance :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kerne
 getDistance = \case
   DRB.OneWayDetails details -> Just details.distance
   DRB.RentalDetails _ -> Nothing
+  DRB.DeliveryDetails details -> Just details.distance
   DRB.DriverOfferDetails details -> Just details.distance
   DRB.OneWaySpecialZoneDetails details -> Just details.distance
   DRB.InterCityDetails details -> Just details.distance
@@ -49,6 +53,7 @@ getOtpCode = \case
   DRB.OneWaySpecialZoneDetails details -> details.otpCode
   DRB.InterCityDetails details -> details.otpCode
   DRB.AmbulanceDetails _ -> Nothing
+  DRB.DeliveryDetails details -> details.otpCode
 
 getStopLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getStopLocationId = \case
@@ -58,6 +63,7 @@ getStopLocationId = \case
   DRB.OneWaySpecialZoneDetails _ -> Nothing
   DRB.InterCityDetails _ -> Nothing
   DRB.AmbulanceDetails _ -> Nothing
+  DRB.DeliveryDetails _ -> Nothing
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getToLocationId = \case
@@ -67,6 +73,12 @@ getToLocationId = \case
   DRB.OneWaySpecialZoneDetails details -> Just (getId details.toLocation.id)
   DRB.InterCityDetails details -> Just (getId details.toLocation.id)
   DRB.AmbulanceDetails details -> Just (getId details.toLocation.id)
+  DRB.DeliveryDetails details -> Just (getId details.toLocation.id)
+
+getDeliveryBookingInfo :: Domain.Types.Booking.BookingDetails -> Maybe Domain.Types.Booking.DeliveryBookingDetails
+getDeliveryBookingInfo = \case
+  DRB.DeliveryDetails details -> Just details
+  _ -> Nothing
 
 backfillMOCId :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> m (Id DMOC.MerchantOperatingCity)
 backfillMOCId merchantOperatingCityId merchantId = case merchantOperatingCityId of
@@ -98,8 +110,15 @@ toBookingDetailsAndFromLocation ::
   Maybe Text ->
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
+  Maybe Text ->
+  Maybe DbHash ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe DbHash ->
+  Maybe Text ->
+  Maybe DeliveryInitiation ->
   m (DL.Location, BookingDetails)
-toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
+toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue senderPhoneNumberEncrypted senderPhoneNumberHash senderName receiverPhoneNumberEncrypted receiverPhoneNumberHash receiverName initiatedAs = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do
@@ -115,6 +134,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
+            Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId
         Nothing ->
           case fareProductType of
@@ -143,6 +163,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
+            Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
         Nothing ->
           case fareProductType of
@@ -198,6 +219,24 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         DRB.AmbulanceBookingDetails
           { toLocation = toLocation,
             distance = distance'
+          }
+    buildDeliveryDetails mbToLocid = do
+      toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for delivery bookingId:-" <> id)
+      toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for delivery booking")
+      distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for delivery booking")
+      senderPhoneNumberEncrypted' <- senderPhoneNumberEncrypted & fromMaybeM (InternalError "senderPhoneNumberEncrypted is null for delivery booking")
+      senderPhoneNumberHash' <- senderPhoneNumberHash & fromMaybeM (InternalError "senderPhoneNumberHash is null for delivery booking")
+      receiverPhoneNumberEncrypted' <- receiverPhoneNumberEncrypted & fromMaybeM (InternalError "receiverPhoneNumberEncrypted is null for delivery booking")
+      receiverPhoneNumberHash' <- receiverPhoneNumberHash & fromMaybeM (InternalError "receiverPhoneNumberHash is null for delivery booking")
+      initiatedAs' <- initiatedAs & fromMaybeM (InternalError "initiatedAs is null for delivery booking")
+      let senderDetails = DeliveryPersonDetails {name = fromMaybe "Sender" senderName, phone = EncryptedHashed (Encrypted senderPhoneNumberEncrypted') senderPhoneNumberHash'}
+          receiverDetails = DeliveryPersonDetails {name = fromMaybe "Receiver" receiverName, phone = EncryptedHashed (Encrypted receiverPhoneNumberEncrypted') receiverPhoneNumberHash'}
+      pure
+        DRB.DeliveryBookingDetails
+          { toLocation = toLocation,
+            distance = distance',
+            initiatedAs = initiatedAs',
+            ..
           }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

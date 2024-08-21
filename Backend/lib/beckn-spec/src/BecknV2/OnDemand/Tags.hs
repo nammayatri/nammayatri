@@ -86,6 +86,7 @@ data BecknTagGroup
   | VEHICLE_INFO
   | SETTLEMENT_DETAILS
   | DEVICE_ID_INFO
+  | DELIVERY
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -100,6 +101,7 @@ instance CompleteTagGroup BecknTagGroup where
     BUYER_FINDER_FEES -> (Just "Buyer Finder Fees Information", Nothing)
     SETTLEMENT_TERMS -> (Just "Settlement Terms Information", Nothing)
     REALLOCATION_INFO -> (Just "Reallocation Information", Nothing)
+    DELIVERY -> (Just "Delivery Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -408,6 +410,13 @@ data BecknTag
   | DEVICE_ID_FLAG
   | TO_UPDATE_DEVICE_ID
   | MEDIA_FILE_PATH
+  | SENDER_NUMBER
+  | SENDER_NAME
+  | SENDER_LOCATION_INSTRUCTIONS
+  | RECEIVER_NUMBER
+  | RECEIVER_NAME
+  | RECEIVER_LOCATION_INSTRUCTIONS
+  | INITIATED_AS
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -434,6 +443,13 @@ instance CompleteTag BecknTag where
     STATIC_TERMS -> (Just "Static Terms", Nothing)
     SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     IS_REALLOCATION_ENABLED -> (Just "Is Reallocation Enabled", Nothing)
+    SENDER_NUMBER -> (Just "Delivery Sender Number", Nothing)
+    SENDER_NAME -> (Just "Delivery Sender Name", Nothing)
+    SENDER_LOCATION_INSTRUCTIONS -> (Just "Delivery Sender Location Instructions", Nothing)
+    RECEIVER_NUMBER -> (Just "Delivery Receiver Number", Nothing)
+    RECEIVER_NAME -> (Just "Delivery Receiver Name", Nothing)
+    RECEIVER_LOCATION_INSTRUCTIONS -> (Just "Delivery Receiver Location Instructions", Nothing)
+    INITIATED_AS -> (Just "Delivery Initiated As", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -459,6 +475,12 @@ instance CompleteTag BecknTag where
     DASHBOARD_USER -> CUSTOMER_INFO
     CUSTOMER_DISABILITY -> CUSTOMER_INFO
     CUSTOMER_NAMMA_TAGS -> CUSTOMER_INFO
+    SENDER_NUMBER -> DELIVERY
+    SENDER_NAME -> DELIVERY
+    SENDER_LOCATION_INSTRUCTIONS -> DELIVERY
+    RECEIVER_NUMBER -> DELIVERY
+    RECEIVER_NAME -> DELIVERY
+    RECEIVER_LOCATION_INSTRUCTIONS -> DELIVERY
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text
