@@ -613,8 +613,6 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
   prevTry <- QAadhaarCard.findByPrimaryKey personId
   checkIfGenuineReq req
   whenJust prevTry $ \aadhaarEntity -> do
-    when (aadhaarEntity.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
-      throwError $ DocumentUnderManualReview "Aadhaar"
     when (aadhaarEntity.verificationStatus == Documents.VALID) $
       throwError $ DocumentAlreadyValidated "Aadhaar"
   QAadhaarCard.upsertAadhaarRecord =<< makeAadhaarCardEntity personId
