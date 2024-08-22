@@ -10,6 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import qualified Tools.Beam.UtilsTH
 
 data ServicePeopleCategory = ServicePeopleCategory
@@ -18,6 +19,7 @@ data ServicePeopleCategory = ServicePeopleCategory
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Kernel.Prelude.Text,
     pricePerUnit :: Kernel.Types.Common.Price,
+    timeBounds :: Kernel.Types.TimeBound.TimeBound,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

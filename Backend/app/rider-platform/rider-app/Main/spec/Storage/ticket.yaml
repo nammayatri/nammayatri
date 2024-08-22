@@ -19,6 +19,7 @@ imports:
   ServicePeopleCategory: Domain.Types.ServicePeopleCategory
   BusinessHourType: Domain.Types.BusinessHour
   Value: Data.Aeson
+  TimeBound : Kernel.Types.TimeBound
 
 TicketPlace:
   tableName: ticket_place
@@ -183,9 +184,11 @@ ServicePeopleCategory:
     description: Text
     pricePerUnit: Price
     cancellationCharges: "Maybe [CancellationCharge]"
+    timeBounds: TimeBound|NoRelation
 
   beamType:
     cancellationCharges: Maybe Value
+    timeBounds: Maybe TimeBound
 
   sqlType:
     cancellationCharges: json
@@ -198,11 +201,16 @@ ServicePeopleCategory:
   fromTType:
     pricePerUnit: Kernel.Types.Common.mkPrice currency pricePerUnit|E
     cancellationCharges: getCancellationChargesFromTable
+    timeBounds: (Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded)|I
 
   toTType:
     pricePerUnit: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
     cancellationCharges: convertCancellationChargesToTable
+    timeBounds: Kernel.Prelude.Just|I
+
+  default:
+    timeBounds: "'Unbounded'"
 
   types:
     CancellationCharge:
@@ -213,9 +221,12 @@ ServicePeopleCategory:
       enum: "FlatFee HighPrecMoney,Percentage Int"
 
   queries:
-    findById:
-      kvFunction: findOneWithKV
+    findAllServicePeopleCategory:
+      kvFunction: findAllWithKV
       where: id
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
 
 SeatManagement:
   tableName: seat_management

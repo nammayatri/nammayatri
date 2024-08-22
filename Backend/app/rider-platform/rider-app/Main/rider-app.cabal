@@ -341,6 +341,7 @@ library
       Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
+      Storage.Queries.ServicePeopleCategoryExtra
       Storage.Queries.TicketBookingExtra
       Storage.Queries.TicketBookingPeopleCategoryExtra
       Storage.Queries.TicketBookingServiceCategoryExtra
@@ -667,6 +668,7 @@ library
       Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
+      Storage.Queries.OrphanInstances.ServicePeopleCategory
       Storage.Queries.OrphanInstances.TicketBooking
       Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
       Storage.Queries.OrphanInstances.TicketBookingService

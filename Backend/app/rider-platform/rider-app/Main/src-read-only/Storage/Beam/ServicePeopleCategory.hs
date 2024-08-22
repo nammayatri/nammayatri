@@ -12,6 +12,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.TimeBound
 import Tools.Beam.UtilsTH
 
 data ServicePeopleCategoryT f = ServicePeopleCategoryT
@@ -21,6 +22,7 @@ data ServicePeopleCategoryT f = ServicePeopleCategoryT
     name :: B.C f Kernel.Prelude.Text,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     pricePerUnit :: B.C f Kernel.Types.Common.HighPrecMoney,
+    timeBounds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

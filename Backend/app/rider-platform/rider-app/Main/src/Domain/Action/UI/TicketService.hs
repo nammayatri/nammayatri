@@ -13,7 +13,7 @@ import Data.OpenApi (ToSchema)
 import Data.Ord as DO
 import qualified Data.Text as Data.Text
 import qualified Data.Text as T
-import Data.Time (UTCTime (UTCTime), dayOfWeek, midnight, timeOfDayToTime, utctDay)
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar as Data.Time.Calendar
 import qualified Domain.Types.BusinessHour as Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
@@ -185,7 +185,7 @@ getTicketPlacesServices _ placeId mbDate = do
           Just _ -> pure True
           Nothing -> pure False
       mBeatManagement <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId bDate_
-      peopleCategories <- mapM mkPeopleCategoriesRes serviceCategory.peopleCategory
+      peopleCategories <- mapM (mkPeopleCategoriesRes bDate_) serviceCategory.peopleCategory
       pure $
         CategoriesResp
           { name = serviceCategory.name,
@@ -197,8 +197,8 @@ getTicketPlacesServices _ placeId mbDate = do
             isClosed = isClosed
           }
 
-    mkPeopleCategoriesRes pCatId = do
-      peopleCategory <- QPC.findById pCatId >>= fromMaybeM (PeopleCategoryNotFound pCatId.getId)
+    mkPeopleCategoriesRes bDate_ pCatId = do
+      peopleCategory <- QPC.findServicePeopleCategoryById pCatId bDate_ >>= fromMaybeM (PeopleCategoryNotFound pCatId.getId)
       pure $
         PeopleCategoriesResp
           { name = peopleCategory.name,
@@ -335,7 +335,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       when (maybe False (\anySplOccassion -> elem businessHour.id anySplOccassion.businessHours) mbAnySplOccassion) $ throwError $ InvalidRequest "Business hour is closed"
       let serviceCatId = ticketServiceCReq.categoryId
       tBookingSC <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
-      tBookingPCats <- mapM (createTicketBookingPeopleCategory now merchantOperatingCityId id) ticketServiceCReq.peopleCategories
+      tBookingPCats <- mapM (createTicketBookingPeopleCategory now merchantOperatingCityId id visitDate) ticketServiceCReq.peopleCategories
       (amount, bookedSeats) <- calculateAmountAndSeats tBookingPCats
       QTBPC.createMany tBookingPCats
 
@@ -377,10 +377,10 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             btype = Just businessHour.btype
           }
 
-    createTicketBookingPeopleCategory now merchantOperatingCityId ticketBookingServiceCategoryId ticketServicePCReq = do
+    createTicketBookingPeopleCategory now merchantOperatingCityId ticketBookingServiceCategoryId visitDate ticketServicePCReq = do
       id <- generateGUID
       let tPCatId = ticketServicePCReq.peopleCategoryId
-      tServicePCat <- QPC.findById tPCatId >>= fromMaybeM (PeopleCategoryNotFound tPCatId.getId)
+      tServicePCat <- QPC.findServicePeopleCategoryById tPCatId visitDate >>= fromMaybeM (PeopleCategoryNotFound tPCatId.getId)
       let numberOfUnits = ticketServicePCReq.numberOfUnits
           pricePerUnit = tServicePCat.pricePerUnit
       return $
@@ -490,8 +490,10 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
           }
     mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails
     mkTicketBookingCategoryDetails DTB.TicketBookingServiceCategory {..} = do
+      localTime <- getLocalCurrentTime 19800
+      let visitDate_ = fromMaybe (utctDay localTime) visitDate
       peopleCategories <- QTBPC.findAllByServiceCategoryId id
-      peopleCategoryDetails <- mapM (mkTicketBookingPeopleCategoryDetails) peopleCategories
+      peopleCategoryDetails <- mapM (mkTicketBookingPeopleCategoryDetails visitDate_) peopleCategories
       return $
         TicketBookingCategoryDetails
           { peopleCategories = peopleCategoryDetails,
@@ -501,12 +503,12 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             bookedSeats = bookedSeats,
             ..
           }
-    mkTicketBookingPeopleCategoryDetails :: DTB.TicketBookingPeopleCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingPeopleCategoryDetails
-    mkTicketBookingPeopleCategoryDetails DTB.TicketBookingPeopleCategory {..} = do
+    mkTicketBookingPeopleCategoryDetails :: Day -> DTB.TicketBookingPeopleCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingPeopleCategoryDetails
+    mkTicketBookingPeopleCategoryDetails visitDate DTB.TicketBookingPeopleCategory {..} = do
       cancellationCharges <- case peopleCategoryId of
         Nothing -> pure Nothing
         Just peopleCategoryId' -> do
-          peopleCategory' <- QPC.findById peopleCategoryId'
+          peopleCategory' <- QPC.findServicePeopleCategoryById peopleCategoryId' visitDate
           pure $ (.cancellationCharges) =<< peopleCategory'
       return $
         TicketBookingPeopleCategoryDetails
@@ -939,7 +941,7 @@ cancelTBSPeopleCategory :: Data.Time.Calendar.Day -> Kernel.Prelude.TimeOfDay ->
 cancelTBSPeopleCategory visitDate startTime PeopleCategoryCancellationInfo {..} = do
   mbCancellationCharges <- case cancelledPeopleCategory.peopleCategoryId of
     Just peopleCategoryId -> do
-      peopleCategory <- QPC.findById peopleCategoryId
+      peopleCategory <- QPC.findServicePeopleCategoryById peopleCategoryId visitDate
       pure $ (.cancellationCharges) =<< peopleCategory
     Nothing -> pure Nothing
   cancellationCharge <- case mbCancellationCharges of
