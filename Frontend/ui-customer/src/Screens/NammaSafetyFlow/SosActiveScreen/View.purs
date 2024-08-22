@@ -9,9 +9,9 @@
 module Screens.NammaSafetyFlow.SosActiveScreen.View where
 
 import PrestoDOM.Animation as PrestoAnim
-import Animation (screenAnimationFadeInOut, fadeIn)
+import Animation (screenAnimationFadeInOut, fadeIn, fadeOut)
 import Prelude (Unit, const, discard, not, pure, unit, void, ($), (&&), (<<<), (<>), (==), (<#>), map, (/), (-), (/=), show, when)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width, accessibilityHint, maxLines, ellipsize, fillViewport)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width, accessibilityHint, maxLines, ellipsize, fillViewport, enableAnimateOnGone)
 import Screens.NammaSafetyFlow.ComponentConfig (cancelSOSBtnConfig, safetyAudioRecordingConfig)
 import Screens.NammaSafetyFlow.Components.HelperViews (layoutWithWeight, safetyPartnerView, separatorView, emptyTextView)
 import Common.Types.App as CTA
@@ -120,7 +120,7 @@ sosActiveView state push =
     , height MATCH_PARENT
     , fillViewport true
     ][ linearLayout
-        [ weight 1.0
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
         ]
@@ -173,12 +173,16 @@ emergencySosConfig state =
 
 sosActionTilesView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 sosActionTilesView state push =
-  linearLayout
+  PrestoAnim.animationSet 
+    [ fadeOut state.props.isAudioRecordingActive , fadeIn (not state.props.isAudioRecordingActive) ]
+    $
+    linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , gravity CENTER
     , visibility $ boolToVisibility $ not state.props.isAudioRecordingActive 
+    , enableAnimateOnGone true
     ]
     [ safetyActionRow actionsRow1 push
     , safetyActionRow actionsRow2 push

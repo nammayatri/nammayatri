@@ -147,7 +147,7 @@ eval StopAudioPlayer state = do
   _ <- pure $ JB.clearAudioPlayer ""
   continue state { props { triggerSiren = false } }
 
-eval (OnAudioCompleted _) state = handleMediaPlayerRestart state
+eval (OnAudioCompleted _) state = if state.props.triggerSiren then handleMediaPlayerRestart state else continue state
 
 eval (RecordAudio SafetyActionTileView.OnClick) state = do
   void $ pure $ JB.askRequestedPermissions [ "android.permission.RECORD_AUDIO" ]

@@ -334,7 +334,7 @@ bottomCardView config push =
 
 customerSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerSideBottomCardsView config push = 
-  let bottomCardPadding = if config.showRentalRideDetails then Padding 8 16 8 16 else Padding 16 16 16 16
+  let bottomCardPadding = if config.showRentalRideDetails then Padding 8 16 8 16 else PaddingBottom 16
   in 
     scrollView[
       width MATCH_PARENT,
@@ -348,7 +348,12 @@ customerSideBottomCardsView config push =
       , background Color.white900
       , gravity CENTER
       ]
-      [ if config.showRentalRideDetails then rentalTripDetailsView config push
+      [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , visibility $ boolToVisibility config.showSafetyCenter
+        ] $ map (\elem -> pillActionView push elem) config.customerBottomCard.actionPills
+      , if config.showRentalRideDetails then rentalTripDetailsView config push
         else rideCustomerExperienceView config push 
       ]
     ]
@@ -656,6 +661,7 @@ needHelpPillView config push =
     , rippleColor Color.rippleShade
     , accessibility ENABLE
     , accessibilityHint $ "Need help : Button"
+    , visibility $ boolToVisibility $ not config.showSafetyCenter
     ][imageView [
         width $ V 16
       , height $ V 16
@@ -668,7 +674,31 @@ needHelpPillView config push =
       ] <> FontStyle.tags TypoGraphy
     ]
 
-
+pillActionView :: forall w. (Action -> Effect Unit) -> PillActionConfig -> PrestoDOM (Effect Unit) w
+pillActionView push pillConfig =
+  linearLayout
+    [ weight 1.0
+    , height WRAP_CONTENT
+    , background Color.blue600
+    , gravity CENTER
+    , padding $ Padding 10 12 10 12
+    , cornerRadius if os == "IOS" then 20.0 else 24.0
+    , onClick push $ const pillConfig.action
+    , margin $ Margin 0 20 (if pillConfig.useMarginRight then 12 else 0) 20
+    , rippleColor Color.rippleShade
+    , accessibility ENABLE
+    , accessibilityHint $ "Need help : Button"
+    ][imageView [
+        width $ V 16
+      , height $ V 16
+      , imageWithFallback pillConfig.image
+      , margin $ MarginRight 8
+      ]
+     , textView $ [
+        text pillConfig.text
+      , color Color.black700
+      ] <> FontStyle.tags TypoGraphy
+    ]
 
 ------------------------------------- Driver Side Bottom Cards View --------------------------------------------------------------------------------------------------------------------------------------------------------------
 driverSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1310,7 +1340,7 @@ sosButtonView config push =
   , cornerRadius if os == "IOS" then 18.0 else 25.0
   , background Color.black150
   , padding $ Padding 8 8 8 8
-  , visibility $ boolToVisibility $ (not config.topCard.topPill.visible) && config.showSafetyCenter
+  , visibility GONE  -- Not required now.
   , onClick push $ const GoToSOS
   ]
   [ imageView

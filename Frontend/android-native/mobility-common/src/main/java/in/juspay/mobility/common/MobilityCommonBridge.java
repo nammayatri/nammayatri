@@ -1804,6 +1804,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (markers.containsKey(title)) {
                     Marker m = (Marker) markers.get(title);
                     m.setVisible(false);
+                    m.remove();
                     markers.remove(title);
                     Log.i(MAPS, "Removed marker " + title);
                 }
@@ -5401,6 +5402,7 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         return Arrays.toString(filePaths);
     }
+
     public boolean requestUninstallPackage(String packageName){
         try {
             Intent intent = new Intent(Intent.ACTION_DELETE);
@@ -5426,4 +5428,11 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+
+    @JavascriptInterface
+    public boolean checkIfPointInsidePolygon(String geoJson, double latitude, double longitude) {
+        List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
+        Boolean res = pointInsidePolygon(polygonCoordinates, latitude, longitude);
+        return res;
+    }
 }

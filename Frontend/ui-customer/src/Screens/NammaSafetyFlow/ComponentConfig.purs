@@ -355,7 +355,7 @@ shareAudioButtonConfig state = let
       , color = Color.blue800
       }
     , background = Color.transparent
-    , margin = Margin 16 16 16 0
+    , margin = MarginHorizontal 16 16
     , id = "SafetyScreenShareAudioButton"
     , enableLoader = JB.getBtnLoader "SafetyScreenShareAudioButton"
     , enableRipple = true
