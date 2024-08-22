@@ -320,7 +320,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
-  isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
+  let isFreeRide = False
   isAlreadyFav <- do
     isAlreadyFav' <- SQR.checkRiderFavDriver (fromMaybe "" booking.riderId) ride.driverId True
     case isAlreadyFav' of
@@ -376,12 +376,6 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
           let (_, curMonth, curDay) = toGregorian $ utctDay currentLocalTime
           return (birthMonth == curMonth && birthDay == curDay)
         Nothing -> return False
-
-    checkIfRideBySpecialDriver driverId transporterConfig = do
-      let specialDrivers = transporterConfig.specialDrivers
-      if null specialDrivers
-        then return False
-        else return $ (getId driverId) `elem` specialDrivers
 
 sendRideStartedUpdateToBAP ::
   ( CacheFlow m r,
