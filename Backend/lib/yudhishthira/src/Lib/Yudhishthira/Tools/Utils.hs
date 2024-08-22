@@ -39,7 +39,8 @@ getAppDynamicLogic ::
   UTCTime ->
   m [AppDynamicLogic]
 getAppDynamicLogic merchantOpCityId domain localTime = do
-  configs <- DAL.findByMerchantOpCityAndDomain merchantOpCityId domain
+  mbConfigs <- DAL.findByMerchantOpCityAndDomain merchantOpCityId domain
+  configs <- if null mbConfigs then DAL.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
   return $ if null boundedConfigs then filter (\cfg -> cfg.timeBounds == Unbounded) configs else boundedConfigs
 
