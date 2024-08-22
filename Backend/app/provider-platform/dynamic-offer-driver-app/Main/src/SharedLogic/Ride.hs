@@ -44,7 +44,6 @@ import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.ScheduledNotifications as SN
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -62,7 +61,6 @@ import Storage.Queries.VehicleRegistrationCertificate as QVRC
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
-import Utils.Common.Cac.KeyNameConstants
 
 initializeRide ::
   Merchant ->
@@ -175,7 +173,6 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
   let previousRideToLocation = previousRide >>= (.toLocation)
   let status = bool DRide.NEW DRide.UPCOMING booking.isScheduled
@@ -228,7 +225,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         estimatedTollNames = booking.tollNames,
         uiDistanceCalculationWithAccuracy = Nothing,
         uiDistanceCalculationWithoutAccuracy = Nothing,
-        isFreeRide = Just ((getId driver.id) `elem` transporterConfig.specialDrivers),
+        isFreeRide = Just False,
         driverGoHomeRequestId = ghrId,
         safetyAlertTriggered = False,
         enableFrequentLocationUpdates = enableFrequentLocationUpdates,
