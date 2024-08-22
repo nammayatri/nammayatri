@@ -164,7 +164,8 @@ config = {
     title : "",
     subTitle : "",
     driverImage : "",
-    selectedRating : 0
+    selectedRating : 0,
+    actionPills : []
   },
   driverBottomCard : {
     visible : false,
@@ -288,7 +289,8 @@ type CustomerBottomCard = {
   title :: String,
   subTitle :: String,
   driverImage :: String, 
-  selectedRating :: Int
+  selectedRating :: Int,
+  actionPills :: Array PillActionConfig
 }
 
 type DriverBottomCard = {
@@ -500,4 +502,11 @@ getCarouselConfig view customerIssueConfig = {
   , showScrollIndicator : false
   , layoutHeight : V 180
   , overlayScrollIndicator : false
+}
+
+type PillActionConfig = {
+  text :: String,
+  action :: Action,
+  useMarginRight :: Boolean,
+  image :: String
 }

@@ -308,7 +308,7 @@ eval (SafetyAudioRecordingAction (SafetyAudioRecording.ShareAudio PrimaryButtonC
     case state.props.recordedAudioUrl of
       Just url -> do
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-          (API.UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "CustomerCare" "") state.data.rideId false false)
+          (API.UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "AudioRecording" "") state.data.rideId false false)
           liftFlowBT $ void $ runEffectFn5 JB.uploadMultiPartData url (EndPoint.updateSosMedia res.sosId) "Audio" "fileUrl" "payload"
       Nothing -> pure unit
     pure NoAction

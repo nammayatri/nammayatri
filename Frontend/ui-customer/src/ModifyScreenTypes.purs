@@ -117,6 +117,7 @@ updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos = do
                     , confirmTestDrill = false
                     , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
                     , checkPastRide = state.props.currentStage == HomeScreen
+                    , isAudioRecordingActive = false
                     , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false
                     }
                   , data

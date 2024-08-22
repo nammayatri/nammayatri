@@ -1784,8 +1784,9 @@ rideCompletedCardConfig state =
         customerBottomCard {
           title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
           subTitle = (getString $ YOUR_FEEDBACK_HELPS_US appName),
-          selectedRating = state.data.ratingViewState.selectedRating
-        , driverImage = fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab"
+          selectedRating = state.data.ratingViewState.selectedRating,
+          driverImage = fetchImage FF_ASSET if state.data.driverInfoCardState.vehicleVariant == "AUTO_RICKSHAW" then "ic_new_avatar" else "ic_driver_avatar_cab",
+          actionPills  = actionPills
         },
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport,
@@ -1853,6 +1854,21 @@ rideCompletedCardConfig state =
       ]
     
     serviceTier = fromMaybe "" (state.data.ratingViewState.rideBookingRes ^. _serviceTierName)
+
+    actionPills = [
+            {
+              text : getString NEED_HELP
+            , image : fetchImage FF_COMMON_ASSET "ny_ic_help"
+            , action : RideCompletedCard.HelpAndSupportAC
+            , useMarginRight : true
+            },
+            {
+              text : getString EMERGENCY
+            , image : fetchImage FF_ASSET "ny_ic_shield_heart"
+            , action : RideCompletedCard.GoToSOS
+            , useMarginRight : false
+            }
+          ]
 
 getFareUpdatedStr :: Int -> Boolean -> String
 getFareUpdatedStr diffInDist waitingChargeApplied = do
@@ -2141,7 +2157,7 @@ shareRideConfig state =
     config = PopupWithCheckboxController.config
 
     appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-    contactList = fromMaybe [] state.data.contactList
+    contactList = DA.filter (\item -> item.shareTripWithEmergencyContactOption.key /= API.NEVER_SHARE) $ fromMaybe [] state.data.contactList
     trustedContactsNotSetup = DA.null contactList || not state.data.settingSideBar.hasCompletedSafetySetup
     shareRideConfig' =
       config

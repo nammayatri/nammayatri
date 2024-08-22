@@ -33,14 +33,16 @@ import Mobility.Prelude as MP
 import Animation (fadeIn)
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
+import PrestoDOM.Elements.Keyed as Keyed
+import Data.Tuple (Tuple(..))
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state = 
-  PrestoAnim.animationSet
-    [ fadeIn true
-    ]
-    $
-     linearLayout
+  if state.isAudioRecordingActive then 
+     PrestoAnim.animationSet
+      [ fadeIn true
+      ]
+      $ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , stroke $ "1," <> Color.black700
@@ -48,7 +50,7 @@ view push state =
         , cornerRadius 12.0
         , orientation VERTICAL
         , margin $ Margin 16 16 16 16
-        , padding $ Padding 16 16 16 16
+        , padding $ Padding 16 16 16 (if state.audioRecordingStatus == RECORDED then 0 else 16)
         , visibility $ boolToVisibility state.isAudioRecordingActive 
         ]$ [ linearLayout
             [ width MATCH_PARENT
@@ -137,6 +139,10 @@ view push state =
               , height $ V 50
               , gravity CENTER_VERTICAL
               , visibility $ boolToInvisibility $ state.audioRecordingStatus == RECORDED
+              , background Color.black900
+              , margin $ MarginTop 12
+              , padding $ PaddingHorizontal 12 12
+              , cornerRadius 4.0
               ][
                 linearLayout
               [ width $ V 24
@@ -164,6 +170,7 @@ view push state =
             ]
       , PrimaryButton.view (push <<< ShareAudio) state.shareAudioButtonConfig
       ]
+    else MP.noView
 
 data Action = StartRecord | StopRecord | CancelAudioRecording | ShareAudio PrimaryButton.Action | NoAction
 
