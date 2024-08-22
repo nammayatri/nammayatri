@@ -84,7 +84,7 @@ eval OnResumeCallBack state = do
   continueWithCmd state [do
     isEnabled <- runEffectFn1 JB.isNetworkTimeEnabled unit
     if isEnabled then do
-      pure ExitScreen
+      pure NoAction
     else pure NoAction
     ]
 eval (AppUpdatedModelAction (PopUpModal.OnButton1Click)) state = exit $ if state.appUpdatedView.popupFlowType == REG_PROF_PAN_AADHAAR then Exit else Decline

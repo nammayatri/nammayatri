@@ -169,7 +169,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
     liftFlowBT $ runEffectFn1 EHC.resetIdMap ""
     liftFlowBT $ resetAllTimers
-    -- checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
+    checkVersion versionCode -- TODO:: Need to handle it properly considering multiple cities and apps
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     updateNightSafetyPopup
