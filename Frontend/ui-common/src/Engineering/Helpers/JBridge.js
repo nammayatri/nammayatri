@@ -1947,6 +1947,15 @@ export const uploadFileImpl = function(showCircularFrame) {
   }
 }
 
+export const performTwilioVoiceCallImpl = function (rideId, accessToken) {
+
+  JOS.emitEvent("java")("onEvent")(JSON.stringify({
+    event: "twilio_call_event",
+    accessToken: accessToken,
+    rideId: rideId
+  }))()()
+}
+
 export const previewImage = function (base64Image) {
   return function () {
     return JBridge.previewImage(base64Image);

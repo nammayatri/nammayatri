@@ -18,7 +18,8 @@
     "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
     "prod:ios": "npm-run-all compile:purs \"bundle:ios\"",
     "webpack-dev-ios": "webpack-dev-server --env master --mode development --config webpack.ios.js --host",
-    "start:ios": "npm-run-all -p dev webpack-dev-ios"
+    "start:ios": "npm-run-all -p dev webpack-dev-ios",
+    "fast:start:ios": "npm-run-all -p fast:purs webpack-dev-ios"
   },
   "author": "juspay",
   "license": "ISC",

@@ -104,6 +104,7 @@ foreign import removeAllMarkers :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
 foreign import uploadFileImpl :: EffectFn1 Boolean Unit
+foreign import performTwilioVoiceCallImpl :: EffectFn2 String String Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import storeCallBackOpenCamera :: forall action. (action -> Effect Unit) -> (action) -> Effect Unit
@@ -1061,3 +1062,6 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
     pure isActive
 uploadFile :: Boolean -> Effect Unit
 uploadFile = runEffectFn1 uploadFileImpl
+
+performTwilioVoiceCall :: String -> String -> Effect Unit 
+performTwilioVoiceCall = runEffectFn2 performTwilioVoiceCallImpl
