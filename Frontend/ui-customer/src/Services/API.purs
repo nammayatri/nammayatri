@@ -968,6 +968,7 @@ data RideBookingReq = RideBookingReq String
 
 data RideBookingStatusReq = RideBookingStatusReq String
 
+
 newtype RideBookingRes = RideBookingRes {
   agencyName :: String,
   agencyNumber :: Maybe String,
@@ -1102,7 +1103,7 @@ instance encodeRideBookingRes  :: Encode RideBookingRes where encode = defaultEn
 
 
 instance makeRideBookingStatus :: RestEndpoint RideBookingStatusReq where
- makeRequest reqBody@(RideBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.ridebooking bookingId) headers reqBody Nothing
+ makeRequest reqBody@(RideBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.ridebookingStatus bookingId) headers reqBody Nothing
  encodeRequest req = standardEncode req
   
 derive instance genericRideBookingStatusReq :: Generic RideBookingStatusReq _

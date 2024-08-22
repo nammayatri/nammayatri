@@ -595,6 +595,7 @@ type HomeScreenState =
 type HomeScreenStateData =
   {
     suggestedAmount :: Int
+  , isBookingUpdated :: Boolean
   , finalAmount :: Int
   , startedAt :: String
   , endedAt :: String

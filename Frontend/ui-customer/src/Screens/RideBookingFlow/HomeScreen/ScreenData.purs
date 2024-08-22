@@ -45,6 +45,7 @@ initData = let
     data: {
       suggestedAmount : 0
     , finalAmount : 0
+    , isBookingUpdated : false
     , startedAt : ""
     , endedAt : ""
     , source : ""
