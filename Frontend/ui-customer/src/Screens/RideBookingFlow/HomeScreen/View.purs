@@ -34,7 +34,7 @@ import Accessor
 import Accessor
 import Timers
 import Types.App
-import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
+import Accessor (_lat, _lon, _selectedQuotes, _fareProductType, _contents, _stopLocation, _toLocation)
 import Animation (fadeInWithDelay, fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, emptyScreenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
 import Animation as Anim
 import Animation.Config (AnimConfig, animConfig)
@@ -51,6 +51,7 @@ import Components.ChooseYourRide as ChooseYourRide
 import Components.CommonComponentConfig as CommonComponentConfig
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Components.ErrorModal as ErrorModal
 import Components.FavouriteLocationModel as FavouriteLocationModel
 import Components.LocationListItem.View as LocationListItem
@@ -3039,12 +3040,17 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
   (GlobalState gbState) <- getState
   if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     let bookingId = if state.props.bookingId == "" then gbState.homeScreen.props.bookingId else state.props.bookingId
-    if bookingId /= ""
+        destinationLat = gbState.homeScreen.props.destinationLat
+        destinationLong = gbState.homeScreen.props.destinationLong
+        isBookingUpdated = gbState.homeScreen.data.isBookingUpdated
+    if bookingId /= "" && (destinationLat /= 0.0 && destinationLong /= 0.0)
       then do
-        respBooking <- ridebookingStatus bookingId
-        case respBooking of
-          Right respBooking -> handleRideBookingStatus respBooking
-          Left _ -> pure unit
+        if not isBookingUpdated then do
+          respBooking <- ridebookingStatus bookingId
+          either (const $ pure unit) handleRideBookingStatus respBooking
+        else do
+          respBooking <- rideBooking bookingId
+          either (const $ pure unit) handleRideBookingResp respBooking
       else do
         mbResp <- getActiveBooking
         case mbResp of
@@ -3244,6 +3250,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
 
     handleRideBookingStatus (RideBookingStatusRes respBooking) = do
       if respBooking.isBookingUpdated || respBooking.bookingStatus == "REALLOCATED" then do
+        void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {data{isBookingUpdated = true} } }
         updatedResp <- rideBooking respBooking.id
         either (const $ pure unit) handleRideBookingResp updatedResp
       else do
@@ -3254,7 +3261,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
 
     handleRideBookingResp (RideBookingRes respBooking) = do
       let bookingStatus = respBooking.status
-      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) state.data.driverInfoCardState} } }
+          fareProductType' = getFareProductType $ respBooking.bookingDetails ^._fareProductType
+          stopLocation = if fareProductType' == FPT.RENTAL then _stopLocation else _toLocation
+          stopLocationDetails = fromMaybe dummyBookingDetails (respBooking.bookingDetails ^._contents^.stopLocation)
+          (BookingLocationAPIEntity toLocation) = stopLocationDetails
+      void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {props{bookingId = respBooking.id,destinationLat=toLocation.lat,destinationLong=toLocation.lon}, data{driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes respBooking) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) state.data.driverInfoCardState} } }
       let fareProductType = respBooking.bookingDetails ^. _fareProductType
       case bookingStatus of
         "REALLOCATED" -> do
