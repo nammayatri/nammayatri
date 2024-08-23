@@ -229,7 +229,8 @@ data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
 
 data DFareBreakup = DFareBreakup
   { amount :: Price,
-    description :: Text
+    title :: DFareBreakup.FareBreakupTitle,
+    description :: Maybe Text
   }
 
 buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> Bool -> Int -> m DRide.Ride
@@ -376,8 +377,8 @@ rideAssignedReqHandler req = do
       let BookingDetails {..} = req'.bookingDetails
       let fareParams = fromMaybe [] req'.fareBreakups
       ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount
-      let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
-      let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams
+      let applicationFeeAmountBreakups = [DFareBreakup.INSURANCE_CHARGES, DFareBreakup.CARD_CHARGES_ON_FARE, DFareBreakup.CARD_CHARGES_FIXED]
+      let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.title `elem` applicationFeeAmountBreakups) fareParams
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
@@ -396,7 +397,7 @@ rideAssignedReqHandler req = do
             Nothing -> "normal"
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
       fareBreakups <- traverse (buildFareBreakupV2 req'.booking.id.getId DFareBreakup.BOOKING) fareParams
-      QFareBreakup.createMany fareBreakups
+      QFareBreakup.mergeByTitleAndCreateMany fareBreakups
       QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
       QPFS.clearCache booking.riderId
@@ -522,7 +523,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              paymentDone = maybe True (not . (.onlinePayment)) mbMerchant,
              endOdometerReading
             }
-  breakups <- traverse (buildFareBreakup ride.id) fareBreakups
+  breakups <- traverse (buildFareBreakupV2 ride.id.getId DFareBreakup.BOOKING) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
@@ -549,7 +550,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
-  QFareBreakup.createMany breakups
+  QFareBreakup.mergeByTitleAndCreateMany breakups
   QPFS.clearCache booking.riderId
 
   -- uncomment for update api test; booking.paymentMethodId should be present
@@ -571,17 +572,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
   unless isInitiatedByCronJob $
     Notify.notifyOnRideCompleted booking updRide
-  where
-    buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
-    buildFareBreakup rideId DFareBreakup {..} = do
-      guid <- generateGUID
-      pure
-        DFareBreakup.FareBreakup
-          { id = guid,
-            entityId = rideId.getId,
-            entityType = DFareBreakup.RIDE,
-            ..
-          }
 
 buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakup.FareBreakupEntityType -> DFareBreakup -> m DFareBreakup.FareBreakup
 buildFareBreakupV2 entityId entityType DFareBreakup {..} = do
@@ -591,6 +581,8 @@ buildFareBreakupV2 entityId entityType DFareBreakup {..} = do
       { id = guid,
         entityId,
         entityType,
+        description = fromMaybe (show title) description,
+        title = Just title,
         ..
       }
 

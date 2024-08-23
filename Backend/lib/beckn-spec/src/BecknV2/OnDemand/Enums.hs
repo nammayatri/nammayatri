@@ -17,6 +17,7 @@ module BecknV2.OnDemand.Enums where
 
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
+import EulerHS.Prelude (Hashable)
 import Kernel.Prelude
 import Kernel.Utils.JSON
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -169,7 +170,7 @@ data QuoteBreakupTitle
   | INSURANCE_CHARGES
   | CARD_CHARGES_ON_FARE
   | CARD_CHARGES_FIXED
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Read, Eq, Generic, ToJSON, FromJSON, Hashable)
 
 data CancellationReasonId
   = -- message.cancellation_reason_id -- sent by BAP in cancel

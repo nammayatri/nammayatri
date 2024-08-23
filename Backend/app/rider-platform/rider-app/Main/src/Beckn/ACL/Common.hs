@@ -253,11 +253,12 @@ mkDFareBreakup :: (MonadFlow m, CacheFlow m r) => Spec.QuotationBreakupInner -> 
 mkDFareBreakup breakup = do
   val :: DecimalValue.DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.breakup.price.value is not present in RideCompleted Event.")
   currency :: Currency <- breakup.quotationBreakupInnerPrice >>= (.priceCurrency) >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "quote.breakup.price.currency is not present in RideCompleted Event.")
-  title <- breakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
+  title <- breakup.quotationBreakupInnerTitle >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
   pure $
     Common.DFareBreakup
       { amount = Utils.decimalValueToPrice currency val,
-        description = title
+        title = Utils.toDomainFBTitle title,
+        description = Nothing
       }
 
 parseBookingCancelledEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.BookingCancelledReq

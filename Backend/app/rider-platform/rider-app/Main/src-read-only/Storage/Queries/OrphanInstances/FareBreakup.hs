@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.FareBreakup where
 
+import qualified Data.Text
 import qualified Domain.Types.FareBreakup
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -22,7 +23,8 @@ instance FromTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
             description = description,
             entityId = bookingId,
             entityType = entityType,
-            id = Kernel.Types.Id.Id id
+            id = Kernel.Types.Id.Id id,
+            title = readMaybe . Data.Text.unpack =<< title
           }
 
 instance ToTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
@@ -33,5 +35,6 @@ instance ToTType' Beam.FareBreakup Domain.Types.FareBreakup.FareBreakup where
         Beam.description = description,
         Beam.bookingId = entityId,
         Beam.entityType = entityType,
-        Beam.id = Kernel.Types.Id.getId id
+        Beam.id = Kernel.Types.Id.getId id,
+        Beam.title = show <$> title
       }

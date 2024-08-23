@@ -90,4 +90,3 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ValidationSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleClassCheckType)
-

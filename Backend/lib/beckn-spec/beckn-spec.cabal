@@ -211,6 +211,7 @@ library
       BecknV2.OnDemand.Utils.Payment
       BecknV2.Utils
       Domain.Types
+      Domain.Types.FareBreakupTitle
       Domain.Types.FareProductType
       Domain.Types.ServiceTierType
       Domain.Types.Trip
