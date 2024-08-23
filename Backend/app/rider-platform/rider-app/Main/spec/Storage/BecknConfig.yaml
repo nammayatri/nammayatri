@@ -36,8 +36,6 @@ BecknConfig:
     cancelTTLSec: Maybe Int
 
   types:
-    VehicleCategory:
-      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE"
 
     PaymentCollectedBy:
       enum: "BAP, BPP"
@@ -47,10 +45,6 @@ BecknConfig:
     collectedBy: "'BPP'"
 
   queries:
-    findByMerchantIdDomainAndVehicle:
-      kvFunction: findOneWithKV
-      where:
-        and: [merchantId, domain, vehicleCategory]
     findByMerchantIdAndDomain:
       kvFunction: findAllWithKV
       where:
@@ -62,6 +56,9 @@ BecknConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, domain, merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   beamType:
     subscriberUrl: Text
