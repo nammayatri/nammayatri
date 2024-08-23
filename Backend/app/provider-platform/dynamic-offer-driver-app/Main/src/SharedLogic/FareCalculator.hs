@@ -377,15 +377,16 @@ calculateFareParameters params = do
 
     processFPInterCityDetails DFP.FPInterCityDetails {..} = do
       let estimatedDuration = maybe 0 (.getSeconds) params.estimatedRideDuration
+          estimatedDurationInMins = estimatedDuration `div` 60
           actualDuration = maybe estimatedDuration (.getSeconds) params.actualRideDuration
           perDayMaxAllowanceInMins' = case perDayMaxAllowanceInMins of
             Just allowance -> allowance.getMinutes
             Nothing -> 840
-          allowanceMins' = maybe 0 (\rt -> (calculateAllowanceMins (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxAllowanceInMins' params.rideTime rt) - estimatedDuration) params.returnTime
+          allowanceMins' = maybe 0 (\rt -> (calculateAllowanceMins (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxAllowanceInMins' params.rideTime rt) - estimatedDurationInMins) params.returnTime
           allowanceMins = if params.roundTrip then max defaultWaitTimeAtDestination.getMinutes allowanceMins' else 0
           extraMins = max 0 (actualDuration - estimatedDuration) `div` 60
           extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
-          fareByTime = HighPrecMoney $ (toRational (estimatedDuration + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
+          fareByTime = HighPrecMoney $ (toRational (estimatedDurationInMins + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
 
       let perKmRate = if params.roundTrip then perKmRateRoundTrip else perKmRateOneWay
           estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
