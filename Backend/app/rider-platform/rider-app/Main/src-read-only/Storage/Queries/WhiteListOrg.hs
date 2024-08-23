@@ -4,16 +4,13 @@
 
 module Storage.Queries.WhiteListOrg (module Storage.Queries.WhiteListOrg, module ReExport) where
 
-import qualified Domain.Types.Merchant
 import qualified Domain.Types.WhiteListOrg
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Beckn.Domain
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Registry
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.WhiteListOrg as Beam
@@ -25,18 +22,6 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.WhiteListOrg.WhiteListOrg] -> m ())
 createMany = traverse_ create
-
-findBySubscriberIdAndDomainAndMerchantId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber -> Kernel.Types.Beckn.Domain.Domain -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m (Maybe Domain.Types.WhiteListOrg.WhiteListOrg))
-findBySubscriberIdAndDomainAndMerchantId subscriberId domain merchantId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId),
-          Se.Is Beam.domain $ Se.Eq domain,
-          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
-        ]
-    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.WhiteListOrg.WhiteListOrg -> m (Maybe Domain.Types.WhiteListOrg.WhiteListOrg))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

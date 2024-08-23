@@ -309,6 +309,7 @@ library
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
       Storage.Queries.AppInstallsExtra
+      Storage.Queries.BecknConfigExtra
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
       Storage.Queries.CallStatusExtra
@@ -634,6 +635,7 @@ library
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
+      Storage.Queries.OrphanInstances.BecknConfig
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
       Storage.Queries.OrphanInstances.CallStatus
