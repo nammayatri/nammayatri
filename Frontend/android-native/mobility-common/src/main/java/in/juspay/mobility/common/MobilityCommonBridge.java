@@ -109,6 +109,10 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -5046,6 +5050,16 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
+    public String convertAudioToBase64(String filePath) throws IOException {
+        File file = new File(filePath);
+        try (FileInputStream fileInputStream = new FileInputStream(file)) {
+            byte[] fileBytes = new byte[(int) file.length()];
+            fileInputStream.read(fileBytes);
+            return Base64.encodeToString(fileBytes, Base64.DEFAULT);
+        }
+    }
+
+    @JavascriptInterface
     public void encodeToBase64(String url, String callback) {
         ExecutorManager.runOnBackgroundThread(() -> {
             try {
@@ -5075,6 +5089,7 @@ public class MobilityCommonBridge extends HyperBridge {
             String id = configObj.optString("id", "");
             String scaleType = configObj.optString("scaleType", "CENTER_CROP");
             int inSampleSize = configObj.optInt("inSampleSize", 1);
+            boolean adjustViewBounds = configObj.optBoolean("adjustViewBounds", true);
 
             // call api to get base64image
             String base64Image = source.startsWith("http") ? MobilityCallAPI.callAPI(source, MobilityCallAPI.getBaseHeaders(bridgeComponents.getContext()), null, "GET", false).getResponseBody() : source;
@@ -5095,7 +5110,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             imageView.setLayoutParams(layoutParams);
                             imageView.setImageBitmap(decodedByte);
                             imageView.setScaleType(getScaleTypes(scaleType));
-                            imageView.setAdjustViewBounds(true);
+                            imageView.setAdjustViewBounds(adjustViewBounds);
                             imageView.setClipToOutline(true);
 
                             layout.removeAllViews();
