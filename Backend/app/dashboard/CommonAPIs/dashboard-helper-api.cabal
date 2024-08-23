@@ -65,6 +65,7 @@ library
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.RideBooking.Driver
       API.Types.RiderPlatform.Management.Booking
+      API.Types.RiderPlatform.Management.Invoice
       API.Types.RiderPlatform.Management.Merchant
   other-modules:
       Paths_dashboard_helper_api

@@ -21,6 +21,7 @@ where
 
 import qualified "rider-app" API.Dashboard as BAP
 import qualified API.Types.RiderPlatform.Management.Booking as BookingDSL
+import qualified API.Types.RiderPlatform.Management.Invoice as InvoiceDSL
 import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
@@ -64,7 +65,8 @@ data AppBackendAPIs = AppBackendAPIs
     tickets :: TicketAPIs,
     hotSpot :: HotSpotAPIs,
     bookingDSL :: BookingDSL.BookingAPIs,
-    merchantDSL :: MerchantDSL.MerchantAPIs
+    merchantDSL :: MerchantDSL.MerchantAPIs,
+    invoiceDSL :: InvoiceDSL.InvoiceAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -136,6 +138,7 @@ mkAppBackendAPIs merchantId city token = do
 
   let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
+  let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
   AppBackendAPIs {..}
   where
     customersClient
@@ -145,7 +148,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> ticketsClient
       :<|> hotSpotClient
       :<|> bookingClientDSL
-      :<|> merchantClientDSL =
+      :<|> merchantClientDSL
+      :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
     customerList
