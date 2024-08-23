@@ -17,13 +17,8 @@ WhiteListOrg:
 
   constraints:
     id: PrimaryKey
-    subscriberId: SecondaryKey
+    subscriberId: !SecondaryKey
 
-  queries:
-    findBySubscriberIdAndDomain:
-      kvFunction: findOneWithKV
-      where:
-        and: [subscriberId, domain]
   sqlType:
     subscriberId: character varying(255)
     domain: character varying(255)

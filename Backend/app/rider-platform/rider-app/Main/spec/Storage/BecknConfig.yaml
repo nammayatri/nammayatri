@@ -36,7 +36,7 @@ BecknConfig:
 
   types:
     VehicleCategory:
-      enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE"
+       enum: "CAB, AUTO_RICKSHAW, METRO, MOTORCYCLE, AMBULANCE"
 
     PaymentCollectedBy:
       enum: "BAP, BPP"
@@ -46,10 +46,6 @@ BecknConfig:
     collectedBy: "'BPP'"
 
   queries:
-    findByMerchantIdDomainAndVehicle:
-      kvFunction: findOneWithKV
-      where:
-        and: [merchantId, domain, vehicleCategory]
     findByMerchantIdAndDomain:
       kvFunction: findAllWithKV
       where:
@@ -57,6 +53,9 @@ BecknConfig:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   beamType:
     subscriberUrl: Text
