@@ -516,7 +516,7 @@ otherActionsView state push =
         , orientation VERTICAL
         , visibility $ boolToVisibility $ state.props.showTestDrill && state.props.isAudioRecordingActive
         ]
-        [ PrimaryButton.view (push <<< CancelSosTrigger) $ dismissSoSButtonConfig state
+        [ PrimaryButton.view (push <<< DismissTestDrill) $ dismissSoSButtonConfig state
         ]
     ]
     where   

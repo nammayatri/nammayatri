@@ -90,7 +90,7 @@ eval :: Action -> ST.NammaSafetyScreenState -> Eval Action ScreenOutput ST.Namma
 eval PlaceCall state = do
   let
     primaryContact = DA.filter (\item -> item.priority == 0) state.data.emergencyContactsList
-  case primaryContact DA.!! 0, state.props.shouldCallAutomatically, state.data.shareToEmergencyContacts of
+  case primaryContact DA.!! 0, state.props.shouldCallAutomatically, state.data.autoCallDefaultContact of
     Just contact, true, true -> void $ pure $ JB.showDialer contact.number true
     _, _, _ -> pure unit
   continue

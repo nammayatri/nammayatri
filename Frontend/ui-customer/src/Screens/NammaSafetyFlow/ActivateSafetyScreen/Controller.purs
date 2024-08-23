@@ -16,7 +16,7 @@ module Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller where
 
 import JBridge as JB
 import Log
-import Prelude (class Show, bind, discard, map, not, pure, show, void, ($), (&&), (/=), (==), unit, (<>))
+import Prelude (class Show, bind, discard, map, not, pure, show, void, ($), (&&), (/=), (==), unit, (<>), (<))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (NammaSafetyScreenState)
 import Timers (clearTimerWithId)
@@ -109,6 +109,7 @@ data Action
   | StopAudioPlayer
   | OnAudioCompleted String
   | PopupWithCheckboxAction PopupWithCheckbox.Action
+  | DismissTestDrill PrimaryButtonController.Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -209,6 +210,7 @@ eval GoToTestDrill state = do
         , showTestDrill = true
         , timerValue = defaultTimerValue
         , triggeringSos = false
+        , isAudioRecordingActive = false
         }
       }
 
@@ -264,9 +266,18 @@ eval (SosButtonAndDescriptionAction (SosButtonAndDescription.CountDown seconds s
       newState = state { props { timerId = "", triggerSiren = false, policeCallTimerValue = 5, policeCallTimerId = "", audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", isAudioRecordingActive = false  } }
     updateAndExit newState $ CreateSos newState SafetyFlow
   else if seconds == 3 && state.props.triggerSiren then handleMediaPlayerRestart state { props { timerValue = seconds, timerId = timerID } }
-  else continue state { props { timerValue = seconds, timerId = timerID } }
+  else do
+    if seconds < 3 && not state.props.triggerSiren then do
+      pure $ JB.clearAudioPlayer ""
+    else pure unit
+    continue state { props { timerValue = seconds, timerId = timerID } }
 
-eval (ToggleSiren SafetyActionTileView.OnClick) state = continue state { props { triggerSiren = not state.props.triggerSiren } }
+eval (ToggleSiren SafetyActionTileView.OnClick) state = 
+    if state.props.triggerSiren then
+      continueWithCmd state { props { triggerSiren = false } }
+      [ pure StopAudioPlayer ]
+    else
+      handleMediaPlayerRestart state
 
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{showMenu = false}}
 
@@ -374,6 +385,8 @@ eval (PopupWithCheckboxAction (PopupWithCheckbox.ToggleSelect index)) state = do
   continue state { data { emergencyContactsList = newContacts } }
 
 eval (PopupWithCheckboxAction (PopupWithCheckbox.DismissPopup)) state = continue state{props{defaultCallPopup = false}}
+
+eval (DismissTestDrill PrimaryButtonController.OnClick) state = continueWithCmd state [pure $ BackPressed]
 
 eval _ state = update state
 

@@ -287,6 +287,16 @@ public class RideRequestUtils {
         try {
             OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(LocationUpdateWorker.class).build();
             WorkManager.getInstance(context).enqueue(oneTimeWorkRequest);
+            Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
+            if(Settings.canDrawOverlays(context) && activityStatus.equals("onDestroy")){
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    context.startActivity(restartIntent);
+                    Utils.minimizeApp(context);
+                }, 5000);
+            }
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error in restartLocationService : " + e);
             String driverId = "empty";

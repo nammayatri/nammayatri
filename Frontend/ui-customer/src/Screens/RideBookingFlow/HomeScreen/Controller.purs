@@ -2592,7 +2592,7 @@ eval (UpdateContacts contacts) state = continue state {data{contactList = Just $
 eval (UpdateChatWithEM flag) state = continue state {props{isChatWithEMEnabled = flag}}
 eval (ShareRideAction PopupWithCheckboxController.DismissPopup) state = continue state {props{showShareRide = false}}
 
-eval (ShareRideAction (PopupWithCheckboxController.ClickPrimaryButton PrimaryButtonController.OnClick)) state = exit $ GoToNotifyRideShare state
+eval (ShareRideAction (PopupWithCheckboxController.ClickPrimaryButton PrimaryButtonController.OnClick)) state = exit $ GoToNammaSafety state false false
 
 eval (ShareRideAction (PopupWithCheckboxController.ClickSecondaryButton PrimaryButtonController.OnClick)) state = continueWithCmd state [pure ShareRide]
 
@@ -2886,7 +2886,7 @@ eval (ShimmerTimer seconds status timerID) state = do
   else update state{props{shimmerViewTimer = seconds, shimmerViewTimerId = timerID}}
 
 eval (ShakeActionCallback count) state = do
-  if count >= 2 && any (_ == state.props.currentStage) [RideAccepted, RideStarted] then do
+  if count >= 2 && any (_ == state.props.currentStage) [RideAccepted, RideStarted] && state.props.isShakeEnabled then do
     void $ pure $ performHapticFeedback unit
     exit $ GoToNammaSafety state true false 
   else continue state

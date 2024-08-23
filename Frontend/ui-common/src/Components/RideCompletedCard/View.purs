@@ -687,7 +687,7 @@ pillActionView push pillConfig =
     , margin $ Margin 0 20 (if pillConfig.useMarginRight then 12 else 0) 20
     , rippleColor Color.rippleShade
     , accessibility ENABLE
-    , accessibilityHint $ "Need help : Button"
+    , accessibilityHint $ pillConfig.text <> " : Button"
     ][imageView [
         width $ V 16
       , height $ V 16

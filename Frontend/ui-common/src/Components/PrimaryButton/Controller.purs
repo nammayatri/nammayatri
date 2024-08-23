@@ -56,6 +56,7 @@ type Config =
     , underlineConfig :: UnderLineConfig 
     , enableRipple :: Boolean
     , rippleColor :: String
+    , viewbackground :: String
   }
 
 type TextConfig =
@@ -131,6 +132,7 @@ config =
   , isSuffixImage : false
   , weight : Nothing
   , enableButtonLayoutId : false
+  , viewbackground : Color.white900
   , suffixImageConfig :
     {
       height : V 20
