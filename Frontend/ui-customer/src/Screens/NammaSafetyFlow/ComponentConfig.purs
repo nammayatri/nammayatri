@@ -362,6 +362,7 @@ shareAudioButtonConfig state = let
     , alpha = if disableButton then 0.5 else 1.0
     , isClickable = not disableButton
     , visibility = boolToVisibility $ state.props.audioRecordingStatus == CTA.RECORDED 
+    , viewbackground = Color.transparent
     }
 
 optionsMenuConfig :: NammaSafetyScreenState -> OptionsMenuConfig.Config

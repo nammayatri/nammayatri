@@ -2460,7 +2460,7 @@ confirmPickUpLocationView push state =
                 , accessibility DISABLE
                 , gravity CENTER_HORIZONTAL
                 , height WRAP_CONTENT
-                , visibility $ boolToInvisibility $ isLocalStageOn EditPickUpLocation
+                , visibility $ boolToVisibility $ isLocalStageOn EditPickUpLocation
                 , width MATCH_PARENT
                 ] <> FontStyle.body2 TypoGraphy
 
