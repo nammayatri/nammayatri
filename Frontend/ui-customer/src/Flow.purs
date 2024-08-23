@@ -2291,7 +2291,7 @@ homeScreenFlow = do
               void $ pure $ toast $ getString STR.GLAD_TO_KNOW_YOU_ARE_SAFE
               pure unit
           else do
-            updateSafetyScreenState state defaultTimerValue true false
+            updateSafetyScreenState state defaultTimerValue false true
             activateSafetyScreenFlow
         Left err -> do
           void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
