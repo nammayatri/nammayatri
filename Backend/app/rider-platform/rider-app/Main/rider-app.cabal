@@ -218,6 +218,7 @@ library
       Domain.Types.Common
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
+      Domain.Types.Extra.FareBreakup
       Domain.Types.Extra.FeedbackForm
       Domain.Types.Extra.InterCityDetails
       Domain.Types.Extra.MerchantMessage

@@ -5,6 +5,7 @@ imports:
   Price: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
   Currency: Kernel.Types.Common
+  FareBreakupTitle: Domain.Types.FareBreakupTitle
 
 FareBreakup:
   derives: "Show"
@@ -12,6 +13,7 @@ FareBreakup:
   fields:
     id: Id FareBreakup
     description: Text
+    title: Maybe FareBreakupTitle
     amount: Price
     entityType: FareBreakupEntityType
     entityId: Text
@@ -31,12 +33,17 @@ FareBreakup:
       amount: HighPrecMoney
       currency: Maybe Currency
 
+  beamType:
+    title: Maybe Text
+
   toTType:
     amount: ((.amount) amount)|E
     currency: (Just $ (.currency) amount)|E
+    title: (show <$> title)|E
 
   fromTType:
     amount: Kernel.Types.Common.mkPrice currency amount|E
+    title: (readMaybe . Data.Text.unpack =<< title)|E
 
   types:
     FareBreakupAPIEntity:
@@ -69,9 +76,12 @@ FareBreakup:
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
+    - createMany
+    - create
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
 
   sqlType:
     currency: character varying(255)

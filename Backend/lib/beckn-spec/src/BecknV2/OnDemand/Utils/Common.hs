@@ -11,7 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module BecknV2.OnDemand.Utils.Common where
+module BecknV2.OnDemand.Utils.Common
+  ( module BecknV2.OnDemand.Utils.Common,
+    module Reexport,
+  )
+where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
@@ -21,6 +25,7 @@ import Data.Generics.Aliases (ext1Q)
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import Domain.Types
+import Domain.Types.FareBreakupTitle as Reexport
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DTV
 import EulerHS.Prelude

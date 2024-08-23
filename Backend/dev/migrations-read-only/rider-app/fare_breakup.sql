@@ -12,3 +12,8 @@ ALTER TABLE atlas_app.fare_breakup ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.fare_breakup ALTER COLUMN booking_id TYPE text;
 ALTER TABLE atlas_app.fare_breakup ADD COLUMN entity_type text NOT NULL default 'BOOKING';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.fare_breakup ADD COLUMN title text ;

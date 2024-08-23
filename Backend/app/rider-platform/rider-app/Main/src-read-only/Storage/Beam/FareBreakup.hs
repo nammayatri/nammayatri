@@ -20,7 +20,8 @@ data FareBreakupT f = FareBreakupT
     description :: B.C f Kernel.Prelude.Text,
     bookingId :: B.C f Kernel.Prelude.Text,
     entityType :: B.C f Domain.Types.FareBreakup.FareBreakupEntityType,
-    id :: B.C f Kernel.Prelude.Text
+    id :: B.C f Kernel.Prelude.Text,
+    title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 

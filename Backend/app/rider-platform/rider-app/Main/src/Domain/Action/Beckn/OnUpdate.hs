@@ -428,7 +428,7 @@ onUpdate = \case
     let currentPointLat = (.lat) <$> currentPoint
         currentPointLon = (.lon) <$> currentPoint
     breakups <- traverse (Common.buildFareBreakupV2 bookingUpdateRequestId.getId DFareBreakup.BOOKING_UPDATE_REQUEST) fareBreakups
-    QFareBreakup.createMany breakups
+    QFareBreakup.mergeByTitleAndCreateMany breakups
     QBUR.updateMultipleById Nothing (Just newEstimatedDistance) (Just fare.amount) Nothing currentPointLat currentPointLon bookingUpdateRequestId
   OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..} -> do
     dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateRequest.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateRequest.id.getId)
@@ -443,7 +443,7 @@ onUpdate = \case
         )
         fareBreakupsBUR
     QFareBreakup.deleteByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-    QFareBreakup.createMany fareBreakups
+    QFareBreakup.mergeByTitleAndCreateMany fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
     Notify.notifyOnTripUpdate booking ride "Destination and Fare Updated" "Your edit request was accepted by your driver!"

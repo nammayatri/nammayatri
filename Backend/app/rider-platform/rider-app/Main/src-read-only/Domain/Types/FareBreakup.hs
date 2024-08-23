@@ -1,10 +1,13 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.FareBreakup where
+module Domain.Types.FareBreakup (module Domain.Types.FareBreakup, module ReExport) where
 
 import Data.Aeson
+import Domain.Types.Extra.FareBreakup as ReExport
+import qualified Domain.Types.FareBreakupTitle
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -15,7 +18,8 @@ data FareBreakup = FareBreakup
     description :: Kernel.Prelude.Text,
     entityId :: Kernel.Prelude.Text,
     entityType :: Domain.Types.FareBreakup.FareBreakupEntityType,
-    id :: Kernel.Types.Id.Id Domain.Types.FareBreakup.FareBreakup
+    id :: Kernel.Types.Id.Id Domain.Types.FareBreakup.FareBreakup,
+    title :: Kernel.Prelude.Maybe Domain.Types.FareBreakupTitle.FareBreakupTitle
   }
   deriving (Show)
 

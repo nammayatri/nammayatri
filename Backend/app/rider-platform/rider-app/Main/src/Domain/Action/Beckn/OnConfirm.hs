@@ -118,8 +118,8 @@ createFareBreakup booking fareParams' = do
   let fareParamsList = fromMaybe [] fareParams'
   fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.INITIAL_BOOKING) fareParamsList
   fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.BOOKING) fareParamsList
-  QFareBreakup.createMany fareBreakups
-  QFareBreakup.createMany fareBreakups'
+  QFareBreakup.mergeByTitleAndCreateMany fareBreakups
+  QFareBreakup.mergeByTitleAndCreateMany fareBreakups'
 
 onConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],

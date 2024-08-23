@@ -16,12 +16,6 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.FareBreakup as Beam
 import Storage.Queries.FareBreakupExtra as ReExport
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FareBreakup.FareBreakup -> m ())
-create = createWithKV
-
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FareBreakup.FareBreakup] -> m ())
-createMany = traverse_ create
-
 deleteByEntityIdAndEntityType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Domain.Types.FareBreakup.FareBreakupEntityType -> m ())
 deleteByEntityIdAndEntityType entityId entityType = do deleteWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq entityId, Se.Is Beam.entityType $ Se.Eq entityType]]
 
