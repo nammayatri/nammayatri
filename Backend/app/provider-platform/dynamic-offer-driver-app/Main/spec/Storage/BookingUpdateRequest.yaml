@@ -41,6 +41,8 @@ BookingUpdateRequest:
     farePolicyId : Id FarePolicy
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    getRouteReq: Maybe Text
+    routeInfoResp: Maybe Text
 
   beamType:
     distanceUnit: Maybe DistanceUnit
