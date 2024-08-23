@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Action.UI.Feedback
   ( FeedbackReq (..),
@@ -19,9 +20,14 @@ module Domain.Action.UI.Feedback
     feedback,
     knowYourFavDriver,
     knowYourDriver,
+    audioFeedbackUpload,
   )
 where
 
+import qualified AWS.S3 as S3
+import qualified Data.ByteString as B
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
@@ -31,12 +37,15 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import qualified Environment as App
+import IssueManagement.Domain.Types.MediaFile as D
+import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -54,7 +63,8 @@ data FeedbackReq = FeedbackReq
     feedbackDetails :: Maybe Text,
     nightSafety :: Maybe Bool,
     shouldFavDriver :: Maybe Bool,
-    wasOfferedAssistance :: Maybe Bool
+    wasOfferedAssistance :: Maybe Bool,
+    mbAudio :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -73,8 +83,15 @@ data FeedbackRes = FeedbackRes
     vehicleServiceTierType :: DVST.ServiceTierType,
     shouldFavDriver :: Maybe Bool,
     riderPhoneNum :: Maybe Text,
-    isValueAddNP :: Bool
+    isValueAddNP :: Bool,
+    filePath :: Maybe Text
   }
+
+newtype FeedbackMediaUploadRes = FeedbackMediaUploadRes
+  { fileId :: Id D.MediaFile
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverProfileResponse = DriverProfileResponse
   { response :: Maybe CallBPPInternal.DriverProfileRes
@@ -92,16 +109,25 @@ feedback request personId = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  (mediaId, filePath) <- case request.mbAudio of
+    Just audio -> do
+      let fileType = S3.Audio
+          contentType = T.pack "mp3"
+      filePath <- S3.createFilePath "/feedback-media/" ("bppBookingId-" <> bppBookingId.getId) fileType contentType
+      media <- audioFeedbackUpload (personId, merchant.id) audio filePath fileType
+      return (Just media.fileId, Just filePath)
+    Nothing -> do
+      return (Nothing, Nothing)
   issueId' <- getIssueIdForRide booking
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRide.updateRideRating rideId ratingValue
   ratingu <- QRating.findRatingForRide rideId
   _ <- case ratingu of
     Nothing -> do
-      newRating <- DRating.buildRating rideId booking.riderId ratingValue feedbackDetails request.wasOfferedAssistance
+      newRating <- DRating.buildRating rideId booking.riderId ratingValue feedbackDetails request.wasOfferedAssistance mediaId
       QRating.create newRating
     Just rideRating -> do
-      QRating.updateRating ratingValue feedbackDetails request.wasOfferedAssistance rideRating.id booking.riderId
+      QRating.updateRating ratingValue feedbackDetails request.wasOfferedAssistance mediaId rideRating.id booking.riderId
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -145,3 +171,41 @@ knowYourFavDriver driverId merchantId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   res <- CallBPPInternal.getKnowYourFavDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl driverId
   pure $ DriverProfileResponse {response = Just res}
+
+audioFeedbackUpload ::
+  (Id Person.Person, Id DM.Merchant) ->
+  Text ->
+  Text ->
+  S3.FileType ->
+  App.Flow FeedbackMediaUploadRes
+audioFeedbackUpload (_personId, merchantId) audio filePath fileType = do
+  merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  let fileSize = getFileSize audio
+  when (fileSize > merchant.mediaFileSizeUpperLimit) $
+    throwError $ FileSizeExceededError (show fileSize)
+  let fileUrl =
+        merchant.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "feedback"
+          & T.replace "<FILE_PATH>" filePath
+  _ <- fork "S3 Put Feedback Media File" $ S3.put (T.unpack filePath) audio
+  createMediaEntry fileUrl fileType
+  where
+    getFileSize :: Text -> Int
+    getFileSize = B.length . TE.encodeUtf8
+
+createMediaEntry :: Text -> S3.FileType -> App.Flow FeedbackMediaUploadRes
+createMediaEntry url fileType = do
+  fileEntity <- mkFile url
+  _ <- QMF.create fileEntity
+  return $ FeedbackMediaUploadRes {fileId = fileEntity.id}
+  where
+    mkFile fileUrl = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        D.MediaFile
+          { id,
+            _type = fileType,
+            url = fileUrl,
+            createdAt = now
+          }

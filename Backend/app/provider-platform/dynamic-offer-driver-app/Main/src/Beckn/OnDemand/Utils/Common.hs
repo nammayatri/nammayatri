@@ -1554,6 +1554,12 @@ getRiderPhoneNumber req = do
       tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.RIDER_PHONE_NUMBER tagGroups
    in tagValue
 
+getFilePath :: Spec.Rating -> Maybe Text
+getFilePath req = do
+  let tagGroups = req.ratingTag
+      tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.MEDIA_FILE_PATH tagGroups
+   in tagValue
+
 mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
 mkFulfillmentState stateCode =
   Spec.FulfillmentState

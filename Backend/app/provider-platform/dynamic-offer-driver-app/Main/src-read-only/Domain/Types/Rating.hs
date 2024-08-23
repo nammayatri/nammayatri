@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -20,6 +21,7 @@ data Rating = Rating
     isFavourite :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSafe :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     issueId :: Kernel.Prelude.Maybe Data.Text.Text,
+    mediaId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     ratingValue :: Kernel.Prelude.Int,
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     updatedAt :: Kernel.Prelude.UTCTime,

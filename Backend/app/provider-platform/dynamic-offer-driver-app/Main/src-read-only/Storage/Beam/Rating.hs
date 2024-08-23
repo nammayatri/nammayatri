@@ -21,6 +21,7 @@ data RatingT f = RatingT
     isFavourite :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSafe :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issueId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    mediaId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     ratingValue :: B.C f Kernel.Prelude.Int,
     rideId :: B.C f Data.Text.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
