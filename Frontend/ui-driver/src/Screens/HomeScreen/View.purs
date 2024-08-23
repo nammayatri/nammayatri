@@ -249,7 +249,7 @@ screen initialState (GlobalState globalState) =
                                 pushPlayAudioAndLaunchMap <- runEffectFn1 EHC.getValueFromIdMap "PlayAudioAndLaunchMap"
                                 when pushPlayAudioAndLaunchMap.shouldPush $ do 
                                   void $ pure $ runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" false
-                                  void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps OnAudioCompleted (fromMaybe false initialState.data.activeRide.acRide) initialState.data.activeRide.requestedVehicleVariant
+                                  void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps OnAudioCompleted (fromMaybe false initialState.data.activeRide.acRide) initialState.data.activeRide.requestedVehicleVariant initialState.data.activeRide.estimatedTollCharges
                                 
                                 if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
                                   then do
@@ -2339,14 +2339,16 @@ getDriverStatusResult index driverStatus currentStatus= case (getValueToLocalSto
                   _ -> if (driverStatus == currentStatus) then ACTIVE
                        else DEFAULT
 
-playAudioAndLaunchMap :: forall action. (action -> Effect Unit) ->  action -> (String -> action) -> Boolean -> Maybe String -> Flow GlobalState Unit
-playAudioAndLaunchMap push action audioCompleted acRide requestedVehicleVariant = do
+playAudioAndLaunchMap :: forall action. (action -> Effect Unit) ->  action -> (String -> action) -> Boolean -> Maybe String -> Number -> Flow GlobalState Unit
+playAudioAndLaunchMap push action audioCompleted acRide requestedVehicleVariant tollCharges = do
   let 
     driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
-
-  if (driverLocation == "bangalore" && isJust requestedVehicleVariant && (not $ requestedVehicleVariant == Just "AUTO_RICKSHAW") && (getValueToLocalStore TRIGGER_MAPS) == "true" ) then  do
+    needToTriggerMaps = (getValueToLocalStore TRIGGER_MAPS) == "true"
+    language = "kn"
+  
+  if driverLocation == "bangalore" && tollCharges > 0.0 && needToTriggerMaps then void $ pure $ runFn3 JB.startAudioPlayer ("https://assets.moving.tech/beckn/audios/toll_charges_background/" <> language <> ".mp3") push audioCompleted
+  else if driverLocation == "bangalore" && isJust requestedVehicleVariant && (not $ requestedVehicleVariant == Just "AUTO_RICKSHAW") &&  needToTriggerMaps then  do
     let 
-      language = "kn"
       audioFolder = if acRide  then "ac_background" else "non_ac_background" 
       audioUrl = "https://assets.moving.tech/beckn/audios/" <> audioFolder <> "/" <> language <> ".mp3"
     void $ pure $ runFn3 JB.startAudioPlayer audioUrl push audioCompleted
