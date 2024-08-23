@@ -230,7 +230,7 @@ findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName ::
   ServiceNames ->
   m [DriverFee]
 findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName merchantId merchantOpCityId from to feeType limit serviceName =
-  findAllWithOptionsKV
+  findAllWithOptionsKV'
     [ Se.And
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
@@ -244,7 +244,6 @@ findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName merchantId merchantOp
           Se.Is BeamDF.sgst $ Se.Not (Se.Eq 0.0)
         ]
     ]
-    (Se.Asc BeamDF.createdAt)
     (Just limit)
     Nothing
 
