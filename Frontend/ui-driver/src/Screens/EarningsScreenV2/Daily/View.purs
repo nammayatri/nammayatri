@@ -368,7 +368,7 @@ ridesStatsView push state showShimmer item =
                                     $ [ text item.value
                                       , color Color.black800
                                       ]
-                                    <> FontStyle.tags TypoGraphy
+                                    <> FontStyle.subHeading1 TypoGraphy
                               ]
                           ]
                     ]

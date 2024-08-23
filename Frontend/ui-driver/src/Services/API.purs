@@ -5008,3 +5008,25 @@ instance standardInitiateDriverBGVResp :: StandardEncode InitiateDriverBGVResp w
 instance showInitiateDriverBGVResp :: Show InitiateDriverBGVResp where show = genericShow
 instance decodeInitiateDriverBGVResp :: Decode InitiateDriverBGVResp where decode = defaultDecode
 instance encodeInitiateDriverBGVResp  :: Encode InitiateDriverBGVResp where encode = defaultEncode
+
+----------------------------------------------- Get Base64 Image From Url ------------------------------------------------------------------------
+
+data GetBase64FromUrlReq = GetBase64FromUrlReq String
+
+instance makeGetBase64FromUrlReq :: RestEndpoint GetBase64FromUrlReq where
+    makeRequest reqBody@(GetBase64FromUrlReq req) headers = defaultMakeRequest GET req headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericGetBase64FromUrlReq :: Generic GetBase64FromUrlReq _
+instance showGetBase64FromUrlReq :: Show GetBase64FromUrlReq where show = genericShow
+instance standardEncodeGetBase64FromUrlReq :: StandardEncode GetBase64FromUrlReq where standardEncode (GetBase64FromUrlReq _) = standardEncode {}
+instance decodeGetBase64FromUrlReq :: Decode GetBase64FromUrlReq where decode = defaultDecode
+instance encodeGetBase64FromUrlReq :: Encode GetBase64FromUrlReq where encode = defaultEncode
+
+newtype GetBase64FromUrlResp = GetBase64FromUrlResp String
+
+derive instance genericGetBase64FromUrlResp :: Generic GetBase64FromUrlResp _
+instance standardGetBase64FromUrlResp :: StandardEncode GetBase64FromUrlResp where standardEncode (GetBase64FromUrlResp body) = standardEncode body
+instance showGetBase64FromUrlResp :: Show GetBase64FromUrlResp where show = genericShow
+instance decodeGetBase64FromUrlResp :: Decode GetBase64FromUrlResp where decode = defaultDecode
+instance encodeGetBase64FromUrlResp  :: Encode GetBase64FromUrlResp where encode = defaultEncode

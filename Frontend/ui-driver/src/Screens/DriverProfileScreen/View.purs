@@ -43,13 +43,14 @@ import Data.Either (Either(..))
 import Data.Enum (enumFromThenTo)
 import Data.Int (toNumber)
 import Data.List (elem)
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.Number (round)
 import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
+import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, liftFlow, screenWidth)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
@@ -79,7 +80,7 @@ import Screens.Types (MenuOptions(..), AutoPayStatus(..))
 import Screens.Types as ST
 import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..))
 import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore, getValueToLocalNativeStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
@@ -723,6 +724,7 @@ tabImageView state push =
       "MALE" | vc == ST.AmbulanceCategory -> "ny_ic_new_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
+    profileImg = if any (_ == getValueToLocalNativeStore PROFILE_IMAGE) ["__failed", ""] then fromMaybe "" state.data.profileImg else getValueToLocalNativeStore PROFILE_IMAGE 
     startPosition = (JB.getWidthFromPercent 25) + 22
     endPosition = (JB.getWidthFromPercent 50) - 44
   in
@@ -745,17 +747,18 @@ tabImageView state push =
               , onClick (\action -> if EHC.os == "IOS" then pure unit else push action) $ const $ ChangeScreen ST.DRIVER_DETAILS
               , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
               ]
-              [ ( if state.data.profileImg == Nothing then
+              [ ( if isNothing state.data.profileImg then
                     imageView
                       [ height $ V 88
                       , width $ V 88
                       , imageWithFallback $ fetchImage FF_ASSET driverImage
                       ]
                   else
-                    linearLayout
+                     PrestoAnim.animationSet [ Anim.fadeIn true ] $
+                     linearLayout
                       [ height $ V 88
                       , width $ V 88
-                      , afterRender (\action -> do JB.renderBase64Image (fromMaybe "" state.data.profileImg) (getNewIDWithTag "driver_prof_img") false "CENTER_CROP") (const NoAction)
+                      , onAnimationEnd (\action -> runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = profileImg, id = (getNewIDWithTag "driver_prof_img"), scaleType =  "CENTER_CROP", inSampleSize = 1, cornerRadius = 150}) (const NoAction)
                       , id (getNewIDWithTag "driver_prof_img")
                       ]
                       []

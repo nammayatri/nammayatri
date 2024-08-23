@@ -564,7 +564,7 @@ getEN stringKey =
         SUMMARY -> "Summary"
         NAMMA_BONUS _ -> "Namma Bonus"
         TRIPS_COMPLETED -> "Trips Completed"
-        LATE_NIGHT_TRIPS -> "Late night trips"
+        LATE_NIGHT_TRIPS -> "Late Night trips"
         ABOUT_ME -> "About me"
         ABOUT_VEHICLE -> "About vehicle"
         ADD -> "Add"

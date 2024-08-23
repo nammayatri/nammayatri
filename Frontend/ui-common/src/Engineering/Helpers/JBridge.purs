@@ -928,6 +928,7 @@ displayBase64ImageConfig = {
   , id : ""
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
+  , cornerRadius : 0
 }
 ---------- ################################### DRAW ROUTE CONFIG ################################### ----------
 

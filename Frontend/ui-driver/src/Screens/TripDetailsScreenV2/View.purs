@@ -155,6 +155,7 @@ view push state =
                             , weight 1.0
                             , text "Bridge doesn't charge you any commission! We believe you deserve a fair price!"
                             , margin $ MarginLeft 12
+                            , color Color.black900
                             ] <> FontStyle.body1 TypoGraphy
                         ]
                    ]
@@ -459,6 +460,7 @@ earningsDetailsView push state =
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , text item.key
+                    , color Color.black800
                     ] <> FontStyle.body1 TypoGraphy
                 ]
              , linearLayout
@@ -469,6 +471,7 @@ earningsDetailsView push state =
                     [ width WRAP_CONTENT
                     , height WRAP_CONTENT
                     , text $ priceToBeDisplayed item.value true
+                    , color Color.black800
                     ] <> FontStyle.body1 TypoGraphy
                 ]
             ]) getPriceBreakupList)

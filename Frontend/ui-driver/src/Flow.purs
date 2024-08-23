@@ -473,6 +473,14 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
           let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
           when (updateFeatureFlags && cityConfig.callDriverInfoPost) $ do
             void $ lift $ lift $ fork $ Remote.getDriverInfoApi ""
+          when (isJust getDriverInfoResp.mediaUrl && DA.any (_ == getValueToLocalNativeStore PROFILE_IMAGE) ["__failed", ""]) $ do
+            maybe (pure unit) (\item -> do
+              image <- lift $ lift $ Remote.getBase64FromUrl item
+              case image of 
+                Left _ -> pure unit
+                Right (API.GetBase64FromUrlResp img) -> void $ setValueToLocalStore PROFILE_IMAGE img
+              pure unit
+              ) getDriverInfoResp.mediaUrl
           if getDriverInfoResp.enabled 
             then do
               void $ lift $ lift $ toggleLoader false
@@ -3756,7 +3764,7 @@ updateDriverDataToStates = do
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {driverName = getDriverInfoResp.firstName
         , vehicleType = linkedVehicle.variant
         , driverAlternateMobile =getDriverInfoResp.alternateNumber
-        , profileImg = getDriverInfoResp.aadhaarCardPhoto
+        , profileImg = getDriverInfoResp.mediaUrl
         , linkedVehicleCategory = fromMaybe linkedVehicle.variant linkedVehicle.serviceTierType
         , linkedVehicleVariant = linkedVehicle.variant
         , gender = fromMaybe "UNKNOWN" getDriverInfoResp.gender
@@ -3794,7 +3802,7 @@ updateDriverDataToStates = do
     , capacity = fromMaybe 2 linkedVehicle.capacity
     , downgradeOptions = getDowngradeOptions linkedVehicle.variant
     , vehicleSelected = getDowngradeOptionsSelected (GetDriverInfoResp getDriverInfoResp)
-    , profileImg = getDriverInfoResp.aadhaarCardPhoto},props {canSwitchToRental =  (getDriverInfoResp.canSwitchToRental),canSwitchToInterCity = getDriverInfoResp.canSwitchToInterCity}})
+    , profileImg = getDriverInfoResp.mediaUrl},props {canSwitchToRental =  (getDriverInfoResp.canSwitchToRental),canSwitchToInterCity = getDriverInfoResp.canSwitchToInterCity}})
   modifyScreenState $ ReferralScreenStateType (\ referralScreen -> referralScreen{ data { driverInfo  
     {  driverName = getDriverInfoResp.firstName
     , driverMobile = getDriverInfoResp.mobileNumber
@@ -4047,7 +4055,7 @@ logoutFlow = do
   deleteValueFromLocalStore REFERRAL_CODE_ADDED
   deleteValueFromLocalStore VEHICLE_CATEGORY
   deleteValueFromLocalStore ENTERED_RC
-  deleteValueFromLocalStore VEHICLE_CATEGORY
+  deleteValueFromLocalStore PROFILE_IMAGE
   pure $ factoryResetApp ""
   void $ lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
