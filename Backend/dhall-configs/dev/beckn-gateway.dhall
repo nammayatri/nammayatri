@@ -48,4 +48,5 @@ in  { hedisCfg = rcfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , internalEndPointMap = common.internalEndPointMap
+    , commonRedisPrefix = ""
     }

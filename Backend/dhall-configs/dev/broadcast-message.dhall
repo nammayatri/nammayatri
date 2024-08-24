@@ -100,4 +100,5 @@ in  { hedisCfg
     , cacConfig
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
+    , commonRedisPrefix = ""
     }

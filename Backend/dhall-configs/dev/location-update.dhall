@@ -117,4 +117,5 @@ in  { hedisCfg
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = Some healthCheckAppCfg
     , cacConfig
+    , commonRedisPrefix = ""
     }

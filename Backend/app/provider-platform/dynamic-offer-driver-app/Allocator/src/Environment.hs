@@ -122,8 +122,8 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
-  hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
-  hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
+  hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>) commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>) commonRedisPrefix
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
@@ -131,11 +131,11 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("dynamic-offer-driver-app:" <>)
+      else connectHedisCluster hedisClusterCfg ("dynamic-offer-driver-app:" <>) commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>)
+      else connectHedisCluster hedisNonCriticalClusterCfg ("doa:n_c:" <>) commonRedisPrefix
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer

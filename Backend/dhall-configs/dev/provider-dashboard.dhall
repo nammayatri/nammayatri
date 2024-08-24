@@ -133,4 +133,5 @@ in  { esqDBCfg
     , cacheConfig
     , cacConfig
     , kvConfigUpdateFrequency = +60
+    , commonRedisPrefix = ""
     }

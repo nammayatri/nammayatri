@@ -101,18 +101,18 @@ buildHandlerEnv HandlerCfg {..} = do
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let kafkaProducerForART = Just kafkaProducerTools
-  hedisEnv <- connectHedis hedisCfg ("kaal-chakra:" <>)
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("doa:n_c:" <>)
+  hedisEnv <- connectHedis hedisCfg ("kaal-chakra:" <>) commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("doa:n_c:" <>) commonRedisPrefix
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("kaal-chakra:" <>)
+      else connectHedisCluster hedisClusterCfg ("kaal-chakra:" <>) commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalCfg ("doa:n_c:" <>)
+      else connectHedisCluster hedisNonCriticalCfg ("doa:n_c:" <>) commonRedisPrefix
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   coreMetrics <- registerCoreMetricsContainer
   return HandlerEnv {..}

@@ -91,4 +91,5 @@ in  { hedisCfg
     , runReviver = True
     , kafkaProducerCfg
     , cacConfig
+    , commonRedisPrefix = ""
     }

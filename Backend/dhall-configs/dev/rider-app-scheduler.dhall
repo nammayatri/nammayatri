@@ -37,6 +37,7 @@ let schedulerConfig =
       , readCount = +1
       , kafkaProducerCfg = appCfg.kafkaProducerCfg
       , cacConfig = appCfg.cacConfig
+      , commonRedisPrefix = ""
       }
 
 in  { appCfg =

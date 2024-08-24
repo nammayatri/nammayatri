@@ -58,16 +58,16 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let kafkaProducerForART = Just kafkaProducerTools
-  hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
+  hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k) commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k) commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg (\k -> hedisPrefix <> ":" <> k)
+      else connectHedisCluster hedisNonCriticalClusterCfg (\k -> hedisPrefix <> ":" <> k) commonRedisPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
+      else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k) commonRedisPrefix
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
   consumerId <- G.generateGUIDTextIO

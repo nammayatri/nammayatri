@@ -39,7 +39,8 @@ data AppCfg = AppCfg
     cutOffHedisCluster :: Bool,
     hedisClusterCfg :: HedisCfg,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -74,20 +75,20 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
-  hedisEnv <- connectHedis hedisCfg riderAppPrefix
+  hedisEnv <- connectHedis hedisCfg riderAppPrefix commonRedisPrefix
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Nothing
   -- let riderAppNonCriticalPrefix = riderAppPrefix
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg riderAppPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg riderAppPrefix commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg riderAppPrefix
+      else connectHedisCluster hedisNonCriticalClusterCfg riderAppPrefix commonRedisPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg riderAppPrefix
+      else connectHedisCluster hedisClusterCfg riderAppPrefix commonRedisPrefix
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

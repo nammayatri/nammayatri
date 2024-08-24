@@ -358,4 +358,5 @@ in  { esqDBCfg
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , quoteRespondCoolDown = +10
+    , commonRedisPrefix = ""
     }

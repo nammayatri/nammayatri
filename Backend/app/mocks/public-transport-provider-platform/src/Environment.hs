@@ -43,7 +43,8 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     authEntity :: AuthenticatingEntity',
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -74,20 +75,20 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
-  hedisEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>)
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("mock_public_transport_provider_platform" <>)
+  hedisEnv <- connectHedis hedisCfg ("mock_public_transport_provider_platform" <>) commonRedisPrefix
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg ("mock_public_transport_provider_platform" <>) commonRedisPrefix
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Nothing
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg ("mock_public_transport_provider_platform" <>)
+      else connectHedisCluster hedisNonCriticalClusterCfg ("mock_public_transport_provider_platform" <>) commonRedisPrefix
   coreMetrics <- registerCoreMetricsContainer
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg ("mock_public_transport_provider_platform" <>)
+      else connectHedisCluster hedisClusterCfg ("mock_public_transport_provider_platform" <>) commonRedisPrefix
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   let authManagerSettings = prepareAuthManager config ["Authorization"] selfId uniqueKeyId (logOutputIO loggerEnv)
   authManager <- newManager authManagerSettings

@@ -60,7 +60,8 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    cacConfig :: CacConfig
+    cacConfig :: CacConfig,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -113,16 +114,16 @@ buildAppEnv AppCfg {..} = do
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Nothing
-  hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
-  hedisNonCriticalEnv <- Redis.connectHedis hedisNonCriticalCfg modifierFunc
+  hedisEnv <- Redis.connectHedis hedisCfg modifierFunc commonRedisPrefix
+  hedisNonCriticalEnv <- Redis.connectHedis hedisNonCriticalCfg modifierFunc commonRedisPrefix
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else Redis.connectHedisCluster hedisClusterCfg modifierFunc
+      else Redis.connectHedisCluster hedisClusterCfg modifierFunc commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else Redis.connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
+      else Redis.connectHedisCluster hedisNonCriticalClusterCfg modifierFunc commonRedisPrefix
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

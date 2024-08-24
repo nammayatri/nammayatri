@@ -30,4 +30,5 @@ in  { driverAllowedDelayForLocationUpdateInSec = +60
     , cacheConfig = appCfg.cacheConfig
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , commonRedisPrefix = ""
     }

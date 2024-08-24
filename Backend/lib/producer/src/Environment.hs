@@ -61,7 +61,8 @@ data AppCfg = AppCfg
     schedulerType :: SchedulerType,
     kvConfigUpdateFrequency :: Int,
     runReviver :: Bool,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    commonRedisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -104,24 +105,24 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
-  hedisEnv <- connectHedis hedisCfg id
+  hedisEnv <- connectHedis hedisCfg id commonRedisPrefix
   version <- lookupDeploymentVersion
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
-  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
+  hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id commonRedisPrefix
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Just kafkaProducerTools
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv
-      else connectHedisCluster hedisClusterCfg id
+      else connectHedisCluster hedisClusterCfg id commonRedisPrefix
   hedisNonCriticalClusterEnv <-
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
-      else connectHedisCluster hedisNonCriticalClusterCfg id
+      else connectHedisCluster hedisNonCriticalClusterCfg id commonRedisPrefix
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   pure $ AppEnv {..}
