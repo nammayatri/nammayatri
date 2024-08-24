@@ -114,7 +114,6 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , alignParentBottom "true,-1"
-            , visibility $ boolToVisibility (not state.props.isMockLocation)
             ][ PrimaryButton.view (push <<< PrimaryButtonAC ) (primaryButtonConfig state) ]
           ]
     ]
