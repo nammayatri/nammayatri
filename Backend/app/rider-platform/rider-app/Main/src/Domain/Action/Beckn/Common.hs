@@ -375,7 +375,7 @@ rideAssignedReqHandler req = do
       let BookingDetails {..} = req'.bookingDetails
       let fareParams = fromMaybe [] req'.fareBreakups
       ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount
-      let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
+      let applicationFeeAmountBreakups = ["INSURANCE_CHARGE"] -- Not adding `CARD_CHARGES_ON_FARE` and `CARD_CHARGES_FIXED` since Driver is MOR
       let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
