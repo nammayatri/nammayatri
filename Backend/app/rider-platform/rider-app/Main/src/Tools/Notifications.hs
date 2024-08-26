@@ -83,18 +83,6 @@ notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceToken = Person.clearDeviceTokenByPersonId
 
-notifyPersonWithMutableContent ::
-  ( ServiceFlow m r,
-    ToJSON a,
-    ToJSON b
-  ) =>
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  Id Person ->
-  Notification.NotificationReq a b ->
-  m ()
-notifyPersonWithMutableContent = runWithServiceConfig Notification.notifyPersonWithMutableContent (.notifyPerson)
-
 runWithServiceConfig ::
   ServiceFlow m r =>
   (Notification.NotificationServiceConfig -> req -> m () -> m resp) ->
@@ -741,7 +729,7 @@ notifyOnNewMessage booking message = do
         unwords
           [ message
           ]
-  notifyPersonWithMutableContent person.merchantId merchantOperatingCityId person.id notificationData
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 notifySafetyAlert ::
   ServiceFlow m r =>
