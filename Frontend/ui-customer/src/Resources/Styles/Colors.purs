@@ -429,7 +429,7 @@ manatee33 :: Color
 manatee33 = "#339A9CA1"
 
 gunMetal :: Color 
-gunMetal = "#282B35"
+gunMetal = "#2E303A"
 
 eerieBlack :: Color 
-eerieBlack = "#121319"
+eerieBlack = "#1A1C24"

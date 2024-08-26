@@ -310,7 +310,7 @@ subTitleView push state config action =
     [ textView
         $ [ height WRAP_CONTENT
           , width MATCH_PARENT
-          , text config.subTitleText
+          , textFromHtml config.subTitleText
           , color Color.black700
           ]
         <> FontStyle.body5 TypoGraphy

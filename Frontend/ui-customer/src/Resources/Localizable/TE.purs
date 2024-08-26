@@ -1146,7 +1146,7 @@ getTE stringKey =
     ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "కీల్లో 6 అంకి రిఫరల్ కోడ్ నమోదు చేయండి"
     APPLY -> "అప్లికేషన్ చేయండి"
     TOLL_CHARGES_INCLUDED -> "టోల్ ఛార్జీలు కలిగి ఉన్నాయి"
-    ONE_TAP_BOOKINGS -> "వన్-ట్యాప్ బుకింగ్‌లు"
+    ONE_TAP_BOOKINGS -> "ఒక క్లిక్ బుకింగ్‌లు"
     HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "మీ డ్రైవర్ మీ ప్రాధాన్యతను ప్రకారం సెట్ చేసాడా?"
     NO_REPORT_AN_ISSUE -> "లేదు, సమస్యను నివేదించండి"
     GREAT_ENJOY_THE_TRIP -> "బాగా ఆనందించండి!"

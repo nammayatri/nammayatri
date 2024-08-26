@@ -802,6 +802,7 @@ type HomeScreenStateProps =
   {
     currentStage :: Stage
   , showCallPopUp :: Boolean
+  , homeScreenPrimaryButtonLottie :: Boolean
   , rideRequestFlow :: Boolean
   , isSearchLocation :: SearchLocationModelType
   , isSource :: Maybe Boolean
@@ -2340,6 +2341,7 @@ type NammaSafetyScreenProps =  {
   timerId :: String,
   timerValue :: Int,
   enableLocalPoliceSupport :: Boolean,
+  isFromSafetyCenter :: Boolean,
   showInfoPopUp :: Boolean,
   localPoliceNumber :: String,
   showShimmer :: Boolean,

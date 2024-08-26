@@ -1132,7 +1132,7 @@ getML stringKey =
         ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "താഴെ 6 അക്കം റെഫറൽ കോഡ് നൽകുക"
         APPLY -> "അപേക്ഷിക്കുക"
         TOLL_CHARGES_INCLUDED -> "ടോൾ ചാർജുകൾ ഉൾപ്പെടുത്തിയിട്ടുണ്ട്"
-        ONE_TAP_BOOKINGS -> "ഒറ്റ ടാപ്പ് ബുക്കിംഗുകൾ"
+        ONE_TAP_BOOKINGS -> "ഒരു ക്ലിക്ക് ബുക്കിംഗ്"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "നിങ്ങളുടെ ഡ്രൈവർ എന്തുപോലെ ആസ്വദിക്കുന്നത് പുനഃപ്രയോഗിച്ചുകൊണ്ടാണ്?"
         NO_REPORT_AN_ISSUE -> "ഇല്ല, ഒരു സമസ്യ റിപ്പോർട്ട് ചെയ്യുക"
         GREAT_ENJOY_THE_TRIP -> "വളരെ നന്ദി! യാത്ര ആസ്വദിക്കുക"

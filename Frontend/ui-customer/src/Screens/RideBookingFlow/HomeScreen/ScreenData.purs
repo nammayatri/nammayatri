@@ -206,6 +206,7 @@ initData = let
     , destinationLong : 0.0
     , sourcePlaceId : Nothing
     , destinationPlaceId : Nothing
+    , homeScreenPrimaryButtonLottie : false
     , estimateId : ""
     , selectedQuote : Nothing
     , locationRequestCount : 0

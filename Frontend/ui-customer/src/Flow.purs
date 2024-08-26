@@ -270,7 +270,7 @@ dataFetchScreenFlow stageConfig stepVal = do
       updateSafetySettings state
       nammaSafetyFlow
     DataExplainWithFetchC.GoToSafetyDrill state -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
+      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true, isFromSafetyCenter = true } })
       activateSafetyScreenFlow
     _ -> homeScreenFlow
 
@@ -5490,7 +5490,12 @@ activateSafetyScreenFlow :: FlowBT String Unit
 activateSafetyScreenFlow = do
   flow <- UI.activateSafetyScreen
   case flow of
-    ActivateSafetyScreen.GoBack state -> homeScreenFlow
+    ActivateSafetyScreen.GoBack state -> 
+      if state.props.isFromSafetyCenter 
+        then do
+          modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { isFromSafetyCenter = false } })
+          dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ SafetyDrill []) 0
+        else homeScreenFlow
     ActivateSafetyScreen.GoToEmergencyContactScreen state -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { props { fromSosFlow = true, appName = state.props.appName }, data { emergencyContactsList = state.data.emergencyContactsList } })
       emergencyScreenFlow

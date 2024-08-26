@@ -135,6 +135,7 @@ initData =
         , enableLocalPoliceSupport: false
         , localPoliceNumber: ""
         , showShimmer: true
+        , isFromSafetyCenter : false
         , showTestDrill: false
         , confirmTestDrill: false
         , educationViewIndex: Nothing
