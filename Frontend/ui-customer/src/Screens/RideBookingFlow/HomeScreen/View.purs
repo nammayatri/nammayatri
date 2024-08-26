@@ -2460,7 +2460,7 @@ confirmPickUpLocationView push state =
                 , accessibility DISABLE
                 , gravity CENTER_HORIZONTAL
                 , height WRAP_CONTENT
-                , visibility $ boolToInvisibility $ isLocalStageOn EditPickUpLocation
+                , visibility $ boolToVisibility $ isLocalStageOn EditPickUpLocation
                 , width MATCH_PARENT
                 ] <> FontStyle.body2 TypoGraphy
 
@@ -3447,7 +3447,8 @@ nearByPickUpPointsView state push =
       let 
         menuBtnHeight = 56 -- Update Menu Button Height
         padding = 28
-        len = if (length nearByPickUpPoints > 3) then 3 else length nearByPickUpPoints
+        allowMaxLen = if state.props.currentStage /= EditPickUpLocation then 3 else 2
+        len = if (length nearByPickUpPoints > allowMaxLen) then allowMaxLen else length nearByPickUpPoints
         removeExtraPadding = if len > 1 then padding else 0
         pickUpPointViewHeight = len * menuBtnHeight + len * padding - removeExtraPadding
         finalHeight = if os == "IOS" 

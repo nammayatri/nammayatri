@@ -461,11 +461,11 @@ eval (UpdateCurrentStageStatus stage (RideBookingStatusRes resp)) newState = do
 eval (EditLocation isEditingPickup) state = do
   case isEditingPickup of
     DriverInfoCardController.SOURCE -> do
-      if (getValueToLocalNativeStore DRIVER_WITHIN_PICKUP_THRESHOLD)  == "false" then do
-        void $ pure $ toast $ getString DRIVER_ALMOST_AT_PICKUP
-        continue state
-      else if (state.data.driverInfoCardState.editPickupAttemptsLeft <= 0) then do
+      if (state.data.driverInfoCardState.editPickupAttemptsLeft <= 0) then do
         void $ pure $ toast $ getString MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED
+        continue state
+      else if (getValueToLocalNativeStore DRIVER_WITHIN_PICKUP_THRESHOLD)  == "false" then do
+        void $ pure $ toast $ getString DRIVER_ALMOST_AT_PICKUP
         continue state
       else do 
         void $ pure $ updateLocalStage EditPickUpLocation
