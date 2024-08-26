@@ -3250,7 +3250,11 @@ public class MobilityCommonBridge extends HyperBridge {
                 markerActionImage.setPadding(padding.left,padding.top,padding.right,padding.bottom);
             }
             parent.setVisibility(View.VISIBLE);
-            if (!imageBackground.equals("")) {
+                if (!imageBackground.equals("")) {
+                    parent.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ));
                 parent.setBackground(context.getResources().getDrawable(context.getResources().getIdentifier(imageBackground, "drawable", context.getPackageName())));
                 parent.setClickable(true);
             }

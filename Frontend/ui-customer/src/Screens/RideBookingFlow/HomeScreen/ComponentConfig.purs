@@ -2497,8 +2497,8 @@ getMarkerActionImageConifg state driverWithinPickupThreshold = do
   if conditionForPickupImage || conditionForDestinationImage then
     JB.defaultActionImageConfig {
       image = imageName,
-      height = 30,
-      width = 30,
+      height = if EHC.os == "IOS" then 30 else 28,
+      width = if EHC.os == "IOS" then 30 else 28,
       background = backgroundColor,
       orientation = "HORIZONTAL",
       padding = if EHC.os == "IOS" then {left : 12, top : 12, right : 12, bottom : 12} else {left : 16, top : 16, right : 16, bottom : 16},

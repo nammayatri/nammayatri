@@ -2650,7 +2650,7 @@ homeScreenFlow = do
       removeChatService ""
       homeScreenFlow
     FCM_NOTIFICATION notificationType state -> do
-      void $ pure $ removeAllPolylines ""
+      if (notificationType /= "EDIT_LOCATION") then void $ pure $ removeAllPolylines "" else pure unit
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showGenericAccessibilityPopUp = false}})
       case notificationType of
         "CANCELLED_PRODUCT" -> do
@@ -2683,8 +2683,11 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = not (homeScreen.data.activeRide.tripType == ST.Rental)}})
             homeScreenFlow
         "EDIT_LOCATION" -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {route = []}})
-          baseAppFlow false Nothing Nothing
+          if isNothing state.data.advancedRideData then do
+            void $ pure $ removeAllPolylines ""
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {route = []}})
+            baseAppFlow false Nothing Nothing
+          else pure unit
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
