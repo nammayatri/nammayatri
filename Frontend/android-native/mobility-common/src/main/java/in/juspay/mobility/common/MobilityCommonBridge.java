@@ -1075,7 +1075,6 @@ public class MobilityCommonBridge extends HyperBridge {
                 String labelActionImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelActionImage", "") : "";
                 LatLng markerLatlng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
                 JSONObject circleConfigJSON = payload.optJSONObject("circleConfig");
-                System.out.println("printing inside locateOnMap -> " + _payload);
                 CircleRippleEffectOptions circleConfig = setCircleConfigFromJSON(circleConfigJSON);
                 String circleId = payload.optString("circleId", "");
                 List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
@@ -1102,7 +1101,6 @@ public class MobilityCommonBridge extends HyperBridge {
 
                             if (googleMap != null && editLocation) {
                                 removeAllPolylines("");
-                                labelView.setVisibility(View.INVISIBLE);
                                 updateRippleCircleWithId(circleId, circleConfig, markerLatlng);
                             }
                             if (zoneMarkers != null) {
@@ -1132,8 +1130,6 @@ public class MobilityCommonBridge extends HyperBridge {
                         googleMap.setOnCameraMoveStartedListener(new GoogleMap.OnCameraMoveStartedListener() {
                             @Override
                             public void onCameraMoveStarted(int i) {
-                                if (labelView != null)
-                                    labelView.setVisibility(View.INVISIBLE);
                                 Marker m = zoneMarkers.get("selectedGate");
                                 if (m != null)
                                     m.setVisible(false);
