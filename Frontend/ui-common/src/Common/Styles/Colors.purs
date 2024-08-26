@@ -280,7 +280,7 @@ squidInkBlue :: Color
 squidInkBlue = "#303440"
 
 rippleShade :: Color
-rippleShade = "#D5D5D8"
+rippleShade = "#000000"
 green200 :: Color
 green200 = "#2053BB6F"
 

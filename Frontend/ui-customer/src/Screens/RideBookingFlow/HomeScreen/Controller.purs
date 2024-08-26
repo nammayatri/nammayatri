@@ -1155,7 +1155,7 @@ eval OpenSearchLocation state = do
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.PickupSearch" "true"
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
   _ <- pure $ updateLocalStage SearchLocationModel
-  exit $ UpdateSavedLocation state { props { isSource = Just false, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2},  rideSearchProps{ sessionId = generateSessionId unit }}, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
+  exit $ UpdateSavedLocation state { props { homeScreenPrimaryButtonLottie = true, isSource = Just false, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2},  rideSearchProps{ sessionId = generateSessionId unit }}, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
@@ -1654,7 +1654,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.EditTex
   else
     continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} , data{ locationList = if state.props.isSource == Just true then state.data.locationList else state.data.recentSearchs.predictionArray } }
 
-eval (SearchLocationModelActionController (SearchLocationModelController.NoAction)) state = continue state
+eval (SearchLocationModelActionController (SearchLocationModelController.NoAction)) state = continue state { props { homeScreenPrimaryButtonLottie = false}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceClear)) state = do
   void $ pure $ performHapticFeedback unit

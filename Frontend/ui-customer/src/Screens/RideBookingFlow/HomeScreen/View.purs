@@ -3567,7 +3567,7 @@ homeScreenContent push state =  let
       ][ mapView' push state "CustomerHomeScreenMap"
         , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
         , suggestionsView push state
-        , if isLocalStageOn HomeScreen then servicesView push state else linearLayout[visibility GONE][]
+        , servicesView push state
         , contentView state
         , exploreCitySection push state
       ]
@@ -3674,7 +3674,7 @@ verticalServiceView push index service =
   ]
 
 isHomeScreenView :: HomeScreenState -> Boolean
-isHomeScreenView state = state.props.currentStage == HomeScreen
+isHomeScreenView state = state.props.currentStage == HomeScreen || (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation && state.props.homeScreenPrimaryButtonLottie)
 
 footerView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 footerView push state = 
@@ -4005,7 +4005,6 @@ mapView' push state idTag =
           , width MATCH_PARENT
           , alignParentBottom "true,-1"
           , gradient (Linear 0.0 [Color.white900, Color.transparent])
-          , visibility $ boolToVisibility $ isLocalStageOn HomeScreen
           ][]
        ]
       , Tuple "TopGradient" $ relativeLayout 
@@ -4047,7 +4046,7 @@ mapView' push state idTag =
            , height $ V 32
            , width $ V 32
            ] 
-          , linearLayout
+          ,relativeLayout
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , margin $ Margin 16 16 16 0
@@ -4055,26 +4054,49 @@ mapView' push state idTag =
             , alignParentBottom "true,-1"
             , gradient (Linear 180.0 [Color.gunMetal, Color.eerieBlack])
             , cornerRadius 12.0
-            , rippleColor Color.rippleShade
-            , onClick push $ const  $ OpenSearchLocation
+            , rippleColor "#000000"
+            , onClick ( \action -> do
+                    void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "HomeScreenNewPrimaryButtonWithLottie"}
+                    push action
+                ) $ const OpenSearchLocation
             , gravity CENTER_VERTICAL
             , visibility $ boolToVisibility $ enableActions
             , accessibility ENABLE
             , accessibilityHint "Where are you going? : Button"
-            ][ imageView
-              [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_search_yellow"
-              , height $ V 16
-              , width $ V 16
-              , gravity CENTER_VERTICAL
-              , margin $ MarginRight 12
+            ][ 
+              linearLayout
+                [ height WRAP_CONTENT
+                , visibility $ boolToInvisibility $ not state.props.homeScreenPrimaryButtonLottie
+                , gravity CENTER_VERTICAL
+                , width MATCH_PARENT
+                ][
+                  imageView
+                  [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_search_yellow"
+                  , height $ V 16
+                  , width $ V 16
+                  , gravity CENTER_VERTICAL
+                  , margin $ MarginRight 12
+                  ]
+                , textView $ 
+                  [ text $ getString WHERE_ARE_YOU_GOING
+                  , color Color.yellow900
+                  , singleLine false
+                  , padding $ if (getLanguageLocale languageKey) == "EN_US" && os /= "IOS" then PaddingBottom 4 else PaddingBottom 0
+                  ] <> FontStyle.subHeading3 TypoGraphy
+                ]
+            , linearLayout
+              ([ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity CENTER
+              ])
+              [ lottieAnimationView
+                  [ id (getNewIDWithTag "HomeScreenNewPrimaryButtonWithLottie")
+                  , visibility $ boolToInvisibility state.props.homeScreenPrimaryButtonLottie
+                  , height $ V 27
+                  , width $ V 100
+                  ]
               ]
-            , textView $ 
-              [ text $ getString WHERE_ARE_YOU_GOING
-              , color Color.yellow900
-              , singleLine false
-              , padding $ if (getLanguageLocale languageKey) == "EN_US" && os /= "IOS" then PaddingBottom 4 else PaddingBottom 0
-              ] <> FontStyle.subHeading3 TypoGraphy
-            ] 
+            ]
       ]
   ]
   where 
@@ -4140,7 +4162,7 @@ getMapDimensions state =
   let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
                     getMapHeight state
                   else if (isHomeScreenView state) then
-                    V (getHeightFromPercent 50)
+                    V (getHeightFromPercent 40)
                   else if (state.data.fareProductType == FPT.RENTAL) then 
                     V (screenHeight unit - 100)
                   else MATCH_PARENT 

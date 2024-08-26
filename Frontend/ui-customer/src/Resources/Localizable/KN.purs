@@ -1135,7 +1135,7 @@ getKN stringKey =
         APPLY -> "ಅನ್ವಯಿಸು"
         BOOK_ANY -> "ಬುಕ್ ಯಾವುದಾದರೂ"
         TOLL_CHARGES_INCLUDED -> "ಟೋಲ್ ಶುಲ್ಕಗಳು ಸೇರಿವೆ"
-        ONE_TAP_BOOKINGS -> "ಒಂದು-ಟ್ಯಾಪ್ ಬುಕಿಂಗ್"
+        ONE_TAP_BOOKINGS -> "ಒಂದು ಟ್ಯಾಪ್ ಬುಕ್"
         HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "ನಿಮ್ಮ ಚಾಲಕ ನಿಮ್ಮ ಆದ್ಯತೆಯನ್ನು ಪ್ರಕಾರಕ್ಕೆ ಹೊಂದಿಸಿದ್ದಾರೆಯಾ?"
         NO_REPORT_AN_ISSUE -> "ಇಲ್ಲ, ಒಂದು ಸಮಸ್ಯೆಯನ್ನು ವರದಿಸಿ"
         GREAT_ENJOY_THE_TRIP -> "ಸವಾರಿಯನ್ನು ಆನಂದಿಸಿ!"

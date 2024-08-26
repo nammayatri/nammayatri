@@ -41,6 +41,7 @@ type Config
     , visibility :: Visibility
     , subTitle :: String
     , backgroundColor :: Color
+    , titleColor :: Color
     }
 
 config :: Config
@@ -51,4 +52,5 @@ config =
   , visibility: VISIBLE
   , subTitle: ""
   , backgroundColor: Colors.blue650
+  , titleColor: Colors.black900
   }

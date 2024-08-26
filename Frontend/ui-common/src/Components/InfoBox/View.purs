@@ -51,6 +51,7 @@ view push config =
         [ imageView -- Image
             [ height $ V 24
             , width $ V 24
+            , visibility $ boolToVisibility $ not String.null config.icon
             , margin $ Margin 0 0 8 0
             , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET config.icon -- "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png"
             ]
@@ -58,7 +59,7 @@ view push config =
             $ [ height WRAP_CONTENT
               , width WRAP_CONTENT
               , text $ config.text
-              , color Color.black900
+              , color config.titleColor
               ]
             <> FontStyle.body32 TypoGraphy
         ]

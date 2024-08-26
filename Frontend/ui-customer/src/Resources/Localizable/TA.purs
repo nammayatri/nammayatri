@@ -1149,7 +1149,7 @@ getTA stringKey =
     ENTER_6_DIGIT_REFERRAL_CODE_BELOW -> "கீழே 6 இலக்க பரிந்துரை குறியீடு உள்ளிடவும்"
     APPLY -> "விண்ணப்பிக்கவும்"
     TOLL_CHARGES_INCLUDED -> "டோல் கட்டணங்கள் சேர்க்கப்பட்டுள்ளன"
-    ONE_TAP_BOOKINGS -> "ஒரே தட்டி முன்பதிவுகள்"
+    ONE_TAP_BOOKINGS -> "ஒரு கிளிக் புக்"
     HAS_YOUR_DRIVER_SET_THE_AC_AS_PER_YOUR_PREFERENCE -> "உங்கள் டிரைவர் உங்கள் விருப்பம் போல ஏசியை அமைத்துவிட்டாரா?"
     NO_REPORT_AN_ISSUE -> "இல்லை, ஒரு சிக்கலை அறிக்கவும்"
     GREAT_ENJOY_THE_TRIP -> "மிகவும் நன்றி! பயணம் மகிழ்ச்சியுடன் கடைசியாக முடியும்."

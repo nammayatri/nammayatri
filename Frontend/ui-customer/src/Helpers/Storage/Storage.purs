@@ -22,6 +22,7 @@ import Data.Show.Generic (genericShow)
 import JBridge as JBridge
 import Screens.Types (Stage)
 import Types.App (FlowBT)
+import LocalStorage.Cache (getValueFromCache, setValueToCache)
 
 data KeyStore
   = USER_NAME_KEY
@@ -139,8 +140,13 @@ getValueToLocalNativeStore = JBridge.getKeyInNativeSharedPrefKeys <<< show
 deleteValueFromLocalNativeStore :: KeyStore -> FlowBT String Unit
 deleteValueFromLocalNativeStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKeysInNativeSharedPrefs <<< show
 
+-- TODO:: Make sure caching works before enabling it here
 updateLocalStage :: Stage -> FlowBT String Unit
+-- updateLocalStage stage = void $ pure $ setValueToCache "LOCAL_STAGE" stage show
 updateLocalStage = setValueToLocalStore LOCAL_STAGE <<< show
 
+
 isLocalStageOn :: Stage -> Boolean
+-- isLocalStageOn stage = show stage == getValueFromCache "LOCAL_STAGE" JBridge.getKeyInSharedPrefKeys
 isLocalStageOn stage = (getValueToLocalStore LOCAL_STAGE) == show stage
+
