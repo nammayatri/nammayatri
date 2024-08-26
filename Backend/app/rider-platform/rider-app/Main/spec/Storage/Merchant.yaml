@@ -298,8 +298,18 @@ MerchantServiceUsageConfig:
     updateAmountInPaymentIntent: PaymentService
     createSetupIntent: PaymentService
     deleteCard: PaymentService
+    cancelPaymentIntent: PaymentService
     updatedAt: UTCTime
     createdAt: UTCTime
+
+  beamType:
+    cancelPaymentIntent: Maybe PaymentService
+
+  fromTType:
+    cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
+
+  toTType:
+    cancelPaymentIntent: Kernel.Prelude.Just|I
 
   beamInstance:
     - MakeTableInstances
@@ -347,6 +357,7 @@ MerchantServiceUsageConfig:
     updatePaymentMethodInIntent: "'Stripe'"
     capturePaymentIntent: "'Stripe'"
     updateAmountInPaymentIntent: "'Stripe'"
+    cancelPaymentIntent: "'Stripe'"
     createSetupIntent: "'Stripe'"
     deleteCard: "'Stripe'"
     getDistancesForScheduledRides: "'OSRM'"

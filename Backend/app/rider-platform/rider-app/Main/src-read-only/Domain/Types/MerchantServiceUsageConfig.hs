@@ -23,6 +23,7 @@ import qualified Tools.Beam.UtilsTH
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { aadhaarVerificationService :: Kernel.External.AadhaarVerification.AadhaarVerificationService,
     autoComplete :: Kernel.External.Maps.Types.MapsService,
+    cancelPaymentIntent :: Kernel.External.Payment.Types.PaymentService,
     capturePaymentIntent :: Kernel.External.Payment.Types.PaymentService,
     createEphemeralKeys :: Kernel.External.Payment.Types.PaymentService,
     createPaymentCustomer :: Kernel.External.Payment.Types.PaymentService,

@@ -28,6 +28,7 @@ module Lib.Payment.Domain.Action
     createPayoutService,
     payoutStatusService,
     payoutStatusUpdates,
+    cancelPaymentIntentService,
   )
 where
 
@@ -266,6 +267,31 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
             createdAt = now,
             updatedAt = now
           }
+
+cancelPaymentIntentService ::
+  ( EncFlow m r,
+    BeamFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Id Ride ->
+  (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
+  m ()
+cancelPaymentIntentService rideId cancelPaymentIntentCall = do
+  mbExistingOrder <- QOrder.findById (cast rideId)
+  case mbExistingOrder of
+    Nothing -> logError $ "In cancel Payment Intent no order found for rideId : " <> rideId.getId
+    Just existingOrder -> do
+      resp <- try @_ @SomeException $ cancelPaymentIntentCall existingOrder.paymentServiceOrderId
+      case resp of
+        Left exec -> do
+          let err = fromException @Payment.StripeError exec
+              errorCode = err <&> toErrorCode
+              errorMessage = err >>= toMessage
+          logError $ "Error while cancelling payment intent : " <> show err <> "error code : " <> show errorCode <> "error message : " <> show errorMessage
+        Right paymentIntentResp -> do
+          transaction <- QTransaction.findByTxnId existingOrder.paymentServiceOrderId >>= fromMaybeM (InternalError $ "No transaction found: " <> existingOrder.paymentServiceOrderId)
+          QOrder.updateStatus existingOrder.id existingOrder.paymentServiceOrderId (Payment.castToTransactionStatus paymentIntentResp.status)
+          QTransaction.updateStatusAndError transaction.id (Payment.castToTransactionStatus paymentIntentResp.status) Nothing Nothing
 
 chargePaymentIntentService ::
   forall m r c.
