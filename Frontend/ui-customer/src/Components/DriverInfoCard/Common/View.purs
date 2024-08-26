@@ -350,6 +350,7 @@ sourceDestinationView push config =
         , visibility $ boolToVisibility $ (config.isEditPickupEnabled && config.rideAccepted)
         , onClick push $ const config.editingPickupLocation
         , rippleColor Color.rippleShade
+        , accessibility DISABLE
         ] <> FontStyle.body1 TypoGraphy
       ]
         , separator (MarginVertical 12 12) (V 1) Color.ghostWhite isNotRentalRide

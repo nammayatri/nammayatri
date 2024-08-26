@@ -202,6 +202,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     if (currMarker != null)
                         {
                             currMarker.setTitle("Vehicle Icon On Map");
+                            currMarker.hideInfoWindow();
                         }
                     Marker destMarker = (Marker) markers.get(dest);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
