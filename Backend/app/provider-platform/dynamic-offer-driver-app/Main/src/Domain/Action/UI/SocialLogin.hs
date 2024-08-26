@@ -153,6 +153,11 @@ postSocialUpdateProfile (mbPersonId, merchantId, _) req = do
             throwError $ DriverMobileAlreadyExists (show req.mobileNumber)
         _ -> return ()
     _ -> return ()
+  PQ.findByEmailAndMerchantIdAndRole (Just req.email) merchantId SP.DRIVER >>= \case
+    Just existingPerson
+      | personId /= existingPerson.id ->
+        throwError $ DriverEmailAlreadyExists (show req.email)
+    _ -> return ()
   let updatedPerson =
         person
           { SP.mobileCountryCode = req.mobileCountryCode <|> person.mobileCountryCode,
