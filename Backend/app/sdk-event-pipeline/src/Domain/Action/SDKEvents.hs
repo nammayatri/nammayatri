@@ -18,7 +18,7 @@ postSdkEvents :: SDKEventsReq -> Flow APISuccess
 postSdkEvents req = do
   --   apiRateLimitOptions <- asks (.apiRateLimitOptions)
   --   checkSlidingWindowLimitWithOptions ("rate-limit:" <> personId) apiRateLimitOptions
-  let clientType = DRIVER
+  let clientType = fromMaybe DRIVER req.clientType
       mbEvent :: Maybe A.Value = A.decode $ encodeUtf8 req.event
   whenJust mbEvent $ \event -> do
     case clientType of
@@ -28,4 +28,7 @@ postSdkEvents req = do
       DRIVER -> do
         driverSDKEventsKafkaTopic <- asks (.driverSDKEventsKafkaTopic)
         produceMessage (driverSDKEventsKafkaTopic, Nothing) event
+      METRO_WEBVIEW -> do
+        metroWebviewEventsKafkaTopic <- asks (.metroWebviewEventsKafkaTopic)
+        produceMessage (metroWebviewEventsKafkaTopic, Nothing) event
   return Success
