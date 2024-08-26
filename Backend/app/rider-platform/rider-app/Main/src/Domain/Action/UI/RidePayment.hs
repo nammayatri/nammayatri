@@ -174,13 +174,10 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
     email <- mapM decrypt person.email
-    let cardFixedCharges = HighPrecMoney 0.3
-    let cardPercentageCharges = 0.029 -- 2.9%
-    let applicationFeeAmount = HighPrecMoney (tipRequest.amount.amount.getHighPrecMoney * cardPercentageCharges) + cardFixedCharges
     let createPaymentIntentReq =
           Payment.CreatePaymentIntentReq
             { amount = tipRequest.amount.amount,
-              applicationFeeAmount,
+              applicationFeeAmount = HighPrecMoney 0.0, -- Driver is MOR, stripe fee will be automatically deducted
               currency = tipRequest.amount.currency,
               customer = customerPaymentId,
               paymentMethod = paymentMethodId,
