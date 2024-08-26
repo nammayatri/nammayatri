@@ -72,4 +72,5 @@
     <string name="third_party_booking">"তৃতীয় পক্ষের বুকিং"</string>
     <string name="parking_charges">%1$.0f₹ পার্কিং</string>
     <string name="includes">অন্তর্ভুক্ত</string>
+    <string name="take_clear_photo_of_package">প্যাকেজের একটি পরিষ্কার ছবি তুলুন</string>
 </resources>

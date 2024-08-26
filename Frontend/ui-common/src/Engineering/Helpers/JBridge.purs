@@ -95,7 +95,7 @@ foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) U
 -- foreign import getNearbyPlaces :: forall action. (action -> Effect Unit) -> (Place -> action) -> Effect Unit
 -- foreign import isNetworkAvailable :: Unit -> Boolean
 foreign import openUrlInApp  :: String -> Effect Unit
-foreign import renderCameraProfilePicture :: String -> Effect Unit
+foreign import renderCameraPicture :: String -> String -> Effect Unit
 foreign import openUrlInMailApp  :: String -> Effect Unit
 foreign import showMarkerImpl :: EffectFn1 ShowMarkerConfig Boolean
 foreign import fadeInFadeOutMarker :: Fn3 String String String Unit

@@ -35,7 +35,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText)
 import Engineering.Helpers.LogEvent (logEvent)
 import Helpers.Utils (contactSupportNumber)
-import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderBase64Image, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderBase64Image, renderCameraPicture, showDialer, uploadFile, renderBase64ImageFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (pure, (==), unit, void,  ($), class Show, bind, discard, (<), (<>), show, (+), (/=), (/), (&&), not)
@@ -259,7 +259,7 @@ eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutA
 eval (RemoveUploadedFile removeType) state = if(removeType == "front") then continue state{data{imageFront = ""}} else continue state{data{imageBack = ""}}
 eval (UploadFileAction clickedType) state = continueWithCmd (state {props {clickedButtonType = clickedType}}) [ pure UploadImage]
 eval (UploadImage) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
-     _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
+     _ <- liftEffect $ renderCameraPicture (getNewIDWithTag "ProfilePictureCaptureLayout") "PROFILE_PICTURE"
      pure NoAction
       ]
       

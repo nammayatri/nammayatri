@@ -39,7 +39,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Helpers.Utils (contactSupportNumber)
-import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraPicture, showDialer, uploadFile, renderBase64ImageFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void)
@@ -295,7 +295,7 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
       pure $ ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButtonController.OnClick))]
     else continue state{props{isValidState = false}}
 eval (UploadFile) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
-     _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
+     _ <- liftEffect $ renderCameraPicture (getNewIDWithTag "ProfilePictureCaptureLayout") "PROFILE_PICTURE"
      pure NoAction
       ]
 eval (VehicleRCNumber val) state = do

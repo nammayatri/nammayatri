@@ -1603,3 +1603,10 @@ getHI stringKey =
         TOTAL_EARNINGS_MISSED -> "कुल कमाई छूट गई"        
         COLLECT_CASH_AT_DROP -> "ड्रॉप पर नकद इकट्ठा करें"
         MORE_DETAILS -> "अधिक जानकारी"
+        TAKE_PHOTO_OF_PARCEL -> "पार्सल की फोटो लें"
+        SENDER_WILL_VERIFY_PARCEL -> "प्रेषक आपको OTP देने के लिए इस फोटो की पुष्टि करेगा"
+        CALL_CUSTOMER_TEXT -> "ग्राहक को कॉल करें"
+        CALL_SENDER -> "सेंडर को कॉल करें"
+        CALL_RECEIVER -> "रिसीवर को कॉल करें"
+        RETAKE_PHOTO -> "फिर से फोटो लें"
+        

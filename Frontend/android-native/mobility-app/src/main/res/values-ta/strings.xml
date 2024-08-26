@@ -78,4 +78,5 @@
     <string name="third_party_booking">"மூன்றாம் தரப்பு முன்பதிவு"</string>
     <string name="parking_charges">%1$.0f₹ பார்க்கிங்</string>
     <string name="includes">அடங்கும்</string>
+    <string name="take_clear_photo_of_package">பொருளின் தெளிவான புகைப்படத்தை எடுக்கவும்</string>
 </resources>

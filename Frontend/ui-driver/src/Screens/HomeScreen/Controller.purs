@@ -70,7 +70,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
 import Engineering.Helpers.Commons as EHC
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig, renderBase64Image)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
 import Engineering.Helpers.Utils (saveObject)
@@ -126,6 +126,7 @@ import Timers as TF
 import Data.Ord (abs)
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -303,6 +304,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | BenefitsScreen ST.HomeScreenState
                     | GotoAddUPIScreen ST.HomeScreenState
                     | VerifyManualUPI ST.HomeScreenState
+                    | UploadParcelImage ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -435,6 +437,8 @@ data Action = NoAction
             | UpdateSpecialZoneList
             | ReferralPopUpAction ST.HomeScreenPopUpTypes (Maybe KeyStore) PopUpModal.Action
             | AddAlternateNumberAction
+            | CloseDeliveryCallPopup
+            | DeliveryCall ST.DeliverCallType
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -870,6 +874,9 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
         else
           updateAndExit newState $ StartRide newState
 
+eval (InAppKeyboardModalAction (InAppKeyboardModal.RetakeParcelImage)) state = do
+  exit $ UploadParcelImage state
+
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do
   continue $ state { props = state.props { enterOtpModal = state.props.enterOdometerReadingModal, enterOdometerReadingModal = false,endRideOtpModal = state.props.endRideOdometerReadingModal,endRideOdometerReadingModal = false} }
 
@@ -919,11 +926,15 @@ eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index
 
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
+  if getValueToLocalStore PARCEL_IMAGE_UPLOADED /= "true" then do
+    exit $ UploadParcelImage state 
+  else
+    continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
+
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
-  if state.data.activeRide.tripType == ST.Rental then continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue=""}, data{route = []}}
-  else if state.data.activeRide.tripType == ST.Intercity then continue state { props{ endRideOtpModal = true, enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp = "" } }
-  else continue $ (state {props {endRidePopUp = true}, data {route = []}})
+  if Array.any (_ == state.data.activeRide.tripType) [ST.Rental, ST.Intercity, ST.Delivery] then 
+    continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue=""}, data{route = []}}
+  else continue state {props {endRidePopUp = true}, data {route = []}}
 
 eval (RideActionModalAction (RideActionModal.ArrivedAtStop)) state = do
   exit $ ArrivedAtStop state
@@ -956,15 +967,21 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
-  let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
-  updateWithCmdAndExit state [ do
-    void $ pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
-    _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
-    pure NoAction
-    ] $ CallCustomer state exophoneNumber
+  if state.data.activeRide.tripType == ST.Delivery && state.props.currentStage /= ST.RideStarted then
+    continue state{props{showDeliveryCallPopup = true}}
+  else do
+    let exoPhoneNo = if state.data.activeRide.tripType == ST.Delivery then maybe "0000" (\(API.PersonDetails det) -> det.phoneNumber) state.data.activeRide.receiverPersonDetails else state.data.activeRide.exoPhone
+    let exophoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
+    updateWithCmdAndExit state [ do
+      void $ pure $ showDialer exophoneNumber false
+      _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
+      pure NoAction
+      ] $ CallCustomer state exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick)) state = continue state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
 
+eval (RideActionModalAction (RideActionModal.MoreDetails)) state = do
+  continue state { props { isSourceDetailsExpanded = not state.props.isSourceDetailsExpanded } }
 
 eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state $ OpenPaymentPage state
 
@@ -974,6 +991,20 @@ eval (MakePaymentModalAC (MakePaymentModal.Info)) state = continue state{data { 
 
 eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = continue state{data { paymentState {showRateCard = false}}}
 
+eval (CloseDeliveryCallPopup) state = continue state{props{showDeliveryCallPopup = false}}
+
+eval (DeliveryCall item) state =  do
+  let exoPhoneNo = case item of
+        ST.SENDER -> maybe "0000" (\(API.PersonDetails det) -> det.phoneNumber) state.data.activeRide.senderPersonDetails
+        ST.RECEIVER -> maybe "0000" (\(API.PersonDetails det) -> det.phoneNumber) state.data.activeRide.receiverPersonDetails
+  let exoPhoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
+  let newState = state { props { showDeliveryCallPopup = false } }
+  updateWithCmdAndExit newState [ do
+    void $ pure $ showDialer exoPhoneNumber false 
+    _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
+    pure NoAction
+    ] $ CallCustomer newState exoPhoneNumber
+  
 ------------------------------- ChatService - Start --------------------------
 
 eval (OpenChatScreen) state = do

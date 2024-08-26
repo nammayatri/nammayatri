@@ -166,23 +166,25 @@ transformVehicleType vehicletype =
 
 decodeVehicleType :: String -> Maybe ST.VehicleCategory
 decodeVehicleType value = case value of
-  "AutoCategory" -> Just ST.AutoCategory
-  "CarCategory" -> Just ST.CarCategory
-  "BikeCategory" -> Just ST.BikeCategory
-  "AmbulanceCategory" -> Just ST.AmbulanceCategory
-  _ -> Nothing
+    "AutoCategory" -> Just ST.AutoCategory
+    "CarCategory" -> Just ST.CarCategory
+    "BikeCategory" -> Just ST.BikeCategory
+    "AmbulanceCategory" -> Just ST.AmbulanceCategory
+    _ -> Nothing
 rideTypeConstructor :: Maybe TripCategory -> ST.TripType
 rideTypeConstructor ( tripCategory) = 
-        case tripCategory of
-            Nothing -> ST.OneWay
-            Just (TripCategory tripCategory') ->
-                case toLower tripCategory'.tag of
-                        "oneway" -> ST.OneWay 
-                        "roundtrip" -> ST.RoundTrip
-                        "rental" -> ST.Rental
-                        "intercity" -> ST.Intercity
-                        "rideshare" -> ST.RideShare
-                        _ -> ST.OneWay
+  case tripCategory of
+    Nothing -> ST.OneWay
+    Just (TripCategory tripCategory') ->
+        case toLower tripCategory'.tag of
+                "oneway" -> ST.OneWay 
+                "roundtrip" -> ST.RoundTrip
+                "rental" -> ST.Rental
+                "intercity" -> ST.Intercity
+                "rideshare" -> ST.RideShare
+                "delivery" -> ST.Delivery
+                _ -> ST.OneWay
+
 
 constructLocationInfo :: Maybe Number -> Maybe Number -> Maybe LocationInfo
 constructLocationInfo (latitude) (longitude) = 
@@ -266,7 +268,7 @@ serviceTierMapping tierName acRide =
   case acRide, tierName of
     Just true, "AC Mini" -> "Mini"
     Just false, "Non-AC Mini" -> "Mini"
-    _ , "BIKE_DELIVERY" -> "Delivery"
+    _ , "DELIVERY_BIKE" -> "Delivery"
     _ , _ -> tierName
 
 defaultSliderDist :: Int

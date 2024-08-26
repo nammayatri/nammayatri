@@ -378,3 +378,7 @@ registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
 
 verifyUPI :: String -> String
 verifyUPI dummy = (getBaseUrl "") <> "/driver/profile/verify/vpaStatus"
+
+uploadParcelImage :: String -> String
+uploadParcelImage rideId = (getBaseUrl "") <> "/ride/" <> rideId <> "/uploadDeliveryImage"
+

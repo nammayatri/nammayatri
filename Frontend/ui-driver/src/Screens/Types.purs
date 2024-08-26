@@ -1308,7 +1308,9 @@ type HomeScreenProps =  {
   showReferNowPopUp :: Boolean,
   showAddUPIPopUp :: Boolean,
   showVerifyUPIPopUp :: Boolean,
-  chatServiceKilled :: Boolean
+  chatServiceKilled :: Boolean,
+  isSourceDetailsExpanded  :: Boolean,
+  showDeliveryCallPopup :: Boolean
  }
 
 type TollState = {
@@ -1318,6 +1320,13 @@ type TollState = {
 , tollAmbigous :: Boolean
 , estimatedCharge :: Number
 }
+
+data DeliverCallType = SENDER | RECEIVER
+derive instance genericDeliverCallType :: Generic DeliverCallType _
+instance eqDeliverCallType :: Eq DeliverCallType where eq = genericEq
+instance showDeliverCallType :: Show DeliverCallType where show = genericShow
+instance encodeDeliverCallType :: Encode DeliverCallType where encode = defaultEnumEncode
+instance decodeDeliverCallType :: Decode DeliverCallType where decode = defaultEnumDecode
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
 
@@ -2982,3 +2991,31 @@ type GullakSDKResp = {
   responseCode :: Int,
   isNewUser :: Boolean
 }
+
+type GullakSDKResp = {
+  amount :: Number,
+  quantity :: String,
+  responseMessage :: String,
+  responseCode :: Int,
+  isNewUser :: Boolean
+}
+
+-------------------------------------------------- Parcel Image Upload Screen ------------------------------------
+
+type UploadParcelImageScreenState = {
+  data :: UploadParcelImageScreenData ,
+  props :: UploadParcelImageScreenProps
+}
+
+type UploadParcelImageScreenData = {
+  rideId :: String,
+  imagePath :: String,
+  errorMessage :: Maybe String,
+  imageId :: String
+} 
+
+type UploadParcelImageScreenProps = {
+  showConfirmAndUploadButton :: Boolean,
+  isStartRideActive :: Boolean,
+  uploading :: Boolean
+} 

@@ -698,16 +698,6 @@ public class RideRequestUtils {
         });
     }
 
-    public static void updateDeliveryView(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
-        Handler mainLooper = new Handler(Looper.getMainLooper());
-        mainLooper.post(() -> {
-            if(!model.getRideProductType().equals(NotificationUtils.DELIVERY)){
-                return;
-            }
-        });
-    }
-        
-
     public static void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         if (model.isThirdPartyBooking()) {
             holder.thirdPartyTag.setVisibility(View.VISIBLE);

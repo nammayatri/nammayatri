@@ -667,6 +667,15 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     Utils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
                 }
                 break;
+            case IMAGE_PERMISSION_REQ_CODE_PROFILE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (cameraPermissionCallback != null) {
+                        cameraPermissionCallback.run();
+                    }
+                } else {
+                    Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
+                }
+                break;
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
@@ -705,17 +714,39 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
+    @SuppressLint("RestrictedApi")
+    public void stopCamera() {
+        Activity activity = bridgeComponents.getActivity();
+        if (activity == null) return;
+
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(activity);
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                cameraProvider.unbindAll();
+            } catch (ExecutionException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, ContextCompat.getMainExecutor(activity));
+    }
 
     @JavascriptInterface
-    public void renderCameraProfilePicture(String id) {
+    public void renderCameraPicture(String id, String layoutViewType) {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
         if (activity != null) {
             activity.runOnUiThread(() -> {
                 if (isCameraPermissionGranted()) {
-                    View profilePictureLayout = LayoutInflater.from(context).inflate(in.juspay.mobility.driver.R.layout.validate_documents_preview, null, false);
-                    previewView = profilePictureLayout.findViewById(in.juspay.mobility.driver.R.id.previewView);
-                    bCapture = profilePictureLayout.findViewById(in.juspay.mobility.driver.R.id.bCapture);
+                    View pictureLayout;
+                    switch (layoutViewType) {
+                        case "PROFILE_PICTURE":
+                            pictureLayout = LayoutInflater.from(context).inflate(in.juspay.mobility.driver.R.layout.validate_documents_preview, null);
+                            break;
+                        default:
+                            pictureLayout = LayoutInflater.from(context).inflate(in.juspay.mobility.driver.R.layout.capture_parcel_preview, null);
+                    }
+                    previewView = pictureLayout.findViewById(in.juspay.mobility.driver.R.id.previewView);
+                    bCapture = pictureLayout.findViewById(in.juspay.mobility.driver.R.id.bCapture);
                     bCapture.setOnClickListener(view -> capturePhoto());
                     ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(context);
                     cameraProviderFuture.addListener(() -> {
@@ -729,9 +760,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     }, ContextCompat.getMainExecutor(activity));
                     LinearLayout layout = activity.findViewById(Integer.parseInt(id));
                     layout.removeAllViews();
-                    layout.addView(profilePictureLayout);
+                    layout.addView(pictureLayout);
                 } else {
-                    requestCameraPermission(() -> renderCameraProfilePicture(id));
+                    requestCameraPermission(() -> renderCameraPicture(id,layoutViewType));
                 }
             });
         }
@@ -752,6 +783,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
                         Uri imageUri = outputFileResults.getSavedUri();
                         Utils.encodeImageToBase64(null, bridgeComponents.getContext(), imageUri);
+                        stopCamera();
                     }
 
                     @Override

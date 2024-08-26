@@ -105,12 +105,12 @@ rideActionModalConfig state =
                       else
                         (fromMaybe "" ((DS.split (DS.Pattern " ") (rideData.riderName)) DA.!! 0)),
     sourceAddress  {
-      titleText = if isDelivery then fromMaybe sourceAddressTitleText rideData.extraFromLocationInfo else sourceAddressTitleText,
-      detailText = rideData.source
+      titleText = sourceAddressTitleText,
+      detailText = (maybe "" (\addr -> addr <> ", ") rideData.extraFromLocationInfo) <> rideData.source
     },
     destinationAddress = (\destination -> {
-      titleText : if isDelivery then fromMaybe (destinationAddressTitleText destination) rideData.extraToLocationInfo else destinationAddressTitleText destination,
-      detailText : destination
+      titleText : destinationAddressTitleText destination,
+      detailText : (maybe "" (\addr -> addr <> ", " ) rideData.extraToLocationInfo) <> destination
     }) <$> state.data.activeRide.destination,
     stopAddress = (\stop -> {
       titleText : fromMaybe "" ((DS.split (DS.Pattern ",") stop) DA.!! 0),
@@ -142,7 +142,7 @@ rideActionModalConfig state =
     isOdometerReadingsRequired = state.props.isOdometerReadingsRequired,
     serviceTierAndAC = state.data.activeRide.serviceTier,
     capacity = state.data.activeRide.capacity,
-    acRide = if (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory then Nothing else state.data.activeRide.acRide,
+    acRide = isAcRide state,
     isAdvanced = (state.props.bookingStage == ADVANCED),
     bookingFromOtherPlatform = state.data.activeRide.bookingFromOtherPlatform,
     bapName = state.data.activeRide.bapName,
@@ -152,9 +152,13 @@ rideActionModalConfig state =
   , parkingCharge = state.data.activeRide.parkingCharge
   , isDelivery = isDelivery
   , delivery = if isDelivery then getDeliveryDetails state else Nothing
-  , isSourceExpanded = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then true else false
+  , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
+  , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
   }
   in rideActionModalConfig'
+  where 
+    isAcRide :: ST.HomeScreenState -> Maybe Boolean
+    isAcRide state = if (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory then Nothing else state.data.activeRide.acRide
 
 getDeliveryDetails :: ST.HomeScreenState -> Maybe RideActionModal.DeliveryDetails
 getDeliveryDetails state = 
@@ -801,6 +805,7 @@ enterOtpStateConfig state =
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
       modalType = ST.OTP,
+      showRetakeParcelImage = state.data.activeRide.tripType == ST.Delivery && state.props.currentStage == ST.RideAccepted,
       enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard,
       confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint
       }

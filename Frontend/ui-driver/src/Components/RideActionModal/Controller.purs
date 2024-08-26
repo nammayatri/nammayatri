@@ -40,7 +40,7 @@ data Action = StartRide
             | VisuallyImpairedCustomer
             | NoAction
             | ArrivedAtStop
-            | MoreDetails Boolean
+            | MoreDetails
 
 type Config = { 
   startRideActive :: Boolean,
@@ -85,7 +85,8 @@ type Config = {
   parkingCharge :: Number,
   isDelivery :: Boolean,
   delivery :: Mb.Maybe DeliveryDetails,
-  isSourceExpanded :: Boolean
+  isSourceDetailsExpanded :: Boolean,
+  isDestinationDetailsExpanded :: Boolean
 }
 
 type DeliveryDetails = {
@@ -156,5 +157,6 @@ config = {
   parkingCharge : 0.0,
   isDelivery : false,
   delivery : Nothing,
-  isSourceExpanded : false
+  isSourceDetailsExpanded : false,
+  isDestinationDetailsExpanded : false
 }

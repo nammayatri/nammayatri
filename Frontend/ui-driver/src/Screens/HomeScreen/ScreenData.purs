@@ -240,6 +240,8 @@ initData =
       , showAddUPIPopUp : false 
       , showVerifyUPIPopUp : false
       , chatServiceKilled : false
+      , isSourceDetailsExpanded : false
+      , showDeliveryCallPopup : false
       }
   }
 

@@ -2618,11 +2618,13 @@ export const isNetworkTimeEnabled = function () {
   return true;
 }
 
-export const renderCameraProfilePicture = function (id) {
-  return function () {
-    if (JBridge.renderCameraProfilePicture) {
-      return JBridge.renderCameraProfilePicture(id);
-    }
+export const renderCameraPicture = function (id) {
+  return function (layoutType) {
+    return function () {
+      if (JBridge.renderCameraPicture) {
+        return JBridge.renderCameraPicture(id,layoutType);
+      }
+    };
   };
 };
 

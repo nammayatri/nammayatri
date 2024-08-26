@@ -754,6 +754,9 @@
       "ys_ic_asansol_map" : true,
       "ny_ic_black_yellow_auto1" : true,
       "ny_ic_suv_plus_side" : true,
-      "ny_ic_suv_plus_left_side" : true
+      "ny_ic_suv_plus_left_side" : true,
+      "ny_ic_money_outline" : true,
+      "ic_phone_filled_green" : true,
+      "ic_phone_filled_red" : true
    }
 }
