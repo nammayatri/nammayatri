@@ -143,7 +143,7 @@ import Domain.Payments as PP
 import PrestoDOM.Core (terminateUI)
 import Helpers.Storage.Flow.BaseApp
 import Helpers.Storage.Flow.SearchStatus
-import Helpers.Logs  -- TODO :: Move helpers import into a single file and reexport
+import Helpers.Logs
 import Helpers.Auth
 import Helpers.Version
 import Helpers.Ride
