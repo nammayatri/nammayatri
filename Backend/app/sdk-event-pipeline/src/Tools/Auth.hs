@@ -15,6 +15,8 @@
 module Tools.Auth where
 
 import Control.Arrow
+import Data.Aeson
+import Data.Aeson.Types
 import Data.List (lookup)
 import Data.Text as T
 import Environment
@@ -40,7 +42,18 @@ import Servant.Client (HasClient (..))
 import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 
-data ClientType = RIDER | DRIVER
+data ClientType = RIDER | DRIVER | METRO_WEBVIEW
+
+instance FromJSON ClientType where
+  parseJSON (String "RiderApp") = return RIDER
+  parseJSON (String "DriverApp") = return DRIVER
+  parseJSON (String "MetroWebview") = return METRO_WEBVIEW
+  parseJSON wrongVal = typeMismatch "Invalid ClientType" wrongVal
+
+instance ToJSON ClientType where
+  toJSON RIDER = String "RiderApp"
+  toJSON DRIVER = String "DriverApp"
+  toJSON METRO_WEBVIEW = String "MetroWebview"
 
 data TokenAuth (tokenHeader :: Symbol) (clientTypeHeader :: Symbol)
 
