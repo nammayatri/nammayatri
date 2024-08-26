@@ -50,3 +50,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_distances_for
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN get_distances_for_scheduled_rides SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN cancel_payment_intent text  default 'Stripe';

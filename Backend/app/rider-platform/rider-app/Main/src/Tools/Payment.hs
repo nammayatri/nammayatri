@@ -30,6 +30,7 @@ module Tools.Payment
     createSetupIntent,
     deleteCard,
     getPaymentIntent,
+    cancelPaymentIntent,
   )
 where
 
@@ -42,6 +43,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import Domain.Types.TicketPlace
 import Kernel.External.Payment.Interface as Reexport hiding
   ( autoRefunds,
+    cancelPaymentIntent,
     capturePaymentIntent,
     createCustomer,
     createEphemeralKeys,
@@ -87,6 +89,9 @@ getCardList = runWithServiceConfig1 Payment.getCardList (.getCardList)
 
 createPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreatePaymentIntentReq -> m CreatePaymentIntentResp
 createPaymentIntent = runWithServiceConfig1 Payment.createPaymentIntent (.createPaymentIntent)
+
+cancelPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> m CreatePaymentIntentResp
+cancelPaymentIntent = runWithServiceConfig1 Payment.cancelPaymentIntent (.cancelPaymentIntent)
 
 getPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> m CreatePaymentIntentResp
 getPaymentIntent = runWithServiceConfig1 Payment.getPaymentIntent (.createPaymentIntent)

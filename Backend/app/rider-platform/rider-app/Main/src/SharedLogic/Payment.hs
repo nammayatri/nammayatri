@@ -47,6 +47,21 @@ makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentR
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
   DPayment.createPaymentIntentService commonMerchantId commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
 
+cancelPaymentIntent ::
+  ( MonadFlow m,
+    EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Ride.Ride ->
+  m ()
+cancelPaymentIntent merchantId merchantOpCityId rideId = do
+  let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
+  DPayment.cancelPaymentIntentService (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
+
 chargePaymentIntent ::
   ( MonadFlow m,
     EncFlow m r,

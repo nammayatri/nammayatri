@@ -6,7 +6,9 @@ module Storage.Queries.OrphanInstances.MerchantServiceUsageConfig where
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Payment.Types
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -19,6 +21,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
         Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsageConfig
           { aadhaarVerificationService = aadhaarVerificationService,
             autoComplete = autoComplete,
+            cancelPaymentIntent = fromMaybe Kernel.External.Payment.Types.Stripe cancelPaymentIntent,
             capturePaymentIntent = capturePaymentIntent,
             createEphemeralKeys = createEphemeralKeys,
             createPaymentCustomer = createPaymentCustomer,
@@ -56,6 +59,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
     Beam.MerchantServiceUsageConfigT
       { Beam.aadhaarVerificationService = aadhaarVerificationService,
         Beam.autoComplete = autoComplete,
+        Beam.cancelPaymentIntent = Kernel.Prelude.Just cancelPaymentIntent,
         Beam.capturePaymentIntent = capturePaymentIntent,
         Beam.createEphemeralKeys = createEphemeralKeys,
         Beam.createPaymentCustomer = createPaymentCustomer,
