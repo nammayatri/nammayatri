@@ -40,6 +40,7 @@ import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as DFParams
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as DFP
 import Domain.Types.TransporterConfig (AvgSpeedOfVechilePerKm)
 import EulerHS.Prelude hiding (id, map, sum)
 import Kernel.Prelude as KP
@@ -392,20 +393,30 @@ calculateFareParameters params = do
           estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
           estimatedDistanceInKm = estimatedDistance `div` 1000
           actualDistance = (.getMeters) <$> params.actualDistance
-          actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
+          actualDistanceInKm = fromMaybe 0 actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
           extraHoursSpent = max 0 (fromIntegral (allowanceMins' - defaultWaitTimeAtDestination.getMinutes) / 60.0) :: Double
           fareByDist = HighPrecMoney $ toRational ((extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers) + fromIntegral estimatedDistanceInKm) * fromRational (perKmRate.getHighPrecMoney)
 
+      let distPercent = case (actualDistance, estimatedDistance) of
+            (Just ad, ed) -> if ed == 0 then 1 else min 1 (fromIntegral ad / (fromIntegral ed :: Double))
+            _ -> 1
+          timePercent = if estimatedDuration == 0 then 1 else min 1 (fromIntegral actualDuration / (fromIntegral estimatedDuration :: Double))
+          pricingSlab = DFP.findFPInterCityDetailsByTimeAndDistancePercentage (round $ timePercent * 100) (round $ distPercent * 100) pricingSlabs
+          distTimePercentApplied = (if pricingSlab.includeActualTimePercentage then timePercent else 0) + (if pricingSlab.includeActualDistPercentage then distPercent else 0)
+          baseFare_ = HighPrecMoney (toRational (min 1 (distTimePercentApplied + (fromIntegral pricingSlab.farePercentage / 100 :: Double))) * baseFare.getHighPrecMoney)
+          fareByTime_ = HighPrecMoney (toRational (min 1 (distTimePercentApplied + (fromIntegral pricingSlab.farePercentage / 100 :: Double))) * fareByTime.getHighPrecMoney)
+          fareByDist_ = HighPrecMoney (toRational (min 1 (distTimePercentApplied + (fromIntegral pricingSlab.farePercentage / 100 :: Double))) * fareByDist.getHighPrecMoney)
+
       ( [],
-        baseFare,
+        baseFare_,
         nightShiftCharge,
         Nothing,
         DFParams.InterCityDetails $
           DFParams.FParamsInterCityDetails
-            { timeFare = fareByTime,
-              distanceFare = fareByDist,
+            { timeFare = fareByTime_,
+              distanceFare = fareByDist_,
               pickupCharge = deadKmFare,
               extraDistanceFare,
               extraTimeFare,
@@ -424,14 +435,22 @@ calculateFareParameters params = do
       let estimatedDistance = (.getMeters) <$> params.estimatedDistance
           estimatedDistanceInKm = max (estimatedDurationInHr * includedKmPerHr.getKilometers) (fromMaybe 0 estimatedDistance `div` 1000)
           actualDistance = (.getMeters) <$> params.actualDistance
-          actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
-          extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
+          extraDist = max 0 (fromMaybe 0 actualDistance - fromMaybe 0 estimatedDistance)
           distanceBuffer = DFP.findFPRentalDetailsByDuration actualRideDurationInHr distanceBuffers
-          fareByDist = if extraDist > distanceBuffer.bufferKms then HighPrecMoney (toRational extraDist * perExtraKmRate.getHighPrecMoney) else 0
+          fareByDist = if extraDist > distanceBuffer.bufferMeters then HighPrecMoney (toRational (fromIntegral extraDist / 1000 :: Double) * perExtraKmRate.getHighPrecMoney) else 0
 
       let extraPlannedKm = max 0 (estimatedDistanceInKm - (estimatedDurationInHr * includedKmPerHr.getKilometers))
-          extraPlannedKmFare = HighPrecMoney $ toRational extraPlannedKm * plannedPerKmRate.getHighPrecMoney
-          baseFare_ = HighPrecMoney (toRational estimatedDurationInHr * perHourCharge.getHighPrecMoney) + extraPlannedKmFare
+          extraPlannedKmFare = toRational extraPlannedKm * plannedPerKmRate.getHighPrecMoney
+          potentialBaseFare = toRational estimatedDurationInHr * perHourCharge.getHighPrecMoney + extraPlannedKmFare
+
+      let distPercent = case (actualDistance, estimatedDistance) of
+            (Just ad, Just ed) -> if ed == 0 then 1 else min 1 (fromIntegral ad / (fromIntegral ed :: Double))
+            _ -> 1
+          timePercent = if estimatedDuration == 0 then 1 else min 1 (fromIntegral actualDuration / (fromIntegral estimatedDuration :: Double))
+          pricingSlab = DFP.findFPRentalDetailsByTimeAndDistancePercentage (round $ timePercent * 100) (round $ distPercent * 100) pricingSlabs
+          distTimePercentApplied = (if pricingSlab.includeActualTimePercentage then timePercent else 0) + (if pricingSlab.includeActualDistPercentage then distPercent else 0)
+          baseFare_ = HighPrecMoney (toRational (min 1 (distTimePercentApplied + (fromIntegral pricingSlab.farePercentage / 100 :: Double))) * potentialBaseFare)
+
       ( [],
         baseFare_,
         nightShiftCharge,

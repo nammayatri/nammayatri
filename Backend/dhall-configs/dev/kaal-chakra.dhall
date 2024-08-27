@@ -74,7 +74,6 @@ let schedulerConfig =
           //  { logRawSql = True
               , logFilePath = "/tmp/kaal-chakra-allocator.log"
               , prettyPrinting = True
-              , logLevel = common.logLevel.ERROR
               }
       , esqDBCfg
       , metricsPort = +8057

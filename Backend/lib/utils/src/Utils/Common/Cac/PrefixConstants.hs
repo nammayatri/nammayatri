@@ -34,6 +34,8 @@ data CacPrefix
   | FarePolicyInterCityDetails
   | FarePolicyAmbulanceDetailsSlab
   | FarePolicyRentalDetailsDistanceBuffers
+  | FarePolicyRentalDetailsPricingSlabs
+  | FarePolicyInterCityDetailsPricingSlabs
   | MerchantServiceUsageConfig
   | Empty
   deriving (Eq)
@@ -53,6 +55,8 @@ instance Show CacPrefix where
   show FarePolicyInterCityDetails = "farePolicyInterCityDetails:"
   show FarePolicyAmbulanceDetailsSlab = "farePolicyAmbulanceDetailsSlab:"
   show FarePolicyRentalDetailsDistanceBuffers = "farePolicyRentalDetailsDistanceBuffers:"
+  show FarePolicyRentalDetailsPricingSlabs = "farePolicyRentalDetailsPricingSlabs:"
+  show FarePolicyInterCityDetailsPricingSlabs = "farePolicyInterCityDetailsPricingSlabs:"
   show MerchantServiceUsageConfig = "merchantServiceUsageConfig:"
   show Empty = ""
 

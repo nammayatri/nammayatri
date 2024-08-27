@@ -18,6 +18,7 @@ import Data.List.NonEmpty as NE
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Common as DFPC
 import Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer as Reexport
+import Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
 
@@ -33,6 +34,7 @@ data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
     deadKmFare :: HighPrecMoney,
     maxAdditionalKmsLimit :: Kilometers,
     totalAdditionalKmsLimit :: Kilometers,
+    pricingSlabs :: NonEmpty (FPRentalDetailsPricingSlabsD s),
     nightShiftCharge :: Maybe DFPC.NightShiftCharge,
     waitingChargeInfo :: Maybe DFPC.WaitingChargeInfo
   }
