@@ -21,7 +21,8 @@ import Tools.Beam.UtilsTH
 data FarePolicyRentalDetailsDistanceBuffersT f = FarePolicyRentalDetailsDistanceBuffersT
   { farePolicyId :: B.C f Text,
     rideDuration :: B.C f Seconds,
-    bufferKms :: B.C f Int
+    bufferKms :: B.C f Int,
+    bufferMeters :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 

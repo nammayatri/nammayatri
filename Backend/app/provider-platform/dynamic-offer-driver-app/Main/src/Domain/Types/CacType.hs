@@ -9,10 +9,12 @@ import Storage.Beam.DriverPoolConfig as DPC
 import qualified Storage.Beam.FarePolicy as FP
 import qualified Storage.Beam.FarePolicy.DriverExtraFeeBounds as DEFB
 import qualified Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab as FPAD
+import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as FPICDPS
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails as FPFB
 import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as FPPDPEKRS
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails as FPRD
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers as FPRDDB
+import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as FPRDPS
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FPSS
 import Storage.Beam.GoHomeConfig as GHC
 import Storage.Beam.TransporterConfig as MTC
@@ -28,6 +30,8 @@ checkParseCommon (key, value) = do
         "goHomeConfig" -> checkParse (Proxy @GHC.GoHomeConfigT) tableColumn value
         "farePolicyProgressiveDetailsPerExtraKmRateSection" -> checkParse (Proxy @[FPPDPEKRS.FarePolicyProgressiveDetailsPerExtraKmRateSection]) tableColumn value
         "farePolicyRentalDetailsDistanceBuffers" -> checkParse (Proxy @[FPRDDB.FarePolicyRentalDetailsDistanceBuffers]) tableColumn value
+        "farePolicyRentalDetailsPricingSlabs" -> checkParse (Proxy @[FPRDPS.FarePolicyRentalDetailsPricingSlabs]) tableColumn value
+        "farePolicyInterCityDetailsPricingSlabs" -> checkParse (Proxy @[FPICDPS.FarePolicyInterCityDetailsPricingSlabs]) tableColumn value
         "farePolicySlabsDetailsSlab" -> checkParse (Proxy @[FPSS.FarePolicySlabsDetailsSlab]) tableColumn value
         "driverExtraFeeBounds" -> checkParse (Proxy @DEFB.DriverExtraFeeBoundsT) tableColumn value
         "farePolicyProgressiveDetails" -> checkParse (Proxy @FPFB.FarePolicyProgressiveDetailsT) tableColumn value

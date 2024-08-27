@@ -264,11 +264,13 @@ library
       Domain.Types.FarePolicy.DriverExtraFeeBounds
       Domain.Types.FarePolicy.FarePolicyAmbulanceDetails
       Domain.Types.FarePolicy.FarePolicyInterCityDetails
+      Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.FarePolicy.FarePolicyRentalDetails
       Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer
+      Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
@@ -363,10 +365,12 @@ library
       Storage.Beam.FarePolicy.DriverExtraFeeBounds
       Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab
       Storage.Beam.FarePolicy.FarePolicyInterCityDetails
+      Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Beam.FarePolicy.FarePolicyRentalDetails
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
+      Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
       Storage.Beam.Feedback.FeedbackBadge
       Storage.Beam.Feedback.FeedbackForm
@@ -389,11 +393,13 @@ library
       Storage.Cac.FarePolicy.DriverExtraFeeBounds
       Storage.Cac.FarePolicy.FarePolicyAmbulanceDetails
       Storage.Cac.FarePolicy.FarePolicyInterCityDetails
+      Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
       Storage.Cac.FarePolicy.FarePolicyRentalDetails
       Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
+      Storage.Cac.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Storage.Cac.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Cac.GoHomeConfig
       Storage.Cac.MerchantServiceUsageConfig
@@ -488,11 +494,13 @@ library
       Storage.Queries.FarePolicy.DriverExtraFeeBounds
       Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab
       Storage.Queries.FarePolicy.FarePolicyInterCityDetails
+      Storage.Queries.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.FarePolicy.FarePolicyRentalDetails
       Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
+      Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProductExtra
       Storage.Queries.Feedback.FeedbackBadge
