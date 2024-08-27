@@ -30,7 +30,6 @@ import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.BottomNavBar as BottomNavBar
 import Components.ChatView as ChatView
-import Components.ChatView as ChatView
 import Components.ErrorModal.Controller as ErrorModalController
 import Components.GoToLocationModal as GoToLocationModal
 import Components.InAppKeyboardModal as InAppKeyboardModal

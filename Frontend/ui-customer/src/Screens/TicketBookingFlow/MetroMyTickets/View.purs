@@ -83,7 +83,7 @@ view push state =
   , orientation VERTICAL
   , afterRender push $ const AfterRender
   ] [ headerView push state
-    , emptyTicketsView push (boolToVisibility etvVisibility)
+    , emptyTicketsView state push (boolToVisibility etvVisibility)
     , scrollableView push state (boolToVisibility$ not etvVisibility)
     ]
 
@@ -121,8 +121,8 @@ shimmerView state =
       )
     ]
 
-emptyTicketsView :: forall w . (Action -> Effect Unit) -> Visibility -> PrestoDOM (Effect Unit) w
-emptyTicketsView push etvVisibility = 
+emptyTicketsView :: forall w . ST.MetroMyTicketsScreenState -> (Action -> Effect Unit) -> Visibility -> PrestoDOM (Effect Unit) w
+emptyTicketsView state push etvVisibility = 
   linearLayout[
     height MATCH_PARENT
   , width MATCH_PARENT
@@ -152,11 +152,11 @@ emptyTicketsView push etvVisibility =
       , margin $ MarginTop 5
       ] <> FontStyle.paragraphText TypoGraphy
     ]
-    , bookTicketsButtonView push
+    , bookTicketsButtonView state push
   ]
 
-bookTicketsButtonView :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-bookTicketsButtonView push = 
+bookTicketsButtonView :: forall w. ST.MetroMyTicketsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bookTicketsButtonView state push = 
   linearLayout
   [ orientation VERTICAL
   , height WRAP_CONTENT
@@ -164,6 +164,7 @@ bookTicketsButtonView push =
   , background Color.white900
   , padding $ PaddingVertical 5 24
   , alignParentBottom "true,-1"
+  , visibility $ boolToVisibility (not state.data.userBlocked)
   ][  linearLayout
       [ height $ V 1
       , width MATCH_PARENT

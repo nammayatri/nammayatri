@@ -205,6 +205,9 @@ _authData = lens (unwrap >>> _.authData) (\oldRec newVal -> wrap ((unwrap oldRec
 _maskedMobileNumber :: forall a b c. Newtype a { maskedMobileNumber :: b | c } => Lens' a b
 _maskedMobileNumber = lens (unwrap >>> _.maskedMobileNumber) (\oldRec newVal -> wrap ((unwrap oldRec) { maskedMobileNumber = newVal }))
 
+_isBlocked :: forall a b c. Newtype a { isBlocked :: b | c } => Lens' a b
+_isBlocked = lens (unwrap >>> _.isBlocked) (\oldRec newVal -> wrap ((unwrap oldRec) { isBlocked = newVal }))
+
 _major :: forall a b c. Newtype a { major :: b | c } => Lens' a b
 _major = lens (unwrap >>> _.major) (\oldRec newVal -> wrap ((unwrap oldRec) { major = newVal }))
 

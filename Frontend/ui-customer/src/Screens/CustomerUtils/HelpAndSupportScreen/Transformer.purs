@@ -251,6 +251,8 @@ topicsList state =
         , categoryId: "5"
         , isRideRequired: false
         , maxAllowedRideAge: Nothing
+        , allowedRideStatuses : Nothing
+        , categoryType: "Category"
         }
       , { categoryAction: Just "CALL_SUPPORT"
         , categoryName: getString CONTACT_SUPPORT
@@ -258,6 +260,8 @@ topicsList state =
         , categoryId: "6"
         , isRideRequired: false
         , maxAllowedRideAge: Nothing
+        , allowedRideStatuses : Nothing
+        , categoryType: "Category"
         }
       ]
   )
@@ -268,6 +272,8 @@ topicsList state =
           , categoryId: "7"
           , isRideRequired: false
           , maxAllowedRideAge: Nothing
+          , allowedRideStatuses: Nothing
+          , categoryType: "Category"
           }
         ]
       else
@@ -280,11 +286,13 @@ reportsList state =
           []
         else
           [ { categoryAction: Just "REPORTED"
-            , categoryName: getString REPORTED <> " : " <> (toStringJSON (DA.length (state.data.ongoingIssueList)))
+            , categoryName: getString ACTIVE_STR <> " : " <> (toStringJSON (DA.length (state.data.ongoingIssueList)))
             , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_reported"
             , categoryId: "1"
+            , categoryType: ""
             , isRideRequired: false
             , maxAllowedRideAge: Nothing
+            , allowedRideStatuses: Nothing
             }
           ]
       )
@@ -295,8 +303,10 @@ reportsList state =
             , categoryName: getString RESOLVED <> " : " <> (toStringJSON (DA.length (state.data.resolvedIssueList)))
             , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_resolved"
             , categoryId: "2"
+            , categoryType: ""
             , isRideRequired: false
             , maxAllowedRideAge: Nothing
+            , allowedRideStatuses: Nothing
             }
           ]
       )

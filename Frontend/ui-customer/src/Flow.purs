@@ -557,6 +557,7 @@ currentFlowStatus = do
                 , sosBannerType = sosBannerType
                 , followsRide = fromMaybe false (response ^. _followsRide)
                 , isSafetyCenterDisabled = fromMaybe false (response ^. _isSafetyCenterDisabled)
+                , userBlocked = fromMaybe false (response ^. _isBlocked)
                 }
               }
 
@@ -756,7 +757,7 @@ enterMobileNumberScreenFlow = do
       (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode (show state.data.otpChannel))
       void $ pure $ toast (getString if state.data.otpChannel == SMS then STR.SENT_OTP_VIA_SMS else STR.SENT_OTP_VIA_WHATSAPP)
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts }, props { enterOTP = true, resendEnable = false } })
-      modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { settingSideBar { number = state.data.mobileNumber } } })
+      modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { settingSideBar { number = state.data.mobileNumber } }, props { userBlocked = triggerOtpResp.isPersonBlocked } })
       enterMobileNumberScreenFlow
     ResendOTP state -> do
       (ResendOTPResp resendResp) <- Remote.resendOTPBT state.data.tokenId
@@ -2251,7 +2252,7 @@ homeScreenFlow = do
         true -> do
           let
             isRideCompleted = state.props.currentStage == RideCompleted
-          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] state.data.config else Nothing } })
+          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.data.ratingViewState.rideBookingRes ] state.data.config Nothing else Nothing } })
           activateSafetyScreenFlow
         false -> nammaSafetyFlow
     -- GO_TO_NAMMASAFETY state triggerSos showtestDrill -> nammaSafetyFlow
@@ -2350,10 +2351,10 @@ homeScreenFlow = do
             )
             getOptionsRes.messages
       void $ pure $ cleverTapCustomEvent "ny_user_report_safety_issue_activated"
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just state.data.rideRatingState.rideId, selectedCategory = { categoryName : "Safety Related Issue", categoryId : "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing} , options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just state.data.rideRatingState.rideId, selectedCategory = { categoryName : "Safety Related Issue", categoryId : "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing, categoryType : "Category", allowedRideStatuses : Nothing} , options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
       flowRouter IssueReportChatScreenFlow
-    GO_TO_MY_METRO_TICKETS -> do
-      modifyScreenState $ MetroMyTicketsScreenStateType (\state -> state { props { entryPoint = ST.HomeScreenToMetroMyTickets } })
+    GO_TO_MY_METRO_TICKETS homeScreenState -> do
+      modifyScreenState $ MetroMyTicketsScreenStateType (\state -> state { data {userBlocked = homeScreenState.props.userBlocked }, props { entryPoint = ST.HomeScreenToMetroMyTickets} })
       metroMyTicketsFlow
     GO_TO_SAFETY_EDUCATION -> do
       let
@@ -2417,7 +2418,7 @@ homeScreenFlow = do
                 )
                 getOptionsRes.messages
           void $ lift $ lift $ toggleLoader false
-          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, selectedCategory = { categoryName : "Ride Related Issue", categoryId : categoryId, categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing}, options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
+          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, selectedCategory = { categoryName : "Ride Related Issue", categoryId : categoryId, categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing, categoryType : "Category", allowedRideStatuses : Nothing}, options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
           flowRouter IssueReportChatScreenFlow
         Nothing -> do
           void $ lift $ lift $ toggleLoader false
@@ -2455,6 +2456,8 @@ homeScreenFlow = do
             , categoryAction : Nothing
             , isRideRequired : false
             , maxAllowedRideAge : Nothing
+            , categoryType : "Category"
+            , allowedRideStatuses : Nothing
           }
           , options = getOptionsRes'
           , chatConfig {
@@ -2917,6 +2920,7 @@ tripDetailsScreenFlow = do
   case flow of
     GO_TO_HELPSCREEN -> flowRouter HelpAndSupportScreenFlow
     GO_TO_RIDES -> myRidesScreenFlow 
+    GO_TO_REPORT_ISSUE_CHAT_SCREEN -> flowRouter IssueReportChatScreenFlow
     GO_TO_INVOICE updatedState -> do
       liftFlowBT $ logEventWithMultipleParams logField_ "ny_user_invoice_clicked"
         $ [ { key: "Pickup", value: unsafeToForeign updatedState.data.selectedItem.source }
@@ -2947,14 +2951,9 @@ tripDetailsScreenFlow = do
       tripDetailsScreenFlow 
     GET_CATEGORIES_LIST updatedState -> do 
       let language = fetchLanguage $ getLanguageLocale languageKey
-          categoryOrder = ["LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED"]
-          compareByOrder a b =
-            let indexA = fromMaybe (length categoryOrder) (a.categoryAction >>= flip elemIndex categoryOrder)
-                indexB = fromMaybe (length categoryOrder) (b.categoryAction >>= flip elemIndex categoryOrder)
-            in compare indexA indexB
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let unsortedCatagory = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired, maxAllowedRideAge : catObj.maxAllowedRideAge}) response.categories
-          categories' = sortBy compareByOrder unsortedCatagory
+      let selfServeCategories = filter (\(Category category) -> category.categoryType == "Category") response.categories
+          categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired, maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType, allowedRideStatuses : catObj.allowedRideStatuses}) selfServeCategories
       modifyScreenState $ TripDetailsScreenStateType (\helpAndSupportScreen -> updatedState { data {categories = categories' }, props { fromMyRides = updatedState.props.fromMyRides} } )
       tripDetailsScreenFlow 
     GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
@@ -2966,8 +2965,7 @@ tripDetailsScreenFlow = do
                                 pure $ getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] issues 
                               else pure []
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" updatedState.data.selectedItem.rideId ""
-      let filteredOptions = UI.transformIssueOptions getOptionsRes.options (Just updatedState.data.selectedItem) currentIssueList updatedState.data.config.cityConfig
-          options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) filteredOptions
+      let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
           chats' = map (\(Message currMessage) -> Chat {
                       chatId : currMessage.id,
@@ -5548,7 +5546,7 @@ activateSafetyScreenFlow = do
             )
             getOptionsRes.messages
       void $ pure $ cleverTapCustomEvent "ny_user_report_safety_issue_activated"
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.SafetyScreen, chats = chats', tripId = Just state.data.rideId, selectedCategory = { categoryName : "Safety Related Issue", categoryId : "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing} , options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.SafetyScreen, chats = chats', tripId = Just state.data.rideId, selectedCategory = { categoryName : "Safety Related Issue", categoryId : "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing, categoryType : "Category", allowedRideStatuses : Nothing} , options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
       flowRouter IssueReportChatScreenFlow
     ActivateSafetyScreen.NotifyMockDrill state -> do
       _ <- lift $ lift $ Remote.createMockSos (not $ DS.null state.data.rideId) true
@@ -5796,8 +5794,9 @@ fetchParticularIssueCategory categoryLabel = do
   let
     language = fetchLanguage $ getLanguageLocale languageKey
   (GetCategoriesRes response) <- Remote.getCategoriesBT language
-  let
-    category = Arr.find (\(Category item) -> item.label == categoryLabel) response.categories
+  let 
+    selfServeCategories = filter (\(Category category) -> category.categoryType == "Category") response.categories
+    category = Arr.find (\(Category item) -> item.label == categoryLabel) selfServeCategories
   case category of
     Just (Category item) -> pure $ Just item.issueCategoryId
     Nothing -> pure Nothing

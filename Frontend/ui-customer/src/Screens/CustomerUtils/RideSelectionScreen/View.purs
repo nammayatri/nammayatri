@@ -255,8 +255,7 @@ getPastRides action push state = do
   rideBookingListResponse <- Remote.rideBookingList "8" (show state.data.offsetValue) "false"
   case rideBookingListResponse of
       Right (RideBookingListRes listResp) -> do
-          let filteredRides = filterRides state.selectedCategory listResp.list
-          doAff do liftEffect $ push $ action (RideBookingListRes {list : filteredRides}) "success"
+          doAff do liftEffect $ push $ action (RideBookingListRes {list : listResp.list}) "success"
           pure unit
       Left err -> do
         doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) if err.code == 500 then "listCompleted" else "failure"

@@ -112,7 +112,6 @@ import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
-import Debug
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -983,6 +982,7 @@ getPurpleRideConfigForVehicle linkedVehicleVariant purpleRideConfigForCity =
     "BIKE" -> purpleRideConfigForCity.purpleRideConfigForBikes
     _ -> purpleRideConfigForCity.purpleRideConfigForCabs
 
+    
 sortIssueCategories :: String -> GetCategoriesRes -> Array CategoryListType 
 sortIssueCategories language (GetCategoriesRes response) =
   let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
@@ -1004,6 +1004,8 @@ categoryTransformer categories language =
     , categoryAction   : Just catObj.label
     , categoryImageUrl : Just catObj.logoUrl
     , isRideRequired : catObj.isRideRequired
-    , maxAllowedRideAge : Nothing
+    , maxAllowedRideAge : catObj.maxAllowedRideAge
+    , categoryType : catObj.categoryType
+    , allowedRideStatuses : catObj.allowedRideStatuses
     }) categories
     

@@ -498,6 +498,8 @@ type CategoryListType = {
   , categoryId :: String
   , isRideRequired :: Boolean
   , maxAllowedRideAge :: Maybe Int
+  , allowedRideStatuses :: Maybe (Array String)
+  , categoryType :: String
   }
 
 type DisplayBase64ImageConig = {

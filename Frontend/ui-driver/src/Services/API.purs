@@ -1602,6 +1602,9 @@ newtype Category = Category
   , category :: String
   , isRideRequired :: Boolean
   , issueCategoryId :: String
+  , maxAllowedRideAge :: Maybe Int
+  , allowedRideStatuses :: Maybe (Array String)
+  , categoryType :: String
   }
 
 instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq where
