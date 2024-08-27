@@ -1,0 +1,19 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+module: TriggerFCM
+types:
+  TriggerFcmReq :
+    chatPersonId : Id Person
+    body : Text
+    title: Text
+
+
+apis :
+  - POST :
+      endpoint : /triggerFCM/message
+      auth : TokenAuth
+      request:
+        type: API.Types.UI.TriggerFCM.TriggerFcmReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
