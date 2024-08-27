@@ -240,13 +240,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN exotel_status_c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_window integer ;
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_calculation_threshold integer ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN pool_sorting_type text ;
