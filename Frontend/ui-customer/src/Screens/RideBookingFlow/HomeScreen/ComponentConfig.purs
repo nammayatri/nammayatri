@@ -944,14 +944,9 @@ waitTimeInfoCardConfig state = let
 rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
-    config' = RateCard.config 
-
     bangaloreCode = HU.getCityCodeFromCity Bangalore
-
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-
-    rateCardConfig' =
-      config'
+  in RateCard.config 
         { isNightShift = state.data.rateCard.isNightShift
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
@@ -959,36 +954,32 @@ rateCardConfig state =
         , description = if state.data.rateCard.isNightShift then (getString $ NIGHT_TIME_CHARGES state.data.rateCard.nightChargeFrom state.data.rateCard.nightChargeTill) else (getString $ DAY_TIME_CHARGES state.data.rateCard.nightChargeTill state.data.rateCard.nightChargeFrom)
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
         , title = getString RATE_CARD
-        , fareList = 
-            state.data.rateCard.extraFare 
+        , fareList = state.data.rateCard.extraFare 
         , driverAdditions = state.data.rateCard.driverAdditions
         , otherOptions = otherOptions $ (not DA.null state.data.rateCard.driverAdditions) && state.data.config.searchLocationConfig.showDriverAdditions
         , fareInfoDescription = state.data.rateCard.fareInfoDescription
-        , additionalStrings = if state.data.config.searchLocationConfig.showDriverAdditions then 
-           [{key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)}] else []
-          <> [ {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)}
-             , {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)}
-          ] <> if state.data.config.searchLocationConfig.showAdditionalChargesText then [
-            {key : "TOLL_OR_PARKING_CHARGES", val : (getString TOLL_OR_PARKING_CHARGES)},
-            {key : "TOLL_CHARGES", val : (getString TOLL_CHARGES)},
-            {key : "TOLL_CHARGES_DESC", val : (getString TOLL_CHARGES_DESC)}] else [] 
-            <> [ {key : "PARKING_CHARGES", val : (getString PARKING_CHARGE)},
-                {key : "PARKING_CHARGES_DESC", val : (getString PARKING_CHARGES_DESC)}]
-            <> if state.data.rateCard.serviceTierName == Just "Auto" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else [] 
+        , additionalStrings = 
+            (if state.data.config.searchLocationConfig.showDriverAdditions then 
+              [ {key : "DRIVER_ADDITIONS_OPTIONAL", val : getString DRIVER_ADDITIONS_OPTIONAL}
+              , {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC}
+              , {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE}
+              ] 
+            else []) 
+          <> (if state.data.config.searchLocationConfig.showAdditionalChargesText then 
+              [ {key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES}
+              , {key : "TOLL_CHARGES", val : getString TOLL_CHARGES}
+              , {key : "TOLL_CHARGES_DESC", val : getString TOLL_CHARGES_DESC}
+              , {key : "PARKING_CHARGE", val : getString PARKING_CHARGE}
+              , {key : "PARKING_CHARGES_DESC", val : getString PARKING_CHARGES_DESC}
+              ] 
+              else []) 
+          <> (if state.data.rateCard.serviceTierName == Just "Auto" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else [])
           }
-  in
-    rateCardConfig'
   where
   otherOptions :: Boolean -> Array FareList
   otherOptions showAdditions =
-    (if showAdditions then
-        [ { key: "DRIVER_ADDITIONS", val: (getString DRIVER_ADDITIONS) } ]
-      else
-        []
-    )
-      <> (if state.data.config.searchLocationConfig.showAdditionalChargesText then 
-              [{key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }]
-          else [])
+    (if showAdditions then [ { key: "DRIVER_ADDITIONS", val: (getString DRIVER_ADDITIONS) } ] else [])
+    <> (if state.data.config.searchLocationConfig.showAdditionalChargesText then [{key : "TOLL_OR_PARKING_CHARGES", val : getString TOLL_OR_PARKING_CHARGES }]else [])
 
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
