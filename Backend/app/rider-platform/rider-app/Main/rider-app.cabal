@@ -212,6 +212,7 @@ library
       Domain.Action.UI.SpecialZoneQuote
       Domain.Action.UI.Support
       Domain.Action.UI.TicketService
+      Domain.Action.UI.TriggerFCM
       Domain.Action.UI.Whatsapp
       Domain.Types.Booking.API
       Domain.Types.CacType
@@ -405,6 +406,7 @@ library
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.TicketService
+      API.Action.UI.TriggerFCM
       API.Types.UI.CustomerReferral
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
@@ -417,6 +419,7 @@ library
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.TicketService
+      API.Types.UI.TriggerFCM
       Domain.Types.AadhaarOtpReq
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
