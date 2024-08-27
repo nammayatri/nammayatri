@@ -40,6 +40,9 @@ let internalEndPointMap =
         }
       ]
 
+let sosAlertsTopicARN =
+      "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
+
 let SchedulerType = < RedisBased | DbBased >
 
 let urlShortnerConfig =
