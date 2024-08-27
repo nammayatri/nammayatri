@@ -38,6 +38,7 @@ imports:
   Category: Domain.Types.Vehicle
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
+  PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -815,6 +816,7 @@ TransporterConfig:
     isDeviceIdChecksRequired: Maybe Bool
     cancellationRateWindow: Maybe Int
     cancellationRateCalculationThreshold: Maybe Int
+    poolSortingType: Maybe PoolSortingType
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
