@@ -22,19 +22,22 @@ import Kernel.Types.Error.BaseError.HTTPError.FromResponse
 import Network.HTTP.Types (Status (statusCode))
 import Servant.Client (ResponseF (responseStatusCode))
 
-data CustomerError = PersonMobileAlreadyExists Text
+data CustomerError = PersonMobileAlreadyExists Text | DeviceTokenNotFound
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''CustomerError
 
 instance IsBaseError CustomerError where
   toMessage (PersonMobileAlreadyExists phoneNo) = Just $ "Mobile number " <> phoneNo <> " already exists with another user."
+  toMessage DeviceTokenNotFound = Just "Device Token does not exist."
 
 instance IsHTTPError CustomerError where
   toErrorCode = \case
     PersonMobileAlreadyExists _ -> "PERSON_MOBILE_ALREADY_EXISTS"
+    DeviceTokenNotFound -> "DEVICE_TOKEN_NOT_FOUND"
   toHttpCode = \case
     PersonMobileAlreadyExists _ -> E400
+    DeviceTokenNotFound -> E400
 
 instance IsAPIError CustomerError
 

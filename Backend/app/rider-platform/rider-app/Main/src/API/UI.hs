@@ -30,6 +30,7 @@ import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
+import qualified API.Action.UI.TriggerFCM as TriggerFCM
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
@@ -111,6 +112,7 @@ type API =
            :<|> EstimateBP.API
            :<|> FavouriteDriver.API
            :<|> PartnerOrgFRFS.API
+           :<|> TriggerFCM.API
        )
 
 handler :: FlowServer API
@@ -159,3 +161,4 @@ handler =
     :<|> EstimateBP.handler
     :<|> FavouriteDriver.handler
     :<|> PartnerOrgFRFS.handler
+    :<|> TriggerFCM.handler
