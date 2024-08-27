@@ -51,6 +51,7 @@ import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import SharedLogic.Scheduler.Jobs.CallPoliceApi
 import SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
+import qualified Slack.AWS.Flow as Slack
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -144,6 +145,10 @@ postSosCreate (mbPersonId, _merchantId) req = do
   Redis.del $ CQSos.mockSosKey personId
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  fork "Notify on slack " $ do
+    sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
+    message <- generateSlackMessage person ride req.customerLocation
+    void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
@@ -164,6 +169,49 @@ postSosCreate (mbPersonId, _merchantId) req = do
       { sosId = sosId
       }
   where
+    generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Maps.LatLong -> Flow Text
+    generateSlackMessage person ride customerLocation = do
+      mbCustomerPhone <- mapM decrypt person.mobileNumber
+      mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
+      merchantOperatingCity <- do
+        case ride.merchantOperatingCityId of
+          Nothing -> pure Nothing
+          Just merchantOpCityId -> CQMOC.findById merchantOpCityId
+      let city = maybe "NA" (\x -> show $ x.city) merchantOperatingCity
+          customerPhone = fromMaybe "NA" mbCustomerPhone
+          customerName = SLP.getName person
+          driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
+          dropLoc = maybe "NA" (T.pack . show) (ride.toLocation)
+          sosRaisedLocation = maybe "NA" (T.pack . show) customerLocation
+      return $
+        "There is an SOS raised by customer_id " <> person.id.getId <> "\n"
+          <> "Customer Name - "
+          <> customerName
+          <> ", phone no: "
+          <> customerPhone
+          <> "\n"
+          <> "On ride id : "
+          <> ride.id.getId
+          <> "\n"
+          <> "Driver details - "
+          <> ride.driverName
+          <> ", phone no: "
+          <> driverPhoneNumber
+          <> "\n"
+          <> "Ride Details - city: "
+          <> city
+          <> ", variant: "
+          <> show ride.vehicleVariant
+          <> "\n"
+          <> "Pickup location: "
+          <> show ride.fromLocation
+          <> "\n"
+          <> "Drop location: "
+          <> dropLoc
+          <> "\n"
+          <> "SOS raised location: "
+          <> sosRaisedLocation
+
     shouldSendSms safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
     notificationBody person_ = SLP.getName person_ <> " has initiated an SOS. Tap to follow and respond to the emergency situation"
     notificationTitle = "SOS Alert"

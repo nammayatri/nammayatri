@@ -6,6 +6,8 @@ let globalCommon = ../generic/common.dhall
 
 let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
 
+let sosAlertsTopicARN = common.sosAlertsTopicARN
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434

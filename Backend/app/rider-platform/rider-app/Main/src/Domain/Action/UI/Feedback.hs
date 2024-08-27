@@ -36,7 +36,9 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
+import Environment
 import qualified Environment as App
+import qualified EulerHS.Language as L
 import IssueManagement.Domain.Types.MediaFile as D
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.External.Encryption (decrypt)
@@ -45,6 +47,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import SharedLogic.Person as SLP
+import qualified Slack.AWS.Flow as Slack
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -133,6 +137,12 @@ feedback request personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  let isLOFeedback = maybe False checkSensitiveWords feedbackDetails
+  when isLOFeedback $
+    fork "notify on slack" $ do
+      sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
+      message <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city)
+      void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   pure
     FeedbackRes
       { wasOfferedAssistance = request.wasOfferedAssistance,
@@ -152,6 +162,43 @@ feedback request personId = do
       case res of
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
+
+    checkSensitiveWords feedbackDetails =
+      let wordsToCheck = map T.toLower ["Abuse", "Misbehave", "Drunk", "Alcohol", "Fight", "Hit", "Assault", "Physical", "Touch", "Molest", "Sex", "Racist"]
+       in any (`T.isInfixOf` T.toLower feedbackDetails) wordsToCheck
+
+    generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Text -> Text -> Flow Text
+    generateSlackMessage person ride mbCustomerPhone city = do
+      mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
+      let customerPhone = fromMaybe "NA" mbCustomerPhone
+          customerName = SLP.getName person
+          driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
+          dropLoc = maybe "NA" (T.pack . show) (ride.toLocation)
+      return $
+        "There is an L0 feedback given by customer_id " <> person.id.getId <> "\n"
+          <> "Customer Name - "
+          <> customerName
+          <> ", phone no: "
+          <> customerPhone
+          <> "\n"
+          <> "On ride id : "
+          <> ride.id.getId
+          <> "\n"
+          <> "Driver details - "
+          <> ride.driverName
+          <> ", phone no: "
+          <> driverPhoneNumber
+          <> "\n"
+          <> "Ride Details - city: "
+          <> city
+          <> ", variant: "
+          <> show ride.vehicleVariant
+          <> "\n"
+          <> "Pickup location: "
+          <> show ride.fromLocation
+          <> "\n"
+          <> "Drop location: "
+          <> dropLoc
 
 knowYourDriver :: Id DRide.Ride -> App.Flow DriverProfileResponse
 knowYourDriver rideId = do
