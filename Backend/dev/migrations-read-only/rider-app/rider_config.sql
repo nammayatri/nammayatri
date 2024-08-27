@@ -98,3 +98,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN cx_agent_details text [] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN cs_alert_trigger_delay integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN avg_speed_in_km_per_hr integer  default 20;

@@ -42,6 +42,7 @@ updateByPrimaryKey (Domain.Types.RiderConfig.RiderConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.appUrl appUrl,
       Se.Set Beam.autoUnblockSafetyCenterAfterDays autoUnblockSafetyCenterAfterDays,
+      Se.Set Beam.avgSpeedInKmPerHr (Just avgSpeedInKmPerHr),
       Se.Set Beam.bookingSyncStatusCallSecondsDiffThreshold bookingSyncStatusCallSecondsDiffThreshold,
       Se.Set Beam.collectAutoCompleteData collectAutoCompleteData,
       Se.Set Beam.collectMMIRouteData collectMMIRouteData,
@@ -83,6 +84,7 @@ instance FromTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
         Domain.Types.RiderConfig.RiderConfig
           { appUrl = appUrl,
             autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
+            avgSpeedInKmPerHr = fromMaybe 20 avgSpeedInKmPerHr,
             bookingSyncStatusCallSecondsDiffThreshold = bookingSyncStatusCallSecondsDiffThreshold,
             collectAutoCompleteData = collectAutoCompleteData,
             collectMMIRouteData = collectMMIRouteData,
@@ -122,6 +124,7 @@ instance ToTType' Beam.RiderConfig Domain.Types.RiderConfig.RiderConfig where
     Beam.RiderConfigT
       { Beam.appUrl = appUrl,
         Beam.autoUnblockSafetyCenterAfterDays = autoUnblockSafetyCenterAfterDays,
+        Beam.avgSpeedInKmPerHr = Just avgSpeedInKmPerHr,
         Beam.bookingSyncStatusCallSecondsDiffThreshold = bookingSyncStatusCallSecondsDiffThreshold,
         Beam.collectAutoCompleteData = collectAutoCompleteData,
         Beam.collectMMIRouteData = collectMMIRouteData,

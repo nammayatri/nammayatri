@@ -46,6 +46,7 @@ RiderConfig:
     settleCancellationFeeBeforeNextRide: Maybe Bool
     cxAgentDetails: "Maybe [CxAgentDetails]"
     csAlertTriggerDelay: NominalDiffTime
+    avgSpeedInKmPerHr: Kilometers
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -54,6 +55,7 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay : Maybe Seconds
     incidentReportSupport: Maybe Bool
     csAlertTriggerDelay: Maybe Seconds
+    avgSpeedInKmPerHr: Maybe Kilometers
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -65,6 +67,7 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: fromMaybe False incidentReportSupport|E
     csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E
+    avgSpeedInKmPerHr: fromMaybe 20 avgSpeedInKmPerHr|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -73,6 +76,7 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: Just incidentReportSupport|E
     csAlertTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    avgSpeedInKmPerHr: Just avgSpeedInKmPerHr|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -91,6 +95,7 @@ RiderConfig:
     kaptureQueue: "''"
     kaptureConfig: "'{\"kaptureQueue\":\"\", \"disposition\":\"\"}'"
     exotelStatusCheckSchedulerDelay: "120"
+    avgSpeedInKmPerHr: "20"
 
   queries:
     findByMerchantOperatingCityId:
