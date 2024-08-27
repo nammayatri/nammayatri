@@ -161,6 +161,7 @@ library
       Domain.Action.Dashboard.Route
       Domain.Action.Internal.Cac
       Domain.Action.Internal.FRFS
+      Domain.Action.Internal.Payout
       Domain.Action.Internal.Rating
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
@@ -259,6 +260,7 @@ library
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
+      SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
       SharedLogic.Scheduler.Jobs.SafetyCSAlert
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
@@ -290,6 +292,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.MerchantState
+      Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.PartnerOrganization
@@ -326,6 +329,7 @@ library
       Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackFormExtra
       Storage.Queries.FRFSTicketBokingPayment
+      Storage.Queries.FRFSTicketBookingExtra
       Storage.Queries.Geometry
       Storage.Queries.IssueExtra
       Storage.Queries.LocationMappingExtra
@@ -386,6 +390,7 @@ library
       Tools.Metrics.BAPMetrics.Types
       Tools.Notifications
       Tools.Payment
+      Tools.Payout
       Tools.Schema
       Tools.SignatureAuth
       Tools.SMS
@@ -474,6 +479,7 @@ library
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
+      Domain.Types.PayoutConfig
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PersonDisability
@@ -564,6 +570,7 @@ library
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
+      Storage.Beam.PayoutConfig
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
@@ -663,6 +670,7 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup
       Storage.Queries.OrphanInstances.FeedbackForm
+      Storage.Queries.OrphanInstances.FRFSTicketBooking
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Merchant
@@ -691,6 +699,7 @@ library
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
+      Storage.Queries.PayoutConfig
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability

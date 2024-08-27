@@ -21,6 +21,7 @@ module SharedLogic.JobScheduler where
 import Data.Singletons.TH
 import Domain.Types.Booking
 import qualified Domain.Types.Extra.Booking as DEB
+import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
@@ -40,6 +41,7 @@ data RiderJobType
   | CheckExotelCallStatusAndNotifyBPP
   | SafetyCSAlert
   | OtherJobTypes
+  | MetroIncentivePayout
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -54,6 +56,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SSafetyCSAlert jobData = AnyJobInfo <$> restoreJobInfo SSafetyCSAlert jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBPP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBPP jobData
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
+  restoreAnyJobInfo SMetroIncentivePayout jobData = AnyJobInfo <$> restoreJobInfo SMetroIncentivePayout jobData
 
 data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
   { bookingId :: Id Booking,
@@ -144,3 +147,16 @@ data SafetyCSAlertJobData = SafetyCSAlertJobData
 instance JobInfoProcessor 'SafetyCSAlert
 
 type instance JobContent 'SafetyCSAlert = SafetyCSAlertJobData
+
+data MetroIncentivePayoutJobData = MetroIncentivePayoutJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    toScheduleNextPayout :: Bool,
+    statusForRetry :: DFTB.CashbackStatus,
+    schedulePayoutForDay :: Maybe Integer
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'MetroIncentivePayout
+
+type instance JobContent 'MetroIncentivePayout = MetroIncentivePayoutJobData

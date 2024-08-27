@@ -25,6 +25,7 @@ data EntityName
   | DAILY_STATS_VIA_DASHBOARD
   | RETRY_VIA_DASHBOARD
   | DRIVER_FEE
+  | INVALID
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

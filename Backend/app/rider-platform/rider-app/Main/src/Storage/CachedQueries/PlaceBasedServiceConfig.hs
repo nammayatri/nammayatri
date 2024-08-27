@@ -18,6 +18,7 @@ import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -80,3 +81,5 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Tokenize.JourneyMonitoringTokenizationServiceConfig _ -> TokenizationService Tokenize.JourneyMonitoring
     Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
     Tokenize.HyperVergeTokenizationServiceConfig _ -> TokenizationService Tokenize.HyperVerge
+  PayoutServiceConfig payoutCfg -> case payoutCfg of
+    Payout.JuspayConfig _ -> PayoutService Payout.Juspay

@@ -19,6 +19,7 @@ import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
+import Kernel.External.Payout.Interface as Payout
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -42,6 +43,7 @@ data ServiceName
   | IssueTicketService Ticket.IssueTicketService
   | TokenizationService Tokenize.TokenizationService
   | IncidentReportService IncidentReport.IncidentReportService
+  | PayoutService Payout.PayoutService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -59,6 +61,7 @@ instance Show ServiceName where
   show (IssueTicketService s) = "Ticket_" <> show s
   show (TokenizationService s) = "Tokenization_" <> show s
   show (IncidentReportService s) = "IncidentReport_" <> show s
+  show (PayoutService s) = "Payout_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -109,6 +112,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "IncidentReport_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (PayoutService v1, r2)
+                 | r1 <- stripPrefix "Payout_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -126,6 +133,7 @@ data ServiceConfigD (s :: UsageSafety)
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
+  | PayoutServiceConfig !PayoutServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe

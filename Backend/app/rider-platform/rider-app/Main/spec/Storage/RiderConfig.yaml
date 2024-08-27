@@ -48,6 +48,8 @@ RiderConfig:
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers
     sensitiveWords: "Maybe [Text]"
+    payoutBatchSize: Maybe Int
+    payoutBatchDelay: NominalDiffTime
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -57,6 +59,7 @@ RiderConfig:
     incidentReportSupport: Maybe Bool
     csAlertTriggerDelay: Maybe Seconds
     avgSpeedInKmPerHr: Maybe Kilometers
+    payoutBatchDelay: Maybe Seconds
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -69,6 +72,7 @@ RiderConfig:
     incidentReportSupport: fromMaybe False incidentReportSupport|E
     csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E
     avgSpeedInKmPerHr: fromMaybe 20 avgSpeedInKmPerHr|E
+    payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -78,6 +82,7 @@ RiderConfig:
     incidentReportSupport: Just incidentReportSupport|E
     csAlertTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     avgSpeedInKmPerHr: Just avgSpeedInKmPerHr|E
+    payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
 
   default:
     enableLocalPoliceSupport: "false"

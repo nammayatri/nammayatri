@@ -362,6 +362,7 @@ castPayoutEntityName entity = case entity of
   DLP.DAILY_STATS_VIA_DASHBOARD -> DTP.DAILY_STATS_VIA_DASHBOARD
   DLP.RETRY_VIA_DASHBOARD -> DTP.RETRY_VIA_DASHBOARD
   DLP.DRIVER_FEE -> DTP.DRIVER_FEE
+  _ -> DTP.INVALID
 
 castPayoutOrderStatus :: TPayout.PayoutOrderStatus -> DDS.PayoutStatus
 castPayoutOrderStatus payoutOrderStatus =
@@ -378,10 +379,11 @@ castPayoutOrderStatus payoutOrderStatus =
 
 castEntityName :: DTP.EntityName -> Maybe DLP.EntityName
 castEntityName entity =
-  Just $ case entity of
-    DTP.MANUAL -> DLP.MANUAL
-    DTP.DRIVER_DAILY_STATS -> DLP.DRIVER_DAILY_STATS
-    DTP.BACKLOG -> DLP.BACKLOG
-    DTP.DAILY_STATS_VIA_DASHBOARD -> DLP.DAILY_STATS_VIA_DASHBOARD
-    DTP.RETRY_VIA_DASHBOARD -> DLP.RETRY_VIA_DASHBOARD
-    DTP.DRIVER_FEE -> DLP.DRIVER_FEE
+  case entity of
+    DTP.MANUAL -> Just DLP.MANUAL
+    DTP.DRIVER_DAILY_STATS -> Just DLP.DRIVER_DAILY_STATS
+    DTP.BACKLOG -> Just DLP.BACKLOG
+    DTP.DAILY_STATS_VIA_DASHBOARD -> Just DLP.DAILY_STATS_VIA_DASHBOARD
+    DTP.RETRY_VIA_DASHBOARD -> Just DLP.RETRY_VIA_DASHBOARD
+    DTP.DRIVER_FEE -> Just DLP.DRIVER_FEE
+    DTP.INVALID -> Nothing
