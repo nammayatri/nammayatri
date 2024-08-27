@@ -66,6 +66,7 @@ import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.Sos as QSos
 import qualified Tools.Call as Call
 import Tools.Error
+import qualified Tools.Metrics as Metrics
 import Tools.Ticket as Ticket
 
 data SOSVideoUploadReq = SOSVideoUploadReq
@@ -144,6 +145,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
   Redis.del $ CQSos.mockSosKey personId
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  fork "increase sos counter " $ do Metrics.incrementSosCount merchant.name person.merchantOperatingCityId.getId
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)

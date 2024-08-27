@@ -37,7 +37,8 @@ data BAPMetricsContainer = BAPMetricsContainer
     confirmDurationFRFS :: DurationMetric,
     cancelDurationFRFS :: DurationMetric,
     initDuration :: DurationMetric,
-    confirmDuration :: DurationMetric
+    confirmDuration :: DurationMetric,
+    sosCounter :: SosCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
@@ -47,6 +48,8 @@ type RideCreatedCounterMetric = P.Vector P.Label4 P.Counter
 type SearchDurationMetric = (P.Vector P.Label2 P.Histogram, P.Vector P.Label2 P.Counter)
 
 type DurationMetric = (P.Vector P.Label3 P.Histogram, P.Vector P.Label3 P.Counter)
+
+type SosCounterMetric = P.Vector P.Label3 P.Counter
 
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
@@ -59,6 +62,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   cancelDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_cancel_frfs_round_trip" "beckn_cancel_frfs_round_trip_failure_counter"
   initDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_init_round_trip" "beckn_init_round_trip_failure_counter"
   confirmDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_confirm_round_trip" "beckn_confirm_round_trip_failure_counter"
+  sosCounter <- registerSosCounterMetric
   return $ BAPMetricsContainer {..}
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
@@ -83,3 +87,6 @@ registerDurationMetric durationTimeout merchantName version merchantOperatingCit
   durationHistogram <- P.register . P.vector (merchantName, version, merchantOperatingCityId) . P.histogram (P.Info roundTrip "") $ P.linearBuckets 0 0.5 bucketsCount
   failureCounter <- P.register . P.vector (merchantName, version, merchantOperatingCityId) $ P.counter $ P.Info roundTripFailureCounter ""
   return (durationHistogram, failureCounter)
+
+registerSosCounterMetric :: IO SosCounterMetric
+registerSosCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "sos_hit_count" ""

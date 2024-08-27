@@ -173,3 +173,14 @@ finishMetrics' bmContainer action merchantName version txnId merchantOperatingCi
         void $ Redis.del (durationKey txnId action)
         putDuration durationHistogram merchantName version merchantOperatingCityId . realToFrac . diffUTCTime endTime $ startTime
       Nothing -> return ()
+
+incrementSosCount :: HasBAPMetrics m r => Text -> Text -> m ()
+incrementSosCount merchantName merchantOperatingCityId = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  incrementSosCount' bmContainer merchantName merchantOperatingCityId version
+
+incrementSosCount' :: MonadIO m => BAPMetricsContainer -> Text -> Text -> DeploymentVersion -> m ()
+incrementSosCount' bmContainer merchantName merchantOperatingCityId version = do
+  let sosCounter = bmContainer.sosCounter
+  liftIO $ P.withLabel sosCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter

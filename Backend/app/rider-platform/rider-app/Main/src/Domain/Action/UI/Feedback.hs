@@ -133,6 +133,7 @@ feedback request personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  let _shouldIncreaseSosCounter = maybe False checkSensitiveWords feedbackDetails
   pure
     FeedbackRes
       { wasOfferedAssistance = request.wasOfferedAssistance,
@@ -152,6 +153,9 @@ feedback request personId = do
       case res of
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
+    checkSensitiveWords feedbackDetails =
+      let wordsToCheck = map T.toLower ["Abuse", "Misbehave", "Drunk", "Alcohol", "Fight", "Hit", "Assault", "Physical", "Touch", "Molest", "Sex", "Racist"]
+       in any (`T.isInfixOf` T.toLower feedbackDetails) wordsToCheck
 
 knowYourDriver :: Id DRide.Ride -> App.Flow DriverProfileResponse
 knowYourDriver rideId = do
