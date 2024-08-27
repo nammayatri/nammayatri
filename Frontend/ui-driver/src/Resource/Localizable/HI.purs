@@ -1601,3 +1601,6 @@ getHI stringKey =
         LIFETIME_STATS -> "जीवनकाल सांख्यिकी"
         TOTAL_RIDES_CANCELLED -> "कुल राइड रद्द"
         TOTAL_EARNINGS_MISSED -> "कुल कमाई छूट गई"
+        RENTAL_RIDE -> "किराये की सवारी"
+        THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "इस सवारी में कई स्टॉप हो सकते हैं। यह किराये की सवारी बुक की गई है" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
+        RENTAL_RIDE_ACCEPTED -> "किराये की सवारी स्वीकार कर ली गई है"

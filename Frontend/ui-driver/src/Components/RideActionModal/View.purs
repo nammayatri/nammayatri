@@ -22,7 +22,7 @@ import Prelude (class Eq, class Show, ($))
 import Animation (scaleYAnimWithDelay)
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Components.RideActionModal.Controller (Action(..), Config)
+import Components.RideActionModal.Controller (Action(..), Config, LearnMorePopUp(..))
 import Components.SeparatorView.View as SeparatorView
 import Data.Array as DA
 import Data.Function.Uncurried (runFn2)
@@ -169,8 +169,20 @@ rideActionViewWithLabel :: forall w. (Action -> Effect Unit) -> Config -> Presto
 rideActionViewWithLabel push config =
   let tagConfig = if config.bookingFromOtherPlatform then 
                     dummyLabelConfig{ text = (getString THIRD_PARTY_BOOKING) <> ": " <> config.bapName, textColor = Color.black700, backgroundColor = Color.grey900 }
+                  else if config.rideType == ST.Rental then 
+                  
+                    dummyLabelConfig
+                      { label = "Rental Ride",
+                        backgroundColor = Color.blueGreen,
+                        text = getString RENTAL_RIDE,
+                        secondaryText = getString LEARN_MORE,
+                        imageUrl = fetchImage FF_ASSET "ny_ic_clock_unfilled"
+                      }
                   else 
                     getRideLabelData config.specialLocationTag
+      popupType = if config.bookingFromOtherPlatform then NoInfo
+                  else if config.rideType == ST.Rental then RentalInfo
+                  else AccessibilityInfo
   in
   linearLayout
   [ width MATCH_PARENT
@@ -202,7 +214,7 @@ rideActionViewWithLabel push config =
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , visibility if Maybe.isJust config.accessibilityTag && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
+          , visibility if (Maybe.isJust config.accessibilityTag || config.rideType == ST.Rental) && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
           ][  textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT
@@ -216,7 +228,7 @@ rideActionViewWithLabel push config =
               , height WRAP_CONTENT
               , orientation VERTICAL
               , margin $ MarginLeft 5
-              , onClick push $ const SecondaryTextClick
+              , onClick push $ const $ SecondaryTextClick popupType
               ]
               [ textView $ 
                   [ width WRAP_CONTENT
@@ -1182,7 +1194,7 @@ separatorConfig =
   }
 
 showTag :: Config -> Boolean
-showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform
+showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50

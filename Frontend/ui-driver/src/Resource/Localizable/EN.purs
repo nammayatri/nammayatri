@@ -1599,3 +1599,6 @@ getEN stringKey =
         LIFETIME_STATS -> "Lifetime Stats"
         TOTAL_RIDES_CANCELLED -> "Total Rides Cancelled"
         TOTAL_EARNINGS_MISSED -> "Total Earnings Missed"
+        RENTAL_RIDE -> "Rental Ride"
+        THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "There might be multiple stops on this ride. This rental ride is booked for" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
+        RENTAL_RIDE_ACCEPTED -> "Rental Ride Accepted"

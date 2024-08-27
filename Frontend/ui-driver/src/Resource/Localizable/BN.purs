@@ -1602,3 +1602,7 @@ getBN stringKey =
         LIFETIME_STATS -> "জীবনকালীন পরিসংখ্যান"
         TOTAL_RIDES_CANCELLED -> "মোট রাইড বাতিল"
         TOTAL_EARNINGS_MISSED -> "মোট উপার্জন হারানো"
+        RENTAL_RIDE -> "ভাড়ার রাইড"
+        THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "এই ভ্রমণে একাধিক বিরতি থাকতে পারে। এই ভাড়ার ভ্রমণটি বুক করা হয়েছে" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
+        RENTAL_RIDE_ACCEPTED -> "ভাড়ার যাত্রা গৃহীত হয়েছে"
+ 

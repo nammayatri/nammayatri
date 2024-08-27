@@ -22,8 +22,10 @@ import Data.Maybe as Mb
 import MerchantConfig.Types (AppConfig)
 import Screens.Types as ST
 import Helpers.Utils as HU
-import Prelude (negate, ($))
+import Prelude (negate, ($),class Eq)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe 
 
 data Action = StartRide 
@@ -36,7 +38,7 @@ data Action = StartRide
             | TimerCallback String String Int
             | WaitingInfo
             | LoadMessages
-            | SecondaryTextClick
+            | SecondaryTextClick LearnMorePopUp
             | VisuallyImpairedCustomer
             | NoAction
             | ArrivedAtStop
@@ -88,6 +90,11 @@ type AddressConfig = {
   titleText :: String,
   detailText :: String
 }
+
+data LearnMorePopUp = AccessibilityInfo | RentalInfo | NoInfo
+
+derive instance genericLearnMorePopUp :: Generic LearnMorePopUp _
+instance eqLearnMorePopUp :: Eq LearnMorePopUp where eq = genericEq
 
 config :: Config
 config = {
