@@ -164,6 +164,8 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     isPartOfIntelligentPool :: Bool,
     pickupZone :: Bool,
     specialZoneExtraTip :: Maybe HighPrecMoney,
+    specialZoneTag :: Maybe Text,
+    tripDistance :: Maybe Meters,
     isForwardRequest :: Bool,
     previousDropGeoHash :: Maybe Text,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
@@ -182,6 +184,8 @@ instance Default DriverPoolWithActualDistResult where
         isPartOfIntelligentPool = False,
         pickupZone = False,
         specialZoneExtraTip = Nothing,
+        specialZoneTag = Nothing,
+        tripDistance = Nothing,
         isForwardRequest = False,
         previousDropGeoHash = Nothing,
         goHomeReqId = Nothing

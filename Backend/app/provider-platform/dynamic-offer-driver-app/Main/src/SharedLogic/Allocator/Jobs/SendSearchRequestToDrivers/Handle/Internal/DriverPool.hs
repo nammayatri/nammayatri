@@ -347,7 +347,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
           case sortingType transporterConfig of
-            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags
+            Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags
             Intelligent -> makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
             Random -> makeRandomDriverPool onlyNewDrivers batchSize'
 
@@ -496,7 +496,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 let randomizedDriverPoolWithSilentSort = splitSilentDriversAndSortWithDistance randomizedDriverPool
                 takeDriversUsingPoolPercentage (sortedDriverPoolWithSilentSort, randomizedDriverPoolWithSilentSort) fillSize intelligentPoolConfig
               Random -> pure $ take fillSize nonGoHomeNormalDriversWithValidReqCountWithServiceTier
-              Tagged -> makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags -- TODO: Fix isOnRidePool flag
+              Tagged -> makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags -- TODO: Fix isOnRidePool flag
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
           batches <- previouslyAttemptedDrivers searchTry.id consideOnRideDrivers
@@ -558,12 +558,13 @@ makeTaggedDriverPool ::
   ) =>
   Id MerchantOperatingCity ->
   Seconds ->
+  DSR.SearchRequest ->
   [DriverPoolWithActualDistResult] ->
   Int ->
   Bool ->
   Maybe [Text] ->
   m [DriverPoolWithActualDistResult]
-makeTaggedDriverPool mOCityId timeDiffFromUtc onlyNewDrivers batchSize isOnRidePool customerNammaTags = do
+makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize isOnRidePool customerNammaTags = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   appDynamicLogics <- LYTU.getAppDynamicLogic (cast mOCityId) LYT.POOLING localTime
   let allLogics = appDynamicLogics <&> (.logic)
@@ -579,7 +580,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc onlyNewDrivers batchSize isOnRideP
   pure $ take batchSize sortedPool
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
-      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, ..}
+      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, specialZoneTag = searchReq.specialLocationTag, tripDistance = searchReq.estimatedDistance, ..}
 
     updateDriverPoolResult DriverPoolResult {..} =
       DriverPoolResult {customerTags = Just $ maybe A.emptyObject convertTags customerNammaTags, ..}
