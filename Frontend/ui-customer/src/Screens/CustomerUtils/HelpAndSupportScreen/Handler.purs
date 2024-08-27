@@ -53,7 +53,8 @@ helpAndSupportScreen = do
   if DA.null helpAndSupportScreenState.data.categories then do 
     let language = fetchLanguage $ getLanguageLocale languageKey 
     (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge}) response.categories
+    let selfServeCategories = DA.filter (\(Category category) -> category.categoryType == "Category") response.categories
+        categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType, allowedRideStatuses : catObj.allowedRideStatuses}) selfServeCategories
     modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories' } } )
   else pure unit
   modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ReportIssueChatScreenData.HelpAndSupportScreenEntry }})
@@ -223,7 +224,7 @@ goToChatScreenHandler selectedCategory updatedState =  do
     \updatedState ->  updatedState {
       data {
         chats = chats'
-      , selectedCategory = selectedCategory
+      , selectedCategory = selectedCategory {categoryName = categoryName}
       , options = options'
       , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{
           messages = messages'
@@ -257,8 +258,10 @@ goToOldChatScreenHandler selectedIssue updatedState = do
             , categoryImageUrl : Nothing
             , categoryAction : Nothing
             , categoryId : issueInfoRes.categoryId
+            , categoryType : ""
             , isRideRequired : false
             , maxAllowedRideAge : Nothing
+            , allowedRideStatuses : Nothing
         }
         , options = options'
         , issueId = Just selectedIssue.issueReportId

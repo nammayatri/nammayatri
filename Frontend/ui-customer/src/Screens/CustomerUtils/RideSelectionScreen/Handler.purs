@@ -18,7 +18,7 @@ module Screens.RideSelectionScreen.Handler where
 import Components.IndividualRideCard.View as IndividualRideCard
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons 
 import ModifyScreenState (modifyScreenState, FlowState(..))
@@ -47,6 +47,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import MerchantConfig.Types as MT
 import ConfigProvider (getAppConfig)
 import Constants (appConfig)
+import Screens.RideSelectionScreen.Controller (getTitle)
 import Debug
 
 rideSelection :: FlowBT String FlowState
@@ -96,25 +97,27 @@ selectRideHandler state = do
   (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language state.selectedCategory.categoryId (fromMaybe "" state.data.selectedOptionId) (fromMaybe "" tripId') ""
   (GlobalState globalState) <- getState
   let 
-    -- VaibhavD : need to shift this check to backend
-    transformedOptions = transformIssueOptions getOptionsRes.options state.selectedItem globalState.helpAndSupportScreen.data.ongoingIssueList config.cityConfig
     getOptionsRes' = mapWithIndex (
       \index (Option optionObj) -> optionObj { 
         option = optionObj.option 
       }
-    ) transformedOptions
+    ) getOptionsRes.options
 
     messages' = mapWithIndex (
       \index (Message currMessage) -> makeChatComponent' currMessage.message currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500*(index + 1))
     ) getOptionsRes.messages
 
     chats' = globalState.reportIssueChatScreen.data.chats <>
-      [ Chat {
-            chatId : fromMaybe "" state.data.selectedOptionId
-          , chatType : "IssueOption"
-          , timestamp : getCurrentUTC ""
-        }
-      ] <>
+      (if isJust state.data.selectedOptionId 
+        then 
+          [ Chat {
+                chatId : fromMaybe "" state.data.selectedOptionId
+              , chatType : "IssueOption"
+              , timestamp : getCurrentUTC ""
+            }
+          ]
+        else [])
+      <>
       map (
         \(Message currMessage) -> Chat {
           chatId : currMessage.id, 
@@ -127,6 +130,9 @@ selectRideHandler state = do
       Just item -> Just item.merchantExoPhone
       _         -> Nothing
 
+  let showSubmitComp' = any (\ (Message  message) -> (fromMaybe "" message.label) == "CREATE_TICKET") getOptionsRes.messages 
+      categoryName = getTitle $ fromMaybe "" state.selectedCategory.categoryAction
+
   modifyScreenState $ ReportIssueChatScreenStateType (\_ -> 
     ReportIssueChatScreenData.initData { 
       data {
@@ -134,12 +140,15 @@ selectRideHandler state = do
       , chats = chats'
       , tripId = tripId'
       , merchantExoPhone = merchantExoPhone'
-      , selectedCategory = state.selectedCategory
+      , selectedCategory = state.selectedCategory {categoryName = categoryName}
       , options = getOptionsRes'
       , chatConfig { 
         messages = (globalState.reportIssueChatScreen.data.chatConfig.messages <> messages')
       }
       ,  selectedRide = state.selectedItem 
+      }
+      , props {
+        showSubmitComp = showSubmitComp' 
       } 
     } 
   )
@@ -156,18 +165,3 @@ refreshScreenHandler state = do
     }
   )
   App.BackT $ App.NoBack <$> (pure  RideSelectionScreenFlow)
-
-transformIssueOptions :: Array Option -> Maybe IndividualRideCardState -> Array ST.IssueInfo -> Array MT.CityConfig -> Array Option
-transformIssueOptions options mbRide ongoingIssues arrCityConfig = filteredOptionsForAc
-  where
-    filteredOptionsForAc = case mbRide of
-      Just ride -> let alreadyHasAcIssue = any (\issue -> issue.optionLabel == Just "AC_RELATED_ISSUE" && issue.rideId == Just ride.rideId) ongoingIssues
-                   in
-                    case ride.serviceTierName of
-                      (Just name) -> if not alreadyHasAcIssue && ServiceTierCard.showACDetails name Nothing && cityConfig.enableAcViews
-                                then options 
-                                else filteredOptions
-                      Nothing -> filteredOptions
-      Nothing -> filteredOptions
-    filteredOptions = filter (\(Option option) -> option.label /= "AC_RELATED_ISSUE") options
-    cityConfig = HU.getCityConfig arrCityConfig (getValueToLocalStore CUSTOMER_LOCATION)

@@ -74,6 +74,7 @@ instance encodeRetryAPIs :: Encode RetryAPIs where encode = defaultEncode
 newtype TriggerOTPResp = TriggerOTPResp {
     authId :: String
   , attempts :: Int
+  , isPersonBlocked :: Boolean
 }
 
 newtype TriggerOTPReq = TriggerOTPReq {
@@ -1363,6 +1364,7 @@ newtype GetProfileRes = GetProfileRes
   , id :: String
   , maskedMobileNumber :: Maybe String
   , email :: Maybe String
+  , isBlocked :: Maybe Boolean
   , hasTakenRide :: Boolean
   , hasTakenValidCabRide :: Maybe Boolean
   , hasTakenValidAutoRide :: Maybe Boolean
@@ -2603,6 +2605,8 @@ newtype Category = Category
   , issueCategoryId :: String
   , isRideRequired :: Boolean
   , maxAllowedRideAge :: Maybe Int
+  , allowedRideStatuses :: Maybe (Array String)
+  , categoryType :: String
   }
 
 instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq  where
@@ -2649,7 +2653,7 @@ newtype Message = Message
   , messageAction :: Maybe String 
   }
 
-instance makeGetOptionsReq :: RestEndpoint GetOptionsReq where
+instance makeGetOptionsReq :: RestEndpoint GetOptionsReq  where
     makeRequest reqBody@(GetOptionsReq categoryId optionId rideId issueReportId language) headers = defaultMakeRequest GET (EP.getOptions categoryId optionId rideId issueReportId language) headers reqBody Nothing
     encodeRequest = standardEncode
 

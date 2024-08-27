@@ -84,8 +84,10 @@ initData =
       , categoryImageUrl : Nothing
       , categoryAction : Nothing
       , categoryId : ""
+      , categoryType : ""
       , isRideRequired : false
       , maxAllowedRideAge : Nothing
+      , allowedRideStatuses : Nothing
     }
   , selectedItem : Nothing
   }
@@ -167,4 +169,6 @@ dummyIndividualCard = {
   , estimatedFare : 0
   , showDestination : ""
   , rideScheduledTime : ""
+  , rideCreatedAt : ""
+  , rideStatus : ""
 }

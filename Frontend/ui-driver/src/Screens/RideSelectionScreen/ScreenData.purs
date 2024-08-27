@@ -31,8 +31,10 @@ initData =
     , categoryName   : ""
     , categoryAction : Nothing
     , categoryImageUrl : Nothing
+    , categoryType : ""
     , isRideRequired : false
     , maxAllowedRideAge : Nothing
+    , allowedRideStatuses : Nothing
     }
   , prestoListArrayItems   : []
   , loaderButtonVisibility : false

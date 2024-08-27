@@ -196,7 +196,7 @@ eval (CheckRideListResp (RideBookingListRes listResp)) state = do
     Nothing -> continue state
     Just resp -> do
       let isRecentRide = getExpiryTime (fromMaybe "" (resp ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
-          transformedResp = myRideListTransformer true listResp.list state.data.config
+          transformedResp = myRideListTransformer true listResp.list state.data.config Nothing
           mbRideData = DA.head transformedResp
       continue state{props{showPastRidePopUp = isRecentRide}, data{lastRideDetails = mbRideData}}
 

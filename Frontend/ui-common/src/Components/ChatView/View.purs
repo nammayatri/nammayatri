@@ -217,6 +217,7 @@ chatView config push =
          ](mapWithIndex (\index item -> let lastConfig = (config.messages !! (index+1))
                                             isLastMessage = index == (length config.messages - 1)
                                         in chatComponentView config push item lastConfig isLastMessage index) config.messages)
+        , if not (null config.chatSuggestionsList) && config.spanParent && config.useSuggestionsView then suggestionsView config push else dummyTextView
         ]
       ]
     ] )
@@ -588,7 +589,7 @@ hasDateFooter msgConfig nxtMsgConfig =
 
 messageView :: forall w. Config -> (Action -> Effect Unit) -> ChatComponentConfig -> ChatConfig -> Boolean -> String -> PrestoDOM (Effect Unit) w
 messageView state push config chatConfig isLastMessage value = do
-  let condition = isJust config.messageTitle || isJust config.messageAction
+  let condition = (isJust config.messageTitle || isJust config.messageAction) && not state.useSuggestionsView
   linearLayout[
     width MATCH_PARENT,
     height MATCH_PARENT,
@@ -602,7 +603,9 @@ messageView state push config chatConfig isLastMessage value = do
 
 simpleMessageView :: forall w. Config -> ChatComponentConfig -> ChatConfig -> String -> PrestoDOM (Effect Unit) w
 simpleMessageView state config (ChatConfig chatConfig) value = 
-  let transformedMessage = STR.replaceAll (STR.Pattern "\\n") (STR.Replacement "<br>") value
+  let transformedMessage = if state.useSuggestionsView 
+    then if state.spanParent then config.message else value
+    else STR.replaceAll (STR.Pattern "\\n") (STR.Replacement "<br>") value
   in
   textView $ [
     textFromHtml transformedMessage,
@@ -661,7 +664,7 @@ issueOptionView config push isLastMessage =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , margin marginTop
-  , visibility $ boolToVisibility isLastMessage
+  , visibility $ boolToVisibility (isLastMessage && not config.useSuggestionsView)
   ](mapWithIndex (\index item -> do
     let isLastOption = index + 1 == length config.chatSuggestionsList
     issueOptionPillView config item isLastOption push

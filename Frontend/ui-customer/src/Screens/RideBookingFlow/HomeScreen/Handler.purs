@@ -230,7 +230,7 @@ homeScreen = do
       App.BackT $ App.NoBack <$> (pure $ GO_TO_REPORT_SAFETY_ISSUE updatedState)
     GoToMyMetroTickets updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKETS)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKETS updatedState)
     GoToSafetyEducation updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_SAFETY_EDUCATION)

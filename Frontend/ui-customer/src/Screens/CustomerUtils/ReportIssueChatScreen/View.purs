@@ -45,7 +45,7 @@ import JBridge (storeCallBackImageUpload, storeCallBackUploadMultiPartData, stor
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
-import Prelude (Unit, bind, const, discard, not, pure, show, unit, void, when, ($), (-), (<<<), (<>), (==), (>), (||))
+import Prelude (Unit, bind, const, discard, not, pure, show, unit, void, when, ($), (-), (<<<), (<>), (==), (>), (||), (&&), (/=))
 import PrestoDOM (Margin(..), background, frameLayout, imageView, linearLayout, relativeLayout, textView, rippleColor, accessibility, Accessiblity(..), accessibilityHint)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, id)
@@ -55,7 +55,7 @@ import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
 import Styles.Colors as Color
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
-import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState)
+import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
 
 screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -174,6 +174,18 @@ headerLayout state push =
               , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
+        , textView
+            $ [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , visibility $ boolToVisibility $ isJust state.data.selectedRide && state.data.entryPoint /= TripDetailsScreenEntry
+              , text $ getString RIDE_DETAILS
+              , weight 1.0
+              , color Color.blue900
+              , gravity RIGHT
+              , margin $ MarginRight 12
+              , onClick push $ const GoToRideDetails
+            ]
+            <> FontStyle.body6 TypoGraphy
         ]
     , linearLayout
         [ width MATCH_PARENT

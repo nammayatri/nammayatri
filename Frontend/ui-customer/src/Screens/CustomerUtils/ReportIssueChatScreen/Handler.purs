@@ -44,6 +44,9 @@ import Debug (spy)
 import Screens.HomeScreen.ScreenData (dummyRideBooking) as HSD
 import Helpers.API (callApiBT) 
 import Data.Either(Either(..))
+import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Screens.Types (TripDetailsGoBackType(..))
+import Control.Applicative (unless)
 
 reportIssueChatScreen :: FlowBT String FlowState
 reportIssueChatScreen = do
@@ -332,10 +335,10 @@ goToRideSelectionScreenHandler updatedState = do
   )
   App.BackT $ App.NoBack <$> (pure $ RideSelectionScreenFlow)
 
-gotoTripDetailsScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
-gotoTripDetailsScreenHandler updatedState = do
-  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
-  App.BackT $ App.NoBack <$> (pure $ TripDetailsScreenFlow)
+-- gotoTripDetailsScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+-- gotoTripDetailsScreenHandler updatedState = do
+--   modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
+--   App.BackT $ App.NoBack <$> (pure $ TripDetailsScreenFlow)
 
 goToHelpAndSupportScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 goToHelpAndSupportScreenHandler updatedState = do
@@ -351,3 +354,31 @@ goToHomeScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 goToHomeScreenHandler updatedState = do
   modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
   App.BackT $ App.NoBack <$> (pure $ HomeScreenFlow)
+
+gotoTripDetailsScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
+gotoTripDetailsScreenHandler updatedState = do 
+  (GlobalState globalState) <- getState 
+  let selectedRide = fromMaybe dummyIndividualCard updatedState.data.selectedRide
+      backPointForTripDetails = if updatedState.data.entryPoint == TripDetailsScreenEntry 
+        then globalState.tripDetailsScreen.props.fromMyRides
+        else ReportIssueChat
+  unless (updatedState.data.entryPoint /= TripDetailsScreenEntry) $
+    modifyScreenState $ ReportIssueChatScreenStateType (\_ -> initData)
+  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen → tripDetailsScreen { 
+    data 
+    { tripId = selectedRide.shortRideId 
+    , source = selectedRide.source
+    , destination = selectedRide.destination
+    , date = selectedRide.date
+    , time = selectedRide.time
+    , rating = selectedRide.rating
+    , driverName = selectedRide.driverName
+    , totalAmount = selectedRide.totalAmount 
+    , selectedItem = selectedRide
+    , vehicleVariant = selectedRide.vehicleVariant
+    },
+    props
+    { fromMyRides = backPointForTripDetails
+    }
+  })
+  App.BackT $ App.BackPoint <$> (pure TripDetailsScreenFlow)

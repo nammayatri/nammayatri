@@ -131,7 +131,9 @@ selectedCategory' = {
   categoryId : "", 
   categoryAction : Nothing,  
   isRideRequired : false,
-  maxAllowedRideAge : Nothing
+  maxAllowedRideAge : Nothing,
+  allowedRideStatuses : Nothing,
+  categoryType: ""
 }
 
 type ReportIssueChatScreenState = {

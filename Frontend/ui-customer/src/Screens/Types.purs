@@ -312,7 +312,7 @@ type TripDetailsScreenProps =
     isContactSupportPopUp :: Boolean
   }
 
-data TripDetailsGoBackType = Home | MyRides | HelpAndSupport
+data TripDetailsGoBackType = Home | MyRides | HelpAndSupport | ReportIssueChat
 derive instance genericTripDetailsGoBackType :: Generic TripDetailsGoBackType _
 instance showTripDetailsGoBackType :: Show TripDetailsGoBackType where show = genericShow
 instance eqTripDetailsGoBackType :: Eq TripDetailsGoBackType where eq = genericEq
@@ -482,6 +482,8 @@ type IndividualRideCardState =
   , estimatedFare :: Int
   , showDestination :: String
   , rideScheduledTime :: String
+  , rideCreatedAt :: String
+  , rideStatus :: String
   }
 
 
@@ -842,6 +844,7 @@ type HomeScreenStateProps =
   , isSrcServiceable :: Boolean
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
+  , userBlocked :: Boolean
   , showlocUnserviceablePopUp :: Boolean
   , isMockLocation :: Boolean
   , autoSelecting :: Boolean
@@ -2058,6 +2061,7 @@ type MetroMyTicketsScreenState = {
 type MetroMyTicketsScreenData = {
   activeTickets :: Array MetroTicketCardData
 , pastTickets :: Array MetroTicketCardData
+, userBlocked :: Boolean
 }
 
 type MetroMyTicketsScreenProps = {

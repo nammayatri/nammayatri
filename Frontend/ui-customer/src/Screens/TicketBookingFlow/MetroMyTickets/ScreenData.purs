@@ -25,6 +25,7 @@ initData = {
   data : {
       activeTickets : []
     , pastTickets : []
+    , userBlocked : false
     }
   , props :  {
       dummyProps : ""

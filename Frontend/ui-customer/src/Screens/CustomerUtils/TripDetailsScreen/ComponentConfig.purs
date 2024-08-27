@@ -144,6 +144,8 @@ topicsList state =
       , categoryId : "5"
       , isRideRequired : false
       , maxAllowedRideAge : Nothing
+      , allowedRideStatuses : Nothing
+      , categoryType: "Category"
       },
       { categoryAction : Just "CALL_SUPPORT"
       , categoryName : getString CONTACT_SUPPORT
@@ -151,6 +153,8 @@ topicsList state =
       , categoryId : "6"
       , isRideRequired : false
       , maxAllowedRideAge : Nothing
+      , allowedRideStatuses : Nothing
+      , categoryType: "Category"
       }]
 
 listExpandingAnimationConfig :: Boolean -> AnimConfig

@@ -1346,7 +1346,7 @@ savedLocationsView state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , clickable state.props.isSrcServiceable
+    , clickable (state.props.isSrcServiceable && not state.props.userBlocked)
     , visibility $ boolToVisibility $ not $ state.props.showShimmer
     , padding $ PaddingHorizontal 16 16
     ]
@@ -1355,7 +1355,7 @@ savedLocationsView state push =
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , margin $ MarginVertical marginTop 8
-        , alpha if state.props.isSrcServiceable then 1.0 else 0.4
+        , alpha if (state.props.isSrcServiceable && not state.props.userBlocked) then 1.0 else 0.4
         , onClick push (const NoAction)
         , onAnimationEnd
              ( \action -> do
@@ -1511,7 +1511,7 @@ homeScreenTopIconView push state =
                 , width $ V 16
                 , margin (Margin 5 5 5 5)
                 , accessibility DISABLE
-                , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
+                , onClick push $ if (state.props.isSrcServiceable && not state.props.userBlocked) then (const $ OpenSearchLocation) else (const $ NoAction)
                 , gravity BOTTOM
                 ]
             , linearLayout
@@ -1519,7 +1519,7 @@ homeScreenTopIconView push state =
                 , width MATCH_PARENT
                 , height WRAP_CONTENT
                 , disableClickFeedback true
-                , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
+                , onClick push $ if (state.props.isSrcServiceable && not state.props.userBlocked) then (const $ OpenSearchLocation) else (const $ NoAction)
                 , accessibility if any (_ == state.props.currentStage) [RideRating , RideCompleted] then DISABLE else ENABLE
                 , accessibilityHint "Pickup Location is Current Location"
                 , accessibility ENABLE
@@ -1536,13 +1536,13 @@ homeScreenTopIconView push state =
                 , textView
                     $ [ height WRAP_CONTENT
                       , width MATCH_PARENT
-                      , text if state.props.isSrcServiceable then
+                      , text if (state.props.isSrcServiceable && not state.props.userBlocked) then
                               (if state.data.source /= "" then state.data.source else (getString CURRENT_LOCATION))
                              else
                                getString APP_NOT_SERVICEABLE
                       , maxLines 1
                       , ellipsize true
-                      , color if state.props.isSrcServiceable then Color.black800 else Color.greyDark
+                      , color if (state.props.isSrcServiceable && not state.props.userBlocked) then Color.black800 else Color.greyDark
                       , gravity LEFT
                       , lineHeight "23"
                       ]
@@ -3531,21 +3531,21 @@ homeScreenViewV2 push state =
                       [ width $ V (screenWidth unit)
                       , height WRAP_CONTENT
                       , orientation VERTICAL
-                      ][ relativeLayout
-                        [ width MATCH_PARENT
-                        , height WRAP_CONTENT
-                        , orientation VERTICAL
-                        , gravity $ CENTER_HORIZONTAL
-                        ][ locationUnserviceableView push state
-                        , homeScreenContent push state 
-                        , PrestoAnim.animationSet [ Anim.triggerOnAnimationEnd true] $
-                          linearLayout
-                          [ height WRAP_CONTENT
-                          , width MATCH_PARENT 
-                          , onAnimationEnd push (const MapReadyAction)
-                          ][shimmerView state]
-                        ]
-                    ]
+                      ] [ relativeLayout
+                          [ width MATCH_PARENT
+                          , height WRAP_CONTENT
+                          , orientation VERTICAL
+                          , gravity $ CENTER_HORIZONTAL
+                          ][ locationUnserviceableOrUserBlockedView push state
+                           , homeScreenContent push state 
+                           , PrestoAnim.animationSet [ Anim.triggerOnAnimationEnd true] $
+                                linearLayout
+                                [ height WRAP_CONTENT
+                                , width MATCH_PARENT 
+                                , onAnimationEnd push (const MapReadyAction)
+                                ][shimmerView state]
+                      ]
+                  ]
               ]
           ]
         ]  
@@ -3559,8 +3559,7 @@ homeScreenContent push state =  let
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , background Color.white900
-    , visibility $ boolToVisibility $ state.props.isSrcServiceable && not state.props.showShimmer
+    , visibility $ boolToVisibility $ (state.props.isSrcServiceable && not state.props.userBlocked) && not state.props.showShimmer
     ][ linearLayout
        [ width MATCH_PARENT
        , height WRAP_CONTENT
@@ -3920,7 +3919,7 @@ mapView push state idTag =
           , width $ mapDimensions.width 
           , accessibility DISABLE_DESCENDANT
           , id (getNewIDWithTag idTag)
-          , visibility if state.props.isSrcServiceable then VISIBLE else GONE
+          , visibility if (state.props.isSrcServiceable && not state.props.userBlocked) then VISIBLE else GONE
           , cornerRadius if state.props.currentStage == HomeScreen && os == "IOS" then 16.0 else 0.0
           , clickable $ not isHomeScreenView state 
           ] <> if state.props.currentStage == HomeScreen then [stroke $ "1,"<> Color.grey900 ] else [])[]
@@ -3971,7 +3970,7 @@ mapView' push state idTag =
           , width mapDimensions.width 
           , accessibility DISABLE_DESCENDANT
           , id (getNewIDWithTag idTag)
-          , visibility if state.props.isSrcServiceable then VISIBLE else GONE
+          , visibility if (state.props.isSrcServiceable && not state.props.userBlocked) then VISIBLE else GONE
           , cornerRadius if state.props.currentStage == HomeScreen && os == "IOS" then 16.0 else 0.0
           , afterRender
             ( \action -> do
@@ -4535,8 +4534,15 @@ updateMapPadding state =
 
 
 
-locationUnserviceableView ::  forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-locationUnserviceableView push state = 
+locationUnserviceableOrUserBlockedView ::  forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+locationUnserviceableOrUserBlockedView push state = 
+  let userBlockedViewConfig = {viewHeader : ACCOUNT_BLOCKED, viewHeaderTypography : FontStyle.h2 TypoGraphy, viewContent : YOU_CAN_STILL_ACCESS, viewImage : fetchImage FF_ASSET "ny_ic_account_blocked", viewImageWidth : V 159, viewImageHeight : V 117, contentViewMargin : Margin 40 75 40 83 }
+      locationUnserviceableViewConfig = {viewHeader : LOCATION_UNSERVICEABLE, viewHeaderTypography : FontStyle.h1 TypoGraphy, viewContent : WE_ARE_NOT_LIVE_IN_YOUR_AREA, viewImage : fetchImage FF_ASSET "ny_ic_location_unserviceable", viewImageWidth : V 108, viewImageHeight : V 101, contentViewMargin : Margin 22 83 22 83 }
+      currentViewConfig = 
+        if state.props.userBlocked then userBlockedViewConfig 
+        else if not state.props.isSrcServiceable then locationUnserviceableViewConfig 
+        else userBlockedViewConfig
+  in
   linearLayout[
     height WRAP_CONTENT
   , width MATCH_PARENT
@@ -4544,7 +4550,7 @@ locationUnserviceableView push state =
   , clickable true
   , orientation VERTICAL
   , gravity CENTER
-  , visibility $ boolToVisibility $ not state.props.isSrcServiceable
+  , visibility $ boolToVisibility $ (not (state.props.isSrcServiceable && not state.props.userBlocked) || state.props.userBlocked)
   ][
     relativeLayout[
       height WRAP_CONTENT
@@ -4569,24 +4575,24 @@ locationUnserviceableView push state =
       , height WRAP_CONTENT 
       , orientation VERTICAL
       , gravity CENTER
-      , margin $ Margin 22 83 22 83 
+      , margin currentViewConfig.contentViewMargin
       , background Color.transparent
       ][
         imageView[
-          imageWithFallback $ fetchImage FF_ASSET "ny_ic_location_unserviceable"
-        , width $ V 108
-        , height $ V 101
+          imageWithFallback currentViewConfig.viewImage
+        , width currentViewConfig.viewImageWidth
+        , height currentViewConfig.viewImageHeight
         ]
       , textView  $ [
-          text $ getString LOCATION_UNSERVICEABLE
+          text $ getString currentViewConfig.viewHeader
         , width MATCH_PARENT
         , height WRAP_CONTENT
         , gravity CENTER 
         , color Color.black800
         , margin $ MarginTop 10
-        ] <> (FontStyle.h1 TypoGraphy)
+        ] <> currentViewConfig.viewHeaderTypography
       , textView $ [
-          text $ getString WE_ARE_NOT_LIVE_IN_YOUR_AREA
+          text $ getString currentViewConfig.viewContent
         , width MATCH_PARENT
         , height WRAP_CONTENT
         , gravity CENTER

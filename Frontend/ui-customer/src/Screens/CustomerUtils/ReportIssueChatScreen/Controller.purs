@@ -135,6 +135,7 @@ data Action = Exit (ScreenOutput)
             | ReopenIssuePress
             | KeyboardCallback String
             | InitializeCallback
+            | GoToRideDetails
 
 data ScreenOutput = GoToHelpAndSupportScreen ReportIssueChatScreenState
                   | UploadIssue  ReportIssueChatScreenState
@@ -504,7 +505,10 @@ eval (CancelCall (PrimaryButton.OnClick)) state =
 
 eval InitializeCallback state = continue state { props {initalizedCallbacks = true}}
 
-eval _ state =
+eval GoToRideDetails state = do
+  exit $ GotoTripDetailsScreen state
+
+eval _ state = do
   continue state
 
 data Result = Result Boolean

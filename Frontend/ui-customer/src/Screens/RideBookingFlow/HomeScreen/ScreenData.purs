@@ -235,6 +235,7 @@ initData = let
     , isSrcServiceable : true
     , isDestServiceable : true
     , isRideServiceable : true
+    , userBlocked : false 
     , showlocUnserviceablePopUp : false
     , autoSelecting : true
     , searchExpire : 90
