@@ -346,7 +346,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
             filtered = filter (\d -> d.driverPoolResult.serviceTierDowngradeLevel >= config) results
 
         mkDriverPoolBatch mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool = do
-          case sortingType transporterConfig of
+          case sortingType of
             Tagged -> makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags
             Intelligent -> makeIntelligentDriverPool mOCityId onlyNewDrivers intelligentPoolConfig transporterConfig batchSize' isOnRidePool
             Random -> makeRandomDriverPool onlyNewDrivers batchSize'
@@ -486,7 +486,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                   else do nonGoHomeNormalDriversWithValidReqCount
           let fillSize = batchSize - length batch
           (batch <>)
-            <$> case sortingType transporterConfig of
+            <$> case sortingType of
               Intelligent -> do
                 let sortWithDriverScore' = sortWithDriverScore merchantOpCityId transporterConfig intelligentPoolConfig driverPoolCfg
                 (sortedDriverPool, randomizedDriverPool) <-
@@ -522,7 +522,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
         -- util function
         bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
 
-        sortingType transporterConfig = fromMaybe driverPoolCfg.poolSortingType transporterConfig.poolSortingType
+        sortingType = driverPoolCfg.poolSortingType
         batchSize = driverPoolCfg.driverBatchSize
         batchSizeOnRide = driverPoolCfg.batchSizeOnRide
 

@@ -18,7 +18,6 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.City
 import qualified Kernel.Types.Common
-import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
@@ -151,7 +150,6 @@ data TransporterConfigT f = TransporterConfigT
     payoutBatchLimit :: B.C f Kernel.Prelude.Int,
     pickupLocThreshold :: B.C f Kernel.Types.Common.Meters,
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    poolSortingType :: B.C f (Kernel.Prelude.Maybe SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.PoolSortingType),
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
     rcLimit :: B.C f Kernel.Prelude.Int,
