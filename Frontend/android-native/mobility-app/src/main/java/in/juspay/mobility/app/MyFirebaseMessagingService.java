@@ -125,7 +125,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
-        Log.e("onMessageReceived", remoteMessage.getData().toString());
+        Log.e("onMessageReceived FCM", remoteMessage.getData().toString());
         NotificationUtils.firebaseLogEventWithParams(this, "notification_received", "type", remoteMessage.getData().get("notification_type"));
 
         super.onMessageReceived(remoteMessage);
