@@ -72,6 +72,7 @@ getZoneType :: String -> ZoneType
 getZoneType tag =
   case tag of
     "SureMetro" -> METRO
+    "SureWarriorMetro" -> METRO
     "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     "PickupZone" -> SPECIAL_PICKUP
     "SureShoppingMall" -> SHOPPING_MALL
