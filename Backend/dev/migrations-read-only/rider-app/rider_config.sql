@@ -108,3 +108,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN avg_speed_in_km_per_hr integer  de
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_size integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_delay integer ;

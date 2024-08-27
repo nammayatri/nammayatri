@@ -183,6 +183,9 @@ FRFSTicketBooking:
     partnerOrgId: Maybe (Id PartnerOrganization)
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+    payerVpa: Maybe Text
+    cashbackStatus: Maybe CashbackStatus
+    cashbackPayoutOrderId: Maybe Text
 
   default:
     customerCancelled: "false"
@@ -199,6 +202,8 @@ FRFSTicketBooking:
   types:
     FRFSTicketBookingStatus:
       enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED"
+    CashbackStatus:
+      enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
@@ -279,7 +284,17 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [customerCancelled, updatedAt]
       where: id
+    updatePayoutStatusById:
+      kvFunction: updateOneWithKV
+      params: [cashbackStatus]
+      where: id
+    updatePayoutOrderId:
+      kvFunction: updateOneWithKV
+      params: [cashbackPayoutOrderId]
+      where: id
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
 # Make use of FareBreakup to store the fare breakup of a ticket
 
 # Get transaction_id from Payment Transaction table

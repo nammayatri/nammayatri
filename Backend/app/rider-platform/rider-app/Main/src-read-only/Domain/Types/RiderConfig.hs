@@ -41,6 +41,8 @@ data RiderConfig = RiderConfig
     kaptureQueue :: Kernel.Prelude.Text,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
+    payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,

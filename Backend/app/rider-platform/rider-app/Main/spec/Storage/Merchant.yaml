@@ -517,3 +517,42 @@ MerchantPushNotification:
       where:
         and: [merchantOperatingCityId, key]
 
+PayoutConfig:
+  tableName : payout_config
+  derives: "Generic,Show,ToJSON,FromJSON"
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    timeDiff: NominalDiffTime
+    isPayoutEnabled: Bool
+    batchLimit: Int
+    maxRetryCount: Int
+    remark: Text
+    orderType: Text
+    payoutEntity: PayoutEntity
+  beamType:
+    timeDiff: Seconds
+  toTType:
+    timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+  fromTType:
+    timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
+  default:
+    timeDiff: "86400"
+    isPayoutEnabled: "False"
+    batchLimit: "10"
+    maxRetryCount: "5"
+    remark: "'Cashback for metro ticket booking with NammaYatri'"
+    orderType: "'FULFILL_ONLY'"
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+  queries:
+    findByMerchantOpCityIdAndIsPayoutEnabledAndPayoutEntity:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, isPayoutEnabled, payoutEntity]
+
+  types:
+    PayoutEntity:
+      enum: "METRO_TICKET_CASHBACK"
+
+

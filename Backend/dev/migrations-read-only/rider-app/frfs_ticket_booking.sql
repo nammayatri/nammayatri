@@ -73,3 +73,10 @@ ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN merchant_id SET NOT NULL;
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN event_discount_amount double precision ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounted_tickets integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN payer_vpa text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cashback_status text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cashback_payout_order_id text ;

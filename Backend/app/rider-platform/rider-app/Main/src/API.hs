@@ -25,11 +25,13 @@ import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
 import Data.OpenApi
+import qualified Domain.Action.Internal.Payout as Payout
 import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
+import qualified Kernel.External.Payout.Juspay.Webhook as JuspayPayout
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -62,6 +64,11 @@ type MainAPI =
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> "v2"
+             :> JuspayPayout.JuspayPayoutWebhookAPI
+         )
 
 handler :: FlowServer API
 handler =
@@ -82,6 +89,7 @@ mainServer =
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
+    :<|> juspayPayoutWebhookHandlerV2
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 
@@ -114,3 +122,12 @@ juspayWebhookHandler ::
   FlowHandler AckResponse
 juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret =
   withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId secret
+
+juspayPayoutWebhookHandlerV2 ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  BasicAuthData ->
+  Value ->
+  FlowHandler AckResponse
+juspayPayoutWebhookHandlerV2 merchantShortId mbOpCity secret value' =
+  withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity secret value'
