@@ -141,7 +141,8 @@ data AppCfg = AppCfg
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
-    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    sosAlertsTopicARN :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -223,7 +224,8 @@ data AppEnv = AppEnv
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    sosAlertsTopicARN :: Text
   }
   deriving (Generic)
 
