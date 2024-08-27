@@ -130,7 +130,6 @@ createPaymentIntentService ::
   m Payment.CreatePaymentIntentResp
 createPaymentIntentService merchantId personId rideId rideShortIdText createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall = do
   let rideShortId = ShortId rideShortIdText
-  -- let cardFixedCharges = HighPrecMoney 0.3 -- 30 cents, we have to fix it later properly
   mbExistingOrder <- QOrder.findById (cast rideId)
   case mbExistingOrder of
     Nothing -> do
