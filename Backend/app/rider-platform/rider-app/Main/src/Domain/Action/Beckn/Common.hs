@@ -303,7 +303,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         tollConfidence = Nothing,
         distanceUnit = booking.distanceUnit,
         driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
-        paymentDone = False,
+        paymentStatus = DRide.NotInitiated,
         driverAlternateNumber = driverAlternateNumber',
         vehicleAge = req.vehicleAge,
         cancellationFeeIfCancelled = Nothing,
@@ -602,7 +602,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
              rideEndTime,
-             paymentDone = maybe True (not . (.onlinePayment)) mbMerchant,
+             paymentStatus = maybe (DRide.Completed) (\m -> if (m.onlinePayment) then DRide.NotInitiated else DRide.Completed) mbMerchant,
              endOdometerReading
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups

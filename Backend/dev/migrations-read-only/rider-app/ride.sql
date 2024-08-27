@@ -164,3 +164,8 @@ ALTER TABLE atlas_app.ride ADD COLUMN estimated_end_time_range_start timestamp w
 ALTER TABLE atlas_app.ride ADD COLUMN estimated_end_time_range_end timestamp with time zone ;
 
 ALTER TABLE atlas_app.ride ADD COLUMN tip_amount numeric(30,2) ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN payment_status text ;
+

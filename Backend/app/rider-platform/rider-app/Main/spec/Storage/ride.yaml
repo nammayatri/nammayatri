@@ -42,6 +42,9 @@ Ride:
     EstimatedEndTimeRange:
       start: UTCTime
       end: UTCTime
+      
+    PaymentStatus:
+      enum: "Completed,NotInitiated,Initiated,Cancelled,Failed"
 
   fields:
     id: Id Ride
@@ -96,7 +99,7 @@ Ride:
     backendAppVersion: Maybe Text
     safetyCheckStatus: Maybe Bool
     showDriversPreviousRideDropLoc: Bool
-    paymentDone: Bool
+    paymentStatus: PaymentStatus
     driverAccountId: Maybe AccountId
     onlinePayment: Bool
     tollConfidence: Maybe Confidence
@@ -192,7 +195,7 @@ Ride:
     driversPreviousRideDropLoc: Storage.Queries.Extra.Transformers.Ride.mkLatLong|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
-    paymentDone: Kernel.Prelude.fromMaybe True paymentDone|E
+    paymentStatus: Kernel.Prelude.fromMaybe Domain.Types.Ride.Completed paymentStatus|E
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
     driverPhoneNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
     driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
@@ -221,7 +224,7 @@ Ride:
     driversPreviousRideDropLat: Kernel.Prelude.fmap (.lat)|I
     driversPreviousRideDropLon: Kernel.Prelude.fmap (.lon)|I
     showDriversPreviousRideDropLoc: Kernel.Prelude.Just showDriversPreviousRideDropLoc|E
-    paymentDone: Kernel.Prelude.Just paymentDone|E
+    paymentStatus: Kernel.Prelude.Just paymentStatus|E
     onlinePayment: Kernel.Prelude.Just onlinePayment|E
     driverNumberEncrypted: (driverPhoneNumber <&> unEncrypted . (.encrypted))|E
     driverNumberHash: (driverPhoneNumber <&> (.hash))|E
@@ -239,7 +242,7 @@ Ride:
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
     showDriversPreviousRideDropLoc : Maybe Bool
-    paymentDone: Maybe Bool
+    paymentStatus: Maybe PaymentStatus
     onlinePayment: Maybe Bool
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
@@ -264,9 +267,9 @@ Ride:
     findRideByRideShortId:
       kvFunction: findOneWithKV
       where: shortId
-    markPaymentDone:
+    markPaymentStatus:
       kvFunction: updateOneWithKV
-      params: [paymentDone]
+      params: [paymentStatus]
       where: id
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
@@ -291,4 +294,5 @@ Ride:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
 

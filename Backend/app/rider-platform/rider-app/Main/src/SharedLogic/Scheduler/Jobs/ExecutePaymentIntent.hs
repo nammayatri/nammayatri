@@ -15,11 +15,13 @@
 module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -50,32 +52,37 @@ sendExecutePaymentIntent Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
       rideId = jobData.rideId
       fare = jobData.fare
       applicationFeeAmount = jobData.applicationFeeAmount
-  logDebug "Executing payment intent"
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  fareWithTip <- case ride.tipAmount of
-    Nothing -> return fare
-    Just tipAmount -> fare `addPrice` tipAmount
-  customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
-  paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
-  driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-  email <- mapM decrypt person.email
-  let createPaymentIntentReq =
-        Payment.CreatePaymentIntentReq
-          { amount = fareWithTip.amount,
-            applicationFeeAmount,
-            currency = fareWithTip.currency,
-            customer = customerPaymentId,
-            paymentMethod = paymentMethodId,
-            receiptEmail = email,
-            driverAccountId
-          }
+  Redis.withWaitOnLockRedisWithExpiry paymentJobExecLockKey 60 60 $ do
+    logDebug "Executing payment intent"
+    QRide.markPaymentStatus DRide.Initiated rideId
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    fareWithTip <- case ride.tipAmount of
+      Nothing -> return fare
+      Just tipAmount -> fare `addPrice` tipAmount
+    customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
+    paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+    driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+    email <- mapM decrypt person.email
+    let createPaymentIntentReq =
+          Payment.CreatePaymentIntentReq
+            { amount = fareWithTip.amount,
+              applicationFeeAmount,
+              currency = fareWithTip.currency,
+              customer = customerPaymentId,
+              paymentMethod = paymentMethodId,
+              receiptEmail = email,
+              driverAccountId
+            }
 
-  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
-  void $ SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId paymentIntentResp.paymentIntentId
-  QRide.markPaymentDone True ride.id
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+    paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
+    void $ SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId paymentIntentResp.paymentIntentId
+    QRide.markPaymentStatus DRide.Completed ride.id
   return Complete
+  where
+    paymentJobExecLockKey :: Text
+    paymentJobExecLockKey = "PaymentJobExec:RideId-" <> jobInfo.jobData.rideId.getId
 
 sendCancelExecutePaymentIntent ::
   ( EncFlow m r,
@@ -106,7 +113,7 @@ sendCancelExecutePaymentIntent Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
   void $ SPayment.makeCancellationPayment booking.merchantId booking.merchantOperatingCityId order.paymentServiceOrderId cancellationAmount.amount
-  QRide.markPaymentDone True rideId
+  QRide.markPaymentStatus DRide.Completed rideId
   void $
     CallBPPInternal.customerCancellationDuesSync
       (merchant.driverOfferApiKey)

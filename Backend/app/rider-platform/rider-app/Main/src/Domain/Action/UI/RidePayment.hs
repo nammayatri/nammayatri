@@ -161,15 +161,41 @@ postPaymentAddTip ::
     API.Types.UI.RidePayment.AddTipRequest ->
     Environment.Flow APISuccess
   )
-postPaymentAddTip (_mbPersonId, merchantId) rideId tipRequest = do
-  Redis.whenWithLockRedis addTipLockKey 60 $ do
+postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
+  Redis.withWaitOnLockRedisWithExpiry paymentJobExecLockKey 60 60 $ do
+    personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     unless (ride.status == Domain.Types.Ride.COMPLETED) $
       throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
-    QRide.updateTipByRideId (Just $ mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount) rideId -- update tip in ride
-    -- we will add this tip amount in ride end and charge it in job which is already created in ride end
+    if ride.paymentStatus == Domain.Types.Ride.NotInitiated
+      then do
+        -- we will add this tip amount in ride end and charge it in job which is already created in ride end
+        QRide.updateTipByRideId (Just $ mkPrice (Just tipRequest.amount.currency) tipRequest.amount.amount) rideId -- update tip in ride
+      else do
+        -- Here we creating a new payment intent for tip if the ride payment status is already initiated
+        customerPaymentId <- person.customerPaymentId & fromMaybeM (PersonFieldNotPresent "customerPaymentId")
+        paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
+        driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+        email <- mapM decrypt person.email
+        let cardFixedCharges = HighPrecMoney 0.3
+        let cardPercentageCharges = 0.029 -- 2.9%
+        let applicationFeeAmount = HighPrecMoney (tipRequest.amount.amount.getHighPrecMoney * cardPercentageCharges) + cardFixedCharges
+        let createPaymentIntentReq =
+              Payment.CreatePaymentIntentReq
+                { amount = tipRequest.amount.amount,
+                  applicationFeeAmount,
+                  currency = tipRequest.amount.currency,
+                  customer = customerPaymentId,
+                  paymentMethod = paymentMethodId,
+                  receiptEmail = email,
+                  driverAccountId
+                }
+        paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
+        Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
+
     createFareBreakup
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount
@@ -178,8 +204,8 @@ postPaymentAddTip (_mbPersonId, merchantId) rideId tipRequest = do
     tipFareBreakupTitle :: Text
     tipFareBreakupTitle = "RIDE_TIP"
 
-    addTipLockKey :: Text
-    addTipLockKey = "Driver:AddTip:RideId-" <> rideId.getId
+    paymentJobExecLockKey :: Text
+    paymentJobExecLockKey = "PaymentJobExec:RideId-" <> rideId.getId
 
     createFareBreakup = do
       id <- generateGUID
