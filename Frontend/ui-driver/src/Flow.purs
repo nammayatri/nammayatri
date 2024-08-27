@@ -161,7 +161,7 @@ import Resource.Constants (hvSdkTokenExp)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
-    lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.6/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
+    reNewFiles
     liftFlowBT $ markPerformance "BASE_APP_FLOW_START"
     liftFlowBT $ Events.endMeasuringDuration "Flow.mainFlow"
     liftFlowBT $ Events.initMeasuringDuration "Flow.baseAppFlow"
@@ -262,6 +262,13 @@ baseAppFlow baseFlow event driverInfoResponse = do
         setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
       else 
         pure unit 
+
+    reNewFiles :: FlowBT String Unit
+    reNewFiles = do
+      lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.6/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
+      lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "zone_config.json" "https://assets.moving.tech/beckn/bundles/zone-config/0.0.2/zone_config.json" (cb <<< Right) $> nonCanceler
+      pure unit
+
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = do
