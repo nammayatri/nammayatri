@@ -934,9 +934,12 @@ waitTimeInfoCardConfig state = let
                                 cityConfig = state.data.currentCityConfig
                                 autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
                                 cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
+                                ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
                                 waitingCharges = 
                                   if state.data.vehicleVariant == "AUTO_RICKSHAW" then
                                       autoWaitingCharges
+                                  else if HU.isAmbulance state.data.vehicleVariant then
+                                      ambulanceWaitingCharges
                                   else 
                                       cabsWaitingCharges
                             {freeMinutes : (show waitingCharges.freeMinutes) , chargePerMinute : "₹"<> show waitingCharges.perMinCharges <>"/min"}
@@ -1921,7 +1924,7 @@ feedbackPillDataWithRating3 state =
     , { id: "8", text: getString RASH_DRIVING }
     ]
   , [ { id: "8", text: getString DRIVER_CHARGED_MORE }
-    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
+    , {id : "11", text : if HU.isAmbulance state.data.vehicleVariant then getString UNCOMFORTABLE_AMBULANCE else if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "3", text: getString TRIP_GOT_DELAYED }
     , { id: "3", text: getString FELT_UNSAFE }
@@ -1934,7 +1937,7 @@ feedbackPillDataWithRating4 state =
     , { id: "9", text: getString EXPERT_DRIVING }
     ]
   , [ { id: "9", text: getString ASKED_FOR_EXTRA_FARE }
-    , {id : "11", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
+    , {id : "11", text : if HU.isAmbulance state.data.vehicleVariant then getString UNCOMFORTABLE_AMBULANCE else if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString UNCOMFORTABLE_AUTO else if state.data.vehicleVariant == "BIKE" then getString UNCOMFORTABLE_BIKE else getString UNCOMFORTABLE_CAB}
     ]
   , [ { id: "4", text: getString TRIP_GOT_DELAYED }
     , { id: "4", text: getString SAFE_RIDE }
@@ -1946,7 +1949,7 @@ feedbackPillDataWithRating5 state =
   [ [ { id: "10", text: getString POLITE_DRIVER }
     , { id: "5", text: getString EXPERT_DRIVING }
     ]
-  , [ {id : "12", text : if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if state.data.vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB}
+  , [ {id : "12", text : if HU.isAmbulance state.data.vehicleVariant then getString CLEAN_AMBULANCE else if state.data.vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if state.data.vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB}
     , { id: "10", text: getString ON_TIME }
     ]
   , [ { id: "10", text: getString SKILLED_NAVIGATOR }

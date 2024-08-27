@@ -1244,3 +1244,12 @@ editPickupCircleConfig =
   let config = getAppConfig appConfig
   in
   defaultCircleConfig {radius = config.mapConfig.locateOnMapConfig.editPickUpThreshold, primaryStrokeColor = Color.yellow900, fillColor = Color.yellowOpacity23, strokeWidth = 4, secondaryStrokeColor =Color.red900 , circleId = "edit_location_circle" }
+
+isAmbulance :: String -> Boolean
+isAmbulance vehicleVariant = case vehicleVariant of
+  "AMBULANCE_TAXI" -> true
+  "AMBULACE_TAXI_OXY" -> true
+  "AMBULANCE_AC" -> true
+  "AMBULANCE_AC_OXY" -> true
+  "AMBULANCE_VENTILATOR" -> true
+  _ -> false

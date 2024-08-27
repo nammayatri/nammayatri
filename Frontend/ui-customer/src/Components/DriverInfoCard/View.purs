@@ -377,7 +377,7 @@ otpAndWaitView push state =
            , cornerRadius if os == "IOS" then 20.0 else 32.0
            , background Color.white900
            , clickable true
-           , onClick push $ const $ if state.props.isRateCardAvailable || Array.any (_ == state.data.fareProductType) [ FPT.RENTAL , FPT.AMBULANCE] then WaitingInfo else NoAction
+           , onClick push $ const $ if state.props.isRateCardAvailable || spy "FP" (Array.any (_ == state.data.fareProductType) [ FPT.RENTAL , FPT.AMBULANCE]) then WaitingInfo else NoAction
            , gravity CENTER
            , accessibility DISABLE
            , margin $ Margin 6 8 8 8

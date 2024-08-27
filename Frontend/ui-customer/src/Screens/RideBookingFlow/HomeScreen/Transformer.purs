@@ -37,7 +37,7 @@ import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null, toLower)
 import Data.Function.Uncurried (runFn1)
-import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices)
+import Helpers.Utils (parseFloat, withinTimeRange, isHaveFare, getVehicleVariantImage, getDistanceBwCordinates, getCityConfig, getAllServices, getSelectedServices, isAmbulance)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Helpers.Utils (parseFloat, withinTimeRange,getVehicleCapacity, isHaveFare, getVehicleVariantImage,fetchImage, FetchImageFrom(..),fetchVehicleVariant)
@@ -682,11 +682,14 @@ getTripDetailsState (RideBookingRes ride) state = do
       autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
       cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
       bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
+      ambulanceWaitingCharges = cityConfig.waitingChargeConfig.ambulance
       waitingCharges = 
         if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
             autoWaitingCharges
         else if rideDetails.vehicleVariant == "BIKE" then
             bikeWaitingCharges
+        else if isAmbulance rideDetails.vehicleVariant then
+            ambulanceWaitingCharges
         else 
             cabsWaitingCharges
       nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
