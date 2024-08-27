@@ -1601,3 +1601,6 @@ getTA stringKey =
         LIFETIME_STATS -> "உயர்ந்த ரத்து விகிதம் உள்ளது"
         TOTAL_RIDES_CANCELLED -> "மொத்த சவாரிகள் ரத்து செய்யப்பட்டன"
         TOTAL_EARNINGS_MISSED -> "மொத்த சம்பாதிக்கை விட குறைந்தது"
+        RENTAL_RIDE -> "வாடகை சவாரி"
+        THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "இந்த வாடகைச் சவாரியில் பல இடங்கள் இருக்கலாம். இந்த வாடகைச் சவாரி" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
+        RENTAL_RIDE_ACCEPTED -> "வாடகைச் சவாரி ஏற்றுக்கொள்ளப்பட்டது"

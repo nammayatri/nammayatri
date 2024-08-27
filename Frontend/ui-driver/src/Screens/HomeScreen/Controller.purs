@@ -155,6 +155,7 @@ instance loggableAction :: Loggable Action where
       -- RideActionModal.MessageCustomer -> trackAppActionClick appId (getScreen HOME_SCREEN) "ride_action_modal" "message_customer"
       -- _ -> pure unit
     PopUpModalAccessibilityAction act -> pure unit
+    PopUpRentalInfoAction act -> pure unit
     PopUpModalAdvancedRideAction act -> pure unit
     InAppKeyboardModalAction act -> pure unit--case act of
       -- InAppKeyboardModal.OnSelection key index -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_selection"
@@ -369,6 +370,7 @@ data Action = NoAction
             | AutoPayBanner Banner.Action
             | AdvancedRideBannerAction Banner.Action
             | RCDeactivatedAC PopUpModal.Action
+            | PopUpRentalInfoAction PopUpModal.Action
             | PopUpModalAccessibilityAction PopUpModal.Action
             | PopUpModalAdvancedRideAction PopUpModal.Action
             | RideCompletedAC RideCompletedCard.Action
@@ -975,8 +977,9 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     pure NoAction
     ] $ CallCustomer state exophoneNumber
 
-eval (RideActionModalAction (RideActionModal.SecondaryTextClick)) state = continue state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
-
+eval (RideActionModalAction (RideActionModal.SecondaryTextClick popUpType)) state = do
+  let updatedState = if popUpType == RideActionModal.RentalInfo then state{props{rentalInfoPopUp = true, safetyAudioAutoPlay = false}}else state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
+  continue updatedState
 
 eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state $ OpenPaymentPage state
 
@@ -1369,6 +1372,16 @@ eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continueW
 eval (PopUpModalAccessibilityAction PopUpModal.NoAction) state = continueWithCmd state [do
   pure $ PopUpModalAccessibilityAction PopUpModal.OnButton1Click
 ]
+
+eval (PopUpRentalInfoAction PopUpModal.OnButton1Click) state = continue state{props{rentalInfoPopUp = false}} 
+eval (PopUpRentalInfoAction PopUpModal.OnButton2Click) state = do 
+  let link = case state.data.linkedVehicleCategory of
+              "AUTO_RICKSHAW" -> "https://www.youtube.com/watch?v=nwXV-vT_X_8"
+              _ -> "https://www.youtube.com/watch?v=aKGPp5A2M0E"
+  continueWithCmd state [ do 
+    void $ JB.openUrlInApp link
+    pure AfterRender
+  ]
 
 eval (PopUpModalAdvancedRideAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAdvancedRidePopUp = true}} [ do 
   void $ openUrlInApp $ state.data.cityConfig.advancedRidePopUpYoutubeLink

@@ -1137,6 +1137,56 @@ accessibilityPopUpConfig state =
       }
   in config'
 
+rentalInfoPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+rentalInfoPopUpConfig state = 
+  let 
+    config = PopUpModal.config
+    tripDuration = (fromMaybe 0 state.data.activeRide.tripDuration) / 3600
+    tripDistance = fromMaybe 0 $ Int.fromNumber $ state.data.activeRide.distance / 1000.0
+    rideInfo = (show tripDuration) <> "h / " <> (show tripDistance) <> "km"
+    config' = config
+      {
+        gravity = CENTER,
+        margin = MarginHorizontal 24 24 ,
+        buttonLayoutMargin = Margin 16 0 16 20 ,
+        onlyTopTitle = GONE,
+        topTitle {
+          text = ""
+        , gravity = CENTER
+        , visibility = VISIBLE
+        },
+        primaryText {
+          text = (getString RENTAL_RIDE_ACCEPTED) <> "!"
+        , visibility = VISIBLE
+        , margin = Margin 16 24 16 4 },
+        secondaryText {
+          text = (getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
+        , visibility = VISIBLE
+        , textStyle = SubHeading2
+        , margin = MarginBottom 24
+        },
+        option1 {
+          text = getString GOT_IT
+        , background = Color.black900
+        , color = Color.yellow900
+        },
+        option2 {
+          visibility = false
+        },
+        backgroundClickable = false,
+        cornerRadius = (PTD.Corners 15.0 true true true true),
+        coverImageConfig {
+          imageUrl = fetchImage FF_ASSET "ny_ic_rental_info"
+        , visibility = VISIBLE
+        , height = V 160
+        , width = MATCH_PARENT
+        , margin = Margin 0 16 0 0
+        }
+      }
+  in config'
+
+
+
 advancedRidePopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
 advancedRidePopUpConfig state = 
   let 

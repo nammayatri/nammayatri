@@ -671,6 +671,7 @@
       "ny_ic_referral_related_faq" : true,
       "ny_ic_refresh" : true,
       "ny_ic_refresh_unfilled" : true,
+      "ny_ic_rental_info" : true,
       "ny_ic_reported" : true,
       "ny_ic_resolved" : true,
       "ny_ic_reward" : true,

@@ -1601,3 +1601,6 @@ getML stringKey =
         LIFETIME_STATS -> "ജീവിത സ്റ്റാറ്റ്സ്"
         TOTAL_RIDES_CANCELLED -> "മൊത്തം റൈഡുകൾ റദ്ദാക്കി"
         TOTAL_EARNINGS_MISSED -> "മൊത്തം ലഭ്യമായ വരുമാനം കളയി"
+        RENTAL_RIDE -> "വാടക റൈഡ്"
+        THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "ഈ യാത്രയിൽ പല സ്റ്റോപ്പുകൾ ഉണ്ടാകാം. ഈ വാടകയാത്ര ബുക്ക് ചെയ്തിരിക്കുന്നു" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
+        RENTAL_RIDE_ACCEPTED -> "വാടകയാത്ര അംഗീകരിച്ചിരിക്കുന്നു"

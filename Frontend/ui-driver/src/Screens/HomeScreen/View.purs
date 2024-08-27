@@ -352,6 +352,7 @@ view push state =
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
+      , if state.props.rentalInfoPopUp then rentalInfoPopUp push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
       , if state.props.showAdvancedRidePopUp then advancedRidePopUpView push state else dummyTextView
@@ -479,6 +480,14 @@ accessibilityPopUpView push state =
   , width MATCH_PARENT
   , background Color.blackLessTrans
   ][PopUpModal.view (push <<< PopUpModalAccessibilityAction) (accessibilityPopUpConfig state)]
+
+rentalInfoPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rentalInfoPopUp push state = 
+    linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , background Color.blackLessTrans
+      ][PopUpModal.view (push <<< PopUpRentalInfoAction) (rentalInfoPopUpConfig state)]
 
 advancedRidePopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 advancedRidePopUpView push state =

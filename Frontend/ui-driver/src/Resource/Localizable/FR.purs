@@ -1102,4 +1102,7 @@ getFR stringKey =
         HIGH_CANCELLATION_RATE -> "Le taux d'annulation est supérieur à 90% des conducteurs"
         LAST_N_DAYS n -> "(les " <> n <> " derniers jours)"
         CANCELLATION_RATE_TRIVIA_2 -> "Que se passe-t-il si vous ne le faites pas ?"
+        RENTAL_RIDE -> "Balade en location"
+        THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "Il pourrait y avoir plusieurs arrêts lors de ce trajet. Cette location est réservée pour" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
+        RENTAL_RIDE_ACCEPTED -> "La location de la course a été acceptée"
         _ -> ""

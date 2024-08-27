@@ -1600,3 +1600,6 @@ getKN stringKey =
         LIFETIME_STATS -> "ಜೀವನದ ಸ್ಟ್ಯಾಟಿಸ್ಟಿಕ್ಸ್"
         TOTAL_RIDES_CANCELLED -> "ಒಟ್ಟು ಸವಾರಿಗಳನ್ನು ರದ್ದು ಮಾಡಲಾಗಿದೆ"
         TOTAL_EARNINGS_MISSED -> "ಒಟ್ಟು ಆದಾಯವನ್ನು ಮಿಸ್ ಮಾಡಲಾಗಿದೆ"
+        RENTAL_RIDE -> "ಬಾಡಿಗೆ ಸವಾರಿ"
+        THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "ಈ ಬಾಡಿಗೆ ಸವಾರಿ ಸಮಯದಲ್ಲಿ ಅನೇಕ ನಿಲ್ದಾಣಗಳು ಇರಬಹುದು. ಈ ಬಾಡಿಗೆ ಸವಾರಿ" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
+        RENTAL_RIDE_ACCEPTED -> "ಬಾಡಿಗೆ ಸವಾರಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ"

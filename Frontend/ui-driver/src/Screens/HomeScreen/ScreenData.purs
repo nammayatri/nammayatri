@@ -165,6 +165,7 @@ initData =
       , driverStatusSet: Online
       , goOfflineModal: false
       , screenName: "Home"
+      , rentalInfoPopUp : false
       , rideActionModal: false
       , updatedArrivalInChat: false
       , enterOtpModal: false
