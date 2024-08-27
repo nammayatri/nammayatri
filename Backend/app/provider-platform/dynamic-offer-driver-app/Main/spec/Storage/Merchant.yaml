@@ -38,6 +38,7 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
+  PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -816,6 +817,7 @@ TransporterConfig:
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
     cancellationRateWindow: Maybe Int
     cancellationRateCalculationThreshold: Maybe Int
+    poolSortingType: Maybe PoolSortingType
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
