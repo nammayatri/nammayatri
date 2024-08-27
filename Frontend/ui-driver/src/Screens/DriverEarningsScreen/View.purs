@@ -1235,7 +1235,7 @@ historyView push state =
             , gravity CENTER_VERTICAL
             ]
             [ textView
-                $ [ text $ "₹" <> formatCurrencyWithCommas (getFixedTwoDecimals state.data.totalCoinConvertedToCash)
+                $ [ text $ formatCurrencyWithCommas (getFixedTwoDecimals state.data.totalCoinConvertedToCash)
                   , color Color.black800
                   , visibility $ boolToVisibility (state.props.subView == ST.USE_COINS_VIEW)
                   , margin $ MarginRight 8
@@ -1244,7 +1244,7 @@ historyView push state =
             , textView
                 $ [ text case state.props.subView of
                       ST.YATRI_COINS_VIEW -> getString POINTS_EARNED
-                      ST.USE_COINS_VIEW -> getString CASH_CONVERTED
+                      ST.USE_COINS_VIEW -> getString DISCOUNT_POINTS
                       _ -> ""
                   , weight 1.0
                   , color Color.black700
@@ -1311,7 +1311,7 @@ historyViewItem item isLast subView =
                   , width WRAP_CONTENT
                   ]
                   [ textView
-                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else "₹" <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_POINTS
+                      $ [ text $ if subView == ST.YATRI_COINS_VIEW then item.event else (if subView == ST.USE_COINS_VIEW then "" else "₹") <> formatCurrencyWithCommas (show item.cash) <> " " <> getString CONVERTED_FROM_POINTS
                         , color Color.black900
                         ]
                       <> FontStyle.tags TypoGraphy
@@ -1493,6 +1493,7 @@ convertView push state =
 
     coinsDefaultValue = (state.data.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
     
+    discountPoints = (toNumber coinsDefaultValue) * state.data.coinConversionRate
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -1556,7 +1557,7 @@ convertView push state =
                     , gravity CENTER
                     ]
                   <> FontStyle.paragraphText TypoGraphy
-                  , pointsOrDiscountTally push (show $ coinsDefaultValue / state.data.config.coinsConfig.stepFunctionForCoinConversion) (getString DISCOUNT_POINTS)
+                  , pointsOrDiscountTally push (getFixedTwoDecimals discountPoints) (getString DISCOUNT_POINTS)
             ]
             , if state.data.coinsToUse > state.data.coinBalance then
               alertView push "ny_ic_alert_red" (getString NOT_ENOUGH_POINTS_DESCRIPTION) "" "" false Color.redOpacity10 6.0 (Margin 16 20 16 0)
@@ -1627,13 +1628,14 @@ separatorView isVisible subView =
     []
 
 coinsUsagePopup :: forall w. (Action -> Effect Unit) -> DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-coinsUsagePopup push state =
+coinsUsagePopup push state = do
+  let conversionRate = fromMaybe 0 (fromNumber $ state.data.coinConversionRate * 100.0)
   PrestoAnim.animationSet [ Anim.fadeIn true ]
     $ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (coinsInfoCardConfig FunctionCall state.data.config.coinsConfig.stepFunctionForCoinConversion) ]
+        [ RequestInfoCard.view (push <<< RequestInfoCardAction) (coinsInfoCardConfig FunctionCall conversionRate) ]
 
 dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [ visibility GONE ] []
