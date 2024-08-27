@@ -1177,7 +1177,7 @@ getBN stringKey =
         CONVERT -> "রূপান্তর"
         CONVERT_POINTS -> "পয়েন্ট রূপান্তর"
         CASH_CONVERTED -> "নগদ রূপান্তরিত"
-        WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES -> "{} আপনার ভবিষ্যতের সাবস্ক্রিপশন বকেয়া সমন্বয় করা হবে"
+        WILL_BE_ADJUSTED_IN_YOUR_FUTURE_SUBSCRIPTION_DUES -> "আপনার সাবস্ক্রিপশন ফি এর জন্য {} ছাড়ের পয়েন্ট উপলব্ধ"
         HAS_BEEN_ADJUSTED_IN_YOUR_SUBSCRIPTION_DUES -> "{} আপনার সাবস্ক্রিপশন বকেয়া সমন্বয় করা হয়েছে"
         USING_POINTS_REQUIRES_AN_ACTIVE_PLAN -> "পয়েন্ট ব্যবহার করার জন্য একটি সক্রিয় পরিকল্পনা প্রয়োজন।"
         TO_GET_STARTED -> "শুরু করতে"

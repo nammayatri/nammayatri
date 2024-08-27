@@ -161,7 +161,7 @@ getPopupConfig state = case state.props.popupType of
     , option2: getString GO_BACK
     , secondaryTextVisibility: false
     , option2Visibility: false
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_plan_by_coin"
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_plan_by_coin_v2"
     }
   ST.COIN_TO_CASH_FAIL_POPUP ->
     { optionButtonOrientation: "VERTICAL"
@@ -171,7 +171,7 @@ getPopupConfig state = case state.props.popupType of
     , option2: getString GO_BACK
     , secondaryTextVisibility: false
     , option2Visibility: true
-    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_coin_to_cash_fail"
+    , coverImageConfig: HU.fetchImage HU.FF_ASSET "ny_ic_coin_to_cash_fail_v2"
     }
   ST.NO_COINS_POPUP ->
     { optionButtonOrientation: "HORIZONTAL"
