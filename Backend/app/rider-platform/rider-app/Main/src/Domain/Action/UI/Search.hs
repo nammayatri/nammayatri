@@ -189,6 +189,7 @@ data RouteDetails = RouteDetails
   { longestRouteDistance :: Maybe Meters,
     shortestRouteDistance :: Maybe Meters,
     shortestRouteDuration :: Maybe Seconds,
+    shortestRouteStaticDuration :: Maybe Seconds,
     shortestRouteInfo :: Maybe Maps.RouteInfo,
     multipleRoutes :: Maybe [Maps.RouteInfo]
   }
@@ -295,7 +296,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
         )
   let merchantOperatingCityId = merchantOperatingCity.id
   searchRequestId <- generateGUID
-  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip req originCity
+  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity req
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops
   searchRequest <-
@@ -317,6 +318,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       device
       tag
       shortestRouteDuration
+      shortestRouteStaticDuration
       riderPreferredOption
       merchantOperatingCity.distanceUnit
       person.totalRidesCount
@@ -434,11 +436,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
 
     processRentalSearch person rentalReq stopsLatLong originCity = do
       case stopsLatLong of
-        [] -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
+        [] -> return $ RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [])) Nothing
         (stop : _) -> do
           stopCity <- Serviceability.validateServiceability stop [] person
           unless (stopCity == originCity) $ throwError RideNotServiceable
-          return $ RouteDetails (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
+          return $ RouteDetails Nothing (Just rentalReq.estimatedRentalDistance) (Just rentalReq.estimatedRentalDuration) Nothing (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) Nothing (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [])) Nothing
 
     updateRideSearchHotSpot :: DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> Flow ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
@@ -494,12 +496,13 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Seconds ->
+  Maybe Seconds ->
   SearchRequest.RiderPreferredOption ->
   DistanceUnit ->
   Maybe Int ->
   Bool ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -520,6 +523,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         clientId = mbClientId,
         createdAt = now,
         estimatedRideDuration = duration,
+        estimatedRideStaticDuration = staticDuration,
         device = device,
         clientBundleVersion = bundleVersion,
         clientSdkVersion = clientVersion,
@@ -602,6 +606,7 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
       longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
       shortestRouteDistance = (.distance) =<< shortestRouteInfo
       shortestRouteDuration = (.duration) =<< shortestRouteInfo
+      shortestRouteStaticDuration = (.staticDuration) =<< shortestRouteInfo
   return $ RouteDetails {multipleRoutes = Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex, ..}
 
 autoCompleteEvent ::

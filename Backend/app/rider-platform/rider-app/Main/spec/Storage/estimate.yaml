@@ -75,6 +75,7 @@ Estimate:
     estimatedTotalFare : Price
     totalFareRange : FareRange
     estimatedDuration : Maybe Seconds
+    estimatedStaticDuration: Maybe Seconds
     estimatedDistance : Maybe Distance
     estimatedPickupDuration : Maybe Seconds
     device : Maybe Text

@@ -69,6 +69,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.estimatedFare ((.amount) estimatedFare),
       Se.Set Beam.estimatedPickupDuration estimatedPickupDuration,
+      Se.Set Beam.estimatedStaticDuration estimatedStaticDuration,
       Se.Set Beam.estimatedTotalFare ((.amount) estimatedTotalFare),
       Se.Set Beam.isAirConditioned isAirConditioned,
       Se.Set Beam.isBlockedRoute isBlockedRoute,

@@ -613,6 +613,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
     defRouteInfo =
       RouteInfo
         { duration = Nothing,
+          staticDuration = Nothing,
           distance = Nothing,
           distanceWithUnit = Nothing,
           boundingBox = Nothing,
@@ -1026,6 +1027,7 @@ refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWi
         { distance = route'.distance,
           distanceWithUnit = route'.distanceWithUnit,
           duration = route'.duration,
+          staticDuration = route'.staticDuration,
           points = getStartPoint $ filterInitPoints (refactor [] route'.points),
           snappedWaypoints = route'.snappedWaypoints,
           boundingBox = route'.boundingBox

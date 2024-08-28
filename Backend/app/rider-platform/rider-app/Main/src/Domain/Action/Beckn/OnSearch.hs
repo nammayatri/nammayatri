@@ -353,6 +353,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType,
         serviceTierShortDesc = serviceTierShortDesc,
         estimatedDuration = searchRequest.estimatedRideDuration,
+        estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
         device = searchRequest.device,
         createdAt = now,
         updatedAt = now,
