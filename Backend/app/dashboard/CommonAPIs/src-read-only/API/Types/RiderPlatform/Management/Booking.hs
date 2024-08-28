@@ -26,3 +26,9 @@ mkBookingAPIs :: (Client EulerHS.Types.EulerClient API -> BookingAPIs)
 mkBookingAPIs bookingClient = (BookingAPIs {..})
   where
     postBookingCancelAllStuck :<|> postBookingSyncMultiple = bookingClient
+
+data BookingEndpointDSL
+  = PostBookingCancelAllStuckEndpoint
+  | PostBookingSyncMultipleEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

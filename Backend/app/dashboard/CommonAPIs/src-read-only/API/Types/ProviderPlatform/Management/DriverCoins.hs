@@ -148,3 +148,10 @@ mkDriverCoinsAPIs :: (Client EulerHS.Types.EulerClient API -> DriverCoinsAPIs)
 mkDriverCoinsAPIs driverCoinsClient = (DriverCoinsAPIs {..})
   where
     postDriverCoinsBulkUploadCoins :<|> postDriverCoinsBulkUploadCoinsV2 :<|> getDriverCoinsCoinHistory = driverCoinsClient
+
+data DriverCoinsEndpointDSL
+  = PostDriverCoinsBulkUploadCoinsEndpoint
+  | PostDriverCoinsBulkUploadCoinsV2Endpoint
+  | GetDriverCoinsCoinHistoryEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

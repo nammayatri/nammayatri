@@ -2,15 +2,18 @@ let common = ../provider-dashboard-common.dhall
 
 let defaultOutput = common.defaultConfigs._output
 
+let folderName = "RideBooking"
+
 let outputPath =
           defaultOutput
-      //  { _apiRelatedTypes = defaultOutput._apiRelatedTypes ++ "/RideBooking"
-          , _servantApi = defaultOutput._servantApi ++ "/RideBooking"
-          , _domainHandler = defaultOutput._domainHandler ++ "/RideBooking"
+      //  { _apiRelatedTypes =
+              defaultOutput._apiRelatedTypes ++ "/" ++ folderName
+          , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName
+          , _domainHandler = defaultOutput._domainHandler ++ "/" ++ folderName
           , _domainHandlerDashboard =
-              defaultOutput._domainHandlerDashboard ++ "/RideBooking"
+              defaultOutput._domainHandlerDashboard ++ "/" ++ folderName
           , _servantApiDashboard =
-              defaultOutput._servantApiDashboard ++ "/RideBooking"
+              defaultOutput._servantApiDashboard ++ "/" ++ folderName
           }
 
 let clientFunction =
@@ -18,4 +21,7 @@ let clientFunction =
         "ProviderPlatformClient.DynamicOfferDriver.RideBooking.callDriverOfferBPP"
 
 in      common.defaultConfigs
-    //  { _output = outputPath, _clientFunction = clientFunction }
+    //  { _output = outputPath
+        , _clientFunction = clientFunction
+        , _folderName = Some folderName
+        }

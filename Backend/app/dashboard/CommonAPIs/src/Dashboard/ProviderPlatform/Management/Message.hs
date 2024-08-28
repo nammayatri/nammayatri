@@ -22,7 +22,6 @@ where
 
 import API.Types.ProviderPlatform.Management.Message as Reexport
 import Dashboard.Common as Reexport
-import Dashboard.Common.Message as Reexport
 import Data.Aeson
 import Data.Text as T
 import Kernel.Prelude

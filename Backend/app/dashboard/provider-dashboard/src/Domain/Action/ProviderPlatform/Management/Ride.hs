@@ -13,6 +13,8 @@ module Domain.Action.ProviderPlatform.Management.Ride
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
@@ -35,13 +37,13 @@ buildManagementServerTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.RideEndpoint ->
+  Common.RideEndpointDSL ->
   ApiTokenInfo ->
   Maybe (Id Common.Ride) ->
   Maybe request ->
   m DT.Transaction
 buildManagementServerTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.RideAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing
+  T.buildTransaction (DT.ProviderManagementAPI $ Common.RideAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing
 
 getRideList ::
   ShortId DM.Merchant ->
@@ -110,6 +112,6 @@ postRideRoute merchantShortId opCity apiTokenInfo rideId = do
 getRideKaptureList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
 getRideKaptureList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildManagementServerTransaction Common.TicketRideListEndpoint apiTokenInfo Nothing T.emptyRequest
+  transaction <- buildManagementServerTransaction Common.GetRideKaptureListEndpoint apiTokenInfo Nothing T.emptyRequest
   T.withResponseTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.rideDSL.getRideKaptureList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber

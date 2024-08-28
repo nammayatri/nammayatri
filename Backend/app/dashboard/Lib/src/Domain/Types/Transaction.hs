@@ -28,17 +28,17 @@ import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Search as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
 import qualified "rider-app" API.Dashboard.Tickets as ADT
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as ProviderFleet
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as ProviderManagement
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking as ProviderRideBooking
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as RiderManagement
+-- import qualified "dashboard-helper-api" API.Types.RiderPlatform.RideBooking as RiderRideBooking
 import Control.Lens.Operators
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
-import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
-import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
-import qualified "dashboard-helper-api" Dashboard.Common.NammaTag as Common
 import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverReferral as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Payout as Payout
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
@@ -53,6 +53,7 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Id
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
+import qualified Text.Show (show)
 
 -- request is raw Text here, because if some field will be changed, we can't parse it
 data Transaction = Transaction
@@ -97,14 +98,9 @@ data RequestorAPIEntity = RequestorAPIEntity
 
 data Endpoint
   = RideAPI Common.RideEndpoint
-  | BookingAPI Common.BookingEndpoint
   | DriverAPI Common.DriverEndpoint
-  | DriverReferralAPI Common.ReferralEndpoint
   | DriverRegistrationAPI Common.DriverRegistrationEndpoint
-  | MerchantAPI Common.MerchantEndpoint
-  | NammaTagAPI Common.NammaTagEndpoint
   | CustomerAPI Common.CustomerEndpoint
-  | MessageAPI Common.MessageEndpoint
   | ExotelAPI Common.ExotelEndpoint
   | IssueAPI Common.IssueEndpoint
   | VolunteerAPI Common.VolunteerEndpoint
@@ -123,8 +119,42 @@ data Endpoint
   | TicketsAPI ADT.TicketBookingEndpoint
   | MapAPI BPP.MapEndPoint
   | SafetyAPI Safety.SafetyEndpoint
-  | PayoutAPI Payout.PayoutEndpoint
-  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+  | RiderManagementAPI RiderManagement.ManagementEndpoint
+  | -- | RiderRideBookingAPI RiderRideBooking.RideBookingEndpoint
+    ProviderFleetAPI ProviderFleet.FleetEndpoint
+  | ProviderManagementAPI ProviderManagement.ManagementEndpoint
+  | ProviderRideBookingAPI ProviderRideBooking.RideBookingEndpoint
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+instance Show Endpoint where
+  show = \case
+    RideAPI e -> "RideAPI " <> show e
+    DriverAPI e -> "DriverAPI " <> show e
+    DriverRegistrationAPI e -> "DriverRegistrationAPI " <> show e
+    CustomerAPI e -> "CustomerAPI " <> show e
+    ExotelAPI e -> "ExotelAPI " <> show e
+    IssueAPI e -> "IssueAPI " <> show e
+    VolunteerAPI e -> "VolunteerAPI " <> show e
+    RegistrationAPI e -> "RegistrationAPI " <> show e
+    SearchAPI e -> "SearchAPI " <> show e
+    SelectAPI e -> "SelectAPI " <> show e
+    ConfirmAPI e -> "ConfirmAPI " <> show e
+    RBooking e -> "RBooking " <> show e
+    ProfileAPI e -> "ProfileAPI " <> show e
+    MapsAPI e -> "MapsAPI " <> show e
+    FlowStatusAPI e -> "FlowStatusAPI " <> show e
+    CancelAPI e -> "CancelAPI " <> show e
+    SpecialZoneAPI e -> "SpecialZoneAPI " <> show e
+    SubscriptionAPI e -> "SubscriptionAPI " <> show e
+    OverlayAPI e -> "OverlayAPI " <> show e
+    TicketsAPI e -> "TicketsAPI " <> show e
+    MapAPI e -> "MapAPI " <> show e
+    SafetyAPI e -> "SafetyAPI " <> show e
+    RiderManagementAPI e -> "RiderManagementAPI_" <> show e
+    -- RiderRideBookingAPI e -> "RiderRideBookingAPI_" <> show e
+    ProviderFleetAPI e -> "ProviderFleetAPI_" <> show e
+    ProviderManagementAPI e -> "ProviderManagementAPI_" <> show e
+    ProviderRideBookingAPI e -> "ProviderRideBookingAPI_" <> show e
 
 $(mkBeamInstancesForEnum ''Endpoint)
 
@@ -139,7 +169,7 @@ instance ToParamSchema Endpoint where
     mempty
       & title ?~ "Endpoint"
       & type_ ?~ OpenApiString
-      & format ?~ "Default,RideAPI BookingEndpoint, BookingAPI BookingEndpoint,.."
+      & format ?~ "ProviderManagementAPI_BookingAPI_PostBookingCancelAllStuckEndpoint,.."
 
 instance Read Endpoint where
   readsPrec d' =
@@ -150,36 +180,16 @@ instance Read Endpoint where
             | r1 <- stripPrefix "RideAPI " r,
               (v1, r2) <- readsPrec (app_prec + 1) r1
           ]
-            ++ [ (BookingAPI v1, r2)
-                 | r1 <- stripPrefix "BookingAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
             ++ [ (DriverAPI v1, r2)
                  | r1 <- stripPrefix "DriverAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-            ++ [ (DriverReferralAPI v1, r2)
-                 | r1 <- stripPrefix "DriverReferralAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (DriverRegistrationAPI v1, r2)
                  | r1 <- stripPrefix "DriverRegistrationAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
-            ++ [ (MerchantAPI v1, r2)
-                 | r1 <- stripPrefix "MerchantAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-            ++ [ (NammaTagAPI v1, r2)
-                 | r1 <- stripPrefix "NammaTagAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
             ++ [ (CustomerAPI v1, r2)
                  | r1 <- stripPrefix "CustomerAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-            ++ [ (MessageAPI v1, r2)
-                 | r1 <- stripPrefix "MessageAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (ExotelAPI v1, r2)
@@ -254,11 +264,27 @@ instance Read Endpoint where
                  | r1 <- stripPrefix "SafetyAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
-            ++ [ (PayoutAPI v1, r2)
-                 | r1 <- stripPrefix "PayoutAPI " r,
+            ++ [ (RiderManagementAPI v1, r2)
+                 | r1 <- stripPrefix "RiderManagementAPI_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            -- ++ [ (RiderRideBookingAPI v1, r2)
+            --      | r1 <- stripPrefix "RiderRideBookingAPI_" r,
+            --        (v1, r2) <- readsPrec (app_prec + 1) r1
+            --    ]
+            ++ [ (ProviderFleetAPI v1, r2)
+                 | r1 <- stripPrefix "ProviderFleetAPI_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (ProviderManagementAPI v1, r2)
+                 | r1 <- stripPrefix "ProviderManagementAPI_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (ProviderRideBookingAPI v1, r2)
+                 | r1 <- stripPrefix "ProviderRideBookingAPI_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
       )
     where
-      app_prec = 10
+      app_prec = 9
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r

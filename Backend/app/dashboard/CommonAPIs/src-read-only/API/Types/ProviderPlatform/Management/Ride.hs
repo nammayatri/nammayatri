@@ -367,3 +367,15 @@ mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
     getRideList :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideKaptureList = rideClient
+
+data RideEndpointDSL
+  = GetRideListEndpoint
+  | PostRideEndMultipleEndpoint
+  | PostRideCancelMultipleEndpoint
+  | GetRideInfoEndpoint
+  | PostRideSyncEndpoint
+  | PostRideSyncMultipleEndpoint
+  | PostRideRouteEndpoint
+  | GetRideKaptureListEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

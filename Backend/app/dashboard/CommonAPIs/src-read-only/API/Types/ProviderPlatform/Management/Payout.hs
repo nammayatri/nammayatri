@@ -169,3 +169,12 @@ mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
 mkPayoutAPIs payoutClient = (PayoutAPIs {..})
   where
     getPayoutPayoutReferralHistory :<|> getPayoutPayoutHistory :<|> postPayoutPayoutVerifyFraudStatus :<|> postPayoutPayoutRetryFailed :<|> postPayoutPayoutRetryAllWithStatus = payoutClient
+
+data PayoutEndpointDSL
+  = GetPayoutPayoutReferralHistoryEndpoint
+  | GetPayoutPayoutHistoryEndpoint
+  | PostPayoutPayoutVerifyFraudStatusEndpoint
+  | PostPayoutPayoutRetryFailedEndpoint
+  | PostPayoutPayoutRetryAllWithStatusEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

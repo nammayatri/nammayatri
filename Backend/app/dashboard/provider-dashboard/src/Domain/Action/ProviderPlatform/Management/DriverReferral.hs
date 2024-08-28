@@ -18,7 +18,9 @@ module Domain.Action.ProviderPlatform.Management.DriverReferral
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverReferral as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverReferral as Common
+import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -37,12 +39,12 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.ReferralEndpoint ->
+  Common.DriverReferralEndpointDSL ->
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.DriverReferralAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.ProviderManagementAPI $ Common.DriverReferralAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postDriverReferralReferralOpsPassword ::
   ShortId DM.Merchant ->

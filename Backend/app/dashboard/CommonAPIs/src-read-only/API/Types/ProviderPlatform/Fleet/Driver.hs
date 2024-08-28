@@ -667,3 +667,26 @@ mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
     postDriverFleetAddVehicle :<|> postDriverFleetAddRCWithoutDriver :<|> getDriverFleetGetAllVehicle :<|> getDriverFleetGetAllDriver :<|> postDriverFleetUnlink :<|> postDriverFleetRemoveVehicle :<|> postDriverFleetRemoveDriver :<|> getDriverFleetTotalEarning :<|> getDriverFleetVehicleEarning :<|> getDriverFleetDriverEarning :<|> getDriverFleetDriverVehicleAssociation :<|> getDriverFleetDriverAssociation :<|> getDriverFleetVehicleAssociation :<|> postDriverFleetVehicleDriverRCstatus :<|> postDriverUpdateFleetOwnerInfo :<|> getDriverFleetOwnerInfo :<|> postDriverFleetSendJoiningOtp :<|> postDriverFleetVerifyJoiningOtp :<|> postDriverFleetLinkRCWithDriver = driverClient
+
+data DriverEndpointDSL
+  = PostDriverFleetAddVehicleEndpoint
+  | PostDriverFleetAddRCWithoutDriverEndpoint
+  | GetDriverFleetGetAllVehicleEndpoint
+  | GetDriverFleetGetAllDriverEndpoint
+  | PostDriverFleetUnlinkEndpoint
+  | PostDriverFleetRemoveVehicleEndpoint
+  | PostDriverFleetRemoveDriverEndpoint
+  | GetDriverFleetTotalEarningEndpoint
+  | GetDriverFleetVehicleEarningEndpoint
+  | GetDriverFleetDriverEarningEndpoint
+  | GetDriverFleetDriverVehicleAssociationEndpoint
+  | GetDriverFleetDriverAssociationEndpoint
+  | GetDriverFleetVehicleAssociationEndpoint
+  | PostDriverFleetVehicleDriverRCstatusEndpoint
+  | PostDriverUpdateFleetOwnerInfoEndpoint
+  | GetDriverFleetOwnerInfoEndpoint
+  | PostDriverFleetSendJoiningOtpEndpoint
+  | PostDriverFleetVerifyJoiningOtpEndpoint
+  | PostDriverFleetLinkRCWithDriverEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

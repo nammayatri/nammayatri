@@ -30,3 +30,10 @@ mkNammaTagAPIs :: (Client EulerHS.Types.EulerClient API -> NammaTagAPIs)
 mkNammaTagAPIs nammaTagClient = (NammaTagAPIs {..})
   where
     postNammaTagTagCreate :<|> postNammaTagQueryCreate :<|> postNammaTagAppDynamicLogicVerify = nammaTagClient
+
+data NammaTagEndpointDSL
+  = PostNammaTagTagCreateEndpoint
+  | PostNammaTagQueryCreateEndpoint
+  | PostNammaTagAppDynamicLogicVerifyEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
