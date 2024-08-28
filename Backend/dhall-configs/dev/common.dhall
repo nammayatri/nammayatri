@@ -78,4 +78,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , schedulerType = SchedulerType
     , internalEndPointMap
     , urlShortnerConfig
+    , sosAlertsTopicARN
     }
