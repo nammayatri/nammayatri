@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleConfig.VehicleConfig] -> m ())
 createMany = traverse_ create
 
-findAllByBecknConfigId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m ([Domain.Types.VehicleConfig.VehicleConfig]))
+findAllByBecknConfigId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig -> m [Domain.Types.VehicleConfig.VehicleConfig])
 findAllByBecknConfigId becknConfigId = do findAllWithKV [Se.Is Beam.becknConfigId $ Se.Eq (Kernel.Types.Id.getId becknConfigId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleConfig.VehicleConfig -> m (Maybe Domain.Types.VehicleConfig.VehicleConfig))

@@ -192,3 +192,8 @@ UPDATE atlas_bpp_dashboard.transaction
 UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'ProviderManagementAPI_DriverAPI_PostDriverSyncDocAadharPanEndpoint'
   WHERE endpoint = 'DriverAPI PostDriverSyncDocAadharPanEndpoint';
+
+-- {"api":"PostDriverPersonId","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'ProviderManagementAPI_DriverAPI_PostDriverPersonIdEndpoint'
+  WHERE endpoint = 'DriverAPI PostDriverpersonIdEndpoint';
