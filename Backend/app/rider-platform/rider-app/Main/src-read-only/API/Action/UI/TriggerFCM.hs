@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "triggerFCM" :> "message" :> ReqBody ('[JSON]) API.Types.UI.TriggerFCM.TriggerFcmReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type API = (TokenAuth :> "triggerFCM" :> "message" :> ReqBody '[JSON] API.Types.UI.TriggerFCM.TriggerFcmReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 handler :: Environment.FlowServer API
 handler = postTriggerFCMMessage

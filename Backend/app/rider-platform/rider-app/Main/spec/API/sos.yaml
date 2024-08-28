@@ -5,6 +5,7 @@ imports:
   SosType : Domain.Types.Sos
   SosStatus : Domain.Types.Sos
   Sos : Domain.Types.Sos
+  LatLong : Kernel.External.Maps.Types
 
 module: Sos
 types:
@@ -19,6 +20,7 @@ types:
     rideId: Id Ride
     isRideEnded: Maybe Bool
     notifyAllContacts: Maybe Bool
+    customerLocation: Maybe LatLong
 
   SosUpdateReq:
     status: SosStatus
