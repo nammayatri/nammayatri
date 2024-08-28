@@ -16,6 +16,7 @@ module Beckn.ACL.OnConfirm (buildOnConfirmReqV2) where
 
 import Beckn.ACL.Common as ACL
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -68,7 +69,9 @@ buildOnConfirmReqV2 req isValueAddNP = do
 
       if isDriverDetailsPresent
         then do
-          let driverImage = fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
+          let agentPerson = fulf >>= (.fulfillmentAgent) >>= (.agentPerson)
+          let tagGroups = agentPerson >>= (.personTags)
+          let driverImage = agentPerson >>= (.personImage) >>= (.imageUrl)
               driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC
               driverRating = Nothing
               driverRegisteredAt = Nothing
@@ -79,6 +82,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
               driverAlternatePhoneNumber = Nothing
               isAlreadyFav = False
               favCount = 0
+              driverAccountId = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
           driverName <- fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & maybe (Left "Missing fulfillment.agent.person.name in on_confirm") Right
