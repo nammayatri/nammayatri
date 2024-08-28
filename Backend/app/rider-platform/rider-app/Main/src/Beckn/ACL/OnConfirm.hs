@@ -88,7 +88,6 @@ buildOnConfirmReqV2 req isValueAddNP = do
               previousRideEndPos = Nothing
               vehicleAge = Nothing
               driverAlternatePhoneNumber = Nothing
-              tagGroups = fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
               isAlreadyFav = castToBool $ ACL.getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
               favCount = fromMaybe 0 $ castToInt $ ACL.getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
               driverAccountId = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
