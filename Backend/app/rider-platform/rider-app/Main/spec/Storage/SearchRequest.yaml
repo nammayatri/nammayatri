@@ -38,6 +38,7 @@ SearchRequest:
     maxDistance: Maybe Distance
     distanceUnit: DistanceUnit
     estimatedRideDuration: Maybe Seconds
+    estimatedRideStaticDuration: Maybe Seconds
     device: Maybe Text
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity #
