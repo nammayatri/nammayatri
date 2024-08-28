@@ -87,7 +87,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
             Nothing -> do
               fork "on_confirm/on_update" $ do
                 handle (errHandler dConfirmRes transporter Nothing) $ do
-                  callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country
+                  callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP
     pure Ack
   where
     errHandler dConfirmRes transporter mbDriver exc
@@ -95,7 +95,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking dConfirmRes.booking mbDriver transporter
       | otherwise = throwM exc
 
-    callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country = do
+    callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP = do
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapServiceTierToCategory dConfirmRes.booking.vehicleServiceTier
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -104,7 +104,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId dConfirmRes.booking.vehicleServiceTier dConfirmRes.booking.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show dConfirmRes.booking.vehicleServiceTier))
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
-          onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy
+      onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy isValueAddNP
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 
 confirmProcessingLockKey :: Text -> Text

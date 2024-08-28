@@ -55,6 +55,11 @@ buildOnConfirmReqV2 req isValueAddNP = do
         return $ Just dReq
       Left err -> throwError . InvalidBecknSchema $ "on_confirm error:-" <> show err
   where
+    castToInt :: Maybe Text -> Maybe Int
+    castToInt mbVar = case mbVar of
+      Just val -> readMaybe (T.unpack val)
+      _ -> Nothing
+
     parseData :: Spec.ConfirmReqMessage -> Maybe [Common.DFareBreakup] -> Either Text DOnConfirm.OnConfirmReq
     parseData message mbFareParams = do
       let order = message.confirmReqMessageOrder
@@ -69,6 +74,9 @@ buildOnConfirmReqV2 req isValueAddNP = do
 
       if isDriverDetailsPresent
         then do
+          let castToBool mbVar = case T.toLower <$> mbVar of
+                Just "true" -> True
+                _ -> False
           let agentPerson = fulf >>= (.fulfillmentAgent) >>= (.agentPerson)
           let tagGroups = agentPerson >>= (.personTags)
           let driverImage = agentPerson >>= (.personImage) >>= (.imageUrl)
@@ -80,8 +88,9 @@ buildOnConfirmReqV2 req isValueAddNP = do
               previousRideEndPos = Nothing
               vehicleAge = Nothing
               driverAlternatePhoneNumber = Nothing
-              isAlreadyFav = False
-              favCount = 0
+              tagGroups = fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
+              isAlreadyFav = castToBool $ ACL.getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
+              favCount = fromMaybe 0 $ castToInt $ ACL.getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
               driverAccountId = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
