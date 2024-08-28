@@ -139,6 +139,20 @@ newtype PersonIdsReq = PersonIdsReq {file :: FilePath}
 instance Kernel.Types.HideSecrets.HideSecrets PersonIdsReq where
   hideSecrets = Kernel.Prelude.identity
 
+newtype PersonMobileNumberIdsCsvRow = PersonMobileNumberIdsCsvRow
+  { mobileNumber :: Maybe Text
+  }
+
+instance Csv.FromNamedRecord PersonMobileNumberIdsCsvRow where
+  parseNamedRecord r = PersonMobileNumberIdsCsvRow <$> r Csv..: "mobileNumber"
+
+newtype PersonMobileNoReq = PersonMobileNoReq {file :: FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PersonMobileNoReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data PersonRes = PersonRes
   { id :: Text,
     mobileNumber :: Maybe Text,
@@ -154,5 +168,14 @@ instance FromMultipart Tmp PersonIdsReq where
       <$> fmap fdPayload (lookupFile "file" form)
 
 instance ToMultipart Tmp PersonIdsReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp PersonMobileNoReq where
+  fromMultipart form = do
+    PersonMobileNoReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp PersonMobileNoReq where
   toMultipart form =
     MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]

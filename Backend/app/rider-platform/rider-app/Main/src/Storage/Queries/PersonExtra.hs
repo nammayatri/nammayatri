@@ -32,6 +32,12 @@ findByPId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is BeamP.id $ Se.Eq id]
 findAllByPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Person]
 findAllByPersonIds ids = findAllWithDb [Se.Is BeamP.id $ Se.In ids]
 
+findPersonIdsByPhoneNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> m [Person]
+findPersonIdsByPhoneNumber phoneNumbers = do
+  phoneNumbersHashes <- mapM getDbHash phoneNumbers
+  let mbhashes = Just <$> phoneNumbersHashes
+  findAllWithDb [Se.Is BeamP.mobileNumberHash $ Se.In mbhashes]
+
 findByEmailAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Merchant -> Text -> m (Maybe Person)
 findByEmailAndMerchantId (Id merchantId) email_ = do
   emailDbHash <- getDbHash email_

@@ -27,6 +27,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverLocation,
     deleteDriverPermanentlyDelete,
     postDriverPersonNumbers,
+    postDriverPersonId,
     postDriverUnlinkDL,
     postDriverUnlinkAadhaar,
     postDriverUpdatePhoneNumber,
@@ -272,3 +273,9 @@ postDriverPersonNumbers merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction (Common.PostDriverPersonNumbersEndpoint) apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callDriverOfferBPPOperations checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverPersonNumbers)) req)
+
+postDriverPersonId :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.PersonMobileNoReq -> Environment.Flow [Common.PersonRes])
+postDriverPersonId merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostDriverpersonIdEndpoint apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ do Client.callDriverOfferBPPOperations checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverPersonId)) req

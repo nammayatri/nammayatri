@@ -22,6 +22,7 @@ module Domain.Action.Dashboard.Customer
     getCancellationDuesDetails,
     updateSafetyCenterBlocking,
     getCustomerPersonNumbers,
+    getCustomerPersonId,
   )
 where
 
@@ -246,4 +247,26 @@ getCustomerPersonNumbers _ _ req = do
       decryptedPersons <- forM persons $ \p -> do
         decPerson <- decrypt p
         return $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber Nothing decPerson.merchantOperatingCityId.getId
+      return decryptedPersons
+
+getCustomerPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
+getCustomerPersonId _ _ req = do
+  csvData <- readCsvAndGetPersonIds req.file
+  let chunks = chunksOf 100 csvData
+  decryptedNumbers <- forM chunks processChunk
+  return $ concat decryptedNumbers
+  where
+    readCsvAndGetPersonIds :: FilePath -> Flow [Text]
+    readCsvAndGetPersonIds csvFile = do
+      csvData <- liftIO $ BS.readFile csvFile
+      case decodeByName (LBS.fromStrict csvData) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ mapMaybe (Common.mobileNumber :: Common.PersonMobileNumberIdsCsvRow -> Maybe Text) $ V.toList v
+
+    processChunk :: [Text] -> Flow [Common.PersonRes]
+    processChunk chunk = do
+      mobile <- QP.findPersonIdsByPhoneNumber chunk
+      decryptedPersons <- forM mobile $ \p -> do
+        decMobile <- decrypt p
+        return $ Common.PersonRes decMobile.id.getId decMobile.mobileNumber Nothing decMobile.merchantOperatingCityId.getId
       return decryptedPersons
