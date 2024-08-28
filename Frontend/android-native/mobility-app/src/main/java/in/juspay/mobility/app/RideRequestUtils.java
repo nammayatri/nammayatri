@@ -41,6 +41,7 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
+import com.bumptech.glide.Glide;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
@@ -387,15 +388,14 @@ public class RideRequestUtils {
             } else {
                 return new JSONObject();
             }
-            InputStream is = context.getAssets().open("juspay/zone_config.json");
-            int size = is.available();
-            byte[] buffer = new byte[size];
-            is.read(buffer);
-            is.close();
-            String json = new String(buffer, StandardCharsets.UTF_8);
-            return new JSONObject(json).getJSONObject(key);
+            if (remoteConfigs.hasKey("zone_config")){
+                String zoneConfStr = remoteConfigs.getString("zone_config");
+                return new JSONObject(zoneConfStr).getJSONObject(key);
+            }else {
+                return new JSONObject();
+            }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            FirebaseCrashlytics.getInstance().recordException(ex);
             return new JSONObject();
         }
     }
@@ -403,12 +403,12 @@ public class RideRequestUtils {
     public static void setSpecialZoneAttrs(SheetAdapter.SheetViewHolder holder, String specialLocationTag, Context context) {
         try{
             JSONObject zoneConfig = getZoneConfig(specialLocationTag,context);
-            holder.assetZonePickup.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ zoneConfig.get("imageUrl")));
-            holder.assetZoneDrop.setImageURI(Uri.parse("android.resource://"+ context.getPackageName() +"/drawable/"+ zoneConfig.get("imageUrl")));
+            Glide.with(context).load(zoneConfig.get("imageUrl")).into(holder.assetZonePickup);
+            Glide.with(context).load(zoneConfig.get("imageUrl")).into(holder.assetZoneDrop);
             holder.assetZonePickup.setVisibility(zoneConfig.getInt("assetZonePickupVisibility"));
             holder.assetZoneDrop.setVisibility(zoneConfig.getInt("assetZoneDropVisibility"));
         }catch (Exception e){
-            e.printStackTrace();
+            FirebaseCrashlytics.getInstance().recordException(e);
         }
     }
 
