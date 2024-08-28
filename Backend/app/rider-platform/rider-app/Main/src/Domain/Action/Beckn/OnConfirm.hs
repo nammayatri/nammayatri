@@ -34,6 +34,7 @@ import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps (LatLong (..))
+import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -42,6 +43,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -81,7 +83,8 @@ data RideAssignedInfo = RideAssignedInfo
     vehicleModel :: Text,
     fareParams :: Maybe [DCommon.DFareBreakup],
     isAlreadyFav :: Bool,
-    favCount :: Int
+    favCount :: Int,
+    driverAccountId :: Maybe Payment.AccountId
   }
 
 data ValidatedOnConfirmReq
@@ -170,11 +173,24 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
 onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
 -- TODO: Make sure booking status is new here.
-validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
+validateRequest :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
 validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
   return $ ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}
 validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
   let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
-  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters = Nothing, fareBreakups = Nothing, driverTrackingUrl = Nothing, ..}
+  mbMerchant <- CQM.findById booking.merchantId
+  let onlinePayment = maybe False (.onlinePayment) mbMerchant
+  onlinePaymentParameters <-
+    if onlinePayment
+      then do
+        person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+        customerPaymentId <- person.customerPaymentId & fromMaybeM (CustomerPaymentIdNotFound booking.riderId.getId)
+        paymentMethodId <- booking.paymentMethodId & fromMaybeM (PaymentMethodIdNotFound booking.id.getId)
+        driverAccountId_ <- driverAccountId & fromMaybeM (DriverAccountIdNotFound booking.id.getId)
+        let merchantOperatingCityId = person.merchantOperatingCityId
+        email <- mapM decrypt person.email
+        return $ Just DCommon.OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
+      else return Nothing
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, fareBreakups = Nothing, driverTrackingUrl = Nothing, ..}
