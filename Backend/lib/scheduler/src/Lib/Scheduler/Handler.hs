@@ -65,20 +65,20 @@ handler hnd = do
     runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> do
       let jobType' = show (fromSing $ jobType jobInfo)
       expirationTime <- asks (.expirationTime)
-      withDynamicLogLevel jobType' . Hedis.withCrossAppRedis . Hedis.whenWithLockRedis (mkRunningJobKey id.getId) (fromIntegral expirationTime) $
-        withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
-          res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
-          registerExecutionResult hnd anyJob res
-          releaseLock parentJobId
+      withDynamicLogLevel jobType' . Hedis.withCrossAppRedis . Hedis.whenWithLockRedis (mkRunningJobKey id.getId) (fromIntegral expirationTime) $ do
+        -- withLogTag ("JobId = " <> id.getId <> " and " <> "parentJobId = " <> parentJobId.getId <> "jobType = " <> jobType') $ do
+        res <- measuringDuration (registerDuration jobType') $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
+        registerExecutionResult hnd anyJob res
+        releaseLock parentJobId
 
     mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
 dbBasedHandlerLoop :: (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
 dbBasedHandlerLoop hnd runTask = do
   logInfo "Starting runner iteration 1"
-  iterSessionId <- generateGUIDText
+  -- iterSessionId <- generateGUIDText
   before <- getCurrentTime
-  withLogTag iterSessionId $ logInfo "Starting runner iteration"
+  -- withLogTag iterSessionId $ logInfo "Starting runner iteration"
   runnerIteration hnd runTask
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
