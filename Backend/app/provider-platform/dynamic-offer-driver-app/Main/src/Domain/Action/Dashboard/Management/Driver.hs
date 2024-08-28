@@ -20,6 +20,7 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverActivity,
     postDriverDisable,
     postDriverPersonNumbers,
+    postDriverPersonId,
     postDriverAcRestrictionUpdate,
     postDriverBlockWithReason,
     postDriverBlock,
@@ -149,6 +150,9 @@ postDriverClearFee = DDriver.postDriverClearFee
 
 postDriverPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
 postDriverPersonNumbers = DDriver.getDriverPersonNumbers
+
+postDriverPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
+postDriverPersonId = DDriver.getDriverPersonId
 
 getDriverPanAadharSelfieDetails :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow Common.PanAadharSelfieDetailsResp
 getDriverPanAadharSelfieDetails = DDriver.getDriverPanAadharSelfieDetails
