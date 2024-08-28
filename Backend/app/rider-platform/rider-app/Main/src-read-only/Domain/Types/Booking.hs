@@ -41,6 +41,7 @@ data Booking = Booking
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
+    estimatedStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedTotalFare :: Kernel.Types.Common.Price,
     fromLocation :: Domain.Types.Location.Location,
     fulfillmentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

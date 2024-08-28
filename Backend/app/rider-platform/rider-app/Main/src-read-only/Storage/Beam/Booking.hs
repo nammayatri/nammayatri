@@ -46,6 +46,7 @@ data BookingT f = BookingT
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    estimatedStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedTotalFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fulfillmentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

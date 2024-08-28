@@ -171,6 +171,7 @@ Booking:
     estimatedDistance: Maybe Distance
     distanceUnit: DistanceUnit
     estimatedDuration: Maybe Seconds
+    estimatedStaticDuration: Maybe Seconds
     discount: Maybe Price
     estimatedTotalFare: Price
     isScheduled: Bool
@@ -283,6 +284,7 @@ Booking:
     stopLocationId: character varying(36)
     estimatedDistance: double precision
     estimatedDuration: integer
+    estimatedStaticDuration: integer
     isScheduled: boolean
     serviceTierName: text
     clientId: character varying(36)
