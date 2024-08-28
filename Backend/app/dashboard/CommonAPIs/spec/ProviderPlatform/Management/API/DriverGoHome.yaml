@@ -23,6 +23,9 @@ apis:
         type: UpdateDriverHomeLocationReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: DriverAPI UpdateDriverHomeLocationEndpoint
+        endpointV2:
   - POST: # IncrementDriverGoToCountAPI
       endpoint: /{driverId}/incrementGoToCount
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS INCREMENT_DRIVER_GO_TO_COUNT
@@ -30,6 +33,9 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      migrate:
+        endpoint: DriverAPI IncrementDriverGoToCountEndPoint
+        endpointV2:
   - GET: # GetDriverGoHomeInfoAPI
       endpoint: /{driverId}/getGoHomeInfo
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_GO_HOME_INFO

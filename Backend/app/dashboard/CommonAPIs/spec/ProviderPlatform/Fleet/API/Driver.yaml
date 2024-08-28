@@ -334,6 +334,9 @@ apis:
               type: RCStatusReq
             response:
               type: APISuccess
+      migrate:
+        endpoint: DriverAPI SetVehicleDriverRcStatusForFleetEndpoint
+        endpointV2:
   - POST: # UpdateFleetOwnerInfoAPI
       endpoint: /{driverId}/updateFleetOwnerInfo
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET UPDATE_FLEET_OWNER_INFO
@@ -343,6 +346,9 @@ apis:
         type: UpdateFleetOwnerInfoReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: DriverAPI UpdateFleetOwnerEndPoint
+        endpointV2:
   - GET: # GetFleetOwnerInfoAPI
       endpoint: /{driverId}/fleetOwnerInfo
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_FLEET_OWNER_INFO

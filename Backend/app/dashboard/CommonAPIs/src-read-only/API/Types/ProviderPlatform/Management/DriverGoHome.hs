@@ -83,3 +83,11 @@ mkDriverGoHomeAPIs :: (Client EulerHS.Types.EulerClient API -> DriverGoHomeAPIs)
 mkDriverGoHomeAPIs driverGoHomeClient = (DriverGoHomeAPIs {..})
   where
     getDriverGoHomeGetHomeLocation :<|> postDriverGoHomeUpdateHomeLocation :<|> postDriverGoHomeIncrementGoToCount :<|> getDriverGoHomeGetGoHomeInfo = driverGoHomeClient
+
+data DriverGoHomeEndpointDSL
+  = GetDriverGoHomeGetHomeLocationEndpoint
+  | PostDriverGoHomeUpdateHomeLocationEndpoint
+  | PostDriverGoHomeIncrementGoToCountEndpoint
+  | GetDriverGoHomeGetGoHomeInfoEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

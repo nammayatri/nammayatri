@@ -30,6 +30,9 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      migrate:
+        endpoint: DriverAPI EnableDriverEndpoint
+        endpointV2:
   - POST: # DriverCashCollectionAPI
       endpoint: /{driverId}/collectCash
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
@@ -47,6 +50,9 @@ apis:
               type: Text
             response:
               type: APISuccess
+      migrate:
+        endpoint: DriverAPI CollectCashEndpoint
+        endpointV2:
   - POST: # DriverCashCollectionAPIV2
       endpoint: /{driverId}/v2/collectCash/{serviceName}
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
@@ -65,6 +71,9 @@ apis:
               serviceName: ServiceNames
             response:
               type: APISuccess
+      migrate:
+        endpoint: DriverAPI CollectCashEndpoint
+        endpointV2:
   - POST: # DriverCashExemptionAPI
       endpoint: /{driverId}/exemptCash
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
@@ -82,6 +91,9 @@ apis:
               type: Text
             response:
               type: APISuccess
+      migrate:
+        endpoint: DriverAPI ExemptCashEndpoint
+        endpointV2:
   - POST: # DriverCashExemptionAPIV2
       endpoint: /{driverId}/v2/exemptCash/{serviceName}
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
@@ -100,6 +112,9 @@ apis:
               serviceName: ServiceNames
             response:
               type: APISuccess
+      migrate:
+        endpoint: DriverAPI ExemptCashEndpoint
+        endpointV2:
   - GET: # DriverInfoAPI
       endpoint: /info
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS INFO
@@ -137,6 +152,9 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      migrate:
+        endpoint: DriverAPI UnlinkVehicleEndpoint
+        endpointV2:
   - POST: # EndRCAssociationAPI
       endpoint: /{driverId}/endRCAssociation
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS END_RC_ASSOCIATION
@@ -144,6 +162,9 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      migrate:
+        endpoint: DriverAPI EndRCAssociationEndpoint
+        endpointV2:
   - POST: # AddVehicleAPI
       endpoint: /{driverId}/addVehicle
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS ADD_VEHICLE
@@ -154,6 +175,9 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
+      migrate:
+        endpoint: DriverAPI AddVehicleEndpoint
+        endpointV2:
   - POST: # SetRCStatusAPI
       endpoint: /{driverId}/setRCStatus
       auth: ApiAuth DRIVER_OFFER_BPP DRIVERS SET_RC_STATUS
@@ -163,6 +187,9 @@ apis:
         type: RCStatusReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: DriverAPI SetRCStatusEndpoint
+        endpointV2:
 types:
   DriverOutstandingBalanceResp:
     - driverFeeId: Id DriverOutstandingBalanceResp

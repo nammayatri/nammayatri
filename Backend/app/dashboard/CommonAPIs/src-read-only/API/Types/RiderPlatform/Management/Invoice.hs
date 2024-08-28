@@ -3,6 +3,7 @@
 
 module API.Types.RiderPlatform.Management.Invoice where
 
+import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import EulerHS.Prelude hiding (id)
@@ -50,3 +51,15 @@ mkInvoiceAPIs :: (Client EulerHS.Types.EulerClient API -> InvoiceAPIs)
 mkInvoiceAPIs invoiceClient = (InvoiceAPIs {..})
   where
     getInvoiceInvoice = invoiceClient
+
+data InvoiceEndpointDSL
+  = GetInvoiceInvoiceEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToSchema)
+
+instance ToJSON InvoiceEndpointDSL where
+  toJSON GetInvoiceInvoiceEndpoint = Data.Aeson.String "GetInvoiceInvoiceEndpoint"
+
+instance FromJSON InvoiceEndpointDSL where
+  parseJSON (Data.Aeson.String "GetInvoiceInvoiceEndpoint") = pure GetInvoiceInvoiceEndpoint
+  parseJSON _ = fail "GetInvoiceInvoiceEndpoint expected"

@@ -27,6 +27,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
 import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -52,12 +53,12 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.MerchantEndpoint ->
+  Common.MerchantEndpointDSL ->
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.MerchantAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.RiderManagementAPI $ Common.MerchantAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postMerchantUpdate ::
   ShortId DM.Merchant ->

@@ -20,7 +20,8 @@ module Domain.Action.ProviderPlatform.Management.DriverGoHome
   )
 where
 
-import qualified API.Types.ProviderPlatform.Management.DriverGoHome as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverGoHome as Common
 import qualified Dashboard.Common.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -40,13 +41,13 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.DriverEndpoint ->
+  Common.DriverGoHomeEndpointDSL ->
   ApiTokenInfo ->
   Maybe (Id Common.Driver) ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.DriverAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
+  T.buildTransaction (DT.ProviderManagementAPI $ Common.DriverGoHomeAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
 
 getDriverGoHomeGetHomeLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.GetHomeLocationsRes
 getDriverGoHomeGetHomeLocation merchantShortId opCity apiTokenInfo driverId = do

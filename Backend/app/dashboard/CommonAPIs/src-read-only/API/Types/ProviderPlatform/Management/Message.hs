@@ -215,3 +215,15 @@ mkMessageAPIs :: (Client EulerHS.Types.EulerClient API -> MessageAPIs)
 mkMessageAPIs messageClient = (MessageAPIs {..})
   where
     postMessageUploadFile :<|> postMessageAddLink :<|> postMessageAdd :<|> postMessageSend :<|> getMessageList :<|> getMessageInfo :<|> getMessageDeliveryInfo :<|> getMessageReceiverList = messageClient
+
+data MessageEndpointDSL
+  = PostMessageUploadFileEndpoint
+  | PostMessageAddLinkEndpoint
+  | PostMessageAddEndpoint
+  | PostMessageSendEndpoint
+  | GetMessageListEndpoint
+  | GetMessageInfoEndpoint
+  | GetMessageDeliveryInfoEndpoint
+  | GetMessageReceiverListEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

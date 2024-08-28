@@ -21,6 +21,8 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
@@ -46,13 +48,13 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.DriverEndpoint ->
+  Common.DriverEndpointDSL ->
   ApiTokenInfo ->
   Maybe (Id Common.Driver) ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.DriverAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
+  T.buildTransaction (DT.ProviderFleetAPI $ Common.DriverAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
 
 postDriverFleetAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> Common.AddVehicleReq -> Flow APISuccess
 postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode req = do
@@ -130,7 +132,7 @@ postDriverFleetVehicleDriverRCstatus merchantShortId opCity apiTokenInfo driverI
 postDriverUpdateFleetOwnerInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateFleetOwnerInfoReq -> Flow APISuccess
 postDriverUpdateFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.UpdateFleetOwnerEndPoint apiTokenInfo (Just driverId) (Just req)
+  transaction <- buildTransaction Common.PostDriverUpdateFleetOwnerInfoEndpoint apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $ do
     unless (apiTokenInfo.personId.getId == driverId.getId) $
       throwError AccessDenied

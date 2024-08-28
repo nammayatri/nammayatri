@@ -36,6 +36,9 @@ apis:
       response:
         type: MerchantUpdateRes
       validation: Dashboard.ProviderPlatform.Management.Merchant.validateMerchantUpdateReq
+      migrate:
+        endpoint: MerchantAPI MerchantUpdateEndpoint
+        endpointV2:
   - GET: # MerchantCommonConfigAPI
       endpoint: /config/common
       auth:
@@ -51,6 +54,9 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.ProviderPlatform.Management.Merchant.validateMerchantCommonConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI MerchantCommonConfigUpdateEndpoint
+        endpointV2:
   - GET: # DriverPoolConfigAPI
       endpoint: /config/driverPool
       auth:
@@ -78,6 +84,9 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.ProviderPlatform.Management.Merchant.validateDriverPoolConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI DriverPoolConfigUpdateEndpoint
+        endpointV2:
   - POST: # DriverPoolConfigCreateAPI
       endpoint: /config/driverPool/create
       auth:
@@ -95,6 +104,9 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.ProviderPlatform.Management.Merchant.validateDriverPoolConfigCreateReq
+      migrate:
+        endpoint: MerchantAPI DriverPoolConfigCreateEndpoint
+        endpointV2:
   - GET: # DriverIntelligentPoolConfigAPI
       endpoint: /config/driverIntelligentPool
       auth:
@@ -110,6 +122,9 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.ProviderPlatform.Management.Merchant.validateDriverIntelligentPoolConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI DriverIntelligentPoolConfigUpdateEndpoint
+        endpointV2:
   - GET: # DocumentVerificationConfigAPI
       endpoint: /config/onboardingDocument/
       query:
@@ -130,6 +145,9 @@ apis:
         type: DocumentVerificationConfigUpdateReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DocumentVerificationConfigUpdateEndpoint
+        endpointV2:
   - POST: # DocumentVerificationConfigCreateAPI
       endpoint: /config/onboardingDocument/create
       auth:
@@ -141,6 +159,9 @@ apis:
         type: DocumentVerificationConfigCreateReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DocumentVerificationConfigCreateEndpoint
+        endpointV2:
   - GET: # ServiceUsageConfigAPI
       endpoint: /serviceUsageConfig
       auth:
@@ -155,6 +176,9 @@ apis:
         type: MapsServiceConfigUpdateReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI MapsServiceConfigUpdateEndpoint
+        endpointV2:
   - POST: # MapsServiceUsageConfigUpdateAPI
       endpoint: /serviceUsageConfig/maps/update
       auth:
@@ -164,6 +188,9 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.Common.Merchant.validateMapsServiceUsageConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI MapsServiceConfigUsageUpdateEndpoint
+        endpointV2:
   - POST: # SmsServiceConfigUpdateAPI
       endpoint: /serviceConfig/sms/update
       auth:
@@ -172,6 +199,9 @@ apis:
         type: SmsServiceConfigUpdateReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI SmsServiceConfigUpdateEndpoint
+        endpointV2:
   - POST: # SmsServiceUsageConfigUpdateAPI
       endpoint: /serviceUsageConfig/sms/update
       auth:
@@ -181,6 +211,9 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.Common.Merchant.validateSmsServiceUsageConfigUpdateReq
+      migrate:
+        endpoint: MerchantAPI SmsServiceConfigUsageUpdateEndpoint
+        endpointV2:
   - POST: # VerificationServiceConfigUpdateAPI
       endpoint: /serviceConfig/verification/update
       auth:
@@ -189,6 +222,9 @@ apis:
         type: VerificationServiceConfigUpdateReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI VerificationServiceConfigUpdateEndpoint
+        endpointV2:
   - POST: # CreateFPDriverExtraFee
       endpoint: /config/farePolicy/{farePolicyId}/driverExtraFeeBounds/create
       auth:
@@ -204,6 +240,9 @@ apis:
         type: CreateFPDriverExtraFeeReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI CreateFPDriverExtraFeeEndpoint
+        endpointV2:
   - POST: # UpdateFPDriverExtraFee
       endpoint: /config/farePolicy/{farePolicyId}/driverExtraFeeBounds/update
       auth:
@@ -219,6 +258,9 @@ apis:
         type: CreateFPDriverExtraFeeReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpdateFPDriverExtraFeeEndpoint
+        endpointV2:
   - POST: # UpdateFPPerExtraKmRate
       endpoint: /config/farePolicy/{farePolicyId}/{startDistance}/perExtraKmRate/update
       auth:
@@ -230,6 +272,9 @@ apis:
         type: UpdateFPPerExtraKmRateReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpdateFPPerExtraKmRate
+        endpointV2:
   - POST: # UpdateFarePolicy
       endpoint: /config/farePolicy/{farePolicyId}/update
       auth:
@@ -240,6 +285,9 @@ apis:
         type: UpdateFarePolicyReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpdateFarePolicy
+        endpointV2:
   - POST: # UpsertFarePolicyAPI
       endpoint: /config/farePolicy/upsert/
       auth:
@@ -248,6 +296,9 @@ apis:
         type: UpsertFarePolicyReq
       response:
         type: UpsertFarePolicyResp
+      migrate:
+        endpoint: MerchantAPI UpsertFarePolicyEndpoint
+        endpointV2:
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
       auth:
@@ -265,6 +316,9 @@ apis:
               type: CreateMerchantOperatingCityReqT
             response:
               type: CreateMerchantOperatingCityRes
+      migrate:
+        endpoint: MerchantAPI CreateMerchantOperatingCityEndpoint
+        endpointV2:
   - POST: # SchedulerTriggerAPI
       endpoint: /scheduler/trigger
       auth:
@@ -281,6 +335,9 @@ apis:
         type: UpdateOnboardingVehicleVariantMappingReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpdateOnboardingVehicleVariantMappingEndpoint
+        endpointV2:
   - POST: # UpsertSpecialLocationAPI
       endpoint: /specialLocation/upsert
       query:
@@ -302,6 +359,9 @@ apis:
               type: UpsertSpecialLocationReqT
             response:
               type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationEndpoint
+        endpointV2:
   - DELETE: # DeleteSpecialLocationAPI
       endpoint: /specialLocation/{specialLocationId}/delete
       params:
@@ -310,6 +370,9 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DeleteSpecialLocationEndpoint
+        endpointV2:
   - POST: # UpsertSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/upsert
       params:
@@ -331,6 +394,9 @@ apis:
               type: UpsertSpecialLocationGateReqT
             response:
               type: APISuccess
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationGateEndpoint
+        endpointV2:
   - DELETE: # DeleteSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
       params:
@@ -340,6 +406,9 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
       response:
         type: APISuccess
+      migrate:
+        endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
+        endpointV2:
 
 types:
   MerchantUpdateReq:

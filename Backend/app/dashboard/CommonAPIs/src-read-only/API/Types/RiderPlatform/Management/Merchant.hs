@@ -158,3 +158,18 @@ mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)
 mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
     postMerchantUpdate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete = merchantClient
+
+data MerchantEndpointDSL
+  = PostMerchantUpdateEndpoint
+  | GetMerchantServiceUsageConfigEndpoint
+  | PostMerchantServiceConfigMapsUpdateEndpoint
+  | PostMerchantServiceUsageConfigMapsUpdateEndpoint
+  | PostMerchantServiceConfigSmsUpdateEndpoint
+  | PostMerchantServiceUsageConfigSmsUpdateEndpoint
+  | PostMerchantConfigOperatingCityCreateEndpoint
+  | PostMerchantSpecialLocationUpsertEndpoint
+  | DeleteMerchantSpecialLocationDeleteEndpoint
+  | PostMerchantSpecialLocationGatesUpsertEndpoint
+  | DeleteMerchantSpecialLocationGatesDeleteEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

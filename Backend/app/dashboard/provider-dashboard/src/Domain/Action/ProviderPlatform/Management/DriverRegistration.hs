@@ -26,6 +26,8 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
@@ -45,13 +47,13 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.DriverRegistrationEndpoint ->
+  Common.DriverRegistrationEndpointDSL ->
   ApiTokenInfo ->
   Maybe (Id Common.Driver) ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.DriverRegistrationAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) driverId Nothing
+  T.buildTransaction (DT.ProviderManagementAPI $ Common.DriverRegistrationAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) driverId Nothing
 
 getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow Common.DocumentsListResponse
 getDriverRegistrationDocumentsList merchantShortId opCity apiTokenInfo driverId = do

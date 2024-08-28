@@ -14,6 +14,9 @@ apis:
         type: StuckBookingsCancelReq
       response:
         type: StuckBookingsCancelRes
+      migrate:
+        endpoint: BookingAPI StuckBookingsCancelEndpoint
+        endpointV2:
   - POST: # MultipleBookingSyncAPI
       endpoint: /sync
       name: PostBookingSyncMultiple
@@ -23,6 +26,9 @@ apis:
       response:
         type: MultipleBookingSyncResp
       validation: Dashboard.Common.Booking.validateMultipleBookingSyncReq
+      migrate:
+        endpoint: BookingAPI MultipleBookingSyncEndpoint
+        endpointV2:
 
 # types are common for rider and provider dashboard
 types: {}

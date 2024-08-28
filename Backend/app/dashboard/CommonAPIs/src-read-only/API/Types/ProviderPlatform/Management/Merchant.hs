@@ -856,3 +856,36 @@ mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)
 mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
     postMerchantUpdate :<|> getMerchantConfigCommon :<|> postMerchantConfigCommonUpdate :<|> getMerchantConfigDriverPool :<|> postMerchantConfigDriverPoolUpdate :<|> postMerchantConfigDriverPoolCreate :<|> getMerchantConfigDriverIntelligentPool :<|> postMerchantConfigDriverIntelligentPoolUpdate :<|> getMerchantConfigOnboardingDocument :<|> postMerchantConfigOnboardingDocumentUpdate :<|> postMerchantConfigOnboardingDocumentCreate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantServiceConfigVerificationUpdate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> postMerchantConfigFarePolicyUpdate :<|> postMerchantConfigFarePolicyUpsert :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantSchedulerTrigger :<|> postMerchantUpdateOnboardingVehicleVariantMapping :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete = merchantClient
+
+data MerchantEndpointDSL
+  = PostMerchantUpdateEndpoint
+  | GetMerchantConfigCommonEndpoint
+  | PostMerchantConfigCommonUpdateEndpoint
+  | GetMerchantConfigDriverPoolEndpoint
+  | PostMerchantConfigDriverPoolUpdateEndpoint
+  | PostMerchantConfigDriverPoolCreateEndpoint
+  | GetMerchantConfigDriverIntelligentPoolEndpoint
+  | PostMerchantConfigDriverIntelligentPoolUpdateEndpoint
+  | GetMerchantConfigOnboardingDocumentEndpoint
+  | PostMerchantConfigOnboardingDocumentUpdateEndpoint
+  | PostMerchantConfigOnboardingDocumentCreateEndpoint
+  | GetMerchantServiceUsageConfigEndpoint
+  | PostMerchantServiceConfigMapsUpdateEndpoint
+  | PostMerchantServiceUsageConfigMapsUpdateEndpoint
+  | PostMerchantServiceConfigSmsUpdateEndpoint
+  | PostMerchantServiceUsageConfigSmsUpdateEndpoint
+  | PostMerchantServiceConfigVerificationUpdateEndpoint
+  | PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreateEndpoint
+  | PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdateEndpoint
+  | PostMerchantConfigFarePolicyPerExtraKmRateUpdateEndpoint
+  | PostMerchantConfigFarePolicyUpdateEndpoint
+  | PostMerchantConfigFarePolicyUpsertEndpoint
+  | PostMerchantConfigOperatingCityCreateEndpoint
+  | PostMerchantSchedulerTriggerEndpoint
+  | PostMerchantUpdateOnboardingVehicleVariantMappingEndpoint
+  | PostMerchantSpecialLocationUpsertEndpoint
+  | DeleteMerchantSpecialLocationDeleteEndpoint
+  | PostMerchantSpecialLocationGatesUpsertEndpoint
+  | DeleteMerchantSpecialLocationGatesDeleteEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

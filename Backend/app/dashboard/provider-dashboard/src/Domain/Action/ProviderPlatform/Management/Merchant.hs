@@ -45,6 +45,8 @@ module Domain.Action.ProviderPlatform.Management.Merchant
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant as Common
 import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -70,12 +72,12 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.MerchantEndpoint ->
+  Common.MerchantEndpointDSL ->
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.MerchantAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.ProviderManagementAPI $ Common.MerchantAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postMerchantUpdate ::
   ShortId DM.Merchant ->

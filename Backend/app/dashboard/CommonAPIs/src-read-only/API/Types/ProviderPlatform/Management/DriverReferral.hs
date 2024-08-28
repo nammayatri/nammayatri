@@ -67,3 +67,9 @@ mkDriverReferralAPIs :: (Client EulerHS.Types.EulerClient API -> DriverReferralA
 mkDriverReferralAPIs driverReferralClient = (DriverReferralAPIs {..})
   where
     postDriverReferralReferralOpsPassword :<|> postDriverReferralLinkReferral = driverReferralClient
+
+data DriverReferralEndpointDSL
+  = PostDriverReferralReferralOpsPasswordEndpoint
+  | PostDriverReferralLinkReferralEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

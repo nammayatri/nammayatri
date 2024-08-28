@@ -29,11 +29,8 @@ library
       Dashboard.Common
       Dashboard.Common.Booking
       Dashboard.Common.Driver
-      Dashboard.Common.DriverReferral
       Dashboard.Common.Exotel
       Dashboard.Common.Merchant
-      Dashboard.Common.Message
-      Dashboard.Common.NammaTag
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.CacAuth
@@ -44,7 +41,6 @@ library
       Dashboard.ProviderPlatform.Management.DriverRegistration
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
-      Dashboard.ProviderPlatform.Management.Payout
       Dashboard.ProviderPlatform.Management.Ride
       Dashboard.ProviderPlatform.RideBooking.Driver
       Dashboard.ProviderPlatform.Volunteer
@@ -52,7 +48,9 @@ library
       Dashboard.RiderPlatform.Merchant
       Dashboard.RiderPlatform.Ride
       Dashboard.SafetyPlatform
+      API.Types.ProviderPlatform.Fleet
       API.Types.ProviderPlatform.Fleet.Driver
+      API.Types.ProviderPlatform.Management
       API.Types.ProviderPlatform.Management.Booking
       API.Types.ProviderPlatform.Management.Driver
       API.Types.ProviderPlatform.Management.DriverCoins
@@ -65,7 +63,9 @@ library
       API.Types.ProviderPlatform.Management.Payout
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
+      API.Types.ProviderPlatform.RideBooking
       API.Types.ProviderPlatform.RideBooking.Driver
+      API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.Booking
       API.Types.RiderPlatform.Management.Invoice
       API.Types.RiderPlatform.Management.Merchant

@@ -42,6 +42,8 @@ apis:
         type: UpdateFraudStatusReq
       response:
         type: APISuccess
+      migrate:
+        endpointV2:
 
   - POST: # to pay the failed ones
       endpoint: payout/retryFailed
@@ -50,6 +52,8 @@ apis:
         type: FailedRetryPayoutReq
       response:
         type: APISuccess
+      migrate:
+        endpointV2:
 
   - POST: # retry all for given status
       endpoint: payout/retryAllWithStatus
@@ -58,6 +62,8 @@ apis:
         type: RetryPayoutsReq
       response:
         type: APISuccess
+      migrate:
+        endpointV2:
 
 types:
 

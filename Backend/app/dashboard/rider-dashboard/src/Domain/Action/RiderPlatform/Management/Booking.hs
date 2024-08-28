@@ -18,6 +18,8 @@ module Domain.Action.RiderPlatform.Management.Booking
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as Common
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
@@ -37,12 +39,12 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.BookingEndpoint ->
+  Common.BookingEndpointDSL ->
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.BookingAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.RiderManagementAPI $ Common.BookingAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postBookingCancelAllStuck :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.StuckBookingsCancelReq -> Flow Common.StuckBookingsCancelRes
 postBookingCancelAllStuck merchantShortId opCity apiTokenInfo req = do

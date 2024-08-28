@@ -293,3 +293,18 @@ mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
     getDriverPaymentDue :<|> postDriverEnable :<|> postDriverCollectCash :<|> postDriverV2CollectCash :<|> postDriverExemptCash :<|> postDriverV2ExemptCash :<|> getDriverInfo :<|> postDriverUnlinkVehicle :<|> postDriverEndRCAssociation :<|> postDriverAddVehicle :<|> postDriverSetRCStatus = driverClient
+
+data DriverEndpointDSL
+  = GetDriverPaymentDueEndpoint
+  | PostDriverEnableEndpoint
+  | PostDriverCollectCashEndpoint
+  | PostDriverV2CollectCashEndpoint
+  | PostDriverExemptCashEndpoint
+  | PostDriverV2ExemptCashEndpoint
+  | GetDriverInfoEndpoint
+  | PostDriverUnlinkVehicleEndpoint
+  | PostDriverEndRCAssociationEndpoint
+  | PostDriverAddVehicleEndpoint
+  | PostDriverSetRCStatusEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

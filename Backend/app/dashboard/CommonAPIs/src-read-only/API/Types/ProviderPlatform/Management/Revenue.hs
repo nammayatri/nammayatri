@@ -69,3 +69,9 @@ mkRevenueAPIs :: (Client EulerHS.Types.EulerClient API -> RevenueAPIs)
 mkRevenueAPIs revenueClient = (RevenueAPIs {..})
   where
     getRevenueCollectionHistory :<|> getRevenueAllFeeHistory = revenueClient
+
+data RevenueEndpointDSL
+  = GetRevenueCollectionHistoryEndpoint
+  | GetRevenueAllFeeHistoryEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
