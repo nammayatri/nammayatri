@@ -161,7 +161,7 @@ postSocialUpdateProfile (mbPersonId, merchantId, _) req = do
   let updatedPerson =
         person
           { SP.mobileCountryCode = req.mobileCountryCode <|> person.mobileCountryCode,
-            SP.mobileNumber = encNewPhoneNumber,
+            SP.mobileNumber = encNewPhoneNumber <|> person.mobileNumber,
             SP.firstName = fromMaybe person.firstName req.firstName,
             SP.lastName = req.lastName <|> person.lastName,
             SP.email = Just req.email
