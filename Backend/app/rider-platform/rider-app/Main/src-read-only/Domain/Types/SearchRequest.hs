@@ -38,6 +38,7 @@ data SearchRequest = SearchRequest
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     estimatedRideDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    estimatedRideStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     isAdvanceBookingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

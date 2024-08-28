@@ -981,7 +981,9 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     platformFeeChargeFarePolicyLevel :: Text,
     platformFeeCgstFarePolicyLevel :: Text,
     platformFeeSgstFarePolicyLevel :: Text,
-    platformFeeChargesBy :: Text
+    platformFeeChargesBy :: Text,
+    perMinuteRideExtraTimeCharge :: Text,
+    searchSource :: Text
   }
   deriving (Show)
 
@@ -1039,6 +1041,8 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "platform_fee_cgst_fare_policy_level"
       <*> r .: "platform_fee_sgst_pare_policy_level"
       <*> r .: "platform_fee_charges_by"
+      <*> r .: "per_minute_ride_extra_time_charge"
+      <*> r .: "search_source"
 
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
@@ -1078,20 +1082,20 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
     cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
     cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
-    groupFarePolices :: [(Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)] -> [[(Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)]]
-    groupFarePolices = DL.groupBy (\a b -> fst5 a == fst5 b) . DL.sortBy (compare `on` fst5)
+    groupFarePolices :: [(Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, FarePolicy.FarePolicy)] -> [[(Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, FarePolicy.FarePolicy)]]
+    groupFarePolices = DL.groupBy (\a b -> fst6 a == fst6 b) . DL.sortBy (compare `on` fst6)
       where
-        fst5 (c, t, tr, a, tb, _) = (c, t, tr, a, tb)
+        fst6 (c, t, tr, a, tb, ss, _) = (c, t, tr, a, tb, ss)
 
-    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> [(Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
+    processFarePolicyGroup :: DMOC.MerchantOperatingCity -> ([Text], Map.Map Text Bool) -> [(Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, FarePolicy.FarePolicy)] -> Flow ([Text], Map.Map Text Bool)
     processFarePolicyGroup _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
     processFarePolicyGroup merchantOpCity (errors, boundedAlreadyDeletedMap) (x : xs) = do
-      let (city, vehicleServiceTier, tripCategory, area, timeBounds, firstFarePolicy) = x
+      let (city, vehicleServiceTier, tripCategory, area, timeBounds, searchSource, firstFarePolicy) = x
       if (city /= opCity)
         then return $ (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap)
         else do
           let mergeFarePolicy newId FarePolicy.FarePolicy {..} = do
-                let remainingfarePolicies = map (\(_, _, _, _, _, fp) -> fp) xs
+                let remainingfarePolicies = map (\(_, _, _, _, _, _, fp) -> fp) xs
                 let driverExtraFeeBounds' = NE.nonEmpty $ (maybe [] NE.toList driverExtraFeeBounds) <> concatMap ((maybe [] NE.toList) . (.driverExtraFeeBounds)) remainingfarePolicies
                 let driverExtraFeeBoundsDuplicateRemoved = (NE.nubBy (\a b -> a.startDistance == b.startDistance)) <$> driverExtraFeeBounds'
                 farePolicyDetails' <-
@@ -1136,16 +1140,16 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           (oldFareProducts, newBoundedAlreadyDeletedMap) <-
             case timeBounds of
               Unbounded -> do
-                fareProducts <- maybeToList <$> CQFProduct.findUnboundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
+                fareProducts <- maybeToList <$> CQFProduct.findUnboundedByMerchantVariantArea merchanOperatingCityId [searchSource] tripCategory vehicleServiceTier area
                 return (fareProducts, boundedAlreadyDeletedMap)
               _ -> do
-                let key = makeKey merchanOperatingCityId vehicleServiceTier tripCategory area
+                let key = makeKey merchanOperatingCityId vehicleServiceTier tripCategory area searchSource
                 let value = Map.lookup key boundedAlreadyDeletedMap
                 if isJust value
                   then return ([], boundedAlreadyDeletedMap)
                   else do
-                    fareProducts <- CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [DFareProduct.ALL] tripCategory vehicleServiceTier area
-                    let updatedBoundedAlreadyDeletedMap = markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area boundedAlreadyDeletedMap
+                    fareProducts <- CQFProduct.findAllBoundedByMerchantVariantArea merchanOperatingCityId [searchSource] tripCategory vehicleServiceTier area
+                    let updatedBoundedAlreadyDeletedMap = markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
                     return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
           oldFareProducts `forM_` \fp -> do
@@ -1156,13 +1160,13 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           id <- generateGUID
           let farePolicyId = finalFarePolicy.id
-          let fareProduct = DFareProduct.FareProduct {searchSource = DFareProduct.ALL, enabled = True, merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
+          let fareProduct = DFareProduct.FareProduct {enabled = True, merchantId = merchantOpCity.merchantId, merchantOperatingCityId = merchantOpCity.id, ..}
           CQFProduct.create fareProduct
           CQFProduct.clearCache fareProduct
 
           return (errors, newBoundedAlreadyDeletedMap)
 
-    makeFarePolicy :: DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, FarePolicy.FarePolicy)
+    makeFarePolicy :: DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, FarePolicy.FarePolicy)
     makeFarePolicy distanceUnit idx row = do
       now <- getCurrentTime
       let createdAt = now
@@ -1190,6 +1194,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       area :: SL.Area <- readCSVField idx row.area "Area"
       idText <- cleanCSVField idx row.farePolicyKey "Fare Policy Key"
       tripCategory :: TripCategory <- readCSVField idx row.tripCategory "Trip Category"
+      let searchSource :: DFareProduct.SearchSource = fromMaybe DFareProduct.ALL $ readMaybeCSVField idx row.searchSource "Search Source"
       nightShiftStart :: TimeOfDay <- readCSVField idx row.nightShiftStart "Night Shift Start"
       nightShiftEnd :: TimeOfDay <- readCSVField idx row.nightShiftEnd "Night Shift End"
       let nightShiftBounds = Just $ Common.NightShiftBounds nightShiftStart nightShiftEnd
@@ -1198,7 +1203,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
-      let perMinuteRideExtraTimeCharge = Nothing
+      let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
       farePolicyType :: FarePolicy.FarePolicyType <- readCSVField idx row.farePolicyType "Fare Policy Type"
       let platformFeeChargeFarePolicyLevel :: Maybe HighPrecMoney = readMaybeCSVField idx row.platformFeeChargeFarePolicyLevel "Platform Fee Charge"
@@ -1331,15 +1336,15 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return $ (city, vehicleServiceTier, tripCategory, area, timeBound, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, ..})
+      return $ (city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, ..})
 
-    makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> Text
-    makeKey cityId vehicleServiceTier tripCategory area =
-      T.intercalate ":" [cityId.getId, show vehicleServiceTier, show area, show tripCategory]
+    makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
+    makeKey cityId vehicleServiceTier tripCategory area searchSource =
+      T.intercalate ":" [cityId.getId, show vehicleServiceTier, show area, show tripCategory, show searchSource]
 
-    markBoundedAreadyDeleted :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> Map.Map Text Bool -> Map.Map Text Bool
-    markBoundedAreadyDeleted cityId vehicleServiceTier tripCategory area mapObj = do
-      let key = makeKey cityId vehicleServiceTier tripCategory area
+    markBoundedAreadyDeleted :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Map.Map Text Bool -> Map.Map Text Bool
+    markBoundedAreadyDeleted cityId vehicleServiceTier tripCategory area searchSource mapObj = do
+      let key = makeKey cityId vehicleServiceTier tripCategory area searchSource
       Map.insert key True mapObj
 
 ---------------------------------------------------------------------

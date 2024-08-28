@@ -437,3 +437,9 @@ ALTER TABLE atlas_app.estimate ADD COLUMN trip_category text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN estimated_static_duration integer ;

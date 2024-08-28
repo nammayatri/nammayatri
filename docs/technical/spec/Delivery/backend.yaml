@@ -8,35 +8,33 @@ imports:
     MerchantOperatingCity: Domain.Types.MerchantOperatingCity
     Centesimal: Kernel.Types.Common
   driverApp:
-    Booking: Domain.Types.Booking
-    RiderDetails: Domain.Types.RiderDetails
+    Booking: Domain.Types.Booking    
     PricingPolicy: Domain.Types.Common
+    FileType: AWS.S3.Types
 
 types:
-  common:
-    DeliveryInitiation:
-      enum:
-        - AsSender
-        - AsReciever
-        - AsSomeoneElse      
-      exists: false
-
-    FulfillmentType:
-      module: Domain.Types.Common
-      enum:
-        - DELIVERY_FLOW
-      exists: true 
-
   riderApp:
-    FareProductType:      
-      enum:
-        - DELIVERY
-      exists: true
-
     RiderPreferredOption:
       enum:
         - Delivery
       exists: true
+
+    TripParty:
+      enum:
+        - Delivery DeliveryParties
+        # - Ride RideParties
+      exists: false
+
+    DeliveryParties:
+      enum:
+        - Sender
+        - Receiver
+        - SomeoneElse        
+      exists: false
+
+    # RideParties:
+    #   enum:
+    #     - SomeOtherRider        
 
   driverApp:
     ServiceTierType:
@@ -124,12 +122,12 @@ flow:
   # No Change, Return all the estimates stored in Estimate table
     trigger:
       GET:
-        endpoint: ui/rideSearch/results
+        endpoint: /ui/rideSearch/results
         exists: true
 
   selectRiderApp:
-  # Create entry in SearchRequestDeliveryDetails table with the Sender & Reciever details  
-  # Update the `instructions, extras` in Location table for SearchRequest.FromLocation & SearchRequest.ToLocation
+  # Create entry in SearchRequestPartiesLink table with the Sender & Receiver party details, If their Person entry does not exist then create a person entry
+  # Update the `instructions, extras` in Location table by SearchRequest.fromLocationId & SearchRequest.toLocationId
     trigger:
       # Request Body =>
       # { 
@@ -142,7 +140,7 @@ flow:
       #         extras: "..." 
       #       } 
       #     }, 
-      #     recieverDetails: { 
+      #     receiverDetails: { 
       #       name: "...", 
       #       phoneNumber: "...", 
       #       address: { 
@@ -154,7 +152,7 @@ flow:
       #   ... 
       # }
       POST:
-        endpoint: ui/rideSearch/:estimateId/select2
+        endpoint: /ui/rideSearch/:estimateId/select2
         request: DSelectReq        
         module: API.UI.Select
         exists: true
@@ -165,7 +163,7 @@ flow:
           address: LocationAddress # Send `instructions, extras` in address
         DeliveryDetails:
           senderDetails: PersonDetails
-          recieverDetails: PersonDetails
+          receiverDetails: PersonDetails
           initiatedAs: DeliveryInitiation 
         DSelectReq:
           deliveryDetails: Maybe DeliveryDetails # For FareProductType::DELIVERY this field should be passed in Select
@@ -173,118 +171,44 @@ flow:
       Location:
         types:
           LocationAddress:
-            instructions: Maybe Text # Note: Restrict `,`
+            instructions: Maybe Text
             extras: Maybe Text
         fields:
           address: LocationAddress      
-        beamFields: # Store additional instructions and extras (building/flatNo) for Sender/Reciever location
+        beamFields: # Store additional instructions and extras (building/flatNo) for Sender/Receiver location
           address:
             instructions: Maybe Text
             extras: Maybe Text
         queries: updateInstructionsAndExtrasById
         exists: true
 
-      SearchRequestDeliveryDetails:
-        types:
-          DeliveryPersonDetails:
-            name: Text
-            phoneNumber: EncryptedHashedField e Text
+      SearchRequest:
+        fields:
+          initiatedBy: Maybe TripParty # (Delivery_Sender | Delivery_Receiver) or (Ride_Rider)
+        exists: true
+        queries: updateInitiatedBy
+
+      SearchRequestPartiesLink:
         fields:
           searchRequestId: Id SearchRequest
-          senderDetails: DeliveryPersonDetails
-          recieverDetails: DeliveryPersonDetails
-          initiatedAs: DeliveryInitiation
-        beamFields:
-          senderDetails:
-            senderName: Text
-            senderPhoneNumber: EncryptedHashedField e Text 
-          recieverDetails:
-            recieverName: Text         
-            recieverPhoneNumber: EncryptedHashedField e Text
-        queries: create, findBySearchRequestId
-        exists: false
-
-      SearchRequest:
-        types:
-          SearchRequestDetails:
-            enum:
-              DeliveryDetails SearchRequestDeliveryDetails
-            exists: false
-        fields:
-          searchRequestDetails: Maybe SearchRequestDetails # If RiderPrefferedOption::Delivery
-        beamFields:
-          searchRequestDetails: {}
-        exists: true    
+          partyId: Id Person
+          partyType: TripParty # Delivery_Sender | Delivery_Receiver
+          partyName: Text
+          # isActive: Bool # Handle, isActive cases
+        queries: create
   
-  selectDriverApp:
-  # Upsert RiderDetails entry for Sender & Reciever phone number
-  # Create entry in SearchRequestDeliveryDetails table with the Sender & Reciever details  
-  # Update the `instructions` in Location table for SearchRequest.FromLocation & SearchRequest.ToLocation
+  selectDriverApp:  
   # Initiate Pooling & Broadcast the search request to all the eligible drivers
     trigger:
       POST:
-        endpoint: /beckn/select        
-        becknTags:
-          DELIVERY:
-            - SENDER_NUMBER: Maybe Text
-            - SENDER_NAME: Maybe Text
-            - SENDER_LOCATION_INSTRUCTIONS: Maybe Text
-            - INITIATED_AS: DeliveryInitiation
-            - RECEIVER_NUMBER: Maybe Text
-            - RECEIVER_NAME: Maybe Text
-            - RECEIVER_LOCATION_INSTRUCTIONS: Maybe Text
-        exists: true
-    storage:
-      Location:
-        types:
-          LocationAddress:
-            instructions: Maybe Text
-            extras: Maybe Text
-        fields:
-          address: LocationAddress          
-        beamFields: # Store additional instructions for Sender/Reciever location
-          address:
-            instructions: Maybe Text
-            extras: Maybe Text
-        queries: updateInstructionsAndExtrasById
-        exists: true
-
-      SearchRequestDeliveryDetails:
-        types:
-          DeliveryPersonDetails:
-            name: Text
-            phoneNumber: EncryptedHashedField e Text
-        fields:
-          searchRequestId: Id SearchRequest
-          senderDetails: DeliveryPersonDetails
-          recieverDetails: DeliveryPersonDetails
-          initiatedAs: DeliveryInitiation
-        beamFields:
-          senderDetails:
-            senderName: Text
-            senderPhoneNumber: EncryptedHashedField e Text 
-          recieverDetails:
-            recieverName: Text         
-            recieverPhoneNumber: EncryptedHashedField e Text
-        queries: create, findBySearchRequestId               
-        exists: false
-
-      SearchRequest:
-        types:
-          SearchRequestDetails:
-            enum:
-              DeliveryDetails SearchRequestDeliveryDetails
-            exists: false
-        fields:
-          searchRequestDetails: Maybe SearchRequestDetails # If TripCategory::(Delivery _) then DeliveryDetails <$> SearchRequestDeliveryDetails.findBySearchRequestId id else Nothing
-        beamFields:
-          searchRequestDetails: {} 
+        endpoint: /beckn/select
+        exists: true    
     
   onSelectDriverApp:
   # Creation of entry in DriverQuote table
     trigger:
       POST:
-        endpoint: ui/quote/respond
+        endpoint: /ui/quote/respond
         exists: true
     functions:
       common: tripCategoryToPricingPolicy
@@ -318,10 +242,11 @@ flow:
         exists: true
   
   confirmRiderApp:
+  # Creation of entry in BookingPartiesLink table by fetching the data from SearchRequestPartiesLink if searchRequest.riderPrefferedOption == Delivery
   # Creation of entry in Booking table
     trigger:
       POST:
-        endpoint: ui/rideSearch/quotes/:quoteId/confirm
+        endpoint: /ui/rideSearch/quotes/:quoteId/confirm
         exists: true
       types:       
         ConfirmQuoteDetails:
@@ -330,8 +255,7 @@ flow:
             - ConfirmDeliveryDetails Text
           exists: true
     functions:
-      getBPPQuoteId: SharedLogic.Confirm # Transform => QuoteDetails::(DeliveryDriverOfferDetails driverOffer) -> getBPPQuoteIdFromDriverOffer driverOffer now
-      mkConfirmQuoteDetails: SharedLogic.Confirm # Transform => QuoteDetails::(DeliveryDriverOfferDetails _) -> ConfirmQuoteDetails::ConfirmDeliveryDetails bppQuoteId_
+      getBPPQuoteId: SharedLogic.Confirm # Transform => QuoteDetails::(DeliveryDriverOfferDetails driverOffer) -> getBPPQuoteIdFromDriverOffer driverOffer now      
       buildBookingDetails: SharedLogic.Confirm # Transform => QuoteDetails::(DeliveryDriverOfferDetails _) -> BookingDetails::(DeliveryDetails DeliveryBookingDetails)
       toBookingDetailsAndFromLocation: Storage.Queries.Transformers.Booking # Used in FromTType of Booking table
       getDistance: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
@@ -339,16 +263,27 @@ flow:
       getOtpCode: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
       getStopLocationId: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
       getToLocationId: Storage.Queries.Transformers.Booking # Used in ToTType of Booking table
-    storage:
+    storage:      
+      SearchRequestPartiesLink:
+        queries: findAllBySearchRequestId
+
+      # Sender, Reciever -> Delivery_Sender, Delivery_Receiver
+      # Sender, Reciever, SomeoneElse -> Delivery_Sender, Delivery_Receiver => initiatedBy: SomeoneElse      
+
+      BookingPartiesLink:
+        fields:
+          id: Id BookingPartiesLink
+          bookingId: Id Booking
+          partyId: Id Person
+          partyType: TripParty # Delivery_Sender | Delivery_Receiver
+          partyName: Text
+          isActive: Bool # Handle, inActive cases
+        queries: create
+        secondaryKey: partyId, isActive
+
       Booking:
         types:
-          DeliveryPersonDetails:
-            name: Text
-            phoneNumber: EncryptedHashedField e Text
           DeliveryBookingDetails:
-            senderDetails: DeliveryPersonDetails
-            recieverDetails: DeliveryPersonDetails
-            initiatedAs: DeliveryInitiation
             toLocation: Location
             distance: Distance
             otpCode: Text
@@ -356,55 +291,65 @@ flow:
             enum:
               - DeliveryDetails DeliveryBookingDetails
             exists: true
-        fields:
-          bookingDetails: BookingDetails
-        beamFields:
-          bookingDetails:
-            senderPhoneNumber: EncryptedHashedField e Text
-            senderName: Text
-            recieverPhoneNumber: EncryptedHashedField e Text
-            recieverName: Text
-            initiatedAs: DeliveryInitiation
+        fields:          
+          initiatedBy: Maybe TripParty          
         exists: true
 
-  initRiderApp:
-    types:       
-      ConfirmQuoteDetails:
-        module: SharedLogic.Confirm
-        enum:
-          - ConfirmDeliveryDetails Text
-        exists: true
-    functions:
-      getFulfillmentTypeAndIdFromQuoteDetails: Beckn.ACL.Init # Transform => ConfirmQuoteDetails::(ConfirmDeliveryDetails quoteId) -> (show FulfillmentType::DELIVERY_FLOW, Just quoteId)
+  initRiderApp: # Fetch all active BookingPartyLinks and if booking.tripCategory == TripCategory::(Delivery _) then construct DELIVERY becknTags
+    storage:  
+      BookingPartiesLink:
+        queries: findAllActiveByBookingId
   
   initDriverApp:
+  # Add the `instructions` and `extras` in Location table
   # Creation of entry in Booking table for ValidatedEstimate
     trigger:
       POST:
         endpoint: /beckn/init
+        becknTags:
+          DELIVERY:
+            - SENDER_NUMBER: Maybe Text
+            - SENDER_NAME: Maybe Text
+            - SENDER_LOCATION_INSTRUCTIONS: Maybe Text
+            - INITIATED_AS: DeliveryInitiation
+            - RECEIVER_NUMBER: Maybe Text
+            - RECEIVER_NAME: Maybe Text
+            - RECEIVER_LOCATION_INSTRUCTIONS: Maybe Text
         exists: true
     storage:
+      Location:
+        types:
+          LocationAddress:
+            instructions: Maybe Text
+            extras: Maybe Text
+        fields:
+          address: LocationAddress          
+        beamFields: # Store additional instructions for Sender/Receiver location
+          address:
+            instructions: Maybe Text
+            extras: Maybe Text        
+        exists: true
+
       Booking:
         types:
           DeliveryPersonDetails:
             name: Text
             phoneNumber: EncryptedHashedField e Text
+            primaryExophone: Text
           DeliveryBookingDetails:
             senderDetails: DeliveryPersonDetails
-            recieverDetails: DeliveryPersonDetails
-            initiatedAs: DeliveryInitiation
+            receiverDetails: DeliveryPersonDetails            
         fields:
-          deliveryBookingDetails: Maybe DeliveryBookingDetails
+          deliveryBookingDetails: Maybe DeliveryBookingDetails # If booking.tripCategory == TripCategory::(Delivery _) then Just else Nothing
         beamFields:
           deliveryBookingDetails:
             senderPhoneNumber: EncryptedHashedField e Text
             senderName: Text
-            recieverPhoneNumber: EncryptedHashedField e Text
-            recieverName: Text
-            initiatedAs: DeliveryInitiation
+            senderPrimaryExophone: Text
+            receiverPhoneNumber: EncryptedHashedField e Text
+            receiverName: Text
+            receiverPrimaryExophone: Text            
         exists: true
-    functions:
-      fulfillmentToPricingPolicy: Domain.Types.Common # FulfillmentType::DELIVERY_FLOW -> PricingPolicy::EstimateBased
 
   onInitDriverApp: # No Change
   
@@ -417,8 +362,6 @@ flow:
       getToLocationFromBookingDetails: Domain.Action.Beckn.OnInit # Transform => BookingDetails::(DeliveryDetails details) -> Just details.toLocation
   
   confirmRiderApp_: # No Change
-    functions:
-      mkFulfillmentType: Beckn.ACL.Confirm # Transform => BookingDetails::(DeliveryDetails _) -> FulfillmentType::DELIVERY_FLOW
 
   confirmDriverApp:
   # Creation of entry in Ride table for DriverQuote request type
@@ -437,15 +380,14 @@ flow:
       #     { 
       #       senderDetails: { 
       #         name: "...", 
-      #         phoneNumber: "..." 
-      #         ...
+      #         phoneNumber: "..." ,
+      #         primaryExophone: "..."
       #       },
       #       receiverDetails: { 
       #         name: "...", 
-      #         phoneNumber: "..." 
-      #         ...
-      #       },
-      #       initiatedAs: AsSender | AsReciever | AsSomeoneElse
+      #         phoneNumber: "...",
+      #         primaryExophone: "..."      
+      #       },      
       #       fromLocation: { 
       #         instructions: "...",
       #         extras: "..."
@@ -455,7 +397,7 @@ flow:
       #         instructions: "...",
       #         extras: "..."
       #         ...
-      #       }
+      #       },
       #       ...
       #     }
       #   ]
@@ -470,6 +412,7 @@ flow:
           fields:
             name: Text
             phoneNumber: Text
+            primaryExophone: Text
           exists: false
 
         LocationAPIEntity:
@@ -481,22 +424,32 @@ flow:
         DriverRideRes:
           fields:
             senderDetails: DeliveryPersonDetailsAPIEntity
-            recieverDetails: DeliveryPersonDetailsAPIEntity
-            initiatedAs: DeliveryInitiation
+            receiverDetails: DeliveryPersonDetailsAPIEntity            
             fromLocation: LocationAPIEntity
             toLocation: Maybe LocationAPIEntity
           exists: true
+      storage:
+        exophone:
+          types:
+            ExophoneType: 
+              enum: # This is required to know during direct frontend exotel calling webhook that whether to return sender or receiver's phone number customerPhoneNumber
+                # - CALL_RIDE
+                - CALL_DELIVERY_SENDER
+                - CALL_DELIVERY_RECEIVER
+              exists: true
+
   
   onConfirmRiderApp: # No Change
 
   onUpdateRideAssignedDriverApp: # No Change, Creation of entry in Ride table
 
   onUpdateRideAssignedRiderApp: 
-  # if booking.initiatedAs \= AsSender
-  #   => Send SMS to Reciever with RideStartOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
+  # if booking.initiatedAs \= Sender
+  #   => Send SMS to Receiver with RideStartOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
   # Creation of entry in Ride table
-
+  
   rideListRiderApp:
+  # Find active BookingPartyLink for the rider and fetch it's corresponding booking details if exists
     trigger:
       # Response Body =>
       # {
@@ -511,11 +464,11 @@ flow:
       #             name: "...",
       #             phoneNumber: "..."
       #           },
-      #           recieverDetails: {
+      #           receiverDetails: {
       #             name: "...",
       #             phoneNumber: "..."
       #           },
-      #           initiatedAs: AsSender | AsReciever | AsSomeoneElse
+      #           riderType: DeliveryInitiation,
       #           toLocation: {
       #             instructions: "...",
       #             extras: "...",
@@ -524,13 +477,19 @@ flow:
       #           estimatedDistance: "...",
       #           estimatedDistanceWithUnit: { ... }
       #         }
-      #       }
+      #       },
+      #       tripCategory: TripCategory::Delivery_OneWayOnDemandDynamicOffer
       #     }
       #   ]
       # }
+      # Person -> personMobileNumber == Exotel.callFrom (For Exotel)
+      #   Booking -> findOneWithKv $ riderId == person.personId (For RideBookingList)
+          # <|> (BookingPartiesLink -> findOneWithKv $ isActive = True && partyId == personId 
+          #       >>= Booking -> findOneWithKv $ booking.id == bookingPartiesLink.bookingId
+          #     )
       GET:
-        endpoint: /ui/rideBooking/list?limit=1
-        request: BookingListRes        
+        endpoint: /ui/rideBooking/list?limit=1&offset=0&onlyActive=true
+        response: BookingListRes        
         module: Domain.API.UI.Booking
         exists: true
       types:
@@ -551,28 +510,81 @@ flow:
           estimatedDistance: HighPrecMeters
           estimatedDistanceWithUnit: Distance
           senderDetails: DeliveryPersonDetailsAPIEntity
-          recieverDetails: DeliveryPersonDetailsAPIEntity
-          initiatedAs: DeliveryInitiation
+          recieverDetails: DeliveryPersonDetailsAPIEntity          
 
         BookingAPIDetails:
           enum:
             - DeliveryAPIDetails DeliveryBookingAPIDetails
-          exists: true
-    functions:
-      fareProductConstructorModifier: Tools.JSON # "DeiveryAPIDetails" -> "DELIVERY"
+          exists: true  
+      storage:  
+        BookingPartiesLink:
+          queries: findOneActiveByPartyId
+  
+  uploadDeliveryImageDriverApp:
+  # This endpoint would be used by driver to upload the delivery images for a Ride multiple times to S3 and a 
+  # fetch API which would be a proxy API to fetch the information from S3
+    trigger:
+      POST:
+        endpoint: /ui/ride/:rideId/uploadDeliveryImage
+        exist: false
+        request:
+          multipart: DeliveryImageUploadReq
+        response: DeliveryImageUploadRes
+        type:
+          DeliveryImageUploadReq:
+            file: FilePath
+            reqContentType: Text
+          DeliveryImageUploadRes:
+            imageId: Id MediaFile
+      GET:
+        endpoint: /internal/ride/:rideId/deliveryImage
+        header:
+          token: Text # merchant.internalApiKey
+        exist: false
+        response: Text
+    storage:
+      Ride:
+        fields:
+          deliveryImageUrl: Maybe BaseUrl          
+      exists: true
+
+  getDeliveryImageRiderApp:
+  # Fetch DeliveryImage in Base64 format on Rider App by calling the Driver App's internal fetch image API to fetch ride delivery image from S3
+  trigger:
+    GET:
+      endpoint: /ui/ride/:rideId/deliveryImage
+      exists: false
+      response: Text # Image as Base64
+
+  exotelFrontendDirectCallToSenderOrReceiverDriverApp:
+  # Based on the ExophoneType corresponding to callTo send either Sender/Receiver phone number to the exotel callback
+  # CALL_RIDE => riderPhoneNumber
+  # CALL_DELIVERY_SENDER => senderPhoneNumber
+  # CALL_DELIVERY_RECEIVER => receiverPhoneNumber
+  function:
+    getCustomerMobileNumber: Domain.Action.UI.Call
+
+  exotelFrontendDirectCallToDriverRiderApp:
+  # Based on the ExophoneType corresponding to callTo send either Sender/Receiver/SomeoneElse phone number to the exotel callback
+    function:
+      # In this function whether the person trying to call the driver is matching as Sender, Receiver or SomeoneElse who has created the Booking in the system. 
+      # findAssignedByRiderId person.id <|> findAssignedBySenderId person.id <|> findAssignedByReciverId person.id
+      getDriverMobileNumber: Domain.Action.UI.Call
+      findRiderDetails: Domain.Action.UI.Call
 
   startRideDriverApp:
-    # During this stage UI can do `POST: /media/upload` and send the `Id MediaFile` in rideStart request
-    # This would be used for tracking purpose
-    POST:
-      endpoint: /driver/ride/:rideId/start
-      exist: true
-      request: StartRideReq
-      type:
-        Ride:
-          parcelDeliveryImage: Maybe (Id MediaFile)
-        StartRideReq:
-          parcelDeliveryImage: Maybe Text        
+  # Driver can start the ride with the startOtp
+
+  webTrackingRider:
+  # Web tracking of Ride from Sender & Reciver Device
+    trigger:
+      GET:
+        endpoint: /dashboard/bap/ride/:rideId/info
+        response: RideInfo
+        type:
+          RideInfo:
+            tripCategory: TripCategory # Delivery_OneWayOnDemandDynamicOffer
+            driverNumber: Text # Driver Phone Number in Plaintext for direct call
       
   onUpdateRideStartedDriverApp:
     # Generate End OTP & Send it to Rider App
@@ -580,13 +592,13 @@ flow:
       common: isEndOtpRequired
   
   onUpdateRideStartedRiderApp:
-  # if booking.initiatedAs \= AsReciever
-  #   => Send SMS to Reciever with RideEndOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
+  # if booking.initiatedAs \= Receiver
+  #   => Send SMS to Receiver with RideEndOTP, DriverName, DriverExophoneNumber, DriverTrackingUrl
 
   endRideDriverApp:
     trigger:  
       POST:
-        endpoint: /driver/ride/:rideId/end
+        endpoint: /ui/driver/ride/:rideId/end
         exist: true
     functions:
       common: isEndOtpRequired
