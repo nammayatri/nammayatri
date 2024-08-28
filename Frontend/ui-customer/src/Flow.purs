@@ -2168,6 +2168,11 @@ homeScreenFlow = do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralType = referralType, referralCode = if any (_ == referralCode) [ "__failed", "" ] then "" else referralCode })
       referralScreenFlow
     ON_CALL state callType exophoneNumber -> do
+      case callType of
+        ANONYMOUS_CALLER -> do
+          (_ :: (Either ErrorResponse APISuccessResp)) <- lift $ lift $ HelpersAPI.callApi (CallOnClickReq state.data.driverInfoCardState.rideId )
+          pure unit
+        _ -> pure unit
       (APISuccessResp res) <- Remote.onCallBT (Remote.makeOnCallReq state.data.driverInfoCardState.rideId (show callType) exophoneNumber)
       homeScreenFlow
     TRIGGER_PERMISSION_FLOW flowType -> do

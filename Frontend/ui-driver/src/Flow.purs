@@ -2815,6 +2815,7 @@ homeScreenFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{alternateNumberView = true, isEditAlternateMobile = true, mNumberEdtFocused = true}, data {fromHomeScreen = true}})
       driverProfileFlow
     ON_CALL state exophoneNumber -> do
+      (_ :: (Either ErrorResponse API.ApiSuccessResult)) <- lift $ lift $ callApi (API.CallOnClickReq state.data.activeRide.id )
       (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow

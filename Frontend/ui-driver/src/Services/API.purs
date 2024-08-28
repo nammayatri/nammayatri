@@ -4742,3 +4742,18 @@ instance standardEncodeDriverAadhaarResp :: StandardEncode DriverAadhaarResp whe
 instance showDriverAadhaarResp :: Show DriverAadhaarResp where show = genericShow
 instance decodeDriverAadhaarResp:: Decode DriverAadhaarResp where decode = defaultDecode
 instance encodeDriverAadhaarResp  :: Encode DriverAadhaarResp where encode = defaultEncode
+
+
+------------------------------------------------------------------- CallOnClick API ----------------------------------------------------------------------------------
+
+data CallOnClickReq = CallOnClickReq String
+
+instance makeCallOnClickReq :: RestEndpoint CallOnClickReq where
+ makeRequest reqBody@(CallOnClickReq rideId) headers = defaultMakeRequest POST (EP.callOnClickEventTracker rideId) headers reqBody Nothing
+ encodeRequest req = defaultEncode req
+
+derive instance genericCallOnClickReq :: Generic CallOnClickReq _
+instance standardEncodeCallOnClickReq :: StandardEncode CallOnClickReq where standardEncode (CallOnClickReq reqBody) = standardEncode reqBody
+instance showCallOnClickReq :: Show CallOnClickReq where show = genericShow
+instance decodeCallOnClickReq :: Decode CallOnClickReq where decode = defaultDecode
+instance encodeCallOnClickReq :: Encode CallOnClickReq where encode = defaultEncode
