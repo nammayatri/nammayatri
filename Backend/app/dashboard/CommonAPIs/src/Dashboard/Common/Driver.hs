@@ -97,6 +97,7 @@ data DriverEndpoint
   | PostDriverGoHomeIncrementGoToCountEndpoint
   | PostDriverClearFeeEndpoint
   | PostDriverPersonNumbersEndpoint
+  | PostDriverpersonIdEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "DriverEndpoint"

@@ -261,6 +261,7 @@ data UserActionType
   | CREATE_CHAKRA_QUERY
   | APP_DYNAMIC_LOGIC_VERIFY
   | INVOICE
+  | FETCH_PERSON_ID
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

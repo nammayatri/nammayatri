@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Driver
   ( driverDocumentsInfo,
     driverAadhaarInfo,
     getDriverPersonNumbers,
+    getDriverPersonId,
     listDrivers,
     driverActivity,
     enableDriver,
@@ -2384,3 +2385,25 @@ getDriverPersonNumbers _ _ req = do
         decPerson <- decrypt p
         return $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber decPerson.alternateMobileNumber decPerson.merchantOperatingCityId.getId
       return decryptedPersons
+
+getDriverPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
+getDriverPersonId _ _ req = do
+  csvData <- readCsvAndGetPersonIds req.file
+  let chunks = chunksOf 100 csvData
+  decryptedNumbers <- forM chunks processChunk
+  return $ concat decryptedNumbers
+  where
+    readCsvAndGetPersonIds :: FilePath -> Flow [Text]
+    readCsvAndGetPersonIds csvFile = do
+      csvData <- liftIO $ BS.readFile csvFile
+      case decodeByName (LBS.fromStrict csvData) :: Either String (V.Vector BS.ByteString, V.Vector Common.PersonMobileNumberIdsCsvRow) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> pure $ mapMaybe (.mobileNumber) $ V.toList v
+
+    processChunk :: [Text] -> Flow [Common.PersonRes]
+    processChunk chunk = do
+      mobile <- QPerson.findPersonIdsByPhoneNumber chunk
+      decryptedMobile <- forM mobile $ \p -> do
+        decMobile <- decrypt p
+        return $ Common.PersonRes decMobile.id.getId decMobile.mobileNumber decMobile.alternateMobileNumber decMobile.merchantOperatingCityId.getId
+      return decryptedMobile

@@ -12,6 +12,7 @@ where
 import Control.Applicative ((<|>))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified Data.HashMap.Strict as HashMap
+import Data.Maybe (catMaybes)
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
 import qualified Database.Beam.Query ()
@@ -84,6 +85,12 @@ findAdminsByMerchantId (Id merchantId) = findAllWithDb [Se.And [Se.Is BeamP.merc
 
 findAllByPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Person]
 findAllByPersonIds ids = findAllWithDb [Se.Is BeamP.id $ Se.In ids]
+
+findPersonIdsByPhoneNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> m [Person]
+findPersonIdsByPhoneNumber phoneNumbers = do
+  phoneNumbersHashes <- mapM getDbHash phoneNumbers
+  let mbhashes = Just <$> phoneNumbersHashes
+  findAllWithDb [Se.Is BeamP.mobileNumberHash $ Se.In mbhashes]
 
 findByEmail :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe Person)
 findByEmail email = findOneWithKV [Se.Is BeamP.email $ Se.Eq email]
