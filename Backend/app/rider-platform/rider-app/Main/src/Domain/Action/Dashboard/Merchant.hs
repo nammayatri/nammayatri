@@ -334,6 +334,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             createdAt = maybe now (.createdAt) mbGate,
             updatedAt = now,
             point = LatLong {lat = latitude, lon = longitude},
+            gateType = D.Pickup,
             ..
           }
 

@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "specialLocation" :> "list" :> Get '[JSON] [Lib.Queries.SpecialLocation.SpecialLocationFull])
+type API = (TokenAuth :> "specialLocation" :> "list" :> QueryParam "isOrigin" Kernel.Prelude.Bool :> Get '[JSON] [Lib.Queries.SpecialLocation.SpecialLocationFull])
 
 handler :: Environment.FlowServer API
 handler = getSpecialLocationList
@@ -32,6 +32,7 @@ getSpecialLocationList ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler [Lib.Queries.SpecialLocation.SpecialLocationFull]
   )
-getSpecialLocationList a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocation.getSpecialLocationList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getSpecialLocationList a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocation.getSpecialLocationList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

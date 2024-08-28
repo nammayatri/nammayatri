@@ -48,11 +48,38 @@ findByIdWithGeom specialLocationId =
     where_ $ specialLocation ^. SpecialLocationId ==. val specialLocationId.getId
     return (specialLocation, F.mbGetGeomGeoJSON)
 
+filterGates :: Maybe SpecialLocationFull -> Bool -> Maybe SpecialLocationFull
+filterGates (Just specialLocBody) isOrigin =
+  let gateTypeRequired = if isOrigin then GD.Pickup else GD.Drop
+      filteredGates = filter matchGateType (gatesInfo specialLocBody)
+      matchGateType gate = case gate of
+        GD.GateInfoFull {GD.gateType = gt} -> gt == gateTypeRequired
+   in if null filteredGates
+        then Just specialLocBody
+        else Just specialLocBody {gatesInfo = filteredGates}
+filterGates Nothing _ = Nothing
+
 makeFullSpecialLocation :: Transactionable m => (D.SpecialLocation, Text) -> m SpecialLocationFull
 makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
   gatesWithShape <- QGI.findAllGatesBySpecialLocationId id
-  let gatesInfoFull = map (\(GD.GateInfo {point = gatePoint, id = gateId, createdAt = _gateCreatedAt, geom = _gateGeom, updatedAt = _gateUpdatedAt, ..}, gateShape) -> GD.GateInfoFull {GD.id = gateId, GD.point = gatePoint, GD.geoJson = gateShape, ..}) gatesWithShape
-  pure $ SpecialLocationFull {gatesInfo = gatesInfoFull, geoJson = Just specialShape, ..}
+  let gatesInfoFull =
+        map
+          ( \(GD.GateInfo {point = gatePoint, id = gateId, gateType = gt, createdAt = _gateCreatedAt, geom = _gateGeom, updatedAt = _gateUpdatedAt, ..}, gateShape) ->
+              GD.GateInfoFull
+                { GD.id = gateId,
+                  GD.point = gatePoint,
+                  GD.geoJson = gateShape,
+                  GD.gateType = gt,
+                  ..
+                }
+          )
+          gatesWithShape
+  pure $
+    SpecialLocationFull
+      { gatesInfo = gatesInfoFull,
+        geoJson = Just specialShape,
+        ..
+      }
 
 fullSpecialLocationRedisKey :: Text
 fullSpecialLocationRedisKey = "SpecialLocation:Full"
