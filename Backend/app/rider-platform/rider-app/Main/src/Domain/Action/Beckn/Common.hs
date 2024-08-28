@@ -57,6 +57,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
@@ -66,6 +67,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRRN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
@@ -413,24 +415,28 @@ rideAssignedReqHandler req = do
 
       -- Notify sender of delivery booking
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
-        case booking.bookingDetails of
-          BT.DeliveryDetails details ->
-            when (details.initiatedAs /= BecknEnums.Sender) $
-              fork "Sending Delivery Details SMS to Sender" $ do
-                riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-                let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-                let senderSmsReq =
-                      MessageBuilder.BuildDeliveryMessageReq
-                        { MessageBuilder.driverName = ride.driverName,
-                          MessageBuilder.driverNumber = ride.driverMobileNumber,
-                          MessageBuilder.trackingUrl = trackLink,
-                          MessageBuilder.otp = ride.otp,
-                          MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
-                        }
-                buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderSmsReq
-                senderMobileNumber <- decrypt details.senderDetails.phone
-                Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq senderMobileNumber) >>= Sms.checkSmsResult
-          _ -> throwError $ InternalError ("Delivery Booking details not found for " <> booking.id.getId)
+        deliveryInitiatedAs <- fromMaybeM (InternalError "DeliveryInitiatedBy not found") booking.initiatedBy
+        when (deliveryInitiatedAs /= Trip.DeliveryParty Trip.Sender) $
+          fork "Sending Delivery Details SMS to Sender" $ do
+            riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+            mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+            senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
+            senderPerson <- QP.findById senderParty.partyId >>= fromMaybeM (PersonDoesNotExist senderParty.partyId.getId)
+            encSenderMobileNumber <- senderPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            let exophoneNumber =
+                  maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExoPhone
+            let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+            let senderSmsReq =
+                  MessageBuilder.BuildDeliveryMessageReq
+                    { MessageBuilder.driverName = ride.driverName,
+                      MessageBuilder.driverNumber = exophoneNumber,
+                      MessageBuilder.trackingUrl = trackLink,
+                      MessageBuilder.otp = ride.otp,
+                      MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
+                    }
+            buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderSmsReq
+            senderMobileNumber <- decrypt encSenderMobileNumber
+            Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq senderMobileNumber) >>= Sms.checkSmsResult
 
 rideStartedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -475,24 +481,31 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   case booking.bookingDetails of
     DRB.RentalDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
     DRB.InterCityDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
-    DRB.DeliveryDetails deliveryDetails -> do
-      when (deliveryDetails.initiatedAs /= BecknEnums.Receiver) $ sendDeliveryDetailsToReceiver deliveryDetails
+    DRB.DeliveryDetails _ -> do
+      deliveryInitiatedAs <- fromMaybeM (InternalError "DeliveryInitiatedBy not found") booking.initiatedBy
+      when (deliveryInitiatedAs /= Trip.DeliveryParty Trip.Receiver) $ sendDeliveryDetailsToReceiver
     _ -> pure ()
   where
-    sendDeliveryDetailsToReceiver deliveryDetails = fork "Sending Delivery Details SMS to Receiver" $ do
+    sendDeliveryDetailsToReceiver = fork "Sending Delivery Details SMS to Receiver" $ do
       riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+      receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
+      receiverPerson <- QP.findById receiverParty.partyId >>= fromMaybeM (PersonDoesNotExist receiverParty.partyId.getId)
+      encReceiverMobileNumber <- receiverPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
       endOtp <- fromMaybeM (InternalError "EndOtp not found to be send in sms for delivery receiver") endOtp_
       let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+      let exophoneNumber =
+            maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExoPhone
       let receiverSmsReq =
             MessageBuilder.BuildDeliveryMessageReq
               { MessageBuilder.driverName = ride.driverName,
-                MessageBuilder.driverNumber = ride.driverMobileNumber,
+                MessageBuilder.driverNumber = exophoneNumber,
                 MessageBuilder.trackingUrl = trackLink,
                 MessageBuilder.otp = endOtp,
                 MessageBuilder.deliveryMessageType = MessageBuilder.ReceiverReq
               }
       buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
-      receiverMobileNumber <- decrypt deliveryDetails.receiverDetails.phone
+      receiverMobileNumber <- decrypt encReceiverMobileNumber
       Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq receiverMobileNumber) >>= Sms.checkSmsResult
 
     sendRideEndOTPMessage = fork "sending ride end otp sms" $ do
@@ -583,7 +596,10 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
-  unless (booking.status == DRB.COMPLETED) $ void $ QRB.updateStatus booking.id DRB.COMPLETED
+  unless (booking.status == DRB.COMPLETED) $
+    void $ do
+      QRB.updateStatus booking.id DRB.COMPLETED
+      QBPL.makeAllInactiveByBookingId booking.id
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.END_TIME
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRide (fromMaybe now rideEndTime))
@@ -715,7 +731,10 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = DRB.CANCELLED}}
   QPFS.updateStatus booking.riderId DPFS.IDLE
-  unless (booking.status == DRB.CANCELLED) $ void $ QRB.updateStatus booking.id DRB.CANCELLED
+  unless (booking.status == DRB.CANCELLED) $
+    void $ do
+      QRB.updateStatus booking.id DRB.CANCELLED
+      QBPL.makeAllInactiveByBookingId booking.id
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   fork "Cancellation Settlement" $ do

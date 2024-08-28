@@ -48,6 +48,50 @@ data TripCategory
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema)
 
+data TripParty
+  = DeliveryParty DeliveryParties
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (ToSchema)
+
+instance ToJSON TripParty where
+  toJSON (DeliveryParty party) =
+    object
+      [ "tag" .= ("DeliveryParty" :: Text),
+        "contents" .= party
+      ]
+
+instance FromJSON TripParty where
+  parseJSON = withObject "TripParty" $ \v -> do
+    tag <- v .: "tag"
+    case tag of
+      "DeliveryParty" -> DeliveryParty <$> v .: "contents"
+      _ -> fail $ "Unknown tag: " ++ tag
+
+data DeliveryParties
+  = Sender
+  | Receiver
+  | SomeoneElse
+  deriving stock (Eq, Show, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable DeliveryParties
+
+instance Show TripParty where
+  show (DeliveryParty party) = "DeliveryParty_" <> show party
+
+instance Read TripParty where
+  readsPrec d' =
+    readParen
+      (d' > app_prec)
+      ( \r ->
+          [ (DeliveryParty v1, r2)
+            | r1 <- stripPrefix "DeliveryParty_" r,
+              (v1, r2) <- readsPrec (app_prec + 1) r1
+          ]
+      )
+    where
+      app_prec = 10
+      stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
+
 -- This is done to handle backward compatibility, as UI is expected "contents" to be a string but due to multiple in InterCity and CrossCity, it got changed into an array
 instance ToJSON TripCategory where
   toJSON (OneWay mode) =

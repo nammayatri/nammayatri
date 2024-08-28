@@ -1,19 +1,17 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.SearchRequest (module Domain.Types.SearchRequest, module ReExport) where
+module Domain.Types.SearchRequest where
 
 import Data.Aeson
 import qualified Domain.Types.Client
-import Domain.Types.Extra.SearchRequest as ReExport
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
-import qualified Domain.Types.SearchRequestDeliveryDetails
+import qualified Domain.Types.Trip
 import qualified Kernel.External.Maps
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
@@ -43,6 +41,7 @@ data SearchRequest = SearchRequest
     estimatedRideDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    initiatedBy :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAdvanceBookingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
@@ -53,7 +52,6 @@ data SearchRequest = SearchRequest
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderPreferredOption :: Domain.Types.SearchRequest.RiderPreferredOption,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    searchRequestDetails :: Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchRequestDetails,
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     startTime :: Kernel.Prelude.UTCTime,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
@@ -63,8 +61,6 @@ data SearchRequest = SearchRequest
   deriving (Generic, Show)
 
 data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance | Delivery deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-data SearchRequestDetails = DeliveryDetails Domain.Types.SearchRequestDeliveryDetails.SearchRequestDeliveryDetails deriving (Generic, Show)
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

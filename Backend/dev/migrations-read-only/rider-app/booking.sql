@@ -124,13 +124,7 @@ ALTER TABLE atlas_app.booking ADD COLUMN is_dashboard_request boolean ;
 ALTER TABLE atlas_app.booking ADD COLUMN trip_category text ;
 
 
-
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.booking ADD COLUMN sender_phone_number_hash text ;
-ALTER TABLE atlas_app.booking ADD COLUMN sender_phone_number_encrypted text ;
-ALTER TABLE atlas_app.booking ADD COLUMN sender_name text ;
-ALTER TABLE atlas_app.booking ADD COLUMN receiver_phone_number_hash text ;
-ALTER TABLE atlas_app.booking ADD COLUMN receiver_phone_number_encrypted text ;
-ALTER TABLE atlas_app.booking ADD COLUMN receiver_name text ;
-ALTER TABLE atlas_app.booking ADD COLUMN initiated_as text ;
+ALTER TABLE atlas_app.booking ADD COLUMN initiated_by text ;
+

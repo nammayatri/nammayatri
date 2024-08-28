@@ -28,6 +28,7 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.BookingLocation as QBBL
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -107,8 +108,16 @@ findLatestByRiderId (Id riderId) =
           ]
         sortBy' = Se.Desc BeamB.createdAt
         limit' = Just 1
-    findAllWithOptionsKV options sortBy' limit' Nothing
-    <&> listToMaybe
+    res <-
+      findAllWithOptionsKV options sortBy' limit' Nothing
+        <&> listToMaybe
+    if (isNothing res)
+      then do
+        bookingParty <- QBPL.findOneActivePartyByRiderId (Id riderId)
+        case bookingParty of
+          Just bp -> findById bp.bookingId
+          Nothing -> return Nothing
+      else (return res)
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -127,11 +136,11 @@ findByTransactionId transactionId =
 findByIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
 
-findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
-  let limit' = fmap fromIntegral $ mbLimit <|> Just 10
-      offset' = fmap fromIntegral $ mbOffset <|> Just 0
-  findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
+-- findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
+-- findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
+--   let limit' = fmap fromIntegral $ mbLimit <|> Just 10
+--       offset' = fmap fromIntegral $ mbOffset <|> Just 0
+--   findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
 
 findCountByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> m Int
 findCountByRiderIdAndStatus (Id personId) status = do

@@ -73,6 +73,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingExtra as QEBooking
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -401,7 +402,18 @@ onUpdate = \case
     let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
         newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
     void $ SQQ.createQuote newQuote
+    -- make all the booking parties inactive during rellocation
+    oldBookingParties <- QBPL.findAllActiveByBookingId booking.id
+    newBookingParties <-
+      mapM
+        ( \bp -> do
+            partyId <- generateGUID
+            return bp{id = partyId, bookingId = bookingId}
+        )
+        oldBookingParties
+    QBPL.makeAllInactiveByBookingId booking.id
     void $ QRB.createBooking newBooking
+    void $ QBPL.createMany newBookingParties
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
     void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = searchReq.validTill, fareProductType = Just $ STB.getFareProductType booking.bookingDetails, tripCategory = booking.tripCategory}

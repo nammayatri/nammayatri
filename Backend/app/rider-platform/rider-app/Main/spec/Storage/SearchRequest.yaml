@@ -20,9 +20,9 @@ imports:
   PaymentMethodId: Kernel.External.Payment.Interface.Types
   EncryptedHashedField: Kernel.External.Encryption
   DeliveryInitiation: BecknV2.OnDemand.Enums
-  SearchRequestDeliveryDetails: Domain.Types.SeachRequestDeliveryDetails
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption
+  TripParty: Domain.Types.Trip
 
 
 SearchRequest:
@@ -65,12 +65,9 @@ SearchRequest:
     isAdvanceBookingEnabled: Maybe Bool
     isDashboardRequest: Maybe Bool
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
-    searchRequestDetails: Maybe SearchRequestDetails
+    initiatedBy: Maybe TripParty
 
   types:
-    SearchRequestDetails:
-      enum: "DeliveryDetails SearchRequestDeliveryDetails"
-      derive': "Generic, Show"
     SearchRequestStatus:
       enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
       derive: "HttpInstance"
@@ -98,7 +95,6 @@ SearchRequest:
     fromLocationId: character varying(36)
 
   beamFields:
-    searchRequestDetails: {}
     distance:
       distance: Maybe Centesimal
       distanceValue: Maybe HighPrecDistance
@@ -158,7 +154,6 @@ SearchRequest:
     clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
-    searchRequestDetails: Storage.Queries.Transformers.SearchRequest.getSearchRequestDetails id riderPreferredOption|EM
 
   excludedFields: [updatedAt]
 
@@ -179,59 +174,37 @@ SearchRequest:
       params: [id, totalRidesCount]
       where: riderId
 
+    updateInitiatedBy:
+      kvFunction: updateOneWithKV
+      params: [initiatedBy]
+      where: id
+
   constraints:
     id: PrimaryKey
     riderId: SecondaryKey
 
   extraOperations:
     - EXTRA_QUERY_FILE
-    - EXTRA_DOMAIN_TYPE_FILE
 
-SearchRequestDeliveryDetails:
-  derives: "Generic"
+SearchRequestPartiesLink:
   fields:
-    searchRequestId: Text
-    senderDetails: DeliveryPersonDetails
-    receiverDetails: DeliveryPersonDetails
-    initiatedAs: DeliveryInitiation
-
-  beamFields:
-    senderDetails:
-      senderName: Text
-      senderPhoneNumberEncrypted: Text
-      senderPhoneNumberHash: DbHash
-    receiverDetails:
-      receiverName: Text
-      receiverPhoneNumberEncrypted: Text
-      receiverPhoneNumberHash: DbHash
-
-  toTType:
-    senderName: senderDetails & (.name)|E
-    senderPhoneNumberEncrypted: (senderDetails & (.phone)) & unEncrypted . encrypted|E
-    senderPhoneNumberHash: (senderDetails & (.phone)) & hash|E
-    receiverName: receiverDetails & (.name)|E
-    receiverPhoneNumberEncrypted: (receiverDetails & (.phone)) & unEncrypted . encrypted|E
-    receiverPhoneNumberHash: (receiverDetails & (.phone)) & hash|E
-
-  fromTType:
-    senderDetails: Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails senderName (EncryptedHashed (Encrypted senderPhoneNumberEncrypted) senderPhoneNumberHash)|E
-    receiverDetails: Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails receiverName (EncryptedHashed (Encrypted receiverPhoneNumberEncrypted) receiverPhoneNumberHash)|E
-
-  sqlType:
-    senderPhoneNumberHash: bytea
-    receiverPhoneNumberHash: bytea
+    id: Id SearchRequestPartiesLink
+    searchRequestId: Id SearchRequest
+    partyId: Id Person
+    partyType: TripParty|NoRelation
+    partyName: Text
 
   constraints:
-    searchRequestId: PrimaryKey
+    id: PrimaryKey
+    searchRequestId: SecondaryKey
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
   excludedDefaultQueries:
-    - createMany
     - updateByPrimaryKey
     - findByPrimaryKey
 
   queries:
-    findBySearchRequestId:
-      kvFunction: findOneWithKV
+    findAllBySearchRequestId:
+      kvFunction: findAllWithKV
       where: searchRequestId

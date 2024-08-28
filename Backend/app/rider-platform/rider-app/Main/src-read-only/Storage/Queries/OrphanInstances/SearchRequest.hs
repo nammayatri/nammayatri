@@ -26,7 +26,6 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.SearchRequest.getFromLocation id
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId
-    searchRequestDetails' <- Storage.Queries.Transformers.SearchRequest.getSearchRequestDetails id riderPreferredOption
     toLocation' <- Storage.Queries.Transformers.SearchRequest.getToLocation id
     pure $
       Just
@@ -50,6 +49,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             estimatedRideDuration = estimatedRideDuration,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
+            initiatedBy = initiatedBy,
             isAdvanceBookingEnabled = isAdvanceBookingEnabled,
             isDashboardRequest = isDashboardRequest,
             language = language,
@@ -60,7 +60,6 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             riderId = Kernel.Types.Id.Id riderId,
             riderPreferredOption = fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption,
             roundTrip = roundTrip,
-            searchRequestDetails = searchRequestDetails',
             selectedPaymentMethodId = selectedPaymentMethodId,
             startTime = startTime,
             toLocation = toLocation',
@@ -96,6 +95,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.estimatedRideDuration = estimatedRideDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.initiatedBy = initiatedBy,
         Beam.isAdvanceBookingEnabled = isAdvanceBookingEnabled,
         Beam.isDashboardRequest = isDashboardRequest,
         Beam.language = language,

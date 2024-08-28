@@ -30,9 +30,7 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   HighPrecMoney: Kernel.Types.Common
   PaymentMethodId: Kernel.External.Payment.Interface.Types
-  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
-  DbHash: Kernel.External.Encryption
-  DeliveryInitiation: BecknV2.OnDemand.Enums
+  TripParty: Domain.Types.Trip
 
 BookingLocation:
   tableName: booking_location
@@ -159,9 +157,6 @@ Booking:
       toLocation: Location
       distance: Distance
       otpCode: Maybe Text
-      senderDetails: DeliveryPersonDetails
-      receiverDetails: DeliveryPersonDetails
-      initiatedAs: DeliveryInitiation
 
   fields:
     id: Id Booking
@@ -214,6 +209,7 @@ Booking:
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
     tripCategory: Maybe TripCategory
+    initiatedBy: Maybe TripParty
 
   beamFields:
     estimatedDistance:
@@ -232,13 +228,6 @@ Booking:
       distance: Maybe HighPrecMeters
       stopLocationId: Maybe Text
       otpCode: Maybe Text
-      senderPhoneNumberEncrypted: Maybe Text
-      senderPhoneNumberHash: Maybe DbHash
-      senderName: Maybe Text
-      receiverPhoneNumberEncrypted: Maybe Text
-      receiverPhoneNumberHash: Maybe DbHash
-      receiverName: Maybe Text
-      initiatedAs: Maybe DeliveryInitiation
     fromLocation:
       fromLocationId: Maybe Text
     tripTerms:
@@ -354,21 +343,13 @@ Booking:
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     bppEstimateId: itemId|E
-    senderPhoneNumberEncrypted: (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.senderDetails)) <&> (unEncrypted . (.encrypted))|E
-    senderPhoneNumberHash: (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.senderDetails)) <&> (.hash)|E
-    senderName: deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.name . Domain.Types.Booking.senderDetails)|E
-    receiverPhoneNumberEncrypted: (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.receiverDetails)) <&> (unEncrypted . (.encrypted))|E
-    receiverPhoneNumberHash: (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.receiverDetails)) <&> (.hash)|E
-    receiverName: deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.name . Domain.Types.Booking.receiverDetails)|E
-    initiatedAs: deliveryBookingInfo <&> (.initiatedAs)|E
 
   intermediateTransformers:
     toTType:
       - distance: getDistance bookingDetails|E
-      - deliveryBookingInfo: getDeliveryBookingInfo bookingDetails|E
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
-      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue senderPhoneNumberEncrypted senderPhoneNumberHash senderName receiverPhoneNumberEncrypted receiverPhoneNumberHash receiverName initiatedAs|EM #check
+      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue|EM
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E
@@ -404,3 +385,58 @@ Booking:
     riderId: "!SecondaryKey" # forcing to be a secondary key
     quoteId: "!SecondaryKey" # forcing to be a secondary key
     riderTransactionId: "!SecondaryKey" # forcing to be a secondary key
+
+BookingPartiesLink:
+  fields:
+    id: Id BookingPartiesLink
+    bookingId: Id Booking
+    partyId: Id Person
+    partyType: TripParty|NoRelation
+    partyName: Text
+    isActive: Bool
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  constraints:
+    id: PrimaryKey
+    partyId: SecondaryKey
+    isActive: SecondaryKey
+
+  queries:
+    findAllByBookingId:
+      kvFunction: findAllWithKV
+      where: bookingId
+    findAllActiveByBookingId:
+      kvFunction: findAllWithKV
+      where:
+        and:
+         - bookingId
+         - isActive: True|CB
+    makeAllInactiveByBookingId:
+      kvFunction: updateWithKV
+      params:
+        - isActive: False|CB
+      where:
+        and:
+          - bookingId
+          - isActive: True|CB
+    findOneByPartyId:
+      kvFunction: findOneWithKV
+      where: partyId
+    findOneActivePartyByRiderId:
+      kvFunction: findOneWithKV
+      where:
+        and:
+         - partyId
+         - isActive: True|CB
+    findOneActiveByBookingIdAndTripParty:
+      kvFunction: findOneWithKV
+      where:
+        and:
+         - bookingId
+         - partyType
+         - isActive: True|CB
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey

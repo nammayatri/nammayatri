@@ -9,7 +9,6 @@ import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
 import qualified Domain.Types.Common
-import qualified Domain.Types.DeliveryPersonDetails
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
@@ -18,6 +17,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.Trip
 import qualified Domain.Types.TripTerms
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
@@ -48,6 +48,7 @@ data Booking = Booking
     fulfillmentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     initialPickupLocation :: Domain.Types.Location.Location,
+    initiatedBy :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBookingUpdated :: Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -94,14 +95,7 @@ data BookingDetails
   | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
   deriving (Show)
 
-data DeliveryBookingDetails = DeliveryBookingDetails
-  { distance :: Kernel.Types.Common.Distance,
-    initiatedAs :: BecknV2.OnDemand.Enums.DeliveryInitiation,
-    otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    receiverDetails :: Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
-    senderDetails :: Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
-    toLocation :: Domain.Types.Location.Location
-  }
+data DeliveryBookingDetails = DeliveryBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Generic, Show)
 
 data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}

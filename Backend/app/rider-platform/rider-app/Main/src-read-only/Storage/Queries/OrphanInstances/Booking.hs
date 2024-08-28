@@ -5,7 +5,6 @@ module Storage.Queries.OrphanInstances.Booking where
 
 import qualified Data.Text
 import qualified Domain.Types.Booking
-import qualified Domain.Types.DeliveryPersonDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -25,7 +24,7 @@ import qualified Storage.Queries.TripTerms
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
-    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue senderPhoneNumberEncrypted senderPhoneNumberHash senderName receiverPhoneNumberEncrypted receiverPhoneNumberHash receiverName initiatedAs
+    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
@@ -58,6 +57,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             fulfillmentId = fulfillmentId,
             id = Kernel.Types.Id.Id id,
             initialPickupLocation = initialPickupLocation',
+            initiatedBy = initiatedBy,
             isAirConditioned = isAirConditioned,
             isBookingUpdated = fromMaybe False isBookingUpdated,
             isDashboardRequest = isDashboardRequest,
@@ -92,20 +92,12 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
 instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
   toTType' (Domain.Types.Booking.Booking {..}) = do
     let distance = getDistance bookingDetails
-    let deliveryBookingInfo = getDeliveryBookingInfo bookingDetails
     Beam.BookingT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = Kernel.Utils.Version.versionToText <$> backendConfigVersion,
         Beam.distance = Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
         Beam.fareProductType = getFareProductType bookingDetails,
-        Beam.initiatedAs = deliveryBookingInfo <&> (.initiatedAs),
         Beam.otpCode = getOtpCode bookingDetails,
-        Beam.receiverName = deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.name . Domain.Types.Booking.receiverDetails),
-        Beam.receiverPhoneNumberEncrypted = (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.receiverDetails)) <&> (unEncrypted . (.encrypted)),
-        Beam.receiverPhoneNumberHash = (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.receiverDetails)) <&> (.hash),
-        Beam.senderName = deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.name . Domain.Types.Booking.senderDetails),
-        Beam.senderPhoneNumberEncrypted = (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.senderDetails)) <&> (unEncrypted . (.encrypted)),
-        Beam.senderPhoneNumberHash = (deliveryBookingInfo <&> (Domain.Types.DeliveryPersonDetails.phone . Domain.Types.Booking.senderDetails)) <&> (.hash),
         Beam.stopLocationId = getStopLocationId bookingDetails,
         Beam.toLocationId = getToLocationId bookingDetails,
         Beam.bppBookingId = Kernel.Types.Id.getId <$> bppBookingId,
@@ -131,6 +123,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId $ (.id) fromLocation,
         Beam.fulfillmentId = fulfillmentId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.initiatedBy = initiatedBy,
         Beam.isAirConditioned = isAirConditioned,
         Beam.isBookingUpdated = Just isBookingUpdated,
         Beam.isDashboardRequest = isDashboardRequest,

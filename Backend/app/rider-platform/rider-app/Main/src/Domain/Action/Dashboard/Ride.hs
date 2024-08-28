@@ -66,6 +66,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
@@ -454,6 +455,7 @@ bookingCancel BookingCancelledReq {..} = do
   bookingCancellationReason <- buildBookingCancellationReason booking (mbRide <&> (.id))
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRB.updateStatus booking.id DTB.CANCELLED
+  _ <- QBPL.makeAllInactiveByBookingId booking.id
   _ <- whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id DRide.CANCELLED
   void $ QBCReason.upsert bookingCancellationReason
   where

@@ -1,6 +1,5 @@
 module Storage.Queries.Transformers.Booking where
 
-import BecknV2.OnDemand.Enums (DeliveryInitiation)
 import Control.Applicative
 import Data.List (sortBy)
 import Data.Ord
@@ -8,11 +7,9 @@ import Domain.Types.Booking
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
 import Domain.Types.Common
-import Domain.Types.DeliveryPersonDetails
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -110,15 +107,8 @@ toBookingDetailsAndFromLocation ::
   Maybe Text ->
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
-  Maybe Text ->
-  Maybe DbHash ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe DbHash ->
-  Maybe Text ->
-  Maybe DeliveryInitiation ->
   m (DL.Location, BookingDetails)
-toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue senderPhoneNumberEncrypted senderPhoneNumberHash senderName receiverPhoneNumberEncrypted receiverPhoneNumberHash receiverName initiatedAs = do
+toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do
@@ -224,18 +214,10 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for delivery bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for delivery booking")
       distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for delivery booking")
-      senderPhoneNumberEncrypted' <- senderPhoneNumberEncrypted & fromMaybeM (InternalError "senderPhoneNumberEncrypted is null for delivery booking")
-      senderPhoneNumberHash' <- senderPhoneNumberHash & fromMaybeM (InternalError "senderPhoneNumberHash is null for delivery booking")
-      receiverPhoneNumberEncrypted' <- receiverPhoneNumberEncrypted & fromMaybeM (InternalError "receiverPhoneNumberEncrypted is null for delivery booking")
-      receiverPhoneNumberHash' <- receiverPhoneNumberHash & fromMaybeM (InternalError "receiverPhoneNumberHash is null for delivery booking")
-      initiatedAs' <- initiatedAs & fromMaybeM (InternalError "initiatedAs is null for delivery booking")
-      let senderDetails = DeliveryPersonDetails {name = fromMaybe "Sender" senderName, phone = EncryptedHashed (Encrypted senderPhoneNumberEncrypted') senderPhoneNumberHash'}
-          receiverDetails = DeliveryPersonDetails {name = fromMaybe "Receiver" receiverName, phone = EncryptedHashed (Encrypted receiverPhoneNumberEncrypted') receiverPhoneNumberHash'}
       pure
         DRB.DeliveryBookingDetails
           { toLocation = toLocation,
             distance = distance',
-            initiatedAs = initiatedAs',
             ..
           }
 

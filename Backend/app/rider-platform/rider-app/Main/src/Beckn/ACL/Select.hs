@@ -30,7 +30,6 @@ import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Location as Location
-import qualified Domain.Types.Trip as Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -143,112 +142,7 @@ mkItemTags res =
       itemTags'' = if not (null res.remainingEstimateBppIds) then mkOtheEstimatesTagGroup res : itemTags' else itemTags'
       itemTags''' = mkAdvancedBookingEnabledTagGroup res : itemTags''
       itemTags'''' = mkDeviceIdTagGroup res : itemTags'''
-      itemTags''''' = if maybe False Trip.isDeliveryTrip res.tripCategory then mkDeliveryTagGroup res <> itemTags'''' else itemTags''''
-   in itemTags'''''
-
-mkDeliveryTagGroup :: DSelect.DSelectRes -> [Spec.TagGroup]
-mkDeliveryTagGroup res =
-  maybe
-    []
-    ( \(DSelect.DSelectResDelivery (DSelect.DeliveryDetails {..})) ->
-        pure $
-          Spec.TagGroup
-            { tagGroupDisplay = Just False,
-              tagGroupDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.DELIVERY,
-                      descriptorName = Just "Delivery Info",
-                      descriptorShortDesc = Nothing
-                    },
-              tagGroupList =
-                Just
-                  [ Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.INITIATED_AS,
-                                descriptorName = Just "Delivery Initiated As",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just $ show initiatedAs
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.SENDER_NAME,
-                                descriptorName = Just "Sender Name",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just senderDetails.name
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.SENDER_LOCATION_INSTRUCTIONS,
-                                descriptorName = Just "Sender Location Instructions",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just $ mkLocationInstructions senderDetails.address.instructions senderDetails.address.extras
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.SENDER_NUMBER,
-                                descriptorName = Just "Sender phone number",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just senderDetails.phoneNumber
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.RECEIVER_NAME,
-                                descriptorName = Just "Receiver Name",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just receiverDetails.name
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.RECEIVER_LOCATION_INSTRUCTIONS,
-                                descriptorName = Just "Receiver Location Instructions",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just $ mkLocationInstructions receiverDetails.address.instructions receiverDetails.address.extras
-                      },
-                    Spec.Tag
-                      { tagDescriptor =
-                          Just $
-                            Spec.Descriptor
-                              { descriptorCode = Just $ show Tags.RECEIVER_NUMBER,
-                                descriptorName = Just "Receiver phone number",
-                                descriptorShortDesc = Nothing
-                              },
-                        tagDisplay = Just False,
-                        tagValue = Just receiverDetails.phoneNumber
-                      }
-                  ]
-            }
-    )
-    res.selectResDetails
-  where
-    mkLocationInstructions instructions extras =
-      fromMaybe mempty instructions
-        <> "|"
-        <> fromMaybe mempty extras
+   in itemTags''''
 
 mkCustomerTipTagGroup :: DSelect.DSelectRes -> Spec.TagGroup
 mkCustomerTipTagGroup res =

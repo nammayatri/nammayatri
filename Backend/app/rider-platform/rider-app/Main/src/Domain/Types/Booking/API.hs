@@ -16,7 +16,6 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
-import qualified BecknV2.OnDemand.Enums as Enums
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
@@ -33,7 +32,8 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Sos as DSos
-import EulerHS.Prelude hiding (elem, id, length, null)
+import qualified Domain.Types.Trip as Trip
+import EulerHS.Prelude hiding (elem, find, id, length, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as Payment
@@ -48,6 +48,7 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -195,15 +196,13 @@ data DeliveryBookingAPIDetails = DeliveryBookingAPIDetails
     estimatedDistance :: HighPrecMeters,
     estimatedDistanceWithUnit :: Distance,
     senderDetails :: DeliveryPersonDetailsAPIEntity,
-    receiverDetails :: DeliveryPersonDetailsAPIEntity,
-    initiatedAs :: Enums.DeliveryInitiation,
-    otpCode :: Maybe Text
+    receiverDetails :: DeliveryPersonDetailsAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data DeliveryPersonDetailsAPIEntity = DeliveryPersonDetailsAPIEntity
   { name :: Text,
-    phone :: Text
+    phoneNumber :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -225,7 +224,7 @@ makeBookingAPIEntity ::
   Maybe BookingCancellationReasonAPIEntity ->
   m BookingAPIEntity
 makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
-  bookingDetails <- mkBookingAPIDetails booking.bookingDetails
+  bookingDetails <- mkBookingAPIDetails booking
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
   return $
     BookingAPIEntity
@@ -287,15 +286,15 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       endTime <- ride.rideEndTime
       return $ nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
 
-mkBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => BookingDetails -> m BookingAPIDetails
-mkBookingAPIDetails = \case
+mkBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> m BookingAPIDetails
+mkBookingAPIDetails booking = case booking.bookingDetails of
   OneWayDetails details -> return $ OneWayAPIDetails . mkOneWayAPIDetails $ details
   RentalDetails details -> return $ RentalAPIDetails . mkRentalAPIDetails $ details
   DriverOfferDetails details -> return $ DriverOfferAPIDetails . mkOneWayAPIDetails $ details
   OneWaySpecialZoneDetails details -> return $ OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
   InterCityDetails details -> return $ InterCityAPIDetails . mkInterCityAPIDetails $ details
   AmbulanceDetails details -> return $ AmbulanceAPIDetails . mkAmbulanceAPIDetails $ details
-  DeliveryDetails details -> DeliveryAPIDetails <$> (mkDeliveryAPIDetails details)
+  DeliveryDetails details -> DeliveryAPIDetails <$> (mkDeliveryAPIDetails booking.id details)
   where
     mkOneWayAPIDetails OneWayBookingDetails {..} =
       OneWayBookingAPIDetails
@@ -329,17 +328,24 @@ mkBookingAPIDetails = \case
           estimatedDistanceWithUnit = distance
         }
     -- check later if sender info required --
-    mkDeliveryAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DeliveryBookingDetails -> m DeliveryBookingAPIDetails
-    mkDeliveryAPIDetails DeliveryBookingDetails {..} = do
-      senderPhoneNumber <- decrypt senderDetails.phone
-      receiverPhoneNumber <- decrypt receiverDetails.phone
+    mkDeliveryAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id Booking -> DeliveryBookingDetails -> m DeliveryBookingAPIDetails
+    mkDeliveryAPIDetails bookingId (DeliveryBookingDetails {..}) = do
+      allBookingParties <- QBPL.findAllByBookingId bookingId
+      senderParty <- fromMaybeM (InternalError "No sender party found") $ find (\party -> party.partyType == Trip.DeliveryParty Trip.Sender) allBookingParties
+      receiverParty <- fromMaybeM (InternalError "No receiver party found") $ find (\party -> party.partyType == Trip.DeliveryParty Trip.Receiver) allBookingParties
+      senderPerson <- QP.findById senderParty.partyId >>= fromMaybeM (InternalError "No sender person found for delivery")
+      receiverPerson <- QP.findById receiverParty.partyId >>= fromMaybeM (InternalError "No receiver person found for delivery")
+      encSenderPhoneNumber <- fromMaybeM (InternalError "No sender phone number found") senderPerson.mobileNumber
+      encReceiverPhoneNumber <- fromMaybeM (InternalError "No receiver phone number found") receiverPerson.mobileNumber
+      decSenderPhoneNumber <- decrypt encSenderPhoneNumber
+      decReceiverPhoneNumber <- decrypt encReceiverPhoneNumber
       return $
         DeliveryBookingAPIDetails
           { toLocation = SLoc.makeLocationAPIEntity toLocation,
             estimatedDistance = distanceToHighPrecMeters distance,
             estimatedDistanceWithUnit = distance,
-            senderDetails = DeliveryPersonDetailsAPIEntity {name = senderDetails.name, phone = senderPhoneNumber},
-            receiverDetails = DeliveryPersonDetailsAPIEntity {name = receiverDetails.name, phone = receiverPhoneNumber},
+            senderDetails = DeliveryPersonDetailsAPIEntity {name = senderParty.partyName, phoneNumber = decSenderPhoneNumber},
+            receiverDetails = DeliveryPersonDetailsAPIEntity {name = receiverParty.partyName, phoneNumber = decReceiverPhoneNumber},
             ..
           }
 
