@@ -68,12 +68,14 @@ import qualified SharedLogic.Serviceability as Serviceability
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingExtra as SQB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequestExtra as SQSR
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 import qualified Tools.Notifications as Notify
@@ -272,6 +274,8 @@ editLocation rideId (personId, merchantId) req = do
       QLM.create pickupMapForBooking
       pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
       QLM.create pickupMapForRide
+      SQB.updateBookingFromLocationById bookingId startLocation.id
+      SQSR.updateSearchReqFromLocationById booking.transactionId startLocation.id
       let origin = Just $ startLocation{id = "0"}
       bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
       uuid <- generateGUID

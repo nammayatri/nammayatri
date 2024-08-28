@@ -1,5 +1,6 @@
 module Storage.Queries.SearchRequestExtra where
 
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
@@ -65,3 +66,10 @@ updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 
       Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2
     ]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateSearchReqFromLocationById :: (MonadFlow m, EsqDBFlow m r) => Text -> Id DL.Location -> m ()
+updateSearchReqFromLocationById searchReqId fromLocationId = do
+  updateOneWithKV
+    [ Se.Set BeamSR.fromLocationId $ Just $ getId fromLocationId
+    ]
+    [Se.Is BeamSR.id (Se.Eq searchReqId)]
