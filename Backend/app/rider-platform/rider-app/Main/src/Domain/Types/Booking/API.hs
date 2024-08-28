@@ -375,7 +375,7 @@ favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: DRide.Ride -> RideAPIEntity
 makeRideAPIEntity DRide.Ride {..} =
-  let driverMobileNumber' = if status `elem` [DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
+  let driverMobileNumber' = if status `elem` [DRide.UPCOMING, DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
