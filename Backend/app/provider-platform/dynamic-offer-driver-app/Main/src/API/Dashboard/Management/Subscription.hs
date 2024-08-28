@@ -16,7 +16,7 @@ module API.Dashboard.Management.Subscription where
 
 import qualified "dashboard-helper-api" Dashboard.Common as DP
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
-import qualified Domain.Action.Dashboard.Driver as DDriver
+import qualified Domain.Action.Dashboard.Management.Subscription as DSubscription
 import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.Payment as APayment
 import qualified Domain.Action.UI.Plan as DTPlan
@@ -187,14 +187,14 @@ type DriverPaymentHistoryEntityDetailsAPI =
 type SendMessageToDriverViaDashboardAPI =
   Capture "driverId" (Id Common.Driver)
     :> "sendSms"
-    :> ReqBody '[JSON] DDriver.SendSmsReq
+    :> ReqBody '[JSON] DSubscription.SendSmsReq
     :> Post '[JSON] APISuccess
 
 type SendSmsToDriverAPI =
   Capture "driverId" (Id Common.Driver)
     :> Capture "volunteerId" Text
     :> "sendSms"
-    :> ReqBody '[JSON] DDriver.SendSmsReq
+    :> ReqBody '[JSON] DSubscription.SendSmsReq
     :> Post '[JSON] APISuccess
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -308,7 +308,7 @@ getPaymentHistory ::
   Maybe Int ->
   Maybe Int ->
   FlowHandler Driver.HistoryEntityV2
-getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset = withFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset DPlan.YATRI_SUBSCRIPTION
+getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset = withFlowHandlerAPI $ DSubscription.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset DPlan.YATRI_SUBSCRIPTION
 
 getPaymentHistoryV2 ::
   ShortId DM.Merchant ->
@@ -319,7 +319,7 @@ getPaymentHistoryV2 ::
   Maybe Int ->
   Maybe Int ->
   FlowHandler Driver.HistoryEntityV2
-getPaymentHistoryV2 merchantShortId opCity driverId serviceName invoicePaymentMode limit offset = withFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset serviceName
+getPaymentHistoryV2 merchantShortId opCity driverId serviceName invoicePaymentMode limit offset = withFlowHandlerAPI $ DSubscription.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset serviceName
 
 getPaymentHistoryEntityDetailsV2 ::
   ShortId DM.Merchant ->
@@ -329,7 +329,7 @@ getPaymentHistoryEntityDetailsV2 ::
   Id INV.Invoice ->
   FlowHandler Driver.HistoryEntryDetailsEntityV2
 getPaymentHistoryEntityDetailsV2 merchantShortId opCity driverId serviceName invoiceId = do
-  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId serviceName invoiceId
+  withFlowHandlerAPI $ DSubscription.getPaymentHistoryEntityDetails merchantShortId opCity driverId serviceName invoiceId
 
 getPaymentHistoryEntityDetails ::
   ShortId DM.Merchant ->
@@ -338,7 +338,7 @@ getPaymentHistoryEntityDetails ::
   Id INV.Invoice ->
   FlowHandler Driver.HistoryEntryDetailsEntityV2
 getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId = do
-  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId DPlan.YATRI_SUBSCRIPTION invoiceId
+  withFlowHandlerAPI $ DSubscription.getPaymentHistoryEntityDetails merchantShortId opCity driverId DPlan.YATRI_SUBSCRIPTION invoiceId
 
 updateDriverSubscriptionDriverFeeAndInvoiceUpdate ::
   ShortId DM.Merchant ->
@@ -347,7 +347,7 @@ updateDriverSubscriptionDriverFeeAndInvoiceUpdate ::
   Common.ServiceNames ->
   Common.SubscriptionDriverFeesAndInvoicesToUpdate ->
   FlowHandler Common.SubscriptionDriverFeesAndInvoicesToUpdate
-updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantShortId opCity driverId serviceName req = withFlowHandlerAPI $ DDriver.updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceName req
+updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantShortId opCity driverId serviceName req = withFlowHandlerAPI $ DSubscription.updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceName req
 
-sendSmsToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> DDriver.SendSmsReq -> FlowHandler APISuccess
-sendSmsToDriver merchantShortId opCity driverId volunteerId = withFlowHandlerAPI . DDriver.sendSmsToDriver merchantShortId opCity driverId volunteerId
+sendSmsToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> DSubscription.SendSmsReq -> FlowHandler APISuccess
+sendSmsToDriver merchantShortId opCity driverId volunteerId = withFlowHandlerAPI . DSubscription.sendSmsToDriver merchantShortId opCity driverId volunteerId
