@@ -295,7 +295,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
         )
   let merchantOperatingCityId = merchantOperatingCity.id
   searchRequestId <- generateGUID
-  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip req originCity
+  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity req
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops
   searchRequest <-
@@ -434,11 +434,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
 
     processRentalSearch person rentalReq stopsLatLong originCity = do
       case stopsLatLong of
-        [] -> return (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
+        [] -> return $ RouteDetails {longestRouteDistance = Nothing, shortestRouteDistance = Just rentalReq.estimatedRentalDistance, shortestRouteDuration = Just rentalReq.estimatedRentalDuration, shortestRouteInfo = (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [])), multipleRoutes = Nothing}
         (stop : _) -> do
           stopCity <- Serviceability.validateServiceability stop [] person
           unless (stopCity == originCity) $ throwError RideNotServiceable
-          return $ RouteDetails (Nothing, Just rentalReq.estimatedRentalDistance, Just rentalReq.estimatedRentalDuration, Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), Nothing)
+          return $ RouteDetails {longestRouteDistance = Nothing, shortestRouteDistance = Just rentalReq.estimatedRentalDistance, shortestRouteDuration = Just rentalReq.estimatedRentalDuration, shortestRouteInfo = Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] []), multipleRoutes = Nothing}
 
     updateRideSearchHotSpot :: DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> Flow ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
