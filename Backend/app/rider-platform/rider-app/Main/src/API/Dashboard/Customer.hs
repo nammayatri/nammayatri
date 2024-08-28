@@ -37,6 +37,7 @@ type API =
            :<|> Common.GetCancellationDuesDetailsAPI
            :<|> Common.UpdateSafetyCenterBlockingAPI
            :<|> Common.PostCustomersPersonNumbersAPI
+           :<|> Common.PostDriverPersonIdAPI
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -50,6 +51,7 @@ handler merchantId city =
     :<|> getCancellationDuesDetails merchantId city
     :<|> updateSafetyCenterBlocking merchantId city
     :<|> postCustomersPersonNumbers merchantId city
+    :<|> postCustomerPersonId merchantId city
 
 listCustomers ::
   ShortId DM.Merchant ->
@@ -108,3 +110,6 @@ updateSafetyCenterBlocking _ _ personId = withFlowHandlerAPI . DCustomer.updateS
 
 postCustomersPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> FlowHandler [Common.PersonRes]
 postCustomersPersonNumbers a b c = withFlowHandlerAPI $ DCustomer.getCustomerPersonNumbers a b c
+
+postCustomerPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> FlowHandler [Common.PersonRes]
+postCustomerPersonId a b c = withFlowHandlerAPI $ DCustomer.getCustomerPersonId a b c

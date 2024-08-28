@@ -36,6 +36,7 @@ data CustomerEndpoint
   | CustomerCancellationDuesSyncEndpoint
   | UpdateSafetyCenterEndpoint
   | PostCustomerPersonNumbersEndpoint
+  | PostDriverpersonIdEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "CustomerEndpoint"
@@ -170,5 +171,10 @@ data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq
 
 type PostCustomersPersonNumbersAPI =
   ( "personNumbers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp PersonIdsReq
+      :> Post '[JSON] [PersonRes]
+  )
+
+type PostDriverPersonIdAPI =
+  ( "personId" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp PersonMobileNoReq
       :> Post '[JSON] [PersonRes]
   )
