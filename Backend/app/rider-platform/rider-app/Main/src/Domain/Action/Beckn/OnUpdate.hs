@@ -400,11 +400,12 @@ onUpdate = \case
         else return False
     let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
         newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
+        flowStatus = if newIsScheduled then DPFS.IDLE else DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = searchReq.validTill, fareProductType = Just $ STB.getFareProductType booking.bookingDetails, tripCategory = booking.tripCategory}
     void $ SQQ.createQuote newQuote
     void $ QRB.createBooking newBooking
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    void $ QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = searchReq.validTill, fareProductType = Just $ STB.getFareProductType booking.bookingDetails, tripCategory = booking.tripCategory}
+    void $ QPFS.updateStatus searchReq.riderId flowStatus
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do

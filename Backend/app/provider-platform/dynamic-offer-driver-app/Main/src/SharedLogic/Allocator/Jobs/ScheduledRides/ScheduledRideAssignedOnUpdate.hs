@@ -131,16 +131,20 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                         dropLoc' = fromJust activeRide.toLocation
                         dropLoc = LatLong {lat = dropLoc'.lat, lon = dropLoc'.lon}
                     currentDriverLocation' <- LTF.driversLocation [driverId]
-                    let dloc = head currentDriverLocation'
-                        currentDriverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
-                    currentLocationtoDropDistance <-
-                      TMaps.getDistanceForScheduledRides merchantId merchantOperatingCityId $
-                        TMaps.GetDistanceReq
-                          { origin = currentDriverLocation,
-                            destination = dropLoc,
-                            travelMode = Just TMaps.CAR,
-                            distanceUnit = Meter
-                          }
+                    currentLocationtoDropDistance <- do
+                      case listToMaybe currentDriverLocation' of
+                        Just dloc -> do
+                          let currentDriverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
+                          currentLocationtoDropDistance' <-
+                            TMaps.getDistanceForScheduledRides merchantId merchantOperatingCityId $
+                              TMaps.GetDistanceReq
+                                { origin = currentDriverLocation,
+                                  destination = dropLoc,
+                                  travelMode = Just TMaps.CAR,
+                                  distanceUnit = Meter
+                                }
+                          return currentLocationtoDropDistance'.distance
+                        _ -> return 0
                     currentDroptoScheduledPickupDistance <-
                       TMaps.getDistanceForScheduledRides merchantId merchantOperatingCityId $
                         TMaps.GetDistanceReq
@@ -152,7 +156,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                     let transporterConfig = fromJust mbtransporterConfig
                         vehicle = fromJust mbVehicle
                         avgSpeeds = fromJust transporterConfig.avgSpeedOfVehicle
-                        estimatedDistinKm = metersToKilometers (currentLocationtoDropDistance.distance + currentDroptoScheduledPickupDistance.distance)
+                        estimatedDistinKm = metersToKilometers (currentLocationtoDropDistance + currentDroptoScheduledPickupDistance.distance)
                         avgSpeedOfVehicleInKM = SDP.getVehicleAvgSpeed vehicle.variant avgSpeeds
                         estimatedDistKmDouble = fromIntegral (getKilometers estimatedDistinKm) :: Double
                         avgSpeedKmPerHrDouble = fromIntegral (getKilometers avgSpeedOfVehicleInKM) :: Double
