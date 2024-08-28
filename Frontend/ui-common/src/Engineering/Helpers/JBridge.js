@@ -1128,6 +1128,12 @@ export const checkOverlayPermission = function (str) {
   };
 };
 
+export const loadView = function (str) {
+  return function () {
+    window.JBridge.loadView();
+  };
+};
+
 export const reallocateMapFragment = function (str) {
   return function () {
     console.log("debug zone reallocateMapFragment js");

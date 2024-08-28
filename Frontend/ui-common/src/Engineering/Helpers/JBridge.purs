@@ -126,6 +126,8 @@ foreign import getDateFromDate :: Fn2 String Int String
 
 foreign import initiateLocationServiceClient :: Effect Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
+
+foreign import loadView  :: Unit -> Effect Unit
 foreign import requestAutoStartPermission  :: Unit -> Effect Unit
 foreign import requestBatteryPermission :: Unit -> Effect Unit
 foreign import isBatteryPermissionEnabled :: Unit -> Effect Boolean

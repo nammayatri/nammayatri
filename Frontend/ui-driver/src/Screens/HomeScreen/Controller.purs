@@ -1259,7 +1259,9 @@ eval LinkAadhaarAC state = exit $ AadhaarVerificationFlow state
 eval ZoneOtpAction state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false,zoneRideBooking = true } }
 
-eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
+eval HelpAndSupportScreen state = continueWithCmd state [do
+  _ <- liftEffect $ JB.loadView unit
+  pure NoAction]
 
 eval (BannerCarousal (BannerCarousel.OnClick index)) state =
   continueWithCmd state [do
