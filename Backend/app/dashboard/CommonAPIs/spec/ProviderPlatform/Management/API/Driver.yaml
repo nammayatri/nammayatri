@@ -21,6 +21,7 @@ imports:
   Currency: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
   PersonIdsReq: Dashboard.Common
+  PersonMobileNoReq: Dashboard.Common
   PersonRes: Dashboard.Common
   MandatoryQueryParam: Kernel.Utils.Common
 
@@ -38,6 +39,13 @@ apis:
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PERSON_NUMBERS
       multipart:
         type: PersonIdsReq
+      response:
+        type: "[PersonRes]"
+  - POST: # PersonIDAPI
+      endpoint: /personId
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS FETCH_PERSON_ID
+      multipart:
+        type: PersonMobileNoReq
       response:
         type: "[PersonRes]"
 
