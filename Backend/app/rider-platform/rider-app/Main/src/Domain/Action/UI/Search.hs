@@ -293,7 +293,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
             "merchantId: " <> merchant.id.getId <> " ,city: " <> show originCity
         )
   searchRequestId <- generateGUID
-  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip req
+  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity req
   fromLocation <- buildSearchReqLoc origin
   stopLocations <- buildSearchReqLoc `mapM` stops
   searchRequest <-
@@ -437,6 +437,14 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       destinationLatLong <- listToMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
       let latLongs = if roundTrip then [sourceLatLong, destinationLatLong, sourceLatLong] else [sourceLatLong, destinationLatLong]
       calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now
+
+    processRentalSearch person rentalReq stopsLatLong originCity = do
+      case stopsLatLong of
+        [] -> return $ RouteDetails {longestRouteDistance = Nothing, shortestRouteDistance = (Just rentalReq.estimatedRentalDistance), shortestRouteDuration = (Just rentalReq.estimatedRentalDuration), shortestRouteInfo = (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [])), multipleRoutes = Nothing}
+        (stop : _) -> do
+          stopCity <- Serviceability.validateServiceability stop [] person
+          unless (stopCity == originCity) $ throwError RideNotServiceable
+          return $ RouteDetails {longestRouteDistance = Nothing, shortestRouteDistance = (Just rentalReq.estimatedRentalDistance), shortestRouteDuration = (Just rentalReq.estimatedRentalDuration), shortestRouteInfo = (Just (RouteInfo (Just rentalReq.estimatedRentalDuration) (Just rentalReq.estimatedRentalDistance) Nothing Nothing [] [])), multipleRoutes = Nothing}
 
     updateRideSearchHotSpot :: DPerson.Person -> SearchReqLocation -> Merchant -> Maybe Bool -> Maybe Bool -> Flow ()
     updateRideSearchHotSpot person origin merchant isSourceManuallyMoved isSpecialLocation = do
