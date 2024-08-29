@@ -1524,7 +1524,10 @@ window.getMerchantConfig = function () {
     "driverToCustomerRefCoinEvent" : true,
     "coinConversionPopupLottie" : "https://assets.moving.tech/beckn/common/common/lotties/points_to_discount_points_lottie.json",
     "driverToCustomerRefPopupEndDate" : "2024-08-01T00:00:00",
-    "monsoonOfferDate" : "2024-09-01T00:00:00"
+    "monsoonOfferDate" : "2024-10-01T00:00:00",
+    "twoPlusRidesCoins" : "+5",
+    "fivePlusRidesCoins" : "+15",
+    "tenPlusRidesCoins" : "+30"
   }
   , "dashboard" : {
         "enable" : true,
