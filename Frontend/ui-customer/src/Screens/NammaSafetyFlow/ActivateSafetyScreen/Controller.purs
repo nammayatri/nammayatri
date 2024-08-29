@@ -117,24 +117,21 @@ eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
 eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
   let
     contacts =
-      if state.props.reportPastRide
-        then []
-        else 
-          map
-            ( \(ContactDetails item) ->
-                { number: item.mobileNumber
-                , name: item.name
-                , isSelected: item.priority == Just 0
-                , enableForFollowing: fromMaybe false item.enableForFollowing
-                , enableForShareRide: fromMaybe false item.enableForShareRide
-                , shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe NEVER_SHARE item.shareTripWithEmergencyContactOption
-                , onRide : fromMaybe false item.onRide
-                , priority: fromMaybe 1 item.priority
-                , contactPersonId : item.contactPersonId
-                , isFollowing : Nothing
-                }
-            )
-            response.defaultEmergencyNumbers
+      map
+      ( \(ContactDetails item) ->
+          { number: item.mobileNumber
+          , name: item.name
+          , isSelected: item.priority == Just 0
+          , enableForFollowing: fromMaybe false item.enableForFollowing
+          , enableForShareRide: fromMaybe false item.enableForShareRide
+          , shareTripWithEmergencyContactOption: getRideOptionFromKeyEM $ fromMaybe NEVER_SHARE item.shareTripWithEmergencyContactOption
+          , onRide : fromMaybe false item.onRide
+          , priority: fromMaybe 1 item.priority
+          , contactPersonId : item.contactPersonId
+          , isFollowing : Nothing
+          }
+      )
+      response.defaultEmergencyNumbers
   continue
     state
       { data
@@ -243,7 +240,7 @@ eval CallPolice state = do
 
 eval ShowSafetyIssueView state = exit $ GoToIssueScreen state
 
-eval (SelectedCurrentLocation _ _ name) state = continue state { data { currentLocation = name } }
+eval (SelectedCurrentLocation lat lon name) state = continue state { data { currentLocation = name, currentLatLon = Just $ API.LatLong {lat : lat, lon : lon} } }
 
 eval GoToEducationView state = do
   _ <- pure $ clearTimerWithId state.props.timerId
@@ -319,7 +316,7 @@ eval (SafetyAudioRecordingAction (SafetyAudioRecording.ShareAudio PrimaryButtonC
     case state.props.recordedAudioUrl of
       Just url -> do
         void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-          (API.UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "AudioRecording" "") state.data.rideId false false)
+          (API.UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "AudioRecording" "") state.data.rideId false false Nothing Nothing)
           liftFlowBT $ void $ runEffectFn5 JB.uploadMultiPartData url (EndPoint.updateSosMedia res.sosId) "Audio" "fileUrl" "payload"
       Nothing -> pure unit
     pure NoAction
@@ -346,7 +343,8 @@ eval (UploadMultiPartDataCallback _ fileId) state = do
 eval (SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording) state = 
   continueWithCmd state { props { audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", isAudioRecordingActive = false } } [do
     _   <- pure $ clearTimerWithId state.props.recordingTimerId
-    res <- runEffectFn1 JB.stopAudioRecording ""
+    void $ runEffectFn1 JB.removeMediaPlayer ""
+    void $ runEffectFn1 JB.stopAudioRecording ""
     pure NoAction
   ]
 

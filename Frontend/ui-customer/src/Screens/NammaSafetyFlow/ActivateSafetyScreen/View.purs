@@ -11,7 +11,7 @@ module Screens.NammaSafetyFlow.ActivateSafetyScreen.View where
 import Animation (screenAnimation, fadeIn)
 import Mobility.Prelude (boolToInvisibility, boolToVisibility)
 import Prelude
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Accessiblity(..), Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Accessiblity(..), Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, singleLine, stroke, text, textFromHtml, textView, visibility, weight, width, accessibilityHint, accessibility, fillViewport)
 import Screens.NammaSafetyFlow.ComponentConfig
 import Screens.NammaSafetyFlow.Components.HelperViews (emptyTextView, layoutWithWeight, safetyPartnerView, separatorView, shimmerView)
 import Screens.Types (NammaSafetyScreenState, IndividualRideCardState)
@@ -148,7 +148,7 @@ view push state =
       { learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY
       , showLearnMore = not state.props.showCallPolice
       , useLightColor = true
-      , title = getStringWithoutNewLine if not state.props.showCallPolice then SAFETY_CENTER else CALL_POLICE
+      , title = getStringWithoutNewLine if not state.props.showCallPolice then EMERGENCY else CALL_POLICE
       , headerVisiblity = boolToInvisibility $ not state.props.confirmTestDrill
       , showCrossImage = not state.props.showCallPolice
       , showOptions = not state.props.showCallPolice 
@@ -167,6 +167,7 @@ activateSafetyView state push =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , fillViewport true
         ]
         [ linearLayout
             [ height MATCH_PARENT
@@ -191,9 +192,10 @@ sosButtonConfig state =
     sosDescription: [ imageWithTextConfig {text' = getString RECEIVE_CALL_FROM_SAFETY_TEAM}
                     , imageWithTextConfig {text' = getString NOTIFY_ALL_EMERGENCY_CONTACTS}
                     ],
-    primaryContactAndEdit: case contactName of
-      Just name -> Just imageWithTextConfig {text' = getString CALL <> " : " <> name, visibility = isJust contactName, useFullWidth = false, useMargin = false}
-      Nothing -> Nothing,
+    primaryContactAndEdit: 
+          case contactName, state.data.autoCallDefaultContact of
+            Just name, true -> Just imageWithTextConfig {text' = getString CALL <> " : " <> name, visibility = isJust contactName, useFullWidth = false, useMargin = false}
+            _,_ -> Nothing,
     buttonText: case state.props.triggeringSos, state.props.showTestDrill of
       true, _ -> show state.props.timerValue
       false, true -> getString TEST_SOS
@@ -522,8 +524,8 @@ otherActionsView state push =
     where   
       otherActions =
         [ { text: getString RECORD_AUDIO, image: "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false }
-        , { text: getString CALL_POLICE , image: "ny_ic_police" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill }
-        , { text: getString CALL_SAFETY_TEAM, image: "ny_ic_police_alert", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill }
+        , { text: getString CALL_POLICE , image: "ny_ic_police_alert" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill }
+        , { text: getString CALL_SAFETY_TEAM, image: "ny_ic_support_unfilled", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill }
         ]
 
 orSeparatorView :: forall w. NammaSafetyScreenState -> PrestoDOM (Effect Unit) w

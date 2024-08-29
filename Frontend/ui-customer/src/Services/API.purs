@@ -1952,7 +1952,9 @@ newtype UserSosReq = UserSosReq
      flow :: UserSosFlow,
      rideId :: String,
      isRideEnded :: Boolean,
-     notifyAllContacts :: Boolean
+     notifyAllContacts :: Boolean,
+     customerLocation :: Maybe LatLong,
+     sendPNOnPostRideSOS :: Maybe Boolean
   }
 
 newtype UserSosFlow = UserSosFlow

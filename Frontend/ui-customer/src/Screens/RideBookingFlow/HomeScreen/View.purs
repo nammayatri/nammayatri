@@ -421,6 +421,7 @@ screen initialState =
               runEffectFn3 JB.initialiseShakeListener push ShakeActionCallback JB.defaultShakeListenerConfig
               void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push
               pure unit
+            when (Arr.elem initialState.props.currentStage [RideStarted, RideAccepted, RideCompleted]) $ void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push
             pure (pure unit))
           
       ]
@@ -5065,8 +5066,8 @@ fetchEmergencySettings :: (Action -> Effect Unit) -> Flow GlobalState Unit
 fetchEmergencySettings push = do
   resp <- Remote.getEmergencySettings ""
   case resp of
-    Right (GetEmergencySettingsRes response) -> do
-      liftFlow $ push $ UpdateShakePermission response.shakeToActivate
+    Right response -> do
+      liftFlow $ push $ UpdateSafetySettings response
       pure unit
     Left err -> pure unit
 
@@ -5077,4 +5078,4 @@ getFollowers :: HomeScreenState -> Array Followers
 getFollowers state = do
   let automaticallySharedFollowers = fromMaybe [] state.data.followers 
       manuallySharedFollowers = fromMaybe [] state.data.manuallySharedFollowers
-  Arr.nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers manuallySharedFollowers
+  spy "followers :" $ Arr.nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers manuallySharedFollowers
