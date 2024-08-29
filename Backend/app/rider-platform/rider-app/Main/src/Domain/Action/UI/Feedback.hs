@@ -22,11 +22,8 @@ module Domain.Action.UI.Feedback
   )
 where
 
-import qualified AWS.S3 as S3
 import qualified Data.Aeson as A
-import qualified Data.ByteString as B
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Domain.Action.Internal.Rating as DRating
@@ -169,7 +166,7 @@ feedback request personId = do
       let customerPhone = fromMaybe "NA" mbCustomerPhone
           customerName = SLP.getName person
           driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
-          dropLoc = fromMaybe "NA" $ TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON <$> ride.toLocation
+          dropLoc = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) (ride.toLocation)
           pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON ride.fromLocation
       return $
         "There is an L0 feedback given by customer_id " <> person.id.getId <> "\n"

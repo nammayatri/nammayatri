@@ -194,8 +194,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
           customerPhone = fromMaybe "NA" mbCustomerPhone
           customerName = SLP.getName person
           driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
-          dropLoc = fromMaybe "NA" $ TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON <$> ride.toLocation
-          sosRaisedLocation = fromMaybe "NA" $ TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON <$> customerLocation
+          dropLoc = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) (ride.toLocation)
+          sosRaisedLocation = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) customerLocation
           pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON ride.fromLocation
       return $
         "There is an SOS raised by customer_id " <> person.id.getId <> "\n"
