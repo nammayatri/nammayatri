@@ -32,7 +32,8 @@ defaultSearchReq =
         isReallocationEnabled = Nothing,
         isDestinationManuallyMoved = Nothing,
         quotesUnifiedFlow = Nothing,
-        sessionToken = Nothing
+        sessionToken = Nothing,
+        placeNameSource = Nothing
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -92,7 +93,8 @@ searchReqFromUpdatesList updList =
               startTime = Nothing,
               isDestinationManuallyMoved = Nothing,
               quotesUnifiedFlow = Nothing,
-              sessionToken = Nothing
+              sessionToken = Nothing,
+              placeNameSource = Nothing
             }
    in (origin, destination, req)
 
@@ -109,7 +111,8 @@ mkSearchReqFromLocations origin destination =
               isReallocationEnabled = Nothing,
               isDestinationManuallyMoved = Nothing,
               quotesUnifiedFlow = Nothing,
-              sessionToken = Nothing
+              sessionToken = Nothing,
+              placeNameSource = Nothing
             }
    in (origin, destination, req)
 
