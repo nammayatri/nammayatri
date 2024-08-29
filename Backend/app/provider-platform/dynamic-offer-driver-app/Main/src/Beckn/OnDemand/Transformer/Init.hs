@@ -5,13 +5,20 @@ module Beckn.OnDemand.Transformer.Init where
 
 import qualified Beckn.OnDemand.Utils.Init
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common
+import qualified BecknV2.Utils as Utils
 import qualified Data.Aeson as A
 import qualified Data.Maybe
 import qualified Data.Text
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Init
 import Domain.Types
+import qualified Domain.Types.DeliveryDetails as DTDD
+import qualified Domain.Types.Location as Location
+import qualified Domain.Types.Trip as Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -46,4 +53,70 @@ buildDInitReq subscriber req isValueAddNP = do
   riderPhoneNumber <- req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerContact) >>= (.contactPhone) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Customer Phone not found.")
   let mbRiderName = req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personName)
   estimateId <- req.initReqMessage.confirmReqMessageOrder.orderItems >>= Kernel.Prelude.listToMaybe >>= (.itemId) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Item Id not found.")
+  orderItem <- req.initReqMessage.confirmReqMessageOrder.orderItems >>= Kernel.Prelude.listToMaybe & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Order Item not found.")
+  let initReqDetails = case tripCategory of
+        Delivery _ -> getDeliveryDetails orderItem.itemTags
+        _ -> Nothing
   pure $ Domain.Action.Beckn.Init.InitReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, fulfillmentId = fulfillmentId_, maxEstimatedDistance = maxEstimatedDistance_, paymentMethodInfo = paymentMethodInfo_, vehicleVariant = vehicleVariant_, bppSubscriberId = bppSubscriberId_, estimateId = estimateId, ..}
+
+getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe Domain.Action.Beckn.Init.InitReqDetails
+getDeliveryDetails tagGroups = do
+  initiatedAs <- Utils.getTagV2 Tag.DELIVERY Tag.INITIATED_AS tagGroups
+  senderName <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_NAME tagGroups
+  senderPhone <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_NUMBER tagGroups
+  senderLocIns <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_LOCATION_INSTRUCTIONS tagGroups
+  receiverName <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_NAME tagGroups
+  receiverPhone <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_NUMBER tagGroups
+  receiverLocIns <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_LOCATION_INSTRUCTIONS tagGroups
+  let (senderInstructions, senderAddressExtra) = splitInstructions senderLocIns
+      (receiverInstructions, receiverAddressExtra) = splitInstructions receiverLocIns
+      initiatedAsEnum = fromMaybe (Trip.DeliveryParty Trip.Sender) (readMaybe @(Trip.TripParty) $ T.unpack initiatedAs)
+  pure $
+    Domain.Action.Beckn.Init.InitReqDeliveryDetails $
+      DTDD.DeliveryDetails
+        { DTDD.senderDetails =
+            DTDD.PersonDetails
+              { DTDD.name = senderName,
+                DTDD.phoneNumber = senderPhone,
+                DTDD.address =
+                  Location.LocationAddress
+                    { Location.extras = senderAddressExtra,
+                      Location.instructions = senderInstructions,
+                      Location.area = Nothing,
+                      Location.areaCode = Nothing,
+                      Location.building = Nothing,
+                      Location.city = Nothing,
+                      Location.country = Nothing,
+                      Location.door = Nothing,
+                      Location.fullAddress = Nothing,
+                      Location.state = Nothing,
+                      Location.street = Nothing
+                    }
+              },
+          DTDD.receiverDetails =
+            DTDD.PersonDetails
+              { DTDD.name = receiverName,
+                DTDD.phoneNumber = receiverPhone,
+                DTDD.address =
+                  Location.LocationAddress
+                    { Location.extras = receiverAddressExtra,
+                      Location.instructions = receiverInstructions,
+                      Location.area = Nothing,
+                      Location.areaCode = Nothing,
+                      Location.building = Nothing,
+                      Location.city = Nothing,
+                      Location.country = Nothing,
+                      Location.door = Nothing,
+                      Location.fullAddress = Nothing,
+                      Location.state = Nothing,
+                      Location.street = Nothing
+                    }
+              },
+          DTDD.initiatedAs = initiatedAsEnum
+        }
+  where
+    correctIns str = if T.null str then Nothing else Just str
+    splitInstructions :: Text -> (Maybe Text, Maybe Text)
+    splitInstructions ins = case T.splitOn "|" ins of
+      [ins1, ins2] -> (correctIns ins1, correctIns ins2)
+      _ -> (Nothing, Nothing)

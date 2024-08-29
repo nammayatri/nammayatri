@@ -295,11 +295,17 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterEstimtesByPrefference :: [EstimateInfo] -> [Enums.VehicleCategory] -> [EstimateInfo]
     filterEstimtesByPrefference _estimateInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
-        OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
+        OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
         Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
+        Delivery -> filter isDeliveryEstimate _estimateInfo
         _ -> []
 
     ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
+
+    isDeliveryEstimate :: EstimateInfo -> Bool
+    isDeliveryEstimate einfo = case einfo.tripCategory of
+      DT.Delivery _ -> True
+      _ -> False
 
     mkBppDetails :: Flow BppDetails
     mkBppDetails = do

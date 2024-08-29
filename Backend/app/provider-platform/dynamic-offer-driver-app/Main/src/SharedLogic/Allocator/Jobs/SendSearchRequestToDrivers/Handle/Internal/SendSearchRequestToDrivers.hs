@@ -269,7 +269,9 @@ buildTranslatedSearchReqLocation DLoc.Location {..} mbLanguage = do
               country = address.country,
               building = address.building,
               areaCode = address.areaCode,
-              fullAddress = address.fullAddress
+              fullAddress = address.fullAddress,
+              instructions = Nothing,
+              extras = Nothing
             },
         ..
       }

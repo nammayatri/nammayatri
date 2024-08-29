@@ -18,6 +18,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
 import Domain.Types.BppDetails
 import Domain.Types.Estimate
+import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -45,6 +46,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
+    tripCategory :: Maybe TripCategory,
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
     estimatedPickupDuration :: Maybe Seconds,
     nightShiftRate :: Maybe NightShiftRateAPIEntity, -- TODO: doesn't make sense, to be removed

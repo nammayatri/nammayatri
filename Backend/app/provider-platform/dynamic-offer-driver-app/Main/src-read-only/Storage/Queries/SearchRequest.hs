@@ -6,6 +6,7 @@ module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, modu
 
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -33,3 +34,6 @@ updateIsReallocationEnabled isReallocationEnabled id = do updateWithKV [Se.Set B
 
 updateSearchTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateSearchTags searchTags id = do updateWithKV [Se.Set Beam.searchTags searchTags] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateTripCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateTripCategory tripCategory id = do updateWithKV [Se.Set Beam.tripCategory tripCategory] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

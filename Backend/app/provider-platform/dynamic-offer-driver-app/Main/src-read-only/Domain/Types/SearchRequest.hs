@@ -9,6 +9,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderDetails
+import qualified Domain.Types.Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
@@ -57,6 +58,7 @@ data SearchRequest = SearchRequest
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     transactionId :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON)

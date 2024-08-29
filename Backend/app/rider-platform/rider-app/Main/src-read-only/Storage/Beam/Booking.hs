@@ -12,6 +12,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.FarePolicy.FareProductType
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
@@ -53,6 +54,7 @@ data BookingT f = BookingT
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fulfillmentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBookingUpdated :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

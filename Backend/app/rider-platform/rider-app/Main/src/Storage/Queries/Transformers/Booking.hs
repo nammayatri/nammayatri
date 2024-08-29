@@ -26,6 +26,7 @@ getDistance :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kerne
 getDistance = \case
   DRB.OneWayDetails details -> Just details.distance
   DRB.RentalDetails _ -> Nothing
+  DRB.DeliveryDetails details -> Just details.distance
   DRB.DriverOfferDetails details -> Just details.distance
   DRB.OneWaySpecialZoneDetails details -> Just details.distance
   DRB.InterCityDetails details -> Just details.distance
@@ -49,6 +50,7 @@ getOtpCode = \case
   DRB.OneWaySpecialZoneDetails details -> details.otpCode
   DRB.InterCityDetails details -> details.otpCode
   DRB.AmbulanceDetails _ -> Nothing
+  DRB.DeliveryDetails details -> details.otpCode
 
 getStopLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getStopLocationId = \case
@@ -58,6 +60,7 @@ getStopLocationId = \case
   DRB.OneWaySpecialZoneDetails _ -> Nothing
   DRB.InterCityDetails _ -> Nothing
   DRB.AmbulanceDetails _ -> Nothing
+  DRB.DeliveryDetails _ -> Nothing
 
 getToLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getToLocationId = \case
@@ -67,6 +70,12 @@ getToLocationId = \case
   DRB.OneWaySpecialZoneDetails details -> Just (getId details.toLocation.id)
   DRB.InterCityDetails details -> Just (getId details.toLocation.id)
   DRB.AmbulanceDetails details -> Just (getId details.toLocation.id)
+  DRB.DeliveryDetails details -> Just (getId details.toLocation.id)
+
+getDeliveryBookingInfo :: Domain.Types.Booking.BookingDetails -> Maybe Domain.Types.Booking.DeliveryBookingDetails
+getDeliveryBookingInfo = \case
+  DRB.DeliveryDetails details -> Just details
+  _ -> Nothing
 
 backfillMOCId :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Text -> m (Id DMOC.MerchantOperatingCity)
 backfillMOCId merchantOperatingCityId merchantId = case merchantOperatingCityId of
@@ -115,6 +124,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
+            Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId
         Nothing ->
           case fareProductType of
@@ -143,6 +153,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
+            Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
         Nothing ->
           case fareProductType of
@@ -198,6 +209,16 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         DRB.AmbulanceBookingDetails
           { toLocation = toLocation,
             distance = distance'
+          }
+    buildDeliveryDetails mbToLocid = do
+      toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for delivery bookingId:-" <> id)
+      toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for delivery booking")
+      distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for delivery booking")
+      pure
+        DRB.DeliveryBookingDetails
+          { toLocation = toLocation,
+            distance = distance',
+            ..
           }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

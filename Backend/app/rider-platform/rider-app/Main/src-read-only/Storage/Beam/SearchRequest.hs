@@ -8,6 +8,7 @@ module Storage.Beam.SearchRequest where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import qualified Kernel.External.Payment.Interface.Types
@@ -45,6 +46,7 @@ data SearchRequestT f = SearchRequestT
     estimatedRideStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    initiatedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
     isAdvanceBookingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),

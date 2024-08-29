@@ -77,6 +77,7 @@ bookingInfo merchantShortId opCity otpCode = do
     convertVehicleVariant DVST.BLACK = Common.BLACK
     convertVehicleVariant DVST.BLACK_XL = Common.BLACK_XL
     convertVehicleVariant DVST.BIKE = Common.BIKE
+    convertVehicleVariant DVST.DELIVERY_BIKE = Common.DELIVERY_BIKE
     convertVehicleVariant DVST.AMBULANCE_TAXI = Common.AMBULANCE_TAXI
     convertVehicleVariant DVST.AMBULANCE_TAXI_OXY = Common.AMBULANCE_TAXI_OXY
     convertVehicleVariant DVST.AMBULANCE_AC = Common.AMBULANCE_AC

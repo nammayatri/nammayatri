@@ -42,6 +42,8 @@ data MessageKey
   | ADDED_AS_EMERGENCY_CONTACT
   | TICKET_BOOKING_CANCELLED
   | POST_RIDE_SOS
+  | SMS_DELIVERY_DETAILS_SENDER
+  | SMS_DELIVERY_DETAILS_RECEIVER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

@@ -18,6 +18,12 @@ imports:
   Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   PaymentMethodId: Kernel.External.Payment.Interface.Types
+  EncryptedHashedField: Kernel.External.Encryption
+  DeliveryInitiation: BecknV2.OnDemand.Enums
+  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
+  DbHash: Kernel.External.Encryption
+  TripParty: Domain.Types.Trip
+
 
 SearchRequest:
   tableName: search_request
@@ -61,13 +67,14 @@ SearchRequest:
     isDashboardRequest: Maybe Bool
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
     placeNameSource:  Maybe Text
+    initiatedBy: Maybe TripParty
 
   types:
     SearchRequestStatus:
       enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
       derive: "HttpInstance"
     RiderPreferredOption:
-      enum: "Rental, OneWay, InterCity, Ambulance"
+      enum: "Rental, OneWay, InterCity, Ambulance, Delivery"
       derive: "HttpInstance"
 
   beamType:
@@ -169,9 +176,37 @@ SearchRequest:
       params: [id, totalRidesCount]
       where: riderId
 
+    updateInitiatedBy:
+      kvFunction: updateOneWithKV
+      params: [initiatedBy]
+      where: id
+
   constraints:
     id: PrimaryKey
     riderId: SecondaryKey
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+SearchRequestPartiesLink:
+  fields:
+    id: Id SearchRequestPartiesLink
+    searchRequestId: Id SearchRequest
+    partyId: Id Person
+    partyType: TripParty|NoRelation
+    partyName: Text
+
+  constraints:
+    id: PrimaryKey
+    searchRequestId: SecondaryKey
+
+  excludedFields: [merchantId, merchantOperatingCityId]
+
+  excludedDefaultQueries:
+    - updateByPrimaryKey
+    - findByPrimaryKey
+
+  queries:
+    findAllBySearchRequestId:
+      kvFunction: findAllWithKV
+      where: searchRequestId

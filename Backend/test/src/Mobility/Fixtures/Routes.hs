@@ -48,7 +48,9 @@ defaultSearchReqAddress =
       areaCode = Nothing,
       area = Nothing,
       ward = Nothing,
-      placeId = Nothing
+      placeId = Nothing,
+      instructions = Nothing,
+      extras = Nothing
     }
 
 type LocationUpdates = NonEmpty (NonEmpty LatLong)

@@ -44,8 +44,53 @@ data TripCategory
   | InterCity OneWayMode (Maybe Text)
   | CrossCity OneWayMode (Maybe Text)
   | Ambulance OneWayMode
+  | Delivery OneWayMode
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema)
+
+data TripParty
+  = DeliveryParty DeliveryParties
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (ToSchema)
+
+instance ToJSON TripParty where
+  toJSON (DeliveryParty party) =
+    object
+      [ "tag" .= ("DeliveryParty" :: Text),
+        "contents" .= party
+      ]
+
+instance FromJSON TripParty where
+  parseJSON = withObject "TripParty" $ \v -> do
+    tag <- v .: "tag"
+    case tag of
+      "DeliveryParty" -> DeliveryParty <$> v .: "contents"
+      _ -> fail $ "Unknown tag: " ++ tag
+
+data DeliveryParties
+  = Sender
+  | Receiver
+  | SomeoneElse
+  deriving stock (Eq, Show, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable DeliveryParties
+
+instance Show TripParty where
+  show (DeliveryParty party) = "DeliveryParty_" <> show party
+
+instance Read TripParty where
+  readsPrec d' =
+    readParen
+      (d' > app_prec)
+      ( \r ->
+          [ (DeliveryParty v1, r2)
+            | r1 <- stripPrefix "DeliveryParty_" r,
+              (v1, r2) <- readsPrec (app_prec + 1) r1
+          ]
+      )
+    where
+      app_prec = 10
+      stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
 
 -- This is done to handle backward compatibility, as UI is expected "contents" to be a string but due to multiple in InterCity and CrossCity, it got changed into an array
 instance ToJSON TripCategory where
@@ -81,6 +126,11 @@ instance ToJSON TripCategory where
       [ "tag" .= ("Ambulance" :: Text),
         "contents" .= mode
       ]
+  toJSON (Delivery mode) =
+    object
+      [ "tag" .= ("Delivery" :: Text),
+        "contents" .= mode
+      ]
 
 instance FromJSON TripCategory where
   parseJSON = withObject "TripCategory" $ \v -> do
@@ -92,6 +142,7 @@ instance FromJSON TripCategory where
       "InterCity" -> InterCity <$> v .: "contents" <*> v .:? "city"
       "CrossCity" -> CrossCity <$> v .: "contents" <*> v .:? "city"
       "Ambulance" -> Ambulance <$> v .: "contents"
+      "Delivery" -> Delivery <$> v .: "contents"
       _ -> fail $ "Unknown tag: " ++ tag
 
 data TripOption = TripOption
@@ -143,6 +194,7 @@ instance Show TripCategory where
   show (CrossCity s Nothing) = "CrossCity_" <> show s
   show (CrossCity s (Just city)) = "CrossCity_" <> show s <> "_" <> T.unpack city
   show (Ambulance s) = "Ambulance_" <> show s
+  show (Delivery s) = "Delivery_" <> show s
 
 generateTripCategoryShowInstances :: [String]
 generateTripCategoryShowInstances =
@@ -152,6 +204,7 @@ generateTripCategoryShowInstances =
     ++ [show (InterCity mode Nothing) | mode <- oneWayModes]
     ++ [show (CrossCity mode Nothing) | mode <- oneWayModes]
     ++ [show (Ambulance mode) | mode <- oneWayModes]
+    ++ [show (Delivery mode) | mode <- oneWayModes]
   where
     oneWayModes = [OneWayRideOtp, OneWayOnDemandStaticOffer, OneWayOnDemandDynamicOffer]
     tripModes = [RideOtp, OnDemandStaticOffer]
@@ -219,6 +272,10 @@ instance Read TripCategory where
                  | r1 <- stripPrefix "Ambulance_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (Delivery v1, r2)
+                 | r1 <- stripPrefix "Delivery_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -241,6 +298,7 @@ tripCategoryToPricingPolicy (OneWay OneWayOnDemandDynamicOffer) = EstimateBased 
 tripCategoryToPricingPolicy (CrossCity OneWayOnDemandDynamicOffer _) = EstimateBased False
 tripCategoryToPricingPolicy (InterCity OneWayOnDemandDynamicOffer _) = EstimateBased False
 tripCategoryToPricingPolicy (Ambulance OneWayOnDemandDynamicOffer) = EstimateBased True
+tripCategoryToPricingPolicy (Delivery OneWayOnDemandDynamicOffer) = EstimateBased False
 tripCategoryToPricingPolicy (Rental _) = QuoteBased True
 tripCategoryToPricingPolicy _ = QuoteBased False
 
@@ -248,18 +306,21 @@ skipDriverPoolCheck :: TripCategory -> Bool
 skipDriverPoolCheck (OneWay OneWayOnDemandStaticOffer) = False
 skipDriverPoolCheck (OneWay OneWayOnDemandDynamicOffer) = False
 skipDriverPoolCheck (Ambulance OneWayOnDemandDynamicOffer) = False
+skipDriverPoolCheck (Delivery OneWayOnDemandDynamicOffer) = False
 skipDriverPoolCheck _ = True
 
 isRideOtpBooking :: TripCategory -> Bool
 isRideOtpBooking (OneWay OneWayRideOtp) = True
 isRideOtpBooking (Rental RideOtp) = True
 isRideOtpBooking (RideShare RideOtp) = True
+isRideOtpBooking (Delivery _) = True
 isRideOtpBooking _ = False
 
 -- Move it to configs later if required
 isEndOtpRequired :: TripCategory -> Bool
 isEndOtpRequired (Rental _) = True
 isEndOtpRequired (InterCity _ _) = True
+isEndOtpRequired (Delivery _) = True
 isEndOtpRequired _ = False
 
 -- Move it to configs later if required
@@ -299,9 +360,14 @@ isDynamicOfferTrip :: TripCategory -> Bool
 isDynamicOfferTrip (OneWay OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip (CrossCity OneWayOnDemandDynamicOffer _) = True
 isDynamicOfferTrip (InterCity OneWayOnDemandDynamicOffer _) = True
+isDynamicOfferTrip (Delivery OneWayOnDemandDynamicOffer) = True
 isDynamicOfferTrip _ = False
 
 isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
 isTollApplicableForTrip AUTO_RICKSHAW _ = False
 isTollApplicableForTrip _ (OneWay OneWayOnDemandDynamicOffer) = True
 isTollApplicableForTrip _ _ = False
+
+isDeliveryTrip :: TripCategory -> Bool
+isDeliveryTrip (Delivery _) = True
+isDeliveryTrip _ = False

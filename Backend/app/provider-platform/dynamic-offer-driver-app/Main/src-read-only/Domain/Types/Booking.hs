@@ -6,6 +6,7 @@ module Domain.Types.Booking where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.DeliveryPersonDetails
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.Location
@@ -13,6 +14,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.RiderDetails
+import qualified Domain.Types.Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
@@ -40,6 +42,7 @@ data Booking = Booking
     fareParams :: Domain.Types.FareParameters.FareParameters,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    initiatedAs :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
@@ -51,10 +54,12 @@ data Booking = Booking
     primaryExophone :: Kernel.Prelude.Text,
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     quoteId :: Kernel.Prelude.Text,
+    receiverDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    senderDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialZoneOtpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
@@ -70,7 +75,7 @@ data Booking = Booking
     vehicleServiceTierName :: Kernel.Prelude.Text,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic)
 
 data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

@@ -6,6 +6,7 @@ module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, modu
 
 import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -19,6 +20,9 @@ import Storage.Queries.SearchRequestExtra as ReExport
 
 updateAdvancedBookingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateOneWithKV [Se.Set Beam.isAdvanceBookingEnabled isAdvanceBookingEnabled] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateInitiatedBy :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateInitiatedBy initiatedBy id = do updateOneWithKV [Se.Set Beam.initiatedBy initiatedBy] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTotalRidesCount ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

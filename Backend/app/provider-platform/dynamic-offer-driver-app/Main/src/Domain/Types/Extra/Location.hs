@@ -26,7 +26,9 @@ data DummyLocationInfo = DummyLocationInfo
     state :: Maybe Text,
     country :: Maybe Text,
     areaCode :: Maybe Text,
-    fullAddress :: Maybe Text
+    fullAddress :: Maybe Text,
+    instructions :: Maybe Text,
+    extras :: Maybe Text
   }
   deriving (Generic, Show, Read, Eq, PrettyShow, ToJSON, FromJSON, ToSchema)
 
@@ -46,7 +48,9 @@ dummyFromLocationData =
       state = Just "Karnataka 560095",
       country = Just "India",
       areaCode = Just "560095",
-      fullAddress = Just "817, 20th Main Rd, Koramangala 8th Block, Koramangala, Bengaluru, Karnataka 560095, 560095, India"
+      fullAddress = Just "817, 20th Main Rd, Koramangala 8th Block, Koramangala, Bengaluru, Karnataka 560095, 560095, India",
+      instructions = Just "Beware of the cruel world",
+      extras = Just "Landmark: Near Apple Signal"
     }
 
 dummyToLocationData :: DummyLocationInfo
@@ -65,5 +69,7 @@ dummyToLocationData =
       state = Just "Karnataka 560095",
       country = Just "India",
       areaCode = Just "560095",
-      fullAddress = Just "Rohit 17th F Main Rd, 6th Block, Koramangala, Bengaluru, Karnataka 560095, 560095, India"
+      fullAddress = Just "Rohit 17th F Main Rd, 6th Block, Koramangala, Bengaluru, Karnataka 560095, 560095, India",
+      instructions = Just "Beware of dogs",
+      extras = Just "Landmark: Near Sony Signal"
     }

@@ -36,6 +36,7 @@ import qualified Domain.Types.Booking as DB
 import Domain.Types.CallStatus as CallStatus
 import Domain.Types.CallStatus as DCallStatus
 import qualified Domain.Types.CallStatus as SCS
+import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
@@ -273,7 +274,10 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
     runInReplica (QRB.findById activeRide.bookingId)
       >>= maybe (throwCallError callStatusId (BookingNotFound $ getId activeRide.bookingId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
 
-  riderId <- activeBooking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
+  riderId <- case exophone.exophoneType of
+    DExophone.CALL_DELIVERY_SENDER -> (activeBooking.senderDetails <&> (.id)) & fromMaybeM (BookingFieldNotPresent "senderDetails")
+    DExophone.CALL_DELIVERY_RECEIVER -> (activeBooking.receiverDetails <&> (.id)) & fromMaybeM (BookingFieldNotPresent "receiverDetails")
+    _ -> activeBooking.riderId & fromMaybeM (BookingFieldNotPresent "riderId")
   riderDetails <-
     runInReplica (QRD.findById riderId)
       >>= maybe (throwCallError callStatusId (RiderDetailsNotFound riderId.getId) (Just exophone.merchantId.getId) (Just exophone.callService)) pure

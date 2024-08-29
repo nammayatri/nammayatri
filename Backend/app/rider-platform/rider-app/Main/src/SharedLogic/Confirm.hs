@@ -19,7 +19,9 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingPartiesLink as DBPL
 import Domain.Types.CancellationReason
+import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DL
@@ -30,6 +32,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSReq
+import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types
@@ -51,9 +54,11 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
+import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Event
@@ -81,8 +86,12 @@ data DConfirmRes = DConfirmRes
     merchant :: DM.Merchant,
     city :: Context.City,
     maxEstimatedDistance :: Maybe Distance,
-    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
+    confirmResDetails :: Maybe DConfirmResDetails
   }
+  deriving (Show, Generic)
+
+data DConfirmResDetails = DConfirmResDelivery DTDD.DeliveryDetails
   deriving (Show, Generic)
 
 tryInitTriggerLock :: (Redis.HedisFlow m r) => Id DSReq.SearchRequest -> m Bool
@@ -131,7 +140,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  booking <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
+  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhone <-
@@ -141,8 +150,12 @@ confirm DConfirmReq {..} = do
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   void $ QRideB.createBooking booking
+  void $ QBPL.createMany bookingParties
   void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
+  confirmResDetails <- case quote.tripCategory of
+    Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
+    _ -> return Nothing
   return $
     DConfirmRes
       { booking,
@@ -156,6 +169,7 @@ confirm DConfirmReq {..} = do
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = Nothing, -- can be removed later
+        confirmResDetails,
         ..
       }
   where
@@ -165,6 +179,7 @@ confirm DConfirmReq {..} = do
     getBppQuoteId now = \case
       DQuote.OneWayDetails _ -> throwError $ InternalError "FulfillmentId/BPPQuoteId not found in Confirm. This is not possible."
       DQuote.AmbulanceDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
+      DQuote.DeliveryDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.RentalDetails rentalDetails -> pure rentalDetails.id.getId
       DQuote.DriverOfferDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.OneWaySpecialZoneDetails details -> pure details.quoteId
@@ -202,8 +217,44 @@ confirm DConfirmReq {..} = do
                 }
           return $ distance.distance.getMeters
 
+    makeDeliveryDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DRB.Booking -> [DBPL.BookingPartiesLink] -> m DConfirmResDetails
+    makeDeliveryDetails booking bookingParties = do
+      senderParty <- fromMaybeM (InternalError "SenderParty not found") $ find (\party -> party.partyType == (Trip.DeliveryParty Trip.Sender)) bookingParties
+      receiverParty <- fromMaybeM (InternalError "ReceiverParty not found") $ find (\party -> party.partyType == (Trip.DeliveryParty Trip.Receiver)) bookingParties
+      senderPerson <- QPerson.findById senderParty.partyId >>= fromMaybeM (PersonDoesNotExist senderParty.partyId.getId)
+      encSenderMobileNumber <- senderPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      receiverPerson <- QPerson.findById receiverParty.partyId >>= fromMaybeM (PersonDoesNotExist receiverParty.partyId.getId)
+      encReceiverMobileNumber <- receiverPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      senderMobileNumber <- decrypt encSenderMobileNumber
+      receiverMobileNumber <- decrypt encReceiverMobileNumber
+      toLocation <- case booking.bookingDetails of
+        DRB.DeliveryDetails details -> return details.toLocation
+        _ -> throwError (InternalError $ "DeliveryBookingDetails not found for booking" <> booking.id.getId)
+      (Trip.DeliveryParty initiatedBy) <- booking.initiatedBy & fromMaybeM (InternalError $ "BookingInitiatedBy not found for booking" <> booking.id.getId)
+      return $
+        DConfirmResDelivery $
+          DTDD.DeliveryDetails
+            { senderDetails =
+                DTDD.PersonDetails
+                  { DTDD.name = senderParty.partyName,
+                    DTDD.phoneNumber = senderMobileNumber,
+                    DTDD.countryCode = Nothing,
+                    DTDD.address = booking.fromLocation.address
+                  },
+              receiverDetails =
+                DTDD.PersonDetails
+                  { DTDD.name = senderParty.partyName,
+                    DTDD.phoneNumber = receiverMobileNumber,
+                    DTDD.countryCode = Nothing,
+                    DTDD.address = toLocation.address
+                  },
+              DTDD.initiatedAs = initiatedBy
+            }
+
 buildBooking ::
-  ( MonadFlow m,
+  ( EsqDBFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
     HasFlowEnv m r '["version" ::: DeploymentVersion]
   ) =>
   DSReq.SearchRequest ->
@@ -216,69 +267,77 @@ buildBooking ::
   Maybe Text ->
   Maybe Payment.PaymentMethodId ->
   Bool ->
-  m DRB.Booking
+  m (DRB.Booking, [DBPL.BookingPartiesLink])
 buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
+  bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
   return $
-    DRB.Booking
-      { id = Id id,
-        clientId = searchRequest.clientId,
-        transactionId = searchRequest.id.getId,
-        bppBookingId = Nothing,
-        fulfillmentId = Just bppQuoteId,
-        quoteId = Just quote.id,
-        paymentMethodId,
-        paymentUrl = Nothing,
-        status = DRB.NEW,
-        providerId = quote.providerId,
-        primaryExophone = exophone.primaryPhone,
-        providerUrl = quote.providerUrl,
-        bppEstimateId = quote.itemId,
-        isBookingUpdated = False,
-        startTime = searchRequest.startTime,
-        returnTime = searchRequest.returnTime,
-        roundTrip = searchRequest.roundTrip,
-        riderId = searchRequest.riderId,
-        fromLocation = fromLoc,
-        initialPickupLocation = fromLoc,
-        estimatedFare = quote.estimatedFare,
-        discount = quote.discount,
-        estimatedTotalFare = quote.estimatedTotalFare,
-        estimatedDistance = searchRequest.distance,
-        estimatedDuration = searchRequest.estimatedRideDuration,
-        estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
-        bookingDetails,
-        tripTerms = quote.tripTerms,
-        merchantId = searchRequest.merchantId,
-        merchantOperatingCityId = searchRequest.merchantOperatingCityId,
-        specialLocationTag = quote.specialLocationTag,
-        isScheduled = isScheduled,
-        createdAt = now,
-        updatedAt = now,
-        serviceTierName = quote.serviceTierName,
-        vehicleServiceTierType = quote.vehicleServiceTierType,
-        vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
-        vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
-        isAirConditioned = quote.isAirConditioned,
-        serviceTierShortDesc = quote.serviceTierShortDesc,
-        clientBundleVersion = quote.clientBundleVersion,
-        clientSdkVersion = quote.clientSdkVersion,
-        clientDevice = quote.clientDevice,
-        clientConfigVersion = quote.clientConfigVersion,
-        backendConfigVersion = quote.backendConfigVersion,
-        backendAppVersion = Just deploymentVersion.getDeploymentVersion,
-        paymentStatus = Nothing,
-        distanceUnit = searchRequest.distanceUnit,
-        specialLocationName = quote.specialLocationName,
-        isDashboardRequest = searchRequest.isDashboardRequest,
-        tripCategory = quote.tripCategory
-      }
+    ( DRB.Booking
+        { id = Id id,
+          clientId = searchRequest.clientId,
+          transactionId = searchRequest.id.getId,
+          bppBookingId = Nothing,
+          fulfillmentId = Just bppQuoteId,
+          quoteId = Just quote.id,
+          paymentMethodId,
+          paymentUrl = Nothing,
+          status = DRB.NEW,
+          providerId = quote.providerId,
+          primaryExophone = exophone.primaryPhone,
+          providerUrl = quote.providerUrl,
+          bppEstimateId = quote.itemId,
+          isBookingUpdated = False,
+          startTime = searchRequest.startTime,
+          returnTime = searchRequest.returnTime,
+          roundTrip = searchRequest.roundTrip,
+          riderId = searchRequest.riderId,
+          fromLocation = fromLoc,
+          initialPickupLocation = fromLoc,
+          estimatedFare = quote.estimatedFare,
+          discount = quote.discount,
+          estimatedTotalFare = quote.estimatedTotalFare,
+          estimatedDistance = searchRequest.distance,
+          estimatedDuration = searchRequest.estimatedRideDuration,
+          estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
+          bookingDetails,
+          tripTerms = quote.tripTerms,
+          merchantId = searchRequest.merchantId,
+          merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+          specialLocationTag = quote.specialLocationTag,
+          isScheduled = isScheduled,
+          createdAt = now,
+          updatedAt = now,
+          serviceTierName = quote.serviceTierName,
+          vehicleServiceTierType = quote.vehicleServiceTierType,
+          vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
+          vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
+          isAirConditioned = quote.isAirConditioned,
+          serviceTierShortDesc = quote.serviceTierShortDesc,
+          clientBundleVersion = quote.clientBundleVersion,
+          clientSdkVersion = quote.clientSdkVersion,
+          clientDevice = quote.clientDevice,
+          clientConfigVersion = quote.clientConfigVersion,
+          backendConfigVersion = quote.backendConfigVersion,
+          backendAppVersion = Just deploymentVersion.getDeploymentVersion,
+          paymentStatus = Nothing,
+          distanceUnit = searchRequest.distanceUnit,
+          specialLocationName = quote.specialLocationName,
+          isDashboardRequest = searchRequest.isDashboardRequest,
+          tripCategory = quote.tripCategory,
+          initiatedBy = searchRequest.initiatedBy
+        },
+      bookingParties
+    )
   where
+    buildPartiesLinks bookingId = case quote.quoteDetails of
+      DQuote.DeliveryDetails _ -> makeDeliveryParties bookingId
+      _ -> pure []
     buildBookingDetails = case quote.quoteDetails of
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
       DQuote.AmbulanceDetails _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails
+      DQuote.DeliveryDetails _ -> DRB.DeliveryDetails <$> buildDeliveryDetails
       DQuote.RentalDetails _ -> pure $ DRB.RentalDetails (DRB.RentalBookingDetails {stopLocation = mbToLoc, ..})
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
@@ -304,6 +363,30 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWaySpecialZoneBookingDetails {..}
+    buildDeliveryDetails = do
+      toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
+      distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      pure DRB.DeliveryBookingDetails {..}
+    makeDeliveryParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [DBPL.BookingPartiesLink]
+    makeDeliveryParties bookingId = do
+      allSearchReqParties <- QSRPL.findAllBySearchRequestId searchRequest.id
+      when ((length allSearchReqParties) < 2) $ throwError $ InternalError "No parties found for search request delivery"
+      mapM
+        ( \party -> do
+            bookingPartyId <- generateGUID
+            return $
+              DBPL.BookingPartiesLink
+                { id = Id bookingPartyId,
+                  bookingId = Id bookingId,
+                  partyId = party.partyId,
+                  partyType = party.partyType,
+                  partyName = party.partyName,
+                  isActive = True,
+                  createdAt = now,
+                  updatedAt = now
+                }
+        )
+        allSearchReqParties
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
 findRandomExophone merchantOperatingCityId = do

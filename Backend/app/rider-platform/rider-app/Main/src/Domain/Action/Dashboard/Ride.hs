@@ -66,6 +66,7 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
@@ -139,13 +140,22 @@ buildShareRideInfo merchantId ride = do
   let mbtoLocation = case booking.bookingDetails of
         DB.OneWayDetails locationDetail -> Just $ mkCommonBookingLocation locationDetail.toLocation
         DB.DriverOfferDetails driverOfferDetail -> Just $ mkCommonBookingLocation driverOfferDetail.toLocation
+        DB.DeliveryDetails deliveryDetails -> Just $ mkCommonBookingLocation deliveryDetails.toLocation
+        DB.InterCityDetails details -> Just $ mkCommonBookingLocation details.toLocation
         _ -> Nothing
   let mbDistance = case booking.bookingDetails of
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
         DB.InterCityDetails details -> Just details.distance
+        DB.DeliveryDetails details -> Just details.distance
         _ -> Nothing
+  let driverNumber =
+        ( case booking.tripCategory of
+            Just (Delivery _) -> Just ride.driverMobileNumber
+            _ -> Nothing
+        )
+          <&> (\number -> if ride.status `elem` [DRide.NEW, DRide.INPROGRESS] then number else "xxxx")
   sosDetails <- CQSos.findByRideId ride.id
   let fareProductType = mkFareProductType booking.bookingDetails
   return $
@@ -154,6 +164,7 @@ buildShareRideInfo merchantId ride = do
         bookingId = cast ride.bookingId,
         status = mkCommonRideStatus ride.status,
         driverName = ride.driverName,
+        driverNumber = driverNumber,
         driverRating = ride.driverRating,
         vehicleNumber = ride.vehicleNumber,
         vehicleModel = ride.vehicleModel,
@@ -418,6 +429,7 @@ mkFareProductType bookingDetails = case bookingDetails of
   DTB.OneWaySpecialZoneDetails _ -> ONE_WAY_SPECIAL_ZONE
   DTB.InterCityDetails _ -> INTER_CITY
   DTB.AmbulanceDetails _ -> AMBULANCE
+  DTB.DeliveryDetails _ -> DRIVER_OFFER --Fix: Check later if this is correct
 
 timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
 timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1
@@ -443,6 +455,7 @@ bookingCancel BookingCancelledReq {..} = do
   bookingCancellationReason <- buildBookingCancellationReason booking (mbRide <&> (.id))
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRB.updateStatus booking.id DTB.CANCELLED
+  _ <- QBPL.makeAllInactiveByBookingId booking.id
   _ <- whenJust mbRide $ \ride -> void $ QRide.updateStatus ride.id DRide.CANCELLED
   void $ QBCReason.upsert bookingCancellationReason
   where

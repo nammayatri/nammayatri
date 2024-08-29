@@ -26,6 +26,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
     fromAndToLocation' <- Storage.Queries.Transformers.Booking.fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId
     merchant <- Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)
+    senderAndReceiverDetails <- Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone
     bapUri' <- Kernel.Prelude.parseBaseUrl bapUri
     fareParams' <- Storage.Queries.FareParameters.findById (Kernel.Types.Id.Id fareParametersId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("FareParameters not found for booking: " <> show id))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
@@ -49,6 +50,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             fareParams = fareParams',
             fromLocation = fst fromAndToLocation',
             id = Kernel.Types.Id.Id id,
+            initiatedAs = initiatedAs,
             isAirConditioned = isAirConditioned,
             isDashboardRequest = fromMaybe False isDashboardRequest,
             isScheduled = fromMaybe False isScheduled,
@@ -60,10 +62,12 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             primaryExophone = primaryExophone,
             providerId = Kernel.Types.Id.Id providerId,
             quoteId = quoteId,
+            receiverDetails = snd <$> senderAndReceiverDetails,
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id <$> riderId,
             riderName = riderName,
             roundTrip = roundTrip,
+            senderDetails = fst <$> senderAndReceiverDetails,
             specialLocationTag = specialLocationTag,
             specialZoneOtpCode = specialZoneOtpCode,
             startTime = startTime,
@@ -100,6 +104,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.fareParametersId = Kernel.Types.Id.getId $ (.id) fareParams,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId $ (.id) fromLocation,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.initiatedAs = initiatedAs,
         Beam.isAirConditioned = isAirConditioned,
         Beam.isDashboardRequest = Just isDashboardRequest,
         Beam.isScheduled = Just isScheduled,
@@ -111,10 +116,16 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.primaryExophone = primaryExophone,
         Beam.providerId = Kernel.Types.Id.getId providerId,
         Beam.quoteId = quoteId,
+        Beam.receiverId = Kernel.Types.Id.getId <$> (receiverDetails <&> (.id)),
+        Beam.receiverName = receiverDetails <&> (.name),
+        Beam.receiverPrimaryExophone = receiverDetails <&> (.primaryExophone),
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
         Beam.riderName = riderName,
         Beam.roundTrip = roundTrip,
+        Beam.senderId = Kernel.Types.Id.getId <$> (senderDetails <&> (.id)),
+        Beam.senderName = senderDetails <&> (.name),
+        Beam.senderPrimaryExophone = senderDetails <&> (.primaryExophone),
         Beam.specialLocationTag = specialLocationTag,
         Beam.specialZoneOtpCode = specialZoneOtpCode,
         Beam.startTime = startTime,

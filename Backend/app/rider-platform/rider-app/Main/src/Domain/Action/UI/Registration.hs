@@ -27,6 +27,7 @@ module Domain.Action.UI.Registration
     resend,
     logout,
     generateCustomerReferralCode,
+    createPersonWithPhoneNumber,
   )
 where
 
@@ -716,3 +717,47 @@ generateCustomerReferralCode = do
   aplhaNumericCode <- generateAplhaNumbericCode 5
   let referralCode = "C" <> aplhaNumericCode
   pure referralCode
+
+createPersonWithPhoneNumber ::
+  ( HasFlowEnv m r '["version" ::: DeploymentVersion],
+    EncFlow m r,
+    EsqDBFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DMerchant.Merchant ->
+  Text ->
+  Maybe Text ->
+  m (Id SP.Person)
+createPersonWithPhoneNumber merchantId phoneNumber countryCode' = do
+  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound $ getId merchantId)
+  mobileDbHash <- getDbHash phoneNumber
+  let countryCode = fromMaybe "+91" countryCode'
+  findPerson <- Person.findByMobileNumberAndMerchantId countryCode mobileDbHash merchantId
+  case findPerson of
+    Just foundPerson -> return $ foundPerson.id
+    Nothing -> do
+      let authReq =
+            AuthReq
+              { mobileNumber = Just phoneNumber,
+                mobileCountryCode = Just countryCode,
+                identifierType = Just SP.MOBILENUMBER,
+                merchantId = merchant.shortId,
+                deviceToken = Nothing,
+                notificationToken = Nothing,
+                whatsappNotificationEnroll = Nothing,
+                firstName = Nothing,
+                middleName = Nothing,
+                lastName = Nothing,
+                email = Nothing,
+                language = Nothing,
+                gender = Nothing,
+                otpChannel = Nothing,
+                registrationLat = Nothing,
+                registrationLon = Nothing,
+                enableOtpLessRide = Nothing
+              }
+      createdPerson <-
+        createPerson authReq SP.MOBILENUMBER Nothing Nothing Nothing Nothing Nothing merchant Nothing
+      pure $ createdPerson.id

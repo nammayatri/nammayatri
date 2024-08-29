@@ -207,6 +207,7 @@ castVariant Variant.PREMIUM_SEDAN = (show Enums.CAB, "PREMIUM_SEDAN")
 castVariant Variant.BLACK = (show Enums.CAB, "BLACK")
 castVariant Variant.BLACK_XL = (show Enums.CAB, "BLACK_XL")
 castVariant Variant.BIKE = (show Enums.TWO_WHEELER, "BIKE")
+castVariant Variant.DELIVERY_BIKE = (show Enums.TWO_WHEELER, "DELIVERY_BIKE")
 castVariant Variant.AMBULANCE_TAXI = (show Enums.AMBULANCE, "AMBULANCE_TAXI")
 castVariant Variant.AMBULANCE_TAXI_OXY = (show Enums.AMBULANCE, "AMBULANCE_TAXI_OXY")
 castVariant Variant.AMBULANCE_AC = (show Enums.AMBULANCE, "AMBULANCE_AC")
@@ -233,7 +234,9 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "TAXI") -> Just Variant.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
   (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE -- becomes redundant, TODO : remove in next release
+  (Just "MOTORCYCLE", Just "DELIVERY_BIKE") -> Just Variant.DELIVERY_BIKE -- becomes redundant, TODO : remove in next release
   (Just "TWO_WHEELER", Just "BIKE") -> Just Variant.BIKE
+  (Just "TWO_WHEELER", Just "DELIVERY_BIKE") -> Just Variant.DELIVERY_BIKE
   (Just "AMBULANCE", Just "AMBULANCE_TAXI") -> Just Variant.AMBULANCE_TAXI
   (Just "AMBULANCE", Just "AMBULANCE_TAXI_OXY") -> Just Variant.AMBULANCE_TAXI_OXY
   (Just "AMBULANCE", Just "AMBULANCE_AC") -> Just Variant.AMBULANCE_AC
@@ -257,6 +260,8 @@ parseAddress loc@Spec.Location {..} = do
           city = city',
           state = state',
           country = country',
+          instructions = Nothing,
+          extras = Nothing,
           ..
         }
   where
@@ -1292,6 +1297,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                 Variant.HATCHBACK -> avgSpeed.hatchback.getKilometers
                 Variant.AUTO_RICKSHAW -> avgSpeed.autorickshaw.getKilometers
                 Variant.BIKE -> avgSpeed.bike.getKilometers
+                Variant.DELIVERY_BIKE -> avgSpeed.bike.getKilometers
                 Variant.TAXI -> avgSpeed.taxi.getKilometers
                 Variant.TAXI_PLUS -> avgSpeed.ambulance.getKilometers
                 Variant.PREMIUM_SEDAN -> avgSpeed.premiumsedan.getKilometers

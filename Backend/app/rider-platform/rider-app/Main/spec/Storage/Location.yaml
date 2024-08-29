@@ -30,6 +30,8 @@ Location:
       area: Maybe Text
       ward: Maybe Text
       placeId: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
       derive: "Eq"
 
   beamFields:
@@ -44,6 +46,8 @@ Location:
       area: Maybe Text
       ward: Maybe Text
       placeId: Maybe Text
+      instructions: Maybe Text
+      extras: Maybe Text
 
   toTType:
     street: Domain.Types.LocationAddress.street|I
@@ -56,9 +60,11 @@ Location:
     area: Domain.Types.LocationAddress.area|I
     ward: Domain.Types.LocationAddress.ward|I
     placeId: Domain.Types.LocationAddress.placeId|I
+    instructions: Domain.Types.LocationAddress.instructions|I
+    extras: Domain.Types.LocationAddress.extras|I
 
   fromTType:
-    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId}|E
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,extras}|E
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -69,6 +75,12 @@ Location:
       where: id
     findById:
       kvFunction: findOneWithKV
+      where: id
+    updateInstructionsAndExtrasById:
+      kvFunction: updateOneWithKV
+      params:
+        - instructions|B
+        - extras|B
       where: id
   constraints:
     id: PrimaryKey

@@ -34,6 +34,8 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
+import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.Ride ()
@@ -292,7 +294,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
-  bookings <-
+  bookings' <-
     findAllWithOptionsKV
       [ Se.And
           ( [Se.Is BeamB.riderId $ Se.Eq personId]
@@ -304,7 +306,22 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
       (Se.Desc BeamB.startTime)
       (Just limit')
       (Just offset')
-
+  otherActivePartyBooking <-
+    if isOnlyActive
+      then do
+        bookingPartyLink <- QBPL.findOneActivePartyByRiderId (Id personId)
+        case bookingPartyLink of
+          Just bpl -> do
+            booking <- maybeToList <$> QB.findById bpl.bookingId
+            pure $
+              filter
+                ( \bk ->
+                    (isNothing mbBookingStatus || Just (bk.status) == mbBookingStatus) && (isNothing mbClientId || bk.clientId == mbClientId)
+                )
+                booking
+          Nothing -> pure []
+      else pure []
+  let bookings = bookings' <> otherActivePartyBooking
   rides <- findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]] (Se.Desc BeamR.createdAt) Nothing Nothing
   let filteredBookings = matchBookingsWithRides bookings rides
   let filteredB = filterBookingsWithConditions filteredBookings
