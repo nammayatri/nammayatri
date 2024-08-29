@@ -646,3 +646,12 @@ notOnRide (Id driverId) = do
 
 findRidesFromDB :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Ride] -> m [Ride]
 findRidesFromDB rideIds = findAllWithDb [Se.Is BeamR.id $ Se.In (getId <$> rideIds)]
+
+updatePassedThroughDestination :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Bool -> m ()
+updatePassedThroughDestination rideId passedThroughDrop = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.passedThroughDestination $ Just passedThroughDrop,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]

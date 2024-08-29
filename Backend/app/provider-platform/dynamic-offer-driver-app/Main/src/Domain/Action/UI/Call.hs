@@ -26,7 +26,6 @@ module Domain.Action.UI.Call
     directCallStatusCallback,
     getCustomerMobileNumber,
     getDriverMobileNumber,
-    callOnClickTracker,
   )
 where
 
@@ -52,17 +51,12 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
-import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
-import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
-import SharedLogic.Allocator
 import qualified SharedLogic.CallBAP as CallBAP
-import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -315,43 +309,6 @@ getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber_ callStatus to_ = d
 
     dropFirstZero = T.dropWhile (== '0')
     removeQuotes = T.replace "\"" ""
-
-callOnClickTracker :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType, HasField "maxShards" r Int) => Id SRide.Ride -> m APISuccess
-callOnClickTracker rideId = do
-  maxShards <- asks (.maxShards)
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  transporterConfig <-
-    CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
-      >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  callStatusObj <- buildCallStatus booking.merchantOperatingCityId
-  QCallStatus.create callStatusObj
-  createJobIn @_ @'CheckExotelCallStatusAndNotifyBAP (fromIntegral transporterConfig.exotelStatusCheckSchedulerDelay) maxShards $
-    CheckExotelCallStatusAndNotifyBAPJobData
-      { rideId = ride.id
-      }
-  return Success
-  where
-    buildCallStatus merchantOpCityId = do
-      callStatusId <- generateGUID
-      callId <- generateGUID -- added random placeholder for backward compatibility
-      now <- getCurrentTime
-      return $
-        SCS.CallStatus
-          { id = callStatusId,
-            callId = callId,
-            entityId = Just $ getId rideId,
-            dtmfNumberUsed = Nothing,
-            status = CallTypes.ATTEMPTED,
-            conversationDuration = 0,
-            recordingUrl = Nothing,
-            merchantId = Nothing,
-            merchantOperatingCityId = Just merchantOpCityId,
-            callService = Nothing,
-            callError = Nothing,
-            callAttempt = Just DCallStatus.Attempted,
-            createdAt = now
-          }
 
 throwCallError ::
   ( HasCallStack,

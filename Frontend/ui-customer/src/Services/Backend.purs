@@ -960,12 +960,14 @@ callbackRequestBT lazyCheck = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
-makeUserSosReq :: UserSosFlow -> String -> Boolean -> Boolean -> UserSosReq
-makeUserSosReq flow rideId isRideEnded notifyAllContacts = UserSosReq {
+makeUserSosReq :: UserSosFlow -> String -> Boolean -> Boolean -> Maybe LatLong -> Maybe Boolean -> UserSosReq
+makeUserSosReq flow rideId isRideEnded notifyAllContacts currentLocation sendPNOnPostRideSOS = UserSosReq {
      "flow" : flow,
      "rideId" : rideId,
      "isRideEnded" : isRideEnded,
-     "notifyAllContacts" : notifyAllContacts
+     "notifyAllContacts" : notifyAllContacts,
+     "customerLocation" : currentLocation,
+     "sendPNOnPostRideSOS" : sendPNOnPostRideSOS
 }
 
 createUserSosFlow :: String -> String -> UserSosFlow

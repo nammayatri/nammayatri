@@ -10,6 +10,9 @@ apis:
         type: ReferralLinkPasswordUpdateAPIReq
       response:
         type: APISuccess
+      migrate:
+        endpoint: DriverReferralAPI ReferralProgramUpdateOpsPasswordEndpoint
+        endpointV2:
   - POST: # ReferralProgramLinkCodeAPI
       endpoint: linkReferral
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT REFERRAL REFERRAL_PROGRAM_LINK_CODE
@@ -17,6 +20,9 @@ apis:
         type: ReferralLinkReq
       response:
         type: LinkReport
+      migrate:
+        endpoint: DriverReferralAPI ReferralProgramUpdateOpsPasswordEndpoint
+        endpointV2:
 
 types:
   LinkReport:

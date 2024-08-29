@@ -31,16 +31,10 @@ data RideEndpoint
   = RideStartEndpoint
   | RideEndEndpoint
   | RideCancelEndpoint
-  | RideSyncEndpoint
   | MultipleRideCancelEndpoint
-  | MultipleRideEndEndpoint
   | MultipleRideSyncEndpoint
   | BookingWithVehicleNumberAndPhoneEndpoint
-  | TicketRideListEndpoint
-  | PostRideEndMultipleEndpoint
-  | PostRideCancelMultipleEndpoint
-  | PostRideSyncEndpoint
-  | PostRideSyncMultipleEndpoint
+  | TicketRideListEndpoint -- moved to DSL only for provider-dashboard
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "RideEndpoint"

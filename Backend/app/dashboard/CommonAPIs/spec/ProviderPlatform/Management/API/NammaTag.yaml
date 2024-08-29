@@ -17,6 +17,8 @@ apis:
         type: CreateNammaTagRequest
       response:
         type: APISuccess
+      migrate:
+        endpointV2:
   - POST:
       endpoint: /query/create
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_CHAKRA_QUERY
@@ -24,6 +26,8 @@ apis:
         type: ChakraQueriesAPIEntity
       response:
         type: APISuccess
+      migrate:
+        endpointV2:
   - POST:
       endpoint: /appDynamicLogic/verify
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
@@ -31,3 +35,5 @@ apis:
         type: AppDynamicLogicReq
       response:
         type: AppDynamicLogicResp
+      migrate:
+        endpointV2:

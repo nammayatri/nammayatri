@@ -40,7 +40,8 @@ instance FromTType' BeamFPRDDB.FarePolicyRentalDetailsDistanceBuffers BeamFPRDDB
         ( KTI.Id farePolicyId,
           DFP.FPRentalDetailsDistanceBuffers
             { rideDuration = rideDuration,
-              bufferKms = bufferKms
+              bufferKms = bufferKms,
+              bufferMeters = bufferMeters
             }
         )
 
@@ -49,5 +50,6 @@ instance ToTType' BeamFPRDDB.FarePolicyRentalDetailsDistanceBuffers BeamFPRDDB.F
     BeamFPRDDB.FarePolicyRentalDetailsDistanceBuffersT
       { farePolicyId = farePolicyId,
         rideDuration = rideDuration,
-        bufferKms = bufferKms
+        bufferKms = bufferKms,
+        bufferMeters = bufferMeters
       }

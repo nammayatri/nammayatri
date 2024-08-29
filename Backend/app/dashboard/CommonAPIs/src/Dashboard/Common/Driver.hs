@@ -32,73 +32,11 @@ import qualified Text.Show
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data DriverEndpoint
-  = EnableDriverEndpoint
-  | DisableDriverEndpoint
-  | BlockDriverWithReasonEndpoint
-  | BlockDriverEndpoint
-  | UnblockDriverEndpoint
-  | DeleteDriverEndpoint
-  | UnlinkVehicleEndpoint
-  | UnlinkDLEndpoint
-  | UnlinkAadhaarEndpoint
-  | EndRCAssociationEndpoint
-  | UpdatePhoneNumberEndpoint
-  | AddVehicleEndpoint
-  | UpdateDriverNameEndpoint
-  | CollectCashEndpoint
-  | ExemptCashEndpoint
-  | SetRCStatusEndpoint
-  | DeleteRCEndpoint
-  | UpdateDriverHomeLocationEndpoint
-  | IncrementDriverGoToCountEndPoint
-  | UpdateSubscriptionDriverFeeAndInvoiceEndpoint
-  | SetVehicleDriverRcStatusForFleetEndpoint
+  = UpdateSubscriptionDriverFeeAndInvoiceEndpoint
   | FleetUnlinkVehicleEndpoint
   | SendMessageToDriverViaDashboardEndPoint
-  | SendDummyRideRequestToDriverViaDashboardEndPoint
-  | ChangeOperatingCityEndpoint
-  | PauseOrResumeServiceChargesEndPoint
   | UpdateRCInvalidStatusEndPoint
-  | UpdateVehicleVariantEndPoint
-  | BulkReviewRCVariantEndPoint
-  | RemoveACUsageRestrictionEndpoint
-  | UpdateDriverTagEndPoint
-  | UpdateFleetOwnerEndPoint
   | SendFleetJoiningOtpEndPoint
-  | PostDriverFleetVehicleDriverRCstatusEndpoint
-  | PostDriverEnableEndpoint
-  | PostDriverCollectCashEndpoint
-  | PostDriverV2CollectCashEndpoint
-  | PostDriverExemptCashEndpoint
-  | PostDriverV2ExemptCashEndpoint
-  | PostDriverUnlinkVehicleEndpoint
-  | PostDriverEndRCAssociationEndpoint
-  | PostDriverAddVehicleEndpoint
-  | PostDriverSetRCStatusEndpoint
-  | PostDriverDisableEndpoint
-  | PostDriverAcRestrictionUpdateEndpoint
-  | PostDriverBlockWithReasonEndpoint
-  | PostDriverBlockEndpoint
-  | PostDriverUnblockEndpoint
-  | DeleteDriverPermanentlyDeleteEndpoint
-  | PostDriverUnlinkDLEndpoint
-  | PostDriverUnlinkAadhaarEndpoint
-  | PostDriverUpdatePhoneNumberEndpoint
-  | PostDriverUpdateNameEndpoint
-  | PostDriverDeleteRCEndpoint
-  | PostDriverSendDummyNotificationEndpoint
-  | PostDriverChangeOperatingCityEndpoint
-  | PostDriverPauseOrResumeServiceChargesEndpoint
-  | PostDriverUpdateRCInvalidStatusEndpoint
-  | PostDriverUpdateVehicleVariantEndpoint
-  | PostDriverBulkReviewRCVariantEndpoint
-  | PostDriverUpdateDriverTagEndpoint
-  | PostDriverGoHomeUpdateHomeLocationEndpoint
-  | PostDriverGoHomeIncrementGoToCountEndpoint
-  | PostDriverClearFeeEndpoint
-  | PostDriverPersonNumbersEndpoint
-  | PostDriverSyncDocAadharPanEndpoint
-  | PostDriverpersonIdEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "DriverEndpoint"

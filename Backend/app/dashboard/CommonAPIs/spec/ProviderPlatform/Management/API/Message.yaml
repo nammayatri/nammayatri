@@ -17,6 +17,9 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE UPLOAD_FILE
       response:
         type: UploadFileResponse
+      migrate:
+        endpoint: MessageAPI UploadFileEndpoint
+        endpointV2:
   - POST:
       endpoint: /addLink
       request:
@@ -25,6 +28,9 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_LINK
       response:
         type: UploadFileResponse
+      migrate:
+        endpoint: MessageAPI AddLinkEndpoint
+        endpointV2:
   - POST:
       endpoint: /add
       request:
@@ -33,6 +39,9 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_MESSAGE
       response:
         type: AddMessageResponse
+      migrate:
+        endpoint: MessageAPI AddMessageEndpoint
+        endpointV2:
   - POST:
       endpoint: /send
       multipart:
@@ -41,6 +50,9 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
       response:
         type: APISuccess
+      migrate:
+        endpoint: MessageAPI SendMessageEndpoint
+        endpointV2:
   - GET:
       endpoint: /list
       query:

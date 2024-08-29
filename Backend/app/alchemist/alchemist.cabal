@@ -71,6 +71,7 @@ executable alchemist-generator-exe
     , bytestring
     , casing
     , directory
+    , extra
     , filepath
     , mobility-core
     , namma-dsl

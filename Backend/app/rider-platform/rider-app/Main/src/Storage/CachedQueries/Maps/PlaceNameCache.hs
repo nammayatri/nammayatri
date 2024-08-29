@@ -22,17 +22,23 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Queries.PlaceNameCache as Queries
 
-findPlaceByPlaceId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m [PlaceNameCache]
+findPlaceByPlaceId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m ([PlaceNameCache], Source)
 findPlaceByPlaceId placeId =
   Hedis.safeGet (makePlaceIdKey placeId) >>= \case
-    Just a -> return a
-    Nothing -> cachedPlaceByPlaceId placeId /=<< Queries.findPlaceByPlaceId (Just placeId)
+    Just a -> return (a, Cache)
+    Nothing -> do
+      plcNm <- cachedPlaceByPlaceId placeId /=<< Queries.findPlaceByPlaceId (Just placeId)
+      return (plcNm, DB)
 
-findPlaceByGeoHash :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m [PlaceNameCache]
-findPlaceByGeoHash geoHash =
+data Source = Cache | DB | Google deriving (Show, Eq)
+
+findPlaceByGeoHash :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> m ([PlaceNameCache], Source)
+findPlaceByGeoHash geoHash = do
   Hedis.safeGet (makeGeoHashIdKey geoHash) >>= \case
-    Just a -> return a
-    Nothing -> cachedPlaceByGeoHash geoHash /=<< Queries.findPlaceByGeoHash (Just geoHash)
+    Just a -> return (a, Cache)
+    Nothing -> do
+      plcNm <- cachedPlaceByGeoHash geoHash /=<< Queries.findPlaceByGeoHash (Just geoHash)
+      return (plcNm, DB)
 
 create :: (CacheFlow m r, Esq.EsqDBFlow m r) => PlaceNameCache -> m ()
 create = Queries.create

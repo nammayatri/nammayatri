@@ -2,7 +2,8 @@
 
 module Main where
 
-import Data.List (dropWhileEnd, isInfixOf, isSuffixOf)
+import Data.List (dropWhileEnd, isInfixOf, isSuffixOf, sort)
+import Data.List.Extra (dropSuffix)
 import Data.Text (unpack)
 import Kernel.Prelude
 import qualified NammaDSL.App as NammaDSL
@@ -45,21 +46,30 @@ processSpecFolders' isGenAll insideOfSpecDir specFolderPath = do
               putStrLn' "33" ("Skipping as Config file not found at " ++ configPath)
               processSpecFolders isGenAll isSpecDir entryPath
             else do
-              forM_ apiContents $
+              shouldRunApiGenerators <- forM apiContents $
                 \inputFile -> do
-                  when (".yaml" `isSuffixOf` inputFile) $ do
-                    let inputFilePath = apiFolderPath </> inputFile
-                    fileState <- NammaDSL.getFileState inputFilePath
-                    putStrLn $ show fileState ++ " " ++ inputFilePath
-                    when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
-                      NammaDSL.runApiGenerator configPath inputFilePath
+                  if ".yaml" `isSuffixOf` inputFile
+                    then do
+                      let inputFilePath = apiFolderPath </> inputFile
+                      fileState <- NammaDSL.getFileState inputFilePath
+                      -- putStrLn $ show fileState ++ " " ++ inputFilePath
+                      let shouldRunApiGenerator = isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED
+                      when shouldRunApiGenerator $
+                        NammaDSL.runApiGenerator configPath inputFilePath
+                      return shouldRunApiGenerator
+                    else return False
+
+              when (or shouldRunApiGenerators && insideOfSpecDir) $ do
+                let specModules = map (dropSuffix ".yaml") $ filter (".yaml" `isSuffixOf`) apiContents
+                putStrLn $ "run api tree generator for spec modules: " <> (show specModules :: String)
+                NammaDSL.runApiTreeGenerator configPath $ sort specModules
 
               forM_ storageContents $
                 \inputFile -> do
                   when (".yaml" `isSuffixOf` inputFile) $ do
                     let inputFilePath = storageFolderPath </> inputFile
                     fileState <- NammaDSL.getFileState inputFilePath
-                    putStrLn $ show fileState ++ " " ++ inputFilePath
+                    -- putStrLn $ show fileState ++ " " ++ inputFilePath
                     when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $
                       NammaDSL.runStorageGenerator configPath inputFilePath
         else processSpecFolders isGenAll isSpecDir entryPath

@@ -49,6 +49,8 @@ module Domain.Action.ProviderPlatform.Management.Driver
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -71,13 +73,13 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.DriverEndpoint ->
+  Common.DriverEndpointDSL ->
   ApiTokenInfo ->
   Maybe (Id Common.Driver) ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.DriverAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
+  T.buildTransaction (DT.ProviderManagementAPI $ Common.DriverAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
 
 getDriverDocumentsInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Flow Common.DriverDocumentsInfoRes
 getDriverDocumentsInfo merchantShortId opCity apiTokenInfo = do
@@ -291,5 +293,5 @@ postDriverSyncDocAadharPan merchantShortId opCity apiTokenInfo req = do
 postDriverPersonId :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.PersonMobileNoReq -> Environment.Flow [Common.PersonRes])
 postDriverPersonId merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostDriverpersonIdEndpoint apiTokenInfo Nothing (Just req)
+  transaction <- buildTransaction Common.PostDriverPersonIdEndpoint apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do Client.callDriverOfferBPPOperations checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverPersonId)) req

@@ -149,10 +149,10 @@ emergencySosConfig state =
   { 
     sosDescription = [ measureViewConfig {text' = getString SAFETY_TEAM_CALLBACK_REQUESTED}
                       , measureViewConfig {text' = getString EMERGENCY_CONTACTS_NOTIFIED}
-                      ] <> case contactName of
-                          Mb.Just name -> [ measureViewConfig {text' = getString CALL_PLACED <> ": " <> name} ]
-                          Mb.Nothing -> []
-  , descriptionText = getString EMERGENCY_SOS_ACTIVATED
+                      ] <> case contactName, state.data.autoCallDefaultContact of
+                          Mb.Just name, true -> [ measureViewConfig {text' = getString CALL_PLACED <> ": " <> name} ]
+                          _,_ -> []
+  , descriptionText = getString if state.props.showTestDrill then TEST_SOS_ACTIVATED else EMERGENCY_SOS_ACTIVATED
   , showSosButton = false
   }
   where
@@ -190,13 +190,13 @@ sosActionTilesView state push =
 
   where
     actionsRow1 =
-        [ { text: getStringWithoutNewLine CALL_POLICE , image: "ny_ic_police" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill }
-        , { text: getStringWithoutNewLine RECORD_AUDIO, image: "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false }
+        [ { text: getStringWithoutNewLine RECORD_AUDIO, image: "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false }
+        , { text: getStringWithoutNewLine CALL_POLICE , image: "ny_ic_police_alert" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill }
         ]
 
     actionsRow2 =
         [ { text: getString SIREN, image: sirenImage, backgroundColor: sirenTileBackgroundColor, strokeColor: sirenTileStrokeColor, push : push <<< ToggleSiren, isDisabled: false }
-        , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: "ny_ic_police_alert", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill }
+        , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: "ny_ic_support_unfilled", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill }
         ]
 
     safetyActionRow actionItems push =
@@ -346,6 +346,7 @@ emergencyContactsView state push =
                 , orientation VERTICAL
                 , onClick push $ const $ CallContact index
                 , margin $ MarginRight 6
+                , padding $ PaddingHorizontal 4 4
                 ]
                 [ ContactCircle.view (ContactCircle.getContactConfig item index false false) (push <<< ContactCircleAction)
                 , textView

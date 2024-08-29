@@ -36,6 +36,7 @@ import qualified BecknV2.OnDemand.Enums as BecknEnums
 import Control.Applicative ((<|>))
 import Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
+import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
@@ -186,8 +187,14 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> m ProfileRes
-getPersonDetails (personId, _) mbToss = do
+getPersonDetails ::
+  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  (Id Person.Person, Id Merchant.Merchant) ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  m ProfileRes
+getPersonDetails (personId, _) toss tenant' context = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
@@ -195,7 +202,8 @@ getPersonDetails (personId, _) mbToss = do
   decPerson <- decrypt person
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
-  frntndfgs <- if useCACConfig then getFrontendConfigs person mbToss else return $ Just DAKM.empty
+  let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
+  frntndfgs <- if useCACConfig then getFrontendConfigs person toss tenant' context' else return $ Just DAKM.empty
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person
   hasTakenValidRide <- QCP.findAllByPersonId personId
@@ -204,11 +212,11 @@ getPersonDetails (personId, _) mbToss = do
       hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknEnums.MOTORCYCLE
       hasTakenValidAmbulanceRide = validRideCount hasTakenValidRide BecknEnums.AMBULANCE
   newCustomerReferralCode <-
-    if (isNothing person.customerReferralCode)
+    if isNothing person.customerReferralCode
       then do
         newCustomerReferralCode <- DR.generateCustomerReferralCode
         checkIfReferralCodeExists <- QPerson.findPersonByCustomerReferralCode (Just newCustomerReferralCode)
-        if (isNothing checkIfReferralCodeExists)
+        if isNothing checkIfReferralCodeExists
           then do
             void $ QPerson.updateCustomerReferralCode personId newCustomerReferralCode
             pure $ Just newCustomerReferralCode

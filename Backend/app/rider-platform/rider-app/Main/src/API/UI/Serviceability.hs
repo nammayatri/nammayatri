@@ -52,13 +52,21 @@ newtype ServiceabilityReq = ServiceabilityReq
 
 handler :: FlowServer API
 handler regToken =
-  checkServiceability origin regToken
-    :<|> checkServiceability destination regToken
+  checkOrignServiceability origin regToken
+    :<|> checkDestinationServiceability destination regToken
 
-checkServiceability ::
+checkOrignServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
-checkServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True
+checkOrignServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True True
+
+checkDestinationServiceability ::
+  (GeofencingConfig -> GeoRestriction) ->
+  (Id Person.Person, Id Merchant.Merchant) ->
+  ServiceabilityReq ->
+  FlowHandler DServiceability.ServiceabilityRes
+checkDestinationServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True False

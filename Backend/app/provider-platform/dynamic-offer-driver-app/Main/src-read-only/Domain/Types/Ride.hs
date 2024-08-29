@@ -66,6 +66,7 @@ data Ride = Ride
     numberOfSnapToRoadCalls :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onlinePayment :: Kernel.Prelude.Bool,
     otp :: Kernel.Prelude.Text,
+    passedThroughDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     pickupDropOutsideOfThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

@@ -65,16 +65,34 @@ checkServiceability ::
   (Id Person.Person, Id Merchant.Merchant) ->
   LatLong ->
   Bool ->
+  Bool ->
   m ServiceabilityRes
-checkServiceability settingAccessor (personId, merchantId) location shouldUpdatePerson = do
+checkServiceability settingAccessor (personId, merchantId) location shouldUpdatePerson isOrigin = do
   DHotSpot.HotSpotResponse {..} <- getHotspot location merchantId
   mbNearestOpAndCurrentCity <- getNearestOperatingAndCurrentCity' settingAccessor (personId, merchantId) shouldUpdatePerson location
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       let city = Just nearestOperatingCity.city
       specialLocationBody <- runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location
-      return ServiceabilityRes {serviceable = True, currentCity = Just currentCity.city, specialLocation = specialLocationBody, geoJson = (.geoJson) =<< specialLocationBody, ..}
-    Nothing -> return ServiceabilityRes {city = Nothing, currentCity = Nothing, serviceable = False, specialLocation = Nothing, geoJson = Nothing, ..}
+      let filteredSpecialLocationBody = QSpecialLocation.filterGates specialLocationBody isOrigin
+      return
+        ServiceabilityRes
+          { serviceable = True,
+            currentCity = Just currentCity.city,
+            specialLocation = filteredSpecialLocationBody,
+            geoJson = (.geoJson) =<< filteredSpecialLocationBody,
+            ..
+          }
+    Nothing ->
+      return
+        ServiceabilityRes
+          { city = Nothing,
+            currentCity = Nothing,
+            serviceable = False,
+            specialLocation = Nothing,
+            geoJson = Nothing,
+            ..
+          }
 
 data NearestOperatingAndCurrentCity = NearestOperatingAndCurrentCity
   { nearestOperatingCity :: CityState,

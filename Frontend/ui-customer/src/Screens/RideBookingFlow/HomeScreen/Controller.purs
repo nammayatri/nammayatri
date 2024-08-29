@@ -154,7 +154,7 @@ import Data.String as DS
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
 import Screens.HomeScreen.Controllers.PopUpModelControllers as PopUpModelControllers
-
+import Services.API as API
 
 
 eval2 :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -2886,12 +2886,16 @@ eval (ShimmerTimer seconds status timerID) state = do
   else update state{props{shimmerViewTimer = seconds, shimmerViewTimerId = timerID}}
 
 eval (ShakeActionCallback count) state = do
-  if count >= 2 && any (_ == state.props.currentStage) [RideAccepted, RideStarted] && state.props.isShakeEnabled then do
-    void $ pure $ performHapticFeedback unit
-    exit $ GoToNammaSafety state true false 
-  else continue state
+  case state.props.safetySettings of
+    Just (API.GetEmergencySettingsRes safetySettings) -> do
+      if count >= 2 && any (_ == state.props.currentStage) [RideAccepted, RideStarted] && safetySettings.shakeToActivate then do
+        void $ pure $ performHapticFeedback unit
+        exit $ GoToNammaSafety state true false 
+      else continue state
+    Nothing -> continue state
+  
+eval (UpdateSafetySettings safetySettings) state = continue state{props{safetySettings = Just safetySettings}}
 
-eval (UpdateShakePermission isAllowed) state = continue state{props{isShakeEnabled = isAllowed}}
 eval (ServicesOnClick service) state = do 
   void $ pure $ performHapticFeedback unit
   case service.type of 

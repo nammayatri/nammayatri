@@ -46,6 +46,7 @@ initData =
         , postRideCheck: API.NEVER_SHARE
         , notifySafetyTeam: false
         , emergencySOSShake: false
+        , hasCompletedMockSafetyDrill: false
         , autoCallDefaultContact: false
         , informPoliceSos: false
         , notifySosWithEmergencyContacts: false
@@ -85,7 +86,7 @@ stageData stage = case stage of
             , SubTitle subTitleConfig { subTitleText = getString TRUSTED_CONTACT_DESC }
             , CheckBoxSelection checkBoxSelectionConfig { title = getString ENABLE_LIVE_TRACKING }
             ]
-        , imageUrl: "ny_ic_in_app_chat"
+        , imageUrl: "ny_ic_share_explain"
         , primaryButtonText: getString DONE
         , primaryButtonAction: "UpdateEmergencyContacts"
         }
@@ -145,7 +146,8 @@ stageData stage = case stage of
         , primaryButtonAction: "NotifySafetyTeam"
         }
       ]
-  EmergencyActions _ ->
+  EmergencyActions _ -> do
+    let appName = fromMaybe (getAppConfig appConfig).appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     EmergencyActions
       [ { dynamicViewData:
             [ Title
@@ -156,7 +158,7 @@ stageData stage = case stage of
                 subTitleConfig
                   { subTitleText = getString EMERGENCY_SOS_SUB
                   }
-            , BoxContainer boxContainerConfig { title = getString SHAKE_TO_ACTIVATE, subTitle = getString SHAKE_TO_ACTIVATE_SUB }
+            , BoxContainer boxContainerConfig { title = getString SHAKE_TO_ACTIVATE, subTitle = getString $ SHAKE_TO_ACTIVATE_SUB appName}
             ]
         , imageUrl: "ny_ic_emergency_sos_banner"
         , primaryButtonText: getString NEXT
@@ -217,7 +219,7 @@ stageData stage = case stage of
             , NoteBox noteBoxConfig { noteText = getString SAFETY_DRILL_NOTE }
             ]
         , imageUrl: "ny_ic_safety_drill_setup"
-        , primaryButtonText: getString NEXT
+        , primaryButtonText: getString START_TEST_DRILL
         , primaryButtonAction: "SafetyTestDrill"
         }
       ]

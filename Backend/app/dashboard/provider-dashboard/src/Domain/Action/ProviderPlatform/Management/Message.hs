@@ -24,8 +24,9 @@ module Domain.Action.ProviderPlatform.Management.Message
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import AWS.S3 (FileType (..))
-import qualified Dashboard.Common.Message as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
 import qualified Data.Text as DT
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -47,12 +48,12 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.MessageEndpoint ->
+  Common.MessageEndpointDSL ->
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.MessageAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.ProviderManagementAPI $ Common.MessageAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postMessageUploadFile :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 postMessageUploadFile merchantShortId opCity apiTokenInfo req = do

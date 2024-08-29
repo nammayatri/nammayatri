@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (FetchImageFrom(..), getAssetsBaseUrl, fetchImage)
 import Types.App (GlobalState(..), defaultGlobalState)
 import JBridge (lottieAnimationConfig, startLottieProcess)
-import Prelude (Unit, const, discard, pure, void, ($), (<>), (<<<), (>), (==), unit, bind, map, not)
+import Prelude (Unit, const, discard, pure, void, ($), (<>), (<<<), (>), (==), (||), unit, bind, map, not)
 import PrestoDOM
 import Screens.DataExplainWithFetch.Controller (Action(..), ScreenOutput, eval, getStepConfig, getStageConfig)
 import Screens.DataExplainWithFetch.ComponentConfig as CC
@@ -113,7 +113,7 @@ explanationContentView push state =
       [ imageView
           [ height $ V 200
           , width MATCH_PARENT
-          , visibility $ boolToVisibility $ not state.props.stageSetUpCompleted
+          , visibility $ boolToVisibility $ not state.props.stageSetUpCompleted || config.primaryButtonAction == "SafetyTestDrill"
           , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET config.imageUrl
           ]
       , dynamicOptionsView push state

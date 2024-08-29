@@ -954,7 +954,7 @@ type HomeScreenStateProps =
   , isContactSupportPopUp :: Boolean
   , isSharedLocationFlow :: Boolean
   , isOtpRideFlow :: Boolean
-  , isShakeEnabled :: Boolean
+  , safetySettings :: Maybe API.GetEmergencySettingsRes
   , editedPickUpLocation :: EditedLocation
   }
 
@@ -2332,7 +2332,8 @@ type NammaSafetyScreenData =  {
   bannerData :: BannerCarousalData,
   safetySetupSteps :: Array SafetyStepsConfig,
   extraSafetyExplaination :: Array SafetyStepsConfig,
-  autoCallDefaultContact :: Boolean
+  autoCallDefaultContact :: Boolean,
+  currentLatLon :: Maybe LatLong
  }
 
 type NammaSafetyScreenProps =  {
@@ -2397,7 +2398,8 @@ type DataFetchScreenData = {
   emergencySOSShake :: Boolean,
   autoCallDefaultContact :: Boolean,
   informPoliceSos :: Boolean,
-  notifySosWithEmergencyContacts :: Boolean
+  notifySosWithEmergencyContacts :: Boolean,
+  hasCompletedMockSafetyDrill :: Boolean
 }
 
 type DataFetchScreenProps = {
@@ -2408,12 +2410,12 @@ type DataFetchScreenProps = {
 }
 
 type SafetyStepsConfig
-  = { title :: String
+  = { title :: STR
     , prefixImage :: String
     , stepNumber :: String
     , isCompleted :: Boolean
     , prefixImageCompleted :: String
-    , labelText :: Maybe String
+    , labelText :: Maybe STR
     , navigation :: NammaSafetyStage
     }
 

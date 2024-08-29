@@ -28,6 +28,8 @@ import qualified Lib.Types.GateInfo as Domain
 
 derivePersistField "LatLong"
 
+derivePersistField "Domain.GateType"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -41,6 +43,7 @@ mkPersist
       canQueueUpOnGate Bool
       createdAt UTCTime
       updatedAt UTCTime
+      gateType Domain.GateType
       Primary id
       deriving Generic
     |]

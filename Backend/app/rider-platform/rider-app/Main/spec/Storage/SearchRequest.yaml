@@ -60,6 +60,7 @@ SearchRequest:
     isAdvanceBookingEnabled: Maybe Bool
     isDashboardRequest: Maybe Bool
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
+    placeNameSource:  Maybe Text
 
   types:
     SearchRequestStatus:

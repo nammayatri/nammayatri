@@ -41,13 +41,14 @@ let outputPath =
       , _servantApi = outputPrefixDriverAppReadOnly ++ "API/Action/Dashboard"
       , _servantApiDashboard =
           outputPrefixDashboardReadOnly ++ "API/Action/ProviderPlatform"
-      , _sql = [ { _1 = migrationPath, _2 = "atlas_driver_offer_bpp" } ]
+      , _sql = [ { _1 = migrationPath, _2 = "atlas_bpp_dashboard" } ]
       , _purescriptFrontend = ""
       }
 
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
+      | SERVANT_API_TREE
       | API_TYPES
       | DOMAIN_HANDLER
       | DOMAIN_HANDLER_DASHBOARD
@@ -223,9 +224,16 @@ let defaultImports =
           , "EulerHS.Types"
           , "Kernel.Types.APISuccess"
           , "Kernel.Types.HideSecrets"
+          , "Kernel.Storage.Esqueleto"
           ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.API_TYPES
+        }
+      , { _simpleImports = [ "EulerHS.Prelude", "Data.OpenApi (ToSchema)" ]
+        , _qualifiedImports =
+          [ "Kernel.Storage.Esqueleto", "Text.Show", "Text.Read", "Data.List" ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.SERVANT_API_TREE
         }
       , { _simpleImports =
           [ "EulerHS.Prelude hiding (id)"
@@ -295,9 +303,13 @@ let defaultConfigs =
         , GeneratorType.API_TYPES
         , GeneratorType.SERVANT_API
         , GeneratorType.SERVANT_API_DASHBOARD
+        , GeneratorType.SERVANT_API_TREE
+        , GeneratorType.SQL
         ]
       , _apiKind = ApiKind.DASHBOARD
       , _clientFunction = None
+      , _endpointPrefix = Some "Provider"
+      , _folderName = None Text
       }
 
 in  { defaultConfigs, ClientName, outputPrefixDriverApp }

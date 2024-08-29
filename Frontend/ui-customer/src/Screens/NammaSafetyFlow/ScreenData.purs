@@ -24,7 +24,6 @@ import ConfigProvider (getAppConfig, appConfig)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
-import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
 import Common.Types.App as CTA
@@ -60,6 +59,7 @@ initData =
             , isFollowing: Nothing
             }
         , currentLocation: "Loading..."
+        , currentLatLon : Nothing
         , vehicleDetails: "Loading..."
         , videoList: []
         , sosType: Nothing
@@ -72,7 +72,7 @@ initData =
             , currentPage: 0
             }
         , extraSafetyExplaination: [
-          { title: getString TRUSTED_CONTACT_HELP
+          { title: TRUSTED_CONTACT_HELP
               , prefixImage: "ny_ic_trusted_contacts"
               , prefixImageCompleted: "ny_ic_trusted_contacts"
               , stepNumber: "5"
@@ -80,7 +80,7 @@ initData =
               , labelText: Nothing
               , navigation: TrustedContactsActions []
               },
-              { title: getString DRIVER_SAFETY_STANDARDS
+              { title: DRIVER_SAFETY_STANDARDS
               , prefixImage: "ny_ic_profile_shine"
               , prefixImageCompleted: "ny_ic_profile_shine"
               , stepNumber: "6"
@@ -90,15 +90,15 @@ initData =
               }
         ]
         , safetySetupSteps:
-            [ { title: getString TRUSTED_CONTACT
+            [ { title: TRUSTED_CONTACT
               , prefixImage: "ny_ic_trusted_contacts"
               , prefixImageCompleted: "ny_ic_trusted_contacts_completed"
               , stepNumber: "1"
               , isCompleted: false -- EmergencyContacts > 0
-              , labelText: Just "✨ Enables Live Tracking and In App Chat"
+              , labelText: Just TRUSTED_CONTACT_HIGHLIGHT
               , navigation: TrustedContacts []
               }
-            , { title: getString SAFETY_CHECK_IN
+            , { title: SAFETY_CHECK_IN
               , prefixImage: "ny_ic_safety_checkin"
               , prefixImageCompleted: "ny_ic_safety_checkin_competed"
               , stepNumber: "2"
@@ -106,7 +106,7 @@ initData =
               , labelText: Nothing
               , navigation: SafetyCheckIn []
               }
-            , { title: getString EMERGENCY_ACTIONS
+            , { title: EMERGENCY_ACTIONS
               , prefixImage: "ny_ic_emergency_actions"
               , prefixImageCompleted: "ny_ic_emergency_actions_completed"
               , stepNumber: "3"
@@ -114,7 +114,7 @@ initData =
               , labelText: Nothing
               , navigation: EmergencyActions []
               }
-            , { title: getString SAFETY_DRILL
+            , { title: SAFETY_DRILL
               , prefixImage: "ny_ic_safety_drill_steps"
               , prefixImageCompleted: "ny_ic_safety_drill_completed"
               , stepNumber: "4"

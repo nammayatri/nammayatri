@@ -481,3 +481,40 @@ mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
     getDriverDocumentsInfo :<|> postDriverPersonNumbers :<|> postDriverPersonId :<|> getDriverAadhaarInfo :<|> getDriverAadhaarInfobyMobileNumber :<|> getDriverList :<|> getDriverActivity :<|> postDriverDisable :<|> postDriverAcRestrictionUpdate :<|> postDriverBlockWithReason :<|> postDriverBlock :<|> getDriverBlockReasonList :<|> postDriverUnblock :<|> getDriverLocation :<|> deleteDriverPermanentlyDelete :<|> postDriverUnlinkDL :<|> postDriverUnlinkAadhaar :<|> postDriverUpdatePhoneNumber :<|> postDriverUpdateByPhoneNumber :<|> postDriverUpdateName :<|> postDriverDeleteRC :<|> getDriverClearStuckOnRide :<|> postDriverSendDummyNotification :<|> postDriverChangeOperatingCity :<|> getDriverGetOperatingCity :<|> postDriverPauseOrResumeServiceCharges :<|> postDriverUpdateRCInvalidStatus :<|> postDriverUpdateVehicleVariant :<|> postDriverBulkReviewRCVariant :<|> postDriverUpdateDriverTag :<|> postDriverClearFee :<|> getDriverPanAadharSelfieDetails :<|> postDriverSyncDocAadharPan = driverClient
+
+data DriverEndpointDSL
+  = GetDriverDocumentsInfoEndpoint
+  | PostDriverPersonNumbersEndpoint
+  | PostDriverPersonIdEndpoint
+  | GetDriverAadhaarInfoEndpoint
+  | GetDriverAadhaarInfobyMobileNumberEndpoint
+  | GetDriverListEndpoint
+  | GetDriverActivityEndpoint
+  | PostDriverDisableEndpoint
+  | PostDriverAcRestrictionUpdateEndpoint
+  | PostDriverBlockWithReasonEndpoint
+  | PostDriverBlockEndpoint
+  | GetDriverBlockReasonListEndpoint
+  | PostDriverUnblockEndpoint
+  | GetDriverLocationEndpoint
+  | DeleteDriverPermanentlyDeleteEndpoint
+  | PostDriverUnlinkDLEndpoint
+  | PostDriverUnlinkAadhaarEndpoint
+  | PostDriverUpdatePhoneNumberEndpoint
+  | PostDriverUpdateByPhoneNumberEndpoint
+  | PostDriverUpdateNameEndpoint
+  | PostDriverDeleteRCEndpoint
+  | GetDriverClearStuckOnRideEndpoint
+  | PostDriverSendDummyNotificationEndpoint
+  | PostDriverChangeOperatingCityEndpoint
+  | GetDriverGetOperatingCityEndpoint
+  | PostDriverPauseOrResumeServiceChargesEndpoint
+  | PostDriverUpdateRCInvalidStatusEndpoint
+  | PostDriverUpdateVehicleVariantEndpoint
+  | PostDriverBulkReviewRCVariantEndpoint
+  | PostDriverUpdateDriverTagEndpoint
+  | PostDriverClearFeeEndpoint
+  | GetDriverPanAadharSelfieDetailsEndpoint
+  | PostDriverSyncDocAadharPanEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

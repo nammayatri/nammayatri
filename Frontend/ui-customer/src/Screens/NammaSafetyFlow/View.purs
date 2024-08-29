@@ -210,7 +210,7 @@ listItem push item state =
                 ]
             ]
         , textView
-            $ [ text item.title
+            $ [ text $ getString item.title
               , color Color.black800
               , weight 1.0
               ]
@@ -222,7 +222,7 @@ listItem push item state =
             ]
         ]
     , textView
-        $ [ text $ fromMaybe "" item.labelText
+        $ [ text $ getString $ fromMaybe NEXT item.labelText
           , color Color.white900
           , visibility $ boolToVisibility $ isJust item.labelText
           , height WRAP_CONTENT

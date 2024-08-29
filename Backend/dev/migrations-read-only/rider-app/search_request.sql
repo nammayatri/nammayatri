@@ -94,3 +94,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN available_payment_methods text[]
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN estimated_ride_static_duration integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN place_name_source text ;

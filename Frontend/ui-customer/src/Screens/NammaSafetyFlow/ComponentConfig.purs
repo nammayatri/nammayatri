@@ -97,10 +97,9 @@ activateSoSButtonConfig state =
 dismissSoSButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 dismissSoSButtonConfig state =
   PrimaryButton.config
-    { textConfig { text = getString if state.props.showTestDrill then DONE else CANCEL_, color = Color.black900 }
+    { textConfig { text = getString if state.props.showTestDrill then DONE else CANCEL_, color = Color.white900 }
     , margin = Margin 16 0 16 16
     , stroke = "1," <> Color.white900
-    , background = Color.white900
     , id = "SafetyScreenDismissSosButton"
     , enableRipple = true
     }

@@ -27,6 +27,7 @@ let outputPath =
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
+      | SERVANT_API_TREE
       | API_TYPES
       | DOMAIN_HANDLER
       | DOMAIN_HANDLER_DASHBOARD
@@ -209,4 +210,6 @@ in  { _output = outputPath
       ]
     , _apiKind = ApiKind.UI
     , _clientFunction = None Text
+    , _folderName = None Text
+    , _endpointPrefix = None Text
     }

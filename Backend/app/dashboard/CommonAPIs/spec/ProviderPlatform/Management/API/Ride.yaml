@@ -39,6 +39,9 @@ apis:
       response:
         type: MultipleRideEndResp
       validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideEndReq
+      migrate:
+        endpoint: RideAPI MultipleRideEndEndpoint
+        endpointV2:
   - POST: # MultipleRideCancelAPI
       endpoint: /cancel
       name: PostRideCancelMultiple
@@ -49,6 +52,9 @@ apis:
       response:
         type: MultipleRideCancelResp
       validation: Dashboard.ProviderPlatform.Management.Ride.validateMultipleRideCancelReq
+      migrate:
+        endpoint: RideAPI MultipleRideCancelEndpoint
+        endpointV2:
   - GET: # RideInfoAPI
       endpoint: /{rideId}/info
       auth:
@@ -65,6 +71,9 @@ apis:
         rideId: Id Ride
       response:
         type: RideSyncRes
+      migrate:
+        endpoint: RideAPI RideSyncEndpoint
+        endpointV2:
   - POST: # MultipleRideSyncAPI
       endpoint: /sync
       name: PostRideSyncMultiple
@@ -74,6 +83,9 @@ apis:
         type: MultipleRideSyncReq
       response:
         type: MultipleRideSyncRes
+      migrate:
+        endpoint: RideAPI MultipleRideSyncEndpoint
+        endpointV2:
   - POST: # RideRouteAPI
       endpoint: /{rideId}/route
       auth:
@@ -93,6 +105,9 @@ apis:
         - supportPhoneNumber: Text
       response:
         type: TicketRideListRes
+      migrate:
+        endpoint: RideAPI TicketRideListEndpoint
+        endpointV2:
 
 
 # TODO add validation

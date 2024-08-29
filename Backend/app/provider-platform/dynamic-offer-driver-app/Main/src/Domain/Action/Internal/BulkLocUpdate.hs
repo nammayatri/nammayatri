@@ -31,6 +31,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Maps as TM
+import Tools.Utils (isDropInsideThreshold)
 
 data BulkLocUpdateReq = BulkLocUpdateReq
   { rideId :: Id DRide.Ride,
@@ -55,5 +56,6 @@ bulkLocUpdate req = do
       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
       else pure Nothing
   let isTollApplicable = DC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId loc
+  let passedThroughDrop = any (isDropInsideThreshold booking transportConfig) loc
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop loc
   pure Success

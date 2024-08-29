@@ -409,3 +409,17 @@ mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegis
 mkDriverRegistrationAPIs driverRegistrationClient = (DriverRegistrationAPIs {..})
   where
     getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> postDriverRegistrationDocumentsUpdate = driverRegistrationClient
+
+data DriverRegistrationEndpointDSL
+  = GetDriverRegistrationDocumentsListEndpoint
+  | GetDriverRegistrationGetDocumentEndpoint
+  | PostDriverRegistrationDocumentUploadEndpoint
+  | PostDriverRegistrationRegisterDlEndpoint
+  | PostDriverRegistrationRegisterRcEndpoint
+  | PostDriverRegistrationRegisterGenerateAadhaarOtpEndpoint
+  | PostDriverRegistrationRegisterVerifyAadhaarOtpEndpoint
+  | GetDriverRegistrationUnderReviewDriversEndpoint
+  | GetDriverRegistrationDocumentsInfoEndpoint
+  | PostDriverRegistrationDocumentsUpdateEndpoint
+  deriving stock (Show, Read, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

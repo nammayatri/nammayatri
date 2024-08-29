@@ -23,20 +23,9 @@ where
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Validation
-
--- we need to save endpoint transactions only for POST, PUT, DELETE APIs
-data BookingEndpoint
-  = StuckBookingsCancelEndpoint
-  | MultipleBookingSyncEndpoint
-  | PostBookingCancelAllStuckEndpoint
-  | PostBookingSyncMultipleEndpoint
-  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
-
-derivePersistField "BookingEndpoint"
 
 ---------------------------------------------------------
 -- bookings cancel --------------------------------------
