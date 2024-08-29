@@ -24,7 +24,6 @@ module Domain.Action.UI.Call
     directCallStatusCallback,
     getCallStatus,
     getDriverMobileNumber,
-    callOnClickTracker,
     DriverNumberType (..),
   )
 where
@@ -49,21 +48,17 @@ import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Types.APISuccess
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id as ID
 import Kernel.Utils.Common
-import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
@@ -287,48 +282,6 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
           let primaryNumber = fromMaybe ride.driverMobileNumber ride.driverPhoneNumber
           let alternateNumber = maybe "" ("," <>) ride.driverAlternateNumber
           return $ primaryNumber <> alternateNumber
-
-callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id SRide.Ride -> m APISuccess
-callOnClickTracker rideId = do
-  maxShards <- asks (.maxShards)
-  ride <- runInReplica $ QRide.findById (ID.Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
-  booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  buildCallStatus <- callStatusObj booking.merchantOperatingCityId
-  QCallStatus.create buildCallStatus
-  scheduleJobs ride booking.merchantId maxShards (riderConfig.exotelStatusCheckSchedulerDelay)
-  return Success
-  where
-    callStatusObj merchantOperatingCityId = do
-      id <- generateGUID
-      callId <- generateGUID -- added random placeholder for backward compatibility
-      now <- getCurrentTime
-      return $
-        CallStatus
-          { id = id,
-            callId = callId,
-            rideId = Just rideId,
-            dtmfNumberUsed = Nothing,
-            status = CallTypes.ATTEMPTED,
-            callAttempt = Just Attempted,
-            conversationDuration = 0,
-            recordingUrl = Nothing,
-            merchantId = Nothing,
-            merchantOperatingCityId = Just merchantOperatingCityId,
-            callService = Nothing,
-            callError = Nothing,
-            createdAt = now,
-            updatedAt = now,
-            customerIvrResponse = Nothing
-          }
-
-    scheduleJobs ride merchantId maxShards exotelStatusCheckSchedulerDelay = do
-      createJobIn @_ @'CheckExotelCallStatusAndNotifyBPP (fromIntegral exotelStatusCheckSchedulerDelay) maxShards $
-        CheckExotelCallStatusAndNotifyBPPJobData
-          { rideId = ride.id,
-            bppRideId = ride.bppRideId,
-            merchantId = merchantId
-          }
 
 -- getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe (Maybe Text, BT.Booking))
 -- getDtmfFlow dtmfNumber_ merchantId callSid exophone = do
