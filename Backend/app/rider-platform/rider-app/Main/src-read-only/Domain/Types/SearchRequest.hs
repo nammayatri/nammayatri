@@ -47,6 +47,7 @@ data SearchRequest = SearchRequest
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    placeNameSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     riderPreferredOption :: Domain.Types.SearchRequest.RiderPreferredOption,
