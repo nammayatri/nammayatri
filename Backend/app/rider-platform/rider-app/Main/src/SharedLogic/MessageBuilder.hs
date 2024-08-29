@@ -34,6 +34,9 @@ module SharedLogic.MessageBuilder
     BuildSendRideEndOTPMessageReq (..),
     buildSendRideEndOTPMessage,
     shortenTrackingUrl,
+    BuildDeliveryMessageReq (..),
+    DeliveryMessageRequestType (..),
+    buildDeliveryDetailsMessage,
   )
 where
 
@@ -231,3 +234,29 @@ shortenTrackingUrl url = do
           }
   res <- UrlShortner.generateShortUrl shortUrlReq
   return res.shortUrl
+
+data DeliveryMessageRequestType = SenderReq | ReceiverReq
+
+data BuildDeliveryMessageReq = BuildDeliveryMessageReq
+  { driverName :: Text,
+    driverNumber :: Text,
+    trackingUrl :: Text,
+    otp :: Text,
+    deliveryMessageType :: DeliveryMessageRequestType
+  }
+
+buildDeliveryDetailsMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildDeliveryMessageReq -> m SmsReqBuilder
+buildDeliveryDetailsMessage merchantOperatingCityId req = do
+  let merchantMessageKey = case req.deliveryMessageType of
+        SenderReq -> DMM.SMS_DELIVERY_DETAILS_SENDER
+        ReceiverReq -> DMM.SMS_DELIVERY_DETAILS_RECEIVER
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
+  buildSendSmsReq
+    merchantMessage
+    [ ("driverName", req.driverName),
+      ("driverNumber", req.driverNumber),
+      ("trackingUrl", req.trackingUrl),
+      ("otp", req.otp)
+    ]

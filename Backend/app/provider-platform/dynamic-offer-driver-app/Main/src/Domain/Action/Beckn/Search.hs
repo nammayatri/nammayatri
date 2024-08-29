@@ -456,6 +456,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         roundTrip = Just roundTrip,
         isAdvanceBookingEnabled = False,
         searchTags = Nothing,
+        tripCategory = Nothing,
         ..
       }
 
@@ -671,7 +672,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
                       <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
               else do
                 [OneWay OneWayOnDemandStaticOffer, Rental OnDemandStaticOffer]
-                  <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp] else [])
+                  <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] else [])
           Nothing ->
             [Rental OnDemandStaticOffer]
               <> [Rental RideOtp | not isScheduled]
@@ -777,7 +778,9 @@ buildSearchReqLocation merchantId merchantOpCityId sessionToken address customer
               country = (address >>= (.country)) <|> updAddress.country,
               building = (address >>= (.building)) <|> updAddress.building,
               area = (address >>= (.ward)) <|> updAddress.area,
-              fullAddress = (address >>= decodeAddress) <|> updAddress.full_address
+              fullAddress = (address >>= decodeAddress) <|> updAddress.full_address,
+              instructions = Nothing,
+              extras = Nothing
             },
         ..
       }

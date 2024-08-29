@@ -34,14 +34,18 @@ import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Domain.Action.UI.Estimate as UEstimate
 import Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Quote as UQuote
-import Domain.Types.Booking
+import qualified Domain.Action.UI.Registration as Reg
+import Domain.Types.Booking (Booking, BookingStatus (..))
 import Domain.Types.Common
+import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
+import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
@@ -55,6 +59,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
@@ -65,9 +70,11 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import Tools.Error
 
 data DSelectReq = DSelectReq
@@ -77,7 +84,8 @@ data DSelectReq = DSelectReq
     autoAssignEnabledV2 :: Maybe Bool,
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
-    isAdvancedBookingEnabled :: Maybe Bool
+    isAdvancedBookingEnabled :: Maybe Bool,
+    deliveryDetails :: Maybe DTDD.DeliveryDetails
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -88,7 +96,19 @@ validateDSelectReq DSelectReq {..} =
     [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100000,
       whenJust customerExtraFeeWithCurrency $ \obj ->
         validateObject "customerExtraFeeWithCurrency" obj $ \obj' ->
-          validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100000.0
+          validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100000.0,
+      whenJust deliveryDetails $ \(DTDD.DeliveryDetails {..}) ->
+        sequenceA_
+          [ validateObject "senderDetails" senderDetails validatePersonDetails,
+            validateObject "receiverDetails" receiverDetails validatePersonDetails
+          ]
+    ]
+
+validatePersonDetails :: Validate DTDD.PersonDetails
+validatePersonDetails DTDD.PersonDetails {..} =
+  sequenceA_
+    [ validateField "phoneNumber" phoneNumber P.mobileNumber,
+      whenJust countryCode $ \cc -> validateField "countryCode" cc P.mobileCountryCode
     ]
 
 data DSelectRes = DSelectRes
@@ -177,6 +197,19 @@ select2 personId estimateId req@DSelectReq {..} = do
     QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
+  when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
+    when (isNothing deliveryDetails) $ throwError $ InvalidRequest "Delivery details not found for trip category Delivery"
+    let validDeliveryDetails = fromJust deliveryDetails
+    let senderLocationId = searchRequest.fromLocation.id
+    when (isNothing searchRequest.toLocation) $ throwError $ InvalidRequest "Receiver location not found for trip category Delivery"
+    let receiverLocationId = fromJust (searchRequest.toLocation <&> (.id))
+    let senderLocationAddress = validDeliveryDetails.senderDetails.address
+        receiverLocationAddress = validDeliveryDetails.receiverDetails.address
+    QLoc.updateInstructionsAndExtrasById senderLocationAddress.instructions senderLocationAddress.extras senderLocationId
+    QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
+    makeDeliverySearchParties searchRequestId searchRequest.merchantId validDeliveryDetails
+    QSearchRequest.updateInitiatedBy (Just $ Trip.DeliveryParty validDeliveryDetails.initiatedAs) searchRequestId
+
   QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
@@ -242,3 +275,32 @@ selectResult estimateId = do
       bppDetailList <- forM ((.providerId) <$> selectedQuotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
       return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList}
+
+makeDeliverySearchParties :: Id DSearchReq.SearchRequest -> Id DM.Merchant -> DTDD.DeliveryDetails -> Flow ()
+makeDeliverySearchParties searchRequestId merchantId deliveryDetails = do
+  senderPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.senderDetails.phoneNumber) (deliveryDetails.senderDetails.countryCode)
+  receiverPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.receiverDetails.phoneNumber) (deliveryDetails.receiverDetails.countryCode)
+  senderSpId <- Id <$> generateGUID
+  receiverSpId <- Id <$> generateGUID
+  now <- getCurrentTime
+  let senderParty =
+        DSRPL.SearchRequestPartiesLink
+          { id = senderSpId,
+            partyId = senderPartyId,
+            partyName = deliveryDetails.senderDetails.name,
+            partyType = Trip.DeliveryParty Trip.Sender,
+            searchRequestId = searchRequestId,
+            createdAt = now,
+            updatedAt = now
+          }
+  let receiverParty =
+        DSRPL.SearchRequestPartiesLink
+          { id = receiverSpId,
+            partyId = receiverPartyId,
+            partyName = deliveryDetails.receiverDetails.name,
+            partyType = Trip.DeliveryParty Trip.Receiver,
+            searchRequestId = searchRequestId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QSRPL.createMany [senderParty, receiverParty]

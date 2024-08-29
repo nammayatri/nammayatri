@@ -11,6 +11,11 @@ imports:
   Language: Tools.Maps
   Money: Kernel.Types.Common
   Currency: Kernel.Types.Common
+  EncryptedHashedField: Kernel.External.Encryption
+  DeliveryInitiation: BecknV2.OnDemand.Enums
+  DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
+  DbHash: Kernel.External.Encryption
+  TripCategory: Domain.Types.Trip
 
 SearchRequest:
   derives: Generic,Show,ToJSON
@@ -56,6 +61,7 @@ SearchRequest:
     searchTags: "Maybe [Text]"
     startTime: UTCTime
     createdAt: UTCTime
+    tripCategory: Maybe TripCategory
 
   beamType:
     startTime: Maybe UTCTime
@@ -166,6 +172,10 @@ SearchRequest:
     updateSearchTags:
       kvFunction: updateWithKV
       params: [searchTags]
+      where: id
+    updateTripCategory:
+      kvFunction: updateWithKV
+      params: [tripCategory]
       where: id
 
   extraOperations:

@@ -245,6 +245,8 @@ library
       Domain.Types.Coins.CoinHistory
       Domain.Types.Coins.CoinsConfig
       Domain.Types.Common
+      Domain.Types.DeliveryDetails
+      Domain.Types.DeliveryPersonDetails
       Domain.Types.DriverLocation
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation

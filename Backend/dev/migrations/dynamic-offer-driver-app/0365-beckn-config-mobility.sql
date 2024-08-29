@@ -69,4 +69,27 @@ VALUES
         120,
         120,
         '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}'
+    ),
+    (
+        '94aeefe5-5ba4-40bb-9552-f4881d6fa062',
+        'MOBILITY',
+        'http://localhost:8015/v1',
+        'http://localhost:8020',
+        'NAMMA_YATRI',
+        'http://localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+        'favorit0-0000-0000-0000-00000favorit',
+        null,
+        'localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+        now(),
+        now(),
+        'MOTORCYCLE',
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        120,
+        '{"bankAccNumber": "xyz@upi","bankCode": "xyz"}'
     );

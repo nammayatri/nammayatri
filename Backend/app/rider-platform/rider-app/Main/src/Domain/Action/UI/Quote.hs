@@ -161,6 +161,10 @@ mkQuoteAPIDetails tollCharges = \case
   DQuote.AmbulanceDetails DDriverOffer.DriverOffer {..} ->
     let distanceToPickup' = distanceToHighPrecMeters <$> distanceToPickup
      in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, ..}
+  DQuote.DeliveryDetails DDriverOffer.DriverOffer {..} ->
+    -- TODO::is delivery entity required
+    let distanceToPickup' = distanceToHighPrecMeters <$> distanceToPickup
+     in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, ..}
   DQuote.DriverOfferDetails DDriverOffer.DriverOffer {..} ->
     let distanceToPickup' = (distanceToHighPrecMeters <$> distanceToPickup) <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
         distanceToPickupWithUnit' = distanceToPickup <|> Just (Distance 0 Meter) -- TODO::remove this default value
@@ -285,6 +289,7 @@ getOffers searchRequest = do
       case quote.quoteDetails of
         SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
         SQuote.AmbulanceDetails details -> details.distanceToPickup
+        SQuote.DeliveryDetails details -> details.distanceToPickup
         SQuote.RentalDetails _ -> Nothing
         SQuote.DriverOfferDetails details -> details.distanceToPickup
         SQuote.OneWaySpecialZoneDetails _ -> Just $ Distance 0 Meter

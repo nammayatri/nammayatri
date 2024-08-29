@@ -186,5 +186,7 @@ convertDomainType DLoc.Location {..} =
       areaCode = address.areaCode,
       area = address.area,
       full_address = address.fullAddress,
+      instructions = address.instructions,
+      extras = address.extras,
       ..
     }

@@ -74,6 +74,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             tollCharges = tollCharges,
             tollNames = tollNames,
             transactionId = transactionId,
+            tripCategory = tripCategory,
             validTill = fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill
           }
 
@@ -120,5 +121,6 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.tollCharges = tollCharges,
         Beam.tollNames = tollNames,
         Beam.transactionId = transactionId,
+        Beam.tripCategory = tripCategory,
         Beam.validTill = Just validTill
       }

@@ -5,7 +5,9 @@ module Beckn.OnDemand.Transformer.Init where
 
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Init
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context
@@ -13,6 +15,8 @@ import BecknV2.Utils (maskNumber)
 import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.DeliveryDetails as DTDD
+import qualified Domain.Types.Trip as Trip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Encryption
 import qualified Kernel.Prelude
@@ -86,7 +90,7 @@ tfOrderItems uiConfirm = do
   let itemLocationIds_ = Nothing
   let itemPaymentIds_ = Nothing
   let itemPrice_ = Nothing
-  let itemTags_ = Nothing
+  let itemTags_ = Just $ mkItemTags uiConfirm
   BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
 
 tfPrice :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Price
@@ -135,3 +139,112 @@ tfCustomer res =
             personName = Just riderName,
             personTags = Nothing
           }
+
+mkItemTags :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]
+mkItemTags res =
+  let itemTags = if maybe False Trip.isDeliveryTrip res.booking.tripCategory then mkDeliveryTagGroup res else []
+   in itemTags
+
+mkDeliveryTagGroup :: SharedLogic.Confirm.DConfirmRes -> [Spec.TagGroup]
+mkDeliveryTagGroup res =
+  maybe
+    []
+    ( \(SharedLogic.Confirm.DConfirmResDelivery (DTDD.DeliveryDetails {..})) ->
+        pure $
+          Spec.TagGroup
+            { tagGroupDisplay = Just False,
+              tagGroupDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.DELIVERY,
+                      descriptorName = Just "Delivery Info",
+                      descriptorShortDesc = Nothing
+                    },
+              tagGroupList =
+                Just
+                  [ Spec.Tag
+                      { tagDescriptor =
+                          Just $
+                            Spec.Descriptor
+                              { descriptorCode = Just $ show Tags.INITIATED_AS,
+                                descriptorName = Just "Delivery Initiated As",
+                                descriptorShortDesc = Nothing
+                              },
+                        tagDisplay = Just False,
+                        tagValue = Just $ show initiatedAs
+                      },
+                    Spec.Tag
+                      { tagDescriptor =
+                          Just $
+                            Spec.Descriptor
+                              { descriptorCode = Just $ show Tags.SENDER_NAME,
+                                descriptorName = Just "Sender Name",
+                                descriptorShortDesc = Nothing
+                              },
+                        tagDisplay = Just False,
+                        tagValue = Just senderDetails.name
+                      },
+                    Spec.Tag
+                      { tagDescriptor =
+                          Just $
+                            Spec.Descriptor
+                              { descriptorCode = Just $ show Tags.SENDER_LOCATION_INSTRUCTIONS,
+                                descriptorName = Just "Sender Location Instructions",
+                                descriptorShortDesc = Nothing
+                              },
+                        tagDisplay = Just False,
+                        tagValue = Just $ mkLocationInstructions senderDetails.address.instructions senderDetails.address.extras
+                      },
+                    Spec.Tag
+                      { tagDescriptor =
+                          Just $
+                            Spec.Descriptor
+                              { descriptorCode = Just $ show Tags.SENDER_NUMBER,
+                                descriptorName = Just "Sender phone number",
+                                descriptorShortDesc = Nothing
+                              },
+                        tagDisplay = Just False,
+                        tagValue = Just senderDetails.phoneNumber
+                      },
+                    Spec.Tag
+                      { tagDescriptor =
+                          Just $
+                            Spec.Descriptor
+                              { descriptorCode = Just $ show Tags.RECEIVER_NAME,
+                                descriptorName = Just "Receiver Name",
+                                descriptorShortDesc = Nothing
+                              },
+                        tagDisplay = Just False,
+                        tagValue = Just receiverDetails.name
+                      },
+                    Spec.Tag
+                      { tagDescriptor =
+                          Just $
+                            Spec.Descriptor
+                              { descriptorCode = Just $ show Tags.RECEIVER_LOCATION_INSTRUCTIONS,
+                                descriptorName = Just "Receiver Location Instructions",
+                                descriptorShortDesc = Nothing
+                              },
+                        tagDisplay = Just False,
+                        tagValue = Just $ mkLocationInstructions receiverDetails.address.instructions receiverDetails.address.extras
+                      },
+                    Spec.Tag
+                      { tagDescriptor =
+                          Just $
+                            Spec.Descriptor
+                              { descriptorCode = Just $ show Tags.RECEIVER_NUMBER,
+                                descriptorName = Just "Receiver phone number",
+                                descriptorShortDesc = Nothing
+                              },
+                        tagDisplay = Just False,
+                        tagValue = Just receiverDetails.phoneNumber
+                      }
+                  ]
+            }
+    )
+    res.confirmResDetails
+  where
+    mkLocationInstructions instructions extras =
+      fromMaybe mempty instructions
+        <> "|"
+        <> fromMaybe mempty extras

@@ -63,6 +63,7 @@ data ShareRideInfoRes = ShareRideInfoRes
     bookingId :: Id Booking,
     status :: RideStatus,
     driverName :: Text,
+    driverNumber :: Maybe Text,
     driverRating :: Maybe Centesimal,
     vehicleNumber :: Text,
     vehicleModel :: Text,

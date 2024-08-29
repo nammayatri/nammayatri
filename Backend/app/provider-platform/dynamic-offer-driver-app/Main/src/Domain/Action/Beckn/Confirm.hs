@@ -257,6 +257,9 @@ validateRequest subscriber transporterId req now = do
     Ambulance OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     Ambulance OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     Ambulance OneWayRideOtp -> getRideOtpQuoteDetails booking transporter -- should create new mode?
+    Delivery OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
+    Delivery OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    Delivery OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
   where
     getDriverQuoteDetails booking transporter = do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)

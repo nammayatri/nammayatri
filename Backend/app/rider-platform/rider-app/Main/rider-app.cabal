@@ -217,6 +217,7 @@ library
       Domain.Types.Booking.API
       Domain.Types.CacType
       Domain.Types.Common
+      Domain.Types.DeliveryDetails
       Domain.Types.Extra.Booking
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
@@ -429,6 +430,7 @@ library
       Domain.Types.Booking
       Domain.Types.BookingCancellationReason
       Domain.Types.BookingLocation
+      Domain.Types.BookingPartiesLink
       Domain.Types.BookingUpdateRequest
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
@@ -490,6 +492,7 @@ library
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
+      Domain.Types.SearchRequestPartiesLink
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -517,6 +520,7 @@ library
       Storage.Beam.Booking
       Storage.Beam.BookingCancellationReason
       Storage.Beam.BookingLocation
+      Storage.Beam.BookingPartiesLink
       Storage.Beam.BookingUpdateRequest
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
@@ -577,6 +581,7 @@ library
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
+      Storage.Beam.SearchRequestPartiesLink
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -605,6 +610,7 @@ library
       Storage.Queries.Booking
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BookingLocation
+      Storage.Queries.BookingPartiesLink
       Storage.Queries.BookingUpdateRequest
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
@@ -701,6 +707,7 @@ library
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
+      Storage.Queries.SearchRequestPartiesLink
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory

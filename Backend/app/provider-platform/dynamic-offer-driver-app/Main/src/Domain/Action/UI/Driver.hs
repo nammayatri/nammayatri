@@ -932,6 +932,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.BLACK -> [DVST.BLACK]
               DV.BLACK_XL -> [DVST.BLACK_XL]
               DV.BIKE -> [DVST.BIKE]
+              DV.DELIVERY_BIKE -> [DVST.DELIVERY_BIKE]
               DV.AMBULANCE_TAXI -> [DVST.AMBULANCE_TAXI] -- deprecated, only for compilation
               DV.AMBULANCE_TAXI_OXY -> [DVST.AMBULANCE_TAXI_OXY]
               DV.AMBULANCE_AC -> [DVST.AMBULANCE_AC]

@@ -40,6 +40,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -68,6 +69,7 @@ postBookingCancelAllStuck merchantShortId opCity req = do
   let stuckPersonIds = stuckRideItems <&> (.riderId)
   _ <- QRide.cancelRides (stuckRideItems <&> (.rideId)) now
   _ <- QBooking.cancelBookings allStuckBookingIds now
+  _ <- mapM QBPL.makeAllInactiveByBookingId allStuckBookingIds
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
   _ <- QPFS.updateToIdleMultiple stuckPersonIds now
   void $ QPFS.clearCache `mapM` stuckPersonIds

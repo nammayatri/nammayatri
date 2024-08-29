@@ -62,6 +62,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.CallStatus as QCallStatus
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
@@ -240,10 +241,16 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
     findRiderDetails merchantId mobileNumberHash =
       runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId) >>= \case
         Nothing -> pure Nothing
-        Just person ->
-          QRB.findAssignedByRiderId person.id >>= \case
+        Just person -> do
+          selfActiveBooking <- QB.findAssignedByRiderId person.id
+          partyActiveBooking <-
+            QBPL.findOneActivePartyByRiderId person.id >>= \case
+              Nothing -> pure Nothing
+              Just party -> QRB.findById party.bookingId
+          let activeBooking = selfActiveBooking <|> partyActiveBooking
+          case activeBooking of
             Nothing -> pure Nothing
-            Just activeBooking -> return $ Just (Nothing, activeBooking)
+            Just activeBooking_ -> return $ Just (Nothing, activeBooking_)
 
     ensureCallStatusExists id callId rideId callStatus' merchantOperatingCityId =
       QCallStatus.findOneByRideId (Just $ getId rideId) >>= \case

@@ -16,6 +16,8 @@ module Domain.Action.Beckn.Init where
 
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.DeliveryDetails as DTDD
+import qualified Domain.Types.DeliveryPersonDetails as DTDPD
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
@@ -25,6 +27,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
@@ -34,6 +37,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
@@ -41,7 +45,9 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
+import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
@@ -62,8 +68,11 @@ data InitReq = InitReq
     bppSubscriberId :: Maybe Text,
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
-    estimateId :: Text
+    estimateId :: Text,
+    initReqDetails :: Maybe InitReqDetails
   }
+
+data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
 
 data ValidatedInitQuote = ValidatedQuote DQ.Quote | ValidatedEstimate DDQ.DriverQuote DST.SearchTry
 
@@ -90,7 +99,8 @@ data InitRes = InitRes
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    EncFlow m r
   ) =>
   Id DM.Merchant ->
   InitReq ->
@@ -107,14 +117,14 @@ handler merchantId req validatedReq = do
   (booking, driverName, driverId) <-
     case validatedReq.quote of
       ValidatedEstimate driverQuote searchTry -> do
-        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup)
+        booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
 
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
-        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
+        booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails
         QRB.createBooking booking
         return (booking, Nothing, Nothing)
 
@@ -127,6 +137,7 @@ handler merchantId req validatedReq = do
     buildBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,
+        EncFlow m r,
         HasField "vehicleServiceTier" q ServiceTierType,
         HasField "distance" q (Maybe Meters),
         HasField "estimatedFare" q HighPrecMoney,
@@ -142,14 +153,22 @@ handler merchantId req validatedReq = do
       Maybe (Id DMPM.MerchantPaymentMethod) ->
       Maybe Text ->
       Maybe Meters ->
+      Maybe InitReqDetails ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup = do
+    buildBooking searchRequest driverQuote quoteId tripCategory now mbPaymentMethodId paymentUrl distanceToPickup initReqDetails = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
           isTollApplicable = isTollApplicableForTrip driverQuote.vehicleServiceTier tripCategory
-      exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest
+      exophone <- findRandomExophone searchRequest.merchantOperatingCityId searchRequest DExophone.CALL_RIDE
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchRequest.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound (show driverQuote.vehicleServiceTier))
+      (initiatedAs, senderDetails, receiverDetails) <- do
+        case tripCategory of
+          Delivery _ -> do
+            initReqDetail' <- fromMaybeM (InternalError "Delivery details not found") initReqDetails
+            case initReqDetail' of
+              InitReqDeliveryDetails deliveryDetails -> makeBookingDeliveryDetails searchRequest deliveryDetails merchantId
+          _ -> pure (Nothing, Nothing, Nothing)
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
@@ -194,6 +213,42 @@ handler merchantId req validatedReq = do
             isDashboardRequest = searchRequest.isDashboardRequest,
             ..
           }
+    makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
+    makeBookingDeliveryDetails searchReq deliveryDetails mId = do
+      --update search req locations
+      now <- getCurrentTime
+      merchant <- QM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
+      let senderLocationId = searchReq.fromLocation.id
+      receiverLocationId <- (searchReq.toLocation <&> (.id)) & fromMaybeM (InternalError $ "To location not found for trip category delivery search request " <> show searchReq.id)
+      QLoc.updateInstructionsAndExtrasById deliveryDetails.senderDetails.address.instructions deliveryDetails.senderDetails.address.extras senderLocationId
+      QLoc.updateInstructionsAndExtrasById deliveryDetails.receiverDetails.address.instructions deliveryDetails.receiverDetails.address.extras receiverLocationId
+
+      -- update Rider details
+      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber now False
+      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber now False
+      when isNewSender $ QRD.create senderRiderDetails
+      when isNewReceiver $ QRD.create receiverRiderDetails
+
+      -- update trip category of search request
+      QSR.updateTripCategory (Just (DTrip.Delivery DTrip.OneWayOnDemandDynamicOffer)) searchReq.id
+
+      -- get the sender and receiver exophone number
+      senderPrimaryExophone <- findRandomExophone searchReq.merchantOperatingCityId searchReq DExophone.CALL_DELIVERY_SENDER
+      receiverPrimaryExophone <- findRandomExophone searchReq.merchantOperatingCityId searchReq DExophone.CALL_DELIVERY_RECEIVER
+
+      let senderPersonDetails =
+            DTDPD.DeliveryPersonDetails
+              { DTDPD.name = deliveryDetails.senderDetails.name,
+                DTDPD.primaryExophone = senderPrimaryExophone.primaryPhone,
+                DTDPD.id = senderRiderDetails.id
+              }
+          receiverPersonDetails =
+            DTDPD.DeliveryPersonDetails
+              { DTDPD.name = deliveryDetails.receiverDetails.name,
+                DTDPD.primaryExophone = receiverPrimaryExophone.primaryPhone,
+                DTDPD.id = receiverRiderDetails.id
+              }
+      return (Just deliveryDetails.initiatedAs, Just senderPersonDetails, Just receiverPersonDetails)
 
     fetchPaymentMethodAndUrl merchantOpCityId = do
       mbPaymentMethod <- forM req.paymentMethodInfo $ \paymentMethodInfo -> do
@@ -203,10 +258,10 @@ handler merchantId req validatedReq = do
         mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
       pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
 
-findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DSR.SearchRequest -> m DExophone.Exophone
-findRandomExophone merchantOpCityId sr = do
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DSR.SearchRequest -> DExophone.ExophoneType -> m DExophone.Exophone
+findRandomExophone merchantOpCityId sr exoType = do
   merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sr.transactionId))) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone DExophone.CALL_RIDE
+  exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone exoType
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOpCityId.getId
     e : es -> pure $ e :| es

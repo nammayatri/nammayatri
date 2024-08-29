@@ -42,6 +42,7 @@ data VehicleVariant
   | AMBULANCE_AC_OXY
   | AMBULANCE_VENTILATOR
   | SUV_PLUS
+  | DELIVERY_BIKE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 $(mkHttpInstancesForEnum ''VehicleVariant)
@@ -67,6 +68,7 @@ castServiceTierToVariant = \case
   DVST.AMBULANCE_AC_OXY -> AMBULANCE_AC_OXY
   DVST.AMBULANCE_VENTILATOR -> AMBULANCE_VENTILATOR
   DVST.SUV_PLUS -> SUV_PLUS
+  DVST.DELIVERY_BIKE -> DELIVERY_BIKE
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
 castVariantToServiceTier = \case
@@ -86,6 +88,7 @@ castVariantToServiceTier = \case
   AMBULANCE_AC_OXY -> DVST.AMBULANCE_AC_OXY
   AMBULANCE_VENTILATOR -> DVST.AMBULANCE_VENTILATOR
   SUV_PLUS -> DVST.SUV_PLUS
+  DELIVERY_BIKE -> DVST.DELIVERY_BIKE
 
 castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
 castVehicleVariantToVehicleCategory = \case
@@ -105,3 +108,4 @@ castVehicleVariantToVehicleCategory = \case
   AMBULANCE_AC_OXY -> DVC.AMBULANCE
   AMBULANCE_VENTILATOR -> DVC.AMBULANCE
   SUV_PLUS -> DVC.CAR
+  DELIVERY_BIKE -> DVC.MOTORCYCLE

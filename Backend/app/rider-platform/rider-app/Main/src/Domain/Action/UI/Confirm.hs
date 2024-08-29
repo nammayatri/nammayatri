@@ -36,6 +36,7 @@ import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Quote as QQuote
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
@@ -68,6 +69,7 @@ cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason
   _ <- QRideB.updateStatus booking.id DRB.CANCELLED
+  _ <- QBPL.makeAllInactiveByBookingId booking.id
   _ <- QBCR.upsert bookingCancellationReason
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails Nothing

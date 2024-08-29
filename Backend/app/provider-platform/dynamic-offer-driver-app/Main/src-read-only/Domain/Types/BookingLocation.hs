@@ -27,6 +27,8 @@ data BookingLocationAPIEntity = BookingLocationAPIEntity
     building :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     city :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     country :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    extras :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    instructions :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -41,6 +43,8 @@ data LocationAddress = LocationAddress
     city :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     country :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     door :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    extras :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    instructions :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }

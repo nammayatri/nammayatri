@@ -21,6 +21,7 @@ import qualified Storage.Queries.TripTerms as QTT
 fromQuoteDetails :: Domain.Types.Quote.QuoteDetails -> (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text)
 fromQuoteDetails quoteDetails =
   let (fareProductType, distanceToNearestDriver, rentalDetailsId, driverOfferId, specialZoneQuoteId) = case quoteDetails of
+        DQ.DeliveryDetails details -> (DRIVER_OFFER, Nothing, Nothing, Just $ getId details.id, Nothing) -- for now as FareProductType deprecated, change later accordingly
         DQ.AmbulanceDetails details -> (AMBULANCE, Nothing, Nothing, Just $ getId details.id, Nothing)
         DQ.OneWayDetails details -> (ONE_WAY, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing)
         DQ.RentalDetails rentalDetails -> (RENTAL, Nothing, Just $ getId rentalDetails.id, Nothing, Nothing)
@@ -39,6 +40,7 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
         RideShare _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
         Rental _ -> getRentalDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")
         Ambulance _ -> getAmbulanceDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
+        Delivery _ -> getDeliveryDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
         _ -> getDriverOfferDetails driverOfferId >>= fromMaybeM (InternalError "No driver offer details")
     -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
     Nothing ->
@@ -77,6 +79,10 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
           mbInterCityDetails <- QueryICD.findById (Id quoteId)
           maybe (pure Nothing) (pure . Just . DQ.InterCityDetails) mbInterCityDetails
         Nothing -> pure Nothing
+
+    getDeliveryDetails driverOfferId' = do
+      res <- maybe (pure Nothing) (QueryDO.findById . Id) driverOfferId'
+      maybe (pure Nothing) (pure . Just . DQ.DeliveryDetails) res
 
 getTripTerms :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms)
 getTripTerms tripTermsId = if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing

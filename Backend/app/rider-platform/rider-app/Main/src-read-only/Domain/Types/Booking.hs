@@ -17,6 +17,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.Trip
 import qualified Domain.Types.TripTerms
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
@@ -48,6 +49,7 @@ data Booking = Booking
     fulfillmentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     initialPickupLocation :: Domain.Types.Location.Location,
+    initiatedBy :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBookingUpdated :: Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -91,7 +93,11 @@ data BookingDetails
   | OneWaySpecialZoneDetails Domain.Types.Booking.OneWaySpecialZoneBookingDetails
   | InterCityDetails Domain.Types.Booking.InterCityBookingDetails
   | AmbulanceDetails Domain.Types.Booking.AmbulanceBookingDetails
+  | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
   deriving (Show)
+
+data DeliveryBookingDetails = DeliveryBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
+  deriving (Generic, Show)
 
 data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Show)

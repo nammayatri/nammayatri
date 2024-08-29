@@ -19,6 +19,8 @@ data BookingLocationT f = BookingLocationT
     city :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     country :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     door :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    extras :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    instructions :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     state :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     street :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
