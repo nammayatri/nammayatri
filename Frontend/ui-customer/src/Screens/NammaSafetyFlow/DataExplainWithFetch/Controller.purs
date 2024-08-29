@@ -92,7 +92,7 @@ eval (PrimaryButtonAC PrimaryButton.OnClick) state =
 
     currentStageConfig = getStepConfig state
   in
-    if state.props.stageSetUpCompleted then
+    if state.props.stageSetUpCompleted && currentStageConfig.primaryButtonAction /= "SafetyTestDrill" then
       exit $ Exit state
     else case currentStageConfig.primaryButtonAction of
       "AddContactsFlow" -> updateAndExit state $ AddEmergencyContacts state

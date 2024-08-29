@@ -20,7 +20,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Engineering.Helpers.Commons as EHC
 import Mobility.Prelude (boolToVisibility)
-import Prelude (map, not, ($), (<>), (==), (&&))
+import Prelude (map, not, ($), (<>), (==), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
@@ -59,13 +59,13 @@ genericHeaderConfig state =
           , enableRipple = true
           }
         , textConfig
-          { text = state.data.headerValue -- (getString SAFETY_CHECK_IN)
+          { text = state.data.headerValue
           , color = Color.darkCharcoal
           }
         , suffixImageConfig
           { visibility = GONE
           }
-        , visibility = VISIBLE --titleVisibility
+        , visibility = VISIBLE
         }
   in
     genericHeaderConfig'
@@ -79,7 +79,7 @@ primaryButtonConfig state =
 
     primaryButtonConfig' =
       config
-        { textConfig { text = if state.props.stageSetUpCompleted then "Done" else screenStageConfig.primaryButtonText }
+        { textConfig { text = if state.props.stageSetUpCompleted && screenStageConfig.primaryButtonAction /= "SafetyTestDrill" then (getString DONE) else screenStageConfig.primaryButtonText }
         , width = MATCH_PARENT
         , cornerRadius = 12.0
         , height = (V 64)
@@ -110,7 +110,7 @@ boxContainerConfig state config action =
         , noteText = config.noteText
         , noteImage = config.noteImageIcon
         , toggleButton = toggleButtonConfig
-        , buttonAction = spy "Yaha Kya hai" action -- screenStageConfig.primaryButtonAction
+        , buttonAction = action
         }
   in
     boxContainerConfig'
@@ -137,7 +137,7 @@ dropDownWithHeaderConfig state config action =
         , headerText = config.headerText
         , dropDownOptions = config.dropDownItems
         , selectedValue = getRideOptionFromKey selectedValueDropDown
-        , dropDownAction = action --screenStageConfig.primaryButtonAction
+        , dropDownAction = action
         }
   in
     dropDownWithHeaderConfig'

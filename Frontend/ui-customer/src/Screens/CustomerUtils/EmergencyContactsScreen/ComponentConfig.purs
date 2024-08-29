@@ -2,25 +2,25 @@ module Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig where
 
 import Common.Types.App
 
+import Components.DropDownWithHeader as DropDownWithHeader
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (length, null)
+import Data.Show (show)
 import Effect (Effect)
 import Engineering.Helpers.Commons (os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Mobility.Prelude (boolToVisibility)
 import Prelude (not, (<>), (==), ($), (&&), (>), (<))
 import PrestoDOM (Length(..), Margin(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, height, margin, padding, text, textSize, width, imageUrl, visibility, stroke)
+import Screens.EmergencyContactsScreen.ScreenData as EMData
 import Screens.Types (EmergencyContactsScreenState, DropDownWithHeaderConfig, NewContacts)
 import Styles.Colors as Color
-import Data.Show (show)
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Components.DropDownWithHeader as DropDownWithHeader
-import Mobility.Prelude (boolToVisibility)
-import Screens.EmergencyContactsScreen.ScreenData as EMData
 
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
@@ -29,7 +29,7 @@ genericHeaderConfig state =
     config = GenericHeader.config
     titleText = case null state.data.emergencyContactsList, state.props.showContactList of 
                     _, true -> show (length state.data.selectedContacts) <> "/3 " <> (getString CONTACTS_SELECTED)
-                    true, false -> getString EMERGENCY_CONTACTS
+                    true, false -> getString TRUSTED_CONTACT
                     false, false -> getString EDIT_EMERGENCY_CONTACTS
     genericHeaderConfig' =
       config
@@ -65,7 +65,7 @@ primaryButtonConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = if null state.data.selectedContacts then "Add Contacts" else if conditionForPrimaryButtonText then "Next" else if defaultContactCondition then "Done" else (getString CONFIRM_EMERGENCY_CONTACTS)
+          { text = if null state.data.selectedContacts then (getString ADD_CONTACTS) else if conditionForPrimaryButtonText then (getString NEXT) else if defaultContactCondition then (getString DONE) else (getString CONFIRM_EMERGENCY_CONTACTS)
           , accessibilityHint = (if null state.data.selectedContacts then "Add Contacts" else if conditionForPrimaryButtonText then "Next" else if defaultContactCondition then "Done" else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
           }
         , isClickable = true

@@ -2398,7 +2398,8 @@ type DataFetchScreenData = {
   emergencySOSShake :: Boolean,
   autoCallDefaultContact :: Boolean,
   informPoliceSos :: Boolean,
-  notifySosWithEmergencyContacts :: Boolean
+  notifySosWithEmergencyContacts :: Boolean,
+  hasCompletedMockSafetyDrill :: Boolean
 }
 
 type DataFetchScreenProps = {
@@ -2409,12 +2410,12 @@ type DataFetchScreenProps = {
 }
 
 type SafetyStepsConfig
-  = { title :: String
+  = { title :: STR
     , prefixImage :: String
     , stepNumber :: String
     , isCompleted :: Boolean
     , prefixImageCompleted :: String
-    , labelText :: Maybe String
+    , labelText :: Maybe STR
     , navigation :: NammaSafetyStage
     }
 

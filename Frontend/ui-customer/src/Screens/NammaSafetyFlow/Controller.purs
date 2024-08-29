@@ -118,7 +118,7 @@ updateSafetySetupSteps state (API.GetEmergencySettingsRes settingsResp) contacts
         TrustedContacts _ -> stepsConfig { isCompleted = contactsLength > 0 }
         SafetyCheckIn _ -> stepsConfig { isCompleted = getBooleanFromOptions settingsResp.enableUnexpectedEventsCheck || getBooleanFromOptions settingsResp.enablePostRideSafetyCheck || settingsResp.informPoliceSos || settingsResp.notifySafetyTeamForSafetyCheckFailure }
         EmergencyActions _ -> stepsConfig { isCompleted = settingsResp.shakeToActivate || settingsResp.autoCallDefaultContact }
-        SafetyDrill _ -> stepsConfig
+        SafetyDrill _ -> stepsConfig { isCompleted = settingsResp.hasCompletedMockSafetyDrill}
         TrustedContactsActions _ -> stepsConfig
         DriverSafetyStandards _ -> stepsConfig
     )
