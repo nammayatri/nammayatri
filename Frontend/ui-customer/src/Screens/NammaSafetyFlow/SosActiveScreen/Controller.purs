@@ -203,7 +203,8 @@ eval (UploadMultiPartDataCallback _ fileId) state = do
 eval (SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording) state = 
   continueWithCmd state { props { audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", isAudioRecordingActive = false } } [do
     _   <- pure $ clearTimerWithId state.props.recordingTimerId
-    res <- runEffectFn1 JB.stopAudioRecording ""
+    void $ runEffectFn1 JB.removeMediaPlayer ""
+    void $ runEffectFn1 JB.stopAudioRecording ""
     pure NoAction
   ]
 

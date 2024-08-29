@@ -40,7 +40,7 @@ import Data.Maybe (Maybe)
 import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 
-import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes,RideBookingStatusRes, SelectListRes)
+import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes,RideBookingStatusRes, SelectListRes, GetEmergencySettingsRes)
 import Common.Types.App as CTP
 
 import RemoteConfig as RemoteConfig
@@ -333,7 +333,7 @@ data Action = NoAction
   | LocateOnMapCallBack String String String
   | UpdatePickupLocation String String String
   | ShakeActionCallback Int
-  | UpdateShakePermission Boolean
+  | UpdateSafetySettings GetEmergencySettingsRes
   | ServicesOnClick RemoteConfig.Service
 
 instance showAction :: Show Action where show _ = ""

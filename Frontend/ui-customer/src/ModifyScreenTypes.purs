@@ -119,6 +119,7 @@ updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos = do
                     , checkPastRide = state.props.currentStage == HomeScreen
                     , isAudioRecordingActive = false
                     , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false
+                    , showMenu = false
                     }
                   , data
                     { rideId = state.data.driverInfoCardState.rideId

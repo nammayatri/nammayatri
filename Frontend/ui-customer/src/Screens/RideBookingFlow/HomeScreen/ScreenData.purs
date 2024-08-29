@@ -388,7 +388,7 @@ initData = let
     , isContactSupportPopUp : false
     , isSharedLocationFlow : false
     , isOtpRideFlow : false
-    , isShakeEnabled : false
+    , safetySettings : Nothing
   }
 }
 

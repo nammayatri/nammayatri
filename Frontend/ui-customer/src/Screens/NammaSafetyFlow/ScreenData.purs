@@ -60,6 +60,7 @@ initData =
             , isFollowing: Nothing
             }
         , currentLocation: "Loading..."
+        , currentLatLon : Nothing
         , vehicleDetails: "Loading..."
         , videoList: []
         , sosType: Nothing

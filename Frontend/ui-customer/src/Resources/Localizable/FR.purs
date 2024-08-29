@@ -1386,7 +1386,7 @@ getFR stringKey =
         EMERGENCY_SOS_NEW -> "Urgence - SOS"
         EMERGENCY_SOS_SUB -> "Le bouton SOS alerte vos contacts de confiance, l'équipe de sécurité disponible 24/7 et appelle un contact sélectionné en un seul tap."
         SHAKE_TO_ACTIVATE -> "Secouer pour activer"
-        SHAKE_TO_ACTIVATE_SUB -> "Secouez votre appareil pour accéder aux actions d'urgence pendant le trajet."
+        SHAKE_TO_ACTIVATE_SUB _ -> "Secouez votre appareil pour accéder aux actions d'urgence pendant le trajet."
         AUTOMATIC_CALL_SOS -> "Appel automatique en cas d'urgence"
         AUTOMATIC_CALL_SOS_SUB -> "Sélectionnez un contact de confiance préféré pour les appels automatiques en cas d'urgence."
         PLACE_DEFAULT_CALL -> "Appeler le contact par défaut"
@@ -1464,3 +1464,4 @@ getFR stringKey =
         WHERE_ARE_YOU_GOING -> "Où vas-tu?"
         TAP_TO_FOLLOW -> "Tap to follow"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " has shared a ride with you. Tap to follow"
+        TEST_SOS_ACTIVATED -> "Test SOS activated"

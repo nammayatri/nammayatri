@@ -954,7 +954,7 @@ type HomeScreenStateProps =
   , isContactSupportPopUp :: Boolean
   , isSharedLocationFlow :: Boolean
   , isOtpRideFlow :: Boolean
-  , isShakeEnabled :: Boolean
+  , safetySettings :: Maybe API.GetEmergencySettingsRes
   , editedPickUpLocation :: EditedLocation
   }
 
@@ -2332,7 +2332,8 @@ type NammaSafetyScreenData =  {
   bannerData :: BannerCarousalData,
   safetySetupSteps :: Array SafetyStepsConfig,
   extraSafetyExplaination :: Array SafetyStepsConfig,
-  autoCallDefaultContact :: Boolean
+  autoCallDefaultContact :: Boolean,
+  currentLatLon :: Maybe LatLong
  }
 
 type NammaSafetyScreenProps =  {
