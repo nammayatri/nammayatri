@@ -132,6 +132,7 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
           , priority: fromMaybe 1 item.priority
           , contactPersonId : item.contactPersonId
           , isFollowing : Nothing
+          , notifiedViaFCM : item.notifiedViaFCM
           }
       )
       response.defaultEmergencyNumbers

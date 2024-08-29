@@ -8,6 +8,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.Types (EmergencyContactsScreenState(..), DropDownOptions)
 import Services.API as API
+import Data.Maybe (Maybe(..))
 
 initData :: EmergencyContactsScreenState
 initData =
@@ -26,6 +27,7 @@ initData =
           , priority: 1
           , contactPersonId: Nothing
           , isFollowing: Nothing
+          , notifiedViaFCM : Nothing
           }
       , searchResult: []
       , prestoListArrayItems: []
@@ -43,6 +45,7 @@ initData =
           , shareTripWithEmergencyContactOption: neverShareRideOption
           , onRide: false
           , priority: 1
+          , notifiedViaFCM : Nothing
           , contactPersonId: Nothing
           , isFollowing: Nothing
           }

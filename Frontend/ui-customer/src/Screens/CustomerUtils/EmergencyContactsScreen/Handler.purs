@@ -53,5 +53,6 @@ listItem1 = {
   onRide: false,
   priority : 1,
   contactPersonId : Nothing,
-  isFollowing: Nothing
+  isFollowing: Nothing,
+  notifiedViaFCM : Nothing
 }

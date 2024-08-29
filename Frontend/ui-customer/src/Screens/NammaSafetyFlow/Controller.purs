@@ -241,6 +241,7 @@ transformContactDetailsToNewContacts (API.GetEmergencySettingsRes settingsResp) 
           , shareTripWithEmergencyContactOption: EmergencyContactsScreenData.getRideOptionFromKeyEM $ fromMaybe API.NEVER_SHARE contact.shareTripWithEmergencyContactOption
           , contactPersonId: contact.contactPersonId
           , isFollowing: Nothing
+          , notifiedViaFCM: Nothing
           }
     )
     settingsResp.defaultEmergencyNumbers

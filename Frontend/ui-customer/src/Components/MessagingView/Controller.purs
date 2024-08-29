@@ -19,6 +19,11 @@ import MerchantConfig.Types
 import MerchantConfig.DefaultConfig as DC
 import PrestoDOM (BottomSheetState(..))
 import Common.Resources.Constants (chatSuggestion)
+import Data.Maybe (Maybe(..))
+import Language.Strings (getString)
+import Prelude
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
 
 data Action = SendMessage
             | SendSuggestion String
@@ -26,6 +31,8 @@ data Action = SendMessage
             | TextChanged String
             | Call
             | NoAction
+            | ToggleMultiChatPopUp
+            | SwitchChat ChatContacts
 
 type Config = 
   { userConfig :: UserConfig
@@ -45,6 +52,9 @@ type Config =
   , feature :: Feature
   , suggestionKey :: String
   , isKeyBoardOpen :: Boolean
+  , showChatListPopUp :: Boolean
+  , contactList :: Array ChatContacts
+  , currentChatRecipient :: ChatContacts
   }
 
 type Feature = 
@@ -67,6 +77,22 @@ type ChatComponent = {
   , type :: String
   , delay :: Int
 }
+
+type ChatContacts = {
+  name :: String,
+  number :: String,
+  uuid :: String,
+  recipient :: ChatRecipient,
+  enableForFollowing :: Boolean,
+  enableForShareRide:: Boolean,
+  contactPersonId :: Maybe String,
+  notifiedViaFCM :: Maybe Boolean
+}
+
+data ChatRecipient = USER | DRIVER
+
+derive instance genericChatRecipient :: Generic ChatRecipient _
+instance eqChatRecipient :: Eq ChatRecipient where eq = genericEq
 
 config :: Config
 config = 
@@ -96,9 +122,24 @@ config =
   , otp : ""
   , suggestionKey : chatSuggestion
   , isKeyBoardOpen : false
+  , showChatListPopUp : false
+  , contactList : []
+  , currentChatRecipient : dummyChatRecipient
   }
 
 
 
 dummyChatComponent :: ChatComponent
 dummyChatComponent = { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
+
+dummyChatRecipient :: ChatContacts
+dummyChatRecipient =  
+  { name : ""
+  , number : ""
+  , uuid : ""
+  , recipient : DRIVER
+  , enableForFollowing : false
+  , enableForShareRide : false
+  , contactPersonId : Nothing
+  , notifiedViaFCM : Nothing
+  }

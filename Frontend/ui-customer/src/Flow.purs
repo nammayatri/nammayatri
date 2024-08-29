@@ -1686,6 +1686,9 @@ homeScreenFlow = do
       setValueToLocalStore TRACKING_DRIVER "False" 
       checkRideStatus true
       homeScreenFlow
+    UPDATE_CHAT -> do 
+      removeChatService ""
+      homeScreenFlow
     RELOAD saveToCurrLocs -> do
       (GlobalState state) <- getState
       void $ liftFlowBT $ setMapPadding 0 0 0 0
@@ -2157,6 +2160,7 @@ homeScreenFlow = do
                 , onRide: fromMaybe false item.onRide
                 , contactPersonId : item.contactPersonId
                 , isFollowing : Nothing
+                , notifiedViaFCM : item.notifiedViaFCM
                 }
             )
             res.defaultEmergencyNumbers
@@ -3218,6 +3222,7 @@ emergencyScreenFlow = do
                     , priority: fromMaybe 1 item.priority
                     , contactPersonId : item.contactPersonId
                     , isFollowing : Nothing
+                    , notifiedViaFCM : item.notifiedViaFCM
                     }
                 )
                 res.defaultEmergencyNumbers

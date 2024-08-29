@@ -260,7 +260,7 @@ eval (ContactListClearText) state =
 
 eval (NewContactActionController (NewContactController.ContactSelected index)) state = do
   let
-    contact = getValidContact $ fromMaybe { isSelected: false, name: "", number: "", enableForFollowing: false, enableForShareRide: false, onRide: false, priority: 0, shareTripWithEmergencyContactOption: neverShareRideOption, contactPersonId: Nothing, isFollowing: Nothing } (state.data.searchResult !! index)
+    contact = getValidContact $ fromMaybe { isSelected: false, name: "", number: "", enableForFollowing: false, enableForShareRide: false, onRide: false, priority: 0, shareTripWithEmergencyContactOption: neverShareRideOption, contactPersonId: Nothing, isFollowing: Nothing , notifiedViaFCM : Nothing} (state.data.searchResult !! index)
   let
     item = (getValidContact contact) { isSelected = not contact.isSelected }
   if (length state.data.selectedContacts) >= 3 && not contact.isSelected then do
@@ -350,6 +350,7 @@ createNewContact name number priorityVal =
   , shareTripWithEmergencyContactOption: shareWithTimeContraintsRideOption
   , contactPersonId: Nothing
   , isFollowing: Nothing
+  , notifiedViaFCM : Nothing
   }
 
 findContactsWithPrefix :: String -> Array NewContacts -> Array NewContacts

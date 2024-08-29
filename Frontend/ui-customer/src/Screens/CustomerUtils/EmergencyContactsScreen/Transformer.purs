@@ -20,4 +20,5 @@ getContact contact =
   , priority: 1
   , contactPersonId : Nothing
   , isFollowing: Nothing
+  , notifiedViaFCM : Nothing
 }

@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData)
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, NewContacts(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -36,6 +36,8 @@ import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
+import Components.MessagingView.Controller (ChatContacts, dummyChatRecipient)
+import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
 
 initData :: HomeScreenState
 initData = let
@@ -183,6 +185,7 @@ initData = let
     , routeCacheForAdvancedBooking : Nothing
     , previousRideDrop : false
     , famousDestinations : []
+    , chatPersonId : "Customer"
     , parking : initialParkingData
     , toll : initialTollData
     },
@@ -387,6 +390,7 @@ initData = let
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
+    , showChatListPopUp : false
     , isSharedLocationFlow : false
     , isOtpRideFlow : false
     , safetySettings : Nothing
@@ -505,6 +509,7 @@ dummyDriverInfo =
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
   , addressWard : Nothing
+  , currentChatRecipient : dummyChatRecipient
   , hasToll : false
   }
 
@@ -726,4 +731,19 @@ initialTollData = {
 , showAmbiguousPopUp : false
 , estimatedCharges : 0.0
 , showIncludedPopUp : false
+}
+
+dummyNewContacts :: NewContacts 
+dummyNewContacts = {
+  name : "",
+  number : "",
+  isSelected : false,
+  enableForFollowing : false,
+  enableForShareRide: false,
+  onRide : false,
+  priority : 1,
+  contactPersonId : Nothing,
+  notifiedViaFCM : Nothing,
+  isFollowing : Nothing,
+  shareTripWithEmergencyContactOption : neverShareRideOption
 }

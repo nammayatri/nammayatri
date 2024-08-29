@@ -744,7 +744,8 @@ postContactsReq contacts = EmergContactsReq {
       enableForShareRide: Just item.enableForShareRide,
       shareTripWithEmergencyContactOption: Just item.shareTripWithEmergencyContactOption.key,
       contactPersonId : Nothing,
-      onRide : Nothing
+      onRide : Nothing,
+      notifiedViaFCM : Nothing
   }) contacts
 }
 
@@ -1464,3 +1465,13 @@ makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq booki
 
 makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
 makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId
+
+----------------------------------------------------------------------------- MultiChat ----------------------------------------------------------------------------------------
+
+makeMultiChatReq :: String -> String -> String -> MultiChatReq
+makeMultiChatReq chatPersonId body title = 
+    MultiChatReq {
+        chatPersonId : chatPersonId,
+        body : body,
+        title : title
+    }
