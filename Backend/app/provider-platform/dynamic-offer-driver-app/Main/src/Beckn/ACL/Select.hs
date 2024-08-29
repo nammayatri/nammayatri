@@ -15,17 +15,13 @@
 module Beckn.ACL.Select (buildSelectReqV2) where
 
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
-import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
-import BecknV2.OnDemand.Utils.Common as OnDemandUtils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.Utils as Utils
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.Select as DSelect
-import qualified Domain.Types.Location as Location
-import Domain.Types.Trip as Trip
 import Kernel.Prelude hiding (error, setField)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -72,12 +68,6 @@ buildSelectReqV2 subscriber req = do
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
     _ -> pure Nothing
-  let tripCategory = fulfillment >>= \fm -> OnDemandUtils.fulfillmentTypeToTripCategory <$> fm.fulfillmentType
-  dselectReqDetails <- case tripCategory of
-    Just (Trip.Delivery _) -> do
-      let deliveryDetails = getDeliveryDetails item.itemTags
-      pure $ DSelect.DSelectReqDeliveryDetails <$> deliveryDetails
-    _ -> pure Nothing
   estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
   pure
@@ -93,8 +83,7 @@ buildSelectReqV2 subscriber req = do
         customerPhoneNum = customerPhoneNum,
         isAdvancedBookingEnabled = isAdvancedBoookingEnabled,
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
-        toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
-        selectReqDetails = dselectReqDetails
+        toUpdateDeviceIdInfo = toUpdateDeviceIdInfo
       }
 
 getBookAnyEstimates :: Maybe [Spec.TagGroup] -> Maybe [Text]
@@ -152,64 +141,3 @@ getEstimateId (Just fulfillment) item = do
     Just fulfillmentId -> Just fulfillmentId
     Nothing -> item.itemId
 getEstimateId Nothing item = item.itemId
-
-getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe DSelect.DeliveryDetails
-getDeliveryDetails tagGroups = do
-  initiatedAs <- Utils.getTagV2 Tag.DELIVERY Tag.INITIATED_AS tagGroups
-  senderName <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_NAME tagGroups
-  senderPhone <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_NUMBER tagGroups
-  senderLocIns <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_LOCATION_INSTRUCTIONS tagGroups
-  receiverName <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_NAME tagGroups
-  receiverPhone <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_NUMBER tagGroups
-  receiverLocIns <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_LOCATION_INSTRUCTIONS tagGroups
-  let (senderInstructions, senderAddressExtra) = splitInstructions senderLocIns
-      (receiverInstructions, receiverAddressExtra) = splitInstructions receiverLocIns
-      initiatedAsEnum = fromMaybe Enums.Sender (readMaybe @(Enums.DeliveryInitiation) $ T.unpack initiatedAs)
-  pure $
-    DSelect.DeliveryDetails
-      { DSelect.senderDetails =
-          DSelect.PersonDetails
-            { DSelect.name = senderName,
-              DSelect.phone = senderPhone,
-              DSelect.address =
-                Location.LocationAddress
-                  { Location.extras = senderAddressExtra,
-                    Location.instructions = senderInstructions,
-                    Location.area = Nothing,
-                    Location.areaCode = Nothing,
-                    Location.building = Nothing,
-                    Location.city = Nothing,
-                    Location.country = Nothing,
-                    Location.door = Nothing,
-                    Location.fullAddress = Nothing,
-                    Location.state = Nothing,
-                    Location.street = Nothing
-                  }
-            },
-        DSelect.receiverDetails =
-          DSelect.PersonDetails
-            { DSelect.name = receiverName,
-              DSelect.phone = receiverPhone,
-              DSelect.address =
-                Location.LocationAddress
-                  { Location.extras = receiverAddressExtra,
-                    Location.instructions = receiverInstructions,
-                    Location.area = Nothing,
-                    Location.areaCode = Nothing,
-                    Location.building = Nothing,
-                    Location.city = Nothing,
-                    Location.country = Nothing,
-                    Location.door = Nothing,
-                    Location.fullAddress = Nothing,
-                    Location.state = Nothing,
-                    Location.street = Nothing
-                  }
-            },
-        DSelect.initiatedAs = initiatedAsEnum
-      }
-  where
-    correctIns str = if T.null str then Nothing else Just str
-    splitInstructions :: Text -> (Maybe Text, Maybe Text)
-    splitInstructions ins = case T.splitOn "|" ins of
-      [ins1, ins2] -> (correctIns ins1, correctIns ins2)
-      _ -> (Nothing, Nothing)

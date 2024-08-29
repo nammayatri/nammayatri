@@ -48,7 +48,7 @@ findAllCallExophoneByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id DM
 findAllCallExophoneByMerchantOpCityId merchantOpCityId = filter (\exophone -> exophone.exophoneType == CALL_RIDE) <$> findAllByMerchantOpCityId merchantOpCityId
 
 findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
-findByPhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType == CALL_RIDE) <$> findAllByPhone phone
+findByPhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType `elem` [CALL_RIDE, CALL_DELIVERY_RECEIVER, CALL_DELIVERY_SENDER]) <$> findAllByPhone phone
 
 findByEndRidePhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
 findByEndRidePhone phone = find (\exophone -> (exophone.primaryPhone == phone || exophone.backupPhone == phone) && exophone.exophoneType == END_RIDE) <$> findAllByPhone phone

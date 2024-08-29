@@ -4,7 +4,6 @@
 
 module Domain.Types.Booking where
 
-import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.DeliveryPersonDetails
@@ -15,6 +14,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.RiderDetails
+import qualified Domain.Types.Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
@@ -42,7 +42,7 @@ data Booking = Booking
     fareParams :: Domain.Types.FareParameters.FareParameters,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
-    initiatedAs :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.DeliveryInitiation,
+    initiatedAs :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,

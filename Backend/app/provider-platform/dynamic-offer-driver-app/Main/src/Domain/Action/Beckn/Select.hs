@@ -17,26 +17,17 @@ module Domain.Action.Beckn.Select
   ( DSelectReq (..),
     validateRequest,
     handler,
-    DeliveryDetails (..),
-    PersonDetails (..),
-    DSelectReqDetails (..),
   )
 where
 
-import BecknV2.OnDemand.Enums (DeliveryInitiation)
 import Data.Text as Text
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
-import qualified Domain.Types.DeliveryPersonDetails as DPD
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
-import Domain.Types.Location (LocationAddress)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequestDeliveryDetails as DSRDD
-import qualified Domain.Types.Trip as DTrip
 import Environment
-import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Id
@@ -48,10 +39,8 @@ import SharedLogic.SearchTry
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
-import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
-import qualified Storage.Queries.SearchRequestDeliveryDetails as QSRDD
 import Tools.Error
 
 data DSelectReq = DSelectReq
@@ -66,22 +55,7 @@ data DSelectReq = DSelectReq
     customerPhoneNum :: Maybe Text,
     isAdvancedBookingEnabled :: Bool,
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
-    toUpdateDeviceIdInfo :: Bool,
-    selectReqDetails :: Maybe DSelectReqDetails
-  }
-
-data DSelectReqDetails = DSelectReqDeliveryDetails DeliveryDetails
-
-data DeliveryDetails = DeliveryDetails
-  { senderDetails :: PersonDetails,
-    receiverDetails :: PersonDetails,
-    initiatedAs :: DeliveryInitiation
-  }
-
-data PersonDetails = PersonDetails
-  { name :: Text,
-    phone :: Text,
-    address :: LocationAddress
+    toUpdateDeviceIdInfo :: Bool
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
@@ -100,45 +74,6 @@ handler merchant sReq searchReq estimates = do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
   when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
   when sReq.isAdvancedBookingEnabled $ QSR.updateIsAdvancedBookingEnabled sReq.isAdvancedBookingEnabled searchReq.id
-  searchRequestDetails <- case sReq.selectReqDetails of
-    Just (DSelectReqDeliveryDetails deliveryDetails) -> do
-      -- update search Request location
-      let senderLocationId = searchReq.fromLocation.id
-      when (isNothing searchReq.toLocation) $ throwError $ InvalidRequest "BPP: Receiver location not found for trip category Delivery"
-      let receiverLocationId = fromJust (searchReq.toLocation <&> (.id))
-      QLoc.updateInstructionsAndExtrasById deliveryDetails.senderDetails.address.instructions deliveryDetails.senderDetails.address.extras senderLocationId
-      QLoc.updateInstructionsAndExtrasById deliveryDetails.receiverDetails.address.instructions deliveryDetails.receiverDetails.address.extras receiverLocationId
-      -- update Rider details
-      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency merchant.id (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phone now False
-      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency merchant.id (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phone now False
-      when isNewSender $ QRD.create senderRiderDetails
-      when isNewReceiver $ QRD.create receiverRiderDetails
-      -- create search request delivery details
-      encSenderPhoneNumber <- encrypt deliveryDetails.senderDetails.phone
-      encReceiverPhoneNumber <- encrypt deliveryDetails.receiverDetails.phone
-      let searchRequestDeliveryDetails =
-            DSRDD.SearchRequestDeliveryDetails
-              { DSRDD.initiatedAs = deliveryDetails.initiatedAs,
-                DSRDD.receiverDetails =
-                  DPD.DeliveryPersonDetails
-                    { DPD.name = deliveryDetails.receiverDetails.name,
-                      DPD.phone = encReceiverPhoneNumber,
-                      DPD.id = receiverRiderDetails.id
-                    },
-                DSRDD.senderDetails =
-                  DPD.DeliveryPersonDetails
-                    { DPD.name = deliveryDetails.senderDetails.name,
-                      DPD.phone = encSenderPhoneNumber,
-                      DPD.id = senderRiderDetails.id
-                    },
-                DSRDD.searchRequestId = searchReq.id.getId,
-                DSRDD.createdAt = now,
-                DSRDD.updatedAt = now
-              }
-      QSRDD.create searchRequestDeliveryDetails
-      QSR.updateTripCategory (Just (DTrip.Delivery DTrip.OneWayOnDemandDynamicOffer)) searchReq.id
-      return $ Just (DSR.DeliveryDetails searchRequestDeliveryDetails)
-    Nothing -> return Nothing
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
@@ -146,7 +81,7 @@ handler merchant sReq searchReq estimates = do
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> estimate.farePolicy
       buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId
-  let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.searchRequestDetails = searchRequestDetails}
+  let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled}
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',

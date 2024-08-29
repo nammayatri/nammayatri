@@ -419,7 +419,6 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         currency,
         roundTrip = Just roundTrip,
         isAdvanceBookingEnabled = False,
-        searchRequestDetails = Nothing,
         tripCategory = Nothing,
         ..
       }

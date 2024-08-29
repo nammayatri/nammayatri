@@ -26,7 +26,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
     fromAndToLocation' <- Storage.Queries.Transformers.Booking.fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId
     merchant <- Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)
-    senderAndReceiverDetails <- Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName receiverId receiverName
+    senderAndReceiverDetails <- Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone
     bapUri' <- Kernel.Prelude.parseBaseUrl bapUri
     fareParams' <- Storage.Queries.FareParameters.findById (Kernel.Types.Id.Id fareParametersId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("FareParameters not found for booking: " <> show id))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
@@ -118,12 +118,14 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.quoteId = quoteId,
         Beam.receiverId = Kernel.Types.Id.getId <$> (receiverDetails <&> (.id)),
         Beam.receiverName = receiverDetails <&> (.name),
+        Beam.receiverPrimaryExophone = receiverDetails <&> (.primaryExophone),
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
         Beam.riderName = riderName,
         Beam.roundTrip = roundTrip,
         Beam.senderId = Kernel.Types.Id.getId <$> (senderDetails <&> (.id)),
         Beam.senderName = senderDetails <&> (.name),
+        Beam.senderPrimaryExophone = senderDetails <&> (.primaryExophone),
         Beam.specialLocationTag = specialLocationTag,
         Beam.specialZoneOtpCode = specialZoneOtpCode,
         Beam.startTime = startTime,

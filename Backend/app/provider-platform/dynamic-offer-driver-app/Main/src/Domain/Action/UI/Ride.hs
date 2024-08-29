@@ -220,7 +220,7 @@ data DriverRideRes = DriverRideRes
 
 data DeliveryPersonDetailsAPIEntity = DeliveryPersonDetailsAPIEntity
   { name :: Text,
-    phone :: Maybe Text
+    primaryExophone :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -374,8 +374,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         cancellationSource = fmap (\cr -> cr.source) cancellationReason,
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
         penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
-        senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) Nothing),
-        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) Nothing)
+        senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) sd.primaryExophone),
+        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone)
       }
 
 calculateLocations ::

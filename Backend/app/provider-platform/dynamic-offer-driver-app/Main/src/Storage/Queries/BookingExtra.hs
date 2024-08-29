@@ -29,7 +29,6 @@ import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.BookingLocation as QBBL
-import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
 import qualified Storage.Queries.Location as QL
@@ -106,7 +105,6 @@ findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay stat
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
-  when (rbStatus `elem` [CANCELLED, COMPLETED]) $ QBPL.makeAllInactiveByBookingId rbId
   updateOneWithKV
     [Se.Set BeamB.status rbStatus, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]

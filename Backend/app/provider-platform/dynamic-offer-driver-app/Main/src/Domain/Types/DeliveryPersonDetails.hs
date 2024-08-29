@@ -18,36 +18,12 @@
 module Domain.Types.DeliveryPersonDetails where
 
 import Domain.Types.RiderDetails
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Text.Show
 
-data DeliveryPersonDetailsE e = DeliveryPersonDetails
+data DeliveryPersonDetails = DeliveryPersonDetails
   { id :: Id RiderDetails,
     name :: Text,
-    phone :: EncryptedHashedField e Text
+    primaryExophone :: Text
   }
-
-instance Show DeliveryPersonDetails where
-  show (DeliveryPersonDetails {..}) =
-    "DeliveryPersonDetails { id = " <> show id.getId <> ", name = " <> show name <> ", phone = xxxx }"
-
-type DeliveryPersonDetails = DeliveryPersonDetailsE 'AsEncrypted
-
-type DecryptedDeliveryPersonDetails = DeliveryPersonDetailsE 'AsUnencrypted
-
-instance EncryptedItem DeliveryPersonDetails where
-  type Unencrypted DeliveryPersonDetails = (DecryptedDeliveryPersonDetails, HashSalt)
-  encryptItem (entity, salt) = do
-    phone_ <- encryptItem $ (phone entity, salt)
-    return
-      entity {phone = phone_}
-  decryptItem entity = do
-    phone_ <- fst <$> decryptItem (phone entity)
-    return (entity {phone = phone_}, "")
-
-instance EncryptedItem' DeliveryPersonDetails where
-  type UnencryptedItem DeliveryPersonDetails = DecryptedDeliveryPersonDetails
-  toUnencrypted a salt = (a, salt)
-  fromUnencrypted = fst
+  deriving (Generic, Show, Eq)

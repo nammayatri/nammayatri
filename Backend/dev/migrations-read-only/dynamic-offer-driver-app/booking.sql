@@ -85,3 +85,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN sender_id character varyin
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN receiver_name text ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN receiver_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN initiated_as text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN sender_primary_exophone text ;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN receiver_primary_exophone text ;

@@ -5,11 +5,11 @@
 
 module Storage.Beam.Booking where
 
-import qualified BecknV2.OnDemand.Enums
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -37,7 +37,7 @@ data BookingT f = BookingT
     fareParametersId :: B.C f Kernel.Prelude.Text,
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
-    initiatedAs :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.DeliveryInitiation),
+    initiatedAs :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -51,12 +51,14 @@ data BookingT f = BookingT
     quoteId :: B.C f Kernel.Prelude.Text,
     receiverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     receiverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    receiverPrimaryExophone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     riderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     roundTrip :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     senderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     senderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    senderPrimaryExophone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialZoneOtpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f Kernel.Prelude.UTCTime,

@@ -16,7 +16,7 @@ imports:
   Currency: Kernel.Utils.Common
   Estimate: Domain.Types.Estimate
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
-  DeliveryInitiation: BecknV2.OnDemand.Enums
+  TripParty: Domain.Types.Trip
 
 Booking:
   derives: "Generic"
@@ -76,7 +76,7 @@ Booking:
     isDashboardRequest: Bool
     senderDetails: Maybe DeliveryPersonDetails
     receiverDetails: Maybe DeliveryPersonDetails
-    initiatedAs: Maybe DeliveryInitiation
+    initiatedAs: Maybe TripParty
 
   excludedFields:
     - merchantId
@@ -110,9 +110,11 @@ Booking:
     senderDetails:
       senderId: Maybe (Id RiderDetails)
       senderName: Maybe Text
+      senderPrimaryExophone: Maybe Text
     receiverDetails:
       receiverId: Maybe (Id RiderDetails)
       receiverName: Maybe Text
+      receiverPrimaryExophone: Maybe Text
 
   toTType:
     currency: Just currency|E
@@ -132,15 +134,17 @@ Booking:
     isDashboardRequest: (Just isDashboardRequest)|E
     senderId: (Kernel.Types.Id.getId <$> (senderDetails <&> (.id)))|E
     senderName: (senderDetails <&> (.name))|E
+    senderPrimaryExophone: (senderDetails <&> (.primaryExophone))|E
     receiverId: (Kernel.Types.Id.getId <$> (receiverDetails <&> (.id)))|E
     receiverName: (receiverDetails <&> (.name))|E
+    receiverPrimaryExophone: (receiverDetails <&> (.primaryExophone))|E
 
   intermediateTransformers:
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
       - fromAndToLocation': Storage.Queries.Transformers.Booking.fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId|EM
       - merchant: Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)|EM
-      - senderAndReceiverDetails: Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName receiverId receiverName|EM
+      - senderAndReceiverDetails: Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone|EM
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
     tripCategory: getTripCategory

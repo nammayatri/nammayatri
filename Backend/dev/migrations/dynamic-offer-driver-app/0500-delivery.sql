@@ -8,6 +8,45 @@ update atlas_driver_offer_bpp.vehicle_service_tier
 set allowed_vehicle_variant = '{BIKE,DELIVERY_BIKE}'
 where service_tier_type = 'DELIVERY_BIKE';
 
+-- only for local --
+INSERT INTO atlas_driver_offer_bpp.exophone (
+    id,
+    primary_phone,
+    backup_phone,
+    call_service,
+    exophone_type,
+    is_primary_down,
+    merchant_id,
+    merchant_operating_city_id,
+    created_at,
+    updated_at
+)
+VALUES
+    (
+        atlas_driver_offer_bpp.uuid_generate_v4(),
+        'ExoPhone_Sender',
+        'ExoPhone',
+        'Exotel',
+        'CALL_DELIVERY_SENDER',
+        FALSE,
+        'favorit0-0000-0000-0000-00000favorit',
+        'favorit0-0000-0000-0000-00000000city',
+        NOW(),
+        NOW()
+    ),
+    (
+        atlas_driver_offer_bpp.uuid_generate_v4(),
+        'ExoPhone_Receiver',
+        'ExoPhone',
+        'Exotel',
+        'CALL_DELIVERY_RECEIVER',
+        FALSE,
+        'favorit0-0000-0000-0000-00000favorit',
+        'favorit0-0000-0000-0000-00000000city',
+        NOW(),
+        NOW()
+    );
+
 -- run only for master so commented out --
 -- With FareProducts as (
 --   select

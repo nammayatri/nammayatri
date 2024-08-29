@@ -7,7 +7,6 @@ import qualified Domain.Types.BookingLocation as DBBL
 import qualified Domain.Types.DeliveryPersonDetails as DPD
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
-import qualified Domain.Types.RiderDetails as DRDD
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -16,7 +15,6 @@ import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Queries.BookingLocation as QBBL
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import qualified Storage.Queries.RiderDetails as QRDD
 import Tools.Error
 
 getTripCategory :: (Domain.Types.Booking.BookingType -> Kernel.Prelude.Maybe TripCategory -> TripCategory)
@@ -93,23 +91,23 @@ upsertLocationForOldData locationId bookingId = do
   void $ QL.create location
   return location
 
-getSenderAndReceiverDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe TripCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> m (Maybe (DPD.DeliveryPersonDetails, DPD.DeliveryPersonDetails))
-getSenderAndReceiverDetails tripCategory senderId senderName receiverId receiverName = do
+getSenderAndReceiverDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe TripCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> m (Maybe (DPD.DeliveryPersonDetails, DPD.DeliveryPersonDetails))
+getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone = do
   if (isJust tripCategory && (isDeliveryTrip $ fromJust tripCategory))
     then do
-      senderRiderDetail <- QRDD.findById `mapM` (Id <$> senderId) >>= fromMaybeM (InternalError $ "Sender not found in Rider Details " <> show senderId)
-      receiverRiderDetail <- QRDD.findById `mapM` (Id <$> receiverId) >>= fromMaybeM (InternalError $ "Receiver not found in Rider Details " <> show receiverId)
-      senderName' <- fromMaybeM (InternalError "Sender Name not found") senderName
-      receiverName' <- fromMaybeM (InternalError "Receiver Name not found") receiverName
-      sdr <- fromMaybeM (InternalError "Sender not found") senderRiderDetail
-      rcd <- fromMaybeM (InternalError "Receiver not found") receiverRiderDetail
-      return $ Just (mkDeliveryPersonDetails sdr senderName', mkDeliveryPersonDetails rcd receiverName')
+      sId <- senderId & fromMaybeM (InternalError "Sender Id not found for Delivery booking")
+      rId <- receiverId & fromMaybeM (InternalError "Receiver Id not found for Delivery booking")
+      sName <- fromMaybeM (InternalError "Sender Name not found") senderName
+      rName <- fromMaybeM (InternalError "Receiver Name not found") receiverName
+      sPhone <- fromMaybeM (InternalError "Sender Primary Exophone not found") senderPrimaryExophone
+      rPhone <- fromMaybeM (InternalError "Receiver Primary Exophone not found") receiverPrimaryExophone
+      return $ Just (mkDeliveryPersonDetails sId sName sPhone, mkDeliveryPersonDetails rId rName rPhone)
     else return Nothing
   where
-    mkDeliveryPersonDetails :: DRDD.RiderDetails -> Text -> DPD.DeliveryPersonDetails
-    mkDeliveryPersonDetails riderDetail name =
+    mkDeliveryPersonDetails :: Text -> Text -> Text -> DPD.DeliveryPersonDetails
+    mkDeliveryPersonDetails riderId name exoPhone =
       DPD.DeliveryPersonDetails
-        { DPD.id = riderDetail.id,
+        { DPD.id = Id riderId,
           DPD.name = name,
-          DPD.phone = riderDetail.mobileNumber
+          DPD.primaryExophone = exoPhone
         }

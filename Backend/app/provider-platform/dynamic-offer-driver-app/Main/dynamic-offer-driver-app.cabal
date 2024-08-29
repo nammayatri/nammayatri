@@ -244,6 +244,7 @@ library
       Domain.Types.Coins.CoinHistory
       Domain.Types.Coins.CoinsConfig
       Domain.Types.Common
+      Domain.Types.DeliveryDetails
       Domain.Types.DeliveryPersonDetails
       Domain.Types.DriverLocation
       Domain.Types.Extra.DriverFee
@@ -257,7 +258,6 @@ library
       Domain.Types.Extra.MessageReport
       Domain.Types.Extra.Notification
       Domain.Types.Extra.Plan
-      Domain.Types.Extra.SearchRequest
       Domain.Types.Extra.TransporterConfig
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
@@ -554,7 +554,6 @@ library
       Storage.Queries.Transformers.ReelsData
       Storage.Queries.Transformers.RegistrationToken
       Storage.Queries.Transformers.Ride
-      Storage.Queries.Transformers.SearchRequest
       Storage.Queries.Transformers.SearchRequestForDriver
       Storage.Queries.Transformers.SearchTry
       Storage.Queries.TranslationsExtra
@@ -719,7 +718,6 @@ library
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.SearchReqLocation
       Domain.Types.SearchRequest
-      Domain.Types.SearchRequestDeliveryDetails
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
       Domain.Types.SubscriptionConfig
@@ -834,7 +832,6 @@ library
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.SearchReqLocation
       Storage.Beam.SearchRequest
-      Storage.Beam.SearchRequestDeliveryDetails
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
       Storage.Beam.SubscriptionConfig
@@ -1010,7 +1007,6 @@ library
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.SearchReqLocation
       Storage.Queries.SearchRequest
-      Storage.Queries.SearchRequestDeliveryDetails
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
       Storage.Queries.SubscriptionConfig

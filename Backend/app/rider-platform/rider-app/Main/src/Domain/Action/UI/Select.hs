@@ -17,8 +17,6 @@ module Domain.Action.UI.Select
   ( DSelectReq (..),
     DSelectRes (..),
     DSelectResultRes (..),
-    DeliveryDetails (..),
-    PersonDetails (..),
     SelectListRes (..),
     QuotesResultResponse (..),
     CancelAPIResponse (..),
@@ -39,9 +37,9 @@ import qualified Domain.Action.UI.Quote as UQuote
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking (Booking, BookingStatus (..))
 import Domain.Types.Common
+import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
-import Domain.Types.LocationAddress (LocationAddress)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
@@ -87,24 +85,7 @@ data DSelectReq = DSelectReq
     paymentMethodId :: Maybe Payment.PaymentMethodId,
     otherSelectedEstimates :: Maybe [Id DEstimate.Estimate],
     isAdvancedBookingEnabled :: Maybe Bool,
-    deliveryDetails :: Maybe DeliveryDetails
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DeliveryDetails = DeliveryDetails
-  { senderDetails :: PersonDetails,
-    receiverDetails :: PersonDetails,
-    initiatedAs :: DeliveryParties
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data PersonDetails = PersonDetails
-  { name :: Text,
-    phoneNumber :: Text,
-    countryCode :: Maybe Text,
-    address :: LocationAddress
+    deliveryDetails :: Maybe DTDD.DeliveryDetails
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -116,15 +97,15 @@ validateDSelectReq DSelectReq {..} =
       whenJust customerExtraFeeWithCurrency $ \obj ->
         validateObject "customerExtraFeeWithCurrency" obj $ \obj' ->
           validateField "amount" obj'.amount $ InRange @HighPrecMoney 1.0 100000.0,
-      whenJust deliveryDetails $ \(DeliveryDetails {..}) ->
+      whenJust deliveryDetails $ \(DTDD.DeliveryDetails {..}) ->
         sequenceA_
           [ validateObject "senderDetails" senderDetails validatePersonDetails,
             validateObject "receiverDetails" receiverDetails validatePersonDetails
           ]
     ]
 
-validatePersonDetails :: Validate PersonDetails
-validatePersonDetails PersonDetails {..} =
+validatePersonDetails :: Validate DTDD.PersonDetails
+validatePersonDetails DTDD.PersonDetails {..} =
   sequenceA_
     [ validateField "phoneNumber" phoneNumber P.mobileNumber,
       whenJust countryCode $ \cc -> validateField "countryCode" cc P.mobileCountryCode
@@ -295,7 +276,7 @@ selectResult estimateId = do
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
       return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList}
 
-makeDeliverySearchParties :: Id DSearchReq.SearchRequest -> Id DM.Merchant -> DeliveryDetails -> Flow ()
+makeDeliverySearchParties :: Id DSearchReq.SearchRequest -> Id DM.Merchant -> DTDD.DeliveryDetails -> Flow ()
 makeDeliverySearchParties searchRequestId merchantId deliveryDetails = do
   senderPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.senderDetails.phoneNumber) (deliveryDetails.senderDetails.countryCode)
   receiverPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.receiverDetails.phoneNumber) (deliveryDetails.receiverDetails.countryCode)

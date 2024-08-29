@@ -11,7 +11,6 @@ imports:
   Language: Tools.Maps
   Money: Kernel.Types.Common
   Currency: Kernel.Types.Common
-  SearchRequestDeliveryDetails: Domain.Types.SeachRequestDeliveryDetails
   EncryptedHashedField: Kernel.External.Encryption
   DeliveryInitiation: BecknV2.OnDemand.Enums
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
@@ -21,10 +20,6 @@ imports:
 SearchRequest:
   derives: Generic,Show
 
-  types:
-    SearchRequestDetails:
-      enum: DeliveryDetails SearchRequestDeliveryDetails
-      derive': Generic,Show
   fields:
     id: Id SearchRequest
     transactionId: Text
@@ -65,7 +60,6 @@ SearchRequest:
     customerNammaTags: "Maybe [Text]"
     startTime: UTCTime
     createdAt: UTCTime
-    searchRequestDetails: Maybe SearchRequestDetails
     tripCategory: Maybe TripCategory
 
   beamType:
@@ -79,7 +73,6 @@ SearchRequest:
     distanceUnit: Maybe DistanceUnit
     isDashboardRequest: Maybe Bool
   beamFields:
-    searchRequestDetails: {}
     driverDefaultExtraFee:
       driverDefaultExtraFee: Maybe Money
       driverDefaultExtraFeeAmount: Maybe HighPrecMoney
@@ -111,7 +104,6 @@ SearchRequest:
       - mbToLocationMapping: Storage.Queries.LocationMapping.getLatestEndByEntityId id|EM
       - startTime_: fromMaybe now startTime|E
   fromTType:
-    searchRequestDetails: Storage.Queries.Transformers.SearchRequest.getSearchRequestDetails id tripCategory|EM
     merchantOperatingCityId: Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity|EM
     bapUri: Kernel.Prelude.parseBaseUrl|IM
     fromLocation: Storage.Queries.Location.findById ( (.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ( (.getId) $ (.locationId) fromLocationMapping))|EM
@@ -183,56 +175,3 @@ SearchRequest:
 
   extraOperations:
     - EXTRA_QUERY_FILE
-    - EXTRA_DOMAIN_TYPE_FILE
-
-
-SearchRequestDeliveryDetails:
-  derives: Generic
-  fields:
-    searchRequestId: Text
-    senderDetails: DeliveryPersonDetails
-    receiverDetails: DeliveryPersonDetails
-    initiatedAs: DeliveryInitiation
-
-  beamFields:
-    senderDetails:
-      senderName: Text
-      senderPhoneNumberEncrypted: Text
-      senderPhoneNumberHash: DbHash
-      senderRiderId: Text
-    receiverDetails:
-      receiverName: Text
-      receiverPhoneNumberEncrypted: Text
-      receiverPhoneNumberHash: DbHash
-      receiverRiderId: Text
-
-  sqlType:
-    senderPhoneNumberHash: bytea
-    receiverPhoneNumberHash: bytea
-  toTType:
-    senderName: senderDetails & (.name)|E
-    senderPhoneNumberEncrypted: (senderDetails & (.phone)) & unEncrypted . encrypted|E
-    senderPhoneNumberHash: (senderDetails & (.phone)) & hash|E
-    senderRiderId: (senderDetails & (.id)) & Kernel.Types.Id.getId|E
-    receiverName: receiverDetails & (.name)|E
-    receiverPhoneNumberEncrypted: (receiverDetails & (.phone)) & unEncrypted . encrypted|E
-    receiverPhoneNumberHash: (receiverDetails & (.phone)) & hash|E
-    receiverRiderId: (receiverDetails & (.id)) & Kernel.Types.Id.getId|E
-
-  fromTType:
-    senderDetails: Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails (Kernel.Types.Id.Id senderRiderId) senderName (EncryptedHashed (Encrypted senderPhoneNumberEncrypted) senderPhoneNumberHash)|E
-    receiverDetails: Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails (Kernel.Types.Id.Id receiverRiderId) receiverName (EncryptedHashed (Encrypted receiverPhoneNumberEncrypted) receiverPhoneNumberHash)|E
-  constraints:
-    searchRequestId: PrimaryKey
-
-  excludedFields: [merchantId, merchantOperatingCityId]
-
-  excludedDefaultQueries:
-    - createMany
-    - updateByPrimaryKey
-    - findByPrimaryKey
-
-  queries:
-    findBySearchRequestId:
-      kvFunction: findOneWithKV
-      where: searchRequestId
