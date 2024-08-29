@@ -931,7 +931,7 @@ contactView push state airportZone =
               , onClick push $ const $ ShowDirections state.data.sourceLat state.data.sourceLng
               ] <> FontStyle.body6 TypoGraphy
          ]
-      , textView [weight 1.0, visibility $ boolToVisibility $ state.props.zoneType.priorityTag /= SPECIAL_PICKUP]
+      , textView [weight 1.0]
       , chatButtonView push state
     ]
     where 

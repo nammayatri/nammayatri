@@ -299,7 +299,7 @@ emptyContactsView push state =
                 [ height $ V 200
                 , width MATCH_PARENT
                 , visibility $ boolToVisibility $ not $ state.props.saveEmergencyContacts && state.props.getDefaultContacts
-                , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET ""
+                , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_share_explain"
                 ]
             , explanationContentView push state
             , checkBoxSelectionView push state

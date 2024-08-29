@@ -46,6 +46,7 @@ initData =
         , postRideCheck: API.NEVER_SHARE
         , notifySafetyTeam: false
         , emergencySOSShake: false
+        , hasCompletedMockSafetyDrill: false
         , autoCallDefaultContact: false
         , informPoliceSos: false
         , notifySosWithEmergencyContacts: false
@@ -85,7 +86,7 @@ stageData stage = case stage of
             , SubTitle subTitleConfig { subTitleText = getString TRUSTED_CONTACT_DESC }
             , CheckBoxSelection checkBoxSelectionConfig { title = getString ENABLE_LIVE_TRACKING }
             ]
-        , imageUrl: "ny_ic_in_app_chat"
+        , imageUrl: "ny_ic_share_explain"
         , primaryButtonText: getString DONE
         , primaryButtonAction: "UpdateEmergencyContacts"
         }
@@ -218,7 +219,7 @@ stageData stage = case stage of
             , NoteBox noteBoxConfig { noteText = getString SAFETY_DRILL_NOTE }
             ]
         , imageUrl: "ny_ic_safety_drill_setup"
-        , primaryButtonText: getString NEXT
+        , primaryButtonText: getString START_TEST_DRILL
         , primaryButtonAction: "SafetyTestDrill"
         }
       ]
