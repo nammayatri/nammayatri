@@ -12,6 +12,7 @@ import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch
 import Domain.Types
+import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -29,7 +30,7 @@ buildOnSearchReq req provider items fulfillments validTill = do
   providerInfo_ <- tfProviderInfo req
   (estimatesInfo_, quotesInfo_) <- partitionEithers <$> traverse (tfQuotesInfo provider fulfillments validTill) items
   requestId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId req.onSearchReqContext
-  pure $ Domain.Action.Beckn.OnSearch.DOnSearchReq {estimatesInfo = estimatesInfo_, paymentMethodsInfo = paymentMethodsInfo_, providerInfo = providerInfo_, quotesInfo = quotesInfo_, requestId = Id requestId_}
+  pure $ Domain.Action.Beckn.OnSearch.DOnSearchReq {estimatesInfo = estimatesInfo_, paymentMethodsInfo = paymentMethodsInfo_, providerInfo = providerInfo_, quotesInfo = quotesInfo_, requestId = Id requestId_, ..}
 
 tfProviderInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.OnSearchReq -> m Domain.Action.Beckn.OnSearch.ProviderInfo
 tfProviderInfo req = do

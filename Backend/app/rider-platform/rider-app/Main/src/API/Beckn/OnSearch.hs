@@ -16,16 +16,21 @@ module API.Beckn.OnSearch (API, handler) where
 
 import qualified Beckn.ACL.OnSearch as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import Beckn.OnDemand.Utils.OnSearch
 import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Environment
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.SearchRequest as QSearchReq
 import TransactionLogs.PushLogs
 
 type API = OnSearch.OnSearchAPIV2
@@ -41,6 +46,8 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
   Utils.withTransactionIdLogTag transactionId $ do
     logInfo $ "OnSearch received:-" <> show reqV2
+    searchRequest <- runInReplica $ QSearchReq.findById (cast $ Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
+    void $ validateOnSearchContext reqV2.onSearchReqContext searchRequest
     mbDOnSearchReq <- TaxiACL.buildOnSearchReqV2 reqV2
     messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
 

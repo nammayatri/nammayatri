@@ -21,6 +21,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import BecknV2.OnDemand.Utils.Context as ContextUtils
 import BecknV2.OnDemand.Utils.Payment
 import qualified BecknV2.Utils as Utils
 import Control.Lens
@@ -44,6 +45,7 @@ import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
@@ -52,21 +54,25 @@ import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
-import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
+import EulerHS.Prelude hiding (id, state, view, whenM, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude hiding (find, length, map, null, readMaybe)
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common hiding (mkPrice)
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Confidence
 import Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common hiding (mkPrice)
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified Storage.CachedQueries.BlackListOrg as QBlackList
+import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Tools.Error
 
 data Pricing = Pricing
@@ -1090,8 +1096,8 @@ tfItemPrice estimatedFare =
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Just $ encodeToText estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
-        priceValue = Just $ encodeToText estimatedFare
+        priceOfferedValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare, -- TODO : Remove this and make non mandatory on BAP side
+        priceValue = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice Nothing estimatedFare -- Sending Nothing here becuase priceCurrency in hardcoded to INR, TODO: make this logic dynamic based on country
       }
 
 tfItemDescriptor :: DBooking.Booking -> Maybe Spec.Descriptor
@@ -1607,3 +1613,35 @@ mkDestinationReachedTimeTagGroupV2 destinationArrivalTime' =
               ]
         }
     ]
+
+validateSearchContext :: (HasFlowEnv m r '["_version" ::: Text], MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Spec.Context -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m ()
+validateSearchContext context merchantId merchantOperatingCityId = do
+  ContextUtils.validateContext Context.SEARCH context
+  bapId <- getContextBapId context
+  validateSubscriber bapId merchantId merchantOperatingCityId
+
+validateSubscriber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m ()
+validateSubscriber subscriberId merchantId merchantOperatingCityId = do
+  totalSubIds <- QWhiteList.countTotalSubscribers merchantId merchantOperatingCityId
+  void $
+    if totalSubIds == 0
+      then do
+        checkBlacklisted subscriberId merchantId merchantOperatingCityId
+      else do
+        checkWhitelisted subscriberId merchantId merchantOperatingCityId
+
+checkBlacklisted :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m ()
+checkBlacklisted subscriberId merchantId merchantOperatingCityId = do
+  whenM (isBlackListed subscriberId Domain.MOBILITY merchantId merchantOperatingCityId) . throwError . InvalidRequest $
+    "It is a Blacklisted subscriber " <> subscriberId
+
+isBlackListed :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Domain.Domain -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m Bool
+isBlackListed subscriberId domain merchantId merchantOperatingCityId = isJust <$> QBlackList.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId (ShortId subscriberId) domain merchantId merchantOperatingCityId
+
+checkWhitelisted :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m ()
+checkWhitelisted subscriberId merchantId merchantOperatingCityId = do
+  whenM (isNotWhiteListed subscriberId Domain.MOBILITY merchantId merchantOperatingCityId) . throwError . InvalidRequest $
+    "It is not a whitelisted subscriber " <> subscriberId
+
+isNotWhiteListed :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Domain.Domain -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m Bool
+isNotWhiteListed subscriberId domain merchantId merchantOperatingCityId = isNothing <$> QWhiteList.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId (ShortId subscriberId) domain merchantId merchantOperatingCityId
