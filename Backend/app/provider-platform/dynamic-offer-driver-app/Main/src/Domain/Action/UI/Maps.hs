@@ -111,7 +111,8 @@ convertToGetPlaceNameResp placeNameCache =
       addressComponents = map (\DTM.AddressResp {..} -> MIT.AddressResp {..}) placeNameCache.addressComponents,
       plusCode = placeNameCache.plusCode,
       location = LatLong {lat = placeNameCache.lat, lon = placeNameCache.lon},
-      placeId = placeNameCache.placeId
+      placeId = placeNameCache.placeId,
+      source = Nothing
     }
 
 convertResultsRespToPlaceNameCache :: MonadFlow m => MIT.PlaceName -> Double -> Double -> Int -> m DTM.PlaceNameCache

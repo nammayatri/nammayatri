@@ -137,18 +137,22 @@ getPlaceName (personId, merchantId) req = do
       let myGeohash = DG.encode merchant.geoHashPrecisionValue (lat, lon)
       case myGeohash of
         Just geoHash -> do
-          placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
+          placeNameCache' <- CM.findPlaceByGeoHash (pack geoHash)
+          let placeNameCache = fst placeNameCache'
+              source = snd placeNameCache'
           fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
           if null placeNameCache
             then callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
-            else pure $ map convertToGetPlaceNameResp placeNameCache
+            else pure $ map (convertToGetPlaceNameResp source) placeNameCache
         Nothing -> callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
-      placeNameCache <- CM.findPlaceByPlaceId placeId
+      placeNameCache' <- CM.findPlaceByPlaceId placeId
+      let placeNameCache = fst placeNameCache'
+          source = snd placeNameCache'
       fork "Place Name Cache Expiry" $ expirePlaceNameCache placeNameCache merchantOperatingCityId
       if null placeNameCache
         then callMapsApi merchantId merchantOperatingCityId req merchant.geoHashPrecisionValue
-        else pure $ map convertToGetPlaceNameResp placeNameCache
+        else pure $ map (convertToGetPlaceNameResp source) placeNameCache
 
 callMapsApi :: (MonadFlow m, ServiceFlow m r) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId merchantOperatingCityId req geoHashPrecisionValue = do
@@ -166,16 +170,17 @@ callMapsApi merchantId merchantOperatingCityId req geoHashPrecisionValue = do
       whenJust placeNameCache.geoHash $ \geohash -> do
         CM.cachedPlaceByGeoHash geohash [placeNameCache]
     Nothing -> pure ()
-  return res
+  return (map (\MIT.PlaceName {..} -> MIT.PlaceName {source = (Just . pack . show) Google, ..}) res)
 
-convertToGetPlaceNameResp :: PlaceNameCache -> Maps.PlaceName
-convertToGetPlaceNameResp placeNameCache =
+convertToGetPlaceNameResp :: CM.Source -> PlaceNameCache -> Maps.PlaceName
+convertToGetPlaceNameResp source placeNameCache =
   MIT.PlaceName
     { formattedAddress = placeNameCache.formattedAddress,
       addressComponents = map (\DTM.AddressResp {..} -> MIT.AddressResp {..}) placeNameCache.addressComponents,
       plusCode = placeNameCache.plusCode,
       location = LatLong {lat = placeNameCache.lat, lon = placeNameCache.lon},
-      placeId = placeNameCache.placeId
+      placeId = placeNameCache.placeId,
+      source = (Just . pack . show) source
     }
 
 convertResultsRespToPlaceNameCache :: (MonadTime m, MonadGuid m) => MIT.PlaceName -> Double -> Double -> Int -> m DTM.PlaceNameCache

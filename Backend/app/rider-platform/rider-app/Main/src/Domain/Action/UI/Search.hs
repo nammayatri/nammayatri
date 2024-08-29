@@ -130,7 +130,8 @@ data OneWaySearchReq = OneWaySearchReq
     startTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
-    sessionToken :: Maybe Text
+    sessionToken :: Maybe Text,
+    placeNameSource :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -143,7 +144,8 @@ data RentalSearchReq = RentalSearchReq
     estimatedRentalDistance :: Meters,
     estimatedRentalDuration :: Seconds,
     quotesUnifiedFlow :: Maybe Bool,
-    isReallocationEnabled :: Maybe Bool
+    isReallocationEnabled :: Maybe Bool,
+    placeNameSource :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -158,7 +160,8 @@ data InterCitySearchReq = InterCitySearchReq
     returnTime :: Maybe UTCTime,
     sessionToken :: Maybe Text,
     quotesUnifiedFlow :: Maybe Bool,
-    isReallocationEnabled :: Maybe Bool
+    isReallocationEnabled :: Maybe Bool,
+    placeNameSource :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -204,7 +207,8 @@ data SearchDetails = SearchDetails
     startTime :: UTCTime,
     returnTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool,
-    quotesUnifiedFlow :: Maybe Bool
+    quotesUnifiedFlow :: Maybe Bool,
+    placeNameSource :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -323,6 +327,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       merchantOperatingCity.distanceUnit
       person.totalRidesCount
       isDashboardRequest_
+      placeNameSource
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
@@ -501,8 +506,9 @@ buildSearchRequest ::
   DistanceUnit ->
   Maybe Int ->
   Bool ->
+  Maybe Text ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -542,7 +548,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         riderPreferredOption, -- this is just to store the rider preference for the ride type to handle backward compatibility
         distanceUnit,
         totalRidesCount,
-        isDashboardRequest = Just isDashboardRequest
+        isDashboardRequest = Just isDashboardRequest,
+        placeNameSource = mbPlaceNameSource
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
