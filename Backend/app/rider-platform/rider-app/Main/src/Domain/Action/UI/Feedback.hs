@@ -25,9 +25,12 @@ module Domain.Action.UI.Feedback
 where
 
 import qualified AWS.S3 as S3
+import qualified Data.Aeson as A
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
@@ -141,7 +144,8 @@ feedback request personId = do
   when isLOFeedback $
     fork "notify on slack" $ do
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
-      message <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city)
+      desc <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city)
+      let message = createJsonMessage desc
       void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   pure
     FeedbackRes
@@ -167,13 +171,28 @@ feedback request personId = do
       let wordsToCheck = map T.toLower ["Abuse", "Misbehave", "Drunk", "Alcohol", "Fight", "Hit", "Assault", "Physical", "Touch", "Molest", "Sex", "Racist"]
        in any (`T.isInfixOf` T.toLower feedbackDetails) wordsToCheck
 
+    createJsonMessage :: Text -> T.Text
+    createJsonMessage descriptionText =
+      let jsonValue :: A.Value
+          jsonValue =
+            A.object
+              [ "version" A..= ("1.0" :: String),
+                "source" A..= ("custom" :: String),
+                "content"
+                  A..= A.object
+                    [ "description" A..= descriptionText
+                    ]
+              ]
+       in TL.toStrict $ TLE.decodeUtf8 $ A.encode jsonValue
+
     generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Text -> Text -> Flow Text
     generateSlackMessage person ride mbCustomerPhone city = do
       mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
       let customerPhone = fromMaybe "NA" mbCustomerPhone
           customerName = SLP.getName person
           driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
-          dropLoc = maybe "NA" (T.pack . show) (ride.toLocation)
+          dropLoc = fromMaybe "NA" $ TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON <$> ride.toLocation
+          pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON ride.fromLocation
       return $
         "There is an L0 feedback given by customer_id " <> person.id.getId <> "\n"
           <> "Customer Name - "
@@ -195,7 +214,7 @@ feedback request personId = do
           <> show ride.vehicleVariant
           <> "\n"
           <> "Pickup location: "
-          <> show ride.fromLocation
+          <> pickupLocation
           <> "\n"
           <> "Drop location: "
           <> dropLoc

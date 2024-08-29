@@ -10,6 +10,8 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM
 import Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Domain.Action.UI.Call as DUCall
 import qualified Domain.Action.UI.FollowRide as DFR
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
@@ -147,7 +149,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   fork "Notify on slack " $ do
     sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
-    message <- generateSlackMessage person ride req.customerLocation
+    desc <- generateSlackMessageDesc person ride req.customerLocation
+    let message = createJsonMessage desc
     void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
@@ -169,8 +172,22 @@ postSosCreate (mbPersonId, _merchantId) req = do
       { sosId = sosId
       }
   where
-    generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Maps.LatLong -> Flow Text
-    generateSlackMessage person ride customerLocation = do
+    createJsonMessage :: Text -> T.Text
+    createJsonMessage descriptionText =
+      let jsonValue :: A.Value
+          jsonValue =
+            A.object
+              [ "version" A..= ("1.0" :: String),
+                "source" A..= ("custom" :: String),
+                "content"
+                  A..= A.object
+                    [ "description" A..= descriptionText
+                    ]
+              ]
+       in TL.toStrict $ TLE.decodeUtf8 $ A.encode jsonValue
+
+    generateSlackMessageDesc :: Person.Person -> DRide.Ride -> Maybe Maps.LatLong -> Flow Text
+    generateSlackMessageDesc person ride customerLocation = do
       mbCustomerPhone <- mapM decrypt person.mobileNumber
       mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
       merchantOperatingCity <- do
@@ -181,8 +198,9 @@ postSosCreate (mbPersonId, _merchantId) req = do
           customerPhone = fromMaybe "NA" mbCustomerPhone
           customerName = SLP.getName person
           driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
-          dropLoc = maybe "NA" (T.pack . show) (ride.toLocation)
-          sosRaisedLocation = maybe "NA" (T.pack . show) customerLocation
+          dropLoc = fromMaybe "NA" $ TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON <$> ride.toLocation
+          sosRaisedLocation = fromMaybe "NA" $ TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON <$> customerLocation
+          pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON ride.fromLocation
       return $
         "There is an SOS raised by customer_id " <> person.id.getId <> "\n"
           <> "Customer Name - "
@@ -204,7 +222,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
           <> show ride.vehicleVariant
           <> "\n"
           <> "Pickup location: "
-          <> show ride.fromLocation
+          <> pickupLocation
           <> "\n"
           <> "Drop location: "
           <> dropLoc
