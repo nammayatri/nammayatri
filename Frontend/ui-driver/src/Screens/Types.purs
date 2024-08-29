@@ -1300,7 +1300,8 @@ type HomeScreenProps =  {
   showReferralEarnedPopUp :: Boolean,
   showReferNowPopUp :: Boolean,
   showAddUPIPopUp :: Boolean,
-  showVerifyUPIPopUp :: Boolean
+  showVerifyUPIPopUp :: Boolean,
+  chatServiceKilled :: Boolean
  }
 
 type TollState = {

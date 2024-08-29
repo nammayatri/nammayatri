@@ -2412,7 +2412,7 @@ homeScreenFlow = do
           _ <- pure $ hideKeyboardOnNavigation true
           liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_start" $ [{key : "Service Tier", value : unsafeToForeign updatedState.data.activeRide.serviceTier},
                                                                                       {key : "Driver Vehicle", value : unsafeToForeign updatedState.data.activeRide.driverVehicle}]
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = false, isInvalidOdometer = false, enterOdometerFocusIndex=0}, data{ route = [], activeRide{status = INPROGRESS}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = false, isInvalidOdometer = false, enterOdometerFocusIndex=0, chatServiceKilled = true}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ pure $ hideKeyboardOnNavigation true
           void $ pure $ JB.exitLocateOnMap ""
           void $ updateStage $ HomeScreenStage RideStarted
@@ -2680,7 +2680,7 @@ homeScreenFlow = do
             void $ pure $ setValueToLocalStore TRIP_STATUS "started"
             currentRideFlow Nothing Nothing
           else do
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatcallbackInitiated = not (homeScreen.data.activeRide.tripType == ST.Rental)}})
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {chatServiceKilled = true}})
             homeScreenFlow
         "EDIT_LOCATION" -> do
           if isNothing state.data.advancedRideData then do

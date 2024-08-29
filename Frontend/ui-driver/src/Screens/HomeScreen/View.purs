@@ -240,10 +240,16 @@ screen initialState (GlobalState globalState) =
                                 when (initialState.data.activeRide.tripType /= ST.Rental && isNothing advancedRideId) $ void $ push RemoveChat
                                 let rideId = fromMaybe "" (advancedRideId <|> Just initialState.data.activeRide.id)
                                 let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
-                                let _ = spy "Inside isChatServiceRunning ---------------------------------->" isChatServiceRunning
-                                when ((initialState.data.activeRide.tripType == ST.Rental || isJust advancedRideId) && not isChatServiceRunning) $ do
-                                  _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkAndStartChatService push 2 rideId initialState
-                                  pure unit
+                                when ((initialState.data.activeRide.tripType == ST.Rental || isJust advancedRideId) && (not initialState.props.chatcallbackInitiated || initialState.props.chatServiceKilled)) $ do
+                                  if initialState.props.chatServiceKilled then void $ launchAff $ EHC.flowRunner defaultGlobalState $ checkAndStartChatService push 5 rideId initialState
+                                  else if not initialState.props.chatcallbackInitiated then do 
+                                    void $ JB.clearChatMessages
+                                    void $ JB.storeCallBackMessageUpdated push rideId "Driver" UpdateMessages AllChatsLoaded
+                                    void $ JB.storeCallBackOpenChatScreen push OpenChatScreen
+                                    void $ JB.scrollOnResume push ScrollToBottom
+                                    void $ JB.startChatListenerService
+                                    void $ push InitializeChat
+                                  else pure unit
                                 
                                 -- Launching the Google Map with playing the audio 
                                 pushPlayAudioAndLaunchMap <- runEffectFn1 EHC.getValueFromIdMap "PlayAudioAndLaunchMap"
@@ -292,11 +298,8 @@ checkAndStartChatService :: forall w . (Action -> Effect Unit) -> Int -> String 
 checkAndStartChatService push retry rideId state = 
   when (retry > 0) $ do 
     let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
-    let _ = spy "IschatServcie " isChatServiceRunning
     if isChatServiceRunning then do
       delay $ Milliseconds 2000.0
-      if state.props.chatcallbackInitiated then pure unit
-        else doAff do liftEffect $ push InitializeChat
       checkAndStartChatService push (retry-1) rideId state
     else do 
       liftFlow $ JB.clearChatMessages
