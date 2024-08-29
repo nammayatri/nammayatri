@@ -102,4 +102,5 @@ verifyTag fullTag = do
           case mbTagValue of
             Just (A.Number num) -> unless (num >= realToFrac start && num <= realToFrac end) $ throwError (InvalidRequest $ "Tag value should be between " <> show start <> " and " <> show end)
             _ -> throwError $ InvalidRequest "Tag value should be a number"
-    _ -> throwError $ InvalidRequest "Tag should have format of name#value"
+    [_] -> return ()
+    _ -> throwError $ InvalidRequest "Tag should have format of name#value or just name"
