@@ -1473,3 +1473,4 @@ getEN stringKey =
         CHOOSE_FROM_CONTACTS -> "Choose from contacts"
         ADD_MANUALLY -> "Add Manually"
         DEFAULT_CONTACT_NOT_SET -> "Default contact not set"
+        DRIVER -> "Driver"

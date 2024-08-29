@@ -87,6 +87,7 @@ import Helpers.TipConfig
 import RemoteConfig as RC
 import Screens.Types as ST
 import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKeyEM)
+import Components.MessagingView.Controller as CMC
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -163,6 +164,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       stopLocation = if fareProductType == FPT.RENTAL then _stopLocation else _toLocation
       (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
       (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
+      currentRecipient = prevState.currentChatRecipient.recipient
   in  {
         otp : if isQuote && (not $ isLocalStageOn RideStarted) then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((DA.any (_ == fareProductType ) [FPT.RENTAL, FPT.INTER_CITY] ) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
@@ -223,6 +225,12 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , spLocationName : resp.specialLocationName
       , addressWard : bookingLocationAPIEntity.ward
       , hasToll : DA.any (\(FareBreakupAPIEntity fare) ->  fare.description == "TOLL_CHARGES") resp.estimatedFareBreakup
+      , currentChatRecipient : CMC.dummyChatRecipient { 
+          uuid = if currentRecipient == CMC.DRIVER && (not $ isLocalStageOn RideStarted) then rideList.bppRideId else prevState.currentChatRecipient.uuid
+        , enableForFollowing = true
+        , name = if currentRecipient == CMC.DRIVER  then rideList.driverName else prevState.currentChatRecipient.name
+        , recipient = currentRecipient
+        }
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -857,7 +865,8 @@ formatContacts defaultEmergencyNumbers =
       onRide : fromMaybe false item.onRide,
       priority: fromMaybe 1 item.priority,
       contactPersonId : item.contactPersonId, 
-      isFollowing: Nothing
+      isFollowing: Nothing,
+      notifiedViaFCM : item.notifiedViaFCM
     }) defaultEmergencyNumbers
 
 

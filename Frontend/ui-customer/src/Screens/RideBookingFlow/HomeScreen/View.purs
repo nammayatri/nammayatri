@@ -114,7 +114,7 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.API as HelpersAPI
 import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList, filterContactsBasedOnShareOptions)
 import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, defaultMarkerImageConfig, defaultActionImageConfig, differenceBetweenTwoUTCInMinutes, ActionImageConfig(..), handleLocateOnMapCallback, differenceBetweenTwoUTC, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
@@ -156,7 +156,7 @@ import Data.String as DS
 import Data.Function.Uncurried (runFn1, runFn2)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Constants.Configs 
-import Common.Resources.Constants (zoomLevel)
+import Common.Resources.Constants (zoomLevel, chatService)
 import Resources.Constants (markerArrowSize)
 import Constants (defaultDensity)
 import Resources.Constants (getEditDestPollingCount)
@@ -200,6 +200,7 @@ import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.Controllers.Types
 import Helpers.Utils as HU
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
+import Screens.HomeScreen.ScreenData (dummyNewContacts)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -352,7 +353,14 @@ screen initialState =
                 when (not initialState.props.chatcallbackInitiated && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) $ do
                   -- @TODO need to revert once apk update is done
                   --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
-                  startChatServices push initialState.data.driverInfoCardState.bppRideId "Customer" false
+                  case initialState.data.contactList of 
+                    Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
+                    Just contacts -> do
+                      let filterContacts = filterContactsBasedOnShareOptions contacts
+                      push $ UpdateChatWithEM false $ fromMaybe dummyNewContacts $ Arr.head filterContacts
+                      checkAndStartChatService push initialState.data.driverInfoCardState.currentChatRecipient.uuid (if initialState.data.driverInfoCardState.currentChatRecipient.uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)) false initialState
+                      pure unit
+                  
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               EditPickUpLocation -> do
                 void $ pure $ enableMyLocation true
@@ -386,7 +394,14 @@ screen initialState =
                   void $ rideDurationTimer (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ) "1" "RideDurationTimer" push (RideDurationTimer)
                   else pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
-              ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
+              ChatWithDriver -> do 
+                if (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION" then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
+                when ((isNothing initialState.data.contactList || not initialState.props.chatcallbackInitiated) && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE ) $ do
+                  case initialState.data.contactList of 
+                    Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
+                    Just _ -> pure unit
+                  checkAndStartChatService push initialState.data.driverInfoCardState.currentChatRecipient.uuid (if initialState.data.driverInfoCardState.currentChatRecipient.uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)) false initialState
+                  push LoadMessages
               ConfirmingLocation -> do
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               GoToConfirmLocation -> do
@@ -4769,10 +4784,6 @@ computeIssueReportBanners push = do
     
 updateEmergencyContacts :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT String Unit
 updateEmergencyContacts push state = do
-  if state.data.fareProductType == FPT.RENTAL && state.props.chatcallbackInitiated then pure unit
-  else if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
-    then liftFlowBT $ startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
-    else do
       emergencySettings <- lift $ lift $ fetchEmergencySettings push state
       case emergencySettings of
         Just (GetEmergencySettingsRes settings) -> do
@@ -4780,29 +4791,58 @@ updateEmergencyContacts push state = do
           void $ liftFlowBT $ push (UpdateContacts contacts)
           void $ liftFlowBT $ validateAndStartChat contacts push state settings.safetyCheckStartTime settings.safetyCheckEndTime
         Nothing -> pure unit      
-      
+
+fetchContactsForMultiChat :: (Action -> Effect Unit) -> HomeScreenState -> FlowBT String Unit
+fetchContactsForMultiChat push state = do
+  contacts <- getFormattedContacts
+  void $ liftFlowBT $ push $ UpdateContacts contacts
+  liftFlowBT $ checkAndStartChatService push state.data.driverInfoCardState.currentChatRecipient.uuid "Customer" false state 
+
 validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Maybe Int -> Maybe Int -> Effect Unit
 validateAndStartChat contacts push state safetyCheckStartSeconds safetyCheckEndSeconds = do
   if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
-    then startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
+    then checkAndStartChatService push state.data.driverInfoCardState.currentChatRecipient.uuid "Customer" false state
   else do
     let filterContacts = filter (\item -> (item.enableForShareRide || SU.checkRideShareOptionConstraint item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds Nothing) && (item.priority == 0 && not item.onRide)) contacts
     if (length filterContacts) == 0 
       then push RemoveChat
       else do
-        push $ UpdateChatWithEM true
-        if (not $ state.props.chatcallbackInitiated) then startChatServices push state.data.driverInfoCardState.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true else pure unit
+        if (not $ state.props.chatcallbackInitiated ) then do 
+          let primaryContact = fromMaybe dummyNewContacts $ Arr.head filterContacts
+          push $ UpdateChatWithEM true primaryContact
+          let uuid = state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" primaryContact.contactPersonId)
+          checkAndStartChatService push uuid (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true state else pure unit 
 
+
+checkAndStartChatService ::  (Action -> Effect Unit) -> String -> String -> Boolean -> HomeScreenState -> Effect Unit
+checkAndStartChatService push chatChannelId chatUser rideStarted state = do
+  let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
+  if chatChannelId /= getValueToLocalStore CHAT_CHANNEL_ID && isChatServiceRunning then do
+    stopChatListenerService 
+    checkChatService push 5 chatChannelId chatUser rideStarted state
+  else
+    startChatServices push chatChannelId chatUser rideStarted
 
 startChatServices ::  (Action -> Effect Unit) -> String -> String -> Boolean -> Effect Unit
-startChatServices push rideId chatUser rideStarted = do
-  void $ pure $ spy "Inside startChatServices" "sdfjhgiub"
-  void $ clearChatMessages
-  void $ storeCallBackMessageUpdated push rideId chatUser UpdateMessages AllChatsLoaded
-  void $ storeCallBackOpenChatScreen push OpenChatScreen
-  void $ startChatListenerService
-  void $ scrollOnResume push ScrollToBottom
-  push InitializeChat
+startChatServices push chatChannelId chatUser rideStarted = do
+    void $ clearChatMessages
+    void $ storeCallBackMessageUpdated push chatChannelId chatUser UpdateMessages AllChatsLoaded
+    void $ storeCallBackOpenChatScreen push OpenChatScreen
+    void $ startChatListenerService
+    void $ scrollOnResume push ScrollToBottom
+    push InitializeChat
+
+checkChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> String -> Boolean -> HomeScreenState -> Effect Unit
+checkChatService push retry channelId chatUser rideStarted state = 
+  when (retry > 0) $ do 
+    let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
+    if isChatServiceRunning then do
+      void $ pure $ delay $ Milliseconds 2000.0
+      checkChatService push (retry-1) channelId chatUser rideStarted state
+    else
+      startChatServices push channelId chatUser rideStarted
+
+    
 
 safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 safetyAlertPopup push state =

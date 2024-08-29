@@ -76,6 +76,7 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             , onRide : fromMaybe false item.onRide
             , contactPersonId : item.contactPersonId
             , isFollowing: Nothing
+            , notifiedViaFCM : item.notifiedViaFCM
             }
         )
         response.defaultEmergencyNumbers

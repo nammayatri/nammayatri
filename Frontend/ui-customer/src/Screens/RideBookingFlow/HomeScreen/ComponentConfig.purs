@@ -39,6 +39,7 @@ import Components.ErrorModal as ErrorModal
 import Components.LocationTagBarV2 as LocationTagBar
 import Components.MenuButton as MenuButton
 import Components.MessagingView as MessagingView
+import Components.MessagingView.Controller (ChatContacts(..))
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
@@ -57,6 +58,7 @@ import Data.Array ((!!), sortBy, mapWithIndex, elem, length, any)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
+import Data.Foldable (foldl)
 import Data.Int (toNumber)
 import Data.Int as INT
 import Data.Lens ((^.), view)
@@ -73,7 +75,7 @@ import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig, filterContactsBasedOnShareOptions)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -86,7 +88,7 @@ import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..), NewContacts(..))
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Services.API as API
@@ -98,6 +100,7 @@ import RemoteConfig as RemoteConfig
 import MerchantConfig.Types
 import Data.Tuple as DT
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
+import Components.MessagingView.Controller as CMC
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -1092,6 +1095,9 @@ messagingViewConfig state =
         , otp = state.data.driverInfoCardState.otp
         , suggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
         , isKeyBoardOpen = state.props.isKeyBoardOpen
+        , showChatListPopUp = state.props.showChatListPopUp
+        , contactList = getChatDetails state $ fromMaybe [] state.data.contactList
+        , currentChatRecipient = state.data.driverInfoCardState.currentChatRecipient       
         }
   in
     messagingViewConfig'
@@ -2522,3 +2528,33 @@ getAllServices dummy =
   , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY, backgroundColor: "#fef9eb"}
   , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec"}
   ]
+
+getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts
+getChatDetails state contacts = do
+  let multiChatContacts = 
+        foldl
+          ( \acc item -> if ( isJust item.contactPersonId) then 
+                            acc <> [ { name : item.name
+                              , number : item.number
+                              , uuid : state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" item.contactPersonId)
+                              , recipient : CMC.USER
+                              , enableForFollowing : item.enableForFollowing
+                              , enableForShareRide : item.enableForShareRide
+                              , contactPersonId : item.contactPersonId
+                              , notifiedViaFCM : item.notifiedViaFCM
+                              }]
+                          else acc
+          ) [] (filterContactsBasedOnShareOptions contacts)
+  multiChatContacts <> (if state.props.stageBeforeChatScreen == ST.RideStarted && state.data.fareProductType /= FPT.RENTAL then []
+                        else 
+                        [
+                          { name :  state.data.driverInfoCardState.driverName
+                          , number : ""
+                          , uuid : state.data.driverInfoCardState.bppRideId
+                          , recipient : CMC.DRIVER
+                          , enableForFollowing : false
+                          , enableForShareRide : false
+                          , contactPersonId : Nothing
+                          , notifiedViaFCM : Nothing
+                          }
+                        ])

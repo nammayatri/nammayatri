@@ -1485,3 +1485,4 @@ getTE stringKey =
     CHOOSE_FROM_CONTACTS -> "కాంటాక్ట్‌లను ఎంచుకోండి"
     ADD_MANUALLY -> "మాన్యువల్‌గా జోడించండి"
     DEFAULT_CONTACT_NOT_SET -> "డిఫాల్ట్ కాంటాక్ట్ సెట్ చేయబడలేదు"
+    DRIVER -> "డ్రైవర్"

@@ -69,5 +69,6 @@ config =
       , priority: 0
       , contactPersonId: Nothing
       , isFollowing: Nothing
+      , notifiedViaFCM : Nothing
       }
   }

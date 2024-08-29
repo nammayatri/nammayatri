@@ -45,7 +45,7 @@ import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
 import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions)
 import Components.SettingSideBar.Controller as SideBar
-import Components.MessagingView.Controller (ChatComponent)
+import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
 import PrestoDOM.List
 import JBridge (Location)
@@ -68,8 +68,9 @@ type NewContacts = {
   enableForShareRide:: Boolean,
   onRide :: Boolean,
   priority :: Int,
-  shareTripWithEmergencyContactOption :: DropDownOptions,
   contactPersonId :: Maybe String,
+  notifiedViaFCM :: Maybe Boolean,
+  shareTripWithEmergencyContactOption :: DropDownOptions,
   isFollowing :: Maybe Boolean
 }
 
@@ -682,8 +683,9 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
-, parking :: ParkingData
-, toll :: TollData
+  , chatPersonId :: String
+  , parking :: ParkingData
+  , toll :: TollData
 }
 
 type TollData = {
@@ -957,6 +959,7 @@ type HomeScreenStateProps =
   , shimmerViewTimerId :: String
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
+  , showChatListPopUp :: Boolean
   , isSharedLocationFlow :: Boolean
   , isOtpRideFlow :: Boolean
   , safetySettings :: Maybe API.GetEmergencySettingsRes
@@ -1365,6 +1368,7 @@ type DriverInfoCard =
   , driversPreviousRideDropLocLon :: Maybe Number
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
+  , currentChatRecipient :: ChatContacts
   , hasToll :: Boolean
   }
 

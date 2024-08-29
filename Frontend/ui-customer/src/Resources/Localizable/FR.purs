@@ -1475,3 +1475,4 @@ getFR stringKey =
         CHOOSE_FROM_CONTACTS -> "Choisir parmi les contacts"
         ADD_MANUALLY -> "Add Manually"
         DEFAULT_CONTACT_NOT_SET -> "Default contact not set"
+        DRIVER -> "Conducteur"

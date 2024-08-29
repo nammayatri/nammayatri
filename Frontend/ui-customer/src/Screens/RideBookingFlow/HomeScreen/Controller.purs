@@ -60,7 +60,7 @@ import Control.Monad.Trans.Class (lift)
 import Constants.Configs (getPolylineAnimationConfig)
 import Helpers.Ride
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, find, updateAt, insert, delete, tail, singleton, take, drop)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, find, updateAt, insert, delete, tail, singleton, take, drop, head)
 import Data.Function.Uncurried (runFn3, runFn2)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.), view)
@@ -84,7 +84,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>), (<$>))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -148,8 +148,14 @@ import Helpers.Utils as HU
 import ConfigProvider
 import Screens.HomeScreen.Controllers.Types
 import Data.Show.Generic 
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Helpers.API (callApiBT)
+import Services.API as API
 import Data.Array as DA
 import Data.String as DS
+import Components.MessagingView.Controller as CMC
+import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
+import Helpers.API as HelpersAPI
 
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -698,12 +704,8 @@ eval LoadMessages state = do
                               isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
                               showNotification = isChatNotificationDismissed && unReadMessages
                           updateMessagesWithCmd state {data {messages = transformedMessages, chatSuggestionsList = suggestions, lastMessage = toChatComponentConfig value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
-      Nothing -> 
-        if state.props.isChatWithEMEnabled then
-            continueWithCmd state [do 
-            pure $ SendQuickMessage "c013253fcbe2fdc50b1c261501de9045"
-            ] 
-          else continue state {props {canSendSuggestion = true}}
+
+      Nothing ->  continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
   if not state.props.chatcallbackInitiated then continue state else do
@@ -748,11 +750,7 @@ eval(MessagingViewActionController (MessagingView.Call)) state = do
   void $ pure $ hideKeyboardOnNavigation true
   if state.props.isChatWithEMEnabled 
     then do
-      let filterContacts = filter (\item -> item.priority == 0) $ fromMaybe [] state.data.contactList
-      case head filterContacts of
-        Nothing -> continue state
-        Just contact -> do 
-          void $ pure $ showDialer contact.number true
+          void $ pure $ showDialer state.data.driverInfoCardState.currentChatRecipient.number true
           continue state
     else if length state.data.config.callOptions > 1 then
       continue state { props { showCallPopUp = true } }
@@ -763,9 +761,31 @@ eval (MessagingViewActionController (MessagingView.SendMessage)) state = do
   then do
     pure $ sendMessage state.data.messageToBeSent
     pure $ setText (getNewIDWithTag "ChatInputEditText") ""
-    continue state{data{messageToBeSent = ""},props {sendMessageActive = false}}
+    let message = state.data.messageToBeSent
+    continueWithCmd state{data{messageToBeSent = ""},props {sendMessageActive = false}} [
+      do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+          $ do
+              when (state.data.driverInfoCardState.currentChatRecipient.notifiedViaFCM /= Just true && state.data.driverInfoCardState.currentChatRecipient.recipient /= CMC.DRIVER ) $ do
+                push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
+                case state.data.driverInfoCardState.currentChatRecipient.contactPersonId of
+                  Just contactId -> do
+                    let requestBody = { chatPersonId : contactId
+                                      , body : message
+                                      , title : "Message from " <> if DA.any (_ == (getValueToLocalStore USER_NAME)) ["__failed", ""] then (getString USER) else (getValueToLocalStore USER_NAME)
+                                      }
+                    (_ :: API.APISuccessResp) <- HelpersAPI.callApiBT $ API.MultiChatReq requestBody
+                    liftFlowBT $ push $ EnableNotificationForMultiChat state.data.driverInfoCardState.currentChatRecipient.contactPersonId
+                    pure unit
+                  Nothing -> pure unit
+        pure NoAction
+    ]
   else
     continue state
+
+eval (EnableNotificationForMultiChat contactPersonId) state = do 
+  let updatedContactList = (map (\item -> if item.contactPersonId == contactPersonId then item{ notifiedViaFCM = Just true} else item)) <$> state.data.contactList
+  continue state { data {contactList = updatedContactList, driverInfoCardState {currentChatRecipient {notifiedViaFCM = Just true}}}}
 
 eval (MessagingViewActionController (MessagingView.BackPressed)) state = do
   void $ pure $ performHapticFeedback unit
@@ -842,14 +862,31 @@ eval (MessagingViewActionController (MessagingView.SendSuggestion chatSuggestion
     continue state {data {chatSuggestionsList = []}, props {canSendSuggestion = false}}
   else continue state
 
+eval (MessagingViewActionController (MessagingView.ToggleMultiChatPopUp)) state = do 
+  if state.props.showChatListPopUp then do 
+    continue state {props {showChatListPopUp = false}}
+  else 
+    do
+      void $ pure $ hideKeyboardOnNavigation true
+      continue state {props {showChatListPopUp = true}}
+
+eval (MessagingViewActionController (MessagingView.SwitchChat contact)) state = do
+  let chatPersonId = if contact.recipient == CMC.DRIVER && state.props.currentStage /= RideStarted then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
+  if state.data.driverInfoCardState.currentChatRecipient.uuid == contact.uuid then do
+    continue state {props {showChatListPopUp = false}}
+  else do
+    let newState = state {data { chatPersonId = chatPersonId, driverInfoCardState { currentChatRecipient = contact}} , props {showChatListPopUp = false, isChatWithEMEnabled = contact.recipient /= CMC.DRIVER}}
+    exit $ UpdateChatScreen newState 
+
 eval AllChatsLoaded state = do
-  if state.props.isChatWithEMEnabled then do
+  if state.props.isChatWithEMEnabled && state.props.currentStage == RideStarted then do
     void $ pure $ sendMessage "c013253fcbe2fdc50b1c261501de9045"
     continue state
   else
     continue state
 
-------------------------------- ChatService - End --------------------------
+
+------------------------------- ChatService - End -----------------------------------------------------------------------------------
 
 eval (MessageExpiryTimer seconds status timerID) state = do
   let newState = state{data{triggerPatchCounter = state.data.triggerPatchCounter + 1}}
@@ -2595,7 +2632,24 @@ eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotify
 eval (ToggleShare index) state = continue state {data{contactList = Just $ mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) (fromMaybe [] state.data.contactList)}}
 
 eval (UpdateContacts contacts) state = continue state {data{contactList = Just $ contacts}}
-eval (UpdateChatWithEM flag) state = continue state {props{isChatWithEMEnabled = flag}}
+eval (UpdateChatWithEM flag primaryContact) state = 
+  continue state 
+    { data 
+      { driverInfoCardState 
+        { currentChatRecipient = CMC.dummyChatRecipient 
+          { name = primaryContact.name
+          , number = primaryContact.number
+          , uuid = state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" primaryContact.contactPersonId)
+          , recipient = CMC.USER
+          , enableForFollowing = primaryContact.enableForFollowing
+          , enableForShareRide = primaryContact.enableForShareRide
+          , contactPersonId = primaryContact.contactPersonId
+          , notifiedViaFCM = primaryContact.notifiedViaFCM
+          }
+        }
+      } 
+    , props {isChatWithEMEnabled = flag}
+    }
 eval (ShareRideAction PopupWithCheckboxController.DismissPopup) state = continue state {props{showShareRide = false}}
 
 eval (ShareRideAction (PopupWithCheckboxController.ClickPrimaryButton PrimaryButtonController.OnClick)) state = exit $ GoToNammaSafety state false false

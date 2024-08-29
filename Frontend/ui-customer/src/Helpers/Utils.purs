@@ -102,6 +102,8 @@ import Data.String.Regex (match, regex)
 import Data.String.Regex.Flags (noFlags)
 import Data.Array.NonEmpty (toArray)
 import Data.Array as DA
+import Components.MessagingView.Controller (ChatContacts(..))
+import Services.API as API
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -1189,3 +1191,6 @@ editPickupCircleConfig =
   let config = getAppConfig appConfig
   in
   defaultCircleConfig {radius = config.mapConfig.locateOnMapConfig.editPickUpThreshold, primaryStrokeColor = Color.yellow900, fillColor = Color.yellowOpacity23, strokeWidth = 4, secondaryStrokeColor = Color.red900 , circleId = "edit_location_circle" }
+
+filterContactsBasedOnShareOptions :: Array NewContacts -> Array NewContacts 
+filterContactsBasedOnShareOptions = DA.filter (\item -> (item.enableForShareRide || item.shareTripWithEmergencyContactOption.key == API.ALWAYS_SHARE || (item.shareTripWithEmergencyContactOption.key == API.SHARE_WITH_TIME_CONSTRAINTS )))

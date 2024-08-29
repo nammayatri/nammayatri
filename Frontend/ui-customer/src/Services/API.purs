@@ -1531,7 +1531,8 @@ newtype ContactDetails = ContactDetails {
   enableForShareRide :: Maybe Boolean,
   shareTripWithEmergencyContactOption:: Maybe RideShareOptions,
   onRide :: Maybe Boolean,
-  contactPersonId :: Maybe String
+  contactPersonId :: Maybe String,
+  notifiedViaFCM :: Maybe Boolean
 }
 
 
@@ -3812,3 +3813,24 @@ instance standardEncodeGetManuallySharedDetailsRes :: StandardEncode GetManually
 instance showGetManuallySharedDetailsRes :: Show GetManuallySharedDetailsRes where show = genericShow
 instance decodeGetManuallySharedDetailsRes :: Decode GetManuallySharedDetailsRes where decode = defaultDecode
 instance encodeGetManuallySharedDetailsRes :: Encode GetManuallySharedDetailsRes where encode = defaultEncode
+
+
+----------------------------------------------------------------- Multichat API ---------------------------------------------------------------------
+
+
+newtype MultiChatReq = MultiChatReq {
+  chatPersonId :: String,
+  body :: String,
+  title :: String
+}
+
+instance makeMultiChatReq :: RestEndpoint MultiChatReq  where
+ makeRequest reqBody@(MultiChatReq payload) headers = defaultMakeRequest POST (EP.multiChat "") headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericMultiChatReq :: Generic MultiChatReq _
+derive instance newtypeMultiChatReq :: Newtype MultiChatReq _
+instance standardEncodeMultiChatReq :: StandardEncode MultiChatReq where standardEncode (MultiChatReq reqBody) = standardEncode reqBody
+instance showMultiChatReq :: Show MultiChatReq where show = genericShow
+instance decodeMultiChatReq :: Decode MultiChatReq where decode = defaultDecode
+instance encodeMultiChatReq :: Encode MultiChatReq where encode = defaultEncode

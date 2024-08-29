@@ -130,6 +130,7 @@ data ScreenOutput = LogoutUser
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
   | SelectEstimateAndQuotes HomeScreenState
+  | UpdateChatScreen HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -299,7 +300,7 @@ data Action = NoAction
   | ShowBookingPreference
   | UpdateBookingDetails RideBookingRes
   | UpdateContacts (Array NewContacts)
-  | UpdateChatWithEM Boolean
+  | UpdateChatWithEM Boolean NewContacts
   | ShareRideAction PopupWithCheckboxController.Action
   | AllChatsLoaded
   | GoToSafetyEducationScreen
@@ -329,6 +330,7 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
+  | EnableNotificationForMultiChat (Maybe String)
   | TollChargeIncludedPopUpAction PopUpModal.Action
   | LocateOnMapCallBack String String String
   | UpdatePickupLocation String String String
