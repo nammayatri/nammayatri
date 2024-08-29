@@ -51,6 +51,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (HasBAPMetrics)
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 data DOnStatusReq = DOnStatusReq
   { bppBookingId :: Id DB.BPPBooking,
@@ -182,7 +183,8 @@ onStatus ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasField "storeRidesTimeLimit" r Int,
-    HasField "hotSpotExpiry" r Seconds
+    HasField "hotSpotExpiry" r Seconds,
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
   ) =>
   ValidatedOnStatusReq ->
   m ()

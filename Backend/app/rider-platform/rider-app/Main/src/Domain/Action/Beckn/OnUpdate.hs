@@ -89,6 +89,7 @@ import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.Notifications as Notify
 import qualified Tools.Notifications as TN
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 data OnUpdateReq
   = OUScheduledRideAssignedReq Common.RideAssignedReq
@@ -347,7 +348,8 @@ onUpdate ::
     HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
     EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    HasField "hotSpotExpiry" r Seconds,
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
   ) =>
   ValidatedOnUpdateReq ->
   m ()

@@ -42,7 +42,7 @@ SafetySettings:
     informPoliceSos : "false"
     autoCallDefaultContact : "false"
     notifySosWithEmergencyContacts : "false"
-    enableUnexpectedEventsCheck : "false"
+    enableUnexpectedEventsCheck : "'NEVER_SHARE'"
     enablePostRideSafetyCheck : "false"
     notifySafetyTeamForSafetyCheckFailure : "false"
     shakeToActivate : "false"

@@ -19,6 +19,7 @@ types:
     flow: SosType
     rideId: Id Ride
     isRideEnded: Maybe Bool
+    sendPNOnPostRideSOS: Maybe Bool
     notifyAllContacts: Maybe Bool
     customerLocation: Maybe LatLong
 

@@ -124,8 +124,8 @@ onInit req = do
             mbRiderName = decRider.firstName,
             transactionId = booking.transactionId,
             merchant = merchant,
-            nightSafetyCheck = safetySettings.nightSafetyChecks,
-            enableFrequentLocationUpdates = any (\item -> checkSharedOptions item riderConfig now) personENList,
+            nightSafetyCheck = checkSafetySettingConstraint (Just safetySettings.enableUnexpectedEventsCheck) riderConfig now,
+            enableFrequentLocationUpdates = any (\item -> checkSafetySettingConstraint item.shareTripWithEmergencyContactOption riderConfig now) personENList,
             paymentId = req.paymentId,
             enableOtpLessRide = fromMaybe False safetySettings.enableOtpLessRide,
             ..
@@ -135,8 +135,8 @@ onInit req = do
     prependZero :: Text -> Text
     prependZero str = "0" <> str
 
-    checkSharedOptions item riderConfig now =
-      case item.shareTripWithEmergencyContactOption of
+    checkSafetySettingConstraint item riderConfig now =
+      case item of
         Just ALWAYS_SHARE -> True
         Just SHARE_WITH_TIME_CONSTRAINTS -> checkTimeConstraintForFollowRide riderConfig now
         _ -> False

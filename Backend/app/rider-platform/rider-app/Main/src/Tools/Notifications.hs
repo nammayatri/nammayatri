@@ -62,6 +62,7 @@ import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
+import qualified UrlShortner.Common as UrlShortner
 
 data EmptyDynamicParam = EmptyDynamicParam
 
@@ -292,7 +293,7 @@ disableFollowRide ::
   m ()
 disableFollowRide personId = do
   emContacts <- QPDEN.findAllByPersonId personId
-  let followingContacts = filter (\item -> item.enableForFollowing || item.enableForShareRide) emContacts
+  let followingContacts = filter (\item -> item.shareTripWithEmergencyContactOption /= Just NEVER_SHARE || item.enableForShareRide) emContacts
   mapM_
     ( \contact -> maybe (pure ()) updateFollowRideCount contact.contactPersonId
     )
@@ -809,7 +810,8 @@ notifyRideStartToEmergencyContacts ::
     EncFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
   ) =>
   SRB.Booking ->
   SRide.Ride ->
@@ -870,11 +872,12 @@ notifyRideStartToEmergencyContacts booking ride = do
               ]
       notifyPerson booking.merchantId booking.merchantOperatingCityId person.id notificationData
     sendSMS emergencyContact name trackLink = do
+      shortenedTrackingUrl <- MessageBuilder.shortenTrackingUrl trackLink
       buildSmsReq <-
         MessageBuilder.buildFollowRideStartedMessage booking.merchantOperatingCityId $
           MessageBuilder.BuildFollowRideMessageReq
             { userName = fromMaybe "" name,
-              rideLink = trackLink
+              rideLink = shortenedTrackingUrl
             }
       void $
         Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq emergencyContact.mobileNumber)
