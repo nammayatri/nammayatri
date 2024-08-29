@@ -4989,7 +4989,7 @@ searchLocationFlow = do
       case response of
         Right _ -> do
           let
-            driverInfoCard = if isLocalStageOn RideStarted then globalState.homeScreen.data.driverInfoCardState { destinationLat = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLng destLoc.lon } else globalState.homeScreen.data.driverInfoCardState
+            driverInfoCard = if isLocalStageOn RideStarted then globalState.homeScreen.data.driverInfoCardState { destinationLat = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLng destLoc.lon, destinationAddress = stopLocation, destination = destLoc.address} else globalState.homeScreen.data.driverInfoCardState
           modifyScreenState
             $ HomeScreenStateType
                 ( \homeScreen ->

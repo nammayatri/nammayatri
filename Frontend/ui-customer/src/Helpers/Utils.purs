@@ -1188,4 +1188,4 @@ editPickupCircleConfig :: CircleConfig
 editPickupCircleConfig =
   let config = getAppConfig appConfig
   in
-  defaultCircleConfig {radius = config.mapConfig.locateOnMapConfig.editPickUpThreshold, primaryStrokeColor = Color.yellow900, fillColor = Color.yellowOpacity23, strokeWidth = 4, secondaryStrokeColor =Color.red900 , circleId = "edit_location_circle" }
+  defaultCircleConfig {radius = config.mapConfig.locateOnMapConfig.editPickUpThreshold, primaryStrokeColor = Color.yellow900, fillColor = Color.yellowOpacity23, strokeWidth = 4, secondaryStrokeColor = Color.red900 , circleId = "edit_location_circle" }
