@@ -67,7 +67,7 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
     toMaybe xs = guard (not (null xs)) >> Just xs
 
     -- Generate with LLM or create a template text here
-    generateAboutMe person driverStats now req' = Just (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> "months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations)
+    generateAboutMe person driverStats now req' = Just (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> " months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations)
 
     hometownDetails mHometown = case mHometown of
       Just hometown' -> "Hailing from " <> hometown' <> ", "
@@ -77,27 +77,23 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
 
     writeDriverStats driverStats = ratingStat driverStats <> cancellationStat driverStats
 
+    nonZero Nothing = 1
+    nonZero (Just a)
+      | a <= 0 = 1
+      | otherwise = a
+
     ratingStat driverStats =
-      let avgRating = divideMaybe driverStats.totalRatingScore driverStats.totalRatings
-       in if avgRating > Just 4.82 && isJust avgRating
-            then "I have an average rating of " <> T.pack (show $ fromJust avgRating) <> " and is among the top 10 percentile. "
-            else ""
+      if driverStats.rating > Just 4.75 && isJust driverStats.rating
+        then "I rank among the top 10 percentile in terms of rating "
+        else ""
 
     cancellationStat driverStats =
-      let cancRate = divideMaybe driverStats.ridesCancelled driverStats.totalRidesAssigned
-       in if (cancRate < Just 0.04 && isJust cancRate)
-            then if ratingStat driverStats == "" then "" else "Also, " <> "I have a very low cancellation rate of " <> (T.pack $ show $ fromJust cancRate) <> " that ranks among top 10 percentile. "
+      let cancRate = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int)
+       in if cancRate < 7
+            then "I " <> if (ratingStat driverStats :: Text) == "" then "" else "also " <> "have a very low cancellation rate that ranks among top 10 percentile. "
             else ""
 
-    genAspirations aspirations' = "With the earnings from my trips, I aspire to " <> T.toLower (T.intercalate ", " aspirations')
-
-    divideMaybe :: Maybe Int -> Maybe Int -> Maybe Double
-    divideMaybe mNum mDenom = do
-      num <- mNum
-      denom <- mDenom
-      if denom == 0
-        then Nothing
-        else Just (fromIntegral num / fromIntegral denom)
+    genAspirations aspirations' = if null aspirations' then "" else "With the earnings from my trips, I aspire to " <> T.toLower (T.intercalate ", " aspirations')
 
 getDriverProfileQues ::
   ( ( Maybe (Id SP.Person),
