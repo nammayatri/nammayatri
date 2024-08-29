@@ -239,6 +239,7 @@ initData =
       , showReferNowPopUp : false
       , showAddUPIPopUp : false 
       , showVerifyUPIPopUp : false
+      , chatServiceKilled : false
       }
   }
 

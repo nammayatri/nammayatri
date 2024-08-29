@@ -1000,10 +1000,10 @@ eval (RideActionModalAction (RideActionModal.VisuallyImpairedCustomer)) state = 
 
 eval (UpdateInChat) state = continue state {props{updatedArrivalInChat = true}}
 
-eval (InitializeChat ) state = continue state {props{chatcallbackInitiated = true}}
+eval (InitializeChat ) state = continue state {props{chatcallbackInitiated = true, chatServiceKilled = false}}
 
 eval RemoveChat state = do
-  continueWithCmd state {props{chatcallbackInitiated = false}} [ do
+  continueWithCmd state {props{chatcallbackInitiated = false, chatServiceKilled = false}} [ do
     _ <- stopChatListenerService
     _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
     pure $ NoAction
