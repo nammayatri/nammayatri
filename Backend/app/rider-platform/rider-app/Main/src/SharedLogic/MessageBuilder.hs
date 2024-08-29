@@ -33,6 +33,7 @@ module SharedLogic.MessageBuilder
     buildFRFSTicketBookedMessage,
     BuildSendRideEndOTPMessageReq (..),
     buildSendRideEndOTPMessage,
+    shortenTrackingUrl,
   )
 where
 
@@ -121,16 +122,21 @@ buildGenericMessage merchantOpCityId messageKey _ = do
 
 data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
   { userName :: Text,
-    rideLink :: Text
+    rideLink :: Text,
+    rideEndTime :: Maybe Text,
+    isRideEnded :: Bool
   }
   deriving (Generic)
 
-buildSOSAlertMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
+buildSOSAlertMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m SmsReqBuilder
 buildSOSAlertMessage merchantOperatingCityId req = do
+  shortenedTrackingUrl <- shortenTrackingUrl req.rideLink
+  let messageKey = if req.isRideEnded then DMM.POST_RIDE_SOS else DMM.SEND_SOS_ALERT
+      smsParams = if req.isRideEnded then [("userName", req.userName), ("rideEndTime", fromMaybe "" req.rideEndTime)] else [("userName", req.userName), ("rideLink", shortenedTrackingUrl)]
   merchantMessage <-
-    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_SOS_ALERT
-      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_SOS_ALERT))
-  buildSendSmsReq merchantMessage [("userName", req.userName), ("rideLink", req.rideLink)]
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId $ show messageKey)
+  buildSendSmsReq merchantMessage smsParams
 
 newtype BuildMarkRideAsSafeMessageReq = BuildMarkRideAsSafeMessageReq
   { userName :: Text
@@ -213,3 +219,15 @@ buildFRFSTicketBookedMessage pOrgId req = do
         msg
           & T.replace (templateText "TICKET_PLURAL") ticketPlural
           & T.replace (templateText "URL") url
+
+shortenTrackingUrl :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Text -> m Text
+shortenTrackingUrl url = do
+  let shortUrlReq =
+        UrlShortner.GenerateShortUrlReq
+          { baseUrl = url,
+            customShortCode = Nothing,
+            shortCodeLength = Nothing,
+            expiryInHours = Nothing
+          }
+  res <- UrlShortner.generateShortUrl shortUrlReq
+  return res.shortUrl

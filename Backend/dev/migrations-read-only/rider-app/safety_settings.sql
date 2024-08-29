@@ -16,3 +16,8 @@ ALTER TABLE atlas_app.safety_settings ADD COLUMN safety_center_disabled_on_date 
 ALTER TABLE atlas_app.safety_settings ADD COLUMN shake_to_activate boolean NOT NULL default false;
 ALTER TABLE atlas_app.safety_settings ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.safety_settings ADD PRIMARY KEY ( person_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.safety_settings ALTER COLUMN enable_unexpected_events_check SET DEFAULT 'NEVER_SHARE';

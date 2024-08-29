@@ -21,6 +21,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS
+import qualified Domain.Types.SafetySettings as DSafety
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow)
@@ -111,9 +112,8 @@ convertTimeZone timeInUTC minuteDiffFromUTC = utcToLocalTime (minutesToTimeZone 
 getName :: DP.Person -> Text
 getName person = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
 
-checkSafetyCenterDisabled :: (EsqDBFlow m r, CacheFlow m r) => DP.Person -> m Bool
-checkSafetyCenterDisabled person = do
-  safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just person)
+checkSafetyCenterDisabled :: (EsqDBFlow m r, CacheFlow m r) => DP.Person -> DSafety.SafetySettings -> m Bool
+checkSafetyCenterDisabled person safetySettings = do
   let isPermanentBlock = safetySettings.falseSafetyAlarmCount >= 6
   case safetySettings.safetyCenterDisabledOnDate of
     Nothing -> return False

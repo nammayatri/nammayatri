@@ -12,6 +12,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
+import Data.Time.Format
 import qualified Domain.Action.UI.Call as DUCall
 import qualified Domain.Action.UI.FollowRide as DFR
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
@@ -159,14 +160,16 @@ postSosCreate (mbPersonId, _merchantId) req = do
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
         { userName = SLP.getName person,
-          rideLink = trackLink
+          rideLink = trackLink,
+          rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> ride.rideEndTime,
+          isRideEnded = fromMaybe False req.isRideEnded
         }
-  when (req.isRideEnded /= Just True) $ do
+  when (triggerShareRideAndNotifyContacts safetySettings) $ do
     emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-    when (shouldSendSms safetySettings) $ do
+    when (req.isRideEnded /= Just True) $ do
       void $ QPDEN.updateShareRideForAll personId True
       enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
-      SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers
+    when shouldNotifyContacts $ SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers
   return $
     SosRes
       { sosId = sosId
@@ -230,9 +233,10 @@ postSosCreate (mbPersonId, _merchantId) req = do
           <> "SOS raised location: "
           <> sosRaisedLocation
 
-    shouldSendSms safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
+    triggerShareRideAndNotifyContacts safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
     notificationBody person_ = SLP.getName person_ <> " has initiated an SOS. Tap to follow and respond to the emergency situation"
     notificationTitle = "SOS Alert"
+    shouldNotifyContacts = bool True (req.sendPNOnPostRideSOS == Just True) (req.isRideEnded == Just True)
 
 enableFollowRideInSos :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow ()
 enableFollowRideInSos emergencyContacts = do

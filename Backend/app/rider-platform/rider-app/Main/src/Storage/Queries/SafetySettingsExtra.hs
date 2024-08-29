@@ -62,11 +62,12 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
         [Se.Is BeamP.personId (Se.Eq personId)]
     else do
       person <- runInReplica $ QPerson.findById (Kernel.Types.Id.Id personId) >>= fromMaybeM (PersonNotFound personId)
-      let safetySettings =
+      let enableUnexpectedEventsCheckValue = maybe (bool NEVER_SHARE SHARE_WITH_TIME_CONSTRAINTS person.nightSafetyChecks) identity enableUnexpectedEventsCheck
+          safetySettings =
             DSafety.SafetySettings
               { autoCallDefaultContact = fromMaybe person.shareEmergencyContacts autoCallDefaultContact,
                 enablePostRideSafetyCheck = fromMaybe NEVER_SHARE enablePostRideSafetyCheck,
-                enableUnexpectedEventsCheck = fromMaybe NEVER_SHARE enableUnexpectedEventsCheck,
+                enableUnexpectedEventsCheck = enableUnexpectedEventsCheckValue,
                 falseSafetyAlarmCount = person.falseSafetyAlarmCount,
                 hasCompletedMockSafetyDrill = bool person.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill (isJust hasCompletedMockSafetyDrill),
                 hasCompletedSafetySetup = fromMaybe person.hasCompletedSafetySetup hasCompletedSafetySetup,

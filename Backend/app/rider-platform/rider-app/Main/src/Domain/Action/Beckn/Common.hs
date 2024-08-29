@@ -77,6 +77,7 @@ import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 data BookingDetails = BookingDetails
   { bppBookingId :: Id DRB.BPPBooking,
@@ -421,7 +422,8 @@ rideStartedReqHandler ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    HasField "hotSpotExpiry" r Seconds,
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
   ) =>
   ValidatedRideStartedReq ->
   m ()

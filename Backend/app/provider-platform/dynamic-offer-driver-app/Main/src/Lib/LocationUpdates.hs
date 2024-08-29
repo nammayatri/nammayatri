@@ -20,7 +20,6 @@ module Lib.LocationUpdates
 where
 
 import Control.Applicative ((<|>))
-import Data.Time hiding (secondsToNominalDiffTime)
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -228,12 +227,11 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
 buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  now <- getLocalCurrentTime transportConfig.timeDiffFromUtc
   let snapToRoad' shouldRectifyDistantPointsFailure =
         if transportConfig.useWithSnapToRoadFallback
           then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId
           else snapToRoadWithService
-      enableNightSafety = (not isEndRide) && (checkNightSafetyTimeConstraint transportConfig now)
+      enableNightSafety = (not isEndRide)
   return $
     mkRideInterpolationHandler
       isEndRide
@@ -271,10 +269,6 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
     snapToRoadWithService req = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId req
       return ([Google], Right resp)
-
-    checkNightSafetyTimeConstraint config now = do
-      let time = timeToTimeOfDay $ utctDayTime now
-      isTimeWithinBounds (secondsToTimeOfDay config.nightSafetyStartTime) (secondsToTimeOfDay config.nightSafetyEndTime) time
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()
 whenWithLocationUpdatesLock driverId f = do
