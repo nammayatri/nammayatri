@@ -91,7 +91,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
         case payoutOrder.entityName of
           Just DPayment.DRIVER_DAILY_STATS -> do
             forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
-              dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DriverStats Not Found")
+              dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
               Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
                 let dPayoutStatus = castPayoutOrderStatus payoutStatus
                 when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
@@ -105,6 +105,18 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
             whenJust payoutOrder.entityIds $ \entityIds -> do
               fork "Update Payout Status for Backlog" $ do
                 mapM_ (updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId) entityIds
+          Just DPayment.RETRY_VIA_DASHBOARD -> do
+            whenJust payoutOrder.entityIds $ \entityIds -> do
+              fork "Update Payout Status for Retried Orders" $ do
+                mapM_ (updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId) entityIds
+          Just DPayment.DAILY_STATS_VIA_DASHBOARD -> do
+            forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
+              dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
+              Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
+                let dPayoutStatus = castPayoutOrderStatus payoutStatus
+                when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
+              fork "Update Payout Status For DailyStats Via Dashboard" $ do
+                callPayoutService dailyStats.driverId payoutOrderId
           _ -> pure ()
       pure ()
     IPayout.BadStatusResp -> pure ()
@@ -119,7 +131,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
 
     updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId dStatsId = do
       let dPayoutStatus = castPayoutOrderStatus payoutStatus
-      dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DriverStats Not Found")
+      dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
       Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId}

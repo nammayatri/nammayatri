@@ -51,5 +51,6 @@ getRiderDetails currency merchantId customerMobileCountryCode customerPhoneNumbe
             nightSafetyChecks = nightSafetyCheck,
             firstRideId = Nothing,
             payoutFlagReason = Nothing,
-            isDeviceIdExists = Nothing
+            isDeviceIdExists = Nothing,
+            isFlagConfirmed = Nothing
           }

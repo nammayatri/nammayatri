@@ -113,6 +113,11 @@ DailyStats:
       params: [payoutOrderId]
       where: id
 
+    updatePayoutOrderIdAndStatus:
+      kvFunction: updateOneWithKV
+      params: [payoutOrderId, payoutStatus]
+      where: id
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
