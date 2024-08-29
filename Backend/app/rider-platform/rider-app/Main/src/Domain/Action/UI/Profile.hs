@@ -205,7 +205,8 @@ getPersonDetails (personId, _) toss tenant' context = do
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
   frntndfgs <- if useCACConfig then getFrontendConfigs person toss tenant' context' else return $ Just DAKM.empty
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
-  isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person
+  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
+  isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person safetySettings
   hasTakenValidRide <- QCP.findAllByPersonId personId
   let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide BecknEnums.CAB
       hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknEnums.AUTO_RICKSHAW
@@ -222,9 +223,9 @@ getPersonDetails (personId, _) toss tenant' context = do
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide safetySettings
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide safetySettings = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -240,6 +241,8 @@ getPersonDetails (personId, _) toss tenant' context = do
           clientVersion = clientSdkVersion,
           deviceId = maskText <$> deviceId,
           androidId = maskText <$> androidId,
+          hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
+          hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
           ..
         }
 
@@ -495,7 +498,9 @@ data EmergencySettingsRes = EmergencySettingsRes
     notifySafetyTeamForSafetyCheckFailure :: Bool,
     shakeToActivate :: Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
-    enableOtpLessRide :: Maybe Bool
+    enableOtpLessRide :: Maybe Bool,
+    safetyCheckStartTime :: Seconds,
+    safetyCheckEndTime :: Seconds
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -516,5 +521,7 @@ getEmergencySettings personId = do
         localPoliceNumber = riderConfig.localPoliceNumber,
         hasCompletedMockSafetyDrill = fromMaybe False safetySettings.hasCompletedMockSafetyDrill,
         shareEmergencyContacts = safetySettings.notifySosWithEmergencyContacts,
+        safetyCheckEndTime = riderConfig.safetyCheckEndTime,
+        safetyCheckStartTime = riderConfig.safetyCheckStartTime,
         ..
       }

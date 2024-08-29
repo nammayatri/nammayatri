@@ -35,7 +35,8 @@ data SosReq = SosReq
     flow :: Domain.Types.Sos.SosType,
     isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     notifyAllContacts :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride
+    rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
+    sendPNOnPostRideSOS :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
