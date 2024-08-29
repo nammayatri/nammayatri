@@ -3,7 +3,10 @@
 
 module Lib.Payment.Storage.Queries.PayoutOrderExtra where
 
+import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption (DbHash)
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -27,3 +30,40 @@ findAllByEntityNameAndEntityIds limit offset entityName entityIds = do
     (Se.Desc Beam.createdAt)
     limit
     offset
+
+updateLastCheckedOn :: BeamFlow m r => [Text] -> m ()
+updateLastCheckedOn payoutOrderIds = do
+  now <- getCurrentTime
+  let lastCheckedAt = UTCTime (utctDay now) (secondsToDiffTime 0)
+  updateWithKV
+    [ Se.Set Beam.lastStatusCheckedAt (Just lastCheckedAt),
+      Se.Set Beam.updatedAt now
+    ]
+    [Se.Is Beam.orderId (Se.In payoutOrderIds)]
+
+findAllWithOptions :: BeamFlow m r => Int -> Int -> Maybe Text -> Maybe DbHash -> Maybe UTCTime -> Maybe UTCTime -> Bool -> m [PayoutOrder]
+findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFailedOnly = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is Beam.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+            <> [Se.Is Beam.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+            <> [Se.Is Beam.mobileNoHash $ Se.Eq (fromJust mbMobileNumberHash) | isJust mbMobileNumberHash]
+            <> [Se.Is Beam.customerId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
+            <> [Se.Is Beam.status $ Se.Eq Payout.FULFILLMENTS_FAILURE | isFailedOnly]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    (Just offset)
+
+findAllWithStatusAndEntity :: BeamFlow m r => Int -> Int -> Payout.PayoutOrderStatus -> [Maybe EntityName] -> m [PayoutOrder]
+findAllWithStatusAndEntity limit offset status entityNames = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is Beam.entityName (Se.In entityNames)]
+            <> [Se.Is Beam.status $ Se.Eq status]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    (Just offset)

@@ -35,6 +35,7 @@ RiderDetails:
     firstRideId: Maybe Text
     payoutFlagReason: Maybe PayoutFlagReason
     isDeviceIdExists: Maybe Bool
+    isFlagConfirmed: Maybe Bool
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -113,6 +114,16 @@ RiderDetails:
       params: [isDeviceIdExists]
       where: id
 
+    updateIsFlagConfirmed:
+      kvFunction: updateOneWithKV
+      params: [isFlagConfirmed]
+      where: id
+
+    updatePayoutFlagReason:
+      kvFunction: updateOneWithKV
+      params: [payoutFlagReason]
+      where: id
+
   sqlType:
     mobileCountryCode: character varying(255)
     mobileNumberEncrypted: character varying(255)
@@ -120,9 +131,7 @@ RiderDetails:
     referralCode: character varying(15)
     referredByDriver: character varying(255)
 
-
   extraOperations:
     - EXTRA_QUERY_FILE
-
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]

@@ -73,6 +73,11 @@ updateIsDeviceIdExists isDeviceIdExists id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isDeviceIdExists isDeviceIdExists, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateIsFlagConfirmed :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateIsFlagConfirmed isFlagConfirmed id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isFlagConfirmed isFlagConfirmed, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateNightSafetyChecks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateNightSafetyChecks nightSafetyChecks id = do
   _now <- getCurrentTime
@@ -80,6 +85,13 @@ updateNightSafetyChecks nightSafetyChecks id = do
 
 updateOtpCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateOtpCode otpCode id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.otpCode otpCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updatePayoutFlagReason ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updatePayoutFlagReason payoutFlagReason id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.payoutFlagReason payoutFlagReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDetails.RiderDetails))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -96,6 +108,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.hasTakenValidRide hasTakenValidRide,
       Se.Set Beam.hasTakenValidRideAt hasTakenValidRideAt,
       Se.Set Beam.isDeviceIdExists isDeviceIdExists,
+      Se.Set Beam.isFlagConfirmed isFlagConfirmed,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.mobileCountryCode mobileCountryCode,
       Se.Set Beam.mobileNumberEncrypted (mobileNumber & unEncrypted . encrypted),

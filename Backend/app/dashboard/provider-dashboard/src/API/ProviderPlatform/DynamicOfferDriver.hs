@@ -32,6 +32,7 @@ import qualified API.Action.ProviderPlatform.Management.DriverRegistration as Ma
 import qualified API.Action.ProviderPlatform.Management.Merchant as ManagementMerchantDSL
 import qualified API.Action.ProviderPlatform.Management.Message as ManagementMessageDSL
 import qualified API.Action.ProviderPlatform.Management.NammaTag as NammaTagDSL
+import qualified API.Action.ProviderPlatform.Management.Payout as ManagementPayoutDSL
 import qualified API.Action.ProviderPlatform.Management.Revenue as ManagementRevenueDSL
 import qualified API.Action.ProviderPlatform.Management.Ride as ManagementRideDSL
 import qualified API.Action.ProviderPlatform.RideBooking.Driver as RideBookingDriverDSL
@@ -137,6 +138,7 @@ type ManagementAPI =
     :<|> ManagementRevenueDSL.API
     :<|> ManagementRideDSL.API
     :<|> NammaTagDSL.API
+    :<|> ManagementPayoutDSL.API
 
 managementHandler :: ShortId DM.Merchant -> City.City -> FlowServer ManagementAPI
 managementHandler merchantId city =
@@ -151,6 +153,7 @@ managementHandler merchantId city =
     :<|> ManagementRevenueDSL.handler merchantId city
     :<|> ManagementRideDSL.handler merchantId city
     :<|> NammaTagDSL.handler merchantId city
+    :<|> ManagementPayoutDSL.handler merchantId city
 
 type RideBookingAPI =
   RideBookingDriverDSL.API

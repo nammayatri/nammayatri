@@ -113,7 +113,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             firstRideId = Nothing,
             payoutFlagReason = flagReason,
             currency,
-            isDeviceIdExists = Just $ isJust isMultipleDeviceIdExist
+            isDeviceIdExists = Just $ isJust isMultipleDeviceIdExist,
+            isFlagConfirmed = Nothing
           }
 
     updateReferralStats driverId transporterConfig merchOpCityId = do
