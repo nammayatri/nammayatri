@@ -19,7 +19,7 @@ data STR = LETS_GET_STARTED
         | LANGUAGE_UPDATED
         | YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION
         | VIEW_STATUS
-        | GO_HOME
+        | GO_HOME 
         | SELECT_LANGUAGE
         | WHICH_LANGUAGE_DO_YOU_PREFER
         | T_C
@@ -1521,6 +1521,20 @@ data STR = LETS_GET_STARTED
         | NO_ACTIVE_REFERRAL_ON_DATE
         | PAYMENT_IN_PROGRESS
         | REFRESH_PAYMENT
+        | BY
+        | CUSTOMERS 
+        | RATING 
+        | CANCELLATION 
+        | TRIP
+        | I_SPEAK
+        | WITH_NAMMAYATRI_FOR 
+        | YEARS 
+        | VEHICLE_NUMBER 
+        | WHAT_PEOPLE_SAY
+        | STAR_RATING 
+        | CARD_TEXT
+        | TRAININGS_I_COMPLETED
+        | I_PLEDGE
         | ONLY_5_MORE_RIDES_FOR_100_POINTS
         | ONLY_3_MORE_RIDES_FOR_50_POINTS
         | YOU_GOT_N_POINTS String
