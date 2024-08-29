@@ -71,6 +71,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
+import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 import qualified Tools.Notifications as Notify
@@ -194,7 +195,8 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
   let tag = customerDisability <&> (.tag)
   decRider <- decrypt rider
-  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled rider
+  safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just rider)
+  isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled rider safetySettings
   return $
     GetRideStatusResp
       { fromLocation = makeLocationAPIEntity booking.fromLocation,
@@ -206,7 +208,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.AmbulanceDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
-        customer = UPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled,
+        customer = UPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled safetySettings,
         driverPosition = mbPos <&> (.currPoint)
       }
 
