@@ -23,7 +23,6 @@ module Domain.Action.Beckn.Search
   )
 where
 
-import qualified Beckn.OnDemand.Utils.Search as Utils
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
 import Data.List (sortBy)
@@ -628,7 +627,6 @@ validateRequest merchantId sReq = do
   NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant sReq.pickupLocation
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
-  _ <- Utils.validateSubscriber sReq.bapId merchantId merchantOpCity.id
   let (distanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   (isInterCity, isCrossCity, destinationTravelCityName) <-

@@ -18,6 +18,7 @@ import Beckn.ACL.Common (getTagV2')
 import Beckn.OnDemand.Utils.Common as Common
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Context as ContextUtils
 import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Maybe (listToMaybe)
@@ -25,11 +26,13 @@ import qualified Data.Text as T
 import Data.Time (TimeOfDay (..))
 import Domain.Action.Beckn.OnSearch as OnSearch
 import Domain.Types.Estimate as Estimate
+import Domain.Types.SearchRequest
 import Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
 import Kernel.Prelude (roundToIntegral)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Utils.Common
@@ -395,3 +398,9 @@ getIsBlockedRoute item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_BLOCKED_SEARCH_ROUTE item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe Bool
   return parsedTagValue
+
+validateOnSearchContext :: (HasFlowEnv m r '["_version" ::: Text], MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Spec.Context -> SearchRequest -> m ()
+validateOnSearchContext context searchReq = do
+  ContextUtils.validateContext Context.ON_SEARCH context
+  bppId <- Common.getContextBppId context
+  Common.validateSubscriber bppId searchReq.merchantId searchReq.merchantOperatingCityId

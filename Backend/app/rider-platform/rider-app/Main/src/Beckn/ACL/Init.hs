@@ -17,7 +17,7 @@ module Beckn.ACL.Init (buildInitReqV2) where
 
 import qualified Beckn.OnDemand.Transformer.Init as TF
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapVariantToVehicle)
+import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import Kernel.Prelude
@@ -27,6 +27,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 
 buildInitReqV2 ::
@@ -35,7 +36,9 @@ buildInitReqV2 ::
   m Spec.InitReq
 buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle res.merchant.id "MOBILITY" (Utils.mapVariantToVehicle res.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+  moc <- CQMOC.findByMerchantIdAndCity res.merchant.id res.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> res.merchant.id.getId <> "-city-" <> show res.city)
+  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId res.merchant.id "MOBILITY" moc.id
+  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   let action = Context.INIT
   let domain = Context.MOBILITY
   isValueAddNP <- VNP.isValueAddNP res.providerId

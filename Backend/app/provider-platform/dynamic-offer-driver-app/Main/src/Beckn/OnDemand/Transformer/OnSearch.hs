@@ -20,6 +20,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Kernel.Utils.Common (highPrecMoneyToText, type (:::))
 
 buildOnSearchMessage :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool -> Maybe BecknV2.OnDemand.Types.OnSearchReqMessage
@@ -70,10 +71,10 @@ tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Typ
 tfItemPrice pricing = do
   let priceComputedValue_ = Nothing
       priceCurrency_ = Just $ show pricing.currency
-      priceMaximumValue_ = highPrecMoneyToText pricing.pricingMaxFare & Just
-      priceMinimumValue_ = highPrecMoneyToText pricing.pricingMinFare & Just
-      priceOfferedValue_ = highPrecMoneyToText pricing.pricingMinFare & Just
-      priceValue_ = highPrecMoneyToText pricing.pricingMinFare & Just
+      priceMaximumValue_ = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice (Just pricing.currency) pricing.pricingMaxFare
+      priceMinimumValue_ = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice (Just pricing.currency) pricing.pricingMinFare
+      priceOfferedValue_ = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice (Just pricing.currency) pricing.pricingMinFare
+      priceValue_ = Just $ Kernel.Types.Price.showPriceWithRoundingWithoutCurrency $ Kernel.Types.Price.mkPrice (Just pricing.currency) pricing.pricingMinFare
       returnData = BecknV2.OnDemand.Types.Price {priceComputedValue = priceComputedValue_, priceCurrency = priceCurrency_, priceMaximumValue = priceMaximumValue_, priceMinimumValue = priceMinimumValue_, priceOfferedValue = priceOfferedValue_, priceValue = priceValue_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing

@@ -31,14 +31,12 @@ where
 
 import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Select as ACL
-import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.Booking
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -101,7 +99,8 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   autoAssignEnabled <- searchRequest.autoAssignEnabled & fromMaybeM (InternalError "Invalid autoAssignEnabled")
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle searchRequest.merchantId "MOBILITY" (Utils.mapVariantToVehicle $ DV.castServiceTierToVariant estimate.vehicleServiceTierType) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId "MOBILITY" searchRequest.merchantOperatingCityId
+  bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   selectTtl <- bapConfig.selectTTLSec & fromMaybeM (InternalError "Invalid ttl")
   ttlInInt <-
     if autoAssignEnabled

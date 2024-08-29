@@ -233,7 +233,6 @@ validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
 validateRequest DOnSearchReq {..} = do
   searchRequest <- runInReplica $ QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   merchant <- QMerch.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-  _ <- Utils.validateSubscriber providerInfo.providerId merchant.id searchRequest.merchantOperatingCityId
   return $ ValidatedOnSearchReq {..}
 
 onSearch ::
