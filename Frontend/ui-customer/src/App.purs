@@ -72,6 +72,7 @@ import Screens.TicketBookingFlow.MetroTicketStatus.ScreenData as MetroTicketStat
 import Services.API
 import Screens.RentalBookingFlow.RentalScreen.ScreenData as RentalScreenData
 import Screens.RideBookingFlow.PickupInstructionsScreen.ScreenData as PickupInstructionsScreenData
+import Screens.DriverProfileScreenCommon.ScreenData as DriverProfileScreenCommonState
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
@@ -85,6 +86,7 @@ import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType)
 import Services.API (BookingStatus(..))
+import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -128,6 +130,7 @@ newtype GlobalState = GlobalState {
   , globalFlowCache :: GlobalFlowCache
   , rentalScreen :: RentalScreenState
   , pickupInstructionsScreen :: PickupInstructionsScreenState
+  , riderDriverProfileScreen :: DriverProfileScreenCommonState
   , dataExplainWithFetch :: DataFetchScreenState
   }
 
@@ -173,6 +176,7 @@ defaultGlobalState = GlobalState {
   , globalFlowCache : defaultGlobalFlowCache 
   , rentalScreen : RentalScreenData.initData
   , pickupInstructionsScreen : PickupInstructionsScreenData.initData
+  , riderDriverProfileScreen : DriverProfileScreenCommonState.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -366,6 +370,8 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
 
 data PICKUP_INSTRUCTIONS_SCREEN_OP = GO_TO_HOME_SCREEN_FROM_PICKUP_INSTRUCTIONS
 
+data DRIVER_PROFILE_SCREEN = GO_TO_HOME_SCREEN_FROM_DRIVER_PROFILE
+
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -403,4 +409,5 @@ data ScreenType =
   | GlobalFlowCacheType (GlobalFlowCache -> GlobalFlowCache)
   | RentalScreenStateType (RentalScreenState -> RentalScreenState)
   | PickupInstructionsScreenStateType (PickupInstructionsScreenState -> PickupInstructionsScreenState)
+  | DriverProfileScreenCommonStateType (DriverProfileScreenCommonState -> DriverProfileScreenCommonState)
   | DataFetchScreenStateType (DataFetchScreenState -> DataFetchScreenState)

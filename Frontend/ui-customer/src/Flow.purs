@@ -3199,6 +3199,11 @@ aboutUsScreenFlow = do
   case flow of
     GO_TO_HOME_FROM_ABOUT -> homeScreenFlow
 
+driverProfileScreenFlow = do
+  flow <- UI.driverProfileScreen
+  case flow of
+    _ -> homeScreenFlow
+
 permissionScreenFlow :: FlowBT String Unit
 permissionScreenFlow = do
   void $ pure $ hideKeyboardOnNavigation true
