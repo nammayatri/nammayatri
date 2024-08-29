@@ -127,7 +127,7 @@ directCallStatusCallback :: Text -> ExotelCallStatus -> Maybe Text -> Maybe Int 
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_ duration
 
 getDriverMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> Text -> FlowHandler DCall.GetDriverMobileNumberResp
-getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus = withFlowHandlerAPI . DCall.getDriverMobileNumber DCall.PrimaryNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus
+getDriverMobileNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus = withFlowHandlerAPI . DCall.getDriverMobileNumber DCall.BothNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus
 
 getDriverAlternateNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> Text -> FlowHandler DCall.GetDriverMobileNumberResp
 getDriverAlternateNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus = withFlowHandlerAPI . DCall.getDriverMobileNumber DCall.AlternateNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus

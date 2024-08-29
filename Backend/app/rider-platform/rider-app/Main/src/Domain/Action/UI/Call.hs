@@ -88,7 +88,7 @@ data CallAttachments = CallAttachments
 
 type CallCallbackRes = AckResponse
 
-data DriverNumberType = AlternateNumber | PrimaryNumber
+data DriverNumberType = AlternateNumber | PrimaryNumber | BothNumber
 
 type GetDriverMobileNumberResp = Text
 
@@ -283,6 +283,10 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
         PrimaryNumber -> return $ fromMaybe ride.driverMobileNumber ride.driverPhoneNumber
         AlternateNumber ->
           maybe (throwError $ RideFieldNotPresent "driverAlternateNumber") pure ride.driverAlternateNumber
+        BothNumber -> do
+          let primaryNumber = fromMaybe ride.driverMobileNumber ride.driverPhoneNumber
+          let alternateNumber = maybe "" ("," <>) ride.driverAlternateNumber
+          return $ primaryNumber <> alternateNumber
 
 callOnClickTracker :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => Id SRide.Ride -> m APISuccess
 callOnClickTracker rideId = do
