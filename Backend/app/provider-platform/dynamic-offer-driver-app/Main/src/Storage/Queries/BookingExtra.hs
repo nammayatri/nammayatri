@@ -218,3 +218,12 @@ updatePaymentId bookingId paymentId = do
 
 findBookingsFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> m [Booking]
 findBookingsFromDB bookingIds = findAllWithKV [Se.Is BeamB.id $ Se.In (getId <$> bookingIds)]
+
+updateBookingFromLocationById :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id DL.Location -> m ()
+updateBookingFromLocationById bookingId fromLocationId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.fromLocationId $ Just $ getId fromLocationId,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

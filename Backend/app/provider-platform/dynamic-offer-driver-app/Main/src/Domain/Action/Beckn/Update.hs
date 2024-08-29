@@ -59,6 +59,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FareParameters as QFP
@@ -153,6 +154,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
   whenJust origin $ \startLocation -> do
     QL.create startLocation
     pickupMapForBooking <- SLM.buildPickUpLocationMapping startLocation.id bookingId.getId DLM.BOOKING (Just person.merchantId) (Just person.merchantOperatingCityId)
+    QRBE.updateBookingFromLocationById bookingId startLocation.id
     QLM.create pickupMapForBooking
     pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id rideId.getId DLM.RIDE (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForRide
