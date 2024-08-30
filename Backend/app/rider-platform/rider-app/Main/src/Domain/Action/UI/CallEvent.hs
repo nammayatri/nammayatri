@@ -54,7 +54,7 @@ data CallEventReq = CallEventReq
 
 logCallEvent :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, CacheFlow m r, HasField "maxShards" r Int, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => CallEventReq -> m APISuccess.APISuccess
 logCallEvent CallEventReq {..} = do
-  callOnClickTracker rideId
+  when (callType == "ANONYMOUS_CALLER") $ callOnClickTracker rideId
   sendCallDataToKafka Nothing (Just rideId) (Just callType) Nothing Nothing User (Just exophoneNumber)
   pure APISuccess.Success
 
