@@ -21,6 +21,7 @@ import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Components.SeparatorView.View as SeparatorView
 import Components.TipsView as TipsView
+import Components.InputView as InputView
 import Data.Array (filter, head, null, (!!), mapWithIndex, slice, length, cons, findIndex, elem, sortBy)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Effect (Effect)
@@ -181,61 +182,62 @@ sourceDestinationImageView state =
 
 ---------------------------- sourceDestinationEditTextView ---------------------------------
 sourceDestinationView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
-sourceDestinationView state push =
-  linearLayout
-    [ width MATCH_PARENT
-    , orientation VERTICAL
-    , height WRAP_CONTENT
-    , margin $ MarginTop 7
-    ][ linearLayout
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , gravity CENTER_VERTICAL
-      ][ 
-      imageView
-        [ height $ V 15
-        , width $ V 15
-        , accessibility DISABLE
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
-        ] 
-      , textView $
-        [ height WRAP_CONTENT
-        , margin $ MarginLeft 12
-        , weight 1.0
-        , text state.source
-        , accessibility ENABLE
-        , color state.appConfig.quoteListModel.textColor
-        , accessibilityHint $ "Pickup Location is " <> (replaceAll (Pattern ",") (Replacement " : ") state.source)
-        , ellipsize true
-        , singleLine true
-        ] <> FontStyle.paragraphText TypoGraphy
-      ]
-      , if DS.null state.destination then textView[] else SeparatorView.view separatorConfig
-      , linearLayout
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , gravity CENTER_VERTICAL
-      , visibility $ boolToVisibility $ not $ DS.null state.destination
-      ][ 
-        imageView
-        [ height $ V 15
-        , width $ V 15
-        , accessibility DISABLE
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
-        ]
-        , textView $
-        [ height WRAP_CONTENT
-        , weight 1.0
-        , text state.destination
-        , margin $ MarginLeft 12
-        , color state.appConfig.quoteListModel.textColor
-        , accessibilityHint $ "Destination Location is " <>  (replaceAll (Pattern ",") (Replacement " : ") state.destination)
-        , accessibility ENABLE
-        , ellipsize true
-        , singleLine true
-        ] <> FontStyle.paragraphText TypoGraphy
-      ]
-    ]   
+sourceDestinationView state push = 
+    InputView.view (push <<< InputViewAction) state.inputViewConfig     -- PrestoAnim.animationSet [ fadeIn true ] $ 
+  -- linearLayout
+  --   [ width MATCH_PARENT
+  --   , orientation VERTICAL
+  --   , height WRAP_CONTENT
+  --   , margin $ MarginTop 7
+  --   ][ linearLayout
+  --     [ height WRAP_CONTENT
+  --     , width WRAP_CONTENT
+  --     , gravity CENTER_VERTICAL
+  --     ][ 
+  --     imageView
+  --       [ height $ V 15
+  --       , width $ V 15
+  --       , accessibility DISABLE
+  --       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
+  --       ] 
+  --     , textView $
+  --       [ height WRAP_CONTENT
+  --       , margin $ MarginLeft 12
+  --       , weight 1.0
+  --       , text state.source
+  --       , accessibility ENABLE
+  --       , color state.appConfig.quoteListModel.textColor
+  --       , accessibilityHint $ "Pickup Location is " <> (replaceAll (Pattern ",") (Replacement " : ") state.source)
+  --       , ellipsize true
+  --       , singleLine true
+  --       ] <> FontStyle.paragraphText TypoGraphy
+  --     ]
+  --     , if DS.null state.destination then textView[] else SeparatorView.view separatorConfig
+  --     , linearLayout
+  --     [ height WRAP_CONTENT
+  --     , width WRAP_CONTENT
+  --     , gravity CENTER_VERTICAL
+  --     , visibility $ boolToVisibility $ not $ DS.null state.destination
+  --     ][ 
+  --       imageView
+  --       [ height $ V 15
+  --       , width $ V 15
+  --       , accessibility DISABLE
+  --       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
+  --       ]
+  --       , textView $
+  --       [ height WRAP_CONTENT
+  --       , weight 1.0
+  --       , text state.destination
+  --       , margin $ MarginLeft 12
+  --       , color state.appConfig.quoteListModel.textColor
+  --       , accessibilityHint $ "Destination Location is " <>  (replaceAll (Pattern ",") (Replacement " : ") state.destination)
+  --       , accessibility ENABLE
+  --       , ellipsize true
+  --       , singleLine true
+  --       ] <> FontStyle.paragraphText TypoGraphy
+  --     ]
+  --   ]   
       
 ---------------------------- quotesView ---------------------------------
 quotesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -489,44 +491,46 @@ quoteListTopSheetView state push =
       , width MATCH_PARENT
       , background state.appConfig.quoteListModel.backgroundColor
       , accessibility DISABLE
-      , padding $ PaddingTop safeMarginTop
+      -- , padding $ PaddingTop safeMarginTop
       , orientation VERTICAL
       ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
-          , padding $ Padding 10 10 16 28
+          -- , padding $ Padding 10 10 16 28
           ][ linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , orientation HORIZONTAL
-              ][ linearLayout
-                  [ height $ V 36
-                  , width $ V 36
-                  , onClick push $ const GoBack
-                  , accessibilityHint "Cancel Search : Button"
-                  , accessibility ENABLE
-                  , rippleColor Color.rippleShade
-                  , cornerRadius 18.0
-                  ][  imageView
-                      [ height $ V 24
-                      , width $ V 24
-                      , accessibility DISABLE
-                      , imageWithFallback state.appConfig.quoteListModel.closeIcon
-                      , margin $ Margin 6 6 6 6
-                      ]
-                  ]
-                , sourceDestinationView state push
+              ][
+              -- ][ linearLayout
+              --     [ height $ V 36
+              --     , width $ V 36
+              --     , onClick push $ const GoBack
+              --     , accessibilityHint "Cancel Search : Button"
+              --     , accessibility ENABLE
+              --     , rippleColor Color.rippleShade
+              --     , cornerRadius 18.0
+              --     ][  imageView
+              --         [ height $ V 24
+              --         , width $ V 24
+              --         , accessibility DISABLE
+              --         , imageWithFallback state.appConfig.quoteListModel.closeIcon
+              --         , margin $ Margin 6 6 6 6
+              --         ]
+              --     ]
+                -- ,
+                 sourceDestinationView state push
                 ]
             ]
-        , linearLayout
-          [ height $ V 1
-          , width MATCH_PARENT
-          , background state.appConfig.quoteListModel.separatorColor
-          , visibility if state.appConfig.quoteListModel.showSeparator then VISIBLE else GONE
-          ]
-          []
+        -- , linearLayout
+        --   [ height $ V 1
+        --   , width MATCH_PARENT
+        --   , background state.appConfig.quoteListModel.separatorColor
+        --   , visibility if state.appConfig.quoteListModel.showSeparator then VISIBLE else GONE
+        --   ]
+        --   []
         ]
 noQuotesErrorModel :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
 noQuotesErrorModel state =

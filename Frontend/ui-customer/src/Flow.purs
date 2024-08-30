@@ -1203,7 +1203,7 @@ homeScreenFlow = do
           Nothing -> defaultAddStopConfig
 
       -- Request serviceability information based on location
-      (ServiceabilityRes placeServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq inputViewAtIndex.placeLat inputViewAtIndex.placeLong) ORIGIN
+      (ServiceabilityRes placeServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq inputViewAtIndex.placeLat inputViewAtIndex.placeLong) DESTINATION
       let
         serviceable = placeServiceabilityResp.serviceable
         (SpecialLocation specialLocation) = fromMaybe HomeScreenData.specialLocation (placeServiceabilityResp.specialLocation)

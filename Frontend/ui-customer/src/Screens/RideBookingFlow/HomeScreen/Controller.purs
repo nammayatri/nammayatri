@@ -1706,12 +1706,56 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetCurr
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
   void $ pure $ performHapticFeedback unit
-  let isSource = case state.props.isSource of
-                    Just true -> true
-                    _         -> false
-      isDestinationNotEmpty = (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0)
-      lat = if isDestinationNotEmpty then state.props.destinationLat else state.props.sourceLat
-      lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
+  let
+    selectedIndex = state.props.selectedIndex
+    inputView = state.props.inputView !! selectedIndex
+
+    isPlaceNotEmpty =
+      case inputView of
+        Just iv ->
+          if selectedIndex == 0 then
+            state.props.sourceLat /= 0.0 && state.props.sourceLong /= 0.0  
+          else if selectedIndex == length state.props.inputView - 1 then
+            state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0  
+          else
+            iv.placeLat /= 0.0 && iv.placeLong /= 0.0  
+        Nothing -> false
+
+    lat =
+      case inputView of
+        Just iv ->
+          if selectedIndex == 0 then
+            if isPlaceNotEmpty then state.props.sourceLat else state.props.destinationLat 
+          else if selectedIndex == length state.props.inputView - 1 then
+            if isPlaceNotEmpty then state.props.destinationLat else state.props.sourceLat
+          else
+            if isPlaceNotEmpty then iv.placeLat else state.props.sourceLat
+        Nothing -> 0.0  
+
+    lon =
+      case inputView of
+        Just iv ->
+          if selectedIndex == 0 then
+            if isPlaceNotEmpty then state.props.sourceLong else state.props.destinationLong 
+          else if selectedIndex == length state.props.inputView - 1 then
+            if isPlaceNotEmpty then state.props.destinationLong else state.props.sourceLong  
+          else
+            if isPlaceNotEmpty then iv.placeLong else state.props.sourceLong   
+        Nothing -> 0.0
+      -- isPlaceNotEmpty =
+      -- case inputView of
+      --   Just iv ->
+      --     if selectedIndex == 0 then
+      --       state.props.sourceLat /= 0.0 && state.props.sourceLong /= 0.0  -- Source
+      --     else if selectedIndex == length state.props.inputView - 1 then
+      --       state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0  -- Destination
+      --     else
+      --       iv.placeLat /= 0.0 && iv.placeLong /= 0.0  -- Stops
+      --   Nothing -> false
+      
+      -- isDestinationNotEmpty = (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0)
+      -- lat = if isDestinationNotEmpty then state.props.destinationLat else state.props.sourceLat
+      -- lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin", locationName = fromMaybe "" state.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig{ labelImage = zoneLabelIcon state.props.confirmLocationCategory }}
@@ -1823,6 +1867,14 @@ eval (SearchLocationModelActionController (SearchLocationModelController.InputVi
   continue state { props { inputView = updatedInputView, searchLocationModelProps{isAutoComplete = canClearText}, selectedIndex = index}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.InputViewAction (InputViewController.BackPressed))) state = do
+  _ <- pure $ performHapticFeedback unit
+  continueWithCmd state{props{showShimmer = true}}
+    [ do
+        _ <- pure $ hideKeyboardOnNavigation true
+        pure $ BackPressed
+    ]
+
+eval (QuoteListModelActionController (QuoteListModelController.InputViewAction (InputViewController.BackPressed))) state = do
   _ <- pure $ performHapticFeedback unit
   continueWithCmd state{props{showShimmer = true}}
     [ do

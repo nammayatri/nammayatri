@@ -23,6 +23,7 @@ import MerchantConfig.Types (AppConfig)
 import Components.TipsView as TipsView
 import Components.ChooseVehicle.Controller as CVC
 import Components.ProviderModel as PM
+import Components.InputView.Controller as InputViewController
 
 data Action = GoBack
             | NoAction
@@ -37,6 +38,7 @@ data Action = GoBack
             | TipsViewActionController TipsView.Action
             | ProviderModelAC PM.Action
             | CancelTimer
+            | InputViewAction InputViewController.Action
 
 type QuoteListModelState = {
      source :: String
@@ -61,4 +63,5 @@ type QuoteListModelState = {
   , showAnim :: Boolean
   , animEndTime :: Int
   , isRentalSearch :: Boolean
+  , inputViewConfig :: InputViewController.InputViewConfig
 }

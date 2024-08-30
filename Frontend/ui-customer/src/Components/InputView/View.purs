@@ -198,7 +198,7 @@ dateTimePickerButton config push =
     ]
 nonEditableTextView :: forall w. (Action -> Effect Unit ) -> InputView -> InputViewConfig -> Int -> PrestoDOM (Effect Unit) w
 nonEditableTextView push config config' index = let
-  strokeValue = ((if config.inputTextConfig.isFocussed then "1," else "0,") <> Color.yellow900)
+  -- strokeValue = ((if config.inputTextConfig.isFocussed then "1," else "0,") <> Color.yellow900)
   marginTop = 48 * index
   in 
     linearLayout[
@@ -232,15 +232,15 @@ nonEditableTextView push config config' index = let
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
-    , gravity config.gravity
+    , gravity LEFT--config.gravity
     , padding $ config.padding 
-    , background Color.squidInkBlue
+    , background config'.backgroundColor--Color.squidInkBlue
     -- , margin $ config.inputTextConfig.margin
     , cornerRadius $ config.inputTextConfig.cornerRadius 
     , clickable $ config.isClickable 
     , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true config.index true
     , rippleColor $ Color.rippleShade
-    , stroke $ strokeValue 
+    -- , stroke $ strokeValue 
     -- , background Color.red900
     ]
     [  
@@ -251,14 +251,14 @@ nonEditableTextView push config config' index = let
       --   , visibility $ config.inputTextConfig.prefixImageVisibility
       --   ],
        textView $ 
-          [ text $ if config.inputTextConfig.textValue == "" then config.inputTextConfig.placeHolder else config.inputTextConfig.textValue
+          [ text $ if config.inputTextConfig.textValue == "" then config.inputTextConfig.placeHolder else config.inputTextConfig.textValue --config.place
           , color config.inputTextConfig.textColor
               , height WRAP_CONTENT
               , maxLines 1
               , ellipsize true
           ] <> config.fontStyle]]]
   ]]
-  , postfixImageView push config (length config'.inputView)
+  -- , postfixImageView push config (length config'.inputView)
   ]
 
 inputTextField :: forall w. (Action -> Effect Unit ) -> InputView -> InputViewConfig -> Int -> PrestoDOM (Effect Unit) w

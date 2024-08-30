@@ -1288,7 +1288,7 @@ getInputViewConfig state =
   , imageLayoutMargin : MarginLeft 0
   , imageLayoutWidth : V 20
   , inputLayoutPading : PaddingLeft 0 
-  , inputView : state.props.inputView
+  , inputView : map (\item -> item{isEditable = state.props.currentStage /= FindingQuotes}) state.props.inputView
   , suffixButton : {
     text : "",
     fontStyle : [],
@@ -1297,6 +1297,7 @@ getInputViewConfig state =
     padding : Padding 0 0 0 0,
     gravity : CENTER_VERTICAL
   }
+  , backgroundColor : if state.props.currentStage == FindingQuotes then Color.black900 else Color.squidInkBlue
   , imageLayoutVisibility : VISIBLE
   , suffixButtonVisibility : GONE
   }
@@ -1454,6 +1455,7 @@ quoteListModelViewState state =
     , showAnim: not $ state.data.iopState.showMultiProvider && isLocalStageOn FindingQuotes
     , animEndTime: state.data.currentCityConfig.iopConfig.autoSelectTime
     , isRentalSearch: isLocalStageOn ConfirmingQuotes
+    , inputViewConfig : getInputViewConfig state
     }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig

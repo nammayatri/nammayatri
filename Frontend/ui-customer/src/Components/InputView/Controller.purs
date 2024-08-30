@@ -59,6 +59,7 @@ type InputViewConfig =
   , imageLayoutWidth :: Length
   , imageLayoutVisibility :: Visibility
   , suffixButtonVisibility :: Visibility
+  , backgroundColor :: Color
   , inputLayoutPading :: Padding
   }
 
@@ -147,7 +148,8 @@ config = {
     suffixImage : "",
     padding : Padding 0 0 0 0,
     gravity : CENTER_VERTICAL
-  }
+  },
+  backgroundColor : Color.squidInkBlue
 }
 
 dummyImageConfig :: ImageConfig
