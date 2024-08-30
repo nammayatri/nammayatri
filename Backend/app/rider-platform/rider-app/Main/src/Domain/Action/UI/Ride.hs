@@ -274,6 +274,8 @@ editLocation rideId (personId, merchantId) req = do
       QLM.create pickupMapForBooking
       pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
       QLM.create pickupMapForRide
+      pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id booking.transactionId DLM.SEARCH_REQUEST (Just merchantId) ride.merchantOperatingCityId
+      QLM.create pickupMapForSearchReq
       SQB.updateBookingFromLocationById bookingId startLocation.id
       SQSR.updateSearchReqFromLocationById booking.transactionId startLocation.id
       let origin = Just $ startLocation{id = "0"}
