@@ -2227,7 +2227,7 @@ instance decodeTicketBookingDetails :: Decode TicketBookingDetails where decode 
 instance encodeTicketBookingDetails :: Encode TicketBookingDetails where encode = defaultEncode
 
 
-data TicketServiceReq = TicketServiceReq String
+data TicketServiceReq = TicketServiceReq String String
 
 data TicketPlaceReq = TicketPlaceReq
 
@@ -2376,7 +2376,7 @@ instance makeGetTicketStatusReq :: RestEndpoint GetTicketStatusReq  where
   encodeRequest req = standardEncode req
 
 instance makeTicketServiceReq :: RestEndpoint TicketServiceReq  where
- makeRequest reqBody@(TicketServiceReq placeId) headers = defaultMakeRequest GET (EP.ticketPlaceServices placeId) headers reqBody Nothing
+ makeRequest reqBody@(TicketServiceReq placeId date) headers = defaultMakeRequest GET (EP.ticketPlaceServices placeId date) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 instance makeTicketPlaceReq :: RestEndpoint TicketPlaceReq  where
@@ -2470,7 +2470,7 @@ instance decodeTicketPlaceResp :: Decode TicketPlaceResp where decode = defaultD
 instance encodeTicketPlaceResp :: Encode TicketPlaceResp where encode = defaultEncode
 
 derive instance genericTicketServiceReq :: Generic TicketServiceReq _
-instance standardEncodeTicketServiceReq :: StandardEncode TicketServiceReq where standardEncode (TicketServiceReq id) = standardEncode id
+instance standardEncodeTicketServiceReq :: StandardEncode TicketServiceReq where standardEncode (TicketServiceReq id date) = standardEncode { id: id, date: date }
 instance showTicketServiceReq :: Show TicketServiceReq where show = genericShow
 instance decodeTicketServiceReq :: Decode TicketServiceReq where decode = defaultDecode
 instance encodeTicketServiceReq  :: Encode TicketServiceReq where encode = defaultEncode
