@@ -219,6 +219,7 @@ import AssetsProvider (renewFile)
 import Data.Tuple
 import Screens.HomeScreen.Controllers.Types
 import Components.MessagingView.Controller as CMC
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller as ParcelDeliveryScreenController
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -6509,3 +6510,26 @@ pickupInstructionsScreenFlow = do
   action <- UI.pickupInstructionsScreen
   case action of 
     _ -> pickupInstructionsScreenFlow
+
+parcelDeliveryFlow :: FlowBT String Unit
+parcelDeliveryFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.parcelDeliveryScreen currentState.parcelDeliveryScreen
+  case action of
+    ParcelDeliveryScreenController.GoToHomeScreen state -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
+      homeScreenFlow
+    ParcelDeliveryScreenController.RefreshScreen state -> do
+      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
+      parcelDeliveryFlow
+    ParcelDeliveryScreenController.GoToSelectLocation state -> do
+      void $ pure $ updateLocalStage SearchLocationModel
+      homeScreenFlow
+    ParcelDeliveryScreenController.GoToChooseYourRide state -> do
+      (GlobalState globalState) <- getState
+      updateLocalStage SettingPrice
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> globalState.homeScreen { props { currentStage = SettingPrice }})
+      homeScreenFlow
+    ParcelDeliveryScreenController.GoToConfirmgDelivery state -> do
+      homeScreenFlow
+    _ -> pure unit

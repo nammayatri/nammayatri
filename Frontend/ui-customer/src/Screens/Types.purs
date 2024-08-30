@@ -2838,6 +2838,7 @@ type SelectFaqScreenProps =
   , needIssueListApiCall :: Boolean
   }
 
+
 -- ######################################### FaqScreenState ####################################################
 
 type FaqScreenState =
@@ -2862,3 +2863,36 @@ type FaqScreenProps =
   , needIssueListApiCall :: Boolean
   }
 
+
+-- ######################################### ParcelDeliveryFlow ####################################################
+
+data ParcelDeliveryScreenStage = DELIVERY_INSTRUCTIONS | SENDER_DETAILS | RECEIVER_DETAILS | FINAL_DETAILS
+
+derive instance genericParcelDeliveryScreenStage :: Generic ParcelDeliveryScreenStage _
+instance showParcelDeliveryScreenStage :: Show ParcelDeliveryScreenStage where show = genericShow
+instance eqParcelDeliveryScreenStage :: Eq ParcelDeliveryScreenStage where eq = genericEq
+
+type ParcelDeliveryScreenState = {
+  data :: ParcelDeliveryScreenData,
+  props :: ParcelDeliveryScreenProps
+}
+
+type ParcelDeliveryScreenData = {
+    currentStage :: ParcelDeliveryScreenStage
+  , sourceAddress :: Address
+  , destinationAddress :: Address
+  , route :: Maybe Route
+  , sourceLat :: Number
+  , sourceLong :: Number
+  , destinationLat :: Number
+  , destinationLong :: Number
+  , selectedQuote :: Maybe QuotesList
+  , parcelQuoteList :: ChooseVehicle.Config
+  , rateCard :: CTA.RateCard
+  , config :: AppConfig
+  , showRateCard :: Boolean
+}
+
+type ParcelDeliveryScreenProps = {
+
+}
