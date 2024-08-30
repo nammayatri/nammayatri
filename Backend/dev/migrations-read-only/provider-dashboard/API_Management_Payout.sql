@@ -1,14 +1,14 @@
 -- {"api":"PostPayoutPayoutVerifyFraudStatus","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
 UPDATE atlas_bpp_dashboard.transaction
-  SET endpoint = 'ProviderManagementAPI_PayoutAPI_PostPayoutPayoutVerifyFraudStatusEndpoint'
+  SET endpoint = 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_VERIFY_FRAUD_STATUS'
   WHERE endpoint = 'PayoutAPI PostPayoutPayoutVerifyFraudStatusEndpoint';
 
 -- {"api":"PostPayoutPayoutRetryFailed","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
 UPDATE atlas_bpp_dashboard.transaction
-  SET endpoint = 'ProviderManagementAPI_PayoutAPI_PostPayoutPayoutRetryFailedEndpoint'
+  SET endpoint = 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RETRY_FAILED'
   WHERE endpoint = 'PayoutAPI PostPayoutPayoutRetryFailedEndpoint';
 
 -- {"api":"PostPayoutPayoutRetryAllWithStatus","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
 UPDATE atlas_bpp_dashboard.transaction
-  SET endpoint = 'ProviderManagementAPI_PayoutAPI_PostPayoutPayoutRetryAllWithStatusEndpoint'
+  SET endpoint = 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RETRY_ALL_WITH_STATUS'
   WHERE endpoint = 'PayoutAPI PostPayoutPayoutRetryAllWithStatusEndpoint';

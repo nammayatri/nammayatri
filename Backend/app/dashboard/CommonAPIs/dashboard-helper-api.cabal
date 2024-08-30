@@ -116,6 +116,7 @@ library
     , beckn-services
     , beckn-spec
     , bytestring
+    , casing
     , cassava
     , deriving-aeson
     , esqueleto

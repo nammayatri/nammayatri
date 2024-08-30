@@ -150,11 +150,11 @@ instance Show Endpoint where
     TicketsAPI e -> "TicketsAPI " <> show e
     MapAPI e -> "MapAPI " <> show e
     SafetyAPI e -> "SafetyAPI " <> show e
-    RiderManagementAPI e -> "RiderManagementAPI_" <> show e
-    -- RiderRideBookingAPI e -> "RiderRideBookingAPI_" <> show e
-    ProviderFleetAPI e -> "ProviderFleetAPI_" <> show e
-    ProviderManagementAPI e -> "ProviderManagementAPI_" <> show e
-    ProviderRideBookingAPI e -> "ProviderRideBookingAPI_" <> show e
+    RiderManagementAPI e -> "RIDER_MANAGEMENT/" <> show e
+    -- RiderRideBookingAPI e -> "RIDER_RIDE_BOOKING/" <> show e
+    ProviderFleetAPI e -> "PROVIDER_FLEET/" <> show e
+    ProviderManagementAPI e -> "PROVIDER_MANAGEMENT/" <> show e
+    ProviderRideBookingAPI e -> "PROVIDER_RIDE_BOOKING/" <> show e
 
 $(mkBeamInstancesForEnum ''Endpoint)
 
@@ -169,7 +169,7 @@ instance ToParamSchema Endpoint where
     mempty
       & title ?~ "Endpoint"
       & type_ ?~ OpenApiString
-      & format ?~ "ProviderManagementAPI_BookingAPI_PostBookingCancelAllStuckEndpoint,.."
+      & format ?~ "PROVIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK,.."
 
 instance Read Endpoint where
   readsPrec d' =
@@ -265,23 +265,23 @@ instance Read Endpoint where
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (RiderManagementAPI v1, r2)
-                 | r1 <- stripPrefix "RiderManagementAPI_" r,
+                 | r1 <- stripPrefix "RIDER_MANAGEMENT/" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             -- ++ [ (RiderRideBookingAPI v1, r2)
-            --      | r1 <- stripPrefix "RiderRideBookingAPI_" r,
+            --      | r1 <- stripPrefix "RIDER_RIDE_BOOKING/" r,
             --        (v1, r2) <- readsPrec (app_prec + 1) r1
             --    ]
             ++ [ (ProviderFleetAPI v1, r2)
-                 | r1 <- stripPrefix "ProviderFleetAPI_" r,
+                 | r1 <- stripPrefix "PROVIDER_FLEET/" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (ProviderManagementAPI v1, r2)
-                 | r1 <- stripPrefix "ProviderManagementAPI_" r,
+                 | r1 <- stripPrefix "PROVIDER_MANAGEMENT/" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (ProviderRideBookingAPI v1, r2)
-                 | r1 <- stripPrefix "ProviderRideBookingAPI_" r,
+                 | r1 <- stripPrefix "PROVIDER_RIDE_BOOKING/" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
       )

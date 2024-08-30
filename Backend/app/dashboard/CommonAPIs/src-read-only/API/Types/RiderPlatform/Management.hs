@@ -6,6 +6,7 @@ module API.Types.RiderPlatform.Management where
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Merchant
+import qualified Dashboard.Common
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
@@ -21,30 +22,30 @@ data ManagementEndpoint
 
 instance Text.Show.Show ManagementEndpoint where
   show = \case
-    BookingAPI e -> "BookingAPI_" <> show e
-    InvoiceAPI e -> "InvoiceAPI_" <> show e
-    MerchantAPI e -> "MerchantAPI_" <> show e
+    BookingAPI e -> "BOOKING/" <> Dashboard.Common.showUserActionType e
+    InvoiceAPI e -> "INVOICE/" <> Dashboard.Common.showUserActionType e
+    MerchantAPI e -> "MERCHANT/" <> Dashboard.Common.showUserActionType e
 
 instance Text.Read.Read ManagementEndpoint where
   readsPrec d' =
     Text.Read.readParen
       (d' > app_prec)
       ( \r ->
-          [(BookingAPI v1, r2) | r1 <- stripPrefix "BookingAPI_" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+          [(BookingAPI v1, r2) | r1 <- stripPrefix "BOOKING/" r, (v1, r2) <- Dashboard.Common.readUserActionTypeS r1]
             ++ [ ( InvoiceAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "InvoiceAPI_" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                 | r1 <- stripPrefix "INVOICE/" r,
+                   (v1, r2) <- Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( MerchantAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "MerchantAPI_" r,
+                 | r1 <- stripPrefix "MERCHANT/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
       )
     where

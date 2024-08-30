@@ -85,6 +85,7 @@ dependencies:
   - beckn-services
   - special-zone-a
   - yudhishthira
+  - casing
 
 ghc-options:
   - -Wall

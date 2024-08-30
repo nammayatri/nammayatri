@@ -232,6 +232,6 @@ token: {{arduCustomerToken}}
 GET {{bap-dashboard-host}}/listTransactions
   ?limit=10
   &offset=0
-  &endpoint=RiderManagementAPI_BookingAPI_PostBookingCancelAllStuckEndpoint
+  &endpoint=RIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK
 content-type: application/json
 token: {{arduCustomerToken}}

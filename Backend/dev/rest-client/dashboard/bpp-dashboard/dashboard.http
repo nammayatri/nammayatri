@@ -216,7 +216,7 @@ token: {{driverOfferCustomerToken}}
 GET {{bpp-dashboard-host}}/listTransactions
   ?limit=10
   &offset=0
-  # & endpoint=IssueAPI IssueUpdateEndpoint
-  &endpoint=ProviderManagementAPI_BookingAPI_PostBookingCancelAllStuckEndpoint
+  # &endpoint=IssueAPI IssueUpdateEndpoint
+  &endpoint=PROVIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK
 content-type: application/json
 token: {{token}}
