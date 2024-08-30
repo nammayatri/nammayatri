@@ -1,6 +1,7 @@
 module MerchantConfig.Types where
 
 import Common.Types.Config
+import Data.Maybe
 
 type AppConfig = AppConfigDriver CommonAppConfig
 
@@ -252,7 +253,8 @@ type CityConfig = {
   assets :: Assets,
   enableHvSdk :: Boolean,
   enableGullak :: Boolean,
-  purpleRideConfig :: PurpleRideConfigForVehicle
+  purpleRideConfig :: PurpleRideConfigForVehicle,
+  rideStartAudio :: RideStartAudio
 }
 
 type CoinsConfig = {
@@ -328,6 +330,20 @@ type PurpleRideConfigForVehicle = {
   purpleRideConfigForAuto :: VariantToDisabilityVideo,
   purpleRideConfigForCabs :: VariantToDisabilityVideo,
   purpleRideConfigForBikes :: VariantToDisabilityVideo
+}
+
+type RideStartAudio = {
+  acCab :: StartAudioUrls,
+  nonAcCab :: StartAudioUrls, 
+  auto :: StartAudioUrls,
+  bike :: StartAudioUrls
+}
+
+type StartAudioUrls = {
+  tollAudio :: Maybe String,
+  acAudio :: Maybe String,
+  parkingAudio :: Maybe String,
+  defaultAudio :: Maybe String
 }
 
 type VariantToDisabilityVideo = {
