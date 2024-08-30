@@ -1,6 +1,7 @@
 module Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller where
 
 import Common.Types.App as App
+import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.GenericHeader.Controller as GenericHeaderController
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -46,6 +47,7 @@ data Action
   | PrimaryButtonActionController PrimaryButtonController.Action
   | ParcelDeliveryInstructionAC ParcelDeliveryInstructionController.Action
   | DeliveryDetailAction (PopUpModalController.Action)
+  | ChooseVehicleAC ChooseVehicleController.Action
 
 data ScreenOutput
   = GoToHomeScreen ST.ParcelDeliveryScreenState
@@ -86,7 +88,7 @@ eval (MapViewLoaded _ _ _) state =
           _ = spy "markers" markers
           _ = spy "points" points
           routeConfig = JB.mkRouteConfig points srcMarkerConfig destMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT $ specialLocationConfig "" "" false getPolylineAnimationConfig
-      EHC.liftFlow $ JB.drawRoute [routeConfig] (EHC.getNewIDWithTag "ParcelDeliveryScreenMap")
+      EHC.liftFlow $ JB.drawRoute [routeConfig] (EHC.getNewIDWithTag "ParcelDetailsMapView")
     pure NoAction
   ] 
 
@@ -156,8 +158,8 @@ eval (DeliveryDetailAction (PopUpModalController.OnButton2Click)) state = do
   if state.data.currentStage == ST.SENDER_DETAILS then
     continue $ state { props { editDetails = deliveryDetailsInfo.receiverDetails}, data { currentStage = ST.RECEIVER_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { senderDetails = state.props.editDetails } } }
   else
-    exit $ GoToConfirmgDelivery $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
-    -- continue $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
+    -- exit $ GoToConfirmgDelivery $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
+    continue $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
 
 eval _ state = update state
 

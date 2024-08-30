@@ -2822,6 +2822,7 @@ type SelectFaqScreenProps =
   , needIssueListApiCall :: Boolean
   }
 
+
 -- ######################################### FaqScreenState ####################################################
 
 type FaqScreenState =
@@ -2847,8 +2848,6 @@ type FaqScreenProps =
   }
 
 
-
-
 -- ######################################### ParcelDeliveryFlow ####################################################
 
 data ParcelDeliveryScreenStage = DELIVERY_INSTRUCTIONS | SENDER_DETAILS | RECEIVER_DETAILS | FINAL_DETAILS
@@ -2872,6 +2871,8 @@ type ParcelDeliveryScreenData = {
   , destinationLat :: Number
   , destinationLong :: Number
   , deliveryDetailsInfo :: API.DeliveryDetails
+  , selectedQuote :: Maybe QuotesList
+  , parcelQuoteList :: ChooseVehicle.Config
   -- parcelBookingData :: CTA.ParcelBookingConfig,
   -- selectedQuote :: Maybe QuotesList,
   -- bookingId :: String,

@@ -1,6 +1,10 @@
 module Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig where
 
 import Prelude
+import Data.String.CodeUnits (slice)
+import Data.Array as DA
+import Data.String as DS
+import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.SeparatorView.View as SeparatorView
@@ -11,17 +15,14 @@ import Components.SelectListModal as CancelRidePopUpConfig
 import ConfigProvider
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Font.Style (Style(..))
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Helpers.Utils as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
-import Screens.Types as ST
-import Styles.Colors as Color
-import Data.String.CodeUnits (slice)
-import Services.API as API
-import Data.Array as DA
-import Data.String as DS
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.Types as ST
+import Services.API as API
+import Styles.Colors as Color
 
 primaryButtonConfig :: ST.ParcelDeliveryScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
@@ -55,7 +56,7 @@ genericHeaderConfig _state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , imageUrl = HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
@@ -68,7 +69,6 @@ genericHeaderConfig _state = let
     , padding = (Padding 0 5 0 0)
     }
   in genericHeaderConfig'
-
 
 deliveryPickupDetialsModalConfig :: ST.ParcelDeliveryScreenState -> PopUpModal.Config
 deliveryPickupDetialsModalConfig state = 
@@ -187,3 +187,46 @@ deliveryPickupDetialsModalConfig state =
           editText { text = fromMaybe "" address.instruction, placeholder = "Instruction", singleLine = false, pattern = Just "[^\n]*,100" },
           topLabel { text = (if isSender then getString PICKUP else getString DROP  <> " " <> getString OPTIONAL_INSTRUCTION) }
         }
+        
+chooseVehicleConfig :: ST.ParcelDeliveryScreenState -> ChooseVehicle.Config
+chooseVehicleConfig state =
+  let
+    config = ChooseVehicle.config
+    selectedParcelEstimate = state.data.parcelQuoteList
+    chooseVehicleConfig' = config
+      { vehicleImage = HU.getVehicleVariantImage selectedParcelEstimate.vehicleVariant ST.RIGHT_VIEW
+      , isSelected = true
+      , vehicleVariant = selectedParcelEstimate.vehicleVariant
+      , vehicleType = selectedParcelEstimate.vehicleType
+      , capacity = selectedParcelEstimate.capacity
+      , price = selectedParcelEstimate.price
+      , isCheckBox = false
+      , isEnabled = true
+      , index = selectedParcelEstimate.index
+      , activeIndex = selectedParcelEstimate.activeIndex
+      , id = selectedParcelEstimate.id
+      , maxPrice = selectedParcelEstimate.maxPrice
+      , basePrice = selectedParcelEstimate.basePrice
+      , showInfo = selectedParcelEstimate.showInfo
+      , searchResultType = selectedParcelEstimate.searchResultType
+      , isBookingOption = false
+      , pickUpCharges = selectedParcelEstimate.pickUpCharges 
+      , layoutMargin = Margin 16 0 16 0
+      , tollCharge = selectedParcelEstimate.tollCharge
+      , serviceTierName = selectedParcelEstimate.serviceTierName
+      , serviceTierShortDesc = selectedParcelEstimate.serviceTierShortDesc
+      , airConditioned = selectedParcelEstimate.airConditioned
+      , extraFare = selectedParcelEstimate.extraFare
+      , fareInfoDescription = selectedParcelEstimate.fareInfoDescription
+      , isNightShift = selectedParcelEstimate.isNightShift
+      , nightChargeTill = selectedParcelEstimate.nightChargeTill
+      , nightChargeFrom = selectedParcelEstimate.nightChargeFrom
+      , driverAdditions = selectedParcelEstimate.driverAdditions
+      , showEditButton = true
+      -- , editBtnText = getString CHANGE
+      , validTill = selectedParcelEstimate.validTill
+      , hasTollCharges = selectedParcelEstimate.hasTollCharges
+      , hasParkingCharges = selectedParcelEstimate.hasParkingCharges
+      , singleVehicle = true
+      }
+  in chooseVehicleConfig'

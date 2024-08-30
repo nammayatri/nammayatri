@@ -45,7 +45,7 @@ view push =
      , width MATCH_PARENT
      , background Color.white900
      , onBackPressed push $ const Back
-     , margin $ Margin 0 safeMarginTop 0 0
+     , margin $ MarginTop safeMarginTop
      ] $
      [ linearLayout
         [ width MATCH_PARENT
@@ -55,33 +55,35 @@ view push =
         [ headerLayout push
         , scrollView
           [ width MATCH_PARENT
-          , weight 1.0
+          -- , weight 1.0
           , scrollBarY false
-          , margin $ MarginBottom if EHC.os == "IOS" then 85 else 0
-          , padding $ Padding 16 16 0 0
-          , gravity CENTER
+          -- , margin $ MarginBottom if EHC.os == "IOS" then 85 else 0
+          , padding $ PaddingTop 16
+          -- , gravity CENTER
           ][ 
             linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
-            , gravity CENTER
+            -- , gravity CENTER
             ]
             [
               linearLayout
-              [ width WRAP_CONTENT
+              [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
               , background Color.blue600
+              , margin $ MarginHorizontal 16 16
               , padding $ Padding 16 16 16 16
               , cornerRadius 16.0
               ]
               [ imageView
-                [ width WRAP_CONTENT
+                [ width $ V (EHC.screenWidth unit - 64)
                 , height WRAP_CONTENT
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_delivery_instructions"
                 , margin $ MarginBottom 20
                 , cornerRadius 8.0
+                , layoutGravity "left"
                 ]
               , textView
                 $ [ width WRAP_CONTENT

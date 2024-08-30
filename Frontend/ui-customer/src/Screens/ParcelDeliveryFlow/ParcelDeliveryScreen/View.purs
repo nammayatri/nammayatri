@@ -5,13 +5,15 @@ import Prelude
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Common.Resources.Constants (zoomLevel)
+import Components.ChooseVehicle.View as ChooseVehicle
 import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination.View as SourceToDestinationView
 import Components.PopUpModal as PopUpModal
-import Data.Array (singleton, head)
+import Data.Array as DA
 import Data.Either (Either(..))
-import Data.Maybe (maybe, fromMaybe, Maybe(..))
+import Data.Maybe (isJust, isNothing, maybe, fromMaybe, Maybe(..))
+import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
 import Debug (spy)
@@ -31,9 +33,10 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import Resources.Constants
 import Resources.Localizable.EN (getEN)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig, deliveryPickupDetialsModalConfig)
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig (chooseVehicleConfig, deliveryPickupDetialsModalConfig, genericHeaderConfig, primaryButtonConfig)
 import Components.ParcelDeliveryInstruction as ParcelDeliveryInstruction
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.Types as ST
@@ -56,10 +59,10 @@ parcelDeliveryScreen initialState =
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-view push state = 
-  case state.data.currentStage of
-    ST.DELIVERY_INSTRUCTIONS -> deliveryInstructionView push state
-    _ -> deliveryDetailsView push state
+view push state = deliveryDetailsView push state
+  -- case state.data.currentStage of
+  --   ST.DELIVERY_INSTRUCTIONS -> deliveryInstructionView push state
+  --   _ -> deliveryDetailsView push state
   
 
 deliveryInstructionView :: forall w . (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
@@ -71,7 +74,8 @@ deliveryInstructionView push state =
 
 deliveryDetailsView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
 deliveryDetailsView push state =
-  Anim.screenAnimation $ linearLayout
+  Anim.screenAnimation $
+  relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -81,12 +85,12 @@ deliveryDetailsView push state =
     , onClick push $ const NoAction
     ]
     [ 
-      if state.data.currentStage == ST.SENDER_DETAILS
-        then deliveryDetailPopupView push state
-        else linearLayout[height WRAP_CONTENT, width WRAP_CONTENT][],
-      if state.data.currentStage == ST.RECEIVER_DETAILS
-        then deliveryDetailPopupView push state
-        else linearLayout[height WRAP_CONTENT, width WRAP_CONTENT][],
+      -- if state.data.currentStage == ST.SENDER_DETAILS
+      --   then deliveryDetailPopupView push state
+      --   else linearLayout[height WRAP_CONTENT, width WRAP_CONTENT, visibility GONE][],
+      -- if state.data.currentStage == ST.RECEIVER_DETAILS
+      --   then deliveryDetailPopupView push state
+      --   else linearLayout[height WRAP_CONTENT, width WRAP_CONTENT, visibility GONE][],
       linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -112,17 +116,26 @@ deliveryDetailsView push state =
         ]
       ]
     , separatorView push state
-    -- , 
-    , primaryButtonView push state
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , gravity BOTTOM
+      , margin (MarginBottom 24)
+      , alignParentBottom "true,-1"
+      ]
+      [ ChooseVehicle.view (push <<< ChooseVehicleAC) $ chooseVehicleConfig state
+      , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
+      ]
     ]
 
 mapViewLayout :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
 mapViewLayout push state = 
   PrestoAnim.animationSet[Anim.fadeInWithDelay 250 true] $
   relativeLayout
-    [ height $ V $ JB.getHeightFromPercent 25
+    [ height $ V $ JB.getHeightFromPercent 20
     , width MATCH_PARENT
-    , cornerRadius 16.0
+    , cornerRadius 24.0
     , margin $ MarginTop 16
     , id $ EHC.getNewIDWithTag idTag
     , onAnimationEnd (\action ->
@@ -171,109 +184,117 @@ dropView push state =
 
 pickupDropItemView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 pickupDropItemView push state isSource =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , margin $ MarginTop 8
-  , cornerRadius 16.0
-  , padding $ Padding 12 12 12 12
-  , stroke $ "1," <> Color.borderGreyColor
-  ]
-  [ linearLayout
+  let 
+    (DeliveryDetails deliveryDetails) = state.data.deliveryDetailsInfo
+    (PersonLocationAndInstruction personDetails) = if isSource then deliveryDetails.senderDetails else deliveryDetails.receiverDetails
+    (InstructionAndAddress address) = personDetails.address
+  in linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation HORIZONTAL
-    , gravity CENTER
+    , orientation VERTICAL
+    , margin $ MarginTop 8
+    , cornerRadius 16.0
+    , padding $ Padding 12 12 12 12
+    , stroke $ "1," <> Color.borderGreyColor
     ]
     [ linearLayout
-      [ width WRAP_CONTENT
-      , orientation VERTICAL
-      , gravity LEFT
-      , weight 1.0
-      ]
-      [ textView $
-        [ text "Narendra Modi"
-        , color Color.black800
-        ] <> FontStyle.body1 TypoGraphy
-      , textView $
-        [ text "+919876543210"
-        , color Color.black800
-        ] <> FontStyle.body1 TypoGraphy
-      ]
-    , editButtonView push state isSource
-    ]
-  , sourceDestinationAddressView push state
-  ]
-
-sourceDestinationAddressView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-sourceDestinationAddressView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , margin $ MarginTop 8
-  , background Color.blue600
-  -- , onAnimationEnd push $ const $ config.onAnimationEnd
-  , cornerRadius 8.0
-  , padding $ Padding 12 8 12 8
-  ]
-  [ linearLayout
-    [ orientation HORIZONTAL
-    , height WRAP_CONTENT
-    , width MATCH_PARENT
-    , gravity CENTER
-    ]
-    [ linearLayout
-      [ orientation VERTICAL
-      , height WRAP_CONTENT
+      [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , gravity LEFT
-      , accessibility ENABLE
-      , weight 1.0
-      -- , accessibilityHint $ "Pickup : " <> config.source
+      , orientation HORIZONTAL
+      , gravity CENTER
       ]
       [ linearLayout
-        [ width MATCH_PARENT
-        , orientation HORIZONTAL
-        , gravity CENTER
+        [ width WRAP_CONTENT
+        , orientation VERTICAL
+        , gravity LEFT
+        , weight 1.0
         ]
-        [ imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_source_dot"
-          , height $ V 14
-          , width $ V 14
-          , margin $ MarginRight 12
-          , layoutGravity "center_vertical"
-          ]
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , orientation VERTICAL
-          ]
-          [ textView $
-            [ text "Sri Satya Sai Apartments"
-            , maxLines 1
-            , ellipsize true
-            , gravity LEFT
-            , color Color.black900
-            , margin $ MarginBottom 2
-            ] <> FontStyle.tags TypoGraphy
-          , textView $
-            [ text "3rd Main, 6th Block, HSR Layout, Bengaluru"
-            , color Color.black700
-            , maxLines 1
-            , ellipsize true
-            , margin $ MarginBottom 2
-            ] <> FontStyle.body3 TypoGraphy
-          , textView $
-            [ textFromHtml $ "<em>Pickup Instruction: " <> "White color Maruti Omni parked outside the gate. Ring bell at flat 4 and wait till the parcel is handed over" <> "</em>"
-            , color Color.black700
-            ] <> FontStyle.body3 TypoGraphy
-          ]
+        [ textView $
+          [ text personDetails.name
+          , color Color.black800
+          ] <> FontStyle.body1 TypoGraphy
+        , textView $
+          [ text personDetails.phoneNumber
+          , color Color.black800
+          ] <> FontStyle.body1 TypoGraphy
         ]
-      ]  
+      , editButtonView push state isSource
+      ]
+    , sourceDestinationAddressView push state isSource
     ]
-  ]
+
+sourceDestinationAddressView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+sourceDestinationAddressView push state isSource =
+  let
+    (DeliveryDetails deliveryDetails) = state.data.deliveryDetailsInfo
+    (PersonLocationAndInstruction personDetails) = if isSource then deliveryDetails.senderDetails else deliveryDetails.receiverDetails
+    (InstructionAndAddress extraAddress) = personDetails.address
+  in 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ MarginTop 8
+    , background Color.blue600
+    , cornerRadius 8.0
+    , padding $ Padding 12 8 12 8
+    ]
+    [ linearLayout
+      [ orientation HORIZONTAL
+      , height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      ]
+      [ linearLayout
+        [ orientation VERTICAL
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        , gravity LEFT
+        , accessibility ENABLE
+        , weight 1.0
+        ]
+        [ linearLayout
+          [ width MATCH_PARENT
+          , orientation HORIZONTAL
+          , gravity CENTER
+          ]
+          [ imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_source_dot"
+            , height $ V 14
+            , width $ V 14
+            , margin $ MarginRight 12
+            , layoutGravity "center_vertical"
+            ]
+          , linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , orientation VERTICAL
+            ]
+            [ textView $
+              [ text extraAddress.extras
+              , maxLines 1
+              , ellipsize true
+              , gravity LEFT
+              , color Color.black900
+              , margin $ MarginBottom 2
+              ] <> FontStyle.tags TypoGraphy
+            , textView $
+              [ text $ decodeAddress' $ if isSource then state.data.sourceAddress else state.data.destinationAddress
+              , color Color.black700
+              , maxLines $ if (isJust extraAddress.instruction) then 1 else 2
+              , ellipsize true
+              , margin $ MarginBottom 2
+              ] <> FontStyle.body3 TypoGraphy
+            , textView $
+              [ textFromHtml $ "<em>Pickup Instruction: " <> fromMaybe "" extraAddress.instruction <> "</em>"
+              , color Color.black700
+              , visibility $ boolToVisibility $ isJust extraAddress.instruction
+              ] <> FontStyle.body3 TypoGraphy
+            ]
+          ]
+        ]  
+      ]
+    ]
 
 deliveryGuidelinesView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
 deliveryGuidelinesView push state =
@@ -359,6 +380,7 @@ primaryButtonView push state =
   , gravity BOTTOM
   , margin (MarginBottom 24)
   , alignParentBottom "true,-1"
+  , stroke $ "1," <> Color.grey900
   ]
   [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
 
@@ -388,3 +410,20 @@ deliveryDetailPopupView push state =
     , accessibility DISABLE
     ]
     [ PopUpModal.view (push <<< DeliveryDetailAction) (deliveryPickupDetialsModalConfig state) ]
+
+decodeAddress' :: ST.Address -> String
+decodeAddress' address =
+  if (DA.all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
+      ""
+    else if (DS.trim (fromMaybe "" address.city) == "" && DS.trim (fromMaybe "" address.area) == "" && DS.trim (fromMaybe "" address.street) == "" && DS.trim (fromMaybe "" address.door) == "" && DS.trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (DS.trim (fromMaybe "" address.area) == "" && DS.trim (fromMaybe "" address.street) == "" && DS.trim (fromMaybe "" address.door) == "" && DS.trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (DS.trim (fromMaybe "" address.street) == "" && DS.trim (fromMaybe "" address.door) == "" && DS.trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (DS.trim (fromMaybe "" address.door) == "" && DS.trim (fromMaybe "" address.building) == "") then
+      ((fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else if (DS.trim (fromMaybe "" address.door) == "") then
+      ((fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
+    else
+      ((fromMaybe "" address.door) <> ", " <> (fromMaybe "" address.building) <> ", " <> (fromMaybe "" address.street) <> ", " <> (fromMaybe "" address.area) <> ", " <> (fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
