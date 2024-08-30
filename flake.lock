@@ -342,6 +342,7 @@
         "nixpkgs": "nixpkgs_6",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround",
         "nixpkgs-21_11": "nixpkgs-21_11",
+        "nixpkgs-latest": "nixpkgs-latest",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
         "process-compose": "process-compose",
         "process-compose-flake": "process-compose-flake",
@@ -350,11 +351,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1717192386,
-        "narHash": "sha256-bNefuV7rSxL+E8SW7jcmuJzoer2bftTvSXHNtUydwFg=",
+        "lastModified": 1724688821,
+        "narHash": "sha256-bo1yitcudAFEc3/BIlSN87l+2+cOtv8M2U1GnQWqnFo=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "8f6f92b32c5b00cf8dacec1b577f5bba3f8416db",
+        "rev": "a82271613023d1d2e7925fc056d5f078ef00022b",
         "type": "github"
       },
       "original": {
@@ -2432,6 +2433,22 @@
       "original": {
         "owner": "nixos",
         "ref": "nixos-21.11",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-latest": {
+      "locked": {
+        "lastModified": 1724395761,
+        "narHash": "sha256-zRkDV/nbrnp3Y8oCADf5ETl1sDrdmAW6/bBVJ8EbIdQ=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "ae815cee91b417be55d43781eb4b73ae1ecc396c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixpkgs-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
