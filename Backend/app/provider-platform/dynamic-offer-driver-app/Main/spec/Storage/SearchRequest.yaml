@@ -13,7 +13,7 @@ imports:
   Currency: Kernel.Types.Common
 
 SearchRequest:
-  derives: Generic,Show
+  derives: Generic,Show,ToJSON
 
   fields:
     id: Id SearchRequest
@@ -53,6 +53,7 @@ SearchRequest:
     isAdvanceBookingEnabled: Bool
     isDashboardRequest: Bool
     customerNammaTags: "Maybe [Text]"
+    searchTags: "Maybe [Text]"
     startTime: UTCTime
     createdAt: UTCTime
 
@@ -161,6 +162,10 @@ SearchRequest:
     updateIsReallocationEnabled:
       kvFunction: updateWithKV
       params: [isReallocationEnabled]
+      where: id
+    updateSearchTags:
+      kvFunction: updateWithKV
+      params: [searchTags]
       where: id
 
   extraOperations:

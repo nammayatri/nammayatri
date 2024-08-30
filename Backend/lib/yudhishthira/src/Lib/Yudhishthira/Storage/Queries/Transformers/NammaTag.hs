@@ -57,8 +57,11 @@ getTags :: (Lib.Yudhishthira.Types.TagValues -> Kernel.Prelude.Maybe [Kernel.Pre
 getTags = \case
   Lib.Yudhishthira.Types.Range _ _ -> Nothing
   Lib.Yudhishthira.Types.Tags tags -> Just tags
+  Lib.Yudhishthira.Types.AnyText -> Nothing
 
 mkTagValues :: (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Lib.Yudhishthira.Types.TagValues)
 mkTagValues rangeEnd rangeStart mbTags = case mbTags of
   Just tags -> Lib.Yudhishthira.Types.Tags tags
-  Nothing -> Lib.Yudhishthira.Types.Range (fromMaybe 0 rangeStart) (fromMaybe 0 rangeEnd)
+  Nothing -> case (rangeStart, rangeEnd) of
+    (Just start, Just end) -> Lib.Yudhishthira.Types.Range start end
+    _ -> Lib.Yudhishthira.Types.AnyText
