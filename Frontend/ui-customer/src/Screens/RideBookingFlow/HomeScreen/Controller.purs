@@ -1335,7 +1335,6 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
 eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked)) state = openDateTimePicker state 
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState = do
-    _ <- pure $ spy "state homeScreen" newState
     let state = newState {data {rentalsInfo = Nothing}}
     case state.props.currentStage of
       HomeScreen   -> do

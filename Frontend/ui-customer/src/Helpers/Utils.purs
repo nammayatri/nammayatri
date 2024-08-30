@@ -22,7 +22,7 @@ module Helpers.Utils
 import ConfigProvider
 import DecodeUtil
 import Accessor (_deeplinkOptions, _distance_meters, _payload, _search_type, _paymentMethod)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..), PolylineAnimationConfig)
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
@@ -104,6 +104,7 @@ import Data.Array.NonEmpty (toArray)
 import Data.Array as DA
 import Components.MessagingView.Controller (ChatContacts(..))
 import Services.API as API
+import JBridge as JB
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -1191,3 +1192,14 @@ editPickupCircleConfig =
   let config = getAppConfig appConfig
   in
   defaultCircleConfig {radius = config.mapConfig.locateOnMapConfig.editPickUpThreshold, primaryStrokeColor = Color.yellow900, fillColor = Color.yellowOpacity23, strokeWidth = 4, secondaryStrokeColor = Color.red900 , circleId = "edit_location_circle" }
+
+mkMapRouteConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
+mkMapRouteConfig srcIcon destIcon isAnim animConfig =
+  JB.mapRouteConfig
+    { sourceSpecialTagIcon = srcIcon
+    , destSpecialTagIcon = destIcon
+    , vehicleSizeTagIcon = getVehicleSize unit
+    , isAnimation = isAnim
+    , autoZoom = true
+    , polylineAnimationConfig = animConfig
+    } 
