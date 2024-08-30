@@ -401,15 +401,15 @@ BookingPartiesLink:
 
   constraints:
     id: PrimaryKey
-    partyId: SecondaryKey
-    isActive: SecondaryKey
+    partyId: "!SecondaryKey"
+    bookingId: "!SecondaryKey"
 
   queries:
     findAllByBookingId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithKVAndConditionalDB
       where: bookingId
     findAllActiveByBookingId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithKVAndConditionalDB
       where:
         and:
          - bookingId
@@ -422,23 +422,9 @@ BookingPartiesLink:
         and:
           - bookingId
           - isActive: True|CB
-    findOneByPartyId:
-      kvFunction: findOneWithKV
-      where: partyId
-    findOneActivePartyByRiderId:
-      kvFunction: findOneWithKV
-      where:
-        and:
-         - partyId
-         - isActive: True|CB
-    findOneActiveByBookingIdAndTripParty:
-      kvFunction: findOneWithKV
-      where:
-        and:
-         - bookingId
-         - partyType
-         - isActive: True|CB
 
   excludedDefaultQueries:
     - updateByPrimaryKey
     - findByPrimaryKey
+  extraOperations:
+    - EXTRA_QUERY_FILE

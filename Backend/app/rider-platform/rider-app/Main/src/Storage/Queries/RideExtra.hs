@@ -307,7 +307,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
       (Just limit')
       (Just offset')
   otherActivePartyBooking <-
-    if isOnlyActive
+    if isOnlyActive && null bookings'
       then do
         bookingPartyLink <- QBPL.findOneActivePartyByRiderId (Id personId)
         case bookingPartyLink of

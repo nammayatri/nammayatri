@@ -44,6 +44,7 @@ data MessageKey
   | POST_RIDE_SOS
   | SMS_DELIVERY_DETAILS_SENDER
   | SMS_DELIVERY_DETAILS_RECEIVER
+  | POST_DELIVERY_SENDER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

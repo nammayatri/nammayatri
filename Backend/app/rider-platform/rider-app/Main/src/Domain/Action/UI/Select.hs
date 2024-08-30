@@ -198,11 +198,9 @@ select2 personId estimateId req@DSelectReq {..} = do
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
-    when (isNothing deliveryDetails) $ throwError $ InvalidRequest "Delivery details not found for trip category Delivery"
-    let validDeliveryDetails = fromJust deliveryDetails
+    validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
     let senderLocationId = searchRequest.fromLocation.id
-    when (isNothing searchRequest.toLocation) $ throwError $ InvalidRequest "Receiver location not found for trip category Delivery"
-    let receiverLocationId = fromJust (searchRequest.toLocation <&> (.id))
+    receiverLocationId <- (searchRequest.toLocation <&> (.id)) & fromMaybeM (InvalidRequest "Receiver location not found for trip category Delivery")
     let senderLocationAddress = validDeliveryDetails.senderDetails.address
         receiverLocationAddress = validDeliveryDetails.receiverDetails.address
     QLoc.updateInstructionsAndExtrasById senderLocationAddress.instructions senderLocationAddress.extras senderLocationId
