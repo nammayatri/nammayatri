@@ -50,6 +50,7 @@ data SearchRequest = SearchRequest
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    searchTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
@@ -58,4 +59,4 @@ data SearchRequest = SearchRequest
     transactionId :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToJSON)

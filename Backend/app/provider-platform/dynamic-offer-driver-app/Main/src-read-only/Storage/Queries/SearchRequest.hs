@@ -30,3 +30,6 @@ updateIsAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateWithKV [Se.
 
 updateIsReallocationEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateIsReallocationEnabled isReallocationEnabled id = do updateWithKV [Se.Set Beam.isReallocationEnabled isReallocationEnabled] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateSearchTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateSearchTags searchTags id = do updateWithKV [Se.Set Beam.searchTags searchTags] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

@@ -26,7 +26,7 @@ data Source
   | KaalChakra Chakra
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type SourceData = Text -- json to be decoded in the respective tag
+type SourceData = Value -- json to be decoded in the respective tag
 
 data CreateNammaTagRequest
   = ApplicationTag NammaTagApplication

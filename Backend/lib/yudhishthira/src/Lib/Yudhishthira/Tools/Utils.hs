@@ -43,18 +43,13 @@ getAppDynamicLogic merchantOpCityId domain localTime = do
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
   return $ if null boundedConfigs then filter (\cfg -> cfg.timeBounds == Unbounded) configs else boundedConfigs
 
-runJsonLogic :: (MonadFlow m) => Text -> Text -> m A.Value
-runJsonLogic dataText ruleText = do
+runJsonLogic :: (MonadFlow m) => Value -> Text -> m A.Value
+runJsonLogic data' ruleText = do
   let eitherRule = decodeTextToValue ruleText
-  let eitherData = decodeTextToValue dataText
   rule <-
     case eitherRule of
       Right rule -> return rule
       Left err -> throwError $ InternalError ("Unable to decode rule:" <> show err)
-  data' <-
-    case eitherData of
-      Right data_ -> return data_
-      Left err -> throwError $ InternalError ("Unable to decode data:" <> show err)
   jsonLogic rule data'
 
 runLogics :: (MonadFlow m, ToJSON a) => [A.Value] -> a -> m LYT.AppDynamicLogicResp

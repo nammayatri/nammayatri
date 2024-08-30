@@ -62,6 +62,8 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
@@ -71,6 +73,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import SharedLogic.TollsDetector
+import Storage.Beam.Yudhishthira ()
 import Storage.Cac.DriverPoolConfig as CDP
 import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
@@ -141,6 +144,14 @@ data DSearchRes = DSearchRes
     transporterConfig :: DTMT.TransporterConfig,
     bapId :: Text
   }
+
+data TagData = TagData
+  { searchRequest :: DSR.SearchRequest,
+    area :: Text,
+    specialLocationTag :: Maybe Text,
+    specialLocationName :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON)
 
 data NearestDriverInfo = NearestDriverInfo
   { locationId :: Text,
@@ -218,6 +229,16 @@ handler ValidatedDSearchReq {..} sReq = do
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
+  fork "Add Namma Tags" $ do
+    let tagData =
+          TagData
+            { searchRequest = searchReq,
+              area = show allFarePoliciesProduct.area,
+              specialLocationTag = allFarePoliciesProduct.specialLocationTag,
+              specialLocationName = allFarePoliciesProduct.specialLocationName
+            }
+    addNammaTags tagData
+
   let buildEstimateHelper = buildEstimate merchantOpCityId currency distanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute searchReq.estimatedDuration
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
@@ -293,6 +314,21 @@ handler ValidatedDSearchReq {..} sReq = do
                   includedKm = (timeInHr * det.includedKmPerHr.getKilometers)
                   maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers includedKm) (det.totalAdditionalKmsLimit.getKilometers - includedKm)
                in distInKm - includedKm <= maxAllowed
+
+    addNammaTags :: TagData -> Flow ()
+    addNammaTags tagData = do
+      let handler_ =
+            Yudhishthira.Handle
+              { updateTags = insertTagBySearchId tagData.searchRequest.id,
+                getData = return tagData
+              }
+      Yudhishthira.addEvent Yudhishthira.Search handler_
+
+    insertTagBySearchId :: Id DSR.SearchRequest -> Text -> Flow ()
+    insertTagBySearchId searchId tag = do
+      search <- QSR.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
+      let searchTags = (fromMaybe [] search.searchTags) <> [tag]
+      QSR.updateSearchTags (Just searchTags) searchId
 
     mkBapMetaData :: Flow BapMetadata
     mkBapMetaData = do
@@ -430,6 +466,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         currency,
         roundTrip = Just roundTrip,
         isAdvanceBookingEnabled = False,
+        searchTags = Nothing,
         ..
       }
 

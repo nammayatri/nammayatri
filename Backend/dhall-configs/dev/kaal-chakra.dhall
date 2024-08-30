@@ -74,7 +74,7 @@ let schedulerConfig =
           //  { logRawSql = True
               , logFilePath = "/tmp/kaal-chakra-allocator.log"
               , prettyPrinting = True
-              , logLevel = common.logLevel.ERROR
+              , level = common.LogLevel.ERROR
               }
       , esqDBCfg
       , metricsPort = +8057
@@ -121,6 +121,7 @@ in  { esqDBReplicaCfg
         //  { logRawSql = True
             , logFilePath = "/tmp/kaal-chakra.log"
             , prettyPrinting = True
+            , level = common.LogLevel.ERROR
             }
     , migrationPath = [] : List Text
     , autoMigrate = False
