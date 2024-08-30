@@ -338,11 +338,12 @@ handleCallStatus :: CallTypes.CallStatus -> DCallStatus.CallAttemptStatus
 handleCallStatus status
   | status `elem` failedCallStatuses = DCallStatus.Failed
   | status `elem` ignoredCallStatuses = DCallStatus.Resolved
-  | status == CallTypes.COMPLETED = DCallStatus.Resolved
+  | status `elem` successCallStatuses = DCallStatus.Resolved
   | otherwise = DCallStatus.Pending
   where
     failedCallStatuses = [CallTypes.INVALID_STATUS, CallTypes.NOT_CONNECTED, CallTypes.FAILED]
-    ignoredCallStatuses = [CallTypes.BUSY, CallTypes.NO_ANSWER, CallTypes.MISSED]
+    ignoredCallStatuses = [CallTypes.BUSY, CallTypes.NO_ANSWER, CallTypes.MISSED, CallTypes.CANCELED, CallTypes.QUEUED]
+    successCallStatuses = [CallTypes.COMPLETED, CallTypes.RINGING, CallTypes.IN_PROGRESS, CallTypes.CONNECTED]
 
 sendFCMToDriverOnCallFailure ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
