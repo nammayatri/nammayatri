@@ -30,6 +30,7 @@ apis:
         offset: Int
         driverId: (Id Driver)
         driverPhoneNo: Text
+        isFailedOnly: Bool
         from: UTCTime
         to: UTCTime
       response:
@@ -104,6 +105,8 @@ types:
     - payoutOrderId: Text
     - derive: "'HideSecrets"
   RetryPayoutsReq:
+    - limit: Int
+    - offset: Int
     - status: PayoutOrderStatus
+    - entityNames: [EntityName]
     - derive: "'HideSecrets"
-
