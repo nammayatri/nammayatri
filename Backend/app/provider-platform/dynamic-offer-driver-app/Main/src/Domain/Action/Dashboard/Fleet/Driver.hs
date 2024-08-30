@@ -15,7 +15,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetDriverVehicleAssociation,
     getDriverFleetDriverAssociation,
     getDriverFleetVehicleAssociation,
-    postDriverFleetVehicleDriverRCstatus,
+    postDriverFleetVehicleDriverRcStatus,
     postDriverUpdateFleetOwnerInfo,
     getDriverFleetOwnerInfo,
     postDriverFleetSendJoiningOtp,
@@ -187,14 +187,14 @@ getDriverFleetVehicleAssociation ::
   Flow Common.DrivertoVehicleAssociationRes
 getDriverFleetVehicleAssociation = DDriver.getFleetVehicleAssociation
 
-postDriverFleetVehicleDriverRCstatus ::
+postDriverFleetVehicleDriverRcStatus ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
   Text ->
   Common.RCStatusReq ->
   Flow APISuccess
-postDriverFleetVehicleDriverRCstatus = DDriver.setVehicleDriverRcStatusForFleet
+postDriverFleetVehicleDriverRcStatus = DDriver.setVehicleDriverRcStatusForFleet
 
 postDriverUpdateFleetOwnerInfo ::
   ShortId DM.Merchant ->

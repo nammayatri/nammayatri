@@ -231,7 +231,12 @@ let defaultImports =
         }
       , { _simpleImports = [ "EulerHS.Prelude", "Data.OpenApi (ToSchema)" ]
         , _qualifiedImports =
-          [ "Kernel.Storage.Esqueleto", "Text.Show", "Text.Read", "Data.List" ]
+          [ "Kernel.Storage.Esqueleto"
+          , "Text.Show"
+          , "Text.Read"
+          , "Dashboard.Common"
+          , "Data.List"
+          ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.SERVANT_API_TREE
         }
