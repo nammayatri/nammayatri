@@ -249,6 +249,19 @@ window.getMerchantConfig = function () {
             "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
+        },
+        "rideStartAudio" : {
+          "acCab" : {
+            "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+            "acAudio" : "https://assets.moving.tech/beckn/audios/ac_background/kn.mp3",
+          },
+          "nonAcCab" : {
+            "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+            "acAudio" : "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3"
+          },
+
+          "auto" : {},
+          "bike" : {}
         }
       },
       {
@@ -330,6 +343,17 @@ window.getMerchantConfig = function () {
             "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
+        },
+        "rideStartAudio" : {
+          "acCab" : {
+            "tollAudio" : "",
+            "acAudio" : "",
+            "parkingAudio" : "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
+            "defaultAudio" : ""
+          },
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
         }
       },
       {
@@ -398,7 +422,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Delhi",
@@ -479,7 +509,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Chennai",
@@ -560,7 +596,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Coimbatore",
@@ -628,7 +670,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Pondicherry",
@@ -696,7 +744,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Tumakuru",
@@ -764,7 +818,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Gurugram",
@@ -832,7 +892,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Noida",
@@ -900,7 +966,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "TamilNaduCities",
@@ -968,7 +1040,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Minneapolis",
@@ -1036,7 +1114,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Kochi",
@@ -1104,7 +1188,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Trichy",
@@ -1185,7 +1275,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Thanjavur",
@@ -1266,7 +1362,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Salem",
@@ -1347,7 +1449,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Tirunelveli",
@@ -1428,7 +1536,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Hosur",
@@ -1509,7 +1623,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Madurai",
@@ -1590,7 +1710,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Vellore",
@@ -1671,7 +1797,13 @@ window.getMerchantConfig = function () {
           "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Davanagere",
@@ -1733,6 +1865,12 @@ window.getMerchantConfig = function () {
             "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
+        },
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
         },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
@@ -1802,6 +1940,12 @@ window.getMerchantConfig = function () {
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
         },
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1869,6 +2013,12 @@ window.getMerchantConfig = function () {
             "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
+        },
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
         },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
@@ -1938,6 +2088,12 @@ window.getMerchantConfig = function () {
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
         },
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -2006,6 +2162,12 @@ window.getMerchantConfig = function () {
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
         },
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -2073,6 +2235,12 @@ window.getMerchantConfig = function () {
             "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
+        },
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
         },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",

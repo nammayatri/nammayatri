@@ -5,6 +5,7 @@ import Common.DefaultConfig
 import Engineering.Helpers.Commons as EHC
 import MerchantConfig.Utils as MU
 import Common.Types.App as CTA
+import Data.Maybe
 
 config :: AppConfig
 config =
@@ -196,6 +197,22 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : {
+                  tollAudio :  Just "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+                  acAudio : Just "https://assets.moving.tech/beckn/audios/ac_background/kn.mp3",
+                  parkingAudio : Nothing,
+                  defaultAudio : Nothing
+                },
+                nonAcCab : {
+                  tollAudio : Just "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+                  acAudio : Just "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3",
+                  parkingAudio : Nothing,
+                  defaultAudio : Nothing
+                },
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -260,6 +277,17 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : {
+                  tollAudio : Nothing,
+                  acAudio : Nothing,
+                  parkingAudio : Just "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
+                  defaultAudio : Nothing
+                },
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -324,6 +352,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -388,6 +422,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -452,6 +492,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -516,6 +562,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -580,6 +632,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -644,6 +702,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {             
@@ -708,6 +772,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -772,6 +842,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -849,6 +925,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             }, 
             {
@@ -917,6 +999,12 @@ config =
                   disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
                   genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
                 }
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
           }
             --, For future use
@@ -1204,7 +1292,21 @@ allCitiesDefaultCityConfig = {
       disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
       genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
     }
+  },
+  rideStartAudio : {
+    acCab : defaultStartAudioUrls,
+    nonAcCab : defaultStartAudioUrls,
+    auto : defaultStartAudioUrls,
+    bike : defaultStartAudioUrls
   }
+}
+
+defaultStartAudioUrls :: StartAudioUrls
+defaultStartAudioUrls = {
+    tollAudio : Nothing,
+    acAudio : Nothing,
+    parkingAudio : Nothing,
+    defaultAudio : Nothing
 }
 
 ysDefaultCityConfig :: CityConfig
@@ -1284,4 +1386,10 @@ ysDefaultCityConfig =
           genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
         }
       }
+    , rideStartAudio = {
+              acCab : defaultStartAudioUrls,
+              nonAcCab : defaultStartAudioUrls,
+              auto : defaultStartAudioUrls,
+              bike : defaultStartAudioUrls
+            } 
   }
