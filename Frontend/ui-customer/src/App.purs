@@ -54,7 +54,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState, ParcelDeliveryScreenState) 
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
@@ -70,6 +70,7 @@ import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScre
 import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
 import Screens.TicketBookingFlow.MetroTicketStatus.ScreenData as MetroTicketStatusScreenData
 import Services.API
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData as ParcelDeliveryScreenData
 import Screens.RentalBookingFlow.RentalScreen.ScreenData as RentalScreenData
 import Screens.RideBookingFlow.PickupInstructionsScreen.ScreenData as PickupInstructionsScreenData
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
@@ -133,6 +134,7 @@ newtype GlobalState = GlobalState {
   , rentalScreen :: RentalScreenState
   , pickupInstructionsScreen :: PickupInstructionsScreenState
   , dataExplainWithFetch :: DataFetchScreenState
+  , parcelDeliveryScreen :: ParcelDeliveryScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -179,6 +181,7 @@ defaultGlobalState = GlobalState {
   , globalFlowCache : defaultGlobalFlowCache 
   , rentalScreen : RentalScreenData.initData
   , pickupInstructionsScreen : PickupInstructionsScreenData.initData
+  , parcelDeliveryScreen : ParcelDeliveryScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -374,6 +377,9 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
 
 data PICKUP_INSTRUCTIONS_SCREEN_OP = GO_TO_HOME_SCREEN_FROM_PICKUP_INSTRUCTIONS
 
+data PARCEL_DELIVERY_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_PARCEL_DELIVERY ParcelDeliveryScreenState
+                                   | REFRESH_PARCEL_DELIVERY_SCREEN ParcelDeliveryScreenState
+
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -414,3 +420,4 @@ data ScreenType =
   | RentalScreenStateType (RentalScreenState -> RentalScreenState)
   | PickupInstructionsScreenStateType (PickupInstructionsScreenState -> PickupInstructionsScreenState)
   | DataFetchScreenStateType (DataFetchScreenState -> DataFetchScreenState)
+  | ParcelDeliveryScreenStateType (ParcelDeliveryScreenState -> ParcelDeliveryScreenState)

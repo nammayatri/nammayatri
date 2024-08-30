@@ -218,6 +218,7 @@ import Presto.Core.Types.API (ErrorResponse(..))
 import AssetsProvider (renewFile)
 import Data.Tuple
 import Screens.HomeScreen.Controllers.Types
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller as ParcelDeliveryScreenController
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -952,6 +953,7 @@ homeScreenFlow = do
       modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> MyProfileScreenData.initData { props { fromHomeScreen = updateProfile, updateProfile = updateProfile, changeAccessibility = true, isBtnEnabled = true, genderOptionExpanded = false, showOptions = false, expandEnabled = true } })
       myProfileScreenFlow
     GO_TO_FIND_ESTIMATES updatedState -> do
+      -- parcelDeliveryFlow
       findEstimates updatedState
     RETRY_FINDING_QUOTES showLoader -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handled Loader in IOS Side
@@ -2573,6 +2575,9 @@ findEstimates updatedState = do
         case head points, last points of
           Just (LatLong source), Just (LatLong dest) -> do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { maxEstimatedDuration = maxEstimatedDuration }, props { routeEndPoints = Just ({ source: { lat: source.lat, lng: source.lon, place: state.data.source, address: Nothing, city: Nothing, isSpecialPickUp: Just false }, destination: { lat: dest.lat, lng: dest.lon, place: state.data.destination, address: Nothing, city: Nothing, isSpecialPickUp: Just false } }) } })
+            -- codex Checking
+            modifyScreenState $ ParcelDeliveryScreenStateType (\parcelDeliverScreen -> parcelDeliverScreen { data { sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong, route = rideSearchRes.routeInfo} })
+            parcelDeliveryFlow
           _, _ -> pure unit
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { rideDistance = distance, rideDuration = duration, source = state.data.source, sourceAddress = state.data.sourceAddress } })
         let
@@ -6424,3 +6429,16 @@ pickupInstructionsScreenFlow = do
   action <- UI.pickupInstructionsScreen
   case action of 
     _ -> pickupInstructionsScreenFlow
+
+parcelDeliveryFlow :: FlowBT String Unit
+parcelDeliveryFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.parcelDeliveryScreen currentState.parcelDeliveryScreen
+  case action of
+    ParcelDeliveryScreenController.GoToHomeScreen state -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
+      homeScreenFlow
+    ParcelDeliveryScreenController.RefreshScreen state -> do
+      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
+      parcelDeliveryFlow
+    _ -> pure unit

@@ -2841,3 +2841,36 @@ type FaqScreenProps =
   , needIssueListApiCall :: Boolean
   }
 
+
+
+
+-- ######################################### ParcelDeliveryFlow ####################################################
+
+data ParcelDeliveryScreenStage = DELIVERY_INSTRUCTIONS | SENDER_DETAILS | RECEIVER_DETAILS | FINAL_DETAILS
+
+derive instance genericParcelDeliveryScreenStage :: Generic ParcelDeliveryScreenStage _
+instance showParcelDeliveryScreenStage :: Show ParcelDeliveryScreenStage where show = genericShow
+instance eqParcelDeliveryScreenStage :: Eq ParcelDeliveryScreenStage where eq = genericEq
+
+type ParcelDeliveryScreenState = {
+  data :: ParcelDeliveryScreenData,
+  props :: ParcelDeliveryScreenProps
+}
+
+type ParcelDeliveryScreenData = {
+    currentStage :: ParcelDeliveryScreenStage
+  , sourceAddress :: Address
+  , destinationAddress :: Address
+  , route :: Maybe Route
+  , sourceLat :: Number
+  , sourceLong :: Number
+  , destinationLat :: Number
+  , destinationLong :: Number
+  -- parcelBookingData :: CTA.ParcelBookingConfig,
+  -- selectedQuote :: Maybe QuotesList,
+  -- bookingId :: String,
+}
+
+type ParcelDeliveryScreenProps = {
+
+}
