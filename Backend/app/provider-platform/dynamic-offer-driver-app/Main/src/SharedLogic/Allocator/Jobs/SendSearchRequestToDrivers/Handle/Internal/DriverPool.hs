@@ -580,7 +580,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   pure $ take batchSize sortedPool
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
-      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, specialZoneTag = searchReq.specialLocationTag, tripDistance = searchReq.estimatedDistance, ..}
+      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
 
     updateDriverPoolResult DriverPoolResult {..} =
       DriverPoolResult {customerTags = Just $ maybe A.emptyObject convertTags customerNammaTags, ..}
