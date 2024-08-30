@@ -729,7 +729,8 @@ type Followers = {
   name :: Maybe String,
   bookingId :: String,
   mobileNumber :: String,
-  priority :: Int
+  priority :: Int,
+  isManualFollower :: Boolean
 }
 
 type QuoteListItemState = 

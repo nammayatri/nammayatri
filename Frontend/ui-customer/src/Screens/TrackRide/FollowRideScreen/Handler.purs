@@ -29,9 +29,9 @@ followRideScreen = do
   (GlobalState globalState) <- getState
   out <- lift $ lift $ runScreen $ FollowRideScreen.screen globalState.followRideScreen (GlobalState globalState)
   case out of
-    Exit updatedState -> do
+    Exit updatedState removeManualFollower -> do
       modifyScreenState $ FollowRideScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_HS_FROM_FOLLOW_RIDE)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_HS_FROM_FOLLOW_RIDE updatedState removeManualFollower)
     RestartTracking updatedState -> do
       modifyScreenState $ FollowRideScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ RESTART_TRACKING)

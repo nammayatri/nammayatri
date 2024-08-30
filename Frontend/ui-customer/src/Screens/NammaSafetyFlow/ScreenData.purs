@@ -186,4 +186,6 @@ invalidSettingsAPIResponse =
     , notifySafetyTeamForSafetyCheckFailure: false
     , notifySosWithEmergencyContacts: false
     , shakeToActivate: false
+    , safetyCheckStartTime : Nothing
+    , safetyCheckEndTime : Nothing
     }

@@ -84,7 +84,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -155,7 +155,7 @@ import Data.String as DS
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
 import Screens.HomeScreen.Controllers.PopUpModelControllers as PopUpModelControllers
 import Services.API as API
-
+import Screens.NammaSafetyFlow.Components.SafetyUtils (showNightSafetyFlow)
 
 eval2 :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval2 action  = 
@@ -291,12 +291,15 @@ eval (ShowProviderInfo showProviderInfo) state = continue state {
 }
 
 eval (UpdateFollowers (FollowRideRes resp)) state = do
-  let followers = map (\(Followers follower) -> follower) resp
+  let followers = map (\(Followers follower) -> transformFollower follower) resp
   continue state{
     data{
       followers = if null followers then Nothing else Just followers
     }
   }
+  where
+    transformFollower follower = {name : follower.name, bookingId : follower.bookingId, mobileNumber : follower.mobileNumber, priority : follower.priority, isManualFollower : false}
+
 
 eval GoToFollowRide state = exit $ ExitToFollowRide state
 
@@ -2894,7 +2897,19 @@ eval (ShakeActionCallback count) state = do
       else continue state
     Nothing -> continue state
   
-eval (UpdateSafetySettings safetySettings) state = continue state{props{safetySettings = Just safetySettings}}
+eval (UpdateSafetySettings safetySettings@(API.GetEmergencySettingsRes settings)) state = do
+  let updatedState = state{props{safetySettings = Just safetySettings}}
+      safetyCheckStartTime = fromMaybe 0 settings.safetyCheckStartTime
+      safetyCheckEndTime = fromMaybe 0 settings.safetyCheckEndTime
+      (API.RideBookingRes resp) = state.data.ratingViewState.rideBookingRes
+      (API.RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+      (API.RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList
+      nightSafetyFlow = showNightSafetyFlow (Just false) (currRideListItem.rideStartTime) (currRideListItem.rideEndTime) safetyCheckStartTime safetyCheckEndTime
+      postSafetyCheckEnabled = settings.enablePostRideSafetyCheck == API.ALWAYS_SHARE || (settings.enablePostRideSafetyCheck == API.SHARE_WITH_TIME_CONSTRAINTS && nightSafetyFlow)
+  if state.props.currentStage == RideCompleted then do
+    continue updatedState{ data{ rideCompletedData{ issueReportData {hasSafetyIssue = postSafetyCheckEnabled, showIssueBanners = state.data.rideCompletedData.issueReportData.showIssueBanners || postSafetyCheckEnabled}}}}
+  else
+    continue updatedState
 
 eval (ServicesOnClick service) state = do 
   void $ pure $ performHapticFeedback unit

@@ -68,7 +68,7 @@ instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 
 data ScreenOutput
-  = Exit FollowRideScreenState
+  = Exit FollowRideScreenState Boolean
   | RestartTracking FollowRideScreenState
   | OpenNavigation FollowRideScreenState
 
@@ -126,7 +126,7 @@ eval action state = case action of
       _ -> do
         _ <- pure $ clearAudioPlayer ""
         let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false} }
-        updateAndExit newState $ Exit newState
+        updateAndExit newState $ Exit newState false
   DismissOverlay -> do
     if isMockDrill state 
       then do
@@ -228,7 +228,7 @@ eval action state = case action of
           }
     if driverInfoCardState.status == "CANCELLED" then do
       void $ pure $ toast $ getString RIDE_CANCELLED
-      exit $ Exit state
+      exit $ Exit state true
     else if isNothing state.data.driverInfoCardState || (fromMaybe mockDriverInfo state.data.driverInfoCardState).status /= driverInfoCardState.status
       then exit $ RestartTracking newState
       else 
@@ -375,7 +375,7 @@ eval action state = case action of
     _ -> continue state
   PrimaryButtonAC act -> do
     case act of
-      PrimaryButton.OnClick -> exit $ Exit state
+      PrimaryButton.OnClick -> exit $ Exit state true
       _ -> continue state
   ResetSheetState -> continue state { props { sheetState = Nothing } }
   CallSafetyTeam SafetyActionTileView.OnClick -> do

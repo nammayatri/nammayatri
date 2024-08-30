@@ -4021,11 +4021,9 @@ mapView' push state idTag =
             , width MATCH_PARENT
             , gradient (Linear 180.0 [Color.white900, Color.transparent])
             ][]
-          , case state.data.followers of
-              Nothing -> linearLayout[visibility GONE][]
-              Just followers -> if isFollowEnabled state 
-                                  then followView push followers
-                                  else linearLayout[visibility GONE][]
+          , if isFollowEnabled state 
+              then followView push $ getFollowers state
+              else linearLayout[visibility GONE][]
         ]
       , Tuple "WhereTo" $ linearLayout
         [ height WRAP_CONTENT
@@ -5087,4 +5085,4 @@ getFollowers :: HomeScreenState -> Array Followers
 getFollowers state = do
   let automaticallySharedFollowers = fromMaybe [] state.data.followers 
       manuallySharedFollowers = fromMaybe [] state.data.manuallySharedFollowers
-  spy "followers :" $ Arr.nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers manuallySharedFollowers
+  Arr.nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers manuallySharedFollowers

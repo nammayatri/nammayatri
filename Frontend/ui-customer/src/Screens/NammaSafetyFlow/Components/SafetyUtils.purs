@@ -1,9 +1,11 @@
 module Screens.NammaSafetyFlow.Components.SafetyUtils where
 
-import Prelude (map, (<>), (==), ($))
+import Prelude (map, (<>), (==), ($), (&&), not, (||), (<#>), (/=))
 import Screens.Types (NewContacts, NammaSafetyScreenState(..))
 import Data.Array (filter, length, uncons, find)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Engineering.Helpers.Commons as EHC
+import JBridge as JB
 
 getDefaultPriorityList :: Array NewContacts -> Array NewContacts
 getDefaultPriorityList contacts =
@@ -26,3 +28,15 @@ getVehicleDetails state =
 getPrimaryContact :: NammaSafetyScreenState -> Maybe NewContacts
 getPrimaryContact state = 
   find (\contact -> contact.priority == 0) $ getDefaultPriorityList state.data.emergencyContactsList
+
+showNightSafetyFlow :: Maybe Boolean -> Maybe String -> Maybe String -> Int -> Int -> Boolean
+showNightSafetyFlow hasNightIssue rideStartTime rideEndTime safetyCheckStartSeconds safetyCheckEndSeconds = (hasNightIssue == Just false) && (checkTimeConstraints rideStartTime || checkTimeConstraints rideEndTime)
+  where 
+    checkTimeConstraints = checkSafetyTimeConstraints safetyCheckStartSeconds safetyCheckEndSeconds 
+
+checkSafetyTimeConstraints :: Int -> Int -> Maybe String -> Boolean
+checkSafetyTimeConstraints safetyCheckStartSeconds safetyCheckEndSeconds = maybe false (\time -> JB.withinTimeRange safetyCheckStart safetyCheckEnd $ EHC.convertUTCtoISC time "HH:mm:ss")
+  where
+    safetyCheckStart = EHC.convertUTCtoISC (EHC.parseSecondsOfDayToUTC safetyCheckStartSeconds) "HH:mm:ss"
+    safetyCheckEnd = EHC.convertUTCtoISC (EHC.parseSecondsOfDayToUTC safetyCheckEndSeconds) "HH:mm:ss"
+    

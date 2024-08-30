@@ -50,6 +50,7 @@ import Screens.Types (FareProductType(..)) as FPT
 import Resources.Constants (getFareFromArray)
 import Data.Array as DA
 import Screens.Types as ST
+import Engineering.Helpers.Commons as EHC
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -186,7 +187,6 @@ checkRideStatus rideAssigned = do
                   (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
                   isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
                   hasAccessibilityIssue' =  resp.hasDisability == Just true 
-                  hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isBlindPerson
                   hasTollIssue' =  (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.estimatedFareBreakup) && not isBlindPerson
 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
@@ -249,9 +249,8 @@ checkRideStatus rideAssigned = do
                           , rideCompletedData { 
                               issueReportData { 
                                 hasAccessibilityIssue = hasAccessibilityIssue'
-                              , hasSafetyIssue = hasSafetyIssue'
                               , hasTollIssue = hasTollIssue'
-                              , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                              , showIssueBanners = hasAccessibilityIssue' || hasTollIssue'
                               }
                             }
                           , toll {
@@ -298,8 +297,3 @@ getFlowStatusData dummy =
     Right res -> Just res
     Left err -> Nothing
 
-showNightSafetyFlow :: Maybe Boolean -> Maybe String -> Maybe String -> Boolean
-showNightSafetyFlow hasNightIssue rideStartTime rideEndTime = not (fromMaybe true hasNightIssue) && (isNightRide rideStartTime || isNightRide rideEndTime)
-
-isNightRide :: Maybe String -> Boolean
-isNightRide = maybe false (\time -> withinTimeRange "21:00:00" "06:00:00" $ convertUTCtoISC time "HH:mm:ss")

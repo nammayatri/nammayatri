@@ -2842,7 +2842,9 @@ newtype GetEmergencySettingsRes = GetEmergencySettingsRes
     informPoliceSos :: Boolean,
     notifySafetyTeamForSafetyCheckFailure :: Boolean,
     notifySosWithEmergencyContacts :: Boolean,
-    shakeToActivate :: Boolean
+    shakeToActivate :: Boolean,
+    safetyCheckStartTime :: Maybe Int,
+    safetyCheckEndTime :: Maybe Int
   }
 
 newtype UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
