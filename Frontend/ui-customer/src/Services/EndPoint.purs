@@ -167,8 +167,8 @@ personStats dummy = (getBaseUrl "41") <> "/personStats"
 ticketPlaces :: String -> String
 ticketPlaces dummy = (getBaseUrl "42") <> "/ticket/places"
 
-ticketPlaceServices :: String -> String
-ticketPlaceServices placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/services"
+ticketPlaceServices :: String -> String -> String
+ticketPlaceServices placeId date = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/services?date=" <> date
 
 ticketPlaceBook :: String -> String
 ticketPlaceBook placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/book"

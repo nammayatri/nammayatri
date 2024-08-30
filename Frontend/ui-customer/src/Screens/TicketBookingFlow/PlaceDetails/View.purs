@@ -78,10 +78,10 @@ screen initialState =
     pure $ pure unit
 
   getPlaceDataEvent' push = do
-    if (any (_ == initialState.props.currentStage) [ST.DescriptionStage]) then do
+    if (any (_ == initialState.props.currentStage) [ST.DescriptionStage,ST.ChooseTicketStage]) then do
       case initialState.data.placeInfo of
         Just (TicketPlaceResp place) -> do
-          servicesResp <- Remote.getTicketPlaceServicesBT place.id
+          servicesResp <- Remote.getTicketPlaceServicesBT place.id initialState.data.dateOfVisit
           lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData (Just $ TicketPlaceResp place) (Just servicesResp)
         Nothing -> lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData Nothing Nothing
     else pure unit

@@ -1008,10 +1008,10 @@ getPersonStatsBT _ = do
     errorHandler errorPayload = do
             BackT $ pure GoBack 
 
-getTicketPlaceServicesBT :: String -> FlowBT String TicketServicesResponse
-getTicketPlaceServicesBT placeId = do
+getTicketPlaceServicesBT :: String -> String-> FlowBT String TicketServicesResponse
+getTicketPlaceServicesBT placeId date= do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.ticketPlaceServices placeId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (TicketServiceReq placeId))
+    withAPIResultBT (EP.ticketPlaceServices placeId date) (\x -> x) errorHandler (lift $ lift $ callAPI headers (TicketServiceReq placeId date))
     where
     errorHandler errorPayload = do
             BackT $ pure GoBack 

@@ -4174,7 +4174,19 @@ placeDetailsFlow = do
   (GlobalState currentState) <- getState
   void $ pure $ spy "ZOO TICKET PLACE DETAILS CALLED" currentState
   liftFlowBT $ hideLoader
-  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { dateOfVisit = if isTodayBookingAllowed ticketBookingScreen then (getNextDateV2 "") else (getNextDate "yyyy-mm-dd")} })
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen 
+  { data 
+      { dateOfVisit = if DS.null ticketBookingScreen.data.dateOfVisit 
+                      then (if isTodayBookingAllowed ticketBookingScreen 
+                            then (getNextDateV2 "") 
+                            else (getNextDate "yyyy-mm-dd")) 
+                      else ticketBookingScreen.data.dateOfVisit
+      }
+  , props 
+      { 
+        selectedOperationalDay = ticketBookingScreen.props.selectedOperationalDay
+      } 
+  })
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ PlaceDetailsS.screen state.ticketBookingScreen
   case action of
@@ -4190,6 +4202,9 @@ placeDetailsFlow = do
     PlaceDetailsC.BookTickets updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData)
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
+    PlaceDetailsC.GoToTicketBook updatedState selectedDateString-> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> updatedState)
+      (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> placeDetailsFlow)
   where
   isTodayBookingAllowed :: ST.TicketBookingScreenState -> Boolean
   isTodayBookingAllowed state = 

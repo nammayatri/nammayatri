@@ -324,6 +324,8 @@ data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreen
                                     | GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW Number Number
                                     | REFRESH_PAYMENT_STATUS TicketBookingScreenState
                                     | GO_TO_TICKET_LIST TicketBookingScreenState
+                                    | GO_TO_TICKET_BOOK TicketBookingScreenState String
+                                    
 
 data METRO_TICKET_STATUS_SCREEN_OUTPUT = GO_TO_METRO_TICKET_DETAILS MetroTicketStatusScreenState MetroTicketBookingStatus
                                        | REFRESH_STATUS_AC MetroTicketStatusScreenState
