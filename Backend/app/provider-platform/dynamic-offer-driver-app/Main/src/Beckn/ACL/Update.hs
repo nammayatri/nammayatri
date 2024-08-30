@@ -103,6 +103,7 @@ parseEvent reqMsg context = do
       orderStatus <- reqMsg.updateReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "orderStatus not found")
       messageId <- Utils.getMessageId context
       status <- castOrderStatus orderStatus
+      transactionId <- Utils.getTransactionId context
       pure $
         DUpdate.UEditLocationReq $
           DUpdate.EditLocationReq
@@ -111,7 +112,8 @@ parseEvent reqMsg context = do
               origin,
               destination,
               status,
-              bapBookingUpdateRequestId = messageId
+              bapBookingUpdateRequestId = messageId,
+              transactionId
             }
 
 castOrderStatus :: (MonadFlow m) => Text -> m Enums.OrderStatus
