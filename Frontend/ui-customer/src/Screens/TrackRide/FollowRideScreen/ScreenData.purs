@@ -62,6 +62,7 @@ dummyFollower =
   , bookingId: ""
   , mobileNumber: ""
   , priority: 0
+  , isManualFollower : false
   }
 
 mockFollower :: Followers
@@ -70,6 +71,7 @@ mockFollower =
   , bookingId: "mock_drill"
   , mobileNumber: ""
   , priority: 0
+  , isManualFollower : false
   }
 
 mockRoute :: Route

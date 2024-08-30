@@ -73,7 +73,7 @@ import Log (logInfo, logStatus)
 import MerchantConfig.Types (AppConfig(..), MetroConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min, (>>>), flip)
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min, (>>>), flip, (<#>))
 import Mobility.Prelude (capitalize)
 import ModifyScreenState (modifyScreenState, updateSafetyScreenState, updateRepeatRideDetails, FlowState(..))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
@@ -381,7 +381,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                   res <- lift $ lift $ HelpersAPI.callApi $ GetManuallySharedDetailsReq rId
                   case res of
                     Right (GetManuallySharedDetailsRes rideDetails) -> do
-                      let follower = { name : Just rideDetails.customerName, bookingId : rideDetails.bookingId, mobileNumber : rideDetails.customerPhone, priority : 0 }
+                      let follower = { name : Just rideDetails.customerName, bookingId : rideDetails.bookingId, mobileNumber : rideDetails.customerPhone, priority : 0, isManualFollower : true }
                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Just [follower], manuallySharedFollowers = Just [follower] } })
                       updateFollower false true Nothing
                     Left _ -> currentFlowStatus
@@ -2653,10 +2653,11 @@ updateFollower callFollowersApi callInitUi eventType = do
     if callFollowersApi then do
       resp <- lift $ lift $ Remote.getFollowRide ""
       case resp of
-        Right (FollowRideRes response) -> pure $ map (\(Followers follower) -> follower) response
+        Right (FollowRideRes response) -> pure $ map (\(Followers follower) -> transformFollower follower) response
         Left err -> pure $ fromMaybe [] allState.homeScreen.data.followers
     else do
       pure $ fromMaybe [] allState.homeScreen.data.followers
+  transformFollower follower = {name : follower.name, bookingId : follower.bookingId, mobileNumber : follower.mobileNumber, priority : follower.priority, isManualFollower : false}
 
 followRideScreenFlow :: Boolean -> FlowBT String Unit
 followRideScreenFlow callInitUI = do
@@ -2667,7 +2668,7 @@ followRideScreenFlow callInitUI = do
     RESTART_TRACKING -> do
       void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
       followRideScreenFlow false
-    GO_TO_HS_FROM_FOLLOW_RIDE -> do
+    GO_TO_HS_FROM_FOLLOW_RIDE state removeManualFollower -> do
       void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
       pure $ removeAllPolylines ""
       void $ liftFlowBT $ runEffectFn1 clearMap ""
@@ -2682,6 +2683,12 @@ followRideScreenFlow callInitUI = do
             "CustomerHomeScreen"
       void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag currentMapFragment)
       modifyScreenState $ FollowRideScreenStateType (\_ -> FollowRideScreenData.initData)
+      case state.data.currentFollower of
+        Just currfollower -> do
+          let currentManualFollowers = fromMaybe [] gs.homeScreen.data.manuallySharedFollowers
+              updatedManualFollowers = if currfollower.isManualFollower then Arr.filter (\follower -> follower.bookingId /= currfollower.bookingId ) currentManualFollowers else currentManualFollowers
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { manuallySharedFollowers = if null updatedManualFollowers then Nothing else Just updatedManualFollowers } })
+        Nothing -> pure unit
       currentFlowStatus
     OPEN_GOOGLE_MAPS_FOLLOW_RIDE state -> do
       case state.data.driverInfoCardState of
@@ -6254,14 +6261,18 @@ fcmHandler notification state = do
 
           differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
 
-          nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
         lift $ lift $ triggerRideStatusEvent notification (Just finalAmount) (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
         setValueToLocalStore PICKUP_DISTANCE "0"
         liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
         let
           isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
           hasAccessibilityIssue' = resp.hasDisability == Just true 
-          hasSafetyIssue' = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime && not isBlindPerson
+          hasSafetyIssue' = case state.props.safetySettings of 
+                              Just (API.GetEmergencySettingsRes settings) -> do
+                                let safetyCheckStartTime = fromMaybe 0 settings.safetyCheckStartTime
+                                    safetyCheckEndTime = fromMaybe 0 settings.safetyCheckEndTime
+                                settings.enablePostRideSafetyCheck == ALWAYS_SHARE || showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime safetyCheckStartTime safetyCheckEndTime
+                              Nothing -> false
           hasTollIssue' = (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.fareBreakup) && not isBlindPerson
         modifyScreenState
           $ HomeScreenStateType

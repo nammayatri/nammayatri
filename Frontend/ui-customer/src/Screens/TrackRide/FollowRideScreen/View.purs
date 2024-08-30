@@ -695,7 +695,7 @@ headerView push state =
           ]
       ]
   where 
-    isChatEnabled currentFollower = state.data.config.feature.enableChat && (currentFollower.priority == 0) && state.props.isRideStarted && not state.props.currentUserOnRide
+    isChatEnabled currentFollower = state.data.config.feature.enableChat && (currentFollower.priority == 0) && state.props.isRideStarted && not state.props.currentUserOnRide && not currentFollower.isManualFollower
 
 emergencyActionsView ::
   forall w.
