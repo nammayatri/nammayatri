@@ -64,6 +64,7 @@ import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
 import SessionCache
+import Services.API (DriverProfileDataReq(..))
 import Helpers.API (getDeviceDetails)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
@@ -492,6 +493,25 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
       "searchRequestId" : requestId,
       "offeredFare" : offeredFare
     }
+
+makeDriverProfileReq :: Array String -> Array String -> Array String -> Maybe Int -> Array String -> GetUploadProfileReq
+makeDriverProfileReq pledge vehicalTags whyNy drivingSince imageId = GetUploadProfileReq {
+    pledges : pledge,
+    vehicleTags : vehicalTags,
+    languages : [],
+    aspirations : whyNy,
+    drivingSince : drivingSince,
+    hometown : Nothing,
+    imageIds : imageId
+}
+
+submitDriverProfile :: GetUploadProfileReq -> FlowBT String ApiSuccessResult
+submitDriverProfile body = do
+        headers <- getHeaders' "" true
+        withAPIResultBT (EP.submitDriverProfile "") identity errorHandler (lift $ lift $ callAPI headers (UploadProfileReq body))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 getRideHistoryReq :: String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse GetRidesHistoryResp)
@@ -1693,3 +1713,15 @@ makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consen
        "validationStatus" : validationStatus,
        "transactionId" : transactionId
     }
+
+---------------------------------------------------------Fetching Driver Profile------------------------------------------------------------
+
+makeDriverProfileDataReq :: DriverProfileDataReq
+makeDriverProfileDataReq = DriverProfileDataReq
+
+fetchDriverProfile :: DriverProfileDataReq -> Flow GlobalState (Either ErrorResponse DriverProfileDataRes)
+fetchDriverProfile req = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getDriverProfile "") unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse (x) = x

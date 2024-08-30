@@ -49,7 +49,7 @@ import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, nonCanceler, Fiber)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastWeeks, toStringJSON) as ReExport
+import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastYears, getPastWeeks, toStringJSON) as ReExport
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode, decode)
 import Juspay.OTP.Reader (initiateSMSRetriever)

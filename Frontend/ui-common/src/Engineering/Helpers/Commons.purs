@@ -93,6 +93,7 @@ foreign import camelCaseToSentenceCase :: String -> String
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
+foreign import getPastYears :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
 foreign import getPastMonths :: Int -> Array CalendarMonth
 foreign import getDayName :: String -> String

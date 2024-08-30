@@ -608,7 +608,7 @@ data STR = LETS_GET_STARTED
         | ABOUT_VEHICLE
         | ADD
         | YEARS_OLD
-        | HOMETOWN
+        | FROM_WHERE
         | MISSED_OPPORTUNITY
         | EARNED_ON_APP String
         | TRAVELLED_ON_APP String
@@ -1559,6 +1559,32 @@ data STR = LETS_GET_STARTED
         | PARKING_CHARGES_INCLUDED String
         | INCLUDED
         | DB_CHECK_AND_NAME_MATCH_FAILED
+        | COMPLETE_YOUR_PROFILE
+        | ADD_PHOTOS
+        | ADD_UPTO_FOUR
+        | CARD_TEXT 
+        | PLEDGE 
+        | SAFE_JOURNEY 
+        | CLEAN_CAR 
+        | ON_TIME_PICK_UP 
+        | MAINTENANCE 
+        | VEHICLE_OFFER 
+        | GAS 
+        | RADIO 
+        | ECO_FRIENDLY 
+        | DEVICE_CHARGING 
+        | BOOT_SPACE 
+        | PET_FRIENDLY 
+        | HOMETOWN 
+        | DRIVING_SINCE 
+        | WHY_NY 
+        | NEW_HOME 
+        | KID_EDUCATION 
+        | NEW_VEHICLE
+        | ADD_YOUR_PHOTOS
+        | ADD_PHOTO_CAPTION
+        | COMPLETE_PROFILE
+        | SAVE 
         | MANAGE_VEHICLE
         | AMBULANCE_IS_NOT_SUPPORTED_YET
         | WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE

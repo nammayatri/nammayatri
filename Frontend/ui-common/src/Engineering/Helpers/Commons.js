@@ -2,12 +2,12 @@ import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
-function getLanguageLocale (){
+function getLanguageLocale() {
   if (!window.languageKey) {
     const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
     window.languageKey = locale;
     return locale;
-  } 
+  }
   return window.languageKey;
 }
 
@@ -20,33 +20,33 @@ export const getOs = function () {
   return "ANDROID";
 };
 
-const trackAPICalls = function(statusCode,url, apiStartTime){
-  if(typeof window.__trackAPICalls == "function"){
-    try{
-      window.__trackAPICalls(url,apiStartTime,Date.now(),statusCode?statusCode:"0");
-    } catch (error){
-      console.error("Error while invoking " + window.__trackAPICalls + " function in Tracker.js \n",error.toString());
+const trackAPICalls = function (statusCode, url, apiStartTime) {
+  if (typeof window.__trackAPICalls == "function") {
+    try {
+      window.__trackAPICalls(url, apiStartTime, Date.now(), statusCode ? statusCode : "0");
+    } catch (error) {
+      console.error("Error while invoking " + window.__trackAPICalls + " function in Tracker.js \n", error.toString());
     }
   } else {
-    console.error(window.__trackAPICalls+" is not a function in Tracker.js");
+    console.error(window.__trackAPICalls + " is not a function in Tracker.js");
   }
 }
 
-const getEncodedData = function(data) {
-  if (window.__OS == "IOS"){
-    return  btoa(unescape(encodeURIComponent(data)));
+const getEncodedData = function (data) {
+  if (window.__OS == "IOS") {
+    return btoa(unescape(encodeURIComponent(data)));
   }
   return data;
 }
 
-export const getNewIDWithTag = function(tag){
+export const getNewIDWithTag = function (tag) {
   window.__usedID = window.__usedID || {}
   window.__usedID[tag] = window.__usedID[tag] || "" + window.createPrestoElement().__id;
   return window.__usedID[tag];
 }
 
 export const callAPI = function () {
-  return window.JBridge.callAPI(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6] )
+  return window.JBridge.callAPI(arguments[0], encodeURI(arguments[1]), getEncodedData(arguments[2]), getEncodedData(arguments[3]), arguments[4], arguments[5], arguments[6])
 }
 
 export const callAPIWithOptions = function () {
@@ -67,9 +67,9 @@ export const atobImpl = function (value) {
   }
 }
 
-export const getMarkerCallback = function(cb, action) {
+export const getMarkerCallback = function (cb, action) {
   try {
-    return PrestoCallbackMapper.map(function(markerName) {
+    return PrestoCallbackMapper.map(function (markerName) {
       cb(action(markerName))();
     })
   } catch (error) {
@@ -78,9 +78,9 @@ export const getMarkerCallback = function(cb, action) {
   }
 }
 
-export const splitString = function(word, pattern, len) {
+export const splitString = function (word, pattern, len) {
   try {
-    
+
     const wordArr = word.split(pattern);
     if (wordArr.length === 0 || wordArr.length === 1) return word;
 
@@ -92,11 +92,11 @@ export const splitString = function(word, pattern, len) {
   }
 }
 
-export const getWindowVariable = function(key) {
-  return function(just) {
-    return function(nothing) {
-      return function() {
-        if(typeof window !== "undefined" && typeof window[key] !== "undefined") {
+export const getWindowVariable = function (key) {
+  return function (just) {
+    return function (nothing) {
+      return function () {
+        if (typeof window !== "undefined" && typeof window[key] !== "undefined") {
           return just(window[key]);
         } else {
           return nothing;
@@ -106,13 +106,13 @@ export const getWindowVariable = function(key) {
   }
 }
 
-export const setWindowVariableImpl = function(key) {
-  return function(value) {
-    return function() {
-      if(typeof window !== "undefined") {
-        window[key] =value;
+export const setWindowVariableImpl = function (key) {
+  return function (value) {
+    return function () {
+      if (typeof window !== "undefined") {
+        window[key] = value;
       }
-        
+
     }
   }
 }
@@ -138,33 +138,33 @@ export const callSahay = function (request) {
   };
 };
 
-export const screenWidth = function(){
+export const screenWidth = function () {
   return screen.width;
 }
 
-export const screenHeight = function(){
+export const screenHeight = function () {
   return screen.height;
 }
 
-export const getDeviceHeight = function(){
-  try{
-    if(window.__OS == "IOS" && JBridge.getDeviceHeight) return parseInt(JBridge.getDeviceHeight());
-    else if(window.fetchCachedSessionInfo)
+export const getDeviceHeight = function () {
+  try {
+    if (window.__OS == "IOS" && JBridge.getDeviceHeight) return parseInt(JBridge.getDeviceHeight());
+    else if (window.fetchCachedSessionInfo)
       return window.fetchCachedSessionInfo("screen_height");
     else return JSON.parse(JBridge.getSessionInfo()).screen_height;
   }
-  catch(e){
+  catch (e) {
     console.log("error in getDeviceHeight", e);
     return -1;
   }
 }
 
-export const getScreenPpi = function(){
-  try{
-    const ppi = window.fetchCachedSessionInfo ? window.fetchCachedSessionInfo("screen_ppi"): JSON.parse(JBridge.getSessionInfo()).screen_ppi;
+export const getScreenPpi = function () {
+  try {
+    const ppi = window.fetchCachedSessionInfo ? window.fetchCachedSessionInfo("screen_ppi") : JSON.parse(JBridge.getSessionInfo()).screen_ppi;
     return Math.round(ppi);
   }
-  catch(e){
+  catch (e) {
     console.log("error in getScreenPpi", e);
     return -1;
   }
@@ -176,7 +176,7 @@ export const safeMarginTopImpl = function () {
     if (parent.__DEVICE_DETAILS && parent.__DEVICE_DETAILS.safe_area_frame) {
       return parent.__DEVICE_DETAILS.safe_area_frame.y
     }
-  } catch(e){
+  } catch (e) {
     console.log("error in safeMarginTopImpl", e);
   }
 
@@ -184,18 +184,18 @@ export const safeMarginTopImpl = function () {
 }
 
 export const safeMarginBottomImpl = function () {
-  try{
+  try {
     const d = parent.__DEVICE_DETAILS;
     if (!d || !d.safe_area_frame) {
       return 0;
     }
     return (d.screen_height - d.safe_area_frame.height - d.safe_area_frame.y);
-  } catch(e){
+  } catch (e) {
     return 0;
-  } 
+  }
 }
 
-export const getVersionByKey = function(key){
+export const getVersionByKey = function (key) {
   return window.version[key] || "";
 }
 
@@ -206,8 +206,8 @@ function setTextImpl(id, text, pos) {
     cmd += "get_view->setSelection:i_" + pos + ";";
     Android.runInUI(cmd, null);
   } else {
-    Android.runInUI({id: id, text: text});
-    Android.runInUI({id: id, cursorPosition: pos});
+    Android.runInUI({ id: id, text: text });
+    Android.runInUI({ id: id, cursorPosition: pos });
   }
 }
 
@@ -222,10 +222,9 @@ export const getExpiryTime = function (str1) {
     try {
       const expiry = new Date(str1);
       const current = new Date();
-      let diff = (expiry.getTime() - current.getTime())/ 1000;
-      if (reverse)
-      {
-        diff = (current.getTime() - expiry.getTime())/ 1000;
+      let diff = (expiry.getTime() - current.getTime()) / 1000;
+      if (reverse) {
+        diff = (current.getTime() - expiry.getTime()) / 1000;
       }
       diff = (Math.round(diff));
       if (diff >= 0)
@@ -247,15 +246,15 @@ export const getCurrentUTC = function (str) {
   return new Date().toISOString();
 };
 
-export const getDateFromObj = function (obj){
+export const getDateFromObj = function (obj) {
   const date = new Date(`${obj.month} ${obj.date}, ${obj.year}`);
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = date.getFullYear();
-  return  yyyy + "-" + mm + "-" + dd;
+  return yyyy + "-" + mm + "-" + dd;
 }
 
-function getFormattedLanguage(language){
+function getFormattedLanguage(language) {
   if (language == "EN_US") return "en-us";
   else if (language == "HI_IN") return "hi-in";
   else if (language == "KN_IN") return "kn-in";
@@ -283,6 +282,32 @@ export const getPastDays = function (count) {
   }
 };
 
+export const getPastYears = function (count) {
+  try {
+    const result = [];
+    const language = getLanguageLocale();
+    const formattedLanguage = getFormattedLanguage(language);
+
+    for (let i = 0; i < count; i++) {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() - i);
+      const obj = {
+        utcDate: d.toISOString(),
+        date: d.getDate(),
+        month: d.toLocaleString(formattedLanguage, { month: "short" }),
+        year: d.getFullYear()
+      };
+      result.push(obj);
+    }
+
+    console.log(language, formattedLanguage);
+    console.log(result);
+    return result.reverse();
+  } catch (e) {
+    console.log("error in getPastYears", e);
+  }
+};
+
 export const getPastWeeks = function (count) {
   try {
     const result = []
@@ -297,8 +322,10 @@ export const getPastWeeks = function (count) {
       const dEnd = new Date(currentDate);
       dStart.setDate(dStart.getDate() - 7 * (i + 1));
       dEnd.setDate(dEnd.getDate() - (7 * i + 1));
-      const obj = { utcStartDate: dStart.toISOString(), startDate: dStart.getDate(), utcEndDate: dEnd.toISOString(), endDate: dEnd.getDate(),
-        startMonth: dStart.toLocaleString(getFormattedLanguage(language), { month: "short" }), endMonth: dEnd.toLocaleString(getFormattedLanguage(language), { month: "short" }) }
+      const obj = {
+        utcStartDate: dStart.toISOString(), startDate: dStart.getDate(), utcEndDate: dEnd.toISOString(), endDate: dEnd.getDate(),
+        startMonth: dStart.toLocaleString(getFormattedLanguage(language), { month: "short" }), endMonth: dEnd.toLocaleString(getFormattedLanguage(language), { month: "short" })
+      }
       result.push(obj)
     }
     console.log(result);
@@ -309,12 +336,12 @@ export const getPastWeeks = function (count) {
 };
 
 export const getPastMonths = function (count) {
-  try { 
+  try {
     const result = []
     const currentDate = new Date(), month = currentDate.getMonth();
-    for(let i = 0; i < count; i++) {
+    for (let i = 0; i < count; i++) {
       const newDate = new Date(); newDate.setMonth(month - i);
-      const obj = { utcDate : newDate, month: month - i + 1};
+      const obj = { utcDate: newDate, month: month - i + 1 };
       result.push(obj);
     }
     return result.reverse();
@@ -468,7 +495,7 @@ export const formatCurrencyWithCommas = function (amount) {
   return amount.toLocaleString("en-IN");
 }
 
-export const camelCaseToSentenceCase = function(string) {
+export const camelCaseToSentenceCase = function (string) {
   const result = string.replace(/([A-Z])/g, " $1");
   return (result.substring(0, 1).toUpperCase() + result.substring(1).toLowerCase());
 }
@@ -491,7 +518,7 @@ export const convertUTCTimeToISTTimeinHHMMSS = function (utcTime) {
 export const getFormattedDate = function (str) {
   const date = new Date(str);
   const language = getLanguageLocale();
-  return formatDates(new Date(date),"MMMM Do, YYYY", getFormattedLanguage(language));
+  return formatDates(new Date(date), "MMMM Do, YYYY", getFormattedLanguage(language));
 }
 
 export const getVideoID = function (url) {
@@ -508,12 +535,12 @@ export const getVideoID = function (url) {
     else {
       if (updatedURL[1] == /shorts/) {
         ID = updatedURL[2];
-      }else {
+      } else {
         ID = updatedURL;
       }
     }
     return ID;
-  }catch (e) {
+  } catch (e) {
     console.log("error in getVideoID " + e);
   }
 }
@@ -524,24 +551,24 @@ export const getImageUrl = function (url) {
       console.log("url", url, videoId_);
       const videoId = url == "" ? videoId_ : getVideoID(url);
       return ("https://img.youtube.com/vi/" + videoId + "/maxresdefault.jpg");
-    }catch (e) {
+    } catch (e) {
       console.log("error in getImageUrl " + e);
     }
   }
 };
 
-export const setEventTimestamp = function(string){
-  return function(){
-    if (!window.flowTimeStampObject[string]){
+export const setEventTimestamp = function (string) {
+  return function () {
+    if (!window.flowTimeStampObject[string]) {
       window.flowTimeStampObject[string] = Date.now() - window.prevTimeStamp;
       window.prevTimeStamp = Date.now();
     }
   }
 }
 
-export const getTimeStampObject = function(){
-  return function(){
-    const keyValuePairArray = Object.keys(window.flowTimeStampObject).map(function(key) {
+export const getTimeStampObject = function () {
+  return function () {
+    const keyValuePairArray = Object.keys(window.flowTimeStampObject).map(function (key) {
       return {
         key: key,
         value: window.flowTimeStampObject[key]
@@ -551,13 +578,13 @@ export const getTimeStampObject = function(){
   }
 }
 
-export const getRandomID = function(max) {
+export const getRandomID = function (max) {
   const id = Math.floor(Math.random() * max) + 1;
-  return id.toString(); 
+  return id.toString();
 }
 
 export const updateIdMap = function (key) {
-  idMap[key] = {id : getRandomID(10000), shouldPush: true};
+  idMap[key] = { id: getRandomID(10000), shouldPush: true };
   return idMap[key];
 };
 
@@ -571,9 +598,9 @@ export const resetIdMap = function () {
 }
 
 export const getValueFromIdMap = function (key) {
-  let val = idMap[key]; 
+  let val = idMap[key];
   if (!val) {
-    idMap[key] = {id : getRandomID(10000), shouldPush: true};
+    idMap[key] = { id: getRandomID(10000), shouldPush: true };
     val = idMap[key];
   }
   return val;
@@ -622,7 +649,7 @@ export const getUTCAfterNSecondsImpl = function (str, seconds) {
 }
 
 export const compareUTCDateImpl = function (date1, date2) {
-  return Math.floor((new Date(date1) - new Date(date2))/1000); 
+  return Math.floor((new Date(date1) - new Date(date2)) / 1000);
 }
 
 export const getUTCAfterNHoursImpl = function (str, hours) {

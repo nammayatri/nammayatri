@@ -75,6 +75,7 @@ modifyScreenState st =
     LmsVideoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsVideoScreen = a state.lmsVideoScreen})
     LmsQuizScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {lmsQuizScreen = a state.lmsQuizScreen})
     DocumentDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {documentDetailsScreen = a state.documentDetailsScreen})
+    DriverCompleteProfileScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverCompleteProfileScreen = a state.driverCompleteProfileScreen})
     RateCardScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rateCardScreen = a state.rateCardScreen})
     CustomerReferralTrackerScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {customerReferralTrackerScreen = a state.customerReferralTrackerScreen})
     CancellationRateScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {cancellationRateScreen = a state.cancellationRateScreen})

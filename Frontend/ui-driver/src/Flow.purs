@@ -1309,6 +1309,12 @@ applicationSubmittedFlow screenType = do
                   applicationSubmittedFlow screenType
     LOGOUT_ACCOUT -> logoutFlow
 
+driverCompleteProfileFlow :: FlowBT String Unit
+driverCompleteProfileFlow = do
+  action <- UI.driverCompleteProfileScreen
+  case action of
+    _ ->  homeScreenFlow
+
 driverProfileFlow :: FlowBT String Unit
 driverProfileFlow = do
   logField_ <- lift $ lift $ getLogFields
@@ -1522,7 +1528,10 @@ driverProfileFlow = do
     SAVED_LOCATIONS_SCREEN -> do
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState'.driverSavedLocationScreen)
-      goToLocationFlow  
+      goToLocationFlow 
+
+    DRIVER_COMPLETING_PROFILE_SCREEN -> do
+      driverCompleteProfileFlow
     
     VIEW_PENDING_VEHICLE rcNumber vehicleCategory -> do
       setValueToLocalStore ENTERED_RC rcNumber
@@ -2358,7 +2367,8 @@ homeScreenFlow = do
   liftFlowBT $ Events.endMeasuringDuration "mainToHomeScreenDuration"
   action <- UI.homeScreen
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
-  case action of
+  case action of    
+    -- _ -> driverCompleteProfileFlow          
     GO_TO_PROFILE_SCREEN updatedState -> do
       liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
       modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data { cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}

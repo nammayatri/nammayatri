@@ -108,6 +108,9 @@ driverProfileScreen = do
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
       App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
+    GoToCompletingProfile updatedState -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> pure DRIVER_COMPLETING_PROFILE_SCREEN
     GoToCancellationRateScreen state -> do
       let cancellationScreenState = CancellationRateScreenData.initData { data { cancellationRate = if isJust state.data.cancellationWindow then state.data.cancellationRate else state.data.analyticsData.cancellationRate
                                                    , assignedRides = state.data.analyticsData.totalRidesAssigned
