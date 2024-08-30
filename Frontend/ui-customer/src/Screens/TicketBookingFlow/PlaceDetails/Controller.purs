@@ -60,6 +60,7 @@ data ScreenOutput = GoToHomeScreen TicketBookingScreenState
                   | GoToTicketPayment TicketBookingScreenState
                   | BookTickets TicketBookingScreenState
                   | GoToOpenGoogleMaps TicketBookingScreenState Number Number
+                  | GoToTicketBook TicketBookingScreenState String
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
 
@@ -87,8 +88,8 @@ eval  (DatePicker _ resp year month date ) state = do
                       && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
           selectedOpDay = convertUTCtoISC ((show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month + 1)) <> "-" <> (show date)) "dddFull"
           modifiedServicesData = map (modifyService selectedOpDay) state.data.servicesInfo
-          
-      continue state { props{selectedOperationalDay = selectedOpDay, validDate = validDate },data { totalAmount = 0, servicesInfo = modifiedServicesData, dateOfVisit = selectedDateString }}
+          updatedState = state { props{selectedOperationalDay = selectedOpDay, validDate = validDate},data { totalAmount = 0, servicesInfo = modifiedServicesData, dateOfVisit = selectedDateString }}
+      updateAndExit updatedState $ GoToTicketBook updatedState selectedDateString
     _ -> continue state
   where
     modifyService selectedOpDay service = 
@@ -109,14 +110,17 @@ eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
-eval (UpdatePlacesData placeData Nothing) state = do
-  let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
-  continue newState
 
-eval (UpdatePlacesData placeData (Just (TicketServicesResponse serviceData))) state = do
-  let selectedOpDay = convertUTCtoISC (getCurrentUTC "") "dddFull"
-      servicesInfo2 = mapWithIndex (\i it -> transformRespToStateDatav2 (i==0) it state selectedOpDay) serviceData
-  continue state { data { placeInfo = placeData, servicesInfo = servicesInfo2}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
+eval (UpdatePlacesData placeData mbServiceData) state = do
+  case mbServiceData of 
+    Just (TicketServicesResponse serviceData) -> do
+      let selectedOpDay = convertUTCtoISC (state.data.dateOfVisit) "dddFull"
+          servicesInfo2 = mapWithIndex (\i it -> transformRespToStateDatav2 (i==0) it state selectedOpDay) serviceData
+      continue state { data { placeInfo = placeData, servicesInfo = servicesInfo2}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
+    Nothing -> do
+      let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
+      continue newState
+  
 
 eval BackPressed state = do
   case state.props.currentStage of 
