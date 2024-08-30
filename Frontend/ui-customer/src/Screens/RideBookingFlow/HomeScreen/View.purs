@@ -1593,6 +1593,7 @@ rideRequestFlowView push state =
             then estimatedFareView push state
           else
             ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
+        else if state.props.currentStage == RevisedEstimate then revisedEstimatedFareView push state
         else if (state.props.currentStage == ConfirmingLocation || state.props.currentStage == EditPickUpLocation) then
           confirmPickUpLocationView push state
         else
