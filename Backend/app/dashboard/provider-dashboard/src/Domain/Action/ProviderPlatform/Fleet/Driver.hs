@@ -12,7 +12,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetDriverVehicleAssociation,
     getDriverFleetDriverAssociation,
     getDriverFleetVehicleAssociation,
-    postDriverFleetVehicleDriverRCstatus,
+    postDriverFleetVehicleDriverRcStatus,
     postDriverUpdateFleetOwnerInfo,
     getDriverFleetOwnerInfo,
     postDriverFleetSendJoiningOtp,
@@ -122,12 +122,12 @@ getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.driverDSL.getDriverFleetVehicleAssociation) apiTokenInfo.personId.getId mbLimit mbOffset mbVehicleNo mbIncludeStats mbFrom mbTo mbStatus
 
-postDriverFleetVehicleDriverRCstatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
-postDriverFleetVehicleDriverRCstatus merchantShortId opCity apiTokenInfo driverId req = do
+postDriverFleetVehicleDriverRcStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
+postDriverFleetVehicleDriverRcStatus merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostDriverFleetVehicleDriverRCstatusEndpoint apiTokenInfo (Just driverId) $ Just req
+  transaction <- buildTransaction Common.PostDriverFleetVehicleDriverRcStatusEndpoint apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
-    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.driverDSL.postDriverFleetVehicleDriverRCstatus) driverId apiTokenInfo.personId.getId req
+    Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.driverDSL.postDriverFleetVehicleDriverRcStatus) driverId apiTokenInfo.personId.getId req
 
 postDriverUpdateFleetOwnerInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateFleetOwnerInfoReq -> Flow APISuccess
 postDriverUpdateFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId req = do

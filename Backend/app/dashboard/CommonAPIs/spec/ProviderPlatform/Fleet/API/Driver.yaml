@@ -316,6 +316,7 @@ apis:
               type: DrivertoVehicleAssociationRes
   - POST: # SetVehicleDriverRcStatusForFleetAPI
       endpoint: /{driverId}/fleet/vehicleDriverRCstatus
+      name: PostDriverFleetVehicleDriverRcStatus
       auth:  ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
       params:
         driverId: Id Driver
