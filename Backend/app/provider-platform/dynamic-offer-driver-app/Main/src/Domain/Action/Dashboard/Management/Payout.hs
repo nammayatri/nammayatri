@@ -14,6 +14,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout as DTP
 import qualified Control.Monad.Extra as Control
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import Data.Time (LocalTime, addUTCTime, minutesToTimeZone, utcToLocalTime, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DDS
@@ -26,7 +27,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DR
 import qualified Domain.Types.VehicleCategory as DV
 import qualified Environment
-import EulerHS.Prelude hiding (elem, forM_, id, mapM_, whenJust)
+import EulerHS.Prelude hiding (elem, forM_, id, map, mapM_, whenJust)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt, decryptItem, encrypt, getDbHash)
 import qualified Kernel.External.Payout.Interface as Juspay
@@ -51,6 +52,7 @@ import Servant hiding (throwError)
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DriverInformation as QDI
@@ -61,6 +63,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Auth
 import Tools.Error
+import Tools.Notifications
 import qualified Tools.Payout as TP
 import Utils.Common.Cac.KeyNameConstants
 
@@ -110,17 +113,18 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
 utcToIst :: Minutes -> Maybe Kernel.Prelude.UTCTime -> Maybe LocalTime
 utcToIst timeZoneDiff = fmap $ utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes)
 
-getPayoutPayoutHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutHistoryRes
-getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom mbLimit mbOffset mbTo = do
+getPayoutPayoutHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutHistoryRes
+getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
+      isFailedOnly = fromMaybe False mbIsFailedOnly
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   person <- getPerson merchant.id
   unless (person.merchantOperatingCityId == merchantOpCity.id) . throwError $ PersonNotFound "Given driverId / driverPhoneNumber does not belong to the city for the given user"
   let driverId = person.id.getId
   mbMobileNumberHash <- mapM getDbHash mbDriverPhoneNo
-  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithOptions limit offset (Just driverId) mbMobileNumberHash mbFrom mbTo
+  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithOptions limit offset (Just driverId) mbMobileNumberHash mbFrom mbTo isFailedOnly
   historyList <- mapM (getPayoutPayoutHistoryItem person merchantOpCity) payoutOrders
   pure DTP.PayoutHistoryRes {history = historyList}
   where
@@ -150,38 +154,50 @@ getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom 
 
 postPayoutPayoutVerifyFraudStatus :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.UpdateFraudStatusReq -> Environment.Flow APISuccess
 postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
+  riderDetails <- QRD.findById (cast $ Id req.riderDetailsId) >>= fromMaybeM (RiderDetailsDoNotExist "Rider Detail Id" req.riderDetailsId)
+  when (isJust riderDetails.isFlagConfirmed) $ throwError $ InvalidRequest $ "Already confirmed by dashboard of riderDetails: " <> req.riderDetailsId
+  QRD.updateIsFlagConfirmed (Just req.isFlagConfirmed) (cast $ Id req.riderDetailsId)
   if not req.isFlagConfirmed -- pay in case of false
     then do
-      QRD.updateIsFlagConfirmed (Just False) (cast $ Id req.riderDetailsId)
       merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
       merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
       mbVehicle <- QVeh.findById (cast req.driverId)
       let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
       payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present for " <> show merchantOpCity.city)
-      dInfo <- QDI.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
       ride <- QR.findById (cast req.firstRideId) >>= fromMaybeM (RideDoesNotExist req.firstRideId.getId)
       transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id (Just (DriverId (cast req.driverId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
       when (isNothing ride.tripEndTime) $ throwError $ InvalidRequest "First Ride is Not Completed by the Referred Customer"
+      when (isNothing riderDetails.payoutFlagReason) $ throwError $ InvalidRequest "Cannot Update Flag For Non Fraud Driver"
       whenJust ride.tripEndTime $ \rideEndTime -> do
+        now <- getCurrentTime
+        dInfo <- QDI.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
         let localTimeOfThatDay = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) rideEndTime
         driverStats <- QDriverStats.findByPrimaryKey (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
         QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + payoutConfig.referralRewardAmountPerRide) (cast req.driverId)
         dailyStats <- getDailyStats payoutConfig (cast req.driverId) (utctDay localTimeOfThatDay) ride
         QRD.updatePayoutFlagReason Nothing (cast $ Id req.riderDetailsId) -- mark as non fraud (remove fraud flag) and pay the driver
-        case dInfo.payoutVpa of
-          Just vpa -> do
-            uid <- generateGUID
-            Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey req.driverId.getId) 1 1 $ do
-              QDS.updatePayoutOrderId (Just uid) dailyStats.id
-            createOrderReq <- createReq payoutConfig vpa uid req.driverId payoutConfig.referralRewardAmountPerRide
-            let serviceName = DEMSC.PayoutService PT.Juspay
-            let entityName = DLP.DAILY_STATS_VIA_DASHBOARD
-                createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
-            void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Kernel.Types.Id.cast req.driverId) (Just [dailyStats.id]) (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
-          Nothing -> do
-            Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey req.driverId.getId) 1 1 $ do
-              QDS.updatePayoutStatusById DDS.PendingForVpa dailyStats.id
-    else QRD.updateIsFlagConfirmed (Just True) (cast $ Id req.riderDetailsId)
+        unless (utctDay rideEndTime == utctDay now) $ do
+          -- don't pay if it's the same day, payout will happen via scheduler
+          case dInfo.payoutVpa of
+            Just vpa -> do
+              uid <- generateGUID
+              driver <- QPerson.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
+              mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCity.id "PAYOUT_REFERRAL_REWARD" driver.language
+              whenJust mbMerchantPN $ \merchantPN -> do
+                let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN.title
+                    entityData = NotifReq {entityId = driver.id.getId, title = title, message = merchantPN.body}
+                notifyDriverOnEvents merchantOpCity.id driver.id driver.deviceToken entityData merchantPN.fcmNotificationType -- Sending PN for Reward
+              Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey req.driverId.getId) 1 1 $ do
+                QDS.updatePayoutOrderId (Just uid) dailyStats.id
+              createOrderReq <- createReq payoutConfig vpa uid req.driverId payoutConfig.referralRewardAmountPerRide
+              let serviceName = DEMSC.PayoutService PT.Juspay
+              let entityName = DLP.DAILY_STATS_VIA_DASHBOARD
+                  createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
+              void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Kernel.Types.Id.cast req.driverId) (Just [dailyStats.id]) (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
+            Nothing -> do
+              Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey req.driverId.getId) 1 1 $ do
+                QDS.updatePayoutStatusById DDS.PendingForVpa dailyStats.id
+    else pure ()
   return Success
   where
     getDailyStats payoutConfig driverId merchantLocalDate ride = do
@@ -203,10 +219,10 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
                     merchantLocalDate = merchantLocalDate,
                     currency = ride.currency,
                     distanceUnit = ride.distanceUnit,
+                    activatedValidRides = 1,
                     cancellationCharges = 0.0,
                     tipAmount = 0.0,
                     totalRideTime = 0,
-                    activatedValidRides = 1,
                     referralEarnings = referralRewardAmount,
                     referralCounts = 1,
                     payoutStatus = DDS.Processing,
@@ -235,7 +251,8 @@ postPayoutPayoutRetryAllWithStatus :: Kernel.Types.Id.ShortId Domain.Types.Merch
 postPayoutPayoutRetryAllWithStatus merchantShortId opCity req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  payoutOrders <- QPayoutOrder.findAllWithStatus req.status
+  let entityNames = map castEntityName req.entityNames
+  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithStatusAndEntity req.limit req.offset req.status entityNames
   mapM_ (callPayoutAndUpdateDailyStats merchant merchantOpCity) payoutOrders
   pure Success
 
@@ -322,3 +339,12 @@ castPayoutOrderStatus payoutOrderStatus =
     TPayout.FULFILLMENTS_CANCELLED -> DDS.ManualReview
     TPayout.FULFILLMENTS_MANUAL_REVIEW -> DDS.ManualReview
     _ -> DDS.Processing
+
+castEntityName :: DTP.EntityName -> Maybe DLP.EntityName
+castEntityName entity =
+  Just $ case entity of
+    DTP.MANUAL -> DLP.MANUAL
+    DTP.DRIVER_DAILY_STATS -> DLP.DRIVER_DAILY_STATS
+    DTP.BACKLOG -> DLP.BACKLOG
+    DTP.DAILY_STATS_VIA_DASHBOARD -> DLP.DAILY_STATS_VIA_DASHBOARD
+    DTP.RETRY_VIA_DASHBOARD -> DLP.RETRY_VIA_DASHBOARD

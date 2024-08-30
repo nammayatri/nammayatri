@@ -77,7 +77,12 @@ data ReferralHistoryItem = ReferralHistoryItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RetryPayoutsReq = RetryPayoutsReq {status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus}
+data RetryPayoutsReq = RetryPayoutsReq
+  { limit :: Kernel.Prelude.Int,
+    offset :: Kernel.Prelude.Int,
+    status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
+    entityNames :: [API.Types.ProviderPlatform.Management.Payout.EntityName]
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -124,7 +129,10 @@ type GetPayoutPayoutHistory =
       :> QueryParam
            "from"
            Kernel.Prelude.UTCTime
-      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam "isFailedOnly" Kernel.Prelude.Bool
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
@@ -159,7 +167,7 @@ type PostPayoutPayoutRetryAllWithStatus =
 
 data PayoutAPIs = PayoutAPIs
   { getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes,
-    getPayoutPayoutHistory :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Payout.PayoutHistoryRes,
+    getPayoutPayoutHistory :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Payout.PayoutHistoryRes,
     postPayoutPayoutVerifyFraudStatus :: API.Types.ProviderPlatform.Management.Payout.UpdateFraudStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutRetryFailed :: API.Types.ProviderPlatform.Management.Payout.FailedRetryPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutRetryAllWithStatus :: API.Types.ProviderPlatform.Management.Payout.RetryPayoutsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
