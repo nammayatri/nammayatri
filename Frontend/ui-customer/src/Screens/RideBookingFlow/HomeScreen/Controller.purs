@@ -328,7 +328,7 @@ eval (MarkerLabelOnClick markerName) state =
     let updatedState = state{props{isSource = isSource, hasEstimateBackpoint = true, currentStage = SearchLocationModel}}
     continue updatedState
   else if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) && state.data.config.feature.enableEditPickupLocation then continueWithCmd state [pure $ EditLocation DriverInfoCardController.SOURCE]
-  else if state.props.currentStage == RideStarted && state.data.config.feature.enableEditDestination then continueWithCmd state [pure $ EditLocation DriverInfoCardController.DESTINATION]
+  else if state.props.currentStage == RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE]) then continueWithCmd state [pure $ EditLocation DriverInfoCardController.DESTINATION]
   else continue state
 
 eval (Scroll item) state = do
