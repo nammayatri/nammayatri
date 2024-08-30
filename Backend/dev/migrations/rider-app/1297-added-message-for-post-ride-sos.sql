@@ -13,4 +13,4 @@ INSERT INTO atlas_app.merchant_message (merchant_id, message_key, message, merch
 -- UPDATE atlas_app.merchant_message SET message = '{#userName#} has activated SOS/ emergency during their Mana Yatri ride. Ride ended at {#rideEndTime#} -Mana Yatri'
 
 
-UPDATE atlas_app.rider_config SET tracking_short_url_pattern = 'nammayatri.in/u?vp=shareRide&rideId=';
+UPDATE atlas_app.rider_config SET tracking_short_url_pattern = 'https://nammayatri.in/u?vp=shareRide&rideId=';

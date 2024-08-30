@@ -67,6 +67,7 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as SQSR
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
@@ -91,7 +92,8 @@ data EditLocationReq = EditLocationReq
     origin :: Maybe DL.Location,
     destination :: Maybe DL.Location,
     status :: Enums.OrderStatus,
-    bapBookingUpdateRequestId :: Text
+    bapBookingUpdateRequestId :: Text,
+    transactionId :: Text
   }
 
 data AddStopReq = AddStopReq
@@ -158,6 +160,9 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     QLM.create pickupMapForBooking
     pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id rideId.getId DLM.RIDE (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForRide
+    searchReq <- SQSR.findByTransactionIdAndMerchantId transactionId person.merchantId >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
+    pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id searchReq.id.getId DLM.SEARCH_REQUEST (Just person.merchantId) (Just person.merchantOperatingCityId)
+    QLM.create pickupMapForSearchReq
     driverInfo <- QDI.findById person.id >>= fromMaybeM DriverInfoNotFound
     overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId "EDIT_LOCATION" (fromMaybe ENGLISH person.language) Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
     let fcmOverlayReq = Notify.mkOverlayReq overlay
