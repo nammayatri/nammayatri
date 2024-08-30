@@ -182,7 +182,7 @@ variantsView push state =
                           isActiveIndex = elem item state.selectedServices
                           itemCount = if (length state.services) == 4 then 2 else 3
                           isInActive = not $ elem item state.availableServices 
-                          widthFactor = if item == "Non-AC Mini" then 38 else if itemCount == 2 then 36 else 28
+                          widthFactor = if itemCount == 3 && item == "Non-AC Mini" then 20 else if itemCount == 2 && item == "Non-AC Mini" then 38 else if itemCount == 2 then 36 else 28
                           shadowOpacity = if isInActive then 0.0 else 1.0
                         in
                           linearLayout
