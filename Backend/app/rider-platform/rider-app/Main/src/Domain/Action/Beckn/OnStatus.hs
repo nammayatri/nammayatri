@@ -48,7 +48,6 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (HasBAPMetrics)
 import TransactionLogs.Types
@@ -150,8 +149,7 @@ rideBookingTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "
 rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
   unless (booking.status == bookingNewStatus) $ do
     QB.updateStatus booking.id bookingNewStatus
-    when (bookingNewStatus == DB.CANCELLED) $ do
-      QBPL.makeAllInactiveByBookingId booking.id
+  -- not making booking parties link inactive as this function is not used
   case rideEntity of
     UpdatedRide (DUpdatedRide {ride, rideOldStatus}) -> do
       unless (rideOldStatus == rideNewStatus) $ do
@@ -198,8 +196,7 @@ onStatus req = do
       mbExistingRide <- B.runInReplica $ QRide.findActiveByRBId booking.id
       unless (booking.status == bookingNewStatus) $ do
         QB.updateStatus booking.id bookingNewStatus
-        when (bookingNewStatus == DB.CANCELLED) $ do
-          QBPL.makeAllInactiveByBookingId booking.id
+      -- not making booking parties link inactive as this function is not used
       whenJust mbExistingRide \existingRide -> do
         unless (existingRide.status == rideNewStatus) $ do
           QRide.updateStatus existingRide.id rideNewStatus

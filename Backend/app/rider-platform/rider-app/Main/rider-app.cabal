@@ -315,6 +315,7 @@ library
       Storage.Queries.BecknConfigExtra
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
+      Storage.Queries.BookingPartiesLinkExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationReasonExtra
       Storage.Queries.DisabilityExtra
@@ -654,6 +655,7 @@ library
       Storage.Queries.OrphanInstances.BecknConfig
       Storage.Queries.OrphanInstances.Booking
       Storage.Queries.OrphanInstances.BookingCancellationReason
+      Storage.Queries.OrphanInstances.BookingPartiesLink
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.Disability

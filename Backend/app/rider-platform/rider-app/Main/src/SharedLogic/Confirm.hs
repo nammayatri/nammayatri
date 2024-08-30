@@ -122,7 +122,7 @@ confirm DConfirmReq {..} = do
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
-  activeBooking <- QRideB.findLatestByRiderId personId
+  activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
   let searchDist = round $ fromMaybe 0 $ distanceToHighPrecMeters <$> searchRequest.distance
       searchDur = fromMaybe 0 $ (.getSeconds) <$> searchRequest.estimatedRideDuration

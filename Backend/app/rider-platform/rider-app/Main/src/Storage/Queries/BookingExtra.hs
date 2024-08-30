@@ -94,8 +94,8 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-findLatestByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
-findLatestByRiderId (Id riderId) =
+findLatestSelfAndPartyBookingByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
+findLatestSelfAndPartyBookingByRiderId (Id riderId) =
   do
     let options =
           [ Se.And

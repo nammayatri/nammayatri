@@ -87,7 +87,7 @@ notifyEvent personId req = do
   _ <- case req.event of
     RATE_DRIVER_SKIPPED -> QPFS.updateStatus personId DPFS.IDLE
     SEARCH_CANCELLED -> do
-      activeBooking <- B.runInReplica $ QB.findLatestByRiderId personId
+      activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
       QPFS.updateStatus personId DPFS.IDLE
   pure APISuccess.Success

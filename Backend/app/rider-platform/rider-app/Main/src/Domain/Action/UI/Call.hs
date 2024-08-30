@@ -242,12 +242,13 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
       runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchantId) >>= \case
         Nothing -> pure Nothing
         Just person -> do
-          selfActiveBooking <- QB.findAssignedByRiderId person.id
-          partyActiveBooking <-
-            QBPL.findOneActivePartyByRiderId person.id >>= \case
-              Nothing -> pure Nothing
-              Just party -> QRB.findById party.bookingId
-          let activeBooking = selfActiveBooking <|> partyActiveBooking
+          activeBooking <-
+            QB.findAssignedByRiderId person.id >>= \case
+              bk@(Just _) -> pure bk
+              Nothing ->
+                QBPL.findOneActivePartyByRiderId person.id >>= \case
+                  Nothing -> pure Nothing
+                  Just party -> QRB.findById party.bookingId
           case activeBooking of
             Nothing -> pure Nothing
             Just activeBooking_ -> return $ Just (Nothing, activeBooking_)

@@ -92,17 +92,19 @@ upsertLocationForOldData locationId bookingId = do
   return location
 
 getSenderAndReceiverDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe TripCategory -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> m (Maybe (DPD.DeliveryPersonDetails, DPD.DeliveryPersonDetails))
-getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone = do
-  if (isJust tripCategory && (isDeliveryTrip $ fromJust tripCategory))
-    then do
-      sId <- senderId & fromMaybeM (InternalError "Sender Id not found for Delivery booking")
-      rId <- receiverId & fromMaybeM (InternalError "Receiver Id not found for Delivery booking")
-      sName <- fromMaybeM (InternalError "Sender Name not found") senderName
-      rName <- fromMaybeM (InternalError "Receiver Name not found") receiverName
-      sPhone <- fromMaybeM (InternalError "Sender Primary Exophone not found") senderPrimaryExophone
-      rPhone <- fromMaybeM (InternalError "Receiver Primary Exophone not found") receiverPrimaryExophone
-      return $ Just (mkDeliveryPersonDetails sId sName sPhone, mkDeliveryPersonDetails rId rName rPhone)
-    else return Nothing
+getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone
+  | isJust tripCategory && (isDeliveryTrip $ fromJust tripCategory) = do
+    (,,,,,)
+      <$> senderId
+      <*> receiverId
+      <*> senderName
+      <*> receiverName
+      <*> senderPrimaryExophone
+      <*> receiverPrimaryExophone
+      & fromMaybeM (InternalError "One or more fields not found for delivery booking")
+        <&> \(sId, rId, sName, rName, sPhone, rPhone) ->
+          Just (mkDeliveryPersonDetails sId sName sPhone, mkDeliveryPersonDetails rId rName rPhone)
+  | otherwise = return Nothing
   where
     mkDeliveryPersonDetails :: Text -> Text -> Text -> DPD.DeliveryPersonDetails
     mkDeliveryPersonDetails riderId name exoPhone =
