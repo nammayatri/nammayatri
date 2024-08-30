@@ -960,9 +960,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (editLocation && googleMap != null) {
                     if (labelView != null)
                         labelView.setVisibility(View.INVISIBLE);
+                    double distFromSource = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, position);
                     String circleId = circleConfig.optString("circleId", "");
                     removeAllPolylines("");
-                    CircleRippleEffectOptions options = setCircleConfigFromJSON(circleConfig);
+                    CircleRippleEffectOptions options = setCircleConfigFromJSON(circleConfig, distFromSource);
                     updateRippleCircleWithId(circleId, options, position);
                 }
                 if (googleMap != null) {
@@ -1005,9 +1006,9 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
-    public CircleRippleEffectOptions setCircleConfigFromJSON (JSONObject json){
+    public CircleRippleEffectOptions setCircleConfigFromJSON (JSONObject json, double distFromSource){
         float radius = (float) json.optDouble("radius", 0.0);
-        String strokeColour = json.optString("primaryStrokeColor", "#FFFFFF");
+        String strokeColour = distFromSource > editPickupThreshold ? json.optString("secondaryStrokeColor", "#FFFFFF") : json.optString("primaryStrokeColor", "#FFFFFF");
         int fillColor = parseColor(json.optString("fillColor", "#FFFFFF"));
         int strokeWidth = json.optInt("strokeWidth", 0);
         CircleRippleEffectOptions options = new CircleRippleEffectOptions();
@@ -1075,7 +1076,6 @@ public class MobilityCommonBridge extends HyperBridge {
                 String labelActionImage = specialZoneMarkerConfig != null ? specialZoneMarkerConfig.optString("labelActionImage", "") : "";
                 LatLng markerLatlng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
                 JSONObject circleConfigJSON = payload.optJSONObject("circleConfig");
-                CircleRippleEffectOptions circleConfig = setCircleConfigFromJSON(circleConfigJSON);
                 String circleId = payload.optString("circleId", "");
                 List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
 
@@ -1101,6 +1101,8 @@ public class MobilityCommonBridge extends HyperBridge {
 
                             if (googleMap != null && editLocation) {
                                 removeAllPolylines("");
+                                double distFromSource = SphericalUtil.computeDistanceBetween(googleMap.getCameraPosition().target, markerLatlng);
+                                CircleRippleEffectOptions circleConfig = setCircleConfigFromJSON(circleConfigJSON, distFromSource);
                                 updateRippleCircleWithId(circleId, circleConfig, markerLatlng);
                             }
                             if (zoneMarkers != null) {
