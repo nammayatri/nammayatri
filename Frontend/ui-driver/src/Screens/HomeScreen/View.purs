@@ -73,6 +73,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils as MU
+import Common.Types.Config (StartAudioUrls(..))
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), ($>), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
@@ -108,6 +109,7 @@ import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
+import Common.Types.Config (RideStartAudio(..))
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -244,8 +246,7 @@ screen initialState (GlobalState globalState) =
                                 pushPlayAudioAndLaunchMap <- runEffectFn1 EHC.getValueFromIdMap "PlayAudioAndLaunchMap"
                                 when pushPlayAudioAndLaunchMap.shouldPush $ do 
                                   void $ pure $ runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" false
-                                  void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps OnAudioCompleted (fromMaybe false initialState.data.activeRide.acRide) initialState.data.activeRide.requestedVehicleVariant
-                                
+                                  void $ launchAff $ flowRunner defaultGlobalState $ playAudioAndLaunchMap push TriggerMaps initialState OnAudioCompleted (fromMaybe false initialState.data.activeRide.acRide) initialState.data.activeRide.requestedVehicleVariant initialState.data.activeRide.specialLocationTag                                
                                 if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
                                   then do
                                     _ <- pure $ spy "global event rentalRideStatusPolling"
@@ -2318,22 +2319,48 @@ getDriverStatusResult index driverStatus currentStatus= case (getValueToLocalSto
                   _ -> if (driverStatus == currentStatus) then ACTIVE
                        else DEFAULT
 
-playAudioAndLaunchMap :: forall action. (action -> Effect Unit) ->  action -> (String -> action) -> Boolean -> Maybe String -> Flow GlobalState Unit
-playAudioAndLaunchMap push action audioCompleted acRide requestedVehicleVariant = do
+geVehicleBasedAudioConfig :: RideStartAudio -> String -> Boolean -> StartAudioUrls
+geVehicleBasedAudioConfig rideStartAudio vehicleType isAcRide =
+  let audioConfig = if isAcRide then
+                      rideStartAudio.acCab
+                    else
+                      case vehicleType of
+                        "AUTO_RICKSHAW" -> rideStartAudio.auto
+                        "BIKE" -> rideStartAudio.bike
+                        _ -> rideStartAudio.nonAcCab
+  in
+    audioConfig
+  
+extractAudioConfig :: HomeScreenState -> Maybe String -> Boolean -> Maybe String -> Maybe String
+extractAudioConfig state requestedVehicleVariant acRide locationTag =
+  let
+    isAcRide = fromMaybe false state.data.activeRide.acRide
+    vehicleType = fromMaybe "" state.data.activeRide.requestedVehicleVariant
+    isAirportPriority = DS.contains(DS.Pattern("SureAirport")) (fromMaybe "" locationTag)
+    cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    vehicleAudioConfig = geVehicleBasedAudioConfig cityConfig.rideStartAudio vehicleType acRide
+  in
+    if isAirportPriority && isJust vehicleAudioConfig.parkingAudio then
+      vehicleAudioConfig.parkingAudio
+    else if isJust vehicleAudioConfig.acAudio then
+      vehicleAudioConfig.acAudio
+    else
+      vehicleAudioConfig.defaultAudio
+
+playAudioAndLaunchMap :: forall action. (action -> Effect Unit) -> action -> HomeScreenState -> (String -> action) -> Boolean -> Maybe String -> Maybe String -> Flow GlobalState Unit
+playAudioAndLaunchMap push action state audioCompleted acRide requestedVehicleVariant specialLocationTag = do
   let 
-    driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
-
-  if (driverLocation == "bangalore" && isJust requestedVehicleVariant && (not $ requestedVehicleVariant == Just "AUTO_RICKSHAW") && (getValueToLocalStore TRIGGER_MAPS) == "true" ) then  do
-    let 
-      language = "kn"
-      audioFolder = if acRide  then "ac_background" else "non_ac_background" 
-      audioUrl = "https://assets.moving.tech/beckn/audios/" <> audioFolder <> "/" <> language <> ".mp3"
-    void $ pure $ runFn3 JB.startAudioPlayer audioUrl push audioCompleted
-  else do  
-    void $ delay $ Milliseconds 2000.0
-    if (getValueToLocalStore TRIGGER_MAPS == "true") then liftFlow $ push $ action  else pure unit
+    needToTriggerMaps = (getValueToLocalStore TRIGGER_MAPS) == "true"
+    audioUrl = extractAudioConfig state requestedVehicleVariant acRide specialLocationTag
+    
+  case audioUrl of
+    Just url -> 
+      if needToTriggerMaps then void $ pure $ runFn3 JB.startAudioPlayer url push audioCompleted
+      else pure unit
+    Nothing -> do  
+      void $ delay $ Milliseconds 2000.0
+      if needToTriggerMaps then liftFlow $ push $ action else pure unit
   pure unit
-
 
 checkBgLocation :: forall action. (action -> Effect Unit) ->  action -> HomeScreenState -> Boolean -> Flow GlobalState Unit
 checkBgLocation push action state bgLocPopupShown = do

@@ -33,6 +33,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Array as DA
 import Common.Types.App as Common
+import MerchantConfig.DefaultConfig (defaultStartAudioUrls)
 
 initData :: RegistrationScreenState
 initData = {
@@ -154,4 +155,10 @@ dummyCityConfig = {
                         empty_referral_cab : ""
                       },
                       gstPercentage : "18"
+                  , rideStartAudio : {
+                      acCab : defaultStartAudioUrls,
+                      nonAcCab : defaultStartAudioUrls,
+                      auto : defaultStartAudioUrls,
+                      bike : defaultStartAudioUrls
+                    }
 }

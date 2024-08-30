@@ -223,6 +223,19 @@ window.getMerchantConfig = function () {
           "onboarding_auto_image" : "ny_ic_auto_side",
           "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+        },
+        "rideStartAudio" : {
+          "acCab" : {
+            "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+            "acAudio" : "https://assets.moving.tech/beckn/audios/ac_background/kn.mp3",
+          },
+          "nonAcCab" : {
+            "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+            "acAudio" : "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3"
+          },
+
+          "auto" : {},
+          "bike" : {}
         }
       },
       {
@@ -282,6 +295,17 @@ window.getMerchantConfig = function () {
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
           "empty_referral_auto" : "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
           "empty_referral_cab" : "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
+        },
+        "rideStartAudio" : {
+          "acCab" : {
+            "tollAudio" : "",
+            "acAudio" : "",
+            "parkingAudio" : "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
+            "defaultAudio" : ""
+          },
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
         }
       },
       {
@@ -328,7 +352,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_side",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Delhi",
@@ -387,7 +417,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_side",
         "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Chennai",
@@ -446,7 +482,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Coimbatore",
@@ -492,7 +534,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Pondicherry",
@@ -538,7 +586,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Tumakuru",
@@ -584,7 +638,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_side",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Gurugram",
@@ -630,7 +690,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_side",
         "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Noida",
@@ -676,7 +742,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_side",
         "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "TamilNaduCities",
@@ -722,7 +794,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Minneapolis",
@@ -768,7 +846,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_side",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Kochi",
@@ -814,7 +898,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_black",
         "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_black,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_black.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Trichy",
@@ -873,7 +963,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Thanjavur",
@@ -932,7 +1028,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Salem",
@@ -991,7 +1093,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Tirunelveli",
@@ -1050,7 +1158,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Hosur",
@@ -1109,7 +1223,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Madurai",
@@ -1168,7 +1288,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Vellore",
@@ -1227,7 +1353,13 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
         "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
         "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      }
+      },
+      "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        }
       },
       {
         "cityName" : "Davanagere",
@@ -1267,7 +1399,13 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage" :  "18", 
+        "gstPercentage": "18",
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1314,6 +1452,12 @@ window.getMerchantConfig = function () {
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
         "gstPercentage" :  "18", 
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1360,6 +1504,12 @@ window.getMerchantConfig = function () {
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
         "gstPercentage" :  "18", 
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1406,6 +1556,12 @@ window.getMerchantConfig = function () {
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
         "gstPercentage" :  "18", 
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1452,6 +1608,12 @@ window.getMerchantConfig = function () {
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
         "gstPercentage" :  "18", 
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",
@@ -1497,7 +1659,13 @@ window.getMerchantConfig = function () {
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
         "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage" :  "18",
+        "gstPercentage": "18",
+        "rideStartAudio" : {
+          "acCab" : {},
+          "nonAcCab" : {},
+          "auto" : {},
+          "bike" : {}
+        },
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side",

@@ -4,6 +4,9 @@ import MerchantConfig.Types
 import Common.DefaultConfig
 import Common.Types.Config as CTC
 import Engineering.Helpers.Commons as EHC
+import MerchantConfig.Utils as MU
+import Common.Types.App as CTA
+import Data.Maybe
 
 config :: AppConfig
 config =
@@ -166,6 +169,22 @@ config =
                 onboarding_auto_image : "ny_ic_auto_side",
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+              },
+              rideStartAudio : {
+                acCab : {
+                  tollAudio :  Just "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+                  acAudio : Just "https://assets.moving.tech/beckn/audios/ac_background/kn.mp3",
+                  parkingAudio : Nothing,
+                  defaultAudio : Nothing
+                },
+                nonAcCab : {
+                  tollAudio : Just "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+                  acAudio : Just "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3",
+                  parkingAudio : Nothing,
+                  defaultAudio : Nothing
+                },
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -208,6 +227,17 @@ config =
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow" ,
                 empty_referral_auto : "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
+              },
+              rideStartAudio : {
+                acCab : {
+                  tollAudio : Nothing,
+                  acAudio : Nothing,
+                  parkingAudio : Just "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
+                  defaultAudio : Nothing
+                },
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -250,6 +280,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_side",
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -292,6 +328,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_side",
                 empty_referral_auto : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -334,6 +376,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow",
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -376,6 +424,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow",
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -418,6 +472,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow",
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -460,6 +520,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_side",
                 empty_referral_auto : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {             
@@ -502,6 +568,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_side",
                 empty_referral_auto : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -544,6 +616,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_right_side_yellow",
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             },
             {
@@ -590,6 +668,12 @@ config =
                 onboarding_auto_image : "ny_ic_auto_side",
                 empty_referral_auto : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
                 empty_referral_cab : "ny_ic_refer_now_cab_ys,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ys.png"
+              },
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
               }
             }, 
             {
@@ -636,7 +720,14 @@ config =
               onboarding_auto_image : "ny_ic_auto_right_side_black",
               empty_referral_auto : "ny_ic_refer_now_auto_yatri_black,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_black.png",
               empty_referral_cab : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-            }
+            },
+
+              rideStartAudio : {
+                acCab : defaultStartAudioUrls,
+                nonAcCab : defaultStartAudioUrls,
+                auto : defaultStartAudioUrls,
+                bike : defaultStartAudioUrls
+              }
           }
             --, For future use
             -- {
@@ -819,3 +910,12 @@ defRateCardConfig = {
   showLearnMore : false,
   learnMoreVideoLink : ""
 }
+
+defaultStartAudioUrls :: CTC.StartAudioUrls
+defaultStartAudioUrls = {
+    tollAudio : Nothing,
+    acAudio : Nothing,
+    parkingAudio : Nothing,
+    defaultAudio : Nothing
+}
+

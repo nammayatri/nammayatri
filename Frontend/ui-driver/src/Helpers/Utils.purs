@@ -110,6 +110,7 @@ import Common.RemoteConfig.Utils (forwardBatchConfigData)
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldl)
+import MerchantConfig.DefaultConfig (defaultStartAudioUrls)
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -725,7 +726,13 @@ getCityConfig cityConfig cityName = do
                             empty_referral_auto : "",
                             empty_referral_cab : ""
                           },
-                          gstPercentage : "18"
+                          gstPercentage : "18",
+                          rideStartAudio : {
+                            acCab : defaultStartAudioUrls,
+                            nonAcCab : defaultStartAudioUrls,
+                            auto : defaultStartAudioUrls,
+                            bike : defaultStartAudioUrls
+                          }
                         }
   maybe dummyCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
   where 

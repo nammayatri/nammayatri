@@ -1,6 +1,7 @@
 module MerchantConfig.Types where
 
 import Common.Types.Config
+import Data.Maybe
 
 type AppConfig = AppConfigDriver CommonAppConfig
 

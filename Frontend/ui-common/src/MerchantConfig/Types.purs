@@ -14,6 +14,8 @@
 -}
 module Common.Types.Config where
 
+import Data.Maybe 
+
 import Common.Types.App
 type CommonAppConfig = (
     colors :: Colors
@@ -116,7 +118,22 @@ type CityConfig = {
   rentalWaitingChargesConfig :: WaitingChargesConfig,
   rateCardConfig :: RateCardConfig,
   gstPercentage :: String,
-  assets :: Assets
+  assets :: Assets,
+  rideStartAudio :: RideStartAudio
+}
+
+type RideStartAudio = {
+  acCab :: StartAudioUrls,
+  nonAcCab :: StartAudioUrls, 
+  auto :: StartAudioUrls,
+  bike :: StartAudioUrls
+}
+
+type StartAudioUrls = {
+  tollAudio :: Maybe String,
+  acAudio :: Maybe String,
+  parkingAudio :: Maybe String,
+  defaultAudio :: Maybe String
 }
 
 type RateCardConfig = {
