@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Fleet where
 
 import qualified API.Types.ProviderPlatform.Fleet.Driver
+import qualified Dashboard.Common
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
@@ -17,10 +18,10 @@ newtype FleetEndpoint
 
 instance Text.Show.Show FleetEndpoint where
   show = \case
-    DriverAPI e -> "DriverAPI_" <> show e
+    DriverAPI e -> "DRIVER/" <> Dashboard.Common.showUserActionType e
 
 instance Text.Read.Read FleetEndpoint where
-  readsPrec d' = Text.Read.readParen (d' > app_prec) (\r -> [(DriverAPI v1, r2) | r1 <- stripPrefix "DriverAPI_" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1])
+  readsPrec d' = Text.Read.readParen (d' > app_prec) (\r -> [(DriverAPI v1, r2) | r1 <- stripPrefix "DRIVER/" r, (v1, r2) <- Dashboard.Common.readUserActionTypeS r1])
     where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r

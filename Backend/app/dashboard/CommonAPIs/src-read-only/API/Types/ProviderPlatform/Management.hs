@@ -15,6 +15,7 @@ import qualified API.Types.ProviderPlatform.Management.NammaTag
 import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
+import qualified Dashboard.Common
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
@@ -39,120 +40,120 @@ data ManagementEndpoint
 
 instance Text.Show.Show ManagementEndpoint where
   show = \case
-    BookingAPI e -> "BookingAPI_" <> show e
-    DriverAPI e -> "DriverAPI_" <> show e
-    DriverCoinsAPI e -> "DriverCoinsAPI_" <> show e
-    DriverGoHomeAPI e -> "DriverGoHomeAPI_" <> show e
-    DriverReferralAPI e -> "DriverReferralAPI_" <> show e
-    DriverRegistrationAPI e -> "DriverRegistrationAPI_" <> show e
-    MerchantAPI e -> "MerchantAPI_" <> show e
-    MessageAPI e -> "MessageAPI_" <> show e
-    NammaTagAPI e -> "NammaTagAPI_" <> show e
-    PayoutAPI e -> "PayoutAPI_" <> show e
-    RevenueAPI e -> "RevenueAPI_" <> show e
-    RideAPI e -> "RideAPI_" <> show e
+    BookingAPI e -> "BOOKING/" <> Dashboard.Common.showUserActionType e
+    DriverAPI e -> "DRIVER/" <> Dashboard.Common.showUserActionType e
+    DriverCoinsAPI e -> "DRIVER_COINS/" <> Dashboard.Common.showUserActionType e
+    DriverGoHomeAPI e -> "DRIVER_GO_HOME/" <> Dashboard.Common.showUserActionType e
+    DriverReferralAPI e -> "DRIVER_REFERRAL/" <> Dashboard.Common.showUserActionType e
+    DriverRegistrationAPI e -> "DRIVER_REGISTRATION/" <> Dashboard.Common.showUserActionType e
+    MerchantAPI e -> "MERCHANT/" <> Dashboard.Common.showUserActionType e
+    MessageAPI e -> "MESSAGE/" <> Dashboard.Common.showUserActionType e
+    NammaTagAPI e -> "NAMMA_TAG/" <> Dashboard.Common.showUserActionType e
+    PayoutAPI e -> "PAYOUT/" <> Dashboard.Common.showUserActionType e
+    RevenueAPI e -> "REVENUE/" <> Dashboard.Common.showUserActionType e
+    RideAPI e -> "RIDE/" <> Dashboard.Common.showUserActionType e
 
 instance Text.Read.Read ManagementEndpoint where
   readsPrec d' =
     Text.Read.readParen
       (d' > app_prec)
       ( \r ->
-          [(BookingAPI v1, r2) | r1 <- stripPrefix "BookingAPI_" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+          [(BookingAPI v1, r2) | r1 <- stripPrefix "BOOKING/" r, (v1, r2) <- Dashboard.Common.readUserActionTypeS r1]
             ++ [ ( DriverAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "DriverAPI_" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                 | r1 <- stripPrefix "DRIVER/" r,
+                   (v1, r2) <- Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( DriverCoinsAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "DriverCoinsAPI_" r,
+                 | r1 <- stripPrefix "DRIVER_COINS/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( DriverGoHomeAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "DriverGoHomeAPI_" r,
+                 | r1 <- stripPrefix "DRIVER_GO_HOME/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( DriverReferralAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "DriverReferralAPI_" r,
+                 | r1 <- stripPrefix "DRIVER_REFERRAL/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( DriverRegistrationAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "DriverRegistrationAPI_" r,
+                 | r1 <- stripPrefix "DRIVER_REGISTRATION/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( MerchantAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "MerchantAPI_" r,
+                 | r1 <- stripPrefix "MERCHANT/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( MessageAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "MessageAPI_" r,
+                 | r1 <- stripPrefix "MESSAGE/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( NammaTagAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "NammaTagAPI_" r,
+                 | r1 <- stripPrefix "NAMMA_TAG/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( PayoutAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "PayoutAPI_" r,
+                 | r1 <- stripPrefix "PAYOUT/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( RevenueAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "RevenueAPI_" r,
+                 | r1 <- stripPrefix "REVENUE/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
             ++ [ ( RideAPI v1,
                    r2
                  )
-                 | r1 <- stripPrefix "RideAPI_" r,
+                 | r1 <- stripPrefix "RIDE/" r,
                    ( v1,
                      r2
                      ) <-
-                     Text.Read.readsPrec (app_prec + 1) r1
+                     Dashboard.Common.readUserActionTypeS r1
                ]
       )
     where
