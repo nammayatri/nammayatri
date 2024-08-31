@@ -2902,17 +2902,16 @@ eval (ShakeActionCallback count) state = do
   
 eval (UpdateSafetySettings safetySettings@(API.GetEmergencySettingsRes settings)) state = do
   let updatedState = state{props{safetySettings = Just safetySettings}}
-      safetyCheckStartTime = fromMaybe 0 settings.safetyCheckStartTime
-      safetyCheckEndTime = fromMaybe 0 settings.safetyCheckEndTime
-      (API.RideBookingRes resp) = state.data.ratingViewState.rideBookingRes
-      (API.RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-      (API.RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList
-      nightSafetyFlow = showNightSafetyFlow (Just false) (currRideListItem.rideStartTime) (currRideListItem.rideEndTime) safetyCheckStartTime safetyCheckEndTime
-      postSafetyCheckEnabled = settings.enablePostRideSafetyCheck == API.ALWAYS_SHARE || (settings.enablePostRideSafetyCheck == API.SHARE_WITH_TIME_CONSTRAINTS && nightSafetyFlow)
-  if state.props.currentStage == RideCompleted then do
-    continue updatedState{ data{ rideCompletedData{ issueReportData {hasSafetyIssue = postSafetyCheckEnabled, showIssueBanners = state.data.rideCompletedData.issueReportData.showIssueBanners || postSafetyCheckEnabled}}}}
-  else
-    continue updatedState
+  case settings.safetyCheckStartTime, settings.safetyCheckEndTime, (state.props.currentStage == RideCompleted) of
+      Just safetyCheckStartTime, Just safetyCheckEndTime, true -> do
+        let (API.RideBookingRes resp) = state.data.ratingViewState.rideBookingRes
+            (API.RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList
+            postRideCheckCache = {enablePostRideSafetyCheck : settings.enablePostRideSafetyCheck, safetyCheckStartTime : settings.safetyCheckStartTime, safetyCheckEndTime : safetyCheckEndTime}
+            nightSafetyFlow = showNightSafetyFlow (Just false) (currRideListItem.rideStartTime) (currRideListItem.rideEndTime) safetyCheckStartTime safetyCheckEndTime
+            postSafetyCheckEnabled = settings.enablePostRideSafetyCheck == API.ALWAYS_SHARE || (settings.enablePostRideSafetyCheck == API.SHARE_WITH_TIME_CONSTRAINTS && nightSafetyFlow)
+        void $ pure $ setValueToCache (show POST_RIDE_CHECK_SETTINGS) postRideCheckCache
+        continue updatedState{ data{ rideCompletedData{ issueReportData {hasSafetyIssue = postSafetyCheckEnabled, showIssueBanners = state.data.rideCompletedData.issueReportData.showIssueBanners || postSafetyCheckEnabled}}}}
+      _,_,_ -> continue updatedState
 
 eval (ServicesOnClick service) state = do 
   void $ pure $ performHapticFeedback unit

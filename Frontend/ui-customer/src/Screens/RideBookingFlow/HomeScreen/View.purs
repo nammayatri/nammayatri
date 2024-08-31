@@ -137,7 +137,7 @@ import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller ( checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval2, flowWithoutOffers, getPeekHeight, checkRecentRideVariant, findingQuotesSearchExpired)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType)
+import Screens.HomeScreen.Transformer (transformSavedLocations, getActiveBooking, getDriverInfo, getFormattedContacts, getFareProductType, formatContacts)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
@@ -199,6 +199,7 @@ import Resources.Localizable.EN (getEN)
 import Screens.HomeScreen.PopUpConfigs as PopUpConfigs
 import Screens.HomeScreen.Controllers.Types
 import Helpers.Utils as HU
+import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -369,7 +370,15 @@ screen initialState =
                 let isRental = initialState.data.fareProductType == FPT.RENTAL
                 case initialState.data.contactList of
                   Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ updateEmergencyContacts push initialState
-                  Just contacts -> validateAndStartChat contacts push initialState
+                  Just contacts -> do
+                    void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+                      emergencySettings <- lift $ lift $ fetchEmergencySettings push initialState
+                      case emergencySettings of
+                        Just (GetEmergencySettingsRes settings) -> do
+                          let contacts = formatContacts settings.defaultEmergencyNumbers
+                          void $ liftFlowBT $ validateAndStartChat contacts push initialState settings.safetyCheckStartTime settings.safetyCheckEndTime
+                          pure unit
+                        Nothing -> pure unit
                 -- when (initialState.data.fareProductType /= FPT.RENTAL) $ do 
                 --   void $ push RemoveChat
                 pure unit
@@ -419,9 +428,8 @@ screen initialState =
             when (Arr.elem initialState.props.currentStage [RideStarted, RideAccepted]) $ do
               push UpdateRateCardCache
               runEffectFn3 JB.initialiseShakeListener push ShakeActionCallback JB.defaultShakeListenerConfig
-              void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push
               pure unit
-            when (Arr.elem initialState.props.currentStage [RideStarted, RideAccepted, RideCompleted]) $ void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push
+            when (Arr.elem initialState.props.currentStage [RideAccepted, RideCompleted]) $ void $ launchAff $ flowRunner defaultGlobalState $ fetchEmergencySettings push initialState
             pure (pure unit))
           
       ]
@@ -4765,16 +4773,20 @@ updateEmergencyContacts push state = do
   else if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
     then liftFlowBT $ startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
     else do
-      contacts <- getFormattedContacts
-      void $ liftFlowBT $ push (UpdateContacts contacts)
-      void $ liftFlowBT $ validateAndStartChat contacts push state
+      emergencySettings <- lift $ lift $ fetchEmergencySettings push state
+      case emergencySettings of
+        Just (GetEmergencySettingsRes settings) -> do
+          let contacts = formatContacts settings.defaultEmergencyNumbers
+          void $ liftFlowBT $ push (UpdateContacts contacts)
+          void $ liftFlowBT $ validateAndStartChat contacts push state settings.safetyCheckStartTime settings.safetyCheckEndTime
+        Nothing -> pure unit      
       
-validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Effect Unit
-validateAndStartChat contacts push state = do
+validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Maybe Int -> Maybe Int -> Effect Unit
+validateAndStartChat contacts push state safetyCheckStartSeconds safetyCheckEndSeconds = do
   if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
     then startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
   else do
-    let filterContacts = filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0 && not item.onRide)) contacts
+    let filterContacts = filter (\item -> (item.enableForShareRide || SU.checkIfFollowEnabled item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds ) && (item.priority == 0 && not item.onRide)) contacts
     if (length filterContacts) == 0 
       then push RemoveChat
       else do
@@ -5090,14 +5102,17 @@ exploreCityCard push state index locationItem =
           ] <> FontStyle.body3 TypoGraphy
     ]
 
-fetchEmergencySettings :: (Action -> Effect Unit) -> Flow GlobalState Unit
-fetchEmergencySettings push = do
-  resp <- Remote.getEmergencySettings ""
-  case resp of
-    Right response -> do
-      liftFlow $ push $ UpdateSafetySettings response
-      pure unit
-    Left err -> pure unit
+fetchEmergencySettings :: (Action -> Effect Unit) -> HomeScreenState -> Flow GlobalState (Maybe GetEmergencySettingsRes)
+fetchEmergencySettings push state = do
+  case state.props.safetySettings of
+    Just settings -> pure $ Just settings
+    Nothing -> do
+      resp <- Remote.getEmergencySettings ""
+      case resp of
+        Right response -> do
+          liftFlow $ push $ UpdateSafetySettings response
+          pure $ Just response
+        Left err -> pure Nothing
 
 isFollowEnabled :: HomeScreenState -> Boolean
 isFollowEnabled state = (state.props.followsRide && isJust state.data.followers) || isJust state.data.manuallySharedFollowers

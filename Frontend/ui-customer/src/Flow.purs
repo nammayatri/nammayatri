@@ -265,13 +265,15 @@ dataFetchScreenFlow stageConfig stepVal = do
       emergencyScreenFlow
     DataExplainWithFetchC.UpdateEmergencyContacts state -> do
       void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.emergencyContactsList
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing}, data{contactList = Nothing } })
       pure $ toast $ "ContactsUpdated"
       nammaSafetyFlow
     DataExplainWithFetchC.Exit state -> do
       updateSafetySettings state
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing } })
       nammaSafetyFlow
     DataExplainWithFetchC.GoToSafetyDrill state -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true, isFromSafetyCenter = true } })
+      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { triggeringSos = false, timerValue = defaultTimerValue, showTestDrill = true, showShimmer = true, confirmTestDrill = false, isAudioRecordingActive = false, showMenu = false, isFromSafetyCenter = true, recordedAudioUrl = Nothing, audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00" } })
       activateSafetyScreenFlow
     _ -> homeScreenFlow
 

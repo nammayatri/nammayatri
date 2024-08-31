@@ -84,6 +84,8 @@ data Action
   | CancelAudioRecording
   | SafetyAudioRecordingAction SafetyAudioRecording.Action
   | PoliceTimerCallback Int String String
+  | OnPauseCallback
+  | AudioPermission Boolean
 
 eval :: Action -> ST.NammaSafetyScreenState -> Eval Action ScreenOutput ST.NammaSafetyScreenState
 
@@ -108,6 +110,7 @@ eval (SafetyHeaderAction (Header.LearnMoreClicked)) state = exit $ GoToEducation
 
 eval (BackPressed) state = do
   pure $ JB.clearAudioPlayer ""
+  _ <- pure $ clearTimerWithId state.props.recordingTimerId
   let newState = state { props { triggerSiren = false } }
   if state.props.showCallPolice then do
     void $ pure $ clearTimerWithId state.props.policeCallTimerId
@@ -132,7 +135,12 @@ eval CallPolice state = do
   void $ pure $ JB.showDialer "112" false
   exit $ UpdateAction state "Called Police"
 
-eval (MarkRideAsSafe PrimaryButtonController.OnClick) state = exit $ UpdateAsSafe state
+eval (MarkRideAsSafe PrimaryButtonController.OnClick) state = do
+  _ <- pure $ clearTimerWithId state.props.recordingTimerId
+  _ <- pure $ JB.clearAudioPlayer ""
+  void $ pure $ runEffectFn1 JB.removeMediaPlayer ""
+  void $ pure $ runEffectFn1 JB.stopAudioRecording ""
+  exit $ UpdateAsSafe state
 
 eval (SelectedCurrentLocation _ _ name) state = continue state { data { currentLocation = name } }
 
@@ -149,9 +157,17 @@ eval StopAudioPlayer state = do
 
 eval (OnAudioCompleted _) state = if state.props.triggerSiren then handleMediaPlayerRestart state else continue state
 
-eval (RecordAudio SafetyActionTileView.OnClick) state = do
-  void $ pure $ JB.askRequestedPermissions [ "android.permission.RECORD_AUDIO" ]
-  continueWithCmd state { props { isAudioRecordingActive = true } } [ pure StopAudioPlayer ]
+eval (RecordAudio SafetyActionTileView.OnClick) state = continueWithCmd state { props { isAudioRecordingActive = true } } [do
+  push <- getPushFn Nothing "SosActiveScreen"
+  let _ = JB.askRequestedPermissionsWithCallback [ "android.permission.RECORD_AUDIO" ] push AudioPermission
+  pure $ UpdateState state
+]
+
+eval (AudioPermission status) state = 
+  if status then 
+    continueWithCmd state{props{isAudioRecordingActive = status}} [pure $ SafetyAudioRecordingAction SafetyAudioRecording.StartRecord]
+  else
+    continue state{props{isAudioRecordingActive = false}}
 
 eval (UpdateState newState) state = continue newState
 
@@ -225,6 +241,10 @@ eval (PoliceTimerCallback seconds status timerID) state = do
 eval (CallSafetyTeam SafetyActionTileView.OnClick) state = do
   void $ pure $ JB.showDialer state.data.config.safety.safetyTeamNumber true
   exit $ UpdateAction state "Called Safety Team"
+
+eval OnPauseCallback state = continueWithCmd state [do
+  pure $ SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording
+]
 
 eval _ state = update state
 

@@ -110,6 +110,8 @@ data Action
   | OnAudioCompleted String
   | PopupWithCheckboxAction PopupWithCheckbox.Action
   | DismissTestDrill PrimaryButtonController.Action
+  | OnPauseCallback
+  | AudioPermission Boolean
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -161,6 +163,7 @@ eval (CancelSosTrigger PrimaryButtonController.OnClick) state = do
 
 eval BackPressed state = do
   pure $ JB.clearAudioPlayer ""
+  void $ pure $ clearTimerWithId state.props.recordingTimerId
   let newState = state { props { triggerSiren = false } }
   if state.props.showCallPolice then do
     void $ pure $ clearTimerWithId state.props.policeCallTimerId
@@ -274,7 +277,7 @@ eval (ToggleSiren SafetyActionTileView.OnClick) state =
       continueWithCmd state { props { triggerSiren = false } }
       [ pure StopAudioPlayer ]
     else
-      handleMediaPlayerRestart state
+      continue state { props { triggerSiren = true } }
 
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{showMenu = false}}
 
@@ -327,9 +330,17 @@ eval (TimerCallback timerId timeInMinutes seconds) state =
 
 eval (UpdateState newState) state = continue newState
 
-eval (RecordAudio SafetyActionTileView.OnClick) state = do
-  void $ pure $ JB.askRequestedPermissions [ "android.permission.RECORD_AUDIO" ]
-  continue state { props { isAudioRecordingActive = true } }
+eval (RecordAudio SafetyActionTileView.OnClick) state = continueWithCmd state { props { isAudioRecordingActive = true } } [do
+  push <- getPushFn Nothing "ActivateSafetyScreen"
+  let _ = JB.askRequestedPermissionsWithCallback [ "android.permission.RECORD_AUDIO" ] push AudioPermission
+  pure $ UpdateState state
+]
+
+eval (AudioPermission status) state = 
+  if status then 
+    continueWithCmd state{props{isAudioRecordingActive = status}} [pure $ SafetyAudioRecordingAction SafetyAudioRecording.StartRecord]
+  else
+    continue state{props{isAudioRecordingActive = false}}
 
 eval (UploadMultiPartDataCallback _ fileId) state = do
   void $ pure $ JB.toggleBtnLoader "" false
@@ -384,7 +395,19 @@ eval (PopupWithCheckboxAction (PopupWithCheckbox.ToggleSelect index)) state = do
 
 eval (PopupWithCheckboxAction (PopupWithCheckbox.DismissPopup)) state = continue state{props{defaultCallPopup = false}}
 
-eval (DismissTestDrill PrimaryButtonController.OnClick) state = continueWithCmd state [pure $ BackPressed]
+eval (DismissTestDrill PrimaryButtonController.OnClick) state = do
+  _ <- pure $ JB.clearAudioPlayer ""
+  _ <- pure $ clearTimerWithId state.props.recordingTimerId
+  continueWithCmd state [do
+    void $ runEffectFn1 JB.removeMediaPlayer ""
+    void $ runEffectFn1 JB.stopAudioRecording ""
+    pure $ BackPressed
+  ]
+
+eval OnPauseCallback state = continueWithCmd state [do
+  pure $ SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording
+]
+
 
 eval _ state = update state
 

@@ -843,7 +843,11 @@ getActiveBooking = do
 getFormattedContacts :: FlowBT String (Array NewContacts)
 getFormattedContacts = do
   (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
-  pure $ getDefaultPriorityList $ map (\(ContactDetails item) -> {
+  pure $ formatContacts res.defaultEmergencyNumbers
+
+formatContacts :: Array API.ContactDetails -> Array NewContacts
+formatContacts defaultEmergencyNumbers = 
+  getDefaultPriorityList $ map (\(ContactDetails item) -> {
       number: item.mobileNumber,
       name: item.name,
       isSelected: true,
@@ -854,7 +858,7 @@ getFormattedContacts = do
       priority: fromMaybe 1 item.priority,
       contactPersonId : item.contactPersonId, 
       isFollowing: Nothing
-    }) res.defaultEmergencyNumbers
+    }) defaultEmergencyNumbers
 
 
 type StepFare = 

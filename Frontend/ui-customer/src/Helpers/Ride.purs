@@ -51,6 +51,7 @@ import Resources.Constants (getFareFromArray)
 import Data.Array as DA
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
+import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -187,6 +188,8 @@ checkRideStatus rideAssigned = do
                   (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
                   isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
                   hasAccessibilityIssue' =  resp.hasDisability == Just true 
+                  postRideCheckCache = SU.getPostRideCheckSettingsFromCache ""
+                  hasSafetyIssue' = maybe false (\settings -> SU.showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime settings.safetyCheckStartSeconds settings.safetyCheckEndSeconds  && not isBlindPerson) postRideCheckCache
                   hasTollIssue' =  (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.estimatedFareBreakup) && not isBlindPerson
 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
@@ -249,8 +252,9 @@ checkRideStatus rideAssigned = do
                           , rideCompletedData { 
                               issueReportData { 
                                 hasAccessibilityIssue = hasAccessibilityIssue'
+                              , hasSafetyIssue = hasSafetyIssue'
                               , hasTollIssue = hasTollIssue'
-                              , showIssueBanners = hasAccessibilityIssue' || hasTollIssue'
+                              , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
                               }
                             }
                           , toll {

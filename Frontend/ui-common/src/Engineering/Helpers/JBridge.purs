@@ -305,7 +305,7 @@ foreign import registerShakeListener :: Unit -> Unit
 foreign import fetchFilesFromFolderPath :: String -> Array String
 foreign import isPackageInstalled :: String -> Boolean
 foreign import requestUninstallPackage :: String -> Boolean
-
+foreign import storeOnPauseCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
 
 type SliderConfig = { 
   id :: String,

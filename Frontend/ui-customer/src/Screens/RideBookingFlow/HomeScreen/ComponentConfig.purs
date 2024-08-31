@@ -96,6 +96,8 @@ import Data.Int
 import Components.CommonComponentConfig as CommonComponentConfig
 import RemoteConfig as RemoteConfig
 import MerchantConfig.Types
+import Data.Tuple as DT
+import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -1047,8 +1049,10 @@ messagingViewConfig :: ST.HomeScreenState -> MessagingView.Config
 messagingViewConfig state =
   let
     config = MessagingView.config
-
-    primaryContact = DA.head $ DA.filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
+    DT.Tuple safetyCheckStartSeconds safetyCheckEndSeconds = case state.props.safetySettings of
+      Just (API.GetEmergencySettingsRes safetySettings) -> DT.Tuple safetySettings.safetyCheckStartTime safetySettings.safetyCheckEndTime
+      Nothing -> DT.Tuple Nothing Nothing
+    primaryContact = DA.head $ DA.filter (\item -> (item.enableForShareRide || SU.checkIfFollowEnabled item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds ) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
 
     messagingViewConfig' =
       config
