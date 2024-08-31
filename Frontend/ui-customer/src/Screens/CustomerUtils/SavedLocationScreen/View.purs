@@ -184,6 +184,7 @@ savedLocationsView push state =
               , frequencyCount : Nothing
               , recencyDate : Nothing
               , locationScore : Nothing
+              , dynamicAction : Nothing
             }))state.data.savedLocations)
         , linearLayout
           [ height $ V 100

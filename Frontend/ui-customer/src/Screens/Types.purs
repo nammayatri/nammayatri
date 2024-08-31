@@ -53,6 +53,9 @@ import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
 import Services.API (DeadKmFare)
+import Services.API as API
+import Common.RemoteConfig.Types as CRT
+
 type Contacts = {
   name :: String,
   number :: String
@@ -1532,6 +1535,7 @@ type LocationListItemState = {
   , frequencyCount :: Maybe Int
   , recencyDate :: Maybe String
   , locationScore :: Maybe Number
+  , dynamicAction :: Maybe CRT.RemoteAC
 }
 
 type SuggestionsMap = Map SourceGeoHash Suggestions

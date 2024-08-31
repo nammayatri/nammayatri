@@ -114,7 +114,7 @@ dummy_data = [
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
-
+    , dynamicAction : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_recent_search"
     , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
@@ -143,7 +143,7 @@ dummy_data = [
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
-
+    , dynamicAction : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
     , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
@@ -172,6 +172,6 @@ dummy_data = [
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
-
+    , dynamicAction : Nothing
     }
 ]

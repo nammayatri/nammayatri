@@ -23,6 +23,11 @@ import Presto.Core.Utils.Encoding  (defaultDecode, defaultDecode, defaultEncode)
 import Control.Monad.Except (runExcept, except)
 import Foreign.Index (readProp)
 import Data.Either as Either
+import Data.Eq.Generic (genericEq)
+import Data.Argonaut.Decode (class DecodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
 
 type RemoteConfig a
   = { bangalore :: Maybe a
@@ -145,6 +150,10 @@ type SubscriptionConfigVariantLevelEntity = {
 
 data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity
 
+instance eqRemoteAC :: Eq RemoteAC where eq = genericEq
+instance encodeJsonRemoteAC :: EncodeJson RemoteAC where encodeJson = genericEncodeJson
+instance decodeJsonRemoteAC :: DecodeJson RemoteAC where decodeJson = genericDecodeJson
+
 derive instance genericRemoteAC :: Generic RemoteAC _
 instance decodeRemoteAC :: Decode RemoteAC where 
   decode body = 
@@ -163,6 +172,9 @@ newtype DestinationParams = DestinationParams {
 derive instance genericDestinationParams :: Generic DestinationParams _
 instance decodeDestinationParams :: Decode DestinationParams where decode = defaultDecode
 instance encodeDestinationParams :: Encode DestinationParams where encode = defaultEncode
+instance eqDestinationParams :: Eq DestinationParams where eq = genericEq
+instance encodeJsonDestinationParams:: EncodeJson DestinationParams where encodeJson = genericEncodeJson
+instance decodeJsonDestinationParams :: DecodeJson DestinationParams where decodeJson = genericDecodeJson
 
 newtype WebLinkParams = WebLinkParams {
   url :: String
@@ -171,3 +183,11 @@ newtype WebLinkParams = WebLinkParams {
 derive instance genericWebLinkParams :: Generic WebLinkParams _
 instance decodeWebLinkParams :: Decode WebLinkParams where decode = defaultDecode
 instance encodeWebLinkParams :: Encode WebLinkParams where encode = defaultEncode
+instance eqWebLinkParams :: Eq WebLinkParams where eq = genericEq
+instance encodeJsonWebLinkParams:: EncodeJson WebLinkParams where encodeJson = genericEncodeJson
+instance decodeJsonWebLinkParams :: DecodeJson WebLinkParams where decodeJson = genericDecodeJson
+
+type GullakConfig = {
+  image :: String,
+  enabled :: Boolean
+}

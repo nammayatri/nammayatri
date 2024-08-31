@@ -117,6 +117,7 @@ getLocation prediction = {
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
+  , dynamicAction : Nothing
 }
 
 checkShowDistance :: Int ->  Boolean

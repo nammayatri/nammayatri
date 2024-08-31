@@ -352,6 +352,7 @@ getLocationFromTrip locationType trip sourceLat sourceLong =
     , frequencyCount : trip.frequencyCount
     , recencyDate : trip.recencyDate
     , locationScore : trip.locationScore
+    , dynamicAction : Nothing
     }
 
 transformTrip :: Array String -> Trip -> Maybe Trip 
@@ -522,4 +523,5 @@ getFamousCityDestination (FamousDestination destnData)  =
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
+    , dynamicAction : destnData.dynamic_action
     }

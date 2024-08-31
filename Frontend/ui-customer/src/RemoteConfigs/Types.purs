@@ -7,6 +7,9 @@ import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import Data.Maybe (Maybe)
+import Language.Types(STR(..))
+import Data.Show.Generic (genericShow)
+import Common.RemoteConfig.Types as CRT
 
 
 type SafetyVideoConfig
@@ -54,7 +57,8 @@ newtype FamousDestination = FamousDestination {
   lat :: Number,
   lon :: Number,
   description :: String,
-  nameBasedOnLanguage :: String
+  nameBasedOnLanguage :: String,
+  dynamic_action :: Maybe CRT.RemoteAC
 }
 
 derive instance genericFamousDestination :: Generic FamousDestination _
