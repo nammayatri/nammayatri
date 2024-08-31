@@ -10,7 +10,7 @@ module Screens.NammaSafetyFlow.SosActiveScreen.View where
 
 import PrestoDOM.Animation as PrestoAnim
 import Animation (screenAnimationFadeInOut, fadeIn, fadeOut)
-import Prelude (Unit, const, discard, not, pure, unit, void, ($), (&&), (<<<), (<>), (==), (<#>), map, (/), (-), (/=), show, when)
+import Prelude (Unit, const, discard, not, pure, unit, void, ($), (&&), (<<<), (<>), (==), (<#>), map, (/), (-), (/=), show, when, bind)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width, accessibilityHint, maxLines, ellipsize, fillViewport, enableAnimateOnGone)
 import Screens.NammaSafetyFlow.ComponentConfig (cancelSOSBtnConfig, safetyAudioRecordingConfig)
 import Screens.NammaSafetyFlow.Components.HelperViews (layoutWithWeight, safetyPartnerView, separatorView, emptyTextView)
@@ -49,6 +49,7 @@ import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple as DT
 import Effect.Uncurried (runEffectFn2)
 import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
+import Data.Function.Uncurried (runFn2)
 
 screen :: ST.NammaSafetyScreenState -> Screen Action ST.NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -57,6 +58,7 @@ screen initialState =
   , name: "SosActiveScreen"
   , globalEvents:
       [ ( \push -> do
+            void $ pure $ runFn2 JB.storeOnPauseCallback push OnPauseCallback
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
               $ do
                   when initialState.data.autoCallDefaultContact $ lift $ lift $ doAff do liftEffect $ push $ PlaceCall
@@ -354,6 +356,7 @@ emergencyContactsView state push =
                       , color Color.white900
                       , maxLines 2
                       , ellipsize true
+                      , gravity CENTER
                       ]
                     <> FontStyle.body1 CTA.TypoGraphy
                 ]

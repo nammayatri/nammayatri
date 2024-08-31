@@ -286,9 +286,15 @@ window.callUICallback = function () {
 
 window.onResumeListeners = [];
 window.internetListeners = {};
+window.onPauseListeners = [];
 
 window.onPause = function () {
   console.error("onEvent onPause");
+  if (window.onPauseListeners && Array.isArray(window.onPauseListeners)) {
+    for (let i = 0; i < window.onPauseListeners.length;i++) {
+      window.onPauseListeners[i].call();
+    }
+  }
   JBridge.unregisterShakeListener();
 }
 function checkInternet() {

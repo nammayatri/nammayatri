@@ -24,6 +24,7 @@ import Resources.Constants (encodeAddress, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreen
 import Screens.Types (MyRidesScreenState, Stage(..), Trip(..), LocationSelectType(..), HomeScreenState)
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Common.Types.App as CTA
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
 modifyScreenState st =
@@ -122,6 +123,9 @@ updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos = do
                     , isAudioRecordingActive = false
                     , showCallPolice = if triggerSos then state.props.isSafetyCenterDisabled else false
                     , showMenu = false
+                    , recordedAudioUrl = Nothing
+                    , audioRecordingStatus = CTA.NOT_RECORDING
+                    , recordingTimer = "00 : 00"
                     }
                   , data
                     { rideId = state.data.driverInfoCardState.rideId

@@ -1717,6 +1717,21 @@ export const storeOnResumeCallback = function (cb, action) {
   }
 }
 
+export const storeOnPauseCallback = function (cb, action) {
+  try {
+    const callback = function () {
+      cb(action)();
+    }
+    console.log("onPauseListeners",callback);
+    
+    if (window.onPauseListeners) {
+      window.onPauseListeners.push(callback);
+    }
+  } catch (error) {
+    console.log("Error occurred in storeOnPauseCallback ------", error);
+  }
+}
+
 export const storeCallBackInternetAction = (cb, action, screenName) => {
   try {
     const callback = callbackMapper.map(isNetworkOn => {
@@ -2650,6 +2665,7 @@ export const askRequestedPermissionsWithCallback = function(permissions){
       const callback = callbackMapper.map(function (isPermissionGranted) {
         cb(action(isPermissionGranted))();
       });
+      
       if(window.JBridge.askRequestedPermissionsWithCallback)
         return window.JBridge.askRequestedPermissionsWithCallback(permissions, callback);
     }

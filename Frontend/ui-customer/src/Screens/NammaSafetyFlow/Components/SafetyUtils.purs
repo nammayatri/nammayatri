@@ -6,6 +6,9 @@ import Data.Array (filter, length, uncons, find)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
+import Services.API as API
+import Storage (getValueToLocalStore, KeyStore(..))
+import DecodeUtil (decodeForeignAnyImpl, parseJSON)
 
 getDefaultPriorityList :: Array NewContacts -> Array NewContacts
 getDefaultPriorityList contacts =
@@ -30,7 +33,7 @@ getPrimaryContact state =
   find (\contact -> contact.priority == 0) $ getDefaultPriorityList state.data.emergencyContactsList
 
 showNightSafetyFlow :: Maybe Boolean -> Maybe String -> Maybe String -> Int -> Int -> Boolean
-showNightSafetyFlow hasNightIssue rideStartTime rideEndTime safetyCheckStartSeconds safetyCheckEndSeconds = (hasNightIssue == Just false) && (checkTimeConstraints rideStartTime || checkTimeConstraints rideEndTime)
+showNightSafetyFlow hasNightIssue rideStartTime rideEndTime safetyCheckStartSeconds safetyCheckEndSeconds = (hasNightIssue == Just false) && ((checkTimeConstraints rideStartTime) || ( checkTimeConstraints rideEndTime))
   where 
     checkTimeConstraints = checkSafetyTimeConstraints safetyCheckStartSeconds safetyCheckEndSeconds 
 
@@ -40,3 +43,27 @@ checkSafetyTimeConstraints safetyCheckStartSeconds safetyCheckEndSeconds = maybe
     safetyCheckStart = EHC.convertUTCtoISC (EHC.parseSecondsOfDayToUTC safetyCheckStartSeconds) "HH:mm:ss"
     safetyCheckEnd = EHC.convertUTCtoISC (EHC.parseSecondsOfDayToUTC safetyCheckEndSeconds) "HH:mm:ss"
     
+type PostRideSettingCache = {
+  enablePostRideSafetyCheck :: Boolean,
+  safetyCheckStartSeconds :: Int,
+  safetyCheckEndSeconds :: Int
+}
+
+checkIfFollowEnabled :: API.RideShareOptions -> Maybe Int -> Maybe Int -> Boolean
+checkIfFollowEnabled shareOption mbSafetyCheckStartSeconds mbSafetyCheckEndSeconds = do
+  let currentTime = EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
+  case shareOption of
+    API.NEVER_SHARE -> false
+    API.ALWAYS_SHARE -> true
+    API.SHARE_WITH_TIME_CONSTRAINTS -> checkTimeConstraints (Just currentTime) || checkTimeConstraints (Just currentTime)
+  where
+    checkTimeConstraints = checkSafetyTimeConstraints (fromMaybe 0 mbSafetyCheckStartSeconds) (fromMaybe 0 mbSafetyCheckEndSeconds)
+
+getPostRideCheckSettingsFromCache :: String -> Maybe PostRideSettingCache
+getPostRideCheckSettingsFromCache cache = 
+  let
+    savedValue = getValueToLocalStore POST_RIDE_CHECK_SETTINGS
+    (parsedValue :: Maybe PostRideSettingCache) = 
+         (decodeForeignAnyImpl (parseJSON savedValue)) 
+  in
+    parsedValue

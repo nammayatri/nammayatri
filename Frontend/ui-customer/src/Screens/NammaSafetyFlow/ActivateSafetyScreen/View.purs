@@ -55,6 +55,7 @@ import Components.OptionsMenu as OptionsMenu
 import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
 import Effect.Uncurried (runEffectFn2)
 import Components.PopupWithCheckbox.View as PopupWithCheckbox
+import Data.Function.Uncurried (runFn2)
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -62,6 +63,7 @@ screen initialState =
   , view: view
   , name: "ActivateSafetyScreen"
   , globalEvents:[ ( \push -> do
+            _ <- pure $ runFn2 JB.storeOnPauseCallback push OnPauseCallback
             void $ launchAff $ EHC.flowRunner defaultGlobalState
               $ do
                   eiResponse <- Remote.getEmergencySettings ""
