@@ -2776,7 +2776,8 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerConfig destMarkerConfig = new MarkerConfig();
                             Boolean useMarkerSize = endMarkerConfig.optBoolean("useMarkerSize", false);
                             Double destMarkerSize = useMarkerSize ? endMarkerConfig.optDouble("markerSize", 0.0) : 0.0;
-                            destMarkerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
+                            if (destMarkerActionImageConfig != null) destMarkerConfig.locationName(endMarkerConfig.optString("primaryText", ""), endMarkerConfig.optString("secondaryText", ""));
+                            else destMarkerConfig.locationName("");
                             destMarkerConfig.setLabelImageConfig(endLabelImageConfig);
                             destMarkerConfig.setLabelActionImageConfig(endActionImageConfig);
                             destMarkerConfig.setTheme(endTheme);
@@ -2784,7 +2785,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             destMarkerConfig.setLabelMaxLines(endMarkerConfig.optInt("labelMaxLines", 1));
                             destMarkerConfig.setLabelTextSize(endMarkerConfig.optInt("labelTextSize", 11));
                             destMarkerConfig.setShortTitle(endShortTitle);
-                            destMarkerConfig.setMarkerActionImageConfig(destMarkerActionImageConfig);
+                            if (destMarkerActionImageConfig != null) destMarkerConfig.setMarkerActionImageConfig(destMarkerActionImageConfig);
                             destMarkerConfig.setMarkerIconSize(destMarkerSize.intValue());
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
@@ -2834,7 +2835,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 markerConfig.setLabelMaxLines(startMarkerConfig.optInt("labelMaxLines", 0));
                                 markerConfig.setLabelTextSize(startMarkerConfig.optInt("labelTextSize", 11));
                                 markerConfig.setShortTitle(startShortTitle);
-                                markerConfig.setMarkerActionImageConfig(sourceMarkerActionImageConfig);
+                                if (sourceMarkerActionImageConfig != null) markerConfig.setMarkerActionImageConfig(sourceMarkerActionImageConfig);
                                 MarkerOptions markerObj = new MarkerOptions()
                                         .title("")
                                         .position(source)
@@ -2888,7 +2889,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                     mConfig.setLabelTextSize(stopMarkerConfig.optInt("labelTextSize", 11));
                                     mConfig.setShortTitle(stopShortTitle);
                                     mConfig.setMarkerIconSize(stopMarkerSize.intValue());
-                                    mConfig.setMarkerActionImageConfig(stopMarkerActionImageConfig);
+                                    if (stopMarkerActionImageConfig != null) mConfig.setMarkerActionImageConfig(stopMarkerActionImageConfig);
                                     MarkerOptions markerObj = new MarkerOptions()
                                             .title("")
                                             .position(source)
