@@ -177,13 +177,13 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     }
                     String json = payload.optString("json", "");
                     JSONObject destMarkerConfig = payload.optJSONObject("destMarkerConfig");
-                    String dest = destMarkerConfig.optString("pointerIcon", "");
+                    String dest = (destMarkerConfig != null) ? destMarkerConfig.optString("pointerIcon", "") : "";
                     String eta = payload.optString("eta", "");
                     String locationName = payload.optString("locationName" , "");
                     String src = payload.optString("srcMarker", "");
                     String specialLocation = payload.optString("specialLocation", "");
                     String polylineKey = payload.optString("polylineKey", "DEFAULT");
-                    JSONObject destMarkerActionImageConfig = destMarkerConfig.optJSONObject("actionImage");
+                    JSONObject destMarkerActionImageConfig = (destMarkerConfig != null) ? destMarkerConfig.optJSONObject("actionImage") : null;
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     int dashUnit = specialLocationObject.optInt("dashUnit", 1);
                     int gapUnit = specialLocationObject.optInt("gapUnit", 0);
@@ -209,7 +209,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     MarkerConfig markerConfig = new MarkerConfig();
                     markerConfig.locationName(locationName);
                     markerConfig.setLabelImage(destinationSpecialTagIcon);
-                    markerConfig.setMarkerActionImageConfig(destMarkerActionImageConfig);
+                    if (destMarkerActionImageConfig != null) markerConfig.setMarkerActionImageConfig(destMarkerActionImageConfig);
                     if (destMarker != null)
                     {
                         destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(dest, false, MarkerType.NORMAL_MARKER, markerConfig))));
