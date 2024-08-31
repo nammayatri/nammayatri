@@ -38,6 +38,8 @@ import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude (boolToVisibility)
 import Effect.Uncurried (runEffectFn1, runEffectFn7)
 import Debug
+import ConfigProvider 
+import Data.Foldable (foldl)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -605,7 +607,7 @@ simpleMessageView :: forall w. Config -> ChatComponentConfig -> ChatConfig -> St
 simpleMessageView state config (ChatConfig chatConfig) value = 
   let transformedMessage = if state.useSuggestionsView 
     then if state.spanParent then config.message else value
-    else STR.replaceAll (STR.Pattern "\\n") (STR.Replacement "<br>") value
+    else reportIssueMessageTransformer value
   in
   textView $ [
     textFromHtml transformedMessage,
@@ -613,7 +615,20 @@ simpleMessageView state config (ChatConfig chatConfig) value =
     margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0,
     color chatConfig.textColor
   ] <> FontStyle.body1 TypoGraphy
+  where
+    reportIssueMessageTransformer :: String -> String
+    reportIssueMessageTransformer message =
+      let
+        config = getAppConfig appConfig
 
+        keyValuePairs =
+          [ { key: STR.Pattern "{#SUPPORT_EMAIL#}", value: STR.Replacement config.appData.supportMail }
+          , { key: STR.Pattern "{#MERCHANT#}", value: STR.Replacement config.appData.name }
+          , { key: STR.Pattern "\\n", value: STR.Replacement "<br>" }
+          ]
+      in
+        foldl (\acc { key, value } -> STR.replaceAll key value acc) message keyValuePairs
+    
 detailedMessageView :: forall w. Config -> (Action -> Effect Unit) -> ChatComponentConfig -> ChatConfig -> String -> PrestoDOM (Effect Unit) w
 detailedMessageView state push config (ChatConfig chatConfig) value = 
   linearLayout [
