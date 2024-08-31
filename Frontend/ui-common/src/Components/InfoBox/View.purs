@@ -67,6 +67,7 @@ view push config =
         $ [ height WRAP_CONTENT
           , width MATCH_PARENT
           , visibility $ boolToVisibility $ not String.null config.subTitle
+          , margin $ MarginTop 8
           , text $ config.subTitle
           , color Color.black700
           ]

@@ -299,7 +299,7 @@ titleView push state config action =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 16 12 16 0
+    , padding $ Padding 16 16 16 0
     ]
     [ textView
         $ [ height WRAP_CONTENT
@@ -315,7 +315,7 @@ subTitleView push state config action =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 16 16 16 0
+    , padding $ Padding 16 0 16 0
     ]
     [ textView
         $ [ height WRAP_CONTENT
