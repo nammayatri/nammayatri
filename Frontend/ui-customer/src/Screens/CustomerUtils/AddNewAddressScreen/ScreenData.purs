@@ -56,6 +56,7 @@ initData = {
     , frequencyCount : Nothing
     , recencyDate : Nothing
     , locationScore : Nothing
+    , dynamicAction : Nothing
   }
   , address : ""
   , activeIndex : (Just 2)

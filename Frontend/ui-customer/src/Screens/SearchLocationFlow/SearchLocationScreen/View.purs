@@ -718,6 +718,7 @@ predictionsView push state globalProps = let
               , frequencyCount : MB.Nothing
               , recencyDate : MB.Nothing
               , locationScore : MB.Nothing
+              , dynamicAction : MB.Nothing
               }) filteredStations
 
     locationListItemView :: LocationListItemState -> Int -> PrestoDOM (Effect Unit) w
