@@ -147,8 +147,8 @@ data RCDetails = RCDetails
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Flow StatusRes
-statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = do
+statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow StatusRes
+statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData = do
   -- multipleRC flag is temporary to support backward compatibility
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -268,13 +268,13 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC prefillData = 
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
   vehicleDocuments <-
     vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
-      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) vehicleDoc.documents
-      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus) driverDocuments
+      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
+      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
       when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
       mbVehicle <- Vehicle.findById personId -- check everytime
       when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
         void $ try @_ @SomeException (activateRCAutomatically personId merchantId merchantOpCityId vehicleDoc.registrationNo)
-      if allVehicleDocsVerified then return $ VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
+      if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
   (dlDetails, rcDetails) <-
     case prefillData of
@@ -353,12 +353,12 @@ activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
           }
   void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
 
-checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVeh.Category -> ResponseStatus -> Flow Bool
-checkIfDocumentValid merchantOperatingCityId docType category status = do
+checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVeh.Category -> ResponseStatus -> Maybe Bool -> Flow Bool
+checkIfDocumentValid merchantOperatingCityId docType category status makeSelfieAadhaarPanMandatory = do
   mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId docType category
   case mbVerificationConfig of
     Just verificationConfig -> do
-      if verificationConfig.isMandatory
+      if verificationConfig.isMandatory && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
         then case status of
           VALID -> return True
           MANUAL_VERIFICATION_REQUIRED -> return verificationConfig.isDefaultEnabledOnManualVerification

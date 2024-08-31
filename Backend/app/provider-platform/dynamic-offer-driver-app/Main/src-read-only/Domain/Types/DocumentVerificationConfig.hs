@@ -20,6 +20,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     doStrictVerifcation :: Kernel.Prelude.Bool,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
