@@ -51,6 +51,7 @@ locationListStateObj = { prefixImageUrl : ""
   , frequencyCount : Nothing
   , recencyDate : Nothing
   , locationScore : Nothing
+  , dynamicAction : Nothing
   }
 
 dummyAddress :: Address
