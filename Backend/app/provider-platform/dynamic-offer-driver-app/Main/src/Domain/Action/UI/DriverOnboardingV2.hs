@@ -61,6 +61,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -113,7 +114,7 @@ getOnboardingConfigs ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
   )
-getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
+getOnboardingConfigs (mbPersonId, merchantID, merchantOpCityId) makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personLangauge = fromMaybe ENGLISH person.language
@@ -121,11 +122,11 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanManda
   autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AUTO_CATEGORY
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.MOTORCYCLE
   ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DTV.AMBULANCE
-
-  cabConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
-  autoConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
-  bikeConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
-  ambulanceConfigs <- filterInCompatibleFlows <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments ambulanceConfigsRaw)
+  merchant <- CQM.findById merchantID >>= fromMaybeM (MerchantNotFound merchantID.getId)
+  cabConfigs <- filterInCompatibleFlows merchant <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments cabConfigsRaw)
+  autoConfigs <- filterInCompatibleFlows merchant <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments autoConfigsRaw)
+  bikeConfigs <- filterInCompatibleFlows merchant <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments bikeConfigsRaw)
+  ambulanceConfigs <- filterInCompatibleFlows merchant <$> mapM (mkDocumentVerificationConfigAPIEntity personLangauge) (filterVehicleDocuments ambulanceConfigsRaw)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       { cabs = toMaybe cabConfigs,
@@ -143,8 +144,8 @@ getOnboardingConfigs (mbPersonId, _, merchantOpCityId) makeSelfieAadhaarPanManda
       if mbOnlyVehicle == Just True
         then filter (\Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..} -> documentType `elem` vehicleDocumentTypes) docs
         else docs
-    filterInCompatibleFlows :: [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity] -> [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity]
-    filterInCompatibleFlows = filter (\doc -> (doc.validateUsing /= Just DTO.FRONTEND) || fromMaybe False makeSelfieAadhaarPanMandatory || doc.documentType `notElem` [DTO.ProfilePhoto, DTO.AadhaarCard, DTO.PanCard])
+    filterInCompatibleFlows :: Domain.Types.Merchant.Merchant -> [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity] -> [API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity]
+    filterInCompatibleFlows merchant = filter (\doc -> merchant.shortId.getShortId /= "NAMMA_YATRI_PARTNER" || fromMaybe False makeSelfieAadhaarPanMandatory || doc.documentType `notElem` [DTO.ProfilePhoto, DTO.AadhaarCard, DTO.PanCard])
 
 getDriverRateCard ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

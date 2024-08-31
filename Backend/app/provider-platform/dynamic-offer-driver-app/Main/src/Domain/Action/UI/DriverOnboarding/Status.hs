@@ -52,6 +52,7 @@ import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
@@ -150,6 +151,7 @@ data RCDetails = RCDetails
 statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow StatusRes
 statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData = do
   -- multipleRC flag is temporary to support backward compatibility
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
@@ -268,8 +270,8 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
   vehicleDocuments <-
     vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
-      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
-      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
+      allVehicleDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchant merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) vehicleDoc.documents
+      allDriverDocsVerified <- Extra.allM (\doc -> checkIfDocumentValid merchant merchantOpCityId doc.documentType (fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory) doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
       when (allVehicleDocsVerified && allDriverDocsVerified) $ enableDriver merchantOpCityId personId mDL
       mbVehicle <- Vehicle.findById personId -- check everytime
       when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC) $
@@ -353,12 +355,12 @@ activateRCAutomatically personId merchantId merchantOpCityId rcNumber = do
           }
   void $ DomainRC.linkRCStatus (personId, merchantId, merchantOpCityId) rcStatusReq
 
-checkIfDocumentValid :: Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVeh.Category -> ResponseStatus -> Maybe Bool -> Flow Bool
-checkIfDocumentValid merchantOperatingCityId docType category status makeSelfieAadhaarPanMandatory = do
+checkIfDocumentValid :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> DVC.DocumentType -> DVeh.Category -> ResponseStatus -> Maybe Bool -> Flow Bool
+checkIfDocumentValid merchant merchantOperatingCityId docType category status makeSelfieAadhaarPanMandatory = do
   mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId docType category
   case mbVerificationConfig of
     Just verificationConfig -> do
-      if verificationConfig.isMandatory && (verificationConfig.validateUsing /= Just DVC.FRONTEND || fromMaybe False makeSelfieAadhaarPanMandatory || docType `notElem` [DVC.ProfilePhoto, DVC.AadhaarCard, DVC.PanCard])
+      if verificationConfig.isMandatory && (merchant.shortId.getShortId /= "NAMMA_YATRI_PARTNER" || fromMaybe False makeSelfieAadhaarPanMandatory || docType `notElem` [DVC.ProfilePhoto, DVC.AadhaarCard, DVC.PanCard])
         then case status of
           VALID -> return True
           MANUAL_VERIFICATION_REQUIRED -> return verificationConfig.isDefaultEnabledOnManualVerification
