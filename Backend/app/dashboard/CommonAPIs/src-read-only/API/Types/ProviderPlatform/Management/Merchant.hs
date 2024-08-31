@@ -85,7 +85,8 @@ data DocumentVerificationConfigCreateReq = DocumentVerificationConfigCreateReq
     minFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     maxFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     stepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
-    defaultStepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity
+    defaultStepFeeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

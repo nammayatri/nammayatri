@@ -55,6 +55,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
