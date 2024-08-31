@@ -668,6 +668,7 @@ types:
     - maxFeeWithCurrency: Maybe PriceAPIEntity
     - stepFeeWithCurrency: Maybe PriceAPIEntity
     - defaultStepFeeWithCurrency: Maybe PriceAPIEntity
+    - filterForOldApks: Maybe Bool
     - derive: "'HideSecrets"
   CreateFPDriverExtraFeeReq:
     - minFee: Money

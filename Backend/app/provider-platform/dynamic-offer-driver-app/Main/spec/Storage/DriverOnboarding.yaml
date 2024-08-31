@@ -382,11 +382,13 @@ DocumentVerificationConfig:
     isImageValidationRequired: Bool
     doStrictVerifcation: Bool
     order: Int
+    filterForOldApks: Maybe Bool
   default:
     order: "0"
     doStrictVerifcation: "true"
     isDefaultEnabledOnManualVerification: "true"
     isImageValidationRequired: "true"
+    filterForOldApks: false
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
