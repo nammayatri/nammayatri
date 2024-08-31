@@ -2623,7 +2623,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
   let rideStatus = (fromMaybe dummyRideAPIEntity ((response.rideList) !! 0)) ^. _status
       newState = state{ props { currentStage =
                       case rideStatus of
-                        "NEW" -> RideAccepted
+                        "NEW" -> if state.props.currentStage == ChatWithDriver then ChatWithDriver else RideAccepted
                         "INPROGRESS" -> RideStarted
                         "COMPLETED" -> RideCompleted
                         "CANCELLED" -> HomeScreen
