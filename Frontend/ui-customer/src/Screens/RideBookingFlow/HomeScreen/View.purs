@@ -3602,13 +3602,34 @@ homeScreenContent push state =  let
 servicesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 servicesView push state = 
   let itemLen = length $ nammaServices FunctionCall
+      appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
+      firstName = fromMaybe "Yatri " (head (DS.split (DS.Pattern " ") appName))
   in
   linearLayout
   [ height WRAP_CONTENT
+  , orientation VERTICAL
   , width MATCH_PARENT
   , margin $ Margin 16 20 16 0
   , visibility $ boolToVisibility $ if itemLen < 1 then false else true
-  ] ( mapWithIndex ( \index item -> (if itemLen > 2 then verticalServiceView else horizontalServiceView) push index item ) (nammaServices FunctionCall))
+  ]  [
+      linearLayout[
+          height WRAP_CONTENT
+        , width MATCH_PARENT 
+        , gravity CENTER_VERTICAL
+        ][  textView $
+              [ text $ firstName <> " " <> getEN SERVICES
+              , color Color.black900
+              , padding $ PaddingLeft 8
+              , height MATCH_PARENT
+              ] <> FontStyle.subHeading1 TypoGraphy
+          ],
+    linearLayout[
+      height WRAP_CONTENT
+      , margin $ MarginTop 12
+      , width MATCH_PARENT
+    ] ( mapWithIndex ( \index item -> (if itemLen > 2 then verticalServiceView else horizontalServiceView) push index item ) (nammaServices FunctionCall))
+  ]
+   
 
 horizontalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
 horizontalServiceView push index service = 
@@ -3626,7 +3647,7 @@ horizontalServiceView push index service =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 16 8 16 8
-    , stroke $ "1," <> Color.grey700
+    , background service.backgroundColor
     , cornerRadius 12.0
     , gravity CENTER
     ][ imageView 
@@ -3659,7 +3680,7 @@ verticalServiceView push index service =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 8 8 8 8
-    , stroke $ "1," <> Color.grey700
+    , background service.backgroundColor
     , cornerRadius 12.0
     , gravity CENTER_HORIZONTAL
     , orientation VERTICAL

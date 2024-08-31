@@ -287,7 +287,19 @@ nammaSafetyFlow = do
           modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { data{ selectedContacts = updatedState.data.emergencyContactsList },props { fromNewSafetyFlow= true, saveEmergencyContacts = true, getDefaultContacts = if emergencyContactLength > 1 then true else false } })
           emergencyScreenFlow --dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ TrustedContacts []) 0
         SafetyCheckIn _ -> do
-          
+          if not navigationConfig.isCompleted
+            then 
+              modifyScreenState
+                $ DataFetchScreenStateType
+                    ( \dataFetchScreen ->
+                        dataFetchScreen
+                          { data
+                            { unExpectedEventChecks = API.SHARE_WITH_TIME_CONSTRAINTS
+                            , postRideCheck = API.SHARE_WITH_TIME_CONSTRAINTS
+                            }
+                          }
+                    )
+            else pure unit
           dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ SafetyCheckIn []) 0
         EmergencyActions _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ EmergencyActions []) 0
         SafetyDrill _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ SafetyDrill []) 0

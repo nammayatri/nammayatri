@@ -82,7 +82,6 @@ primaryButtonConfig state =
         { textConfig { text = if state.props.stageSetUpCompleted && screenStageConfig.primaryButtonAction /= "SafetyTestDrill" then (getString DONE) else screenStageConfig.primaryButtonText }
         , width = MATCH_PARENT
         , cornerRadius = 12.0
-        , height = (V 64)
         , background = Color.black900
         , margin = (Margin 16 16 16 16)
         , id = "DataFetchScreenPrimaryButton"
@@ -94,7 +93,6 @@ boxContainerConfig :: ST.DataFetchScreenState -> ST.BoxContainerConfig -> String
 boxContainerConfig state config action =
   let
     screenStageConfig = DC.getStepConfig state
-
     toggleButtonConfig = case action of
       "UpdateUnExpectedEventChecks" -> getBooleanFromOptions state.data.unExpectedEventChecks
       "PostRideCheck" -> getBooleanFromOptions state.data.postRideCheck

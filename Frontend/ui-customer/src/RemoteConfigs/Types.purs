@@ -65,7 +65,8 @@ instance decodeFamousDestination :: Decode FamousDestination where decode = defa
 type Service = {
   type :: ServiceType,
   name :: STR,
-  image :: String
+  image :: String,
+  backgroundColor :: String
 }
 
 data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY_BUS
