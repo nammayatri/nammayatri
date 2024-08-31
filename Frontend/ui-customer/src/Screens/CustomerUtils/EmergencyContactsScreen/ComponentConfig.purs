@@ -30,7 +30,7 @@ genericHeaderConfig state =
     titleText = case null state.data.emergencyContactsList, state.props.showContactList of 
                     _, true -> show (length state.data.selectedContacts) <> "/3 " <> (getString CONTACTS_SELECTED)
                     true, false -> getString TRUSTED_CONTACT
-                    false, false -> getString EDIT_EMERGENCY_CONTACTS
+                    false, false -> getString TRUSTED_CONTACT
     genericHeaderConfig' =
       config
         { height = WRAP_CONTENT

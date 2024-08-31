@@ -81,7 +81,7 @@ textContainer push config =
 toggleView :: forall w a. (a -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 toggleView push config =
   let
-    backgroundColor = if config.toggleButton then Color.blue800 else Color.black600
+    backgroundColor = if config.toggleButton then Color.green900 else Color.black600
 
     align = if config.toggleButton then RIGHT else LEFT
   in

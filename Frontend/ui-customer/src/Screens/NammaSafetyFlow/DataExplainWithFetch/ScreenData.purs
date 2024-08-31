@@ -105,7 +105,7 @@ stageData stage = case stage of
             , DropDownWithHeader
                 dropDownWithHeaderConfig
                   { headerText = getString UNEXPECTED_EVENT_CHECK_TIMINGS
-                  , currentValue = alwaysShareRideOption
+                  , currentValue = shareWithTimeContraintsRideOption
                   , dropDownItems = [ alwaysShareRideOption, shareWithTimeContraintsRideOption ]
                   }
             ]
@@ -123,7 +123,7 @@ stageData stage = case stage of
             , DropDownWithHeader
                 dropDownWithHeaderConfig
                   { headerText = getString POST_RIDE_CHECK_TIMINGS
-                  , currentValue = alwaysShareRideOption
+                  , currentValue = shareWithTimeContraintsRideOption
                   , dropDownItems = [ alwaysShareRideOption, shareWithTimeContraintsRideOption ]
                   }
             ]
@@ -141,7 +141,7 @@ stageData stage = case stage of
                   , noteImageIcon = "ny_ic_police_siren"
                   }
             ]
-        , imageUrl: ""
+        , imageUrl: "ny_ic_safety_team_checkin"
         , primaryButtonText: getString DONE
         , primaryButtonAction: "NotifySafetyTeam"
         }

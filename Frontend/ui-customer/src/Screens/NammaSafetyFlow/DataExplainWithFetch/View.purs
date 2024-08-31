@@ -28,7 +28,7 @@ import Prelude (Unit, const, discard, pure, void, ($), (<>), (<<<), (>), (==), (
 import PrestoDOM
 import Screens.DataExplainWithFetch.Controller (Action(..), ScreenOutput, eval, getStepConfig, getStageConfig)
 import Screens.DataExplainWithFetch.ComponentConfig as CC
-import Screens.Types (DataFetchScreenState, SafetyStepsConfig, Component(..), SafetyStageConfig(..), SubTitleConfig, TitleConfig, NoteBoxConfig, DropDownWithHeaderConfig, BoxContainerConfig, CheckBoxSelectionConfig, NewContacts)
+import Screens.Types (DataFetchScreenState, SafetyStepsConfig, Component(..), NammaSafetyStage(..), SafetyStageConfig(..), SubTitleConfig, TitleConfig, NoteBoxConfig, DropDownWithHeaderConfig, BoxContainerConfig, CheckBoxSelectionConfig, NewContacts)
 import Styles.Colors as Color
 import Components.GenericHeader as GenericHeader
 import PrestoDOM.List (ListItem, preComputeListItem)
@@ -102,6 +102,7 @@ explanationContentView :: forall w. (Action -> Effect Unit) -> DataFetchScreenSt
 explanationContentView push state =
   let
     config = getStepConfig state
+    setupDone = not $ not state.props.stageSetUpCompleted || config.primaryButtonAction == "SafetyTestDrill"
   in
     linearLayout
       [ height MATCH_PARENT
@@ -113,11 +114,20 @@ explanationContentView push state =
       [ imageView
           [ height $ V 200
           , width MATCH_PARENT
-          , visibility $ boolToVisibility $ not state.props.stageSetUpCompleted || config.primaryButtonAction == "SafetyTestDrill"
-          , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET config.imageUrl
+          , padding $ if setupDone then PaddingHorizontal 16 16 else Padding 0 0 0 0
+          , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET $ if setupDone then getSetupCompletedImage else config.imageUrl
           ]
       , dynamicOptionsView push state
       ]
+    where
+      getSetupCompletedImage = 
+        case state.config.stage of
+          TrustedContacts _ -> "ny_ic_trusted_contact_complete"
+          SafetyCheckIn _ -> "ny_ic_safety_check_in_complete"
+          EmergencyActions _ -> "ny_ic_emergency_actions_complete"
+          SafetyDrill _ -> "ny_ic_safety_drill_setup"
+          DriverSafetyStandards _ -> "ny_ic_safety_explore_features"
+          TrustedContactsActions _ -> "ny_ic_trusted_contact_more"
 
 dynamicOptionsView :: forall w. (Action -> Effect Unit) -> DataFetchScreenState -> PrestoDOM (Effect Unit) w
 dynamicOptionsView push state =
