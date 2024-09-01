@@ -364,12 +364,14 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       let vehicleAgeSections = NE.sortBy (comparing (.vehicleAge.getMonths)) det.slabs
           perKmStepFareItems = mkPerKmStepFareItem [] (toList vehicleAgeSections)
           baseStepFareItems = mkBaseStepFareItem [] (toList vehicleAgeSections)
+          baseStepDistanceItems = mkBaseStepDistanceItem [] (toList vehicleAgeSections)
           nightShiftFareItems = mkNightShiftStepFareItem [] (toList vehicleAgeSections)
           platformFeeItems = mkPlatformFeeStepFareItem [] (toList vehicleAgeSections)
           waitingChargeItems = mkWaitingChargeStepFareItem [] (toList vehicleAgeSections)
 
       perKmStepFareItems
         <> baseStepFareItems
+        <> baseStepDistanceItems
         <> nightShiftFareItems
         <> platformFeeItems
         <> waitingChargeItems
@@ -390,6 +392,15 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
           let baseStepFareCaption = show $ Tags.BASE_STEP_FARE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)
               baseStepFareItem = mkBreakupItem baseStepFareCaption (mkValue $ highPrecMoneyToText s1.baseFare)
           mkBaseStepFareItem (baseStepFareItems <> [baseStepFareItem]) (s2 : ss)
+
+        mkBaseStepDistanceItem baseStepDistanceItems [] = baseStepDistanceItems
+        mkBaseStepDistanceItem baseStepDistanceItems [s1] = do
+          let baseStepDistanceItem = mkBreakupItem (show $ Tags.BASE_STEP_DISTANCE s1.vehicleAge.getMonths Nothing) (mkValue $ show s1.baseDistance.getMeters)
+          baseStepDistanceItems <> [baseStepDistanceItem]
+        mkBaseStepDistanceItem baseStepDistanceItems (s1 : s2 : ss) = do
+          let baseStepFareCaption = show $ Tags.BASE_STEP_DISTANCE s1.vehicleAge.getMonths (Just s2.vehicleAge.getMonths)
+              baseStepDistanceItem = mkBreakupItem baseStepFareCaption (mkValue $ show s1.baseDistance.getMeters)
+          mkBaseStepDistanceItem (baseStepDistanceItems <> [baseStepDistanceItem]) (s2 : ss)
 
         mkNightShiftStepFareItem nightShiftStepFareItems [] = nightShiftStepFareItems
         mkNightShiftStepFareItem nightShiftStepFareItems [s1] = do
