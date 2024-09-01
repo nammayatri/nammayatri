@@ -22,6 +22,7 @@ data FarePolicyAmbulanceDetailsSlabT f = FarePolicyAmbulanceDetailsSlabT
   { id :: B.C f Int,
     farePolicyId :: B.C f Text,
     baseFare :: B.C f HighPrecMoney,
+    baseDistance :: B.C f Meters,
     perKmRate :: B.C f HighPrecMoney,
     currency :: B.C f Currency,
     vehicleAge :: B.C f Months,

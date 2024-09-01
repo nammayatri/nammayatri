@@ -358,9 +358,8 @@ calculateFareParameters params = do
       DFP.AmbulanceDetails det -> processFPAmbulanceDetailsSlab $ DFP.findFPAmbulanceDetailsSlabByAge (fromMaybe 0 params.vehicleAge) det.slabs
 
     processFPAmbulanceDetailsSlab DFP.FPAmbulanceDetailsSlab {..} = do
-      let estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
-          actualDistance = (.getMeters) <$> params.actualDistance
-          distanceInKm = (fromIntegral $ fromMaybe estimatedDistance actualDistance) / 1000
+      let mbExtraDistance = (fromMaybe 0 params.actualDistance) - baseDistance & (\dist -> if dist > 0 then Just dist else Nothing)
+          distanceInKm = (fromIntegral $ fromMaybe 0 mbExtraDistance) / 1000
           distBasedFare = HighPrecMoney $ perKmRate.getHighPrecMoney * distanceInKm
       ( [],
         baseFare,

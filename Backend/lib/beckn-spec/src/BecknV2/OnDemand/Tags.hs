@@ -174,6 +174,16 @@ instance Show BASE_STEP_FARE where
   show (BASE_STEP_FARE startDist (Just endDist)) = "BASE_STEP_FARE" <> show startDist <> "_" <> show endDist
   show (BASE_STEP_FARE startDist Nothing) = "BASE_STEP_FARE" <> show startDist <> "_Above"
 
+data BASE_STEP_DISTANCE = BASE_STEP_DISTANCE
+  { startThreshold :: Int,
+    endThreshold :: Maybe Int
+  }
+  deriving (Eq, Generic, ToJSON, FromJSON)
+
+instance Show BASE_STEP_DISTANCE where
+  show (BASE_STEP_DISTANCE startDist (Just endDist)) = "BASE_STEP_DISTANCE" <> show startDist <> "_" <> show endDist
+  show (BASE_STEP_DISTANCE startDist Nothing) = "BASE_STEP_DISTANCE" <> show startDist <> "_Above"
+
 data NIGHT_SHIFT_STEP_PERCENTAGE = NIGHT_SHIFT_STEP_PERCENTAGE
   { startThreshold :: Int,
     endThreshold :: Maybe Int
