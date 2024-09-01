@@ -179,12 +179,12 @@ audioFeedbackUpload mbBooking mbFilePath = do
             transporterConfig.mediaFileUrlPattern
               & T.replace "<DOMAIN>" "feedback"
               & T.replace "<FILE_PATH>" filePath
-      mediaId <- createMediaEntry fileUrl fileType
+      mediaId <- createMediaEntry fileUrl fileType filePath
       return $ Just mediaId
     (_, _) -> return Nothing
 
-createMediaEntry :: Text -> S3.FileType -> Flow (Id D.MediaFile)
-createMediaEntry url fileType = do
+createMediaEntry :: Text -> S3.FileType -> Text -> Flow (Id D.MediaFile)
+createMediaEntry url fileType filePath = do
   fileEntity <- mkFile url
   _ <- QMF.create fileEntity
   return fileEntity.id
@@ -197,5 +197,6 @@ createMediaEntry url fileType = do
           { id,
             _type = fileType,
             url = fileUrl,
+            s3FilePath = Just filePath,
             createdAt = now
           }

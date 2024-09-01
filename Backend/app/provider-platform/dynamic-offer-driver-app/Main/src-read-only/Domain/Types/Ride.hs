@@ -38,6 +38,7 @@ data Ride = Ride
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
+    deliveryFileIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

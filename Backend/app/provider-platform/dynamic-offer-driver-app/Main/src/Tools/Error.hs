@@ -1359,3 +1359,20 @@ instance IsHTTPError ForwardBatchingErrors where
     CurrentRideInprogress _ -> E500
 
 instance IsAPIError ForwardBatchingErrors
+
+data DeliveryErrors = DeliveryImageNotFound
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DeliveryErrors
+
+instance IsBaseError DeliveryErrors where
+  toMessage = \case
+    DeliveryImageNotFound -> Just "Delivery image not found."
+
+instance IsHTTPError DeliveryErrors where
+  toErrorCode = \case
+    DeliveryImageNotFound -> "DELIVERY_IMAGE_NOT_FOUND"
+  toHttpCode = \case
+    DeliveryImageNotFound -> E400
+
+instance IsAPIError DeliveryErrors

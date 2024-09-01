@@ -67,6 +67,7 @@ library
       API.Internal.PopulateTipAmount
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
+      API.Internal.Ride
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -172,6 +173,7 @@ library
       Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
+      Domain.Action.Internal.Ride
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent

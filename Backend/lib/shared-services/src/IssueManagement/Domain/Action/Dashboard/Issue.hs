@@ -731,7 +731,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
                           & T.replace "<DOMAIN>" "issue"
                           & T.replace "<FILE_PATH>" filePath
                   _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
-                  UIR.createMediaEntry fileUrl S3.Image <&> (.fileId)
+                  UIR.createMediaEntry fileUrl S3.Image filePath <&> (.fileId)
               )
               (fromMaybe [] req.mediaFiles)
           return $ bool (existingMediaFiles <> mediaFileIds) mediaFileIds (fromMaybe False req.deleteExistingFiles)

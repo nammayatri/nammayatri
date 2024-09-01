@@ -73,6 +73,7 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
           { id,
             _type = fileType,
             url = fileUrl,
+            s3FilePath = Nothing,
             createdAt = now
           }
 

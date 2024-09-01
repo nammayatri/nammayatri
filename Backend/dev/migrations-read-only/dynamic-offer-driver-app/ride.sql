@@ -151,3 +151,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN tip_amount double precision;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN passed_through_destination boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN delivery_file_ids text[] ;

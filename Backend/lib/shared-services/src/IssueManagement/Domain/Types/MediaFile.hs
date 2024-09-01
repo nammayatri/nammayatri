@@ -24,6 +24,7 @@ data MediaFile = MediaFile
   { id :: Id MediaFile,
     _type :: FileType,
     url :: Text,
+    s3FilePath :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, FromJSON, Eq, ToJSON, ToSchema, Show)

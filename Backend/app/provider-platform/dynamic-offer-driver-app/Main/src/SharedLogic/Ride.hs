@@ -245,7 +245,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         enableOtpLessRide = enableOtpLessRide,
         cancellationFeeIfCancelled = Nothing,
         tipAmount = Nothing,
-        passedThroughDestination = Nothing
+        passedThroughDestination = Nothing,
+        deliveryFileIds = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

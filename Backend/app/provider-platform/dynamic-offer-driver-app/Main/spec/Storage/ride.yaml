@@ -105,6 +105,7 @@ Ride:
     cancellationFeeIfCancelled: Maybe HighPrecMoney
     tipAmount: Maybe HighPrecMoney
     passedThroughDestination: Maybe Bool
+    deliveryFileIds: Maybe [Id MediaFile]
 
   sqlType:
     id: character(36)
@@ -121,6 +122,7 @@ Ride:
     endOdometerReadingValue: double precision
     startOdometerReadingFileId: character varying(36)
     endOdometerReadingFileId: character varying(36)
+    deliveryFileIds: "text[]"
 
   default:
     traveledDistance: '0'
@@ -181,6 +183,7 @@ Ride:
     tripCategory: Storage.Queries.Transformers.Ride.getTripCategory bookingId |IM
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
+    deliveryFileIds: (Kernel.Types.Id.Id <$> ) <$> deliveryFileIds|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -209,6 +212,7 @@ Ride:
     onlinePayment: Kernel.Prelude.Just|I
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    deliveryFileIds: (Kernel.Types.Id.getId <$> ) <$> deliveryFileIds|E
 
   beamType:
     trackingUrl: Text

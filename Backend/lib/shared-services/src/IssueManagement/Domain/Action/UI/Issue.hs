@@ -250,8 +250,8 @@ issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle 
             createdAt = issueReport.createdAt
           }
 
-createMediaEntry :: BeamFlow m r => Text -> S3.FileType -> m Common.IssueMediaUploadRes
-createMediaEntry url fileType = do
+createMediaEntry :: BeamFlow m r => Text -> S3.FileType -> Text -> m Common.IssueMediaUploadRes
+createMediaEntry url fileType filePath = do
   fileEntity <- mkFile url
   _ <- QMF.create fileEntity
   return $ Common.IssueMediaUploadRes {fileId = fileEntity.id}
@@ -264,6 +264,7 @@ createMediaEntry url fileType = do
           { id,
             _type = fileType,
             url = fileUrl,
+            s3FilePath = Just filePath,
             createdAt = now
           }
 
@@ -293,7 +294,7 @@ issueMediaUpload' (personId, merchantId, merchantOperatingCityId) issueHandle Co
           & T.replace "<DOMAIN>" domain
           & T.replace "<FILE_PATH>" filePath
   _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry fileUrl fileType
+  createMediaEntry fileUrl fileType filePath
   where
     validateContentType = do
       case fileType of
@@ -329,7 +330,7 @@ issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
   _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry fileUrl fileType
+  createMediaEntry fileUrl fileType filePath
   where
     validateContentType = do
       case fileType of
