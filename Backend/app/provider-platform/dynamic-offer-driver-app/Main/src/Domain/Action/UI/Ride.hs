@@ -19,11 +19,13 @@ module Domain.Action.UI.Ride
     OTPRideReq (..),
     UploadOdometerReq (..),
     UploadOdometerResp (..),
+    DeliveryImageUploadReq (..),
     listDriverRides,
     arrivedAtPickup,
     otpRideCreate,
     arrivedAtStop,
     uploadOdometerReading,
+    uploadDeliveryImage,
   )
 where
 
@@ -104,6 +106,31 @@ import qualified Text.Read as TR (read)
 import Tools.Error
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
+
+data DeliveryImageUploadReq = DeliveryImageUploadReq
+  { file :: FilePath,
+    reqContentType :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp DeliveryImageUploadReq where
+  fromMultipart form = do
+    DeliveryImageUploadReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> fmap fdFileCType (lookupFile "file" form)
+
+instance ToMultipart Tmp DeliveryImageUploadReq where
+  toMultipart deliveryImageUploadReq =
+    MultipartData
+      []
+      [FileData "file" (T.pack deliveryImageUploadReq.file) "" (deliveryImageUploadReq.file)]
+
+newtype DeliveryImageUploadRes = DeliveryImageUploadRes
+  { fileId :: Id MediaFile.MediaFile
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UploadOdometerReq = UploadOdometerReq
   { file :: FilePath,
@@ -489,7 +516,7 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
   _ <- fork "S3 Put Odometer Reading File" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry fileUrl
+  createMediaEntry fileUrl filePath
   where
     validateContentType = do
       case fileType of
@@ -500,7 +527,7 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
         S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-    createMediaEntry url = do
+    createMediaEntry url filePath = do
       fileEntity <- mkFile url
       QMediaFile.create fileEntity
       return $ UploadOdometerResp {fileId = cast $ fileEntity.id}
@@ -513,5 +540,54 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
               { id,
                 _type = fileType,
                 url = fileUrl,
+                s3FilePath = Just filePath,
+                createdAt = now
+              }
+
+uploadDeliveryImage ::
+  Id DMOC.MerchantOperatingCity ->
+  Id DRide.Ride ->
+  DeliveryImageUploadReq ->
+  Flow APISuccess
+uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
+  contentType <- validateContentType
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  config <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  fileSize <- L.runIO $ withFile file ReadMode hFileSize
+  when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
+    throwError $ FileSizeExceededError (show fileSize)
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
+  filePath <- S3.createFilePath "delivery/" ("rideId-" <> rideId.getId) S3.Image contentType
+  let fileUrl =
+        config.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "issue"
+          & T.replace "<FILE_PATH>" filePath
+  _ <- fork "S3 Put Delivery Image File" $ S3.put (T.unpack filePath) mediaFile
+  now <- getCurrentTime
+  fileId <- createMediaEntry fileUrl filePath now
+  let deliveryFileIds = fromMaybe [fileId] (ride.deliveryFileIds <&> (\dFileIds -> dFileIds ++ [fileId]))
+  QRide.updateDeliveryFileIds rideId deliveryFileIds now
+  return Success
+  where
+    validateContentType = do
+      case reqContentType of
+        "image/png" -> pure "png"
+        "image/jpeg" -> pure "jpg"
+        _ -> throwError $ FileFormatNotSupported reqContentType
+
+    createMediaEntry url filePath now = do
+      fileEntity <- mkFile url
+      QMediaFile.create fileEntity
+      return fileEntity.id
+      where
+        mkFile fileUrl = do
+          id <- generateGUID
+          return $
+            MediaFile.MediaFile
+              { id,
+                _type = S3.Image,
+                url = fileUrl,
+                s3FilePath = Just filePath,
                 createdAt = now
               }

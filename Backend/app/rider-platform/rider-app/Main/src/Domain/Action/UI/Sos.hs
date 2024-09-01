@@ -371,10 +371,10 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
           kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       when riderConfig.enableSupportForSafety $
         void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.AudioRecording riderConfig.kaptureConfig.disposition kaptureQueue))
-      createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
+      createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType} filePath
 
-createMediaEntry :: Common.AddLinkAsMedia -> Flow AddSosVideoRes
-createMediaEntry Common.AddLinkAsMedia {..} = do
+createMediaEntry :: Common.AddLinkAsMedia -> Text -> Flow AddSosVideoRes
+createMediaEntry Common.AddLinkAsMedia {..} filePath = do
   fileEntity <- mkFile url
   MFQuery.create fileEntity
   return $
@@ -390,6 +390,7 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
           { id,
             _type = S3.Video,
             url = fileUrl,
+            s3FilePath = Just filePath,
             createdAt = now
           }
 

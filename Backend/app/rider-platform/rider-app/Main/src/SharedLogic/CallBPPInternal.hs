@@ -491,3 +491,30 @@ populateTipAmount ::
 populateTipAmount apiKey internalUrl bppRideId tipAmount = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (populateTipAmountClient bppRideId tipAmount (Just apiKey)) "PopulateTipAmount" populateTipAmountApi
+
+type GetDeliveryImageAPI =
+  "internal"
+    :> "ride"
+    :> Capture "rideId" Text
+    :> "deliveryImage"
+    :> Header "token" Text
+    :> Get '[JSON] Text
+
+getDeliveryImageApi :: Proxy GetDeliveryImageAPI
+getDeliveryImageApi = Proxy
+
+getDeliveryImageClient :: Text -> Maybe Text -> EulerClient Text
+getDeliveryImageClient = client getDeliveryImageApi
+
+getDeliveryImage ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m Text
+getDeliveryImage apiKey internalUrl bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getDeliveryImageClient bppRideId (Just apiKey)) "GetDeliveryImage" getDeliveryImageApi

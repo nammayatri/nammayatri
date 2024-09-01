@@ -33,6 +33,7 @@ import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, elem, id, length, null, sum, traverse_, whenJust)
+import IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..), lat, lon)
@@ -392,6 +393,14 @@ getRidesForDate driverId date diffTime = do
           Se.Is BeamR.status $ Se.Eq Ride.COMPLETED
         ]
     ]
+
+updateDeliveryFileIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> [Id DMF.MediaFile] -> UTCTime -> m ()
+updateDeliveryFileIds rideId deliveryFileIds now = do
+  updateOneWithKV
+    [ Se.Set BeamR.deliveryFileIds $ Just (getId <$> deliveryFileIds),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
 updateArrival :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> UTCTime -> m ()
 updateArrival rideId now = do

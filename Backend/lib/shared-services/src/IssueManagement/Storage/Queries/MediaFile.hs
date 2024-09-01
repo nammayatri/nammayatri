@@ -42,6 +42,7 @@ instance FromTType' BeamMF.MediaFile MediaFile where
           { id = Id id,
             _type = fileType,
             url = url,
+            s3FilePath = s3FilePath,
             createdAt = T.localTimeToUTC T.utc createdAt
           }
 
@@ -51,5 +52,6 @@ instance ToTType' BeamMF.MediaFile MediaFile where
       { BeamMF.id = getId id,
         BeamMF.fileType = _type,
         BeamMF.url = url,
+        BeamMF.s3FilePath = s3FilePath,
         BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
       }

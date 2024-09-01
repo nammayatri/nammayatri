@@ -18,6 +18,7 @@ import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
+import qualified API.Internal.Ride as Ride
 import Environment
 import Servant
 import Tools.Auth ()
@@ -38,6 +39,7 @@ type API =
            :<|> KnowYourDriver.API
            :<|> DriverCoordinates.API
            :<|> PopulateTipAmount.API
+           :<|> Ride.API
        )
 
 handler :: FlowServer API
@@ -56,3 +58,4 @@ handler =
     :<|> KnowYourDriver.handler
     :<|> DriverCoordinates.handler
     :<|> PopulateTipAmount.handler
+    :<|> Ride.handler

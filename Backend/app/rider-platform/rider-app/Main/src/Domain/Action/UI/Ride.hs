@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride
     getRideStatus,
     editLocation,
     getDriverPhoto,
+    getDeliveryImage,
   )
 where
 
@@ -62,6 +63,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.Serviceability as Serviceability
@@ -392,3 +394,24 @@ buildbookingUpdateRequest booking = do
         travelledDistance = Nothing,
         distanceUnit = booking.distanceUnit
       }
+
+getDeliveryImage ::
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    MonadFlow m,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Id SRide.Ride ->
+  (Id SPerson.Person, Id DM.Merchant) ->
+  m Text
+getDeliveryImage rideId (_personId, merchantId) = do
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  CallBPPInternal.getDeliveryImage
+    merchant.driverOfferApiKey
+    merchant.driverOfferBaseUrl
+    ride.bppRideId.getId

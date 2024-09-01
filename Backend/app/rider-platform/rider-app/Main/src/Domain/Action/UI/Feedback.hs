@@ -254,13 +254,13 @@ audioFeedbackUpload (_personId, merchantId) audio filePath fileType = do
           & T.replace "<DOMAIN>" "feedback"
           & T.replace "<FILE_PATH>" filePath
   _ <- fork "S3 Put Feedback Media File" $ S3.put (T.unpack filePath) audio
-  createMediaEntry fileUrl fileType
+  createMediaEntry fileUrl fileType filePath
   where
     getFileSize :: Text -> Int
     getFileSize = B.length . TE.encodeUtf8
 
-createMediaEntry :: Text -> S3.FileType -> App.Flow FeedbackMediaUploadRes
-createMediaEntry url fileType = do
+createMediaEntry :: Text -> S3.FileType -> Text -> App.Flow FeedbackMediaUploadRes
+createMediaEntry url fileType filePath = do
   fileEntity <- mkFile url
   _ <- QMF.create fileEntity
   return $ FeedbackMediaUploadRes {fileId = fileEntity.id}
@@ -273,5 +273,6 @@ createMediaEntry url fileType = do
           { id,
             _type = fileType,
             url = fileUrl,
+            s3FilePath = Just filePath,
             createdAt = now
           }

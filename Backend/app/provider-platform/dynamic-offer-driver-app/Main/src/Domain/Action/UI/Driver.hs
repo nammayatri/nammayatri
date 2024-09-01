@@ -1386,7 +1386,7 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
           QPerson.updateMediaId driverId Nothing
           MFQuery.deleteById mediaFileId
         Nothing -> return ()
-  createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType}
+  createMediaEntry driverId Common.AddLinkAsMedia {url = fileUrl, fileType} filePath
   where
     validateContentType = do
       case fileType of
@@ -1399,8 +1399,8 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
 fetchDriverPhoto :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow Text
 fetchDriverPhoto _ filePath = S3.get $ T.unpack filePath
 
-createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Flow APISuccess
-createMediaEntry driverId Common.AddLinkAsMedia {..} = do
+createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Text -> Flow APISuccess
+createMediaEntry driverId Common.AddLinkAsMedia {..} filePath = do
   fileEntity <- mkFile url
   MFQuery.create fileEntity
   QPerson.updateMediaId driverId (Just fileEntity.id)
@@ -1414,6 +1414,7 @@ createMediaEntry driverId Common.AddLinkAsMedia {..} = do
           { id,
             _type = S3.Image,
             url = fileUrl,
+            s3FilePath = Just filePath,
             createdAt = now
           }
 

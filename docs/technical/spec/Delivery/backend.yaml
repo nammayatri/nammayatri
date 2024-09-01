@@ -525,17 +525,16 @@ flow:
   # fetch API which would be a proxy API to fetch the information from S3
     trigger:
       POST:
-        endpoint: /ui/ride/:rideId/uploadDeliveryImage
+        endpoint: /ui/driver/ride/:rideId/uploadDeliveryImage
         exist: false
         request:
           multipart: DeliveryImageUploadReq
-        response: DeliveryImageUploadRes
+        response: APISuccess
         type:
           DeliveryImageUploadReq:
             file: FilePath
             reqContentType: Text
-          DeliveryImageUploadRes:
-            imageId: Id MediaFile
+            fileType: FileType # Audio | Video | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
       GET:
         endpoint: /internal/ride/:rideId/deliveryImage
         header:
@@ -545,7 +544,7 @@ flow:
     storage:
       Ride:
         fields:
-          deliveryImageUrl: Maybe BaseUrl          
+          deliveryFileIds: Maybe [Id MediaFile]          
       exists: true
 
   getDeliveryImageRiderApp:
