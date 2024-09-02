@@ -163,9 +163,10 @@ callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   callStatus <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
   let interfaceStatus = exotelStatusToInterfaceStatus req.status
-  let dCallStatus = Just $ handleCallStatus interfaceStatus
-  fork "sendFCMToDriverOnCallFailure" $ sendFCMToDriverOnCallFailure dCallStatus (Just req.customField.rideId) callStatus.merchantId
-  QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) interfaceStatus dCallStatus callStatusId
+  let dCallStatus = Just $ handleCallStatus (interfaceStatus)
+  isSendFCMSuccess <- sendFCMToDriverOnCallFailure interfaceStatus (Just req.customField.rideId) callStatus.merchantId
+  let callAttemptStatus = if isSendFCMSuccess then Just DCallStatus.Resolved else dCallStatus
+  QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) interfaceStatus callAttemptStatus callStatusId
   return Ack
 
 directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Text -> Call.ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
@@ -174,21 +175,22 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
   let dCallStatus = Just $ handleCallStatus newCallStatus
-  fork "sendFCMToDriverOnCallFailure" $ sendFCMToDriverOnCallFailure dCallStatus callStatus.rideId callStatus.merchantId
+  isSendFCMSuccess <- sendFCMToDriverOnCallFailure newCallStatus callStatus.rideId callStatus.merchantId
+  let callAttemptStatus = if isSendFCMSuccess then Just DCallStatus.Resolved else dCallStatus
   _ <- case recordingUrl_ of
     Just recordUrl -> do
       if recordUrl == ""
         then do
-          updateCallStatus callStatus.id newCallStatus Nothing dCallStatus callDuration
+          updateCallStatus callStatus.id newCallStatus Nothing callAttemptStatus callDuration
           throwError CallStatusDoesNotExist
         else do
-          updateCallStatus callStatus.id newCallStatus (Just recordUrl) dCallStatus callDuration
+          updateCallStatus callStatus.id newCallStatus (Just recordUrl) callAttemptStatus callDuration
     Nothing -> do
       if newCallStatus == CallTypes.COMPLETED
         then do
-          updateCallStatus callStatus.id newCallStatus Nothing dCallStatus callDuration
+          updateCallStatus callStatus.id newCallStatus Nothing callAttemptStatus callDuration
           throwError CallStatusDoesNotExist
-        else updateCallStatus callStatus.id newCallStatus Nothing dCallStatus callDuration
+        else updateCallStatus callStatus.id newCallStatus Nothing callAttemptStatus callDuration
   DCE.sendCallDataToKafka (Just "EXOTEL") callStatus.rideId (Just "ANONYMOUS_CALLER") (Just callSid) (Just (show dialCallStatus)) System Nothing
   return Ack
   where
@@ -258,7 +260,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
         Nothing -> do
           callStatusObj <- buildCallStatus id callId (Just rideId) (exotelStatusToInterfaceStatus callStatus') merchantOperatingCityId
           void $ QCallStatus.create callStatusObj
-        Just _ -> QCallStatus.updateCallStatusCallId callId id
+        Just cs -> QCallStatus.updateCallStatusCallId callId cs.id
 
     buildCallStatus id exotelCallId rideId exoStatus merchantOperatingCityId = do
       now <- getCurrentTime
@@ -358,14 +360,20 @@ sendFCMToDriverOnCallFailure ::
     CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  Maybe DCallStatus.CallAttemptStatus ->
+  CallTypes.CallStatus ->
   Maybe (Id SRide.Ride) ->
   Maybe Text ->
-  m ()
-sendFCMToDriverOnCallFailure dCallStatus mbRideId mbMerchantId =
-  when (dCallStatus == Just DCallStatus.Failed) $ do
-    rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") mbRideId
-    ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-    merchantId <- fromMaybeM (RideFieldNotPresent "merchantId") mbMerchantId
-    merchant <- SMerchant.findById (ID.Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
-    void $ CallBPPInternal.callCustomerFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl (getId ride.bppRideId)
+  m Bool
+sendFCMToDriverOnCallFailure callStatus mbRideId mbMerchantId =
+  if isFailureStatus callStatus
+    then do
+      rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") mbRideId
+      ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+      merchantId <- fromMaybeM (RideFieldNotPresent "merchantId") mbMerchantId
+      merchant <- SMerchant.findById (ID.Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+      void $ CallBPPInternal.callCustomerFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl (getId ride.bppRideId)
+      return True
+    else return False
+  where
+    isFailureStatus :: CallTypes.CallStatus -> Bool
+    isFailureStatus status = status `elem` [CallTypes.INVALID_STATUS, CallTypes.NOT_CONNECTED, CallTypes.FAILED]
