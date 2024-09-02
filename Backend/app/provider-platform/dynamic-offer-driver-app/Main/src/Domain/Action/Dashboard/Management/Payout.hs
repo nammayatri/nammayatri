@@ -113,6 +113,11 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
 utcToIst :: Minutes -> Maybe Kernel.Prelude.UTCTime -> Maybe LocalTime
 utcToIst timeZoneDiff = fmap $ utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes)
 
+data PayoutHistoryWithCity = PayoutHistoryWithCity
+  { historyItem :: DTP.PayoutHistoryItem,
+    cityId :: Text
+  }
+
 getPayoutPayoutHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutHistoryRes
 getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
@@ -120,37 +125,32 @@ getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom 
       isFailedOnly = fromMaybe False mbIsFailedOnly
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  person <- getPerson merchant.id
-  unless (person.merchantOperatingCityId == merchantOpCity.id) . throwError $ PersonNotFound "Given driverId / driverPhoneNumber does not belong to the city for the given user"
-  let driverId = person.id.getId
   mbMobileNumberHash <- mapM getDbHash mbDriverPhoneNo
-  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithOptions limit offset (Just driverId) mbMobileNumberHash mbFrom mbTo isFailedOnly
-  historyList <- mapM (getPayoutPayoutHistoryItem person merchantOpCity) payoutOrders
+  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithOptions limit offset (mbDriverId <&> (.getId)) mbMobileNumberHash mbFrom mbTo isFailedOnly
+  history <- mapM (getPayoutPayoutHistoryItem merchantOpCity) payoutOrders
+  let historyList_ = filter (\item -> item.cityId == merchantOpCity.id.getId) history
+      historyList = map (.historyItem) historyList_
   pure DTP.PayoutHistoryRes {history = historyList}
   where
     maxLimit = 20
     defaultLimit = 10
-    getPayoutPayoutHistoryItem person merchantOpCity payoutOrder = do
+    getPayoutPayoutHistoryItem merchantOpCity payoutOrder = do
+      person <- QPerson.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
       phoneNo <- decrypt payoutOrder.mobileNo
       transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
       let timeZoneDiff = secondsToMinutes transporterConfig.timeDiffFromUtc
-      pure $
-        DTP.PayoutHistoryItem
-          { driverName = person.firstName,
-            driverPhoneNo = phoneNo,
-            driverId = Id payoutOrder.customerId,
-            payoutAmount = payoutOrder.amount.amount,
-            payoutStatus = show payoutOrder.status,
-            payoutTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) payoutOrder.createdAt,
-            payoutEntity = castPayoutEntityName <$> payoutOrder.entityName
-          }
-
-    getPerson merchantId = case (mbDriverPhoneNo, mbDriverId) of
-      (Just phoneNo, _) -> do
-        numberHash <- getDbHash phoneNo
-        QPerson.findByMobileNumberAndMerchantAndRole "+91" numberHash merchantId DP.DRIVER >>= fromMaybeM (PersonNotFound $ "phoneNoHash-" <> show numberHash <> "-merchantId-" <> merchantId.getId <> "-role-" <> show DP.DRIVER)
-      (_, Just driverId) -> QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-      _ -> throwError $ InvalidRequest "Either driverId or driverPhoneNo is required"
+      let item =
+            DTP.PayoutHistoryItem
+              { driverName = person.firstName,
+                driverPhoneNo = phoneNo,
+                driverId = Id payoutOrder.customerId,
+                payoutAmount = payoutOrder.amount.amount,
+                payoutStatus = show payoutOrder.status,
+                payoutTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) payoutOrder.createdAt,
+                payoutEntity = castPayoutEntityName <$> payoutOrder.entityName,
+                payoutOrderId = payoutOrder.orderId
+              }
+      pure $ PayoutHistoryWithCity {historyItem = item, cityId = person.merchantOperatingCityId.getId}
 
 postPayoutPayoutVerifyFraudStatus :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.UpdateFraudStatusReq -> Environment.Flow APISuccess
 postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
@@ -259,14 +259,15 @@ postPayoutPayoutRetryAllWithStatus merchantShortId opCity req = do
 callPayoutAndUpdateDailyStats :: Domain.Types.Merchant.Merchant -> DMOC.MerchantOperatingCity -> PO.PayoutOrder -> Environment.Flow ()
 callPayoutAndUpdateDailyStats merchant merchantOpCity payoutOrder = do
   let driverId = Id payoutOrder.customerId
-  when (isNothing payoutOrder.vpa) $ throwError $ InvalidRequest "VPA does not Exist" -- vpa will always exist
+  dInfo <- QDI.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
+  when (isNothing dInfo.payoutVpa) $ throwError $ InvalidRequest "VPA does not Exist"
   orderStatusRep <- getPayoutOrderStatus (driverId, merchant.id, merchantOpCity.id) payoutOrder
   when (orderStatusRep.status `elem` [TPayout.FULFILLMENTS_FAILURE, TPayout.FULFILLMENTS_CANCELLED, TPayout.FAILURE, TPayout.ERROR]) do
     mbVehicle <- QVeh.findById (cast driverId)
     let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
     payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present for " <> show merchantOpCity.city)
     uid <- generateGUID
-    createOrderReq <- createReq payoutConfig (fromJust payoutOrder.vpa) uid driverId payoutOrder.amount.amount
+    createOrderReq <- createReq payoutConfig (fromMaybe "" dInfo.payoutVpa) uid driverId payoutOrder.amount.amount -- payout vpa will always exist here
     let serviceName = DEMSC.PayoutService PT.Juspay
         entityName = DLP.RETRY_VIA_DASHBOARD
         createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName

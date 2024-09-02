@@ -95,6 +95,7 @@ types:
     - payoutStatus: Text
     - payoutTime: LocalTime
     - payoutEntity: Maybe EntityName
+    - payoutOrderId: Text
   UpdateFraudStatusReq:
     - isFlagConfirmed: Bool # false means pay
     - firstRideId: Id Ride
