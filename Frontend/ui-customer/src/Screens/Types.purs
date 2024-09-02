@@ -2265,11 +2265,16 @@ data Component --TODO:: Discuss if this concept can be used and moved to a new c
   | Title TitleConfig
   | SubTitle SubTitleConfig
   | CheckBoxSelection CheckBoxSelectionConfig 
+  | ImageComponent ImageComponentConfig
 
 type CheckBoxSelectionConfig = {
   title :: String,
   contacts :: Array NewContacts,
   selectedContact :: NewContacts
+}
+
+type ImageComponentConfig = {
+  imageUrl :: String
 }
 
 type BoxContainerConfig = {

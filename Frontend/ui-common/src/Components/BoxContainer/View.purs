@@ -37,7 +37,7 @@ view push config =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 16 16 16 16
-    , margin $ Margin 16 16 16 0
+    , margin config.margin
     , cornerRadius 16.0
     , onClick push $ const $ OnClick config.buttonAction
     , background Color.blue600

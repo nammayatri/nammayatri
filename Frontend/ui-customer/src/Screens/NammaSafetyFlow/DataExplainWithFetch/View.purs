@@ -28,7 +28,7 @@ import Prelude (Unit, const, discard, pure, void, ($), (<>), (<<<), (>), (==), (
 import PrestoDOM
 import Screens.DataExplainWithFetch.Controller (Action(..), ScreenOutput, eval, getStepConfig, getStageConfig)
 import Screens.DataExplainWithFetch.ComponentConfig as CC
-import Screens.Types (DataFetchScreenState, SafetyStepsConfig, Component(..), NammaSafetyStage(..), SafetyStageConfig(..), SubTitleConfig, TitleConfig, NoteBoxConfig, DropDownWithHeaderConfig, BoxContainerConfig, CheckBoxSelectionConfig, NewContacts)
+import Screens.Types (DataFetchScreenState, SafetyStepsConfig, Component(..), NammaSafetyStage(..), SafetyStageConfig(..), SubTitleConfig, TitleConfig, NoteBoxConfig, DropDownWithHeaderConfig, BoxContainerConfig, CheckBoxSelectionConfig, NewContacts, ImageComponentConfig)
 import Styles.Colors as Color
 import Components.GenericHeader as GenericHeader
 import PrestoDOM.List (ListItem, preComputeListItem)
@@ -95,14 +95,22 @@ view push state =
                 [ explanationContentView push state
                 ]
             ]
+        , separator
         , PrimaryButton.view (push <<< PrimaryButtonAC) (CC.primaryButtonConfig state)
         ]
+
+separator :: forall w. PrestoDOM (Effect Unit) w
+separator =
+  linearLayout
+  [ width MATCH_PARENT
+  , height $ V 1
+  , background Color.grey900
+  ][]
 
 explanationContentView :: forall w. (Action -> Effect Unit) -> DataFetchScreenState -> PrestoDOM (Effect Unit) w
 explanationContentView push state =
   let
     config = getStepConfig state
-    setupDone = not $ not state.props.stageSetUpCompleted || config.primaryButtonAction == "SafetyTestDrill"
   in
     linearLayout
       [ height MATCH_PARENT
@@ -114,20 +122,21 @@ explanationContentView push state =
       [ imageView
           [ height $ V 200
           , width MATCH_PARENT
-          , padding $ if setupDone then PaddingHorizontal 16 16 else Padding 0 0 0 0
-          , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET $ if setupDone then getSetupCompletedImage else config.imageUrl
+          , visibility $ boolToVisibility $ not state.props.stageSetUpCompleted || config.primaryButtonAction == "SafetyTestDrill"
+          , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET config.imageUrl
           ]
       , dynamicOptionsView push state
       ]
-    where
-      getSetupCompletedImage = 
-        case state.config.stage of
-          TrustedContacts _ -> "ny_ic_trusted_contact_complete"
-          SafetyCheckIn _ -> "ny_ic_safety_check_in_complete"
-          EmergencyActions _ -> "ny_ic_emergency_actions_complete"
-          SafetyDrill _ -> "ny_ic_safety_drill_setup"
-          DriverSafetyStandards _ -> "ny_ic_safety_explore_features"
-          TrustedContactsActions _ -> "ny_ic_trusted_contact_more"
+
+imageViewComponent :: forall w. (Action -> Effect Unit) -> DataFetchScreenState -> ImageComponentConfig -> PrestoDOM (Effect Unit) w
+imageViewComponent push state config =
+  imageView
+    [ height $ V 200
+    , width MATCH_PARENT
+    , margin $ Margin 16 16 16 0
+    , visibility $ boolToVisibility state.props.stageSetUpCompleted
+    , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET config.imageUrl
+    ]
 
 dynamicOptionsView :: forall w. (Action -> Effect Unit) -> DataFetchScreenState -> PrestoDOM (Effect Unit) w
 dynamicOptionsView push state =
@@ -165,6 +174,7 @@ filteringHelpers push state configData =
         Title config -> titleView push state config configData.primaryButtonAction
         SubTitle config -> subTitleView push state config configData.primaryButtonAction
         CheckBoxSelection config -> checkBoxSelectionView push state config configData.primaryButtonAction
+        ImageComponent config -> imageViewComponent push state config
     )
     configData.dynamicViewData
 
@@ -315,7 +325,7 @@ subTitleView push state config action =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 16 0 16 0
+    , padding $ if state.props.stageSetUpCompleted then (Padding 16 8 16 0) else (Padding 16 0 16 0)
     ]
     [ textView
         $ [ height WRAP_CONTENT

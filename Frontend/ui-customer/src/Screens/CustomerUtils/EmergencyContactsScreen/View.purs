@@ -404,12 +404,12 @@ emptyContactsView push state =
             [ imageView
                 [ height $ V 200
                 , width MATCH_PARENT
-                , padding $ if state.props.saveEmergencyContacts && state.props.getDefaultContacts then PaddingHorizontal 16 16 else Padding 0 0 0 0
-                , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET (if state.props.saveEmergencyContacts && state.props.getDefaultContacts then "ny_ic_trusted_contact_complete" else if state.props.getDefaultContacts then "ny_ic_in_app_chat" else "ny_ic_share_explain")
+                , visibility $ boolToVisibility $ not $ state.props.saveEmergencyContacts && state.props.getDefaultContacts
+                , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_share_explain"
                 ]
             , explanationContentView push state
             , checkBoxSelectionView push state
-            , if length state.data.selectedContacts < 3 && length state.data.selectedContacts > 0 then addContactsButtonView push state else emptyTextView state
+            , if length state.data.selectedContacts < 3 && length state.data.selectedContacts > 0 && (not $ state.props.saveEmergencyContacts && state.props.getDefaultContacts) then addContactsButtonView push state else emptyTextView state
             ]
         ]
     ]
@@ -439,6 +439,7 @@ explanationContentView push state =
                 ]
               <> FontStyle.h3 TypoGraphy
           ]
+      , imageViewComponent state "ny_ic_share_ride_rounded"
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -455,6 +456,16 @@ explanationContentView push state =
       , emergencyContactsListView push state
       , if contactsLength < 3 && contactsLength > 0 then addContactsButtonView push state else emptyTextView state
       ]
+
+imageViewComponent :: forall w. EmergencyContactsScreenState -> String -> PrestoDOM (Effect Unit) w
+imageViewComponent state imageUrl =
+  imageView
+    [ height $ V 200
+    , width MATCH_PARENT
+    , margin $ Margin 16 16 16 0
+    , visibility $ boolToVisibility $ state.props.saveEmergencyContacts && state.props.getDefaultContacts
+    , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET imageUrl
+    ]
 
 addContactsButtonView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 addContactsButtonView push state =
@@ -529,10 +540,11 @@ emergencyContactListItem push state contact index =
       ]
       [ linearLayout
           [ height WRAP_CONTENT
-          , width WRAP_CONTENT
+          , width $ V 42
           , background userColor
           , padding $ Padding 12 12 12 12
           , cornerRadius 50.0
+          , gravity CENTER
           , margin $ MarginRight 12
           ]
           [ textView
@@ -594,7 +606,7 @@ checkBoxSelectionView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , padding $ PaddingHorizontal 16 16
+        , padding $ Padding 16 16 16 0
         ]
         [ textView
             $ [ height WRAP_CONTENT
@@ -603,6 +615,7 @@ checkBoxSelectionView push state =
               , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
+        , imageViewComponent state "ny_ic_chat_rounded"
         , textView
             $ [ height WRAP_CONTENT
               , width MATCH_PARENT

@@ -41,6 +41,7 @@ type Config
     , noteImage :: String
     , toggleButton :: Boolean
     , buttonAction :: String
+    , margin :: Margin
     }
 
 config :: Config
@@ -51,6 +52,7 @@ config =
   , noteImage: ""
   , toggleButton: false
   , buttonAction: ""
+  , margin: Margin 16 16 16 0
   }
 
 infoBoxConfig :: Config -> InfoBox.Config

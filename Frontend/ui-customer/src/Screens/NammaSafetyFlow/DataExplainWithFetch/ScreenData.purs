@@ -95,6 +95,7 @@ stageData stage = case stage of
     SafetyCheckIn
       [ { dynamicViewData:
             [ Title titleConfig { titleText = getString UNEXPECTED_EVENT_CHECK }
+            , ImageComponent imageComponentConfig { imageUrl = "ny_ic_everything_rounded" }
             , BoxContainer
                 boxContainerConfig
                   { title = getString UNEXPECTED_EVENT_CHECK
@@ -115,6 +116,7 @@ stageData stage = case stage of
         }
       , { dynamicViewData:
             [ Title titleConfig { titleText = getString POST_RIDE_CHECK }
+            , ImageComponent imageComponentConfig { imageUrl = "ny_ic_safe_journey_rounded" }
             , BoxContainer
                 boxContainerConfig
                   { title = getString POST_RIDE_CHECK
@@ -133,6 +135,7 @@ stageData stage = case stage of
         }
       , { dynamicViewData:
             [ Title titleConfig { titleText = getString SAFETY_TEAM_NOTIFICATION }
+            , ImageComponent imageComponentConfig { imageUrl = "ny_ic_no_resp_checkin_rounded" }
             , BoxContainer
                 boxContainerConfig
                   { title = getString NOTIFY_SAFETY_TEAM
@@ -154,6 +157,7 @@ stageData stage = case stage of
                 titleConfig
                   { titleText = getString EMERGENCY_SOS_NEW
                   }
+            , ImageComponent imageComponentConfig { imageUrl = "ny_ic_rounded_sos_button" }
             , SubTitle
                 subTitleConfig
                   { subTitleText = getString EMERGENCY_SOS_SUB
@@ -166,6 +170,7 @@ stageData stage = case stage of
         }
       , { dynamicViewData:
             [ Title titleConfig { titleText = getString AUTOMATIC_CALL_SOS }
+            , ImageComponent imageComponentConfig { imageUrl = "ny_ic_trusted_contact_rounded" }
             , SubTitle subTitleConfig { subTitleText = getString AUTOMATIC_CALL_SOS_SUB }
             , BoxContainer boxContainerConfig { title = getString PLACE_DEFAULT_CALL, subTitle = "" }
             , SubTitle subTitleConfig { subTitleText = getString DEFAULT_CALL_CONTACT }
@@ -183,6 +188,7 @@ stageData stage = case stage of
       , { dynamicViewData:
             [ Title
                 titleConfig { titleText = getString MORE_EMERGENCY_ACTIONS }
+            , ImageComponent imageComponentConfig { imageUrl = "ny_ic_emergency_actions_rounded" }
             , NoteBox
                 noteBoxConfig
                   { noteText = getStringWithoutNewLine CALL_POLICE
@@ -329,6 +335,11 @@ boxContainerConfig =
   , toggleButton: true
   , noteText: ""
   , noteImageIcon: ""
+  }
+
+imageComponentConfig :: ImageComponentConfig
+imageComponentConfig =
+  { imageUrl: ""
   }
 
 dropDownWithHeaderConfig :: DropDownWithHeaderConfig

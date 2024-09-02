@@ -53,7 +53,7 @@ initData =
       { showContactList: false
       , showInfoPopUp: false
       , fromSosFlow: false
-      , validManualContact : false
+      , validManualContact : true
       , showAddContactOptions : false
       , addContactsManually : false
       , fromNewSafetyFlow: false
