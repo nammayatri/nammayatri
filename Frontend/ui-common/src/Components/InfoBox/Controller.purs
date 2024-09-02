@@ -42,6 +42,7 @@ type Config
     , subTitle :: String
     , backgroundColor :: Color
     , titleColor :: Color
+    , disabled :: Boolean
     }
 
 config :: Config
@@ -53,4 +54,5 @@ config =
   , subTitle: ""
   , backgroundColor: Colors.blue650
   , titleColor: Colors.black900
+  , disabled: false
   }

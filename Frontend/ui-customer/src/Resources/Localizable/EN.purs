@@ -900,6 +900,7 @@ getEN stringKey =
         PLEASE_REMAIN_CALM_YOU_CAN_REQUEST_AN_IMMEDIATE_CALL -> "Please remain calm, you can request an immediate call from us if required.\n\nYou can also use the safety+ features at the top right for added safety."
         RECEIVE_CALL_FROM_SUPPORT -> "Receive Call from Support"
         ADD_CONTACTS -> "Add Contacts"
+        ADD_CONTACTS_MANUALLY -> "Add Contacts Manually"
         VIDEO_SHARE_INFO_TO_POLICE -> "The video will be recorded for 15 sec only and will be shared to the Police Authorities via Whatsapp"
         CALL_POLICE_HELPLINE -> "Call Police Helpline (112)"
         PLEASE_REMAIN_CALM_CALL_POLICE -> "Please remain calm, you can call the Police Helpline if required.\n\nYou can also use the Safety mode features at the top right for added safety."
@@ -1469,3 +1470,5 @@ getEN stringKey =
         TAP_TO_FOLLOW -> "Tap to follow"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " has shared a ride with you. Tap to follow"
         TEST_SOS_ACTIVATED -> "Test SOS Activated!"
+        CHOOSE_FROM_CONTACTS -> "Choose from contacts"
+        ADD_MANUALLY -> "Add Manually"

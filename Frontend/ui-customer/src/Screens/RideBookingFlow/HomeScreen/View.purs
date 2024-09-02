@@ -4193,7 +4193,7 @@ getMapDimensions state =
   let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
                     getMapHeight state
                   else if (isHomeScreenView state) then
-                    V (getHeightFromPercent 40)
+                    V (getHeightFromPercent 35)
                   else if (state.data.fareProductType == FPT.RENTAL) then 
                     V (screenHeight unit - 100)
                   else MATCH_PARENT 

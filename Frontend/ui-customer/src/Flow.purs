@@ -303,7 +303,11 @@ nammaSafetyFlow = do
                     )
             else pure unit
           dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ SafetyCheckIn []) 0
-        EmergencyActions _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ EmergencyActions []) 0
+        EmergencyActions _ -> do
+          if not navigationConfig.isCompleted
+            then modifyScreenState $ DataFetchScreenStateType( \dataFetchScreen -> dataFetchScreen{ data{ autoCallDefaultContact = true, emergencySOSShake = true}})
+            else pure unit
+          dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ EmergencyActions []) 0
         SafetyDrill _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ SafetyDrill []) 0
         TrustedContactsActions _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ TrustedContactsActions []) 0
         DriverSafetyStandards _ -> dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ DriverSafetyStandards []) 0

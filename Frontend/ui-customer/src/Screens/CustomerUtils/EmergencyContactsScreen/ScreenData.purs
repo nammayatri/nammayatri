@@ -30,6 +30,8 @@ initData =
       , searchResult: []
       , prestoListArrayItems: []
       , loadMoreDisabled: true
+      , manualContactName : ""
+      , manualContactNumber : ""
       , offsetForEmergencyContacts: 0
       , limitForEmergencyContacts: 20
       , removedContactDetail:
@@ -51,6 +53,9 @@ initData =
       { showContactList: false
       , showInfoPopUp: false
       , fromSosFlow: false
+      , validManualContact : false
+      , showAddContactOptions : false
+      , addContactsManually : false
       , fromNewSafetyFlow: false
       , saveEmergencyContacts: false
       , getDefaultContacts: false

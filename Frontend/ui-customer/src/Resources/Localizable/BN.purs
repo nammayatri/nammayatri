@@ -892,6 +892,7 @@ getBN stringKey =
         PLEASE_REMAIN_CALM_YOU_CAN_REQUEST_AN_IMMEDIATE_CALL -> "অনুগ্রহ করে শান্ত থাকুন, প্রয়োজনে আপনি আমাদের কাছ থেকে একটি জরুরী কল ব্যাক করার অনুরোধ করতে পারেন।\n\nআপনি অতিরিক্ত নিরাপত্তার জন্য উপরের ডানদিকে জরুরী এসওএস বৈশিষ্ট্যগুলিও ব্যবহার করতে পারেন।"
         RECEIVE_CALL_FROM_SUPPORT -> "সমর্থন থেকে একটি কল গ্রহণ"
         ADD_CONTACTS -> "যোগ করুন"
+        ADD_CONTACTS_MANUALLY -> "যোগ করুন"
         VIDEO_SHARE_INFO_TO_POLICE -> "ভিডিওটি কেবলমাত্র 15 সেকেন্ডের জন্য রেকর্ড হবে এবং এটি পুলিশ অধিকারীদের কাছে WhatsApp মাধ্যমে শেয়ার করা হবে।"
         CALL_POLICE_HELPLINE -> "পুলিশ হেল্পলাইনে কল করুন (112)"
         PLEASE_REMAIN_CALM_CALL_POLICE -> "অনুগ্রহ করে শান্ত থাকুন, প্রয়োজনে আপনি পুলিশ হেল্পলাইনে কল করতে পারেন (112)"
@@ -1467,3 +1468,5 @@ getBN stringKey =
         TAP_TO_FOLLOW -> "অনুসরণ করতে আলতো চাপুন"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " আপনার সাথে একটি রাইড শেয়ার করেছে৷ অনুসরণ করতে আলতো চাপুন" 
         TEST_SOS_ACTIVATED -> "টেস্ট এসওএস সক্রিয় করা হয়েছে!"
+        CHOOSE_FROM_CONTACTS -> "যোগাযোগ থেকে নির্বাচন করুন"
+        ADD_MANUALLY -> "ম্যানুয়ালি যোগ করুন"
