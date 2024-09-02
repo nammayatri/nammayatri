@@ -112,6 +112,7 @@ dependencies:
   - beam-mysql
   - regex-compat
   - regex-tdfa
+  - external
 
 ghc-options:
   - -fwrite-ide-info

@@ -137,7 +137,8 @@ data AppCfg = AppCfg
     singleBatchProcessingTempDelay :: NominalDiffTime,
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
-    quoteRespondCoolDown :: Int
+    quoteRespondCoolDown :: Int,
+    sosAlertsTopicARN :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -226,7 +227,8 @@ data AppEnv = AppEnv
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     passettoContext :: PassettoContext,
-    quoteRespondCoolDown :: Int
+    quoteRespondCoolDown :: Int,
+    sosAlertsTopicARN :: Text
   }
   deriving (Generic)
 

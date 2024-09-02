@@ -123,6 +123,7 @@ library
     , esqueleto
     , euler-hs
     , exceptions
+    , external
     , extra
     , generic-lens
     , hspec
