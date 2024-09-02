@@ -49,11 +49,13 @@ defaultNavigationAppConfig = {
       , packageName : "com.google.android.apps.maps"
       , walkQuery : "google.navigation:q=%f,%f&mode=w"
       , directionQuery : "http://maps.google.com?saddr=&daddr=%f,%f&dirflg=d"
+      , twoWheelerQuery : "google.navigation:q=%f,%f&mode=l"
       }
     , ios : {
         query : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
       , walkQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=w"
       , directionQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=d"
+      , twoWheelerQuery : "http://maps.google.com///?saddr=&daddr=%@,%@&dirflg=l"
       , packageName : ""
       }
     }
