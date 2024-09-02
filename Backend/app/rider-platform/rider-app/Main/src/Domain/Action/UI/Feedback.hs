@@ -55,6 +55,7 @@ import qualified Slack.AWS.Flow as Slack
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
@@ -115,6 +116,7 @@ feedback request personId = do
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   (mediaId, filePath) <- case request.mbAudio of
     Just audio -> do
@@ -140,7 +142,7 @@ feedback request personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
-  let isLOFeedback = maybe False checkSensitiveWords feedbackDetails
+  let isLOFeedback = maybe False (checkSensitiveWords riderConfig) feedbackDetails
   when isLOFeedback $
     fork "notify on slack" $ do
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
@@ -167,9 +169,7 @@ feedback request personId = do
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
 
-    checkSensitiveWords feedbackDetails =
-      let wordsToCheck = map T.toLower ["Abuse", "Misbehave", "Drunk", "Alcohol", "Fight", "Hit", "Assault", "Physical", "Touch", "Molest", "Sex", "Racist"]
-       in any (`T.isInfixOf` T.toLower feedbackDetails) wordsToCheck
+    checkSensitiveWords riderConfig feedbackDetails = maybe False (any (T.isInfixOf $ T.toLower feedbackDetails) . map T.toLower) riderConfig.sensitiveWords
 
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
