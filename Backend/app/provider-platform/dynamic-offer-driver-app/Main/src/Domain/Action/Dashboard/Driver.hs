@@ -83,6 +83,7 @@ module Domain.Action.Dashboard.Driver
     postDriverClearFee,
     getDriverPanAadharSelfieDetails,
     postDriverSyncDocAadharPan,
+    postDriverUpdateVehicleManufacturing,
   )
 where
 
@@ -2471,3 +2472,18 @@ postDriverSyncDocAadharPan merchantShortId _opCity Common.AadharPanSyncReq {..} 
     extract2 (x : y : []) = return [Just x, Just y]
     extract2 (x : []) = return [Just x, Nothing]
     extract2 _ = throwError (InternalError "No Image found for document type Aadhaar!!!!!!!!!")
+
+postDriverUpdateVehicleManufacturing :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateVehicleManufacturingReq -> Flow APISuccess)
+postDriverUpdateVehicleManufacturing merchantShortId opCity reqDriverId Common.UpdateVehicleManufacturingReq {..} = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  QVehicle.updateManufacturing (Just manufacturing) driverId
+  RCQuery.updateManufacturing (Just manufacturing) (Id rcId)
+  pure Success

@@ -101,3 +101,7 @@ Vehicle:
       kvFunction: updateWithKV
       params: [ventilator]
       where: driverId
+    updateManufacturing:
+      kvFunction: updateWithKV
+      params: [mYManufacturing]
+      where: driverId

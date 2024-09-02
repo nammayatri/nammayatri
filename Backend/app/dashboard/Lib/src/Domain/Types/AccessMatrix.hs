@@ -265,6 +265,7 @@ data UserActionType
   | INVOICE
   | FETCH_PERSON_ID
   | PAYOUT_MANAGEMENT
+  | UPDATE_VEHICLE_MANUFACTURING
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

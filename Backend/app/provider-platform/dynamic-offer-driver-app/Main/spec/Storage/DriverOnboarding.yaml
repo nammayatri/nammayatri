@@ -229,6 +229,10 @@ VehicleRegistrationCertificate:
       kvFunction: updateWithKV
       params: [ventilator]
       where: id
+    updateManufacturing:
+      kvFunction: updateWithKV
+      params: [mYManufacturing]
+      where: id
     updateVerificationStatus:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
