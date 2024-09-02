@@ -22,7 +22,7 @@ import Common.Types.App (LazyCheck(..))
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, root, backgroundColor, alpha)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), relativeLayout, afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, root, backgroundColor, alpha)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Common.Styles.Colors as Color
@@ -33,10 +33,9 @@ import Mobility.Prelude (boolToVisibility)
 
 view :: forall w a. (a -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  linearLayout
+  relativeLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 16 16 16 16
     , margin config.margin --Config needs to be added
     , cornerRadius 16.0
     , background config.backgroundColor
@@ -44,32 +43,50 @@ view push config =
     , orientation VERTICAL
     , gravity CENTER_VERTICAL
     ]
-    [ linearLayout
+    [ internalView VISIBLE
+    , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
+        , visibility $ boolToVisibility $ config.disabled
+        , background Color.transparentHigh
         ]
-        [ imageView -- Image
-            [ height $ V 24
-            , width $ V 24
-            , visibility $ boolToVisibility $ not String.null config.icon
-            , margin $ Margin 0 0 8 0
-            , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET config.icon -- "ny_ic_sedan,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_sedan.png"
-            ]
-        , textView -- Title
-            $ [ height WRAP_CONTENT
-              , width WRAP_CONTENT
-              , text $ config.text
-              , color config.titleColor
-              ]
-            <> FontStyle.body32 TypoGraphy
-        ]
-    , textView
-        $ [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , visibility $ boolToVisibility $ not String.null config.subTitle
-          , margin $ MarginTop 8
-          , text $ config.subTitle
-          , color Color.black700
-          ]
-        <> FontStyle.body5 TypoGraphy
+        [ internalView INVISIBLE ]
     ]
+  where
+  internalView componentVisibility =
+    linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , visibility componentVisibility
+      , padding $ Padding 16 16 16 16
+      , orientation VERTICAL
+      ]
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ]
+          [ imageView -- Image
+              [ height $ V 24
+              , width $ V 24
+              , visibility $ boolToVisibility $ not String.null config.icon
+              , margin $ Margin 0 0 8 0
+              , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET config.icon
+              ]
+          , textView -- Title
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ config.text
+                , color config.titleColor
+                ]
+              <> FontStyle.body32 TypoGraphy
+          ]
+      , textView
+          $ [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , visibility $ boolToVisibility $ not String.null config.subTitle
+            , margin $ MarginTop 8
+            , text $ config.subTitle
+            , color Color.black700
+            ]
+          <> FontStyle.body5 TypoGraphy
+      ]

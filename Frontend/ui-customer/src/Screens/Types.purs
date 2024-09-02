@@ -1228,11 +1228,16 @@ type EmergencyContactsScreenData = {
   offsetForEmergencyContacts :: Int,
   limitForEmergencyContacts :: Int,
   editedText :: String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  manualContactName :: String,
+  manualContactNumber :: String
 }
 
 type EmergencyContactsScreenProps = {
   showContactList :: Boolean,
+  validManualContact :: Boolean,
+  showAddContactOptions :: Boolean,
+  addContactsManually :: Boolean,
   showInfoPopUp :: Boolean,
   fromSosFlow :: Boolean,
   fromNewSafetyFlow :: Boolean,

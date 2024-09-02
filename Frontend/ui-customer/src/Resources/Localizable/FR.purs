@@ -894,6 +894,7 @@ getFR stringKey =
         PLEASE_REMAIN_CALM_YOU_CAN_REQUEST_AN_IMMEDIATE_CALL -> "Veuillez rester calme, vous pouvez nous demander un appel immédiat si nécessaire.\n\nVous pouvez également utiliser les fonctionnalités SOS d'urgence en haut à droite pour plus de sécurité."
         RECEIVE_CALL_FROM_SUPPORT -> "Recevoir un appel du support"
         ADD_CONTACTS -> "Ajouter des contacts"
+        ADD_CONTACTS_MANUALLY -> "Ajouter des contacts manuellement"
         VIDEO_SHARE_INFO_TO_POLICE -> "La vidéo sera enregistrée pendant 15 secondes seulement et sera partagée selon vos paramètres"
         CALL_POLICE_HELPLINE -> "Appeler la ligne d'assistance de la police"
         PLEASE_REMAIN_CALM_CALL_POLICE -> "Veuillez rester calme, vous pouvez appeler la police si nécessaire.\n\nVous pouvez également utiliser les fonctionnalités SOS d'urgence en haut à droite pour plus de sécurité."
@@ -1471,3 +1472,5 @@ getFR stringKey =
         TAP_TO_FOLLOW -> "Tap to follow"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " has shared a ride with you. Tap to follow"
         TEST_SOS_ACTIVATED -> "Test SOS activated"
+        CHOOSE_FROM_CONTACTS -> "Choisir parmi les contacts"
+        ADD_MANUALLY -> "Add Manually"

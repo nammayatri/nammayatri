@@ -152,6 +152,7 @@ infoBoxConfig state config action =
         , backgroundColor = Color.blue600
         , margin = Margin 16 16 16 0
         , titleColor = if action == "SafetyTestDrill" then Color.blue800 else Color.black900
+        , disabled = if action == "AutomaticCallOnEmergency" && not state.data.autoCallDefaultContact then true else false
         }
   in
     infoBoxConfig'
