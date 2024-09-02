@@ -120,7 +120,7 @@ eval (TrustedNumberPET (PrimaryEditText.TextChanged id value)) state =
   let mobileNumberValid = case (charAt 0 value) of 
                                 Just a -> DA.notElem a ['0', '1', '2', '3', '4', '5']
                                 Nothing -> true
-  in continue state{ data { manualContactNumber = value}, props{validManualContact = mobileNumberValid && DS.length value == 10 && (not $ DS.null state.data.manualContactName) }}
+  in continue state{ data { manualContactNumber = value}, props{validManualContact = mobileNumberValid }}
 
 eval (PrimaryButtonActionControll PrimaryButton.OnClick) state =
   if state.props.showAddContactOptions then do

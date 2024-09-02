@@ -282,7 +282,7 @@ nammaSafetyFlow = do
   flow <- UI.nammaSafetyScreen
   case flow of
     NammaSafetyFlowScreenOutput.Navigate updatedState navigationConfig -> do
-      updateDataFetchScreenState updatedState navigationConfig.isCompleted
+      updateDataFetchScreenState updatedState navigationConfig.isCompleted Nothing
       case navigationConfig.navigation of
         TrustedContacts _ -> do
           let emergencyContactLength = Arr.length updatedState.data.emergencyContactsList 
@@ -338,8 +338,8 @@ updateSafetySettings state = do
   pure unit
 
 
-updateDataFetchScreenState :: ST.NammaSafetyScreenState -> Boolean -> FlowBT String Unit
-updateDataFetchScreenState safetyScreenState setupCompleted = do
+updateDataFetchScreenState :: ST.NammaSafetyScreenState -> Boolean -> Maybe API.GetEmergencySettingsRes -> FlowBT String Unit
+updateDataFetchScreenState safetyScreenState setupCompleted apiResponse = do
   let (API.GetEmergencySettingsRes emergencySettings) = safetyScreenState.data.settingsAPIResponse
   modifyScreenState
     $ DataFetchScreenStateType
@@ -5605,8 +5605,9 @@ activateSafetyScreenFlow = do
     ActivateSafetyScreen.NotifyMockDrill state -> do
       _ <- lift $ lift $ Remote.createMockSos (not $ DS.null state.data.rideId) true
       activateSafetyScreenFlow
-    ActivateSafetyScreen.GoToDataFetchScreen state ->
-      dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ TrustedContacts []) 0 -- change to go to emergency contacts step @witcher-shailesh
+    ActivateSafetyScreen.GoToDataFetchScreen state -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { props { fromNewSafetyFlow= true, saveEmergencyContacts = true, getDefaultContacts = if (length state.data.emergencyContactsList > 1) then true else false } })
+      emergencyScreenFlow
 
 safetySettingsFlow :: FlowBT String Unit
 safetySettingsFlow = do

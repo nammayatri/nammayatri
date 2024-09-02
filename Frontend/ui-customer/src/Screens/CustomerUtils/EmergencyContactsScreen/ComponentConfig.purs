@@ -83,7 +83,7 @@ primaryEditTextConfig state = let
         { text = (getString INVALID_MOBILE_NUMBER)
         , margin = (MarginTop 1)
         }
-      , showErrorLabel = state.props.validManualContact
+      , showErrorLabel = not state.props.validManualContact
       , width = MATCH_PARENT
       }
     in primaryEditTextConfig'
