@@ -4,6 +4,8 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let sosAlertsTopicARN = common.sosAlertsTopicARN
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -358,4 +360,5 @@ in  { esqDBCfg
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , quoteRespondCoolDown = +10
+    , sosAlertsTopicARN
     }

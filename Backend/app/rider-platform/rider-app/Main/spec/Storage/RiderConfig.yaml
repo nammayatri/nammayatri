@@ -45,6 +45,7 @@ RiderConfig:
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
     cxAgentDetails: "Maybe [CxAgentDetails]"
+    sensitiveWords: "Maybe [Text]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -102,6 +103,7 @@ RiderConfig:
     kaptureConfig: "json"
     exotelAppIdMapping: "json"
     cxAgentDetails: text []
+    sensitiveWords: text []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

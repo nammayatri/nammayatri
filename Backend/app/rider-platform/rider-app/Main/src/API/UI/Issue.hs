@@ -228,7 +228,8 @@ buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
         kaptureDisposition = merchant.kaptureDisposition,
         kaptureQueue = riderConfig.kaptureQueue,
         counterPartyUrl = merchant.driverOfferBaseUrl,
-        counterPartyApiKey = merchant.driverOfferApiKey
+        counterPartyApiKey = merchant.driverOfferApiKey,
+        sensitiveWords = riderConfig.sensitiveWords
       }
 
 issueReportCustomerList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueReportListRes

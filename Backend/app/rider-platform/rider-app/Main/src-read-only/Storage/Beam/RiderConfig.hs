@@ -41,6 +41,7 @@ data RiderConfigT f = RiderConfigT
     policeTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,
+    sensitiveWords :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     settleCancellationFeeBeforeNextRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     specialZoneRadius :: B.C f Kernel.Prelude.Int,
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
