@@ -2512,8 +2512,6 @@ referNowConfig :: ST.HomeScreenState -> PopUpModal.Config
 referNowConfig state =
   let
     config = PopUpModal.config
-    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-    image = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then cityConfig.assets.empty_referral_auto else cityConfig.assets.empty_referral_cab
     requestInfoCardConfig' =
       config
         { primaryText 
@@ -2525,7 +2523,7 @@ referNowConfig state =
           , textStyle = Heading2
           }
         , coverImageConfig
-          { imageUrl = image
+          { imageUrl = fetchImage COMMON_ASSET "ny_ic_refer_now"
           , height = V $ JB.getHeightFromPercent 31
           , width = V $ (EHC.screenWidth unit) - 64
           , visibility = VISIBLE
@@ -2563,8 +2561,6 @@ addUPIConfig :: ST.HomeScreenState -> PopUpModal.Config
 addUPIConfig state =
   let
     config = PopUpModal.config
-    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-    image = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then cityConfig.assets.empty_referral_auto else cityConfig.assets.empty_referral_cab
     requestInfoCardConfig' =
       config
         { primaryText 
@@ -2576,7 +2572,7 @@ addUPIConfig state =
           , textStyle = Heading2
           }
         , coverImageConfig
-          { imageUrl = image
+          { imageUrl = fetchImage COMMON_ASSET "ny_ic_add_upi_large"
           , height = V $ JB.getHeightFromPercent 31
           , width = V $ (EHC.screenWidth unit) - 64
           , visibility = VISIBLE
@@ -2614,8 +2610,6 @@ verifyUPI :: ST.HomeScreenState -> PopUpModal.Config
 verifyUPI state =
   let
     config = PopUpModal.config
-    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-    image = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then cityConfig.assets.empty_referral_auto else cityConfig.assets.empty_referral_cab
     requestInfoCardConfig' =
       config
         { primaryText 
@@ -2639,7 +2633,7 @@ verifyUPI state =
             }
           }
         , coverImageConfig
-          { imageUrl = image
+          { imageUrl = fetchImage COMMON_ASSET "ny_ic_confirm_upi"
           , height = V $ JB.getHeightFromPercent 31
           , width = V $ (EHC.screenWidth unit) - 64
           , visibility = VISIBLE

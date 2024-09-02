@@ -173,14 +173,16 @@ addUPIView push state =
   , background Color.seaShell
   , cornerRadius 16.0
   , margin $ MarginBottom 16
+  , gravity CENTER_VERTICAL
   , onClick push $ const $ AddUPIAction
   , visibility $ boolToVisibility $ isNothing state.data.upiID && state.data.orderStatus /= Just PENDING
   ][ linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
+      , gravity CENTER_VERTICAL
       ][ linearLayout
          [ height WRAP_CONTENT
-         , width $ V ((screenWidth unit) - 164)
+         , width $ V ((screenWidth unit) - 158)
          , orientation VERTICAL
          , margin $ Margin 16 16 16 16
          ][ textView $ 
@@ -203,10 +205,10 @@ addUPIView push state =
             ]
          ]
        , imageView
-         [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_add_upi"
-         , height $ V 96
+         [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_add_upi_small"
+         , height $ V 84
          , width $ V 84
-         , margin $ MarginRight 16
+         , margin $ MarginRight 10
          ]
       ]
   ]
@@ -295,8 +297,6 @@ upiDetailsScreen push state =
 emptyReferralView :: forall w. (Action -> Effect Unit) -> CustomerReferralTrackerScreenState -> PrestoDOM (Effect Unit) w
 emptyReferralView push state = 
   let hasVPA = isJust state.data.upiID
-      cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-      image = if (getValueToLocalStore VEHICLE_VARIANT == "AUTO_RICKSHAW") then cityConfig.assets.empty_referral_auto else cityConfig.assets.empty_referral_cab
   in 
   linearLayout
   [ height $ if hasVPA then MATCH_PARENT else WRAP_CONTENT
@@ -308,7 +308,7 @@ emptyReferralView push state =
   ][ imageView 
      [ height $ V 248
      , width MATCH_PARENT
-     , imageWithFallback image
+     , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_refer_now"
      ]
    , textView $ 
      [ text $ getString $ EARN_FOR_EACH_REFERRAL $ state.data.config.currency <> (show state.data.referralRewardAmountPerRide)
