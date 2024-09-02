@@ -1471,3 +1471,4 @@ getHI stringKey =
         TEST_SOS_ACTIVATED -> "टेस्ट एसओएस सक्रिय किया गया!"
         CHOOSE_FROM_CONTACTS -> "संपर्कों में से चुनें"
         ADD_MANUALLY -> "मैन्युअल रूप से जोड़ें"
+        DEFAULT_CONTACT_NOT_SET -> "डिफ़ॉल्ट संपर्क सेट नहीं है"

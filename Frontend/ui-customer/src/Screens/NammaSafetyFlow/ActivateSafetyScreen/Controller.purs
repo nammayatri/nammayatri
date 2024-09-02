@@ -24,12 +24,12 @@ import Common.Types.App as CTA
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array as DA
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
-import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
+import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList, getPrimaryContact)
 import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
 import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), Sos(..), SosFlow(..), RideShareOptions(..))
 import Services.Config (getSupportNumber)
@@ -56,7 +56,7 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Debug 
+
 instance showAction :: Show Action where
   show _ = ""
 
@@ -71,6 +71,7 @@ data ScreenOutput
   | GoToEducationScreen NammaSafetyScreenState
   | GoToIssueScreen NammaSafetyScreenState
   | NotifyMockDrill NammaSafetyScreenState
+  | GoToDataFetchScreen NammaSafetyScreenState
 
 data Action
   = BackPressed
@@ -255,7 +256,9 @@ eval CallSupport state = do
 
 eval (SosButtonAndDescriptionAction SosButtonAndDescription.TriggerSosCountdown) state = continue state { props { triggeringSos = true } }
 
-eval (SosButtonAndDescriptionAction SosButtonAndDescription.AddContacts) state = continue state{props{defaultCallPopup = true}}
+eval (SosButtonAndDescriptionAction SosButtonAndDescription.AddContacts) state = if (isJust $ getPrimaryContact state) && state.data.autoCallDefaultContact
+  then continue state{props{defaultCallPopup = true}}
+  else exit $ GoToDataFetchScreen state
 
 eval (SosButtonAndDescriptionAction (SosButtonAndDescription.CountDown seconds status timerID)) state = do
   _ <- pure $ printLog "timer" $ show seconds
@@ -330,7 +333,7 @@ eval (TimerCallback timerId timeInMinutes seconds) state =
 
 eval (UpdateState newState) state = continue newState
 
-eval (RecordAudio SafetyActionTileView.OnClick) state = continueWithCmd state { props { isAudioRecordingActive = true } } [do
+eval (RecordAudio SafetyActionTileView.OnClick) state = continueWithCmd state [do
   push <- getPushFn Nothing "ActivateSafetyScreen"
   let _ = JB.askRequestedPermissionsWithCallback [ "android.permission.RECORD_AUDIO" ] push AudioPermission
   pure $ UpdateState state

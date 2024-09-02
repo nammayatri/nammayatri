@@ -1474,3 +1474,4 @@ getKN stringKey =
         TEST_SOS_ACTIVATED -> "ಟೆಸ್ಟ್ ಎಸ್‌ಒಎಸ್ ಸಕ್ರಿಯಗೊಂಡಿದೆ!"
         CHOOSE_FROM_CONTACTS -> "ಸಂಪರ್ಕಗಳಿಂದ ಆಯ್ಕೆ ಮಾಡಿ"
         ADD_MANUALLY -> "ಕೈಯಾರೆ ಸ"
+        DEFAULT_CONTACT_NOT_SET -> "ಡಿಫಾಲ್ಟ್ ಸಂಪರ್ಕವನ್ನು ಸೆಟ್ ಮಾಡಿ"

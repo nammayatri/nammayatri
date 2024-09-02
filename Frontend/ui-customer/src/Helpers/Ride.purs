@@ -189,7 +189,7 @@ checkRideStatus rideAssigned = do
                   isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
                   hasAccessibilityIssue' =  resp.hasDisability == Just true 
                   postRideCheckCache = SU.getPostRideCheckSettingsFromCache ""
-                  hasSafetyIssue' = maybe false (\settings -> SU.showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime settings.safetyCheckStartSeconds settings.safetyCheckEndSeconds  && not isBlindPerson) postRideCheckCache
+                  hasSafetyIssue' = maybe false (\settings -> SU.showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime settings.safetyCheckStartSeconds settings.safetyCheckEndSeconds settings.enablePostRideSafetyCheck && not isBlindPerson) postRideCheckCache
                   hasTollIssue' =  (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.estimatedFareBreakup) && not isBlindPerson
 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{

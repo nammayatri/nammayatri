@@ -1470,3 +1470,4 @@ getML stringKey =
         TEST_SOS_ACTIVATED -> "ടെസ്റ്റ് എസ്‌ഒ‌എസ് സജീവമാക്കി!"
         CHOOSE_FROM_CONTACTS -> "ബന്ധപ്പെട്ടവരുടെ നാമം തിരഞ്ഞെടുക്കുക"
         ADD_MANUALLY -> "കൈമാറി ച"
+        DEFAULT_CONTACT_NOT_SET -> "ഡിഫോൾട്ട് കോൺടാക്റ്റ് സജീവമാക്കിയില്ല"

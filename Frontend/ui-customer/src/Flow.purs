@@ -5605,6 +5605,8 @@ activateSafetyScreenFlow = do
     ActivateSafetyScreen.NotifyMockDrill state -> do
       _ <- lift $ lift $ Remote.createMockSos (not $ DS.null state.data.rideId) true
       activateSafetyScreenFlow
+    ActivateSafetyScreen.GoToDataFetchScreen state ->
+      dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ TrustedContacts []) 0 -- change to go to emergency contacts step @witcher-shailesh
 
 safetySettingsFlow :: FlowBT String Unit
 safetySettingsFlow = do
@@ -6304,7 +6306,7 @@ fcmHandler notification state = do
                               Just (API.GetEmergencySettingsRes settings) -> do
                                 let safetyCheckStartTime = fromMaybe 0 settings.safetyCheckStartTime
                                     safetyCheckEndTime = fromMaybe 0 settings.safetyCheckEndTime
-                                settings.enablePostRideSafetyCheck == ALWAYS_SHARE || showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime safetyCheckStartTime safetyCheckEndTime
+                                settings.enablePostRideSafetyCheck == ALWAYS_SHARE || showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime safetyCheckStartTime safetyCheckEndTime settings.enablePostRideSafetyCheck
                               Nothing -> false
           hasTollIssue' = (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.fareBreakup) && not isBlindPerson
         modifyScreenState

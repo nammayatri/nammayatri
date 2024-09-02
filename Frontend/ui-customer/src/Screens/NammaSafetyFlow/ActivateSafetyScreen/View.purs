@@ -197,7 +197,7 @@ sosButtonConfig state =
     primaryContactAndEdit: 
           case contactName, state.data.autoCallDefaultContact of
             Just name, true -> Just imageWithTextConfig {text' = getString CALL <> " : " <> name, visibility = isJust contactName, useFullWidth = false, useMargin = false}
-            _,_ -> Nothing,
+            _,_ -> Just imageWithTextConfig {text' = getString DEFAULT_CONTACT_NOT_SET, visibility = true, useFullWidth = false, useMargin = false},
     buttonText: case state.props.triggeringSos, state.props.showTestDrill of
       true, _ -> show state.props.timerValue
       false, true -> getString TEST_SOS
@@ -208,7 +208,8 @@ sosButtonConfig state =
             false, true -> PRESS_TO_START_TEST_DRILL
             false, false -> PRESS_IN_CASE_OF_EMERGENCY,
     showSosButton: true,
-    isDisabled : state.props.showTestDrill && state.props.isAudioRecordingActive
+    isDisabled : state.props.showTestDrill && state.props.isAudioRecordingActive,
+    editContactText : getString $ if isJust contactName && state.data.autoCallDefaultContact then EDIT else SET_NOW
   }
   where
     imageWithTextConfig =
@@ -508,7 +509,7 @@ otherActionsView state push =
                 ]
                 ( map
                     ( \item ->
-                        SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (EHC.screenWidth unit - 56) / 3) true item.isDisabled Color.white900
+                        SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (EHC.screenWidth unit - 56) / 3) true item.isDisabled Color.white900 item.height
                     )
                     otherActions
                 )        
@@ -525,9 +526,9 @@ otherActionsView state push =
     ]
     where   
       otherActions =
-        [ { text: getString RECORD_AUDIO, image: "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false }
-        , { text: getString CALL_POLICE , image: "ny_ic_police_alert" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill }
-        , { text: getString CALL_SAFETY_TEAM, image: "ny_ic_support_unfilled", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill }
+        [ { text: getString RECORD_AUDIO, image: "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false, height : MATCH_PARENT }
+        , { text: getString CALL_POLICE , image: "ny_ic_police_alert" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill, height : MATCH_PARENT  }
+        , { text: getString CALL_SAFETY_TEAM, image: "ny_ic_support_unfilled", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill, height : WRAP_CONTENT }
         ]
 
 orSeparatorView :: forall w. NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
@@ -653,7 +654,7 @@ triggeringSosView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , margin $ Margin 16 16 16 16
-      ][ SafetyActionTileView.view sirenImage (getString SIREN) (push <<< ToggleSiren) sirenTileBackgroundColor sirenTileStrokeColor MATCH_PARENT false false Color.white900]
+      ][ SafetyActionTileView.view sirenImage (getString SIREN) (push <<< ToggleSiren) sirenTileBackgroundColor sirenTileStrokeColor MATCH_PARENT false false Color.white900 WRAP_CONTENT]
     , warningView (getString SOS_WILL_BE_DISABLED) (not state.props.showTestDrill) true
     , layoutWithWeight
     , case state.props.showTestDrill of

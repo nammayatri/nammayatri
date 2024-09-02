@@ -32,10 +32,10 @@ getPrimaryContact :: NammaSafetyScreenState -> Maybe NewContacts
 getPrimaryContact state = 
   find (\contact -> contact.priority == 0) $ getDefaultPriorityList state.data.emergencyContactsList
 
-showNightSafetyFlow :: Maybe Boolean -> Maybe String -> Maybe String -> Int -> Int -> Boolean
-showNightSafetyFlow hasNightIssue rideStartTime rideEndTime safetyCheckStartSeconds safetyCheckEndSeconds = (hasNightIssue == Just false) && ((checkTimeConstraints rideStartTime) || ( checkTimeConstraints rideEndTime))
+showNightSafetyFlow :: Maybe Boolean -> Maybe String -> Maybe String -> Int -> Int -> API.RideShareOptions -> Boolean
+showNightSafetyFlow hasNightIssue rideStartTime rideEndTime safetyCheckStartSeconds safetyCheckEndSeconds rideShareOption = (hasNightIssue == Just false) && ((checkTimeConstraints rideStartTime) || (checkTimeConstraints rideEndTime))
   where 
-    checkTimeConstraints = checkSafetyTimeConstraints safetyCheckStartSeconds safetyCheckEndSeconds 
+    checkTimeConstraints = checkRideShareOptionConstraint rideShareOption (Just safetyCheckStartSeconds) (Just safetyCheckEndSeconds)
 
 checkSafetyTimeConstraints :: Int -> Int -> Maybe String -> Boolean
 checkSafetyTimeConstraints safetyCheckStartSeconds safetyCheckEndSeconds = maybe false (\time -> JB.withinTimeRange safetyCheckStart safetyCheckEnd $ EHC.convertUTCtoISC time "HH:mm:ss")
@@ -44,14 +44,14 @@ checkSafetyTimeConstraints safetyCheckStartSeconds safetyCheckEndSeconds = maybe
     safetyCheckEnd = EHC.convertUTCtoISC (EHC.parseSecondsOfDayToUTC safetyCheckEndSeconds) "HH:mm:ss"
     
 type PostRideSettingCache = {
-  enablePostRideSafetyCheck :: Boolean,
+  enablePostRideSafetyCheck :: API.RideShareOptions,
   safetyCheckStartSeconds :: Int,
   safetyCheckEndSeconds :: Int
 }
 
-checkIfFollowEnabled :: API.RideShareOptions -> Maybe Int -> Maybe Int -> Boolean
-checkIfFollowEnabled shareOption mbSafetyCheckStartSeconds mbSafetyCheckEndSeconds = do
-  let currentTime = EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
+checkRideShareOptionConstraint :: API.RideShareOptions -> Maybe Int -> Maybe Int -> Maybe String -> Boolean
+checkRideShareOptionConstraint shareOption mbSafetyCheckStartSeconds mbSafetyCheckEndSeconds time = do
+  let currentTime = maybe (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss") (\i->i) time
   case shareOption of
     API.NEVER_SHARE -> false
     API.ALWAYS_SHARE -> true
@@ -60,10 +60,7 @@ checkIfFollowEnabled shareOption mbSafetyCheckStartSeconds mbSafetyCheckEndSecon
     checkTimeConstraints = checkSafetyTimeConstraints (fromMaybe 0 mbSafetyCheckStartSeconds) (fromMaybe 0 mbSafetyCheckEndSeconds)
 
 getPostRideCheckSettingsFromCache :: String -> Maybe PostRideSettingCache
-getPostRideCheckSettingsFromCache cache = 
+getPostRideCheckSettingsFromCache _ = 
   let
     savedValue = getValueToLocalStore POST_RIDE_CHECK_SETTINGS
-    (parsedValue :: Maybe PostRideSettingCache) = 
-         (decodeForeignAnyImpl (parseJSON savedValue)) 
-  in
-    parsedValue
+  in decodeForeignAnyImpl (parseJSON savedValue) 
