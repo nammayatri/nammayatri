@@ -1,0 +1,84 @@
+
+customer:
+  - types:
+      personLocationDetails:
+        name: Text
+        self: Bool
+        phone: Text
+        building: Text
+        instructions: Maybe Text
+  - api: 
+      GetQuotesRes:
+        EstimateAPIEntity:
+          insurence: Int # for insurance amount
+      SelectEstimateReq: # for sending delivery details
+        - senderDetails:
+        - receiverDetails:
+        - insurence:
+
+  - screenTypes:
+      parcelEducation: 
+        isFirstTimeUser: Bool
+      deliveryDetails:
+        senderDetails: Sender LocationDetails
+        receiverDetails: Receiver LocationDetails
+        insurence: 
+          amount: float
+          isInsured: Bool
+
+  - screen:
+      parcelEducation:
+        View: delivery
+        action: searchLocation
+        controller: exit to search location component
+      deliveryDetails:
+        senderDetailPopup:
+          back:
+            action: back
+            controller: exit to estimate screen
+          next: 
+            action: next
+            controller: update to receiver details screen
+          confirm:
+            action: confirm
+            controller: update to ride search screen
+
+
+driver:
+  - onboarding: 
+    VEHICLE_SERVICE_TIER: DELIVERY_BIKE, DELIVERY_TRUCK
+    isExisting: No
+  - types:
+      LocationAPIEntity:
+          fields:
+            instructions: Maybe Text
+            extras: Maybe Text
+          exists: true
+      DeliveryInitiation:
+      enum:
+        - AsSender
+        - AsReciever
+        - AsSomeoneElse   
+      personLocationDetails:
+        name: Text
+        # self: Bool
+        phone: Text
+        # building: Text
+        # instructions: Maybe Text
+  - api:
+      - GetRidesHistoryResp:
+         RidesInfo:
+          senderDetails: Sender personLocationDetails
+          receiverDetails: Receiver personLocationDetails
+          initiatedAs: DeliveryInitiation
+          fromLocation: LocationAPIEntity
+          toLocation: Maybe LocationAPIEntity
+          # senderInstructions: Maybe Text
+          # receiverInstructions: Maybe Text
+      
+- native:
+    - types:
+       rideRequest:
+         tripCategory:
+          tag: DELIVERY
+        

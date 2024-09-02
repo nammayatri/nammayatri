@@ -360,12 +360,10 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> FPT.FareProductType -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation searchActionType = -- check this for rentals
     let appConfig = CP.getAppConfig CP.appConfig
-    in  SearchReq 
-        { "contents" : OneWaySearchRequest 
-            ( OneWaySearchReq
+        searchRequest = ( OneWaySearchReq
                 { "startTime" : Just startTime
                 , "destination" : SearchReqLocation 
                     { "gps" : LatLong 
@@ -390,8 +388,16 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , "rideRequestAndRideOtpUnifiedFlow" : Just true 
                 }
             )
-        , "fareProductType" : "ONE_WAY"
-        }
+    in case searchActionType of
+        -- FPT.DELIVERY -> SearchReq 
+        --     { "contents" : DeliverySearchRequest searchRequest
+        --     , "fareProductType" : "DELIVERY"
+        --     }
+        _ -> SearchReq 
+            { "contents" : OneWaySearchRequest searchRequest
+            , "fareProductType" : "ONE_WAY"
+            }
+            
     where 
         validateLocationAddress :: Number -> Number -> LocationAddress -> LocationAddress
         validateLocationAddress lat long address = 
@@ -1464,3 +1470,36 @@ makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq booki
 
 makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
 makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId
+
+mkDeliverylSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> SearchReq
+mkDeliverylSearchReq slat slong dlat dlong srcAdd desAdd startTime  =
+    let appConfig = CP.getAppConfig CP.appConfig
+    in  SearchReq 
+        { "contents" : OneWaySearchRequest 
+            ( OneWaySearchReq
+                { "startTime" : Just startTime
+                , "destination" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : dlat 
+                        , "lon" : dlong
+                        }
+                    , "address" : (LocationAddress desAdd)
+                    }
+                , "origin" : SearchReqLocation 
+                    { "gps" : LatLong 
+                        { "lat" : slat 
+                        , "lon" : slong
+                        }
+                    , "address" : (LocationAddress srcAdd)
+                    }
+                , "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                , "isSourceManuallyMoved" : Nothing
+                , "isDestinationManuallyMoved" : Nothing
+                , "sessionToken" : Nothing
+                , "isSpecialLocation" : Nothing
+                , "quotesUnifiedFlow" : Just true
+                , "rideRequestAndRideOtpUnifiedFlow" : Just true 
+                }
+            )
+        , "fareProductType" : "ONE_WAY"
+        }

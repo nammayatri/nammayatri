@@ -42,6 +42,7 @@ import Components.MessagingView as MessagingView
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
@@ -52,6 +53,7 @@ import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
+import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem, length, any)
 import Data.Array as DA
@@ -2085,7 +2087,8 @@ locationTagBarConfig state =
         ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
           , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
           ]
-            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
+            <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
+            <> ([{image: "ny_ic_delivery", text: (getString DELIVERY_STR), id: "DELIVERY", background: Color.seashell, showBanner: GONE }])
         )
   in
     { tagList: locTagList }
@@ -2511,7 +2514,7 @@ nammaServices dummy =
                           case mbService of 
                             Just value -> acc <> [value]
                             Nothing -> acc
-              ) [] enabledServices
+              ) [{type: RemoteConfig.DELIVERY, name: DELIVERY_STR, image: "ny_ic_delivery_service", backgroundColor: "#fef9eb"}] enabledServices
 
 getAllServices :: LazyCheck -> Array RemoteConfig.Service
 getAllServices dummy = 
@@ -2519,6 +2522,21 @@ getAllServices dummy =
   , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee"}
   , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe"}
   , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb"}
-  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY, backgroundColor: "#fef9eb"}
+  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb"}
   , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec"}
   ]
+
+deliveryParcelImageAndOtpConfig :: ST.HomeScreenState -> DeliveryParcelImageAndOtp.Config
+deliveryParcelImageAndOtpConfig state =
+  let
+    config = DeliveryParcelImageAndOtp.config
+
+    deliveryParcelImageAndOtpConfig' =
+      config
+        { image = ""
+        , imageVisibility = false
+        , otp = state.data.driverInfoCardState.otp
+        , otpVisibility = false
+        }
+  in
+    deliveryParcelImageAndOtpConfig'

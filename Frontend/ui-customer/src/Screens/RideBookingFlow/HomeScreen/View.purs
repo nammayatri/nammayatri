@@ -67,6 +67,7 @@ import Components.QuoteListModel.View as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.Referral as ReferralComponent
+import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SaveFavouriteCard as SaveFavouriteCard
@@ -537,9 +538,7 @@ view push state =
                         [ width $ V 35
                         , height $ V 35
                         , accessibility DISABLE
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case confirmingLocOrEditPickupStage || state.props.isSource == (Just true) of
-                            true  -> "ny_ic_src_marker"
-                            false -> "ny_ic_dest_marker"
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ locateOnMapPinImage
                         , visibility $ boolToVisibility (confirmingLocOrEditPickupStage ||  state.props.locateOnMap)
                         ]
                     ]
@@ -575,9 +574,7 @@ view push state =
                         [ width $ V 35
                         , height $ V 35
                         , accessibility DISABLE
-                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ case confirmingLocOrEditPickupStage || state.props.isSource == (Just true) of
-                            true  -> "ny_ic_src_marker"
-                            false -> "ny_ic_dest_marker"
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET $ locateOnMapPinImage
                         , visibility $ boolToVisibility (confirmingLocOrEditPickupStage || state.props.locateOnMap)
                         ]
                     ]
@@ -661,6 +658,14 @@ view push state =
     onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS
     isAcRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
     acPopupConfig = state.data.config.acPopupConfig
+    locateOnMapPinImage = 
+      let confirmingLocOrEditPickupStage = any (_ == state.props.currentStage) [ConfirmingLocation, EditPickUpLocation]
+      in case state.data.fareProductType of 
+            FPT.DELIVERY -> if state.props.isConfirmSourceCurrentLocation then "ny_ic_src_marker" else "ny_ic_dest_marker"
+            _ -> case confirmingLocOrEditPickupStage || state.props.isSource == (Just true) of
+                        true  -> "ny_ic_src_marker"
+                        false -> "ny_ic_dest_marker"
+      
 
 rideDetailsBottomView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideDetailsBottomView push state = 
@@ -2457,13 +2462,13 @@ confirmPickUpLocationView push state =
             , background Color.white900
             , accessibility DISABLE
             ] [ textView $
-                [ text if state.props.currentStage == EditPickUpLocation then getString CHANGE_PICKUP_LOCATION else (getString CONFIRM_PICKUP_LOCATION)
+                [ text if state.props.currentStage == EditPickUpLocation then getString CHANGE_PICKUP_LOCATION else if state.data.fareProductType == FPT.DELIVERY then (getString CONFIRM_PICKUP_AND_DROP_LOCATION) else (getString CONFIRM_PICKUP_LOCATION)
                 , color Color.black800
                 , accessibility DISABLE
                 , gravity CENTER_HORIZONTAL
                 , height WRAP_CONTENT
                 , width MATCH_PARENT
-                ] <> FontStyle.h1 TypoGraphy
+                ] <> (if state.data.fareProductType == FPT.DELIVERY then FontStyle.h2 TypoGraphy else FontStyle.h1 TypoGraphy)
               , textView $ [
                   text $ getString MOVE_PIN_TO_THE_DESIRED_PICKUP_POINT
                 , color Color.black800
@@ -2473,8 +2478,8 @@ confirmPickUpLocationView push state =
                 , visibility $ boolToVisibility $ isLocalStageOn EditPickUpLocation
                 , width MATCH_PARENT
                 ] <> FontStyle.body2 TypoGraphy
-
-              , currentLocationView push state
+              , deliveryPickupAndDropLocationView push state
+              , currentLocationView push state $ pickupLocationConfig state
               , nearByPickUpPointsView state push
               , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
              ]
@@ -3381,7 +3386,7 @@ editButtontView push state =
   , padding (Padding 10 6 10 6)
   , margin $ MarginLeft 10
   , accessibilityHint "Edit Pickup Location : Button"
-  , visibility $ boolToVisibility $ state.props.currentStage /= EditPickUpLocation
+  , visibility $ boolToVisibility $ state.props.currentStage /= EditPickUpLocation && state.data.fareProductType /= FPT.DELIVERY
   ][ textView 
       $
       [ text (getString EDIT)
@@ -3392,25 +3397,24 @@ editButtontView push state =
       <> FontStyle.body1 TypoGraphy
   ]
 
-currentLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w 
-currentLocationView push state =
-  let showCurrentLocationView = DS.null state.props.defaultPickUpPoint
-  in linearLayout
+currentLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> {isClickable :: Boolean, click :: Action, border :: String, image :: String, accessibilityText :: String, text :: String, visibility :: Boolean} -> PrestoDOM (Effect Unit) w 
+currentLocationView push state config =
+  linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             , margin $ MarginVertical 20 10
-            , clickable $ state.props.currentStage /= EditPickUpLocation
-            , onClick push $ const GoBackToSearchLocationModal
+            , clickable $ config.isClickable
+            , onClick push $ const config.click
             , padding $ PaddingHorizontal 15 15
-            , stroke $ "1," <> state.data.config.confirmPickUpLocationBorder
+            , stroke config.border
             , gravity CENTER_VERTICAL
             , accessibility DISABLE
-            , cornerRadius 5.0
-            , visibility $ boolToVisibility showCurrentLocationView
+            , cornerRadius $ if state.data.fareProductType == FPT.DELIVERY then 12.0 else 5.0
+            , visibility $ boolToVisibility config.visibility
             ]
             [ imageView
-                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET config.image
                 , height $ V 16
                 , width $ V 16
                 , gravity CENTER_VERTICAL
@@ -3418,19 +3422,31 @@ currentLocationView push state =
                 ]
             , textView
                 $
-                  [ text state.data.source
+                  [ text config.text
                   , ellipsize true
-                  , maxLines 2
+                  , maxLines (if state.data.fareProductType == FPT.DELIVERY then 1 else 2)
                   , accessibility ENABLE
-                  , accessibilityHint $ "Pickup Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " ") state.data.source)
+                  , accessibilityHint config.accessibilityText
                   , gravity LEFT
                   , weight 1.0
                   , padding (Padding 10 16 10 16)
                   , color Color.black800
                   ]
-                <> FontStyle.subHeading1 TypoGraphy
+                <> (if state.data.fareProductType == FPT.DELIVERY then FontStyle.body1 TypoGraphy else FontStyle.subHeading1 TypoGraphy)
               , editButtontView push state
             ]
+
+deliveryPickupAndDropLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+deliveryPickupAndDropLocationView push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY
+    ]
+    [ currentLocationView push state $ deliveryPickupLocationConfig state
+    , currentLocationView push state $ deliveryDropLocationConfig state
+    ]
 
 nearByPickUpPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 nearByPickUpPointsView state push =
@@ -3439,7 +3455,7 @@ nearByPickUpPointsView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 5 20 0 5
-  , visibility $ boolToVisibility (not (DS.null state.props.defaultPickUpPoint))
+  , visibility $ boolToVisibility $ (not (DS.null state.props.defaultPickUpPoint)) && state.data.fareProductType /= FPT.DELIVERY
   , id $ getNewIDWithTag "scrollViewParent"
   ][linearLayout
     [ height WRAP_CONTENT
@@ -5102,6 +5118,14 @@ exploreCityCard push state index locationItem =
           ] <> FontStyle.body3 TypoGraphy
     ]
 
+deliveryParcelImageAndOtpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+deliveryParcelImageAndOtpView push state = 
+  linearLayout
+    [
+      height MATCH_PARENT
+    , width MATCH_PARENT
+    ] [DeliveryParcelImageAndOtp.view (push <<< DeliveryParcelImageOtpAction) (deliveryParcelImageAndOtpConfig state)]
+
 fetchEmergencySettings :: (Action -> Effect Unit) -> HomeScreenState -> Flow GlobalState (Maybe GetEmergencySettingsRes)
 fetchEmergencySettings push state = do
   case state.props.safetySettings of
@@ -5122,3 +5146,44 @@ getFollowers state = do
   let automaticallySharedFollowers = fromMaybe [] state.data.followers 
       manuallySharedFollowers = fromMaybe [] state.data.manuallySharedFollowers
   Arr.nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers manuallySharedFollowers
+
+pickupLocationConfig :: HomeScreenState -> {isClickable :: Boolean, click :: Action, border :: String, image :: String, accessibilityText :: String, text :: String, visibility :: Boolean}
+pickupLocationConfig state = 
+  let showCurrentLocationView = DS.null state.props.defaultPickUpPoint && state.data.fareProductType /= FPT.DELIVERY
+  in {
+        isClickable: state.props.currentStage /= EditPickUpLocation, 
+        click: GoBackToSearchLocationModal, 
+        border: "1," <> state.data.config.confirmPickUpLocationBorder, 
+        image: "ny_ic_source_dot",
+        accessibilityText:  "Pickup Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " ") state.data.source),
+        text: state.data.source,
+        visibility: showCurrentLocationView 
+      }
+
+deliveryPickupLocationConfig :: HomeScreenState -> {isClickable :: Boolean, click :: Action, border :: String, image :: String, accessibilityText :: String, text :: String, visibility :: Boolean}
+deliveryPickupLocationConfig state = 
+  {
+    isClickable: true, 
+    click: ToggleCurrentPickupDropCurrentLocation true, 
+    border: "1," <> (if state.props.isConfirmSourceCurrentLocation then Color.blue800 else Color.grey900),
+    image: "ny_ic_source_dot",
+    accessibilityText:  "Pickup Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " ") state.data.source),
+    text: state.data.source,
+    visibility: state.data.fareProductType == FPT.DELIVERY
+   }
+
+deliveryDropLocationConfig :: HomeScreenState -> {isClickable :: Boolean, click :: Action, border :: String, image :: String, accessibilityText :: String, text :: String, visibility :: Boolean}
+deliveryDropLocationConfig state = 
+  {
+    isClickable: true, 
+    click: ToggleCurrentPickupDropCurrentLocation false, 
+    border: "1," <> (if not state.props.isConfirmSourceCurrentLocation then Color.blue800 else Color.grey900), 
+    image: "ny_ic_dest_dot",
+    accessibilityText:  "Destination Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " ") state.data.destination),
+    text: state.data.destination,
+    visibility: state.data.fareProductType == FPT.DELIVERY
+   }
+
+type CurrentLocationConfig = { isClickable :: Boolean, click :: Action, border :: String, image :: String, accessibilityText :: String, text :: String, visibility :: Boolean }
+
+

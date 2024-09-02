@@ -57,6 +57,7 @@ import Constants (defaultDensity, languageKey)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Constants.Configs (getPolylineAnimationConfig)
 import Helpers.Ride
 import Control.Transformers.Back.Trans (runBackT)
@@ -183,9 +184,9 @@ eval2 action  =
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
-eval GoToConfirmingLocationStage state = 
-  exit $ ExitToConfirmingLocationStage state
-eval UpdateNoInternet state = continue state { props { isOffline = true } }
+-- eval GoToConfirmingLocationStage state = 
+--   exit $ ExitToConfirmingLocationStage state
+-- eval UpdateNoInternet state = continue state { props { isOffline = true } }
 eval (InternetCallBackCustomer internetAvailable) state =
   if (internetAvailable == "true") then do
     updateAndExit state { props { isOffline = false } } $ ReloadFlowStatus state { props { isOffline = false } }
@@ -938,6 +939,7 @@ eval BackPressed state = do
                   , followers = state.data.followers
                 , currentCityConfig = state.data.currentCityConfig
                 , famousDestinations = state.data.famousDestinations
+                , fareProductType = FPT.ONE_WAY
                 }
               , props { 
                   isBanner = state.props.isBanner
@@ -1094,6 +1096,21 @@ eval GoBackToSearchLocationModal state = do
   continue state { props { rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
   -- let newState = state { props { rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
   -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
+
+eval (ToggleCurrentPickupDropCurrentLocation isSource) state = do
+  let config = if isSource then
+      locateOnMapConfig { lat = state.props.sourceLat , lon = state.props.sourceLong}
+    else locateOnMapConfig { lat = state.props.destinationLat , lon = state.props.destinationLong}
+  let newState = state { props { isConfirmSourceCurrentLocation = isSource } }
+  continueWithCmd newState [do
+    void $ pure $ removeAllPolylines ""
+    void $ animateCamera config.lat config.lon zoomLevel "ZOOM"
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+      liftFlowBT $ runEffectFn1 locateOnMap config
+      pure unit 
+    pure NoAction
+  ]
+
 eval HandleCallback state = do
   continue state { props { callbackInitiated = true } }
 
@@ -1160,6 +1177,15 @@ eval OpenSearchLocation state = do
   _ <- pure $ updateLocalStage SearchLocationModel
   exit $ UpdateSavedLocation state { props { homeScreenPrimaryButtonLottie = true, isSource = Just false, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2},  rideSearchProps{ sessionId = generateSessionId unit }}, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
 
+eval OpenDeliverySearchLocation state = do
+  void $ pure $ performHapticFeedback unit
+  _ <- pure $ firebaseLogEvent "ny_user_hs_pickup_click"
+  void $ pure $ updateLocalStage SearchLocationModel
+  continue state { 
+    props { homeScreenPrimaryButtonLottie = true, isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length (getString CURRENT_LOCATION)) > 2},  rideSearchProps{ sessionId = generateSessionId unit } }
+  , data {fareProductType = FPT.DELIVERY, source="", locationList = state.data.recentSearchs.predictionArray} 
+  }
+  
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
 
 eval (LocateOnMapCallBack key lat lon) state = do
@@ -2024,7 +2050,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
   else do
     void $ pure $ updateLocalStage SearchLocationModel
     void $ pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    continue state { props {currentStage = SearchLocationModel}, data{fareProductType = FPT.ONE_WAY}}
+    continue state { props {currentStage = SearchLocationModel}} -- TEST data{fareProductType = FPT.ONE_WAY}
 
   where 
     getSelectedEstimates :: ChooseVehicleController.Config -> Array ChooseVehicleController.Config -> Tuple String (Array String) 
@@ -2570,6 +2596,7 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue state
     "INSTANT" -> continueWithCmd state [ pure $ WhereToClick]
+    "DELIVERY" -> if getValueToLocalNativeStore PARCEL_INSTRUCTIONS_VISITED /= "true" then exit GoToParcelInstructions else continueWithCmd state [pure OpenDeliverySearchLocation]
     _ -> continue state
   
 eval (RentalBannerClick) state = maybe (exit GoToScheduledRides) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit GoToScheduledRides) state.data.rentalsInfo
@@ -2912,6 +2939,13 @@ eval (UpdateSafetySettings safetySettings@(API.GetEmergencySettingsRes settings)
         continue updatedState{ data{ rideCompletedData{ issueReportData {hasSafetyIssue = postSafetyCheckEnabled, showIssueBanners = state.data.rideCompletedData.issueReportData.showIssueBanners || postSafetyCheckEnabled}}}}
       _,_,_ -> continue updatedState
 
+eval (DeliveryParcelImageAndOtp (CheckImageUploadStatus PrimaryButtonController.OnClick)) = 
+  continue state  -- TODO
+
+eval (DeliveryParcelImageAndOtp (DeliveryParcelButton PrimaryButtonController.OnClick)) state = 
+  continue state { props { showDeliveryImageAndOtpModal = false}}
+  
+
 eval (ServicesOnClick service) state = do 
   void $ pure $ performHapticFeedback unit
   case service.type of 
@@ -2925,6 +2959,7 @@ eval (ServicesOnClick service) state = do
           continue state
     RC.INSTANT -> continueWithCmd state [ pure $ WhereToClick]
     RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow state
+    RC.DELIVERY -> if getValueToLocalNativeStore PARCEL_INSTRUCTIONS_VISITED /= "true" then exit GoToParcelInstructions else continueWithCmd state [pure OpenDeliverySearchLocation]
     _ -> continue state
 
 eval _ state = update state

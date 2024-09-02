@@ -242,6 +242,7 @@ initData =
       , chatServiceKilled : false
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
+      , isConfirmSourceCurrentLocation : false
       }
   }
 

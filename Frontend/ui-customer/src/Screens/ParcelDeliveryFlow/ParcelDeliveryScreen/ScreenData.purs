@@ -6,7 +6,7 @@ import Screens.Types as ST
 initData :: ST.ParcelDeliveryScreenState
 initData =
   { data : {
-      currentStage : ST.FINAL_DETAILS
+      currentStage : ST.DELIVERY_INSTRUCTIONS
     , sourceAddress : dummyAddress
     , destinationAddress : dummyAddress
     , sourceLat : 0.0
@@ -14,6 +14,7 @@ initData =
     , destinationLat : 0.0
     , destinationLong : 0.0
     , route : Nothing
+    , deliveryDetailsInfo : dummyDeliveryDetailsInfo
     },
     props : {}
   }
@@ -31,3 +32,18 @@ dummyAddress =
   , "ward"      : Nothing
   , "placeId"   : Nothing
   }
+
+dummyDeliveryDetailsInfo :: ST.DeliveryDetailsInfo
+dummyDeliveryDetailsInfo = {
+  sendersDetails : dummyPersonAndLocationInfo
+  , receiversDetails : dummyPersonAndLocationInfo
+  , currentState : ST.SenderModal
+  , initiatedAs : ST.Sender
+}
+
+dummyPersonAndLocationInfo = {
+  name : ""
+  , mobileNumber : ""
+  , address : ""
+  , instruction : Nothing
+}

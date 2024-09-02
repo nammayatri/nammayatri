@@ -33,7 +33,8 @@ import PrestoDOM.Elements.Keyed as Keyed
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import Resources.Localizable.EN (getEN)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig, deliveryPickupDetialsModalConfig)
+import Components.ParcelDeliveryInstruction as ParcelDeliveryInstruction
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.Types as ST
 import Services.API
@@ -56,6 +57,20 @@ parcelDeliveryScreen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
 view push state = 
+  case state.data.currentStage of
+    ST.DELIVERY_INSTRUCTIONS -> deliveryInstructionView push state
+    _ -> deliveryDetailsView push state
+  
+
+deliveryInstructionView :: forall w . (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
+deliveryInstructionView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][ParcelDeliveryInstruction.view (push <<< ParcelDeliveryInstructionAC)]
+
+deliveryDetailsView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
+deliveryDetailsView push state =
   Anim.screenAnimation $
   relativeLayout
     [ height MATCH_PARENT
@@ -87,7 +102,7 @@ view push state =
         [ mapViewLayout push state
         , pickupView push state
         , dropView push state
-        , deliveryInstructionView push state
+        , deliveryGuidelinesView push state
         ]
       ]
     , separatorView push state
@@ -254,8 +269,8 @@ sourceDestinationAddressView push state =
     ]
   ]
 
-deliveryInstructionView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-deliveryInstructionView push state =
+deliveryGuidelinesView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
+deliveryGuidelinesView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -357,3 +372,13 @@ instructionData =
   , { title: "Avoid sending high-value / fragile items", image: "ny_ic_streamline_fragile_solid" }
   , { title: "Illegal items are prohibited", image: "ny_ic_prohibited" }
   ]
+
+
+deliveryDetailPopupView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
+deliveryDetailPopupView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , accessibility DISABLE
+    ]
+    [ PopUpModal.view (push <<< DeliveryDetailAction) (deliveryPickupDetialsModalConfig state) ]

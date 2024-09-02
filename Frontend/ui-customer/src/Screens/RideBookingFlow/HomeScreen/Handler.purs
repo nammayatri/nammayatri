@@ -278,3 +278,10 @@ homeScreen = do
     UpdatePickupName updatedState lat lng -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng)
+    GoToParcelInstructions -> do 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_PARCEL_INSTRUCTIONS)
+    GoToDeliverySearchLocation updatedState -> do
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_DELIVERY_SEARCH_LOCATION updatedState)
+    -- GoToDeliveryDetails -> do
+    --   modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+    --   App.BackT $ App.NoBack <$> (pure $ GO_TO_DELIVERY_DETAILS updatedState)

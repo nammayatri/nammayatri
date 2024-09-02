@@ -117,6 +117,7 @@ data KeyStore
   | BOOKING_TIME_LIST
   | TICKETS_BOOKED_IN_EVENT
   | POST_RIDE_CHECK_SETTINGS
+  | PARCEL_INSTRUCTIONS_VISITED
 
 derive instance genericKeyStore :: Generic KeyStore _
 

@@ -3399,6 +3399,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 removeMarker("ic_auto_nav_on_map");
                 removeMarker("ny_ic_vehicle_nav_on_map");
                 removeMarker("ny_ic_black_yellow_auto");
+                removeMarker("ny_ic_bike_delivery_nav_on_map");
                 removeMarker("ny_ic_src_marker");
                 removeMarker("ny_ic_dest_marker");
                 removeMarker("ny_ic_blue_marker");

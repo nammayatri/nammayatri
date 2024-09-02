@@ -219,6 +219,7 @@ import AssetsProvider (renewFile)
 import Data.Tuple
 import Screens.HomeScreen.Controllers.Types
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller as ParcelDeliveryScreenController
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData as ParcelDeliveryScreenData
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -953,7 +954,6 @@ homeScreenFlow = do
       modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState -> MyProfileScreenData.initData { props { fromHomeScreen = updateProfile, updateProfile = updateProfile, changeAccessibility = true, isBtnEnabled = true, genderOptionExpanded = false, showOptions = false, expandEnabled = true } })
       myProfileScreenFlow
     GO_TO_FIND_ESTIMATES updatedState -> do
-      -- parcelDeliveryFlow
       findEstimates updatedState
     RETRY_FINDING_QUOTES showLoader -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handled Loader in IOS Side
@@ -1118,7 +1118,6 @@ homeScreenFlow = do
       updateCurrentLocation ""
       let
         state = newState.homeScreen
-
         searchWithoutPlaceName = any (_ == state.props.rideSearchProps.sourceSelectType) [ ST.MAP, ST.FAVOURITE, ST.RETRY_SEARCH, ST.SUGGESTION ] && state.props.isSource == Just true
       case searchWithoutPlaceName of
         true -> pure unit
@@ -1189,6 +1188,7 @@ homeScreenFlow = do
                           Nothing
                       }
                     , showShimmer = false
+                    , isConfirmSourceCurrentLocation = true
                     }
                   }
             )
@@ -1208,9 +1208,11 @@ homeScreenFlow = do
             true
             state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
       if (not srcServiceable && (updateScreenState.props.sourceLat /= -0.1 && updateScreenState.props.sourceLong /= -0.1) && (updateScreenState.props.sourceLat /= 0.0 && updateScreenState.props.sourceLong /= 0.0)) then do
+        let _ = spy "DEBUG: LOCATION_SELECTED not srcServiceable" srcServiceable
         modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState { props { isSrcServiceable = false, isRideServiceable = false, isSource = Just true }, data { recentSearchs { predictionArray = recentList } } })
         homeScreenFlow
       else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
+        let _ = spy "DEBUG: LOCATION_SELECTED not destServiceable" destServiceable
         if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
           _ <- pure $ toast (getString STR.LOCATION_UNSERVICEABLE)
           pure unit
@@ -1961,13 +1963,19 @@ homeScreenFlow = do
         distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
 
         isMoreThan20Meters = distanceBetweenLatLong > (state.data.config.mapConfig.locateOnMapConfig.apiTriggerRadius / 1000.0)
+        sourceLat = if state.props.isConfirmSourceCurrentLocation then lat else state.props.sourceLat
+        sourceLong = if state.props.isConfirmSourceCurrentLocation then lon else state.props.sourceLong
+        destLat = if state.props.isConfirmSourceCurrentLocation then state.props.destinationLat else lat
+        destLong = if state.props.isConfirmSourceCurrentLocation then state.props.destinationLong else lon
       modifyScreenState
         $ HomeScreenStateType
             ( \homeScreen ->
                 homeScreen
                   { props
-                    { sourceLat = lat
-                    , sourceLong = lon
+                    { sourceLat = sourceLat
+                    , sourceLong = sourceLong
+                    , destinationLat = destLat
+                    , destinationLong = destLong
                     , editedPickUpLocation {gps = LatLong {lat : lat
                                                     , lon : lon 
                                                     }  
@@ -1977,7 +1985,7 @@ homeScreenFlow = do
                     }
                   }
             )
-      if isMoreThan20Meters || isJust gateAddress.address then do
+      if isMoreThan20Meters || isJust gateAddress.address || state.data.fareProductType == FPT.DELIVERY then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do
@@ -1987,8 +1995,10 @@ homeScreenFlow = do
                   ( \homeScreen ->
                       homeScreen
                         { data
-                          { source = address.formattedAddress
-                          , sourceAddress = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon
+                          { source =  if state.props.isConfirmSourceCurrentLocation then address.formattedAddress else state.data.source
+                          , sourceAddress = if state.props.isConfirmSourceCurrentLocation then encodeAddress address.formattedAddress address.addressComponents Nothing lat lon else state.data.sourceAddress
+                          , destination = if state.props.isConfirmSourceCurrentLocation then state.data.destination else address.formattedAddress
+                          , destinationAddress = if state.props.isConfirmSourceCurrentLocation then state.data.destinationAddress else encodeAddress address.formattedAddress address.addressComponents Nothing lat lon 
                           }
                         , props
                           { editedPickUpLocation {address = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon }
@@ -2492,6 +2502,11 @@ homeScreenFlow = do
       else do
         modifyScreenState $ PickupInstructionsScreenStateType $ \pickupInstructionsScreen -> pickupInstructionsScreen { data { pickupLat = lat, pickupLong = lon, pickupInstructions = pickupInstructions } }
         pickupInstructionsScreenFlow
+    GO_TO_PARCEL_INSTRUCTIONS -> do
+      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> ParcelDeliveryScreenData.initData)
+      parcelDeliveryFlow
+    -- GO_TO_DELIVERY_DETAILS updatedState -> 
+      
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit
@@ -2552,7 +2567,7 @@ findEstimates updatedState = do
     homeScreenFlow
   let
     startTimeUTC = if (isIntercity && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
-  (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone)
+  (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone state.data.fareProductType)
   void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
   routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig)
   logStatus "ride_search" rideSearchRes
@@ -2575,9 +2590,6 @@ findEstimates updatedState = do
         case head points, last points of
           Just (LatLong source), Just (LatLong dest) -> do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { maxEstimatedDuration = maxEstimatedDuration }, props { routeEndPoints = Just ({ source: { lat: source.lat, lng: source.lon, place: state.data.source, address: Nothing, city: Nothing, isSpecialPickUp: Just false }, destination: { lat: dest.lat, lng: dest.lon, place: state.data.destination, address: Nothing, city: Nothing, isSpecialPickUp: Just false } }) } })
-            -- codex Checking
-            modifyScreenState $ ParcelDeliveryScreenStateType (\parcelDeliverScreen -> parcelDeliverScreen { data { sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong, route = rideSearchRes.routeInfo} })
-            parcelDeliveryFlow
           _, _ -> pure unit
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { rideDistance = distance, rideDuration = duration, source = state.data.source, sourceAddress = state.data.sourceAddress } })
         let
@@ -2589,7 +2601,7 @@ findEstimates updatedState = do
         --   updateLocalStage DistanceOutsideLimits
         --   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0, isShorterTrip = false}})
         --   homeScreenFlow
-        if ((response.distance < 500 || isDistMoreThanThreshold) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ]) then do
+        if ((response.distance < 500 || isDistMoreThanThreshold) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ] && state.data.fareProductType /= FPT.DELIVERY) then do
           let
             currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
           updateLocalStage currentStage
@@ -2790,6 +2802,7 @@ editDestinationFlow = do
 
 rideSearchFlow :: String -> FlowBT String Unit
 rideSearchFlow flowType = do
+  let _ = spy "DEBUG: rideSearchFlow flowType" flowType
   void $ pure $ hideKeyboardOnNavigation true
   logField_ <- lift $ lift $ getLogFields
   (GlobalState homeScreenModifiedState) <- getState
@@ -2800,15 +2813,18 @@ rideSearchFlow flowType = do
     let
       searchWithoutConfirmPickup = any (_ == finalState.props.rideSearchProps.sourceSelectType) [ ST.MAP, ST.RETRY_SEARCH, ST.REPEAT_RIDE ] || (finalState.props.rideSearchProps.sourceSelectType == ST.FAVOURITE && not finalState.props.isSpecialZone)
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { flowWithoutOffers = flowWithoutOffers WithoutOffers } })
+    let _ = spy "DEBUG: rideSearchFlow searchWithoutConfirmPickup" searchWithoutConfirmPickup
     case searchWithoutConfirmPickup of
       false -> do
         pure $ removeAllPolylines ""
         liftFlowBT $ setMapPadding 0 0 0 0
         if finalState.data.source == (getString STR.CURRENT_LOCATION) then void $ pure $ currentPosition "" else pure unit
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = GoToConfirmLocation } })
+        let _ = spy "DEBUG: rideSearchFlow GoToConfirmLocation" "false"
         void $ pure $ updateLocalStage GoToConfirmLocation
       true -> do
         let
+          _ = spy "DEBUG: rideSearchFlow GoToConfirmLocation" "true"
           currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
           currentDate = getCurrentDate ""
         void $ pure
@@ -2818,7 +2834,7 @@ rideSearchFlow flowType = do
               ]
         let
           startTimeUTC = if (finalState.data.fareProductType == FPT.INTER_CITY && finalState.data.startTimeUTC /= "") then finalState.data.startTimeUTC else (getCurrentUTC "")
-        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress startTimeUTC finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone)
+        (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress startTimeUTC finalState.props.rideSearchProps.sourceManuallyMoved finalState.props.rideSearchProps.destManuallyMoved finalState.props.rideSearchProps.sessionId finalState.props.isSpecialZone finalState.data.fareProductType)
         void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
         void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
         void $ liftFlowBT
@@ -2892,7 +2908,7 @@ rideSearchFlow flowType = do
                 if (cityConfig.geoCodeConfig.strictBounds && response.distance >= cityConfig.geoCodeConfig.radius) then do
                   void $ pure $ updateLocalStage DistanceOutsideLimits
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = DistanceOutsideLimits, rideRequestFlow = true, isSearchLocation = SearchLocation } })
-                else if ((response.distance < 500 || isDistMoreThanThreshold) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ] && flowType /= "REPEAT_RIDE_FLOW") then do
+                else if ((response.distance < 500 || isDistMoreThanThreshold) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ] && flowType /= "REPEAT_RIDE_FLOW" && finalState.data.fareProductType /= FPT.DELIVERY) then do
                   let
                     currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
                   void $ pure $ updateLocalStage currentStage
@@ -2963,7 +2979,7 @@ tripDetailsScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
         updateLocalStage HomeScreen
       else
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } } })
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } }})
       homeScreenFlow
     CONNECT_WITH_DRIVER updatedState -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
@@ -4966,6 +4982,7 @@ searchLocationFlow = do
   where
   locSelectedOnMapFlow :: SearchLocationScreenState -> FlowBT String Unit
   locSelectedOnMapFlow state = do
+    let _ = spy "locSelectedOnMapFlow" state
     modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
     let
       latNum = fromMaybe 0.0 state.data.latLonOnMap.lat
@@ -5110,6 +5127,21 @@ searchLocationFlow = do
       modifyScreenState
         $ SearchLocationScreenStateType
             (\slsState -> slsState { data { destLoc = Just state.data.latLonOnMap } })
+    pure unit
+
+  updateDeliveryLocationFromMap :: SearchLocationScreenState -> FlowBT String Unit
+  updateDeliveryLocationFromMap state = do
+    (GlobalState globalState) <- getState
+    let
+      focussedField = fromMaybe SearchLocPickup globalState.searchLocationScreen.props.focussedTextField
+    if focussedField == SearchLocPickup then do
+      modifyScreenState
+        $ SearchLocationScreenStateType
+            (\slsState -> slsState { data { srcLoc = Just state.data.latLonOnMap }, props { pickUpSelectedOnMap = true, searchLocStage = PredictionsStage } })
+    else
+      modifyScreenState
+        $ SearchLocationScreenStateType
+            (\slsState -> slsState { data { destLoc = Just state.data.latLonOnMap }, props {searchLocStage = PredictionsStage} })
     pure unit
 
   handleUpdateLocNameFlow :: SearchLocationScreenState -> String -> String -> FlowBT String Unit
@@ -5336,6 +5368,8 @@ searchLocationFlow = do
 
 predictionClickedFlow :: LocationListItemState -> SearchLocationScreenState -> FlowBT String Unit
 predictionClickedFlow prediction state = do
+  let _ = spy "predictionClickedFlow prediction" prediction 
+      _ = spy "predictionClickedFlow state" state
   modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
   if state.props.actionType == AddingStopAction then do
     void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
@@ -6056,6 +6090,7 @@ findRentalEstimates state = do
 
 enterRideSearchFLow :: FlowBT String Unit
 enterRideSearchFLow = do
+  
   (GlobalState globalState) <- getState
   let
     slsState = globalState.searchLocationScreen
@@ -6441,4 +6476,37 @@ parcelDeliveryFlow = do
     ParcelDeliveryScreenController.RefreshScreen state -> do
       modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
       parcelDeliveryFlow
+    ParcelDeliveryScreenController.GoToSelectLocation state -> do
+      setValueToLocalStore PARCEL_INSTRUCTIONS_VISITED "true"
+      void $ pure $ updateLocalStage SearchLocationModel
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { 
+        props { homeScreenPrimaryButtonLottie = true, isSource = Just true, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length (getString STR.CURRENT_LOCATION)) > 2},  rideSearchProps{ sessionId = generateSessionId unit } }
+      , data {fareProductType = FPT.DELIVERY, source="", locationList = homeScreen.data.recentSearchs.predictionArray} 
+      })
+      homeScreenFlow
     _ -> pure unit
+
+findDeliveryEstimates :: SearchLocationScreenState -> FlowBT String Unit
+findDeliveryEstimates state = do
+    let
+      dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.destLoc
+      pickupLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc
+    (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) ORIGIN
+    void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
+    void $ lift $ lift $ toggleLoader true
+    srcFullAddress <- getPlaceName (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon) HomeScreenData.dummyLocation true
+    destFullAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation true
+    let
+      currentTime = getCurrentUTC ""
+      address = maybe "" (\(PlaceName address) -> address.formattedAddress) srcFullAddress
+      destAddress = maybe "" (\(PlaceName address) -> address.formattedAddress) destFullAddress
+      srcMarkerConfig = defaultMarkerConfig { pointerIcon = "ny_ic_auto_map" }
+      destMarkerConfig = defaultMarkerConfig { pointerIcon = "src_marker" }
+
+    (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkDeliverylSearchReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address [] Nothing (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) (encodeAddress destAddress [] Nothing (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon)) currentTime)
+    modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { data { srcLoc = Just pickupLoc { address = address }, destLoc = Just dropLoc, route = rideSearchRes.routeInfo, rideDetails { searchId = rideSearchRes.searchId, rideScheduledTimeUTC = currentTime } }, props { searchLocStage = ChooseYourRide } })
+    void $ lift $ lift $ toggleLoader false
+    (App.BackT $ App.BackPoint <$> pure unit)
+      >>= ( \_ -> do
+            searchLocationFlow
+          )

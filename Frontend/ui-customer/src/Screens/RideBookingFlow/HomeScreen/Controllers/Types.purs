@@ -18,6 +18,7 @@ import Components.PricingTutorialModel.Controller as PricingTutorialModelControl
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.QuoteListModel.Controller as QuoteListModelController
 import Components.RateCard as RateCard
+import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.SaveFavouriteCard as SaveFavouriteCardController
@@ -44,7 +45,6 @@ import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp,
 import Common.Types.App as CTP
 
 import RemoteConfig as RemoteConfig
-
 
 
 data ScreenOutput = LogoutUser
@@ -130,6 +130,8 @@ data ScreenOutput = LogoutUser
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
   | SelectEstimateAndQuotes HomeScreenState
+  | GoToParcelInstructions
+  | GoToDeliverySearchLocation HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -335,6 +337,10 @@ data Action = NoAction
   | ShakeActionCallback Int
   | UpdateSafetySettings GetEmergencySettingsRes
   | ServicesOnClick RemoteConfig.Service
+  | OpenDeliverySearchLocation 
+  | ToggleCurrentPickupDropCurrentLocation Boolean
+  | UpdateSearchActionType
+  | DeliveryParcelImageOtpAction DeliveryParcelImageAndOtp.Action
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

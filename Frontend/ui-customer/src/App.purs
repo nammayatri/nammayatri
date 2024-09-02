@@ -303,6 +303,9 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EDIT_DEST_BACKPRESSED
                         | EXIT_AND_ENTER_HOME_SCREEN
                         | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
+                        | GO_TO_PARCEL_INSTRUCTIONS
+                        | GO_TO_DELIVERY_SEARCH_LOCATION HomeScreenState 
+                        | GO_TO_DELIVERY_DETAILS HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

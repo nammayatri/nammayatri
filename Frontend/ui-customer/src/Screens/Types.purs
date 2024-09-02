@@ -682,8 +682,8 @@ type HomeScreenStateData =
   , routeCacheForAdvancedBooking :: Maybe Route
   , previousRideDrop :: Boolean
   , famousDestinations :: Array LocationListItemState
-, parking :: ParkingData
-, toll :: TollData
+  , parking :: ParkingData
+  , toll :: TollData
 }
 
 type TollData = {
@@ -961,6 +961,8 @@ type HomeScreenStateProps =
   , isOtpRideFlow :: Boolean
   , safetySettings :: Maybe API.GetEmergencySettingsRes
   , editedPickUpLocation :: EditedLocation
+  , isConfirmSourceCurrentLocation :: Boolean
+  , showDeliveryImageAndOtpModal :: Boolean
   }
 
 type EditedLocation = {
@@ -2760,7 +2762,7 @@ type DateTimeConfig = {
 
 ----------------------------------------------------------------------
 
-data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | DELIVERY
 
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow
@@ -2866,11 +2868,38 @@ type ParcelDeliveryScreenData = {
   , sourceLong :: Number
   , destinationLat :: Number
   , destinationLong :: Number
+  , deliveryDetailsInfo :: DeliveryDetailsInfo
   -- parcelBookingData :: CTA.ParcelBookingConfig,
   -- selectedQuote :: Maybe QuotesList,
   -- bookingId :: String,
 }
 
 type ParcelDeliveryScreenProps = {
-
 }
+
+
+type DeliveryDetailsInfo = {
+  sendersDetails :: PersonAndLocationInfo
+  , receiversDetails :: PersonAndLocationInfo
+  , currentState :: DeliveryModalState
+  , initiatedAs :: InitiatedAs
+}
+
+type PersonAndLocationInfo = {
+  name :: String
+  , mobileNumber :: String
+  , address :: String
+  , instruction :: Maybe String
+}
+
+data DeliveryModalState = SenderModal | ReceiverModal
+
+derive instance genericDeliveryModalState :: Generic DeliveryModalState _
+instance eqDeliveryModalState :: Eq DeliveryModalState  where eq = genericEq
+instance showDeliveryModalState :: Show DeliveryModalState where show = genericShow
+
+data InitiatedAs = Sender | Receiver | Else
+
+derive instance genericInitiatedAs :: Generic InitiatedAs _
+instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
+instance showInitiatedAs :: Show InitiatedAs where show = genericShow

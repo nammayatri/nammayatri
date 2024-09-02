@@ -1,0 +1,4 @@
+module Components.ParcelDeliveryInstruction(module Reexport) where
+
+import Components.ParcelDeliveryInstruction.View as Reexport
+import Components.ParcelDeliveryInstruction.Controller as Reexport

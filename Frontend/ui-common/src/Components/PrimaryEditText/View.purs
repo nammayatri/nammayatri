@@ -63,9 +63,10 @@ editTextLayout push config =
     , cornerRadius config.cornerRadius
     , gravity CENTER_VERTICAL
     , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
-    ](  if config.showConstantField then 
+    ]((if config.showConstantField then 
           [constantField push config, editTextView push config ] 
-          else [editTextView push config])
+          else [editTextView push config, textImageView config ])
+          )
 
 
 constantField :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
@@ -154,4 +155,15 @@ errorLabelLayout config =
         , visibility if config.showErrorLabel then VISIBLE else GONE
         , alpha config.errorLabel.alpha
         ] <> (FontStyle.getFontStyle config.errorLabel.textStyle LanguageStyle)
+    ]
+
+textImageView :: forall w . Config -> PrestoDOM (Effect Unit) w
+textImageView config = 
+  imageView
+    [ height config.textImage.height
+    , width config.textImage.width
+    , imageUrl config.textImage.imageUrl
+    , gravity RIGHT
+    , padding config.textImage.padding
+    , visibility config.textImage.visibility
     ]

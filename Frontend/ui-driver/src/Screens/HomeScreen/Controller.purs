@@ -1553,6 +1553,7 @@ eval (SwitchBookingStage stage) state = do
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
 
+
 eval _ state = continue state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
