@@ -4786,7 +4786,7 @@ validateAndStartChat contacts push state safetyCheckStartSeconds safetyCheckEndS
   if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
     then startChatServices push state.data.driverInfoCardState.bppRideId "Customer" false 
   else do
-    let filterContacts = filter (\item -> (item.enableForShareRide || SU.checkIfFollowEnabled item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds ) && (item.priority == 0 && not item.onRide)) contacts
+    let filterContacts = filter (\item -> (item.enableForShareRide || SU.checkRideShareOptionConstraint item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds Nothing) && (item.priority == 0 && not item.onRide)) contacts
     if (length filterContacts) == 0 
       then push RemoveChat
       else do

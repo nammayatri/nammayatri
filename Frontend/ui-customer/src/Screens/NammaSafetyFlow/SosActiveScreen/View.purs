@@ -217,7 +217,7 @@ sosActionTilesView state push =
             ]
             ( map
                 ( \item ->
-                    SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (EHC.screenWidth unit - 44) / 2) true item.isDisabled Color.white900
+                    SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (EHC.screenWidth unit - 44) / 2) true item.isDisabled Color.white900 WRAP_CONTENT
                 )
                 actionItems
             )

@@ -1484,3 +1484,4 @@ getTE stringKey =
     TEST_SOS_ACTIVATED -> "టెస్ట్ ఎస్ఓఎస్ సక్రియం చేయబడింది!"
     CHOOSE_FROM_CONTACTS -> "కాంటాక్ట్‌లను ఎంచుకోండి"
     ADD_MANUALLY -> "మాన్యువల్‌గా జోడించండి"
+    DEFAULT_CONTACT_NOT_SET -> "డిఫాల్ట్ కాంటాక్ట్ సెట్ చేయబడలేదు"

@@ -33,10 +33,10 @@ import Mobility.Prelude as MP
 
 data Action = OnClick
 
-view :: forall w. String -> String -> (Action -> Effect Unit) -> String -> String -> Length -> Boolean -> Boolean -> String -> PrestoDOM (Effect Unit) w
-view image title push backgroundColor strokeColor width' useMargin isDisabled color' =
+view :: forall w. String -> String -> (Action -> Effect Unit) -> String -> String -> Length -> Boolean -> Boolean -> String -> Length -> PrestoDOM (Effect Unit) w
+view image title push backgroundColor strokeColor width' useMargin isDisabled color' height' =
   linearLayout
-    ([ height WRAP_CONTENT
+    ([ height height'
     , width width'
     , orientation VERTICAL
     , padding $ Padding 16 16 16 16

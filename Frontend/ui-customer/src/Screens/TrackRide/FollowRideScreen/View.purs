@@ -719,7 +719,7 @@ emergencyActionsView push state =
         ]
         ( map
             ( \item ->
-                SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (screenWidth unit - 76) / 2) true item.isDisabled Color.black900
+                SafetyActionTileView.view item.image item.text item.push item.backgroundColor item.strokeColor (V $ (screenWidth unit - 76) / 2) true item.isDisabled Color.black900 WRAP_CONTENT
             )
             safetyActions
         )

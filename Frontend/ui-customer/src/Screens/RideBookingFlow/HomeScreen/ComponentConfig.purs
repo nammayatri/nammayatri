@@ -1052,7 +1052,7 @@ messagingViewConfig state =
     DT.Tuple safetyCheckStartSeconds safetyCheckEndSeconds = case state.props.safetySettings of
       Just (API.GetEmergencySettingsRes safetySettings) -> DT.Tuple safetySettings.safetyCheckStartTime safetySettings.safetyCheckEndTime
       Nothing -> DT.Tuple Nothing Nothing
-    primaryContact = DA.head $ DA.filter (\item -> (item.enableForShareRide || SU.checkIfFollowEnabled item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds ) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
+    primaryContact = DA.head $ DA.filter (\item -> (item.enableForShareRide || SU.checkRideShareOptionConstraint item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds Nothing) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
 
     messagingViewConfig' =
       config

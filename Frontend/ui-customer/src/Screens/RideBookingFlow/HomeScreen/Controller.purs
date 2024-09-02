@@ -2902,16 +2902,16 @@ eval (ShakeActionCallback count) state = do
   
 eval (UpdateSafetySettings safetySettings@(API.GetEmergencySettingsRes settings)) state = do
   let updatedState = state{props{safetySettings = Just safetySettings}}
-  case settings.safetyCheckStartTime, settings.safetyCheckEndTime, (state.props.currentStage == RideCompleted) of
-      Just safetyCheckStartTime, Just safetyCheckEndTime, true -> do
+  case settings.safetyCheckStartTime, settings.safetyCheckEndTime of
+      Just safetyCheckStartTime, Just safetyCheckEndTime -> do
         let (API.RideBookingRes resp) = state.data.ratingViewState.rideBookingRes
             (API.RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList
-            postRideCheckCache = {enablePostRideSafetyCheck : settings.enablePostRideSafetyCheck, safetyCheckStartTime : settings.safetyCheckStartTime, safetyCheckEndTime : safetyCheckEndTime}
-            nightSafetyFlow = showNightSafetyFlow (Just false) (currRideListItem.rideStartTime) (currRideListItem.rideEndTime) safetyCheckStartTime safetyCheckEndTime
-            postSafetyCheckEnabled = settings.enablePostRideSafetyCheck == API.ALWAYS_SHARE || (settings.enablePostRideSafetyCheck == API.SHARE_WITH_TIME_CONSTRAINTS && nightSafetyFlow)
-        void $ pure $ setValueToCache (show POST_RIDE_CHECK_SETTINGS) postRideCheckCache
+            postRideCheckCache = {enablePostRideSafetyCheck : settings.enablePostRideSafetyCheck, safetyCheckStartSeconds : settings.safetyCheckStartTime, safetyCheckEndSeconds : safetyCheckEndTime}
+            nightSafetyFlow = showNightSafetyFlow (Just false) (currRideListItem.rideStartTime) (currRideListItem.rideEndTime) safetyCheckStartTime safetyCheckEndTime settings.enablePostRideSafetyCheck
+            postSafetyCheckEnabled = (state.props.currentStage == RideCompleted) && (settings.enablePostRideSafetyCheck == API.ALWAYS_SHARE || (settings.enablePostRideSafetyCheck == API.SHARE_WITH_TIME_CONSTRAINTS && nightSafetyFlow))
+        void $ pure $ setValueToLocalNativeStore POST_RIDE_CHECK_SETTINGS (stringifyJSON $ encode postRideCheckCache)
         continue updatedState{ data{ rideCompletedData{ issueReportData {hasSafetyIssue = postSafetyCheckEnabled, showIssueBanners = state.data.rideCompletedData.issueReportData.showIssueBanners || postSafetyCheckEnabled}}}}
-      _,_,_ -> continue updatedState
+      _,_ -> continue updatedState
 
 eval (ServicesOnClick service) state = do 
   void $ pure $ performHapticFeedback unit

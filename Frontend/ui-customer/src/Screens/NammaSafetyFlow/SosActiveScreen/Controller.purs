@@ -157,7 +157,7 @@ eval StopAudioPlayer state = do
 
 eval (OnAudioCompleted _) state = if state.props.triggerSiren then handleMediaPlayerRestart state else continue state
 
-eval (RecordAudio SafetyActionTileView.OnClick) state = continueWithCmd state { props { isAudioRecordingActive = true } } [do
+eval (RecordAudio SafetyActionTileView.OnClick) state = continueWithCmd state [do
   push <- getPushFn Nothing "SosActiveScreen"
   let _ = JB.askRequestedPermissionsWithCallback [ "android.permission.RECORD_AUDIO" ] push AudioPermission
   pure $ UpdateState state

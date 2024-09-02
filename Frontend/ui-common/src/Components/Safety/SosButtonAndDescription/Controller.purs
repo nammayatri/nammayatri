@@ -24,7 +24,8 @@ type Config = {
     buttonText :: String,
     descriptionText :: String,
     showSosButton :: Boolean,
-    isDisabled :: Boolean
+    isDisabled :: Boolean,
+    editContactText :: String
 }
 
 config :: Config 
@@ -37,5 +38,6 @@ config = {
     buttonText: "",
     descriptionText: "",
     showSosButton: false,
-    isDisabled: false
+    isDisabled: false,
+    editContactText: ""
 }

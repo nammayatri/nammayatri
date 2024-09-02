@@ -1470,3 +1470,4 @@ getBN stringKey =
         TEST_SOS_ACTIVATED -> "টেস্ট এসওএস সক্রিয় করা হয়েছে!"
         CHOOSE_FROM_CONTACTS -> "যোগাযোগ থেকে নির্বাচন করুন"
         ADD_MANUALLY -> "ম্যানুয়ালি যোগ করুন"
+        DEFAULT_CONTACT_NOT_SET -> "ডিফল্ট যোগাযোগ সেট করা হয়নি"

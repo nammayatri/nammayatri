@@ -1,36 +1,37 @@
 module Components.Safety.SosButtonAndDescription.View where
 
-import Components.Safety.SosButtonAndDescription.Controller (Action(..), Config(..))
-import PrestoDOM
 import Prelude
-import Data.Maybe as Mb
-import Common.Types.App (LazyCheck(..), RateCardType(..))
-import Data.String as DS
-import Data.Int as DI
-import Data.Maybe as DM
+import PrestoDOM
+
 import Animation (translateInXForwardAnim, translateInXBackwardAnim)
+import Animation.Config as AnimConfig
+import Common.Types.App (LazyCheck(..), RateCardType(..))
+import Components.PrimaryButton as PrimaryButton
+import Components.Safety.SosButtonAndDescription.Controller (Action(..), Config(..))
+import Components.Safety.Utils as SU
+import Data.Array as DA
+import Data.Int as DI
+import Data.Maybe (Maybe(..))
+import Data.Maybe as DM
+import Data.Maybe as Mb
+import Data.String as DS
 import Effect (Effect)
+import Engineering.Helpers.Commons (os, screenWidth, screenHeight)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Halogen.VDom.DOM.Prop (Prop)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit, map, (-), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine, stroke, horizontalScrollView, relativeLayout)
+import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude as MP
+import Prelude (Unit, ($), const, (<>), (>), (==), (||), (&&), (/), (*), (/=), (+), (<<<), unit, map, (-), not)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight, fontStyle, scrollView, maxLines, singleLine, stroke, horizontalScrollView, relativeLayout)
+import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
-import PrestoDOM.Animation as PrestoAnim
-import Animation.Config as AnimConfig
-import Halogen.VDom.DOM.Prop (Prop)
-import Data.Array as DA
-import Data.Maybe (Maybe(..))
-import Components.PrimaryButton as PrimaryButton
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Commons (os, screenWidth, screenHeight)
-import Mobility.Prelude (boolToVisibility)
 import Timers (startTimer)
-import Components.Safety.Utils as SU
-import Mobility.Prelude as MP
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -54,7 +55,7 @@ view push config =
         ]
         (map (\item -> SU.measureView item) config.sosDescription)
     , case config.primaryContactAndEdit of
-        Just item -> primaryContactAndEditView item push config.isDisabled
+        Just item -> primaryContactAndEditView item push config.isDisabled config.editContactText
         Nothing -> MP.noView
     ]
 
@@ -117,8 +118,8 @@ sosButtonView config push useMargin =
       ]
 
 -- ---------------------------------- primaryContactAndEditView -----------------------------------
-primaryContactAndEditView :: forall w. SU.MeasureViewConfig -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
-primaryContactAndEditView item push isDisabled =
+primaryContactAndEditView :: forall w. SU.MeasureViewConfig -> (Action -> Effect Unit) -> Boolean -> String -> PrestoDOM (Effect Unit) w
+primaryContactAndEditView item push isDisabled editContactText =
   linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -127,7 +128,7 @@ primaryContactAndEditView item push isDisabled =
         ]
         [ SU.measureView item
         , textView
-            $ [ text $ getString EDIT
+            $ [ text editContactText
               , color Color.blue800
               , gravity RIGHT
               , onClick push $ const AddContacts

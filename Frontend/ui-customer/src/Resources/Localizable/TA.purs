@@ -1489,3 +1489,4 @@ getTA stringKey =
     TEST_SOS_ACTIVATED -> "சோஸ் செயல்படுத்தப்பட்டது!"
     CHOOSE_FROM_CONTACTS -> "தொடர்புகளிலிருந்து தேர்ந்தெடு"
     ADD_MANUALLY -> "கைமுறையா"
+    DEFAULT_CONTACT_NOT_SET -> "இயல்புநிலை தொடர்பு அமைக்கப்படவில்லை"
