@@ -46,6 +46,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverClearFee,
     getDriverPanAadharSelfieDetails,
     postDriverSyncDocAadharPan,
+    postDriverUpdateVehicleManufacturing,
   )
 where
 
@@ -159,3 +160,6 @@ getDriverPanAadharSelfieDetails = DDriver.getDriverPanAadharSelfieDetails
 
 postDriverSyncDocAadharPan :: ShortId DM.Merchant -> Context.City -> Common.AadharPanSyncReq -> Flow APISuccess
 postDriverSyncDocAadharPan = DDriver.postDriverSyncDocAadharPan
+
+postDriverUpdateVehicleManufacturing :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateVehicleManufacturingReq -> Flow APISuccess
+postDriverUpdateVehicleManufacturing = DDriver.postDriverUpdateVehicleManufacturing

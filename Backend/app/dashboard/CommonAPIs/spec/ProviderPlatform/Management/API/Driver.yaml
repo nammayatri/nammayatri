@@ -377,6 +377,15 @@ apis:
         type: APISuccess
       migrate:
         endpointV2:
+  - POST:
+      endpoint: /updateVehicleManufacturing/{driverId}
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_VEHICLE_MANUFACTURING
+      params:
+        driverId: Id Driver
+      request:
+        type: UpdateVehicleManufacturingReq
+      response:
+        type: APISuccess
 
 types:
   DriverListRes:
@@ -481,6 +490,10 @@ types:
   UpdateVehicleVariantReq:
     - rcId: Text
     - vehicleVariant: VehicleVariant
+    - derive: "'HideSecrets"
+  UpdateVehicleManufacturingReq:
+    - rcId: Text
+    - manufacturing: Day
     - derive: "'HideSecrets"
   ReviewRCVariantReq:
     - rcId: Text

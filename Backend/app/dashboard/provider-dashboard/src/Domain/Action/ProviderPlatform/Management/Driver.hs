@@ -46,6 +46,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverClearFee,
     getDriverPanAadharSelfieDetails,
     postDriverSyncDocAadharPan,
+    postDriverUpdateVehicleManufacturing,
   )
 where
 
@@ -295,3 +296,9 @@ postDriverPersonId merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.PostDriverPersonIdEndpoint apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do Client.callDriverOfferBPPOperations checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverPersonId)) req
+
+postDriverUpdateVehicleManufacturing :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateVehicleManufacturingReq -> Environment.Flow APISuccess)
+postDriverUpdateVehicleManufacturing merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostDriverUpdateVehicleManufacturingEndpoint apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ do Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverUpdateVehicleManufacturing) driverId req
