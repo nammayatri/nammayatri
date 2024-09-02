@@ -151,6 +151,7 @@ import Screens.HomeScreen.Controllers.Types
 import Data.Show.Generic 
 import Data.Array as DA
 import Data.String as DS
+import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -2939,10 +2940,10 @@ eval (UpdateSafetySettings safetySettings@(API.GetEmergencySettingsRes settings)
         continue updatedState{ data{ rideCompletedData{ issueReportData {hasSafetyIssue = postSafetyCheckEnabled, showIssueBanners = state.data.rideCompletedData.issueReportData.showIssueBanners || postSafetyCheckEnabled}}}}
       _,_,_ -> continue updatedState
 
-eval (DeliveryParcelImageAndOtp (CheckImageUploadStatus PrimaryButtonController.OnClick)) = 
-  continue state  -- TODO
+eval (DeliveryParcelImageOtpAction (DeliveryParcelImageAndOtp.CheckImageUploadStatus PrimaryButtonController.OnClick)) state = 
+  continue state  -- TODO-vishal
 
-eval (DeliveryParcelImageAndOtp (DeliveryParcelButton PrimaryButtonController.OnClick)) state = 
+eval (DeliveryParcelImageOtpAction (DeliveryParcelImageAndOtp.DeliveryParcelButton PrimaryButtonController.OnClick)) state = 
   continue state { props { showDeliveryImageAndOtpModal = false}}
   
 

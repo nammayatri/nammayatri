@@ -2540,3 +2540,54 @@ deliveryParcelImageAndOtpConfig state =
         }
   in
     deliveryParcelImageAndOtpConfig'
+
+parcelFeedbackPillDataWithRating1 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating1 state =
+  [ [ { id: "6", text: getString RUDE_BEHAVIOUR }
+    , { id: "1", text: getString TOO_MANY_CALLS }
+    ]
+  , [ { id: "6", text: getString RECKLESS_HANDLING }
+    , { id: "6", text: getString ASKED_FOR_EXTRA_FARE }
+    ]
+  , ( [ { id: "15", text: getString DELIVERY_DELAYED } 
+      , { id: "15", text: getString ITEMS_MISSING } ]
+    )
+  ]
+
+parcelFeedbackPillDataWithRating2 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating2 state = parcelFeedbackPillDataWithRating1 state
+
+parcelFeedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating3 state =
+  [ [ { id: "8", text: getString UNPROFESSIONAL_DRIVER }]
+  , [ { id: "8", text: getString ASKED_FOR_EXTRA_FARE }
+    , { id: "11", text: getString TOO_MANY_CALLS}
+    ]
+  , [ { id: "3", text: getString DELIVERY_DELAYED }
+    , { id: "3", text: getString RUDE_BEHAVIOUR }
+    ]
+  ]
+
+parcelFeedbackPillDataWithRating4 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating4 state =
+  [ [ { id: "9", text: getString POLITE_ATTITUDE }
+    , { id: "9", text: getString SMOOTH_EXPERIENCE }
+    ]
+  , [ { id: "9", text: getString SECURE_DELIVERY }
+    , { id: "11", text: getString ASKED_FOR_EXTRA_FARE}
+    ]
+  , [ { id: "4", text: getString DELIVERY_DELAYED }
+    , { id: "4", text: getString TOO_MANY_CALLS }
+    ]
+  ]
+
+parcelFeedbackPillDataWithRating5 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating5 state =
+  [ [ { id: "10", text: getString POLITE_ATTITUDE }
+    , { id: "5", text: getString SMOOTH_EXPERIENCE }
+    ]
+  , [ { id: "12", text: getString ON_TIME }
+    , { id: "10", text: getString MINIMAL_CALLING }
+    ]
+  , [ { id: "10", text: getString SECURE_DELIVERY }]
+  ]
