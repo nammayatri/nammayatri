@@ -109,6 +109,7 @@ data LocationAPIEntity = LocationAPIEntity
     areaCode :: Maybe Text,
     area :: Maybe Text
   }
+  deriving (Generic, ToJSON)
 
 data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED
   deriving stock (Show, Read, Generic)
@@ -219,7 +220,8 @@ data MerchantConfig = MerchantConfig
     kaptureDisposition :: Text,
     kaptureQueue :: Text,
     counterPartyUrl :: BaseUrl,
-    counterPartyApiKey :: Text
+    counterPartyApiKey :: Text,
+    sensitiveWords :: Maybe [Text]
   }
 
 allLanguages :: [Language]

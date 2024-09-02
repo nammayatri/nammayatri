@@ -47,6 +47,7 @@ RiderConfig:
     cxAgentDetails: "Maybe [CxAgentDetails]"
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers
+    sensitiveWords: "Maybe [Text]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -111,6 +112,7 @@ RiderConfig:
     kaptureConfig: "json"
     exotelAppIdMapping: "json"
     cxAgentDetails: text []
+    sensitiveWords: text []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
