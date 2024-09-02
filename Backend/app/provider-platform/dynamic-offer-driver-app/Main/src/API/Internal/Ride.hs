@@ -8,10 +8,10 @@ import qualified Domain.Action.Internal.Ride as Domain
 import Domain.Types.Ride
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
-import Kernel.Types.Id
 
 type API =
   ( "ride"
