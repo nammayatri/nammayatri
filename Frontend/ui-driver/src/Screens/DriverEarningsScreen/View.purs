@@ -68,7 +68,7 @@ import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
-import Screens.DriverEarningsScreen.Controller (Action(..), ScreenOutput, eval, fetchWeekyEarningData, dummyQuestions, tableData)
+import Screens.DriverEarningsScreen.Controller (Action(..), ScreenOutput, eval, fetchWeekyEarningData, dummyQuestions)
 import Screens.DriverEarningsScreen.ScreenData (dummyDateItem)
 import Screens.Types (DriverEarningsScreenState)
 import Screens.Types as ST
@@ -917,23 +917,22 @@ faqQuestionView push state =
             <> FontStyle.h1 TypoGraphy
         )
     , answersListView push state.props.individualQuestion.answer state
-    , tableView state $ tableData state
+    , tableView state
     ]
 
-tableView :: forall w. ST.DriverEarningsScreenState -> Array ST.TableItem -> PrestoDOM (Effect Unit) w
-tableView state tableData =
+tableView :: forall w. ST.DriverEarningsScreenState ->  PrestoDOM (Effect Unit) w
+tableView state  =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 5.0
     , stroke $ "1," <> Color.grey900
     , orientation VERTICAL
-    , visibility $ boolToVisibility (state.props.individualQuestion.showTable)
-    ]
-    (mapWithIndex (\index item -> tableItemView item index state) tableData)
+    , visibility $ boolToVisibility $ state.props.individualQuestion.tag == ST.HowEarnLosePoints
+    ] $ mapWithIndex (\index item -> tableItemView item index state) (fromMaybe [] state.data.coinInfoRes)
 
-tableItemView :: forall w. ST.TableItem -> Int -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
-tableItemView item index state =
+tableItemView :: forall w. API.CoinInfo -> Int -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
+tableItemView (API.CoinInfo item) index state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -951,7 +950,7 @@ tableItemView item index state =
             [ textView
               ( [ height WRAP_CONTENT
                 , width $ V (((screenWidth unit - 10) * 55) / 100)
-                , text item.key
+                , text item.title
                 , color Color.black900
                 , padding $ if index == 0 then Padding 16 12 16 12 else Padding 16 8 16 8
                 ]
@@ -961,10 +960,10 @@ tableItemView item index state =
                 ( [
                     height WRAP_CONTENT
                   , width $ V (((screenWidth unit - 10) * 55) / 100)
-                  , text $ "*" <> getString CUSTOMER_SHOULD_COMPLETE_A_VALID_RIDE
+                  , text item.description
                   , color Color.black700
                   , padding $ Padding 16 0 16 8
-                  , visibility $ boolToVisibility (item.key == getString CUSTOMER_REFERRAL)
+                  , visibility $ boolToVisibility $ not $ DS.null item.description
                   ] <> FontStyle.body1 TypoGraphy
                 )
             ]
@@ -983,7 +982,7 @@ tableItemView item index state =
               [ textView
                   ( [ height WRAP_CONTENT
                     , width WRAP_CONTENT
-                    , text item.value
+                    , text $ if index /= 0 then  (if item.coins > 0 then "+" else "-") <> (show item.coins) else getString YATRI_POINTS_STR
                     , color Color.black900
                     ]
                       <> if index == 0 then FontStyle.h2 TypoGraphy else FontStyle.subHeading2 TypoGraphy
@@ -997,7 +996,7 @@ tableItemView item index state =
                     ]
               ]
           ]
-    , separatorView (not (index == length (tableData state) - 1)) state.props.subView
+    , separatorView (not (index == (length $ fromMaybe [] state.data.coinInfoRes) - 1)) state.props.subView
     ]
 
 faqVideoView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w

@@ -1601,3 +1601,5 @@ getHI stringKey =
         LIFETIME_STATS -> "जीवनकाल सांख्यिकी"
         TOTAL_RIDES_CANCELLED -> "कुल राइड रद्द"
         TOTAL_EARNINGS_MISSED -> "कुल कमाई छूट गई"
+        POINTS_EARNED_ points -> points <> " अंक अर्जित किये गये ✨"
+        FOR_METRO_RIDE -> "मेट्रो सवारी के लिए"

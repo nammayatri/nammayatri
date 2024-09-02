@@ -1600,3 +1600,5 @@ getKN stringKey =
         LIFETIME_STATS -> "ಜೀವನದ ಸ್ಟ್ಯಾಟಿಸ್ಟಿಕ್ಸ್"
         TOTAL_RIDES_CANCELLED -> "ಒಟ್ಟು ಸವಾರಿಗಳನ್ನು ರದ್ದು ಮಾಡಲಾಗಿದೆ"
         TOTAL_EARNINGS_MISSED -> "ಒಟ್ಟು ಆದಾಯವನ್ನು ಮಿಸ್ ಮಾಡಲಾಗಿದೆ"
+        POINTS_EARNED_ points -> points <> " ಅಂಕ ಗಳಿಸಿದೆ ✨"
+        FOR_METRO_RIDE -> "ಮೆಟ್ರೋ ಸವಾರಿಗಾಗಿ"

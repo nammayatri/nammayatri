@@ -1046,6 +1046,7 @@ type HomeScreenData =  {
   payoutRewardAmount :: Maybe Int,
   payoutVpaBankAccount :: Maybe String
 , cancellationRate :: Int
+, coinsEarned :: Array API.CoinsEarned
 }
 
 type ParkingData = {
@@ -2540,6 +2541,7 @@ type DriverEarningsScreenData = {
   weeklyEarningData :: Array WeeklyEarning,
   anyRidesAssignedEver :: Boolean,
   logField :: Object Foreign
+, coinInfoRes :: Maybe (Array API.CoinInfo)
 }
 
 type DriverEarningsScreenProps = {
@@ -2579,8 +2581,14 @@ type FaqQuestions = {
   question :: String,
   videoLink :: Maybe String,
   answer :: Array AnswerConfig,
-  showTable :: Boolean
+  showTable :: Boolean,
+  tag :: CoinsQuestionTag
 }
+
+data CoinsQuestionTag = HowEarnLosePoints | DiscountPoints | PointsValidity | HowEarnPoints | HowUsePoints | PointsEarnEligibility | NothingCoinsQuestionTag
+
+derive instance genericCoinsQuestionTag :: Generic CoinsQuestionTag _
+instance eqCoinsQuestionTag :: Eq CoinsQuestionTag where eq = genericEq
 
 
 type AnswerConfig = {

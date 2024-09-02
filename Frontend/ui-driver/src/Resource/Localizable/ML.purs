@@ -1601,3 +1601,5 @@ getML stringKey =
         LIFETIME_STATS -> "ജീവിത സ്റ്റാറ്റ്സ്"
         TOTAL_RIDES_CANCELLED -> "മൊത്തം റൈഡുകൾ റദ്ദാക്കി"
         TOTAL_EARNINGS_MISSED -> "മൊത്തം ലഭ്യമായ വരുമാനം കളയി"
+        POINTS_EARNED_ points -> points <> " പോയിൻ്റ് നേടി ✨"
+        FOR_METRO_RIDE -> "ಮೆಟ್ರೋ ಸವಾರಿಗಾಗಿ"

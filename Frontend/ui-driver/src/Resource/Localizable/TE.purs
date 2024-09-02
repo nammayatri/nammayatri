@@ -1603,3 +1603,5 @@ getTE stringKey =
         LIFETIME_STATS -> "జీవిత సమాచారం"
         TOTAL_RIDES_CANCELLED -> "మొత్తం రైడ్‌లను రద్దు చేసారు"
         TOTAL_EARNINGS_MISSED -> "మొత్తం సంపాదించని ధరలు"
+        POINTS_EARNED_ points -> points <> " సంపాదించిన పాయింట్‌లు ✨"
+        FOR_METRO_RIDE -> "మెట్రో రైడ్ కోసం"

@@ -61,7 +61,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
 import Screens.Types as ST
-import Services.API as SA
+import Services.API as API
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..), BookingTypes(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Mobility.Prelude (boolToVisibility)
@@ -144,7 +144,7 @@ rideActionModalConfig state =
     bookingFromOtherPlatform = state.data.activeRide.bookingFromOtherPlatform,
     bapName = state.data.activeRide.bapName,
     distance = case state.data.route DA.!! 0 of
-                  Just (SA.Route obj) ->  obj.distance
+                  Just (API.Route obj) ->  obj.distance
                   Nothing -> 0
   , parkingCharge = state.data.activeRide.parkingCharge
   }
@@ -945,7 +945,7 @@ waitTimeInfoCardConfig state =
         padding = PaddingVertical 16 20
       }
     }
-    where rideInProgress = state.data.activeRide.status == SA.INPROGRESS
+    where rideInProgress = state.data.activeRide.status == API.INPROGRESS
           chargesOb = HU.getChargesOb state.data.activeRide.tripType state.data.cityConfig state.data.activeRide.driverVehicle
           maxWaitTimeInMinutes = Int.floor $ Int.toNumber chargesOb.freeSeconds / 60.0
 
@@ -1452,7 +1452,9 @@ getRideCompletedConfig state = let
   specialZonePickup = isJust $ state.data.endRideData.specialZonePickup
   topPillConfig = constructTopPillConfig disability specialZonePickup
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
-  viewOrderConfig = [ {condition : (not isRentalRide) && (autoPayBanner == DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
+  metroRideCoins = DA.find (\(API.CoinsEarned item) -> item.eventType == "MetroRideCompleted") state.data.coinsEarned
+  viewOrderConfig = [ {condition : isJust metroRideCoins, elementView :  RideCompletedCard.COINS_EARNED_VIEW },
+                      {condition : (not isRentalRide) && (autoPayBanner == DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
                       {condition : (not isRentalRide) && (autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= ""), elementView :  RideCompletedCard.QR_VIEW },
                       {condition : (not isRentalRide) && not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"), elementView :  RideCompletedCard.NO_VPA_VIEW },
                       {condition : (not isRentalRide) &&  (autoPayBanner /= DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
@@ -1566,6 +1568,10 @@ getRideCompletedConfig state = let
       url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
     }
   , additionalCharges = additionalCharges
+  , coinsEarned  {
+      title = maybe "" (\(API.CoinsEarned item) -> getString $ POINTS_EARNED_ $ show item.coins) metroRideCoins
+    , subTitle = if isJust metroRideCoins then getString FOR_METRO_RIDE else ""
+    }
   }
   in config'
 
