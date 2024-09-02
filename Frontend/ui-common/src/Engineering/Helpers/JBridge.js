@@ -1334,6 +1334,9 @@ export const openNavigation = function (dlat) {
           case "DIRECTION": 
             query = platformConfig.directionQuery;
             break;
+          case "TWOWHEELER":
+            query = platformConfig.twoWheelerQuery;
+            break;
           default:
             query = platformConfig.query;
         }

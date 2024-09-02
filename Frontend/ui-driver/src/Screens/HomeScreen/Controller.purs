@@ -625,10 +625,18 @@ eval TriggerMaps state = continueWithCmd state[ do
   let _ = runFn2 EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
   if state.data.activeRide.tripType == ST.Rental then
       case state.data.activeRide.nextStopLat, state.data.activeRide.nextStopLon of
-        Just nextStopLat,Just nextStopLon -> pure $ openNavigation nextStopLat nextStopLon "DRIVE"
+        Just nextStopLat,Just nextStopLon -> if state.props.currentStage == ST.RideAccepted && state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai"
+                                              then
+                                                pure $ openNavigation nextStopLat nextStopLon "TWOWHEELER"
+                                              else
+                                                pure $ openNavigation nextStopLat nextStopLon "DRIVE"
         _,_ -> pure unit
   else 
-    pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
+    if state.props.currentStage == ST.RideAccepted && state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai"
+      then
+        pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon "TWOWHEELER"
+      else
+        pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   pure NoAction
   ]
@@ -947,7 +955,11 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   where 
     action lat lon = if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon lat lon > 0.200
       then do 
-        void $ pure $ openNavigation lat lon "DRIVE"
+        if state.props.currentStage == ST.RideAccepted && state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai"
+          then
+            void $ pure $ openNavigation lat lon "TWOWHEELER"
+          else
+            void $ pure $ openNavigation lat lon "DRIVE"
         continue state
       else 
         continueWithCmd state [do
@@ -1201,7 +1213,11 @@ eval (OnMarkerClickCallBack tag lat lon) state = do
     Just lat', Just lon' -> 
       if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon lat' lon' > 0.200
         then do 
-          void $ pure $ openNavigation lat' lon' "DRIVE"
+          if state.props.currentStage == ST.RideAccepted && state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai"
+            then
+              void $ pure $ openNavigation lat' lon' "TWOWHEELER"
+            else
+              void $ pure $ openNavigation lat' lon' "DRIVE"
           continue state
       else 
         continueWithCmd state [do

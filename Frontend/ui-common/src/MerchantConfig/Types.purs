@@ -75,6 +75,7 @@ type NavigationAppConfig = {
 , packageName :: String
 , walkQuery :: String
 , directionQuery :: String
+, twoWheelerQuery :: String
 }
 
 type GenericHeaderConfig = {
