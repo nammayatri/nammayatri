@@ -1486,3 +1486,4 @@ getTE stringKey =
     ADD_MANUALLY -> "మాన్యువల్‌గా జోడించండి"
     DEFAULT_CONTACT_NOT_SET -> "డిఫాల్ట్ కాంటాక్ట్ సెట్ చేయబడలేదు"
     DRIVER -> "డ్రైవర్"
+    RECOMMEND_SHARE_MANUALLY -> "మీరు మనువల్లో కూడా షేర్ బటన్ ఉపయోగించి ఎవరితో కూడా షేర్ చేయవచ్చు"

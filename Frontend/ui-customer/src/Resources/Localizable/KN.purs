@@ -1473,6 +1473,7 @@ getKN stringKey =
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " ನಿಮ್ಮೊಂದಿಗೆ ಸವಾರಿಯನ್ನು ಹಂಚಿಕೊಂಡಿದ್ದಾರೆ. ಅನುಸರಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ"
         TEST_SOS_ACTIVATED -> "ಟೆಸ್ಟ್ ಎಸ್‌ಒಎಸ್ ಸಕ್ರಿಯಗೊಂಡಿದೆ!"
         CHOOSE_FROM_CONTACTS -> "ಸಂಪರ್ಕಗಳಿಂದ ಆಯ್ಕೆ ಮಾಡಿ"
-        ADD_MANUALLY -> "ಕೈಯಾರೆ ಸ"
+        ADD_MANUALLY -> "ಹಸ್ತಚಾಲಿತವಾಗಿ ಸೇರಿಸಿ"
         DEFAULT_CONTACT_NOT_SET -> "ಡಿಫಾಲ್ಟ್ ಸಂಪರ್ಕವನ್ನು ಸೆಟ್ ಮಾಡಿ"
         DRIVER -> "ಚಾಲಕ"
+        RECOMMEND_SHARE_MANUALLY -> "ನೀವು ಶೇರ್ ಬಟನ್ ಬಳಸಿ ಯಾರಾದರೂ ಜೊತೆ ಶೇರ್ ಮಾಡಬಹುದು"

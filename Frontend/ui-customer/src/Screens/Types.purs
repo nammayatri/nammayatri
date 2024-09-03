@@ -1239,6 +1239,7 @@ type EmergencyContactsScreenData = {
 type EmergencyContactsScreenProps = {
   showContactList :: Boolean,
   validManualContact :: Boolean,
+  validManualName :: Boolean,
   showAddContactOptions :: Boolean,
   addContactsManually :: Boolean,
   showInfoPopUp :: Boolean,

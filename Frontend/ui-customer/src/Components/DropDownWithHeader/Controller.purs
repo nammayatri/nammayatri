@@ -43,6 +43,7 @@ type Config
     , listVisibility :: Visibility
     , headerText :: String
     , boxPadding :: Padding
+
     , boxBackground :: String
     , selectedContact :: NewContacts
     , dropDownAction :: String
@@ -50,7 +51,7 @@ type Config
 
 config :: Config
 config =
-  { margin: Margin 16 16 16 16
+  { margin: MarginVertical 12 8
   , selectedValue: alwaysShareRideOption
   , dropDownOptions: [ alwaysShareRideOption, shareWithTimeContraintsRideOption ]
   , listVisibility: GONE

@@ -59,8 +59,8 @@ dropDownView push config =
     [ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , padding $ Padding 16 16 16 16
-        , margin $ MarginVertical 12 8
+        , padding $ Padding 16 12 16 12
+        , margin config.margin
         , cornerRadius 16.0
         , background config.boxBackground
         , orientation HORIZONTAL

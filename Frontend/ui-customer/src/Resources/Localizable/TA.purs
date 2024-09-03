@@ -1491,3 +1491,4 @@ getTA stringKey =
     ADD_MANUALLY -> "கைமுறையா"
     DEFAULT_CONTACT_NOT_SET -> "இயல்புநிலை தொடர்பு அமைக்கப்படவில்லை"
     DRIVER -> "இயக்கி"
+    RECOMMEND_SHARE_MANUALLY -> "நீங்கள் பகிர்வதை கைமுறையாகப் பகிரலாம்"

@@ -1472,3 +1472,4 @@ getBN stringKey =
         ADD_MANUALLY -> "ম্যানুয়ালি যোগ করুন"
         DEFAULT_CONTACT_NOT_SET -> "ডিফল্ট যোগাযোগ সেট করা হয়নি"
         DRIVER -> "ড্রাইভার"
+        RECOMMEND_SHARE_MANUALLY -> "আপনি শেয়ার বোতাম ব্যবহার করে কাউকে ম্যানুয়ালি শেয়ার করতে পারেন"

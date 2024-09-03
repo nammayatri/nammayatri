@@ -3585,6 +3585,7 @@ homeScreenContent push state =  let
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , background Color.white900
     , visibility $ boolToVisibility $ (state.props.isSrcServiceable && not state.props.userBlocked) && not state.props.showShimmer
     ][ linearLayout
        [ width MATCH_PARENT

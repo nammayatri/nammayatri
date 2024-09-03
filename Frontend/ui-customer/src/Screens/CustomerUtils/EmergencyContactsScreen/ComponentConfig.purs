@@ -119,6 +119,27 @@ primaryEditTextConfigName state = let
       }
     in primaryEditTextConfig'
 
+primaryButtonConfigManualContactDummy :: EmergencyContactsScreenState -> PrimaryButton.Config
+primaryButtonConfigManualContactDummy state =
+  let
+    config = PrimaryButton.config
+    primaryButtonConfig' =
+      config
+        { textConfig
+          { text = (getString SAVE)
+          -- , accessibilityHint = (if null state.data.selectedContacts then "Add Contacts" else if conditionForPrimaryButtonText then "Next" else if defaultContactCondition then "Done" else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
+          }
+        , isClickable = false
+        , width = if EHC.os == "IOS" then (V 360) else (MATCH_PARENT)
+        , margin = (Margin 16 16 16 16)
+        , id = "ConfirmEmergencyContactsButtonDumm"
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
+        , visibility = INVISIBLE
+        }
+  in
+    primaryButtonConfig'
+
 primaryButtonConfigManualContact :: EmergencyContactsScreenState -> PrimaryButton.Config
 primaryButtonConfigManualContact state =
   let
@@ -166,13 +187,15 @@ primaryButtonConfig state =
 dropDownWithHeaderConfig :: EmergencyContactsScreenState -> NewContacts -> DropDownWithHeader.Config
 dropDownWithHeaderConfig state contact =
   let
+    listVisibile = state.data.selectedContact.number == contact.number && state.props.showDropDown
     dropDownWithHeaderConfig' =
       DropDownWithHeader.config
-        { listVisibility = boolToVisibility $ state.data.selectedContact.number == contact.number && state.props.showDropDown
+        { listVisibility = boolToVisibility listVisibile
         , headerText = ""
         , selectedValue = contact.shareTripWithEmergencyContactOption
         , boxPadding = Padding 0 0 0 0
         , boxBackground = Color.white900
+        , margin = if listVisibile then MarginVertical 12 8 else MarginTop 12
         , selectedContact = contact
         , dropDownOptions = [EMData.alwaysShareRideOptionEM, EMData.shareWithTimeContraintsRideOptionEM, EMData.neverShareRideOptionEM]
         }
