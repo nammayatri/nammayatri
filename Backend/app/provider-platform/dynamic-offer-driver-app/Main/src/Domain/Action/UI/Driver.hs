@@ -1212,7 +1212,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             clientDevice = getDeviceFromText mbDevice',
             backendConfigVersion = Nothing,
             backendAppVersion = Just deploymentVersion.getDeploymentVersion,
-            merchantOperatingCityId = Just driver.merchantOperatingCityId,
+            merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
             vehicleServiceTierName = sd.vehicleServiceTierName
           }
     thereAreActiveQuotes = do
