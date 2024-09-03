@@ -16,6 +16,7 @@ module Domain.Action.UI.Call
   ( CallRes (..),
     CallCallbackReq,
     CallAttachments (..),
+    EntityType (..),
     CallCallbackRes,
     GetCustomerMobileNumberResp,
     GetDriverMobileNumberResp,
@@ -26,11 +27,19 @@ module Domain.Action.UI.Call
     directCallStatusCallback,
     getCustomerMobileNumber,
     getDriverMobileNumber,
+    getCallTwillioAccessToken,
+    getCallTwillioConnectedEntityTwiml,
   )
 where
 
+import Data.Aeson (object, (.=))
+import Data.Char (toUpper)
 import qualified Data.HashMap.Strict as HMS
+import Data.Map as DM
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as DTL
+import Data.Text.Lazy.Builder (fromString, toLazyText)
+import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.CallEvent as DCE
 import qualified Domain.Types.Booking as DB
 import Domain.Types.CallStatus as CallStatus
@@ -39,10 +48,13 @@ import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
+import Environment (Flow)
 import EulerHS.Prelude (Alternative ((<|>)))
 import Kernel.Beam.Functions
+import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Exotel.Types
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import qualified Kernel.External.Call.Interface.Types as CallTypes
@@ -54,11 +66,15 @@ import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
+import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
+import Kernel.Utils.XML
 import Lib.SessionizerMetrics.Types.Event
+import Servant (FromHttpApiData (..))
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
@@ -67,9 +83,32 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import Text.XML as XML
 import Tools.Call
 import Tools.Error
 import TransactionLogs.Types
+import Web.JWT (Algorithm (HS256), ClaimsMap (..), JOSEHeader (..), JWTClaimsSet (..), encodeSigned, hmacSecret, numericDate, stringOrURI)
+
+data EntityType = CUSTOMER | DRIVER
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data Response = Response
+  { say :: Maybe String,
+    dial :: Maybe Dial
+  }
+  deriving stock (Generic, Show)
+
+newtype Dial = Dial
+  { client :: Maybe String
+  }
+  deriving stock (Generic, Show)
+
+instance FromHttpApiData EntityType where
+  parseUrlPiece txt = case T.toLower txt of
+    "customer" -> Right Domain.Action.UI.Call.CUSTOMER
+    "driver" -> Right Domain.Action.UI.Call.DRIVER
+    _ -> Left "Invalid EntityType"
 
 newtype CallRes = CallRes
   { callId :: Id SCS.CallStatus
@@ -412,3 +451,130 @@ type CallBAPConstraints m r c =
     EsqDBReplicaFlow m r,
     HasField "esqDBReplicaEnv" r EsqDBEnv
   )
+
+getCallTwillioAccessToken ::
+  ( Id SRide.Ride ->
+    EntityType ->
+    DeviceType ->
+    Flow Text
+  )
+getCallTwillioAccessToken rideId entity deviceType = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  entityId <- case entity of
+    Domain.Action.UI.Call.CUSTOMER -> do
+      booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
+      riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+      return riderDetails.id.getId
+    Domain.Action.UI.Call.DRIVER -> do
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      return driver.id.getId
+  getAccessToken entityId ride.merchantOperatingCityId
+  where
+    getAccessToken id cityId = do
+      twillioCallConfig :: TwillioCallCfg <- getCfg cityId
+      createJWT id twillioCallConfig deviceType
+    getCfg cityId = do
+      merchantServConfig <- QMSC.findByServiceAndCity (DMSC.CallService Call.TwillioCall) cityId >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
+      case merchantServConfig.serviceConfig of
+        DMSC.CallServiceConfig config ->
+          case config of
+            TwillioCallConfig cfg -> return cfg
+            _ -> throwError $ InternalError "Twillio configs not foung"
+        _ -> throwError $ InternalError "Twillio configs not foung"
+
+getCallTwillioConnectedEntityTwiml ::
+  ( Id SRide.Ride ->
+    EntityType ->
+    Flow XmlText
+  )
+getCallTwillioConnectedEntityTwiml rideId entity = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  let say = Just "Please wait while we are making the call"
+  dial <- case entity of
+    Domain.Action.UI.Call.CUSTOMER -> do
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      let dial = Dial (Just (T.unpack driver.id.getId))
+      return $ Just dial
+    Domain.Action.UI.Call.DRIVER -> do
+      booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
+      riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+      let dial = Dial (Just (T.unpack riderDetails.id.getId))
+      return $ Just dial
+  let twimlResp = responseToXML (Response say dial)
+  logDebug $ DTL.toStrict $ renderText def twimlResp
+  return $ XmlText $ DTL.toStrict $ renderText def twimlResp
+
+createJWT :: Text -> TwillioCallCfg -> DeviceType -> Flow Text
+createJWT id cfg deviceType = do
+  decApiKey <- decrypt cfg.apiKey
+  decApiKeySecret <- decrypt cfg.apiKeySecret
+  let applicationSid = cfg.applicationSid
+      accountSid = cfg.accountSid
+      pushCredentialSid = if deviceType == IOS then cfg.pushCredentialSidIos else cfg.pushCredentialSidAndroid
+  now <- getCurrentTime
+  let grants =
+        object
+          [ "identity" .= id,
+            "voice"
+              .= object
+                [ "incoming" .= object ["allow" .= True],
+                  "outgoing" .= object ["application_sid" .= (applicationSid :: Text)],
+                  "push_credential_sid" .= (pushCredentialSid :: Text)
+                ]
+          ]
+  let jtiText = decApiKey <> "-" <> posixTimeToText (utcTimeToPOSIXSeconds now)
+  let claims =
+        JWTClaimsSet
+          { iss = stringOrURI decApiKey,
+            sub = stringOrURI accountSid,
+            iat = numericDate $ utcTimeToPOSIXSeconds now,
+            exp = numericDate $ utcTimeToPOSIXSeconds $ addUTCTime (secondsToNominalDiffTime 1800) now,
+            jti = stringOrURI jtiText,
+            unregisteredClaims = ClaimsMap (DM.fromList [("grants", grants)]),
+            aud = Nothing,
+            nbf = Nothing
+          }
+  let header =
+        JOSEHeader
+          { typ = Just "JWT",
+            alg = Just HS256,
+            cty = Just "twilio-fpa;v=1",
+            kid = Nothing
+          }
+  let key = hmacSecret decApiKeySecret
+  let jwt = encodeSigned key header claims
+  return jwt
+  where
+    posixTimeToText = DTL.toStrict . toLazyText . Data.Text.Lazy.Builder.fromString . show . (round :: POSIXTime -> Int)
+
+capitalizeText :: T.Text -> T.Text
+capitalizeText txt =
+  case T.uncons txt of
+    Nothing -> txt
+    Just (x, xs) -> T.cons (toUpper x) xs
+
+mkElement :: T.Text -> Maybe String -> Maybe XML.Node
+mkElement tagName = fmap (\tval -> NodeElement $ XML.Element (Name (capitalizeText tagName) Nothing Nothing) mempty [NodeContent (T.pack tval)])
+
+-- Function to convert a Dial data type to XML elements
+dialToXML :: Dial -> XML.Element
+dialToXML Dial {..} = XML.Element (Name "Dial" Nothing Nothing) mempty elements
+  where
+    elements =
+      catMaybes
+        [ mkElement "client" client
+        ]
+
+-- Function to convert a Response data type to an XML Document
+responseToXML :: Response -> Document
+responseToXML Response {..} =
+  Document (Prologue [] Nothing []) root []
+  where
+    elements =
+      catMaybes
+        [ mkElement "say" say,
+          NodeElement <$> fmap dialToXML dial
+        ]
+    root = XML.Element (Name "Response" Nothing Nothing) mempty elements

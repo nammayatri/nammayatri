@@ -69,6 +69,10 @@ dependencies:
   - euler-hs
   - passetto-client
   - exceptions
+  - jwt >= 0.11
+  - xml-conduit
+  - servant-xml
+  - xmlbf
   - hspec
   - http-client
   - lens
