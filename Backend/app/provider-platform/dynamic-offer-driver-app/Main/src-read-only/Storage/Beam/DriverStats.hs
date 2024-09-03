@@ -31,6 +31,7 @@ data DriverStatsT f = DriverStatsT
     totalDistance :: B.C f Kernel.Prelude.Double,
     totalEarnings :: B.C f Kernel.Types.Common.Money,
     totalEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    totalPayoutAmountPaid :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalPayoutEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     totalRatingScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalRatings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

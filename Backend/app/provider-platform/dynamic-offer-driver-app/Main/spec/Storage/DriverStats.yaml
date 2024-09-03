@@ -34,6 +34,7 @@ DriverStats:
     totalPayoutEarnings: HighPrecMoney
     totalValidActivatedRides: Int
     totalReferralCounts: Int
+    totalPayoutAmountPaid: Maybe HighPrecMoney
 
   beamFields:
     totalEarnings:
@@ -116,6 +117,11 @@ DriverStats:
     updateTotalReferralCount:
       kvFunction: updateOneWithKV
       params: [totalReferralCounts]
+      where: driverId
+
+    updateTotalPayoutAmountPaid:
+      kvFunction: updateOneWithKV
+      params: [totalPayoutAmountPaid]
       where: driverId
 
     # setMissedEarnings: -- beam Field checkUp DSL Fix needed
