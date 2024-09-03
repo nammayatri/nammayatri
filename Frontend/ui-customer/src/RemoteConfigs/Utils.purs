@@ -94,3 +94,23 @@ getEnabledServices city = do
     let config = fetchRemoteConfigString "enabled_services"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
     getCityBasedConfig value city
+
+defaultTipConfig :: TipsConfigRC
+defaultTipConfig = {
+  sedan : [0, 20, 30, 50],
+  suv : [0, 20, 30, 50],
+  hatchback : [0, 20, 30, 50],
+  autoRickshaw : [0, 10, 20, 30],
+  taxi : [0, 20, 30, 50],
+  taxiPlus : [0, 20, 30, 50],
+  bike : [0, 20, 30, 50],
+  suvPlus : [0, 20, 30, 50],
+  default : [0, 10, 20, 30],
+  bookAny : [0, 10, 20, 30]
+}
+
+getTipConfigRC :: String -> TipsConfigRC
+getTipConfigRC city = do
+    let config = fetchRemoteConfigString "tip_config"
+        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultTipConfig
+    getCityBasedConfig value city
