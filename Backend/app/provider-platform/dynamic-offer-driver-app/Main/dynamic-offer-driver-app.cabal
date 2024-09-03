@@ -1114,6 +1114,7 @@ library
     , http-conduit
     , http-types
     , json-logic-hs
+    , jwt >=0.11
     , lens
     , lens-aeson
     , location-updates
@@ -1138,6 +1139,7 @@ library
     , servant-multipart
     , servant-openapi3
     , servant-server
+    , servant-xml
     , sessionizer-metrics
     , shared-services
     , singletons
@@ -1157,6 +1159,8 @@ library
     , wai
     , wai-extra
     , warp
+    , xml-conduit
+    , xmlbf
     , yudhishthira
   extra-libraries:
       cac_client
@@ -1242,6 +1246,7 @@ executable dynamic-offer-driver-app-exe
     , http-conduit
     , http-types
     , json-logic-hs
+    , jwt >=0.11
     , lens
     , lens-aeson
     , mobility-core
@@ -1264,6 +1269,7 @@ executable dynamic-offer-driver-app-exe
     , servant-multipart
     , servant-openapi3
     , servant-server
+    , servant-xml
     , shared-services
     , singletons
     , singletons-th
@@ -1280,6 +1286,8 @@ executable dynamic-offer-driver-app-exe
     , wai
     , wai-extra
     , warp
+    , xml-conduit
+    , xmlbf
     , yudhishthira
   extra-libraries:
       cac_client
