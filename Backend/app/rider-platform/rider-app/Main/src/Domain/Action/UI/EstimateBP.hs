@@ -51,12 +51,12 @@ getEstimateBreakupFromQuote quote =
     DQuote.OneWayDetails _ -> pure []
     DQuote.AmbulanceDetails _ -> pure []
     DQuote.DeliveryDetails driverOfferDetails -> do
-      breakup <- CH.findAllByEstimateIdT (Id.cast driverOfferDetails.estimateId)
+      breakup <- CH.findAllByEstimateIdT (Id.cast driverOfferDetails.estimateId) quote.createdAt
       pure $ transformEstimate <$> breakup
     DQuote.InterCityDetails interCityDetails -> pure $ transformInterCityDetails interCityDetails
     DQuote.RentalDetails rentalDetails -> pure $ transformRentalDetails rentalDetails
     DQuote.DriverOfferDetails driverOfferDetails -> do
-      breakup <- CH.findAllByEstimateIdT (Id.cast driverOfferDetails.estimateId)
+      breakup <- CH.findAllByEstimateIdT (Id.cast driverOfferDetails.estimateId) quote.createdAt
       pure $ transformEstimate <$> breakup
     DQuote.OneWaySpecialZoneDetails _ -> pure []
 
