@@ -11,6 +11,18 @@ import Language.Types(STR(..))
 import Data.Show.Generic (genericShow)
 import Common.RemoteConfig.Types as CRT
 
+type TipsConfigRC = {
+  sedan :: Array Int,
+  suv :: Array Int,
+  hatchback :: Array Int,
+  autoRickshaw :: Array Int,
+  taxi :: Array Int,
+  taxiPlus :: Array Int,
+  bike :: Array Int,
+  suvPlus :: Array Int,
+  default :: Array Int,
+  bookAny :: Array Int
+}
 
 type SafetyVideoConfig
   = { videoId :: String
