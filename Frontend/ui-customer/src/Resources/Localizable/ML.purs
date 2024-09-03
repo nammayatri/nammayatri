@@ -1489,3 +1489,4 @@ getML stringKey =
         SECURE_DELIVERY -> "സുരക്ഷിതമായ വിതരണം"
         MINIMAL_CALLING -> "കുറഞ്ഞ വിളി"
         RUDE_BEHAVIOUR -> "അവിനയപരമായ പെരുമാറ്റം"
+        PACKAGE_PHOTO_AND_OTP -> "പാക്കേജ് ഫോട്ടോ ആന്ഡ് ഒടിപി"

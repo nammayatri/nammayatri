@@ -1490,3 +1490,4 @@ getHI stringKey =
         SECURE_DELIVERY -> "सुरक्षित डिलीवरी"
         MINIMAL_CALLING -> "न्यूनतम कॉलिंग"
         RUDE_BEHAVIOUR -> "अशिष्ट व्यवहार"
+        PACKAGE_PHOTO_AND_OTP -> "पैकेज फोटो और ओटीपी"

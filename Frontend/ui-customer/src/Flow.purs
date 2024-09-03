@@ -990,7 +990,7 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindEstimateAndSearch, searchAfterEstimate = false } })
       else do
         void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-        response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled)) (state.props.estimateId)
+        response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) (state.props.estimateId)
         case response of
           Right res -> do
             void $ pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
@@ -1373,7 +1373,7 @@ homeScreenFlow = do
       if valid then do
         setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindingQuotes } })
-        void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled)) (state.props.estimateId)
+        void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) (state.props.estimateId)
         logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
         homeScreenFlow
       else do
@@ -1397,7 +1397,7 @@ homeScreenFlow = do
               ChooseVehicle.ESTIMATES -> do
                 let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
                 if valid then do
-                  void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled)) selectedEstimateOrQuote.id 
+                  void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) selectedEstimateOrQuote.id
                   void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
                   setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes
@@ -2505,8 +2505,18 @@ homeScreenFlow = do
     GO_TO_PARCEL_INSTRUCTIONS -> do
       modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> ParcelDeliveryScreenData.initData)
       parcelDeliveryFlow
-    -- GO_TO_DELIVERY_DETAILS updatedState -> 
-      
+    GET_DELIVERY_IMAGE updatedState -> do
+      res <- lift $ lift $ Remote.getDeliveryImage updatedState.data.driverInfoCardState.rideId
+      case res of
+        Right (API.GetDeliveryImageResponse image) -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { deliveryImage = Just image } })
+          homeScreenFlow
+        Left _ -> do
+          void $ pure $ toast $ "Image Not Uploaded"
+          homeScreenFlow
+    GO_TO_DELIVERY_DETAILS updatedState -> do
+      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> ParcelDeliveryScreenData.initData{ data { currentStage = SENDER_DETAILS, sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, route = updatedState.data.route, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong}})
+      parcelDeliveryFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit

@@ -136,7 +136,9 @@ bottomLayoutView push config visibility' id' =
   , afterRender push $ const $ NoAction
   , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
   , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-  ][ addTipView push config
+  ][ 
+    deliveryPaymentAtReceivingEndLayout push config
+   , addTipView push config
    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "PrimaryButtomConfirm") 
    ]
   
@@ -681,7 +683,7 @@ quoteListView push config =
                         ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
-        , deliveryPaymentAtReceivingEndLayout push config
+        
       ]
     -- , linearLayout -- TODO:: Temporary removing gradient for estimates
     --   [ height $ WRAP_CONTENT
@@ -724,7 +726,9 @@ quoteListView push config =
       , afterRender push $ const $ NoAction
       , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
       , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-      ][ addTipView push config
+      ][ 
+      deliveryPaymentAtReceivingEndLayout push config
+      , addTipView push config
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "KeyedButtonPrimary") 
       ]
 
@@ -843,8 +847,6 @@ deliveryPaymentAtReceivingEndLayout push config =
       , background Color.blue600
       , cornerRadius 12.0
       , margin $ MarginTop 16
-      , clickable true
-      , onClick push $ const $ NoAction
       , gravity CENTER_VERTICAL
       , visibility $ boolToVisibility $ config.fareProductType == DELIVERY
       ]

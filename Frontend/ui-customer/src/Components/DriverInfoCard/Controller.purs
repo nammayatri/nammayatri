@@ -55,6 +55,7 @@ data Action = NoAction
             | ShowEndOTP
             | ShowDirections Number Number
             | EditingLocation LocationType
+            | ShowDeliveryImageAndOtp
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps

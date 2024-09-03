@@ -1507,3 +1507,4 @@ getTA stringKey =
     SECURE_DELIVERY -> "பாதுகாப்பான விநியோகம்"
     MINIMAL_CALLING -> "குறைந்த அழைப்புகள்"
     RUDE_BEHAVIOUR -> "முரட்டுத்தனம்"
+    PACKAGE_PHOTO_AND_OTP -> "பேக்கேஜ் புகோ மற்றும் ஓடிபி"

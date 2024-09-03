@@ -282,6 +282,8 @@ homeScreen = do
       App.BackT $ App.NoBack <$> (pure $ GO_TO_PARCEL_INSTRUCTIONS)
     GoToDeliverySearchLocation updatedState -> do
       App.BackT $ App.NoBack <$> (pure $ GO_TO_DELIVERY_SEARCH_LOCATION updatedState)
-    -- GoToDeliveryDetails -> do
-    --   modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-    --   App.BackT $ App.NoBack <$> (pure $ GO_TO_DELIVERY_DETAILS updatedState)
+    GetDeliveryImage updatedState -> do
+      App.BackT $ App.NoBack <$> (pure $ GET_DELIVERY_IMAGE updatedState)
+    GoToDeliveryDetails updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_DELIVERY_DETAILS updatedState)

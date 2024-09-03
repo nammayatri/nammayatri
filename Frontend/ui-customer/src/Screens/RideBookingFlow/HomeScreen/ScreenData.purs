@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, DeliveryDetailsInfo(..), PersonAndLocationInfo(..), DeliveryModalState(..), InitiatedAs(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -185,6 +185,8 @@ initData = let
     , famousDestinations : []
     , parking : initialParkingData
     , toll : initialTollData
+    , deliveryImage : Nothing
+    , deliveryDetailsInfo : Nothing
     },
     props: {
       rideRequestFlow : false

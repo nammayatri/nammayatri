@@ -1493,3 +1493,5 @@ getKN stringKey =
         SECURE_DELIVERY -> "ಸುರಕ್ಷಿತ ವಿತರಣೆ"
         MINIMAL_CALLING -> "ಕಡಿಮೆ ಕರೆಗಳು"
         RUDE_BEHAVIOUR -> "ಅಸಭ್ಯ ವರ್ತನೆ"
+        PACKAGE_PHOTO_AND_OTP -> "ಪ್ಯಾಕೇಜ್ ಫೋಟೋ ಮತ್ತು ಒಟಿಪಿ"
+        

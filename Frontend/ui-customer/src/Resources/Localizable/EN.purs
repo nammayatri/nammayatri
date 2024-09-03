@@ -1469,7 +1469,6 @@ getEN stringKey =
         TAP_TO_FOLLOW -> "Tap to follow"
         HAS_SHARED_A_RIDE_WITH_YOU name -> name <> " has shared a ride with you. Tap to follow"
         TEST_SOS_ACTIVATED -> "Test SOS Activated!"
-        DELIVERY_STR -> "Delivery"
         CONFIRM_PICKUP_AND_DROP_LOCATION -> "Confirm Pickup and Drop Location"
         CONFIRM_YOUR_DELIVERY -> "Confirm Your Delivery"
         PAYMENT_AT_RECEIVING_END -> "Payment at Receiving End" 
@@ -1491,3 +1490,4 @@ getEN stringKey =
         SECURE_DELIVERY -> "Secure Delivery"
         MINIMAL_CALLING -> "Minimal Calling"
         RUDE_BEHAVIOUR -> "Rude Behaviour"
+        PACKAGE_PHOTO_AND_OTP -> "Package Photo & OTP"

@@ -132,6 +132,8 @@ data ScreenOutput = LogoutUser
   | SelectEstimateAndQuotes HomeScreenState
   | GoToParcelInstructions
   | GoToDeliverySearchLocation HomeScreenState
+  | GetDeliveryImage HomeScreenState
+  | GoToDeliveryDetails HomeScreenState
 
 data Action = NoAction
   | BackPressed

@@ -116,6 +116,7 @@ view push state =
           , clickable true
           ][ otpAndWaitView push state 
             , endOTPView push state
+            , deliveryImageAndOtpView push state
             , linearLayout [weight 1.0] []
             -- , if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then trackRideView push state else dummyView push -- TODO: may use in future: Ashish Singh
             , if enableShareRide then shareRideButton push state else if enableSupport then contactSupport push state else dummyView push -- TEMP FIX UNTIL THE NEW DESIGN IS DONE
@@ -183,6 +184,47 @@ endOTPView push state =
       , margin $ Margin 0 4 4 4
       , background Color.grey700
       ] <> FontStyle.body22 TypoGraphy
+    ]
+  ]
+deliveryImageAndOtpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+deliveryImageAndOtpView push state =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , cornerRadius if os == "IOS" then 18.0 else 32.0
+  , background Color.white900
+  , gravity CENTER
+  , clickable true
+  , accessibility DISABLE
+  , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY
+  , margin $ Margin 8 8 6 8
+  ][ textView $
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , accessibilityHint $ " O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp) 
+    , accessibility ENABLE
+    , text $ getString PACKAGE_PHOTO_AND_OTP
+    , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
+    , color Color.black700
+    ] <> FontStyle.body22 TypoGraphy
+  , linearLayout 
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , background Color.grey700
+    , clickable true
+    , onClick push $ const ShowDeliveryImageAndOtp
+    , margin $ Margin 4 4 4 4
+    , padding $ Padding 8 4 8 4
+    , cornerRadius 16.0
+    , rippleColor Color.rippleShade
+    ]
+    [ imageView 
+      [ gravity CENTER_VERTICAL
+      , height $ V 22
+      , width $ V 22
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+      ] 
     ]
   ]
 
@@ -333,7 +375,7 @@ otpAndWaitView push state =
   , disableKeyboardAvoidance true
   , scrollBarX false
   , scrollBarY false
-  , visibility $ boolToVisibility $ (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted))
+  , visibility $ boolToVisibility $ (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted && state.data.fareProductType /= FPT.DELIVERY ))
   , gravity CENTER
   , accessibility DISABLE
   ] <> if os == "IOS" then [width MATCH_PARENT] else [weight 1.0])[ linearLayout

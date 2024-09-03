@@ -1489,3 +1489,4 @@ getBN stringKey =
         SECURE_DELIVERY -> "নিরাপদ ডেলিভারি"
         MINIMAL_CALLING -> "ন্যূনতম কলিং"
         RUDE_BEHAVIOUR -> "অসভ্য আচরণ"
+        PACKAGE_PHOTO_AND_OTP -> "প্যাকেজ ফটো এবং ওটিপি"

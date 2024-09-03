@@ -306,3 +306,6 @@ getEmergencyContactsTrackingStatus rideId = (getBaseUrl "59") <> "/followRide/EC
 
 getManuallySharedRideDetails :: String -> String
 getManuallySharedRideDetails rideId = (getBaseUrl "60") <> "/followRide/" <> rideId <> "/customerDetails"
+
+getDeliveryImage :: String -> String
+getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"

@@ -488,13 +488,14 @@ selectEstimate payload estimateId = do
     where
         unwrapResponse (x) = x
 
-makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> DEstimateSelect
-makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled = DEstimateSelect {
+makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> Maybe DeliveryDetails -> DEstimateSelect
+makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled deliveryDetails = DEstimateSelect {
       "customerExtraFee": tipForDriver,
       "autoAssignEnabled": isAutoAssigned,
       "autoAssignEnabledV2": isAutoAssigned,
       "otherSelectedEstimates": otherSelectedEstimates,
-      "isAdvancedBookingEnabled": isAdvancedBookingEnabled
+      "isAdvancedBookingEnabled": isAdvancedBookingEnabled,
+      "deliveryDetails": deliveryDetails
     }
 
 ------------------------------------------------------------------------ SelectList Function ------------------------------------------------------------------------------------------
@@ -1471,6 +1472,8 @@ makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq booki
 makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
 makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId
 
+----------------------------------------- DELiVERY FLOW ----------------------------------------------
+
 mkDeliverylSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> SearchReq
 mkDeliverylSearchReq slat slong dlat dlong srcAdd desAdd startTime  =
     let appConfig = CP.getAppConfig CP.appConfig
@@ -1503,3 +1506,10 @@ mkDeliverylSearchReq slat slong dlat dlong srcAdd desAdd startTime  =
             )
         , "fareProductType" : "ONE_WAY"
         }
+
+getDeliveryImage :: String -> Flow GlobalState (Either ErrorResponse GetDeliveryImageResponse)
+getDeliveryImage rideId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getDeliveryImage rideId) unwrapResponse $ callAPI headers (GetDeliveryImageReq rideId)
+    where
+        unwrapResponse (x) = x

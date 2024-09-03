@@ -2533,10 +2533,10 @@ deliveryParcelImageAndOtpConfig state =
 
     deliveryParcelImageAndOtpConfig' =
       config
-        { image = ""
-        , imageVisibility = false
+        { image = fromMaybe "" state.data.deliveryImage
+        , imageVisibility = isJust state.data.deliveryImage
         , otp = state.data.driverInfoCardState.otp
-        , otpVisibility = false
+        , otpVisibility = isJust state.data.deliveryImage
         }
   in
     deliveryParcelImageAndOtpConfig'

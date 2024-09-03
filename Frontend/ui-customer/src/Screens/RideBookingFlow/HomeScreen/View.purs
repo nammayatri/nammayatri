@@ -624,6 +624,7 @@ view push state =
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
             , if state.data.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
             , if state.data.toll.showIncludedPopUp then PopUpModal.view (push <<< TollChargeIncludedPopUpAction) (PopUpConfigs.tollChargesIncluded state) else emptyTextView state
+            , if state.props.showDeliveryImageAndOtpModal then deliveryParcelImageAndOtpView push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT

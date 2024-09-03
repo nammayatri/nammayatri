@@ -2,6 +2,7 @@ module Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData where
 
 import Data.Maybe(Maybe(..))
 import Screens.Types as ST
+import Services.API as API
 
 initData :: ST.ParcelDeliveryScreenState
 initData =
@@ -33,17 +34,22 @@ dummyAddress =
   , "placeId"   : Nothing
   }
 
-dummyDeliveryDetailsInfo :: ST.DeliveryDetailsInfo
-dummyDeliveryDetailsInfo = {
-  sendersDetails : dummyPersonAndLocationInfo
-  , receiversDetails : dummyPersonAndLocationInfo
-  , currentState : ST.SenderModal
-  , initiatedAs : ST.Sender
+dummyDeliveryDetailsInfo :: API.DeliveryDetails
+dummyDeliveryDetailsInfo = API.DeliveryDetails {
+  senderDetails : dummyPersonAndLocationInfo
+  , receiverDetails : dummyPersonAndLocationInfo
+  , initiatedAs : API.Sender
 }
 
-dummyPersonAndLocationInfo = {
+dummyPersonAndLocationInfo :: API.PersonLocationAndInstruction
+dummyPersonAndLocationInfo = API.PersonLocationAndInstruction {
   name : ""
-  , mobileNumber : ""
-  , address : ""
-  , instruction : Nothing
+  , phoneNumber : ""
+  , address : dummyAddress'
+}
+
+dummyAddress' :: API.InstructionAndAddress
+dummyAddress' = API.InstructionAndAddress {
+  instruction : Just ""
+  , extras : ""
 }

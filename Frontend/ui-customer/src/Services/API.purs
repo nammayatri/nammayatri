@@ -1194,8 +1194,60 @@ newtype DEstimateSelect = DEstimateSelect
     autoAssignEnabled :: Boolean,
     autoAssignEnabledV2 :: Boolean,
     otherSelectedEstimates :: Array String,
-    isAdvancedBookingEnabled :: Boolean
+    isAdvancedBookingEnabled :: Boolean,
+    deliveryDetails :: Maybe DeliveryDetails
   }
+
+data DeliveryDetails = DeliveryDetails
+  {
+    senderDetails :: PersonLocationAndInstruction,
+    receiverDetails :: PersonLocationAndInstruction,
+    initiatedAs :: InitiatedAs
+  }
+
+derive instance genericDeliveryDetails :: Generic DeliveryDetails _
+instance standardEncodeDeliveryDetails :: StandardEncode DeliveryDetails where standardEncode (DeliveryDetails body) = standardEncode body 
+instance showDeliveryDetails :: Show DeliveryDetails where show = genericShow
+instance decodeDeliveryDetails :: Decode DeliveryDetails where decode = defaultDecode
+instance encodeDeliveryDetails  :: Encode DeliveryDetails where encode = defaultEncode
+
+data PersonLocationAndInstruction = PersonLocationAndInstruction
+  {
+    name :: String,
+    phoneNumber :: String,
+    address :: InstructionAndAddress
+  }
+
+derive instance genericPersonLocationAndInstruction :: Generic PersonLocationAndInstruction _
+-- derive instance newtypePersonLocationAndInstruction :: Newtype PersonLocationAndInstruction _
+instance standardEncodePersonLocationAndInstruction :: StandardEncode PersonLocationAndInstruction where standardEncode (PersonLocationAndInstruction body) = standardEncode body
+instance showPersonLocationAndInstruction :: Show PersonLocationAndInstruction where show = genericShow
+instance decodePersonLocationAndInstruction :: Decode PersonLocationAndInstruction where decode = defaultDecode
+instance encodePersonLocationAndInstruction  :: Encode PersonLocationAndInstruction where encode = defaultEncode
+
+data InstructionAndAddress = InstructionAndAddress
+  {
+    instruction :: Maybe String,
+    extras :: String
+  }
+
+derive instance genericInstructionAndAddress :: Generic InstructionAndAddress _
+-- derive instance newtypeInstructionAndAddress :: Newtype InstructionAndAddress _
+instance standardEncodeInstructionAndAddress :: StandardEncode InstructionAndAddress where standardEncode (InstructionAndAddress body) = standardEncode body
+instance showInstructionAndAddress :: Show InstructionAndAddress where show = genericShow
+instance decodeInstructionAndAddress :: Decode InstructionAndAddress where decode = defaultDecode
+instance encodeInstructionAndAddress  :: Encode InstructionAndAddress where encode = defaultEncode
+
+data InitiatedAs =  Sender | Receiver | SomeoneElse
+
+derive instance genericInitiatedAs :: Generic InitiatedAs _
+instance showInitiatedAs :: Show InitiatedAs where show = genericShow
+instance decodeInitiatedAs :: Decode InitiatedAs where decode = defaultEnumDecode
+instance encodeInitiatedAs :: Encode InitiatedAs where encode = defaultEnumEncode
+instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
+instance standardEncodeInitiatedAs :: StandardEncode InitiatedAs
+  where
+    standardEncode _ = standardEncode {}
 
 
 instance makeSelectEstimateReq :: RestEndpoint SelectEstimateReq  where
@@ -3814,3 +3866,27 @@ instance standardEncodeGetManuallySharedDetailsRes :: StandardEncode GetManually
 instance showGetManuallySharedDetailsRes :: Show GetManuallySharedDetailsRes where show = genericShow
 instance decodeGetManuallySharedDetailsRes :: Decode GetManuallySharedDetailsRes where decode = defaultDecode
 instance encodeGetManuallySharedDetailsRes :: Encode GetManuallySharedDetailsRes where encode = defaultEncode
+
+
+----------------------------- DELIVERY -----------------------------------------------------
+
+data GetDeliveryImageReq = GetDeliveryImageReq String
+
+newtype GetDeliveryImageResponse = GetDeliveryImageResponse String
+
+instance makeGetDeliveryImageReq :: RestEndpoint GetDeliveryImageReq where
+ makeRequest reqBody@(GetDeliveryImageReq bookingId) headers = defaultMakeRequest GET (EP.getDeliveryImage bookingId) headers reqBody Nothing
+ encodeRequest req = defaultEncode req
+ 
+derive instance genericGetDeliveryImageReq :: Generic GetDeliveryImageReq _
+instance standardEncodeGetDeliveryImageReq :: StandardEncode GetDeliveryImageReq where standardEncode (GetDeliveryImageReq resp) = standardEncode resp
+instance showGetDeliveryImageReq :: Show GetDeliveryImageReq where show = genericShow
+instance decodeGetDeliveryImageReq :: Decode GetDeliveryImageReq where decode = defaultDecode
+instance encodeGetDeliveryImageReq :: Encode GetDeliveryImageReq where encode = defaultEncode
+
+derive instance genericGetDeliveryImageResponse :: Generic GetDeliveryImageResponse _
+derive instance newtypeGetDeliveryImageResponse :: Newtype GetDeliveryImageResponse _
+instance standardEncodeGetDeliveryImageResponse :: StandardEncode GetDeliveryImageResponse where standardEncode (GetDeliveryImageResponse resp) = standardEncode resp
+instance showGetDeliveryImageResponse :: Show GetDeliveryImageResponse where show = genericShow
+instance decodeGetDeliveryImageResponse :: Decode GetDeliveryImageResponse where decode = defaultDecode
+instance encodeGetDeliveryImageResponse :: Encode GetDeliveryImageResponse where encode = defaultEncode

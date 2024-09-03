@@ -47,6 +47,7 @@ import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.SaveFavouriteCard as SaveFavouriteCardController
+import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
 import Components.SelectListModal.Controller as CancelRidePopUp
@@ -185,9 +186,9 @@ eval2 action  =
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
--- eval GoToConfirmingLocationStage state = 
---   exit $ ExitToConfirmingLocationStage state
--- eval UpdateNoInternet state = continue state { props { isOffline = true } }
+eval GoToConfirmingLocationStage state = 
+  exit $ ExitToConfirmingLocationStage state
+eval UpdateNoInternet state = continue state { props { isOffline = true } }
 eval (InternetCallBackCustomer internetAvailable) state =
   if (internetAvailable == "true") then do
     updateAndExit state { props { isOffline = false } } $ ReloadFlowStatus state { props { isOffline = false } }
@@ -2458,7 +2459,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".BookNow") "true"
       (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
-  _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
+  void $ pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
   void $ pure $ cacheRateCard state
   if any (_ == state.data.fareProductType) [FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY] then do
@@ -2467,6 +2468,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
   else if state.data.iopState.showMultiProvider then do 
     void $  pure $ updateLocalStage ProviderSelection 
     exit $ RefreshHomeScreen state { data { iopState { providerSelectionStage = true}, otherSelectedEstimates = otherSelectedEstimates}, props {estimateId = estimateId}}
+  else if state.data.fareProductType == FPT.DELIVERY then do
+    exit $ GoToDeliveryDetails state
   else do
     
     let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
@@ -2664,6 +2667,8 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
   continue newState
   
 eval (DriverInfoCardActionController (DriverInfoCardController.ShowEndOTP)) state = continue state { props { showEndOTP = true } }
+
+eval (DriverInfoCardActionController (DriverInfoCardController.ShowDeliveryImageAndOtp)) state = continue state { props { showDeliveryImageAndOtpModal = true } }
 
 eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{data{ startedAt = "", invalidBookingId = Nothing, maxEstimatedDuration = 0}, props{showScheduledRideExistsPopUp = false}}
 
@@ -2941,7 +2946,7 @@ eval (UpdateSafetySettings safetySettings@(API.GetEmergencySettingsRes settings)
       _,_,_ -> continue updatedState
 
 eval (DeliveryParcelImageOtpAction (DeliveryParcelImageAndOtp.CheckImageUploadStatus PrimaryButtonController.OnClick)) state = 
-  continue state  -- TODO-vishal
+  exit $ GetDeliveryImage state  -- TODO
 
 eval (DeliveryParcelImageOtpAction (DeliveryParcelImageAndOtp.DeliveryParcelButton PrimaryButtonController.OnClick)) state = 
   continue state { props { showDeliveryImageAndOtpModal = false}}

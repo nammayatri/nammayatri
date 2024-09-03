@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -684,6 +684,8 @@ type HomeScreenStateData =
   , famousDestinations :: Array LocationListItemState
   , parking :: ParkingData
   , toll :: TollData
+  , deliveryImage :: Maybe String
+  , deliveryDetailsInfo :: Maybe API.DeliveryDetails
 }
 
 type TollData = {
@@ -2868,7 +2870,7 @@ type ParcelDeliveryScreenData = {
   , sourceLong :: Number
   , destinationLat :: Number
   , destinationLong :: Number
-  , deliveryDetailsInfo :: DeliveryDetailsInfo
+  , deliveryDetailsInfo :: API.DeliveryDetails
   -- parcelBookingData :: CTA.ParcelBookingConfig,
   -- selectedQuote :: Maybe QuotesList,
   -- bookingId :: String,
@@ -2878,28 +2880,28 @@ type ParcelDeliveryScreenProps = {
 }
 
 
-type DeliveryDetailsInfo = {
-  sendersDetails :: PersonAndLocationInfo
-  , receiversDetails :: PersonAndLocationInfo
-  , currentState :: DeliveryModalState
-  , initiatedAs :: InitiatedAs
-}
+-- type DeliveryDetailsInfo = {
+--   senderDetails :: PersonAndLocationInfo
+--   , receiverDetails :: PersonAndLocationInfo
+--   , currentState :: DeliveryModalState
+--   , initiatedAs :: InitiatedAs
+-- }
 
-type PersonAndLocationInfo = {
-  name :: String
-  , mobileNumber :: String
-  , address :: String
-  , instruction :: Maybe String
-}
+-- type PersonAndLocationInfo = {
+--   name :: String
+--   , mobileNumber :: String
+--   , address :: String
+--   , instruction :: Maybe String
+-- }
 
-data DeliveryModalState = SenderModal | ReceiverModal
+-- data DeliveryModalState = SenderModal | ReceiverModal
 
-derive instance genericDeliveryModalState :: Generic DeliveryModalState _
-instance eqDeliveryModalState :: Eq DeliveryModalState  where eq = genericEq
-instance showDeliveryModalState :: Show DeliveryModalState where show = genericShow
+-- derive instance genericDeliveryModalState :: Generic DeliveryModalState _
+-- instance eqDeliveryModalState :: Eq DeliveryModalState  where eq = genericEq
+-- instance showDeliveryModalState :: Show DeliveryModalState where show = genericShow
 
-data InitiatedAs = Sender | Receiver | Else
+-- data InitiatedAs = Sender | Receiver | Else
 
-derive instance genericInitiatedAs :: Generic InitiatedAs _
-instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
-instance showInitiatedAs :: Show InitiatedAs where show = genericShow
+-- derive instance genericInitiatedAs :: Generic InitiatedAs _
+-- instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
+-- instance showInitiatedAs :: Show InitiatedAs where show = genericShow

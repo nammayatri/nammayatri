@@ -1503,3 +1503,4 @@ getTE stringKey =
     SECURE_DELIVERY -> "భద్రతా డెలివరీ"
     MINIMAL_CALLING -> "తక్కువ కాలింగ్"
     RUDE_BEHAVIOUR -> "అసభ్య ప్రవర్తన"
+    PACKAGE_PHOTO_AND_OTP -> "ప్యాకేజీ ఫోటో మరియు ఓటీపీ"

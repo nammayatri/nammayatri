@@ -306,6 +306,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_PARCEL_INSTRUCTIONS
                         | GO_TO_DELIVERY_SEARCH_LOCATION HomeScreenState 
                         | GO_TO_DELIVERY_DETAILS HomeScreenState
+                        | GET_DELIVERY_IMAGE HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

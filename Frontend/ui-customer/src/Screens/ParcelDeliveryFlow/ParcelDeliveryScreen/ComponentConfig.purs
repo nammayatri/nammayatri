@@ -17,6 +17,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Services.API as API
 import Data.Array as DA
 import Data.String as DS
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -73,10 +74,13 @@ deliveryPickupDetialsModalConfig state =
   let
       config' = PopUpModal.config
       config = getAppConfig appConfig
-      isSenderModal = state.data.deliveryDetailsInfo.currentState == ST.SenderModal
-      details = if isSenderModal then state.data.deliveryDetailsInfo.sendersDetails else state.data.deliveryDetailsInfo.receiversDetails
-      isSelected = if isSenderModal then state.data.deliveryDetailsInfo.initiatedAs == ST.Sender else state.data.deliveryDetailsInfo.initiatedAs == ST.Receiver
+      isSenderModal = state.data.currentStage == ST.SENDER_DETAILS
+      (API.DeliveryDetails deliveryDetails) = state.data.deliveryDetailsInfo
+      (API.PersonLocationAndInstruction details) = if isSenderModal then deliveryDetails.senderDetails else deliveryDetails.receiverDetails
+      (API.InstructionAndAddress address) = details.address
+      isSelected = if isSenderModal then deliveryDetails.initiatedAs == API.Sender else deliveryDetails.initiatedAs == API.Receiver
       checkBoxDetailsText = if isSenderModal then getString I_AM_THE_SENDER else getString I_AM_THE_RECEIVER
+      isClickable = details.name /= "" && details.phoneNumber /= "" && address.extras /= ""
       popUpConfig' =
         config'
           { primaryText { 
@@ -103,6 +107,7 @@ deliveryPickupDetialsModalConfig state =
             , strokeColor = config.primaryBackground
             , color = config.primaryBackground
             , text = "Back"
+            , isClickable = not isSenderModal
             , enableRipple = true
             , margin = Margin 0 20 12 0
             , width = (V 158)
@@ -115,52 +120,60 @@ deliveryPickupDetialsModalConfig state =
             , enableRipple = true
             , margin = Margin 0 20 0 0
             , width = (V 158)
+            , isClickable = isClickable
             }
           , deliveryDetailsConfig { 
             visibility = VISIBLE,
             margin  = Margin 0 20 0 0,
-            personNameDetails = personNameDetailsConfig details isSenderModal,
-            mobileNumberDetails = mobileNumberDetailsConfig details isSenderModal,
-            addressDetails = addressDetailsConfig details isSenderModal,
-            instructionDetails = instructionDetailsConfig details isSenderModal,
+            personNameDetails = personNameDetailsConfig (API.PersonLocationAndInstruction details) isSenderModal,
+            mobileNumberDetails = mobileNumberDetailsConfig (API.PersonLocationAndInstruction details) isSenderModal,
+            addressDetails = addressDetailsConfig (API.PersonLocationAndInstruction details) isSenderModal,
+            instructionDetails = instructionDetailsConfig (API.PersonLocationAndInstruction details) isSenderModal,
             checkBoxDetails = {text : checkBoxDetailsText , isSelected : isSelected}
             }
           }
     in
       popUpConfig'
   where
-    personNameDetailsConfig :: ST.PersonAndLocationInfo -> Boolean -> PrimaryEditTextController.Config
-    personNameDetailsConfig details isSender = 
+    personNameDetailsConfig :: API.PersonLocationAndInstruction -> Boolean -> PrimaryEditTextController.Config
+    personNameDetailsConfig details' isSender = 
       let config = PopUpModal.dummyDeliveryPrimaryText
+          (API.PersonLocationAndInstruction details) = details'
       in
         config {
           editText { text = details.name, placeholder = "Name" },
-          topLabel { text = if isSender then getString SENDER else getString RECEIVER <> " " <> getString NAME },
+          topLabel { text = if isSender then getString SENDER else getString RECEIVER <> " " <> getString NAME <> "*" },
           textImage { visibility = VISIBLE },
           margin = Margin 0 0 0 8
         }
-    mobileNumberDetailsConfig :: ST.PersonAndLocationInfo -> Boolean  -> PrimaryEditTextController.Config
-    mobileNumberDetailsConfig details isSender = 
+    mobileNumberDetailsConfig :: API.PersonLocationAndInstruction -> Boolean  -> PrimaryEditTextController.Config
+    mobileNumberDetailsConfig details' isSender = 
       let config = PopUpModal.dummyDeliveryPrimaryText
+          (API.PersonLocationAndInstruction details) = details'
       in
         config {
-          editText { text = details.mobileNumber, placeholder = "9999999999", pattern = Just ("[0-9]*,10") },
-          topLabel { text = getString $ PHONE $ if isSender then getString SENDER else getString RECEIVER },
+          editText { text = details.phoneNumber, placeholder = "9999999999", pattern = Just ("[0-9]*,10") },
+          topLabel { text = getString $ PHONE $ if isSender then getString SENDER else getString RECEIVER <> "*"  },
           textImage { visibility = VISIBLE } 
         }
-    addressDetailsConfig :: ST.PersonAndLocationInfo -> Boolean  -> PrimaryEditTextController.Config
-    addressDetailsConfig details isSender = 
+    addressDetailsConfig :: API.PersonLocationAndInstruction -> Boolean  -> PrimaryEditTextController.Config
+    addressDetailsConfig details' isSender = 
       let config = PopUpModal.dummyDeliveryPrimaryText
+          (API.PersonLocationAndInstruction details) = details'
+          (API.InstructionAndAddress address) = details.address
       in
         config {
-          editText { text = details.address, placeholder = "Apt #1, 1st Block, Locality" },
-          topLabel { text = getString $ BUILDING_OR_FLAT $ if isSender then getString SENDER else getString RECEIVER }
+          editText { text = address.extras, placeholder = "Apt #1, 1st Block, Locality" },
+          topLabel { text = getString $ BUILDING_OR_FLAT $ (if isSender then getString SENDER else getString RECEIVER) <> "*"  }
         }
-    instructionDetailsConfig :: ST.PersonAndLocationInfo -> Boolean  -> PrimaryEditTextController.Config
-    instructionDetailsConfig details isSender = 
+    instructionDetailsConfig :: API.PersonLocationAndInstruction -> Boolean  -> PrimaryEditTextController.Config
+    instructionDetailsConfig details' isSender = 
       let config = PopUpModal.dummyDeliveryPrimaryText
+          (API.PersonLocationAndInstruction details) = details'
+          (API.InstructionAndAddress address) = details.address
       in
         config {
-          editText { text = fromMaybe "" details.instruction, placeholder = "Instruction", singleLine = false },
-          topLabel { text =if isSender then getString PICKUP else getString DROP  <> " " <> getString OPTIONAL_INSTRUCTION}
+          height = (V 90),
+          editText { text = fromMaybe "" address.instruction, placeholder = "Instruction", singleLine = false },
+          topLabel { text =if isSender then getString PICKUP else getString DROP  <> " " <> getString OPTIONAL_INSTRUCTION <> "*" }
         }
