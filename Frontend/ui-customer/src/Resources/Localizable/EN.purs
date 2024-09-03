@@ -1402,7 +1402,7 @@ getEN stringKey =
         CALL_POLICE_DESC -> "Places a call directly to the nearest police control centre"
         RECORD_AUDIO_DESC -> "Record audio clip to your device and share it in case of any disputes or emergencies"
         SIREN_DESC -> "Play a loud sound to deter any inappropriate actions and alert people around you"
-        CALL_SAFETY_TEAM_DESC -> "Places a call to the 24/7 our Safety Team"
+        CALL_SAFETY_TEAM_DESC -> "Places a call to the 24/7 Safety Team"
         SAFETY_DRILL_DESC -> "You will be able to try out all the emergency actions in the next screen."
         SAFETY_DRILL_SUB -> "<i>‘Call Police’</i> and <i>‘Call Safety Team’</i> options are disabled for the test drill"
         SAFETY_DRILL_NOTE -> "Notify your emergency contacts about the test drill and to avoid unnecessary panic"
@@ -1474,3 +1474,4 @@ getEN stringKey =
         ADD_MANUALLY -> "Add Manually"
         DEFAULT_CONTACT_NOT_SET -> "Default contact not set"
         DRIVER -> "Driver"
+        RECOMMEND_SHARE_MANUALLY -> "You can also share manually with anybody using the share button"

@@ -57,6 +57,7 @@ initData =
       , showInfoPopUp: false
       , fromSosFlow: false
       , validManualContact : true
+      , validManualName : false
       , showAddContactOptions : false
       , addContactsManually : false
       , fromNewSafetyFlow: false

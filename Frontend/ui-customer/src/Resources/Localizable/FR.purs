@@ -1476,3 +1476,4 @@ getFR stringKey =
         ADD_MANUALLY -> "Add Manually"
         DEFAULT_CONTACT_NOT_SET -> "Default contact not set"
         DRIVER -> "Conducteur"
+        RECOMMEND_SHARE_MANUALLY -> "Vous pouvez également partager manuellement avec n'importe qui en utilisant le bouton de partage"

@@ -1,6 +1,6 @@
 module Screens.EmergencyContactsScreen.Controller where
 
-import Prelude (class Show, bind, compare, discard, map, not, pure, unit, ($), (&&), (+), (-), (/=), (<), (<=), (<>), (==), (>), (>=), (||))
+import Prelude (class Show, bind, compare, discard, map, not, pure, unit, ($), (&&), (*), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||))
 import PrestoDOM (Eval, update, ScrollState, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Components.GenericHeader as GenericHeader
@@ -22,7 +22,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, liftFlow)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String as DS
 import Data.Array as DA
-import Data.Int (fromString)
+import Data.Int (fromString, toNumber)
 import Data.String.CodeUnits (charAt)
 import Types.App (defaultGlobalState)
 import Effect.Aff (launchAff)
@@ -114,7 +114,8 @@ data ScreenOutput
 
 eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
 
-eval (TrustedNamePET (PrimaryEditText.TextChanged id value)) state = continue state{ data { manualContactName = value }}
+eval (TrustedNamePET (PrimaryEditText.TextChanged id value)) state = 
+  continue state{ data { manualContactName = value}, props{validManualName = not $ DS.null value }}
 
 eval (TrustedNumberPET (PrimaryEditText.TextChanged id value)) state = 
   let mobileNumberValid = case (charAt 0 value) of 
@@ -129,7 +130,7 @@ eval (PrimaryButtonActionControll PrimaryButton.OnClick) state =
         updatedContactSC = DA.snoc state.data.selectedContacts newContact
         newState = state { data { emergencyContactsList = updatedContactList, selectedContacts = updatedContactSC }, props {showAddContactOptions = false, addContactsManually = false} }
     pure $ hideKeyboardOnNavigation true
-    updateAndExit newState $ PostContactsSafety newState true 
+    updateAndExit newState $ PostContacts newState false 
   else if null state.data.selectedContacts then
     continueWithCmd state [ pure ShowAddContactsOptions ]
   else if state.props.getDefaultContacts then
@@ -163,7 +164,7 @@ eval AddContactsManually state =
   continue state { props { addContactsManually = true } }
 
 eval AddContacts state =
-  continueWithCmd state
+  continueWithCmd state { props { showAddContactOptions = false, addContactsManually = false } }
     [ do
         _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
         pure $ setEnabled (getNewIDWithTag "EmergencyContactTag") false
@@ -369,7 +370,18 @@ findContactsWithPrefix prefix arr =
     if null filteredResultWithStartsWith then
       filter (\contact -> DS.contains (DS.Pattern $ DS.toLower prefix) (DS.toLower contact.name)) arr
     else
-      filteredResultWithStartsWith
+      sortBy (compareByMatchPercentage prefix) filteredResultWithStartsWith
+  where 
+    compareByMatchPercentage pre a b = compare (calculateMatchPercentage pre b.name) (calculateMatchPercentage pre a.name)
+
+    calculateMatchPercentage :: String -> String -> Number
+    calculateMatchPercentage searchString name =
+      let
+        searchLength = DS.length searchString
+        nameLength = DS.length name
+        unmatchedLength = nameLength - searchLength
+      in
+        100.0 - (toNumber unmatchedLength / toNumber nameLength) * 100.0
 
 uniqueContacts :: Array NewContacts -> Array NewContacts -> Array NewContacts
 uniqueContacts result contacts = case head contacts of

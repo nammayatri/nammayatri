@@ -1472,3 +1472,4 @@ getML stringKey =
         ADD_MANUALLY -> "കൈമാറി ച"
         DEFAULT_CONTACT_NOT_SET -> "ഡിഫോൾട്ട് കോൺടാക്റ്റ് സജീവമാക്കിയില്ല"
         DRIVER -> "ഡ്രൈവർ"
+        RECOMMEND_SHARE_MANUALLY -> "നിങ്ങൾക്ക് അനുബന്ധിക്കുന്നവർക്ക് ഷെയർ ബട്ടൺ ഉപയോഗിച്ച് കൈമാറി ഷെയർ ചെയ്യാം"

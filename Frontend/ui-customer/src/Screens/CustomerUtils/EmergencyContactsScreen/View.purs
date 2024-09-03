@@ -11,13 +11,13 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, discard, pure, unit, void, map, not, (<$>), ($), (&&), (-), (<), (<<<), (<>), (==), (>))
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarY, stroke, text, textSize, textView, visibility, weight, width, adjustViewWithKeyboard, scrollView)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarY, stroke, text, textSize, textView, visibility, weight, width, adjustViewWithKeyboard, scrollView, clickable)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (EmergencyContactsScreenState, NewContacts, CheckBoxSelectionConfig)
+import Screens.Types (EmergencyContactsScreenState, NewContacts, CheckBoxSelectionConfig, Stage(..))
 import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Helpers.Utils (FetchImageFrom(FF_COMMON_ASSET), fetchImage, storeCallBackContacts)
-import Data.Array (difference, length, null, take, (!!), mapWithIndex, concat)
+import Data.Array (difference, length, null, take, (!!), mapWithIndex, concat, any)
 import Data.String as DS
 import Data.Maybe (fromMaybe)
 import Data.String (split, Pattern(..))
@@ -38,6 +38,7 @@ import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
 import Screens.NammaSafetyFlow.Components.HelperViews as HelperViews
 import Components.DropDownWithHeader as DropDownWithHeader
 import Debug (spy)
+import Storage (isLocalStageOn)
 import Engineering.Helpers.Utils (terminateLoader)
 import Mobility.Prelude (boolToInvisibility, boolToVisibility)
 
@@ -161,8 +162,21 @@ manualContactView push state =
       PrimaryEditText.view (push <<< TrustedNumberPET) (CC.primaryEditTextConfig state),
       PrimaryEditText.view (push <<< TrustedNamePET) (CC.primaryEditTextConfigName state),
       separator,
+      relativeLayout[
+        height WRAP_CONTENT,
+        width MATCH_PARENT
+      ][
       PrimaryButton.view (push <<< PrimaryButtonActionControll) (CC.primaryButtonConfigManualContact state)
-
+      , linearLayout 
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.transparentHigh
+        , clickable true
+        , visibility $ boolToVisibility $ not $ state.props.validManualContact && state.props.validManualName
+        ][
+          PrimaryButton.view (push <<< PrimaryButtonActionControll) (CC.primaryButtonConfigManualContactDummy state)
+        ]
+      ]
     ]
 
 separator :: forall w. PrestoDOM (Effect Unit) w
@@ -408,8 +422,8 @@ emptyContactsView push state =
                 , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_share_explain"
                 ]
             , explanationContentView push state
+            , HelperViews.recommendContactsToInstallView state.props.appName $ state.props.saveEmergencyContacts && state.props.getDefaultContacts
             , checkBoxSelectionView push state
-            , if length state.data.selectedContacts < 3 && length state.data.selectedContacts > 0 && (not $ state.props.saveEmergencyContacts && state.props.getDefaultContacts) then addContactsButtonView push state else emptyTextView state
             ]
         ]
     ]
@@ -439,7 +453,7 @@ explanationContentView push state =
                 ]
               <> FontStyle.h3 TypoGraphy
           ]
-      , imageViewComponent state "ny_ic_share_ride_rounded"
+      , imageViewComponent state "ny_ic_share_ride_rounded" true
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -457,12 +471,12 @@ explanationContentView push state =
       , if contactsLength < 3 && contactsLength > 0 then addContactsButtonView push state else emptyTextView state
       ]
 
-imageViewComponent :: forall w. EmergencyContactsScreenState -> String -> PrestoDOM (Effect Unit) w
-imageViewComponent state imageUrl =
+imageViewComponent :: forall w. EmergencyContactsScreenState -> String -> Boolean -> PrestoDOM (Effect Unit) w
+imageViewComponent state imageUrl enableMargin =
   imageView
     [ height $ V 200
     , width MATCH_PARENT
-    , margin $ Margin 16 16 16 0
+    , margin $ if enableMargin then Margin 16 16 16 0 else MarginTop 16
     , visibility $ boolToVisibility $ state.props.saveEmergencyContacts && state.props.getDefaultContacts
     , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET imageUrl
     ]
@@ -472,7 +486,7 @@ addContactsButtonView push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 16 24 16 24
+    , padding $ Padding 16 16 16 16
     , margin $ Margin 16 16 16 16
     , cornerRadius 16.0
     , background Color.blue600
@@ -537,12 +551,12 @@ emergencyContactListItem push state contact index =
     linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
+      , gravity CENTER_VERTICAL
       ]
       [ linearLayout
-          [ height WRAP_CONTENT
-          , width $ V 42
+          [ height $ V 36
+          , width $ V 36
           , background userColor
-          , padding $ Padding 12 12 12 12
           , cornerRadius 50.0
           , gravity CENTER
           , margin $ MarginRight 12
@@ -566,18 +580,19 @@ emergencyContactListItem push state contact index =
                 , text contact.name
                 , color Color.black900
                 ]
-              <> FontStyle.h3 TypoGraphy
+              <> FontStyle.subHeading3 TypoGraphy
           , textView
               $ [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , text contact.number
                 , color Color.black700
                 ]
-              <> FontStyle.body5 TypoGraphy
+              <> FontStyle.body32 TypoGraphy
           ]
       , imageView
           [ height $ V 40
           , width $ V 40
+          , visibility $ boolToVisibility $ not $ any isLocalStageOn [RideAccepted, RideStarted]
           , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_delete_bin"
           , onClick push $ const $ RemoveButtonClicked contact
           ]
@@ -615,7 +630,7 @@ checkBoxSelectionView push state =
               , color Color.black900
               ]
             <> FontStyle.h3 TypoGraphy
-        , imageViewComponent state "ny_ic_chat_rounded"
+        , imageViewComponent state "ny_ic_chat_rounded" false
         , textView
             $ [ height WRAP_CONTENT
               , width MATCH_PARENT
@@ -667,17 +682,17 @@ contactListViewCheckBox push state contact index =
       , gravity CENTER_VERTICAL
       ]
       [ linearLayout
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
+          [ height $ V 36
+          , width $ V 36
           , background userColor
-          , padding $ Padding 8 8 8 8
           , cornerRadius 50.0
+          , gravity CENTER
           , margin $ MarginRight 12
           ]
           [ textView
               $ [ height WRAP_CONTENT
                 , width WRAP_CONTENT
-                , text "AR"
+                , text $ getInitials $ getNameInitials contact.name
                 , color Color.black
                 ]
           ]
@@ -688,7 +703,7 @@ contactListViewCheckBox push state contact index =
             , color Color.black900
             , weight 1.0
             ]
-          <> FontStyle.body5 TypoGraphy
+          <> FontStyle.body32 TypoGraphy
       , linearLayout
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
