@@ -50,7 +50,7 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
             <> [Se.Set BeamP.enablePostRideSafetyCheck (fromJust enablePostRideSafetyCheck) | isJust enablePostRideSafetyCheck]
             <> [Se.Set BeamP.enableUnexpectedEventsCheck (fromJust enableUnexpectedEventsCheck) | isJust enableUnexpectedEventsCheck]
             <> [Se.Set BeamP.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill]
-            <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
+            <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup && hasCompletedSafetySetup == Just True]
             <> [Se.Set BeamP.informPoliceSos (fromJust informPoliceSos) | isJust informPoliceSos]
             <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
             <> [Se.Set BeamP.notifySafetyTeamForSafetyCheckFailure (fromJust notifySafetyTeamForSafetyCheckFailure) | isJust notifySafetyTeamForSafetyCheckFailure]

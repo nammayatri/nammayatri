@@ -168,7 +168,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
     when (req.isRideEnded /= Just True) $ do
       void $ QPDEN.updateShareRideForAll personId True
       enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers
-    when shouldNotifyContacts $ SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers
+    let sosType = if req.isRideEnded == Just True then Notification.POST_RIDE_SOS_ALERT else Notification.SOS_TRIGGERED
+    when shouldNotifyContacts $ SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle sosType (Just buildSmsReq) True emergencyContacts.defaultEmergencyNumbers
   return $
     SosRes
       { sosId = sosId
@@ -233,7 +234,8 @@ postSosCreate (mbPersonId, _merchantId) req = do
           <> sosRaisedLocation
 
     triggerShareRideAndNotifyContacts safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
-    notificationBody person_ = SLP.getName person_ <> " has initiated an SOS. Tap to follow and respond to the emergency situation"
+    suffixNotificationBody = if fromMaybe False req.isRideEnded then " has initiated an SOS. Tap to follow and respond to the emergency situation" else " has activated SOS after their Namma Yatri ride. Please check on their safety"
+    notificationBody person_ = SLP.getName person_ <> suffixNotificationBody
     notificationTitle = "SOS Alert"
     shouldNotifyContacts = bool True (req.sendPNOnPostRideSOS == Just True) (req.isRideEnded == Just True)
 
