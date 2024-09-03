@@ -458,7 +458,7 @@ calculateFareParameters params = do
           DFParams.FParamsRentalDetails
             { timeBasedFare = fareByTime,
               distBasedFare = fareByDist,
-              extraDistance = Meters $ extraDist * 1000,
+              extraDistance = Meters extraDist,
               extraDuration = Seconds $ extraMins * 60,
               currency = params.currency,
               distanceUnit = params.distanceUnit,

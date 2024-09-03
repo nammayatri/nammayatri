@@ -383,7 +383,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
-                    then recalculateFareForDistance handle booking ride (max (roundToIntegral ride.traveledDistance) (fromMaybe 0 booking.estimatedDistance)) thresholdConfig False tripEndPoint
+                    then recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig False tripEndPoint
                     else
                       if distanceCalculationFailed
                         then calculateFinalValuesForFailedDistanceCalculations handle booking ride tripEndPoint pickupDropOutsideOfThreshold thresholdConfig
