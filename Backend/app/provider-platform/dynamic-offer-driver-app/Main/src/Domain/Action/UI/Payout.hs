@@ -54,6 +54,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDailyStats
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
@@ -87,14 +88,18 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   case osr of
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
-      unless (payoutOrder.status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]) do
+      unless (isSuccessStatus payoutOrder.status) do
+        when (isSuccessStatus payoutStatus) do
+          driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
+          QDriverStats.updateTotalPayoutAmountPaid (driverStats.totalPayoutAmountPaid <&> (+ amount)) (Id payoutOrder.customerId)
         case payoutOrder.entityName of
           Just DPayment.DRIVER_DAILY_STATS -> do
             forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
               dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
               Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
                 let dPayoutStatus = castPayoutOrderStatus payoutStatus
-                when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
+                when (dailyStats.payoutStatus /= DS.Success) $ do
+                  QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
               fork "Update Payout Status and Transactions for DailyStats" $ do
                 callPayoutService dailyStats.driverId payoutOrderId
           Just DPayment.MANUAL -> do
@@ -122,6 +127,8 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     IPayout.BadStatusResp -> pure ()
   pure Ack
   where
+    isSuccessStatus payoutStatus = payoutStatus `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
+
     callPayoutService driverId payoutOrderId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId}

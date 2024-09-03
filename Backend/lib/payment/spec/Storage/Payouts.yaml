@@ -65,6 +65,9 @@ PayoutOrder:
     findAllWithStatus:
       kvFunction: findAllWithKV
       where: status
+    findAllByCustomerId:
+      kvFunction: findAllWithKV
+      where: customerId
   extraOperations:
   - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"

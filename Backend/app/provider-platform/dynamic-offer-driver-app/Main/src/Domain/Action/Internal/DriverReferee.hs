@@ -34,12 +34,14 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderDetails as QRD
+import Tools.Notifications
 import Utils.Common.CacUtils
 
 data RefereeLinkInfoReq = RefereeLinkInfoReq
@@ -86,6 +88,11 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
     Nothing -> do
       riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency flagReason
       QRD.create riderDetails
+  driver <- QP.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound driverReferralLinkage.driverId.getId)
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchOpCityId "REFERRAL_FLOW" driver.language
+  whenJust mbMerchantPN $ \merchantPN -> do
+    let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
+    notifyDriverOnEvents merchOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType
   pure Success
   where
     mkRiderDetailsObj driverId currency flagReason = do

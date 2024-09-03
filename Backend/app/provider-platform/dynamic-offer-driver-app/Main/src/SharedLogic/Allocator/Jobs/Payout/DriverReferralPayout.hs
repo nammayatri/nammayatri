@@ -19,8 +19,6 @@ import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
-import Domain.Types.Merchant
-import Domain.Types.MerchantOperatingCity
 import Domain.Types.PayoutConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
@@ -106,7 +104,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     else do
       for_ dailyStatsWithVpaList $ \executionData -> do
         fork ("processing Payout for DriverId : " <> executionData.dailyStats.driverId.getId) $ do
-          callPayout merchantId (cast merchantOpCityId) executionData.dailyStats executionData.payoutVpa payoutConfigList statusForRetry
+          callPayout executionData.dailyStats executionData.payoutVpa payoutConfigList statusForRetry
 
       ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
@@ -130,14 +128,12 @@ callPayout ::
     EsqDBFlow m r,
     SchedulerFlow r
   ) =>
-  Id Merchant ->
-  Id MerchantOperatingCity ->
   DS.DailyStats ->
   Maybe Text ->
   [PayoutConfig] ->
   DS.PayoutStatus ->
   m ()
-callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutVpa payoutConfigList statusForRetry = do
+callPayout DS.DailyStats {..} payoutVpa payoutConfigList statusForRetry = do
   mbVehicle <- QV.findById driverId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
@@ -145,7 +141,7 @@ callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutVpa payoutConfig
     Just payoutConfig -> do
       uid <- generateGUID
       person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+      merchantOperatingCity <- CQMOC.findById (cast person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
       case payoutVpa of
         Just vpa -> do
           Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
@@ -169,8 +165,8 @@ callPayout merchantId merchantOpCityId DS.DailyStats {..} payoutVpa payoutConfig
             then do
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
               let serviceName = DEMSC.PayoutService PT.Juspay
-                  createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId serviceName
-              mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast merchantId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+                  createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
+              mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
               errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
             else do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do

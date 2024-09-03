@@ -24,6 +24,9 @@ create = createWithKV
 createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder] -> m ())
 createMany = traverse_ create
 
+findAllByCustomerId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder])
+findAllByCustomerId customerId = do findAllWithKV [Se.Is Beam.customerId $ Se.Eq customerId]
+
 findAllWithStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> m [Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder])
 findAllWithStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 

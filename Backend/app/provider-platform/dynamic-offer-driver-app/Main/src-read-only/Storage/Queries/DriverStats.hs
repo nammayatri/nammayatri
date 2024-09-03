@@ -33,6 +33,11 @@ updatePayoutEarningsByDriverId totalPayoutEarnings driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.Just totalPayoutEarnings), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateTotalPayoutAmountPaid :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateTotalPayoutAmountPaid totalPayoutAmountPaid driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.totalPayoutAmountPaid totalPayoutAmountPaid, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateTotalReferralCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
 updateTotalReferralCount totalReferralCounts driverId = do
   _now <- getCurrentTime
@@ -73,6 +78,7 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),
+      Se.Set Beam.totalPayoutAmountPaid totalPayoutAmountPaid,
       Se.Set Beam.totalPayoutEarnings (Kernel.Prelude.Just totalPayoutEarnings),
       Se.Set Beam.totalRatingScore totalRatingScore,
       Se.Set Beam.totalRatings totalRatings,
