@@ -141,7 +141,8 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                                 { origin = currentDriverLocation,
                                   destination = dropLoc,
                                   travelMode = Just TMaps.CAR,
-                                  distanceUnit = Meter
+                                  distanceUnit = Meter,
+                                  sourceDestinationMapping = Nothing
                                 }
                           return currentLocationtoDropDistance'.distance
                         _ -> return 0
@@ -151,7 +152,8 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                           { origin = dropLoc,
                             destination = scheduledPickup,
                             travelMode = Just TMaps.CAR,
-                            distanceUnit = Meter
+                            distanceUnit = Meter,
+                            sourceDestinationMapping = Nothing
                           }
                     let transporterConfig = fromJust mbtransporterConfig
                         vehicle = fromJust mbVehicle

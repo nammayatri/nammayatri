@@ -172,6 +172,7 @@ getRouteServiceability merchantId merchantOpCityId distanceUnit fromLocation toL
         { origin = fromLocation,
           destination = toLocation,
           travelMode = Just Maps.CAR,
+          sourceDestinationMapping = Nothing,
           distanceUnit
         }
   return $

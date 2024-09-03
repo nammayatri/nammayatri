@@ -182,6 +182,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     enableForwardBatching :: Kernel.Prelude.Bool,
     currentRideTripCategoryValidForForwardBatching :: [Kernel.Prelude.Text],
     batchSizeOnRide :: Kernel.Prelude.Int,
+    batchSizeOnRideWithStraightLineDistance :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    useOneToOneOsrmMapping :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     actualDistanceThresholdWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     actualDistanceThresholdOnRideWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     maxDriverQuotesRequired :: Kernel.Prelude.Int,

@@ -45,6 +45,8 @@ DriverPoolConfig:
     area: Area
     timeBounds: TimeBound|NoRelation
     batchSizeOnRide: Int
+    batchSizeOnRideWithStraightLineDistance: Maybe Int
+    useOneToOneOsrmMapping : Maybe Bool
     onRideRadiusConfig: "[OnRideRadiusConfig]"
     onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
     enableForwardBatching: Bool

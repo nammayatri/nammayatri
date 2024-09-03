@@ -23,6 +23,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     actualDistanceThresholdOnRide :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     area :: B.C f Lib.Types.SpecialLocation.Area,
     batchSizeOnRide :: B.C f Kernel.Prelude.Int,
+    batchSizeOnRideWithStraightLineDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currentRideTripCategoryValidForForwardBatching :: B.C f [Kernel.Prelude.Text],
     distanceBasedBatchSplit :: B.C f [SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config.BatchSplitByPickupDistance],
@@ -55,6 +56,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     tripCategory :: B.C f Kernel.Prelude.Text,
     tripDistance :: B.C f Kernel.Types.Common.Meters,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    useOneToOneOsrmMapping :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType)
   }
   deriving (Generic, B.Beamable)

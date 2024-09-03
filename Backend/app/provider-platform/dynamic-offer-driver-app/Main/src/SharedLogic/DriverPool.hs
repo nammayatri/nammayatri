@@ -783,6 +783,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
                   { origin = dropLoc,
                     destination = scheduledPickup,
                     travelMode = Just TMaps.CAR,
+                    sourceDestinationMapping = Nothing,
                     distanceUnit = Meter
                   }
             let avgSpeedOfVehicleInKM = getVehicleAvgSpeed driverInfo.variant avgSpeeds
@@ -909,7 +910,9 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   DST.CurrentSearchInfo ->
   m [DriverPoolWithActualDistResult]
 calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType batchNum currentSearchInfo = do
-  (thresholdRadius, driverPool) <- calculateDriverPoolCurrentlyOnRide calculateReq (Just batchNum)
+  (thresholdRadius, driverPoolStraightLineFiltered) <- calculateDriverPoolCurrentlyOnRide calculateReq (Just batchNum)
+  let countDriversToProccess = fromMaybe 10 driverPoolCfg.batchSizeOnRideWithStraightLineDistance
+  let driverPool = take countDriversToProccess $ sortOn (.distanceToPickup) driverPoolStraightLineFiltered
   logDebug $ "driverPoolcalculateDriverCurrentlyOnRideWithActualDist" <> show driverPool
   case driverPool of
     [] -> do
@@ -919,7 +922,10 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
       let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
           driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
       driverPoolWithActualDistFromDestinationLocation <- computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOperatingCityId Nothing pickup driverPoolResultsWithDriverLocationAsDestinationLocation
-      driverPoolWithActualDistFromCurrentLocation <- traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
+      driverPoolWithActualDistFromCurrentLocation <- do
+        case driverPoolCfg.useOneToOneOsrmMapping of
+          Just True -> calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping (a :| pprox)
+          _ -> traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = catMaybes $ zipWith (curry $ combine driverToDestinationDistanceThreshold) (NE.toList driverPoolWithActualDistFromDestinationLocation) (NE.toList driverPoolWithActualDistFromCurrentLocation)
           filtDriverPoolWithActualDist' = case (driverPoolCfg.actualDistanceThresholdOnRide, poolType) of
             (_, SpecialZoneQueuePool) -> driverPoolWithActualDist
@@ -955,6 +961,11 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
                 ..
               }
         else Nothing
+    calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping driverPoolCurrentlyOnRide = do
+      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
+      let mbPreviousRideDropLatLn = NE.toList $ map (\DriverPoolResultCurrentlyOnRide {..} -> Just $ LatLong previousRideDropLat previousRideDropLon) driverPoolCurrentlyOnRide
+      let previousRideDropLatLn = NE.fromList $ catMaybes mbPreviousRideDropLatLn
+      computeActualDistanceOneToOneSrcAndDestMapping driverPoolCfg.distanceUnit merchantId merchantOperatingCityId previousRideDropLatLn mbPreviousRideDropLatLn driverPoolResultsWithDriverLocationAsCurrentLocation
 
 computeActualDistanceOneToOne ::
   ( CacheFlow m r,
@@ -995,6 +1006,7 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],
           travelMode = Just Maps.CAR,
+          sourceDestinationMapping = Nothing,
           distanceUnit
         }
   logDebug $ "get distance results" <> show getDistanceResults
@@ -1002,6 +1014,59 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
     Just (LatLong lat lon) -> pure $ T.pack <$> DG.encode 9 (lat, lon)
     Nothing -> pure Nothing
   return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay prevRideDropGeoHash <$> getDistanceResults
+  where
+    mkDriverPoolWithActualDistResult defaultPopupDelay prevRideDropGeoHash distDur = do
+      DriverPoolWithActualDistResult
+        { driverPoolResult = distDur.origin,
+          actualDistanceToPickup = distDur.distance,
+          actualDurationToPickup = distDur.duration,
+          intelligentScores = IntelligentScores Nothing Nothing Nothing Nothing Nothing Nothing defaultPopupDelay,
+          isPartOfIntelligentPool = False,
+          pickupZone = False,
+          specialZoneExtraTip = Nothing,
+          searchTags = Nothing,
+          tripDistance = Nothing,
+          keepHiddenForSeconds = Seconds 0,
+          goHomeReqId = Nothing,
+          isForwardRequest = False,
+          previousDropGeoHash = prevRideDropGeoHash
+        }
+
+computeActualDistanceOneToOneSrcAndDestMapping ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  DistanceUnit ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  NonEmpty LatLong ->
+  [Maybe LatLong] ->
+  NonEmpty DriverPoolResult ->
+  m (NonEmpty DriverPoolWithActualDistResult)
+computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCityId destinationLatLons previousDropPoints driverPoolResults = do
+  transporter <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  getDistanceResults <-
+    Maps.getEstimatedPickupDistances orgId merchantOpCityId $
+      Maps.GetDistancesReq
+        { origins = driverPoolResults,
+          destinations = destinationLatLons,
+          travelMode = Just Maps.CAR,
+          sourceDestinationMapping = Just Maps.OneToOne,
+          distanceUnit
+        }
+  logDebug $ "get distance results one to one mapping" <> show getDistanceResults
+  let distanceAndDropPointsZipped = zip previousDropPoints (NE.toList getDistanceResults)
+  driverPoolEntities <-
+    mapM
+      ( \(prevRideDropLatLn, getDistanceResult) -> do
+          prevRideDropGeoHash <- case prevRideDropLatLn of
+            Just (LatLong lat lon) -> pure $ T.pack <$> DG.encode 9 (lat, lon)
+            Nothing -> pure Nothing
+          return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay prevRideDropGeoHash getDistanceResult
+      )
+      distanceAndDropPointsZipped
+  return $ NE.fromList driverPoolEntities
   where
     mkDriverPoolWithActualDistResult defaultPopupDelay prevRideDropGeoHash distDur = do
       DriverPoolWithActualDistResult
