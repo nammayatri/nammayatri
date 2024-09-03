@@ -213,6 +213,7 @@ confirm DConfirmReq {..} = do
                 { origin = currBookingDest,
                   destination = scheduledPickup,
                   travelMode = Just Maps.CAR,
+                  sourceDestinationMapping = Nothing,
                   distanceUnit = Meter
                 }
           return $ distance.distance.getMeters

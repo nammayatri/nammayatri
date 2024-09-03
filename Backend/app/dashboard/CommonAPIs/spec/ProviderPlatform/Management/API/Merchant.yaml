@@ -559,6 +559,8 @@ types:
     - enableForwardBatching: Bool
     - currentRideTripCategoryValidForForwardBatching: [Text]
     - batchSizeOnRide: Int
+    - batchSizeOnRideWithStraightLineDistance: Maybe Int
+    - useOneToOneOsrmMapping : Maybe Bool
     - actualDistanceThresholdWithUnit: Maybe Distance
     - actualDistanceThresholdOnRideWithUnit: Maybe Distance
     - maxDriverQuotesRequired: Int

@@ -283,6 +283,7 @@ driverDistanceToPickup booking merchantOperatingCityId tripStartPos tripEndPos =
         { origin = tripStartPos,
           destination = tripEndPos,
           travelMode = Just Maps.CAR,
+          sourceDestinationMapping = Nothing,
           distanceUnit = booking.distanceUnit
         }
   return distRes.distance

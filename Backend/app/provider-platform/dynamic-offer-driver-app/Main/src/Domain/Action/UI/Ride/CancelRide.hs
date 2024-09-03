@@ -279,6 +279,7 @@ driverDistanceToPickup booking tripStartPos tripEndPos = do
         { origin = tripStartPos,
           destination = tripEndPos,
           travelMode = Just Maps.CAR,
-          distanceUnit = booking.distanceUnit
+          distanceUnit = booking.distanceUnit,
+          sourceDestinationMapping = Nothing
         }
   return $ distRes.distance
