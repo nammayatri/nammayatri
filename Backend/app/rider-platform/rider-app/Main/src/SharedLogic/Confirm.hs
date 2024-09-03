@@ -14,7 +14,6 @@
 
 module SharedLogic.Confirm where
 
-import Data.Foldable.Extra (anyM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Estimate as UEstimate
@@ -36,7 +35,6 @@ import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types
 import Kernel.Prelude
@@ -66,7 +64,6 @@ import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Event
-import qualified Tools.Maps as Maps
 import TransactionLogs.Types
 
 data DConfirmReq = DConfirmReq
@@ -132,13 +129,8 @@ confirm DConfirmReq {..} = do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QPerson.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
-  scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
-  let searchDist = round $ fromMaybe 0 $ distanceToHighPrecMeters <$> searchRequest.distance
-      searchDur = fromMaybe 0 $ (.getSeconds) <$> searchRequest.estimatedRideDuration
-  overlap <- anyM (checkOverlap searchDist searchDur searchRequest.startTime searchRequest.toLocation merchant) scheduledBookings
-  case (activeBooking, overlap) of
-    (_, True) -> throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
-    (Just booking, _) -> DQuote.processActiveBooking booking OnConfirm
+  case activeBooking of
+    Just booking -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
@@ -207,33 +199,6 @@ confirm DConfirmReq {..} = do
       when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
       when (driverOffer.validTill < now) $ throwError $ QuoteExpired quote.id.getId
       pure driverOffer.bppQuoteId
-
-    checkOverlap :: (ServiceFlow m r) => Int -> Int -> UTCTime -> Maybe DL.Location -> DM.Merchant -> DRB.Booking -> m Bool
-    checkOverlap estimatedDistance estimatedDuration curBookingStartTime currBookingToLocation merchant booking = do
-      destToScheduledPickup <- calculateDistanceToScheduledPickup currBookingToLocation booking
-      let estimatedDistanceInKm' = destToScheduledPickup + estimatedDistance
-          estimatedDistanceInKm = estimatedDistanceInKm' `div` 1000
-          estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration + merchant.scheduleRideBufferTime) curBookingStartTime
-          estRideEndTimeByDist = addUTCTime (intToNominalDiffTime (estimatedDistanceInKm * 3 * 60) + merchant.scheduleRideBufferTime) curBookingStartTime -- TODO: need to make avg speed at rider side configurable : current 3min/km
-      return $ max estRideEndTimeByDuration estRideEndTimeByDist >= booking.startTime
-
-    calculateDistanceToScheduledPickup :: (ServiceFlow m r) => Maybe DL.Location -> DRB.Booking -> m Int
-    calculateDistanceToScheduledPickup currBookingToLocation booking =
-      case currBookingToLocation of
-        Nothing -> return 0
-        Just loc -> do
-          let currBookingDest = LatLong {lat = loc.lat, lon = loc.lon}
-          let scheduledPickup = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
-          distance <- do
-            Maps.getDistanceForScheduledRides booking.merchantId booking.merchantOperatingCityId $
-              Maps.GetDistanceReq
-                { origin = currBookingDest,
-                  destination = scheduledPickup,
-                  travelMode = Just Maps.CAR,
-                  sourceDestinationMapping = Nothing,
-                  distanceUnit = Meter
-                }
-          return $ distance.distance.getMeters
 
     makeDeliveryDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DRB.Booking -> [DBPL.BookingPartiesLink] -> m DConfirmResDetails
     makeDeliveryDetails booking bookingParties = do
