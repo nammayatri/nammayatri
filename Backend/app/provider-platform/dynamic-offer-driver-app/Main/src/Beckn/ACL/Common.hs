@@ -114,6 +114,7 @@ filterRequiredBreakups fParamsType breakup = do
                  "WAITING_OR_PICKUP_CHARGES",
                  "EXTRA_TIME_FARE",
                  "CANCELLATION_CHARGES",
+                 "NIGHT_SHIFT_CHARGE",
                  "PARKING_CHARGE"
                ]
     DFParams.Slab ->
