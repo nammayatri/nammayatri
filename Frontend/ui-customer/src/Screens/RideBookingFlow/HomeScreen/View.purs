@@ -357,6 +357,13 @@ screen initialState =
                 void $ pure $ enableMyLocation true
                 void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ UpdatePickupLocation key lat lon) (handleLocateOnMapCallback "HomeScreen")
                 pure unit
+
+
+              ChooseDropLocation -> do
+                void $ pure $ enableMyLocation true
+                void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ UpdateDropLocation key lat lon) (handleLocateOnMapCallback "HomeScreen")
+                pure unit
+
               RideStarted -> do
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -1563,7 +1570,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingEditDestinationLoc, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap, RevisedEstimate, EditPickUpLocation] 
+    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingEditDestinationLoc, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated, LoadMap, RevisedEstimate, EditPickUpLocation, ChooseDropLocation] 
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1593,7 +1600,7 @@ rideRequestFlowView push state =
             then estimatedFareView push state
           else
             ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
-        else if (state.props.currentStage == ConfirmingLocation || state.props.currentStage == EditPickUpLocation) then
+        else if (state.props.currentStage == ConfirmingLocation || state.props.currentStage == EditPickUpLocation || state.props.currentStage == ChooseDropLocation) then
           confirmPickUpLocationView push state
         else
           emptyTextView state
@@ -2390,7 +2397,7 @@ confirmPickUpLocationView push state =
     , disableClickFeedback true
     , background Color.transparent
     , accessibility DISABLE
-    , visibility if state.props.currentStage == ConfirmingLocation || state.props.currentStage == EditPickUpLocation then VISIBLE else GONE
+    , visibility $ spy"viewVisibility--->" $boolToVisibility (state.props.currentStage == ConfirmingLocation || state.props.currentStage == EditPickUpLocation || state.props.currentStage == ChooseDropLocation)
     , padding $ PaddingTop 16
     , cornerRadii $ Corners 24.0 true true false false
     , gravity CENTER
@@ -2448,7 +2455,7 @@ confirmPickUpLocationView push state =
             , background Color.white900
             , accessibility DISABLE
             ] [ textView $
-                [ text if state.props.currentStage == EditPickUpLocation then getString CHANGE_PICKUP_LOCATION else (getString CONFIRM_PICKUP_LOCATION)
+                [ text if state.props.currentStage == EditPickUpLocation then getString CHANGE_PICKUP_LOCATION else if state.props.currentStage == ChooseDropLocation then "Drop Location"  else (getString CONFIRM_PICKUP_LOCATION)
                 , color Color.black800
                 , accessibility DISABLE
                 , gravity CENTER_HORIZONTAL
@@ -2467,6 +2474,7 @@ confirmPickUpLocationView push state =
 
               , currentLocationView push state
               , nearByPickUpPointsView state push
+              , nearByDropPointsView state push
               , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
              ]
         ]
@@ -3423,12 +3431,15 @@ currentLocationView push state =
 
 nearByPickUpPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 nearByPickUpPointsView state push =
+  let 
+      _ = spy "nearByPickUpPoints---->" state.data.nearByPickUpPoints
+  in 
   scrollView
   [ height $ V $ getPickUpViewHeight state.data.nearByPickUpPoints
   , width MATCH_PARENT
   , orientation VERTICAL
   , padding $ Padding 5 20 0 5
-  , visibility $ boolToVisibility (not (DS.null state.props.defaultPickUpPoint))
+  , visibility $ spy"pickupVisibility--->" $boolToVisibility (not (DS.null state.props.defaultPickUpPoint) && (state.props.currentStage == ConfirmingLocation || state.props.currentStage == EditPickUpLocation))
   , id $ getNewIDWithTag "scrollViewParent"
   ][linearLayout
     [ height WRAP_CONTENT
@@ -3450,6 +3461,47 @@ nearByPickUpPointsView state push =
         padding = 28
         allowMaxLen = if state.props.currentStage /= EditPickUpLocation then 3 else 2
         len = if (length nearByPickUpPoints > allowMaxLen) then allowMaxLen else length nearByPickUpPoints
+        removeExtraPadding = if len > 1 then padding else 0
+        pickUpPointViewHeight = len * menuBtnHeight + len * padding - removeExtraPadding
+        finalHeight = if os == "IOS" 
+                            then pickUpPointViewHeight - len * 10
+                            else pickUpPointViewHeight
+      in
+      finalHeight
+
+
+nearByDropPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+nearByDropPointsView state push =
+  let 
+      _ = spy "nearByPickUpPoints---->" state.data.nearByDropOfPoints
+  in 
+  scrollView
+  [ height $ V $ getPickUpViewHeight state.data.nearByDropOfPoints
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , padding $ Padding 5 20 0 5
+  , visibility $ spy "visibility---->"$boolToVisibility $ state.props.currentStage == ChooseDropLocation
+  , id $ getNewIDWithTag "scrollViewParentdrop"
+  ][linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , id $ getNewIDWithTag "scrollViewChilddrop"
+    , afterRender push (const AfterRender)
+    ](mapWithIndex (\index item ->
+                    linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , margin $ MarginBottom 12
+                      ][MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state item)]) state.data.nearByDropOfPoints)
+  ]
+  where 
+    getPickUpViewHeight nearByDropOfPoints =
+      let 
+        menuBtnHeight = 56 -- Update Menu Button Height
+        padding = 28
+        allowMaxLen = if state.props.currentStage /= EditPickUpLocation then 3 else 2
+        len = if (length nearByDropOfPoints > allowMaxLen) then allowMaxLen else length nearByDropOfPoints
         removeExtraPadding = if len > 1 then padding else 0
         pickUpPointViewHeight = len * menuBtnHeight + len * padding - removeExtraPadding
         finalHeight = if os == "IOS" 

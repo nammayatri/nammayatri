@@ -112,6 +112,7 @@ initData = let
     , chatSuggestionsList : []
     , messageToBeSent : ""
     , nearByPickUpPoints : []
+    , nearByDropOfPoints : []
     , polygonCoordinates : ""
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing

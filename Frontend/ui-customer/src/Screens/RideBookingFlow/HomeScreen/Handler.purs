@@ -138,6 +138,9 @@ homeScreen = do
     UpdatedSource updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_FIND_ESTIMATES updatedState)
+    GoToChooseDropLocation updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_CHOOSE_DROP_LOCATION updatedState)
     UpdateSavedLocation screenState -> do
        modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
        App.BackT $ App.BackPoint <$> (pure $ UPDATE_SAVED_LOCATION )

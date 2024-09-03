@@ -1203,7 +1203,30 @@ eval (UpdatePickupLocation key lat lon) state = do
             _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
             exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = key', markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then getString LOCATION_IS_TOO_FAR else key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
           _, _ -> continue updatedState
-
+          
+eval (UpdateDropLocation key lat lon) state = do
+  let latitude = fromMaybe 0.0 (NUM.fromString lat)
+      longitude = fromMaybe 0.0 (NUM.fromString lon)
+  if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude state.props.destinationLat state.props.destinationLong) > 5.0 then do
+    continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
+      void $ animateCamera state.props.sourceLat state.props.sourceLong 25.0 "NO_ZOOM"
+      pure NoAction
+    ]
+  else do
+    let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } }
+        sourceManuallyMoved = true
+    case key of
+      "LatLon" -> do
+        let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot) ) updatedState.data.nearByPickUpPoints)
+        exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
+      _ -> do
+        let focusedIndex = findIndex (\item -> item.place == key) updatedState.data.nearByPickUpPoints
+            spot = (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0
+        case focusedIndex, spot of
+          Just index, Just spot' -> do
+            _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+            exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
+          _, _ -> continue updatedState
 
 eval (CheckBoxClick autoAssign) state = do
   void $ pure $ performHapticFeedback unit
@@ -1334,8 +1357,12 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
         let sourceAddressWard = if state.props.isSpecialZone && not (state.props.defaultPickUpPoint == "")
                                   then state.props.defaultPickUpPoint
                                   else state.data.source
-        let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}, data { iopState { showMultiProvider = false}, sourceAddress { ward = Just sourceAddressWard}}}
-        updateAndExit updatedState $  (UpdatedSource updatedState)
+        if DA.null (state.data.nearByDropOfPoints) then do
+          let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}, data { iopState { showMultiProvider = false}, sourceAddress { ward = Just sourceAddressWard}}}
+          updateAndExit updatedState $ UpdatedSource updatedState
+        else do
+          let updatedState = state{props{currentStage = ChooseDropLocation, locateOnMap = true}, data { iopState { showMultiProvider = false}}}
+          updateAndExit updatedState $ GoToChooseDropLocation updatedState
       EditPickUpLocation -> do
         void $ pure $ performHapticFeedback unit
         void $ pure $ exitLocateOnMap ""
@@ -3084,7 +3111,7 @@ flowWithoutOffers dummy = not $ (getValueToLocalStore FLOW_WITHOUT_OFFERS) == "f
 
 recenterCurrentLocation :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 recenterCurrentLocation state = continueWithCmd state [ do
-    if state.props.locateOnMap || (not state.props.locateOnMap && state.props.currentStage == ConfirmingLocation) || state.props.currentStage == EditPickUpLocation then do
+    if (state.props.locateOnMap || (not state.props.locateOnMap && state.props.currentStage == ConfirmingLocation) || (state.props.currentStage == EditPickUpLocation || state.props.currentStage == ChooseDropLocation) ) then do
       _ <- pure $ currentPosition "NO_ZOOM"
       pure unit
     else do

@@ -130,6 +130,7 @@ data ScreenOutput = LogoutUser
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
   | SelectEstimateAndQuotes HomeScreenState
+  | GoToChooseDropLocation HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -335,6 +336,8 @@ data Action = NoAction
   | ShakeActionCallback Int
   | UpdateSafetySettings GetEmergencySettingsRes
   | ServicesOnClick RemoteConfig.Service
+  | UpdateDropLocation String String String
+
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

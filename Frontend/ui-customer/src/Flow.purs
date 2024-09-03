@@ -1140,6 +1140,14 @@ homeScreenFlow = do
       let
         destServiceable = destServiceabilityResp.serviceable
       let
+        (SpecialLocation destSpecialLocation) = fromMaybe HomeScreenData.specialLocation (destServiceabilityResp.specialLocation)
+      let
+        dropOfPoints =
+          if null srcSpecialLocation.gatesInfo then
+            filterHotSpots bothLocationChangedState destServiceabilityResp.hotSpotInfo bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong
+          else
+            mapSpecialZoneGates destSpecialLocation.gatesInfo
+      let
         pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints !! 0)).place
       setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
       let
@@ -1153,6 +1161,7 @@ homeScreenFlow = do
                   { data
                     { polygonCoordinates = geoJson
                     , nearByPickUpPoints = pickUpPoints
+                    , nearByDropOfPoints = dropOfPoints
                     }
                   , props
                     { defaultPickUpPoint = (fromMaybe HomeScreenData.dummyLocation (pickUpPoints !! 0)).place
@@ -2473,6 +2482,9 @@ homeScreenFlow = do
       else do
         modifyScreenState $ PickupInstructionsScreenStateType $ \pickupInstructionsScreen -> pickupInstructionsScreen { data { pickupLat = lat, pickupLong = lon, pickupInstructions = pickupInstructions } }
         pickupInstructionsScreenFlow
+    GO_TO_CHOOSE_DROP_LOCATION state -> do 
+      void $ pure $ spy "profile_updated_state" state.props.currentStage
+      homeScreenFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit

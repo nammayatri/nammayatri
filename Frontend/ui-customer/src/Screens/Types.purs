@@ -571,6 +571,7 @@ data Stage = HomeScreen
            | ConfirmingEditDestinationLoc
            | RevisedEstimate
            | FavouriteLocationModelEditDest
+           | ChooseDropLocation
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -634,6 +635,7 @@ type HomeScreenStateData =
   , chatSuggestionsList :: Array String
   , messageToBeSent :: String
   , nearByPickUpPoints :: Array Location
+  , nearByDropOfPoints :: Array Location
   , polygonCoordinates :: String
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
