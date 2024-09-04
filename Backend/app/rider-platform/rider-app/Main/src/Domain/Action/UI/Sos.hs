@@ -155,12 +155,13 @@ postSosCreate (mbPersonId, _merchantId) req = do
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
+  let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) <$> ride.rideEndTime
   buildSmsReq <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
         { userName = SLP.getName person,
           rideLink = trackLink,
-          rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> ride.rideEndTime,
+          rideEndTime = T.pack . formatTime defaultTimeLocale "%e-%-m-%Y %-I:%M%P" <$> localRideEndTime,
           isRideEnded = fromMaybe False req.isRideEnded
         }
   when (triggerShareRideAndNotifyContacts safetySettings) $ do
@@ -358,10 +359,10 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile payload
   filePath <- createFilePath "/sos/" ("sos-" <> getId sosId) fileType fileExtension
   let fileUrl =
-        merchantConfig.publicMediaFileUrlPattern
+        merchantConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "sos"
           & T.replace "<FILE_PATH>" filePath
-  result <- try @_ @SomeException $ S3.putPublic (T.unpack filePath) mediaFile
+  result <- try @_ @SomeException $ S3.put (T.unpack filePath) mediaFile
   case result of
     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
     Right _ -> do
