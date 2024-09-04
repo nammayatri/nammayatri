@@ -34,9 +34,10 @@ data CoinHistory = CoinHistory
     expirationAt :: Maybe UTCTime,
     coinsUsed :: Int,
     status :: CoinStatus,
-    bulkUploadTitle :: Maybe DCoins.Translations
+    bulkUploadTitle :: Maybe DCoins.Translations,
+    entityId :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data CoinStatus = Used | Remaining deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 

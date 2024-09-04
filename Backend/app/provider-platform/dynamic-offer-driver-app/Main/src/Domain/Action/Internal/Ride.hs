@@ -14,8 +14,8 @@
 
 module Domain.Action.Internal.Ride where
 
-import qualified Data.Text as T
 import qualified AWS.S3 as S3
+import qualified Data.Text as T
 import Domain.Types.Ride
 import Environment
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
@@ -23,11 +23,11 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.Booking as QBooking
-import Tools.Error
 import Storage.Beam.IssueManagement ()
+import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 
 getDeliveryImage :: Id Ride -> Maybe Text -> Flow Text
 getDeliveryImage rideId apiKey = do
@@ -37,10 +37,10 @@ getDeliveryImage rideId apiKey = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   latestDeliveryFileId <- ride.deliveryFileIds >>= safeLast & fromMaybeM DeliveryImageNotFound
-  mediaFile <- QMF.findById latestDeliveryFileId >>= fromMaybeM (FileDoNotExist latestDeliveryFileId.getId)  
-  mediaFilePath <- mediaFile.s3FilePath & fromMaybeM (FileDoNotExist latestDeliveryFileId.getId)  
+  mediaFile <- QMF.findById latestDeliveryFileId >>= fromMaybeM (FileDoNotExist latestDeliveryFileId.getId)
+  mediaFilePath <- mediaFile.s3FilePath & fromMaybeM (FileDoNotExist latestDeliveryFileId.getId)
   S3.get $ T.unpack mediaFilePath
   where
     safeLast [] = Nothing
     safeLast [x] = Just x
-    safeLast (_ : xs) = safeLast xs    
+    safeLast (_ : xs) = safeLast xs

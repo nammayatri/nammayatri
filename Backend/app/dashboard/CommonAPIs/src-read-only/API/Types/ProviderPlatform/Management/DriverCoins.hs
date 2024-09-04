@@ -95,6 +95,7 @@ data DriverCoinsFunctionType
   | TrainingCompleted
   | BulkUploadFunction
   | BulkUploadFunctionV2 API.Types.ProviderPlatform.Management.DriverCoins.CoinMessage
+  | MetroRideCompleted
   deriving stock (Generic, Show, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

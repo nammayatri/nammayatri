@@ -907,6 +907,7 @@ data DriverCoinError
   | CoinConversionToCash Text Int Int
   | CoinUsedForConverting Text Int Int
   | NonBulkUploadCoinFunction Text
+  | CoinInfoTranslationNotFound Text Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverCoinError
@@ -917,6 +918,7 @@ instance IsBaseError DriverCoinError where
     InsufficientCoins driverId coins -> Just ("Insufficient coin balance for driverId : " <> show driverId <> ". Given coins value is : " <> show coins <> ".")
     CoinConversionToCash driverId coins val -> Just ("Atleast " <> show val <> " coins is required for conversion driverId : " <> show driverId <> ". Given coins value is : " <> show coins <> ".")
     CoinUsedForConverting driverId coins val -> Just ("Coins used for converting to cash should be multiple of " <> show val <> " for driverId : " <> show driverId <> ". Given coins value is : " <> show coins <> ".")
+    CoinInfoTranslationNotFound key lang -> Just $ "Coin info translation not found for " <> key <> " in " <> lang <> " language."
     NonBulkUploadCoinFunction eventFunction -> Just ("Coin function " <> show eventFunction <> " is not bulk upload function.")
 
 instance IsHTTPError DriverCoinError where
@@ -926,12 +928,14 @@ instance IsHTTPError DriverCoinError where
     CoinConversionToCash _ _ val -> "ATLEAST_" <> show val <> "_COINS_REQUIRED_FOR_CONVERSION"
     CoinUsedForConverting _ _ val -> "COINS_USED_FOR_CONVERTING_TO_CASH_SHOULD_BE_MULTIPLE_OF_" <> show val
     NonBulkUploadCoinFunction _ -> "NON_BULK_UPLOAD_COIN_FUNCTION"
+    CoinInfoTranslationNotFound _ _ -> "COIN_INFO_TRANSLATION_NOT_FOUND"
   toHttpCode = \case
     CoinServiceUnavailable _ -> E400
     InsufficientCoins _ _ -> E400
     CoinConversionToCash _ _ _ -> E400
     CoinUsedForConverting _ _ _ -> E400
     NonBulkUploadCoinFunction _ -> E400
+    CoinInfoTranslationNotFound _ _ -> E400
 
 instance IsAPIError DriverCoinError
 
