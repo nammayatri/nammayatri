@@ -507,41 +507,41 @@ createDriverFee ::
   ServiceNames ->
   m ()
 createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams maxShards driverInfo booking serviceName = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
-  let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
-  when (newFareParams.platformFeeChargesBy == DFP.None) $ pure ()
-  (platformFee, cgst, sgst, isSpecialZoneCharge) <- case newFareParams.platformFeeChargesBy of
-    DFP.SlabBased -> case newFareParams.fareParametersDetails of
-      DFare.SlabDetails fpDetails -> return (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
+  unless (newFareParams.platformFeeChargesBy == DFP.None) $ do
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
+    let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
+    (platformFee, cgst, sgst, isSpecialZoneCharge) <- case newFareParams.platformFeeChargesBy of
+      DFP.SlabBased -> case newFareParams.fareParametersDetails of
+        DFare.SlabDetails fpDetails -> return (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst, True)
+        _ -> return (0, 0, 0, False)
+      DFP.Subscription -> return (0, 0, 0, False)
+      DFP.FixedAmount -> return (fromMaybe 0.0 newFareParams.platformFee, fromMaybe 0.0 newFareParams.cgst, fromMaybe 0.0 newFareParams.sgst, True)
       _ -> return (0, 0, 0, False)
-    DFP.Subscription -> return (0, 0, 0, False)
-    DFP.FixedAmount -> return (fromMaybe 0.0 newFareParams.platformFee, fromMaybe 0.0 newFareParams.cgst, fromMaybe 0.0 newFareParams.sgst, True)
-    _ -> return (0, 0, 0, False)
-  let totalDriverFee = govtCharges + platformFee + cgst + sgst
-  mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft isSpecialZoneCharge
-  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
-  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking) isSpecialZoneCharge
-  vehicle <- QV.findById driverId
-  let isEnableForVariant = maybe True (`elem` transporterConfig.variantsToEnableForSubscription) (vehicle <&> (.variant))
-  let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEnableForVariant
-  when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge) $ do
-    numRides <- case lastDriverFee of
-      Just ldFee ->
-        if now >= ldFee.startTime && now < ldFee.endTime
-          then do
-            QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
-            return (ldFee.numRides + 1)
-          else do
-            QDF.create driverFee
-            return 1
-      Nothing -> do
-        QDF.create driverFee
-        return 1
-    plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
-    fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
-    scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
+    let totalDriverFee = govtCharges + platformFee + cgst + sgst
+    mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft isSpecialZoneCharge
+    now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+    lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
+    driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking) isSpecialZoneCharge
+    vehicle <- QV.findById driverId
+    let isEnableForVariant = maybe True (`elem` transporterConfig.variantsToEnableForSubscription) (vehicle <&> (.variant))
+    let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)) && isEnableForVariant
+    when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge) $ do
+      numRides <- case lastDriverFee of
+        Just ldFee ->
+          if now >= ldFee.startTime && now < ldFee.endTime
+            then do
+              QDF.updateFee ldFee.id rideFare govtCharges platformFee cgst sgst now True booking isSpecialZoneCharge
+              return (ldFee.numRides + 1)
+            else do
+              QDF.create driverFee
+              return 1
+        Nothing -> do
+          QDF.create driverFee
+          return 1
+      plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
+      fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
+      scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
     isEligibleForCharge transporterConfig freeTrialDaysLeft isSpecialZoneCharge =
       if isSpecialZoneCharge
