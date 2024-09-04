@@ -241,6 +241,8 @@ data BuildDeliveryMessageReq = BuildDeliveryMessageReq
   { driverName :: Text,
     driverNumber :: Text,
     trackingUrl :: Text,
+    senderName :: Text,
+    receiverName :: Text,
     appUrl :: Text,
     otp :: Text,
     hasEnded :: Bool,
@@ -260,6 +262,8 @@ buildDeliveryDetailsMessage merchantOperatingCityId req = do
     [ ("driverName", req.driverName),
       ("driverNumber", req.driverNumber),
       ("trackingUrl", req.trackingUrl),
+      ("senderName", req.senderName),
+      ("receiverName", req.receiverName),
       ("appUrl", req.appUrl),
       ("otp", req.otp)
     ]

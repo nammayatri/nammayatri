@@ -244,7 +244,7 @@ confirm DConfirmReq {..} = do
                   },
               receiverDetails =
                 DTDD.PersonDetails
-                  { DTDD.name = senderParty.partyName,
+                  { DTDD.name = receiverParty.partyName,
                     DTDD.phoneNumber = receiverMobileNumber,
                     DTDD.countryCode = Nothing,
                     DTDD.address = toLocation.address
