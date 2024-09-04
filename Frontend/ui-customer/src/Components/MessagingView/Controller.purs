@@ -24,6 +24,7 @@ import Language.Strings (getString)
 import Prelude
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
+import Services.API as API
 
 data Action = SendMessage
             | SendSuggestion String
@@ -83,7 +84,7 @@ type ChatContacts = {
   number :: String,
   uuid :: String,
   recipient :: ChatRecipient,
-  enableForFollowing :: Boolean,
+  shareTripWithEmergencyContactOption :: API.RideShareOptions,
   enableForShareRide:: Boolean,
   contactPersonId :: Maybe String,
   notifiedViaFCM :: Maybe Boolean
@@ -138,8 +139,8 @@ dummyChatRecipient =
   , number : ""
   , uuid : ""
   , recipient : DRIVER
-  , enableForFollowing : false
   , enableForShareRide : false
   , contactPersonId : Nothing
   , notifiedViaFCM : Nothing
+  , shareTripWithEmergencyContactOption : API.NEVER_SHARE
   }

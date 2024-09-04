@@ -114,7 +114,7 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Helpers.API as HelpersAPI
 import Helpers.Pooling (delay)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig, zoneLabelIcon, findSpecialPickupZone, getConfirmLocationCategory)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList, filterContactsBasedOnShareOptions)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didReceiverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getCityConfig, getVehicleVariantImage, getImageBasedOnCity, getDefaultPixelSize, getVehicleVariantImage, getRouteMarkers, TrackingType(..), getDistanceBwCordinates, decodeBookingTimeList)
 import JBridge (showMarker, animateCamera, reallocateMapFragment, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, getKeyInSharedPrefKeys, locateOnMap, locateOnMapConfig, defaultMarkerConfig, currentPosition, defaultMarkerImageConfig, defaultActionImageConfig, differenceBetweenTwoUTCInMinutes, ActionImageConfig(..), handleLocateOnMapCallback, differenceBetweenTwoUTC, mkRouteConfig)
 import JBridge as JB
 import Language.Strings (getString, getVarString)
@@ -356,8 +356,7 @@ screen initialState =
                   case initialState.data.contactList of 
                     Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
                     Just contacts -> do
-                      let filterContacts = filterContactsBasedOnShareOptions contacts
-                      push $ UpdateChatWithEM false $ fromMaybe dummyNewContacts $ Arr.head filterContacts
+                      push $ UpdateChatWithEM false $ fromMaybe dummyNewContacts $ Arr.head contacts
                       checkAndStartChatService push initialState.data.driverInfoCardState.currentChatRecipient.uuid (if initialState.data.driverInfoCardState.currentChatRecipient.uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)) false initialState
                       pure unit
                   
@@ -2720,43 +2719,46 @@ rideTrackingView push state =
 
 getMessageNotificationViewConfig :: HomeScreenState -> MessageNotificationView Action
 getMessageNotificationViewConfig state =
-  let primaryContact = head $ filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
-      toChatComponent { message, sentBy, timeStamp, type: type_, delay } = 
-        { message, sentBy, timeStamp, type: type_, delay}
+  let getSuggestionKey = if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
+      toChatComponent { message, sentBy, timeStamp, type: type_, delay } = { message, sentBy, timeStamp, type: type_, delay}
   in {
-    showChatNotification : state.props.showChatNotification
-  , enableChatWidget : state.props.enableChatWidget
-  , isNotificationExpanded :state.props.isNotificationExpanded
-  , fareProductType : state.data.fareProductType
-  , config : state.data.config
-  , rideStarted : state.props.currentStage == RideStarted
-  , lastMessage : toChatComponent state.data.lastMessage
-  , lastSentMessage : state.data.lastSentMessage
-  , lastReceivedMessage : state.data.lastReceivedMessage
-  , removeNotificationAction : RemoveNotification
-  , messageViewAnimationEnd : MessageViewAnimationEnd
-  , messageReceiverAction : MessageDriver
-  , sendQuickMessageAction : SendQuickMessage
-  , timerCounter : state.data.triggerPatchCounter
-  , messageExpiryAction : MessageExpiryTimer
-  , chatSuggestions : getChatSuggestions state
-  , messages : state.data.messages
-  , removeNotification : state.props.removeNotification
-  , currentStage : state.props.currentStage
-  , suggestionKey : if state.props.isChatWithEMEnabled then emChatSuggestion else chatSuggestion
-  , user :{ userName : if state.props.isChatWithEMEnabled 
-                    then case primaryContact of
-                            Nothing -> state.data.driverInfoCardState.driverName
-                            Just contact -> contact.name
-                    else state.data.driverInfoCardState.driverName
-    , receiver : if state.props.isChatWithEMEnabled 
-                    then case primaryContact of
-                            Nothing -> "Driver"
-                            Just contact -> contact.name
-                    else "Driver"
-    }
-  , isOtpRideFlow : state.props.isOtpRideFlow
-}
+      showChatNotification : state.props.showChatNotification
+    , enableChatWidget : state.props.enableChatWidget
+    , isNotificationExpanded :state.props.isNotificationExpanded
+    , fareProductType : state.data.fareProductType
+    , config : state.data.config
+    , rideStarted : state.props.currentStage == RideStarted
+    , lastMessage : toChatComponent state.data.lastMessage
+    , lastSentMessage : state.data.lastSentMessage
+    , lastReceivedMessage : state.data.lastReceivedMessage
+    , removeNotificationAction : RemoveNotification
+    , messageViewAnimationEnd : MessageViewAnimationEnd
+    , messageReceiverAction : MessageDriver
+    , sendQuickMessageAction : SendQuickMessage
+    , timerCounter : state.data.triggerPatchCounter
+    , messageExpiryAction : MessageExpiryTimer
+    , chatSuggestions : getChatSuggestions state
+    , messages : state.data.messages
+    , removeNotification : state.props.removeNotification
+    , currentStage : state.props.currentStage
+    , suggestionKey : getSuggestionKey
+    , user : mkUser
+    , isOtpRideFlow : state.props.isOtpRideFlow
+  }
+  where 
+    mkUser = 
+      { userName : mkUserHelpers state.data.driverInfoCardState.driverName
+      , receiver : mkUserHelpers "Driver"
+      }
+
+    mkUserHelpers fallbackName = 
+      let primaryContact = head $ filter (\item -> item.contactPersonId == state.data.driverInfoCardState.currentChatRecipient.contactPersonId) $ fromMaybe [] state.data.contactList
+      in if state.props.isChatWithEMEnabled 
+          then case primaryContact of
+              Nothing -> fallbackName
+              Just contact -> contact.name
+          else fallbackName
+      
 
 separatorView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
 separatorView push state = 
@@ -4804,12 +4806,12 @@ validateAndStartChat contacts push state safetyCheckStartSeconds safetyCheckEndS
   if state.data.fareProductType == FPT.RENTAL && not state.props.chatcallbackInitiated 
     then checkAndStartChatService push state.data.driverInfoCardState.currentChatRecipient.uuid "Customer" false state
   else do
-    let filterContacts = filter (\item -> (item.enableForShareRide || SU.checkRideShareOptionConstraint item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds Nothing) && (item.priority == 0 && not item.onRide)) contacts
-    if (length filterContacts) == 0 
+    
+    if (length contacts) == 0 
       then push RemoveChat
       else do
         if (not $ state.props.chatcallbackInitiated ) then do 
-          let primaryContact = fromMaybe dummyNewContacts $ Arr.head filterContacts
+          let primaryContact = fromMaybe dummyNewContacts $ Arr.head $ Arr.filter (\item -> (isJust item.contactPersonId)) contacts
           push $ UpdateChatWithEM true primaryContact
           let uuid = state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" primaryContact.contactPersonId)
           checkAndStartChatService push uuid (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true state else pure unit 

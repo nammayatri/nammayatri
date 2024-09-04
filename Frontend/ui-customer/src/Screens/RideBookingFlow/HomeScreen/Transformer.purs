@@ -225,11 +225,11 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , spLocationName : resp.specialLocationName
       , addressWard : bookingLocationAPIEntity.ward
       , hasToll : DA.any (\(FareBreakupAPIEntity fare) ->  fare.description == "TOLL_CHARGES") resp.estimatedFareBreakup
-      , currentChatRecipient : CMC.dummyChatRecipient { 
+      , currentChatRecipient : prevState.currentChatRecipient { 
           uuid = if currentRecipient == CMC.DRIVER && (not $ isLocalStageOn RideStarted) then rideList.bppRideId else prevState.currentChatRecipient.uuid
-        , enableForFollowing = true
         , name = if currentRecipient == CMC.DRIVER  then rideList.driverName else prevState.currentChatRecipient.name
         , recipient = currentRecipient
+        , shareTripWithEmergencyContactOption = prevState.currentChatRecipient.shareTripWithEmergencyContactOption
         }
       }
 

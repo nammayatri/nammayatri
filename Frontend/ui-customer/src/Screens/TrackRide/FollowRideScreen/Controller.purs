@@ -285,7 +285,7 @@ eval action state = case action of
     case state.data.currentFollower of
         Nothing -> continue state
         Just follower -> do
-          if state.data.config.feature.enableChat && follower.priority == 0 && state.props.isRideStarted && not state.props.currentUserOnRide then do
+          if state.data.config.feature.enableChat then do
             if not state.props.chatCallbackInitiated then continue state else do
               void $ pure $ performHapticFeedback unit
               _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
