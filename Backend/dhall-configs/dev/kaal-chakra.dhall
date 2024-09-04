@@ -74,7 +74,7 @@ let schedulerConfig =
           //  { logRawSql = True
               , logFilePath = "/tmp/kaal-chakra-allocator.log"
               , prettyPrinting = True
-              , level = common.LogLevel.ERROR
+              , level = common.LogLevel.DEBUG
               }
       , esqDBCfg
       , metricsPort = +8057
@@ -93,7 +93,7 @@ let schedulerConfig =
       , graceTerminationPeriod = +10
       , enableRedisLatencyLogging = False
       , enablePrometheusMetricLogging = True
-      , groupName = "myGroup"
+      , groupName = "myGroup_Chakras"
       , schedulerType = globalCommon.schedulerType.RedisBased
       , schedulerSetName = "Scheduled_Chakras"
       , streamName = "Available_Chakras"
@@ -121,7 +121,7 @@ in  { esqDBReplicaCfg
         //  { logRawSql = True
             , logFilePath = "/tmp/kaal-chakra.log"
             , prettyPrinting = True
-            , level = common.LogLevel.ERROR
+            , level = common.LogLevel.DEBUG
             }
     , migrationPath = [] : List Text
     , autoMigrate = False
