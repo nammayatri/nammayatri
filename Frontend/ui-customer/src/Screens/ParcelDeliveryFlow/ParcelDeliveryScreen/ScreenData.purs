@@ -1,6 +1,8 @@
 module Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData where
 
+import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Data.Maybe(Maybe(..))
+import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Screens.Types as ST
 import Services.API as API
 
@@ -15,7 +17,9 @@ initData =
     , destinationLat : 0.0
     , destinationLong : 0.0
     , route : Nothing
+    , parcelQuoteList : ChooseVehicleController.config
     , deliveryDetailsInfo : dummyDeliveryDetailsInfo
+    , selectedQuote : Nothing
     },
     props : {
       editDetails : dummyPersonAndLocationInfo

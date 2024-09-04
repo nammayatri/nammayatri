@@ -36,7 +36,7 @@ view push config =
     , width $ V $ screenWidth unit
     , padding $ PaddingHorizontal 16 16
     , root true
-    , accessibilityHintHolder "accessibilityHint"
+    -- , accessibilityHintHolder "accessibilityHint"
     ][ 
       bannerView push config
     , imageBannerView push config
@@ -58,7 +58,7 @@ imageBannerView push config =
     , width MATCH_PARENT
     , imageUrlHolder "imageBannerUrl"
     , visibilityHolder "imageBannerVisibility"
-    , accessibilityHintHolder "accessibilityHint"
+    -- , accessibilityHintHolder "accessibilityHint"
     , margin $ MarginTop if os == "IOS" then  15 else 0
     ] <> maybe ([]) (\action -> [onClickHolder push $ (action <<< OnClick)]) config.action
 

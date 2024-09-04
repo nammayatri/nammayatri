@@ -2516,7 +2516,7 @@ homeScreenFlow = do
           homeScreenFlow
     GO_TO_DELIVERY_DETAILS updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState)
-      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> ParcelDeliveryScreenData.initData{ data { currentStage = SENDER_DETAILS, sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, route = updatedState.data.route, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong}})
+      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> ParcelDeliveryScreenData.initData{ data { parcelQuoteList = updatedState.data.selectedEstimatesObject, currentStage = SENDER_DETAILS, sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, route = updatedState.data.route, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong}})
       parcelDeliveryFlow
     _ -> homeScreenFlow
 
