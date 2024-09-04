@@ -1973,11 +1973,11 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1716981052,
-        "narHash": "sha256-sojqWmHR1Rim2cQJvwYjRqNaEY8dALAXshCg1l3bubQ=",
+        "lastModified": 1724303821,
+        "narHash": "sha256-bbe7ADZdaCWFz/PtGxRm30c/k8jKzbHwvWhaT5ITCFg=",
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "5e822fff6c99d6774f638c05fca8a6a6ea7dd9d2",
+        "rev": "76101e6e58c63859bf1881a1bc0df7ad00527e07",
         "type": "github"
       },
       "original": {

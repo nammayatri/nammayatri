@@ -1,4 +1,4 @@
-let non_persistent_redis_cfg =
+let redis_cfg =
       { redis_host = "0.0.0.0"
       , redis_port = 6379
       , redis_pool_size = 10
@@ -10,7 +10,7 @@ let non_persistent_redis_cfg =
       , stream_read_count = 100
       }
 
-let persistent_redis_cfg =
+let replica_redis_cfg =
       { redis_host = "0.0.0.0"
       , redis_port = 6379
       , redis_pool_size = 10
@@ -30,11 +30,8 @@ let LogLevel = < TRACE | DEBUG | INFO | WARN | ERROR | OFF >
 let logger_cfg = { level = LogLevel.INFO, log_to_file = False }
 
 in  { logger_cfg
-    , non_persistent_redis_cfg
-    , non_persistent_migration_redis_cfg = non_persistent_redis_cfg
-    , persistent_redis_cfg
-    , persistent_migration_redis_cfg = persistent_redis_cfg
-    , redis_migration_stage = False
+    , redis_cfg
+    , replica_redis_cfg = Some replica_redis_cfg
     , workers = 1
     , drainer_size = 10
     , drainer_delay = 2
@@ -53,7 +50,7 @@ in  { logger_cfg
     , location_update_limit = 6000000000
     , location_update_interval = 60
     , driver_location_update_topic = "location-updates"
-    , batch_size = 100
+    , batch_size = 1
     , bucket_size = 30
     , nearby_bucket_threshold = 4
     , blacklist_merchants = [ "favorit0-0000-0000-0000-00000favorit" ]
@@ -68,4 +65,5 @@ in  { logger_cfg
     , driver_location_delay_in_sec = 60
     , trigger_fcm_callback_url =
         "http://127.0.0.1:8016/internal/driverInactiveFCM"
+    , apns_url = "https://api.sandbox.push.apple.com:443"
     }

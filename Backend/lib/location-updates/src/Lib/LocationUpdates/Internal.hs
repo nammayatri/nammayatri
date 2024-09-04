@@ -172,7 +172,8 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
       sendTollCrossedNotificationToDriver driverId
       sendTollCrossedUpdateToBAP driverId
   let recomputeIfPickupDropNotOutsideOfThreshold = getRecomputeIfPickupDropNotOutsideOfThreshold
-  let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold || isJust rectifyDistantPointsFailureUsing || isJust estTollCharges || tollRouteDeviation || passedThroughDrop
+  _ <- processPassedThroughDrop
+  let snapToRoadCallCondition = (routeDeviation && recomputeIfPickupDropNotOutsideOfThreshold) || pickupDropOutsideThreshold || isJust rectifyDistantPointsFailureUsing || isJust estTollCharges || tollRouteDeviation
   if ending
     then do
       if snapToRoadCallCondition
@@ -222,6 +223,14 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
         updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
         throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
       return currSnapToRoadState
+
+    processPassedThroughDrop = do
+      prevSnapToRoadState :: SnapToRoadState <-
+        Redis.safeGet (onRideSnapToRoadStateKey driverId)
+          <&> fromMaybe (SnapToRoadState 0 0 0 (Just 0) (Just passedThroughDrop))
+      let isPassedThroughDrop = bool prevSnapToRoadState.passThroughDropThreshold (Just True) passedThroughDrop
+      let currSnapToRoadState = prevSnapToRoadState {passThroughDropThreshold = isPassedThroughDrop}
+      Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
 
 recalcDistanceBatchStep ::
   (CacheFlow m r, Monad m, Log m, MonadFlow m) =>

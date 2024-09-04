@@ -357,6 +357,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
                       else pure Nothing
                   let passedThroughDrop = any (isDropInsideThreshold booking thresholdConfig) tripEndPoints'
+                  logDebug $ "Did we passed through drop yet in endRide" <> show passedThroughDrop <> " " <> show tripEndPoints'
                   withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rectificationMapsConfig (DTC.isTollApplicableForTrip booking.vehicleServiceTier booking.tripCategory) thresholdConfig.enableTollCrossedNotifications rideOld.id driverId tripEndPoints' estimatedDistance estimatedTollCharges estimatedTollNames pickupDropOutsideOfThreshold passedThroughDrop
 
                 updRide <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -460,6 +461,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
   let merchantId = booking.providerId
       oldDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
   passedThroughDrop <- LocUpd.isPassedThroughDrop ride.driverId
+  logDebug $ "Did we passed through drop yet in recalculateFareForDistance" <> show passedThroughDrop
   QRide.updatePassedThroughDestination ride.id passedThroughDrop
   if passedThroughDrop
     then do
