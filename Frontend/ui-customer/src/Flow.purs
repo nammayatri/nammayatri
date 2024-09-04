@@ -273,7 +273,7 @@ dataFetchScreenFlow stageConfig stepVal = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing } })
       nammaSafetyFlow
     DataExplainWithFetchC.GoToSafetyDrill state -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { triggeringSos = false, timerValue = defaultTimerValue, showTestDrill = true, showShimmer = true, confirmTestDrill = false, isAudioRecordingActive = false, showMenu = false, isFromSafetyCenter = true, recordedAudioUrl = Nothing, audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00" } })
+      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { triggeringSos = false, timerValue = defaultTimerValue, showTestDrill = true, showShimmer = true, confirmTestDrill = false, isAudioRecordingActive = false, showMenu = false, isFromSafetyCenter = true, recordedAudioUrl = Nothing, audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", defaultCallPopup = false } })
       activateSafetyScreenFlow
     _ -> homeScreenFlow
 
@@ -401,6 +401,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                     Right (GetManuallySharedDetailsRes rideDetails) -> do
                       let follower = { name : Just rideDetails.customerName, bookingId : rideDetails.bookingId, mobileNumber : rideDetails.customerPhone, priority : 0, isManualFollower : true }
                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Just [follower], manuallySharedFollowers = Just [follower] } })
+                      void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                       updateFollower false true Nothing
                     Left _ -> currentFlowStatus
                 _ -> currentFlowStatus
@@ -2420,10 +2421,10 @@ homeScreenFlow = do
 
         language = fetchLanguage $ getLanguageLocale languageKey
       void $ lift $ lift $ toggleLoader true
-      categoryId <- fetchParticularIssueCategory "RIDE_RELATED"
-      case categoryId of
-        Just categoryId -> do
-          (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language categoryId "" rideId ""
+      mbCategory <- fetchParticularIssueCategory "RIDE_RELATED"
+      case mbCategory of
+        Just (Category category) -> do
+          (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language category.issueCategoryId "" rideId ""
           let
             getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = optionObj.option }) getOptionsRes.options
 
@@ -2440,7 +2441,7 @@ homeScreenFlow = do
                 )
                 getOptionsRes.messages
           void $ lift $ lift $ toggleLoader false
-          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, selectedCategory = { categoryName : "Ride Related Issue", categoryId : categoryId, categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing, categoryType : "Category", allowedRideStatuses : Nothing}, options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
+          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, selectedCategory = { categoryName : getTitle category.label, categoryId : category.issueCategoryId, categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing, categoryType : "Category", allowedRideStatuses : Nothing}, options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
           flowRouter IssueReportChatScreenFlow
         Nothing -> do
           void $ lift $ lift $ toggleLoader false
@@ -5851,17 +5852,12 @@ firstRideCompletedEvent str = do
   else
     pure unit
 
-fetchParticularIssueCategory :: String -> FlowBT String (Maybe String)
+fetchParticularIssueCategory :: String -> FlowBT String (Maybe Category)
 fetchParticularIssueCategory categoryLabel = do
-  let
-    language = fetchLanguage $ getLanguageLocale languageKey
+  let language = fetchLanguage $ getLanguageLocale languageKey
   (GetCategoriesRes response) <- Remote.getCategoriesBT language
-  let 
-    selfServeCategories = filter (\(Category category) -> category.categoryType == "Category") response.categories
-    category = Arr.find (\(Category item) -> item.label == categoryLabel) selfServeCategories
-  case category of
-    Just (Category item) -> pure $ Just item.issueCategoryId
-    Nothing -> pure Nothing
+  let selfServeCategories = filter (\(Category category) -> category.categoryType == "Category") response.categories
+  pure $ Arr.find (\(Category item) -> item.label == categoryLabel) selfServeCategories
 
 rentalScreenFlow :: FlowBT String Unit
 rentalScreenFlow = do

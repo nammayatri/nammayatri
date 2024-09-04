@@ -149,9 +149,9 @@ emergencySosConfig :: ST.NammaSafetyScreenState -> SosButtonAndDescription.Confi
 emergencySosConfig state =
   SosButtonAndDescription.config
   { 
-    sosDescription = [ measureViewConfig {text' = getString SAFETY_TEAM_CALLBACK_REQUESTED}
-                      , measureViewConfig {text' = getString EMERGENCY_CONTACTS_NOTIFIED}
-                      ] <> case contactName, state.data.autoCallDefaultContact of
+    sosDescription = [ measureViewConfig {text' = getString SAFETY_TEAM_CALLBACK_REQUESTED} ]
+                     <> if null state.data.emergencyContactsList then [] else [measureViewConfig {text' = getString EMERGENCY_CONTACTS_NOTIFIED}]
+                     <> case contactName, state.data.autoCallDefaultContact of
                           Mb.Just name, true -> [ measureViewConfig {text' = getString CALL_PLACED <> ": " <> name} ]
                           _,_ -> []
   , descriptionText = getString if state.props.showTestDrill then TEST_SOS_ACTIVATED else EMERGENCY_SOS_ACTIVATED

@@ -86,6 +86,7 @@ data Action
   | PoliceTimerCallback Int String String
   | OnPauseCallback
   | AudioPermission Boolean
+  | Exit ScreenOutput
 
 eval :: Action -> ST.NammaSafetyScreenState -> Eval Action ScreenOutput ST.NammaSafetyScreenState
 
@@ -115,8 +116,16 @@ eval (BackPressed) state = do
   if state.props.showCallPolice then do
     void $ pure $ clearTimerWithId state.props.policeCallTimerId
     continue newState { props { showCallPolice = false, policeCallTimerValue = 5 } }
-  else
-    exit $ GoBack newState
+  else 
+    continueWithCmd state [do
+    if state.props.isAudioRecordingActive then do
+      void $ runEffectFn1 JB.removeMediaPlayer ""
+      void $ runEffectFn1 JB.stopAudioRecording ""
+      pure unit
+    else
+      pure unit
+    pure $ Exit $ GoBack newState
+  ]
 
 eval DisableShimmer state = continue state { props { showShimmer = false } }
 
@@ -138,9 +147,11 @@ eval CallPolice state = do
 eval (MarkRideAsSafe PrimaryButtonController.OnClick) state = do
   _ <- pure $ clearTimerWithId state.props.recordingTimerId
   _ <- pure $ JB.clearAudioPlayer ""
-  void $ pure $ runEffectFn1 JB.removeMediaPlayer ""
-  void $ pure $ runEffectFn1 JB.stopAudioRecording ""
-  exit $ UpdateAsSafe state
+  continueWithCmd state [do
+    void $ runEffectFn1 JB.removeMediaPlayer ""
+    void $ runEffectFn1 JB.stopAudioRecording ""
+    pure $ Exit $ UpdateAsSafe state
+  ]
 
 eval (SelectedCurrentLocation _ _ name) state = continue state { data { currentLocation = name } }
 
@@ -245,6 +256,8 @@ eval (CallSafetyTeam SafetyActionTileView.OnClick) state = do
 eval OnPauseCallback state = continueWithCmd state [do
   pure $ SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording
 ]
+
+eval (Exit output) state = exit output
 
 eval _ state = update state
 

@@ -498,6 +498,8 @@ otherActionsView state push =
       , height WRAP_CONTENT
       ][ linearLayout
           [ visibility $ boolToInvisibility state.props.isAudioRecordingActive
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
           ][ SafetyAudioRecording.view (push <<< SafetyAudioRecordingAction) $ safetyAudioRecordingConfig state ]
         ,  PrestoAnim.animationSet [ fadeIn $ not state.props.isAudioRecordingActive  ] $
               linearLayout
