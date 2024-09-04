@@ -191,7 +191,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
        in TL.toStrict $ TLE.decodeUtf8 $ A.encode jsonValue
 
     generateSlackMessageDesc :: Person.Person -> DRide.Ride -> SosReq -> Flow Text
-    generateSlackMessageDesc person ride req@SosReq {..} = do
+    generateSlackMessageDesc person ride SosReq {..} = do
       mbCustomerPhone <- mapM decrypt person.mobileNumber
       mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
       merchantOperatingCity <- do
