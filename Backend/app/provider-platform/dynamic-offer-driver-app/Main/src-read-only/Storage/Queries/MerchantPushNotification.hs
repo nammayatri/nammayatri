@@ -6,6 +6,7 @@ module Storage.Queries.MerchantPushNotification where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPushNotification
+import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
@@ -39,6 +40,18 @@ findAllByMerchantOpCityIdAndMessageKey merchantOperatingCityId key = do
         ]
     ]
 
+findAllByMerchantOpCityIdAndMessageKeyAndTripCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> m [Domain.Types.MerchantPushNotification.MerchantPushNotification])
+findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId key tripCategory = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.key $ Se.Eq key,
+          Se.Is Beam.tripCategory $ Se.Eq tripCategory
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.External.Types.Language -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.MerchantPushNotification.MerchantPushNotification))
@@ -59,6 +72,7 @@ updateByPrimaryKey (Domain.Types.MerchantPushNotification.MerchantPushNotificati
       Se.Set Beam.fcmNotificationType fcmNotificationType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.title title,
+      Se.Set Beam.tripCategory tripCategory,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -81,6 +95,7 @@ instance FromTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotif
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             title = title,
+            tripCategory = tripCategory,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -95,6 +110,7 @@ instance ToTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotific
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.title = title,
+        Beam.tripCategory = tripCategory,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

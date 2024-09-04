@@ -7,6 +7,7 @@ module Domain.Types.MerchantPushNotification where
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Trip
 import qualified Kernel.External.Notification.Interface.Types
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -21,6 +22,7 @@ data MerchantPushNotification = MerchantPushNotification
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     title :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

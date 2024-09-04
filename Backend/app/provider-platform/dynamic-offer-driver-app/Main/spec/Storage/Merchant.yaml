@@ -38,6 +38,7 @@ imports:
   VehicleCategory: Domain.Types.VehicleCategory
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
+  TripCategory: Domain.Types.Trip
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -1215,6 +1216,7 @@ MerchantPushNotification:
     fcmNotificationType: FCMNotificationType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    tripCategory: Maybe TripCategory
   constraints:
     key: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -1227,6 +1229,10 @@ MerchantPushNotification:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key]
+    findAllByMerchantOpCityIdAndMessageKeyAndTripCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, key, tripCategory]
 
 RideRelatedNotificationConfig:
   tableName : ride_related_notification_config

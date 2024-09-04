@@ -24,6 +24,7 @@ where
 import Control.Applicative ((<|>))
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MerchantPushNotification
+import Domain.Types.Trip
 import Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -49,30 +50,30 @@ cacheMerchantPushNotificationForCity merchantOperatingCityId cfg = do
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantPushNotification:MerchantOperatingCityId-" <> id.getId
 
-findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe Language -> m (Maybe MerchantPushNotification)
-findMatchingMerchantPN id messageKey personLanguage = do
+findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Language -> m (Maybe MerchantPushNotification)
+findMatchingMerchantPN id messageKey tripCategory personLanguage = do
   merchantPNs <-
-    Hedis.safeGet (makeMerchantOpCityIdAndMessageKey id messageKey) >>= \case
+    Hedis.safeGet (makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory) >>= \case
       Just a -> return a
       Nothing -> do
-        pns <- Queries.findAllByMerchantOpCityIdAndMessageKey id messageKey
-        cacheMerchantPushNotification id messageKey pns
+        pns <- Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory
+        cacheMerchantPushNotification id messageKey tripCategory pns
         return pns
   let matchingPN =
         find (\pn -> Just pn.language == personLanguage) merchantPNs
           <|> find (\pn -> pn.language == ENGLISH) merchantPNs
   return matchingPN
 
-cacheMerchantPushNotification :: CacheFlow m r => Id MerchantOperatingCity -> Text -> [MerchantPushNotification] -> m ()
-cacheMerchantPushNotification id messageKey merchantPushNotification = do
+cacheMerchantPushNotification :: CacheFlow m r => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> [MerchantPushNotification] -> m ()
+cacheMerchantPushNotification id messageKey tripCategory merchantPushNotification = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdAndMessageKey id messageKey
+  let idKey = makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory
   Hedis.setExp idKey merchantPushNotification expTime
 
-makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> Text -> Text
-makeMerchantOpCityIdAndMessageKey id messageKey = "CachedQueries:MerchantPushNotification:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> messageKey
+makeMerchantOpCityIdAndMessageKeyAndTripCategory :: Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Text
+makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory = "CachedQueries:MerchantPushNotification:MerchantOperatingCityId-" <> id.getId <> ":MessageKey-" <> messageKey <> ":TripCategory-" <> show tripCategory
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Text -> m ()
-clearCache merchantOpCityId messageKey = do
-  Hedis.del (makeMerchantOpCityIdAndMessageKey merchantOpCityId messageKey)
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> m ()
+clearCache merchantOpCityId messageKey tripCategory = do
+  Hedis.del (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)

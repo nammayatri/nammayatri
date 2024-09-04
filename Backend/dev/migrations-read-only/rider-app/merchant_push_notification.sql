@@ -26,3 +26,8 @@ ALTER TABLE atlas_app.merchant_push_notification ADD PRIMARY KEY ( key, merchant
 
 ALTER TABLE atlas_app.merchant_push_notification DROP CONSTRAINT merchant_push_notification_pkey;
 ALTER TABLE atlas_app.merchant_push_notification ADD PRIMARY KEY ( key, language, merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN trip_category text ;

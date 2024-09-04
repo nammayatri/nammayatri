@@ -182,7 +182,7 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
             Just vpa -> do
               uid <- generateGUID
               driver <- QPerson.findById (cast req.driverId) >>= fromMaybeM (PersonNotFound req.driverId.getId)
-              mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCity.id "PAYOUT_REFERRAL_REWARD" driver.language
+              mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCity.id "PAYOUT_REFERRAL_REWARD" Nothing driver.language
               whenJust mbMerchantPN $ \merchantPN -> do
                 let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN.title
                     entityData = NotifReq {entityId = driver.id.getId, title = title, message = merchantPN.body}

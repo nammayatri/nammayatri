@@ -465,12 +465,12 @@ onUpdate = \case
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
     Notify.notifyOnTripUpdate booking ride "Destination and Fare Updated" "Your edit request was accepted by your driver!"
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
-    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "TOLL_CROSSED" person.language
+    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "TOLL_CROSSED" Nothing person.language
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
   OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq {..} -> do
-    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" person.language
+    mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FCM_CHAT_MESSAGE" Nothing person.language
     whenJust mbMerchantPN $ \merchantPN -> do
       let entityData = TN.NotifReq {title = merchantPN.title, message = merchantPN.body}
       TN.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType

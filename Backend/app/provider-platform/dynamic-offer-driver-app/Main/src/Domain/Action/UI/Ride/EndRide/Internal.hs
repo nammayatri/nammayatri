@@ -237,12 +237,12 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
     updateReferralStats referredDriverId mbDailyStats localTime driver merchantOpCityId payoutConfig = do
       driverInfo <- QDI.findById (cast referredDriverId) >>= fromMaybeM (PersonNotFound referredDriverId.getId)
       when (isNothing driverInfo.payoutVpa) do
-        mbMerchantPN_ <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_VPA_ALERT" driver.language
+        mbMerchantPN_ <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_VPA_ALERT" Nothing driver.language
         whenJust mbMerchantPN_ $ \merchantPN_ -> do
           let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN_.title
               entityData = NotifReq {entityId = referredDriverId.getId, title = title, message = merchantPN_.body}
           notifyDriverOnEvents merchantOpCityId driver.id driver.deviceToken entityData merchantPN_.fcmNotificationType -- Sending PN to Add Vpa
-      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" driver.language
+      mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "PAYOUT_REFERRAL_REWARD" Nothing driver.language
       whenJust mbMerchantPN $ \merchantPN -> do
         let title = T.replace "{#rewardAmount#}" (show payoutConfig.referralRewardAmountPerRide) merchantPN.title
             entityData = NotifReq {entityId = referredDriverId.getId, title = title, message = merchantPN.body}

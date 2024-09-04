@@ -252,7 +252,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       snapToRoad'
       ( \driverId -> do
           person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-          mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "TOLL_CROSSED" person.language
+          mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "TOLL_CROSSED" Nothing person.language
           whenJust mbMerchantPN $ \merchantPN -> do
             let entityData = TN.NotifReq {entityId = person.id.getId, title = merchantPN.title, message = merchantPN.body}
             TN.notifyDriverOnEvents person.merchantOperatingCityId person.id person.deviceToken entityData merchantPN.fcmNotificationType

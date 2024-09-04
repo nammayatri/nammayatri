@@ -7,6 +7,7 @@ module Storage.Beam.MerchantPushNotification where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types
 import qualified Kernel.External.Types
@@ -22,6 +23,7 @@ data MerchantPushNotificationT f = MerchantPushNotificationT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     title :: B.C f Kernel.Prelude.Text,
+    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

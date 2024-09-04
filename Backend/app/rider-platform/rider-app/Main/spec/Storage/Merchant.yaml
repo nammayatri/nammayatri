@@ -27,6 +27,7 @@ imports:
   Language: Kernel.External.Types
   Category: Kernel.External.Notification.Interface.Types
   PaymentService: Kernel.External.Payment.Types
+  TripCategory: Domain.Types.Trip
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -493,6 +494,7 @@ MerchantPushNotification:
     fcmNotificationType: Category
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    tripCategory: Maybe TripCategory
   constraints:
     key: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -505,4 +507,8 @@ MerchantPushNotification:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key]
+    findAllByMerchantOpCityAndMessageKeyAndTripCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, key, tripCategory]
 

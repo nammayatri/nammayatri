@@ -36,6 +36,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.RiderConfig as DRC
 import Domain.Types.SearchRequest as SearchRequest
+import Domain.Types.Trip (TripCategory)
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -50,6 +51,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -63,6 +65,9 @@ import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
+
+templateText :: Text -> Text
+templateText txt = "{#" <> txt <> "#}"
 
 data EmptyDynamicParam = EmptyDynamicParam
 
@@ -959,6 +964,69 @@ notifyPersonOnEvents person entityData notifType = do
           [ entityData.message
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
+-- data NotificationRequest a = NotificationRequest
+--   {
+--     subCategory :: Maybe Notification.SubCategory,
+--     notificationType :: Text,
+--     dynamicParams :: Maybe a
+--   } deriving (Show, Eq)
+
+-- instance Default NotificationRequest where
+--   def = NotificationRequest {
+--       title = mempty,
+--       body = mempty,
+--       subCategory = Nothing,
+--       notificationType = mempty,
+--       dynamicParams = Nothing,
+--       priority = Nothing,
+--       ttl = Nothing,
+--     }
+NotificationRequest ()
+
+genericNotifyPerson ::
+  ServiceFlow m r =>
+  Person.Person ->
+  NotifReq ->
+  Text ->
+  Maybe TripCategory ->
+  [(Text, Text)] ->
+  m ()
+genericNotifyPerson person entityData notifType tripCategory dynamicTemplateParams = do
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notifType tripCategory person.language
+  whenJust mbMerchantPN \merchantPN -> do
+    notificationSoundFromConfig <- SQNSC.findByNotificationType merchantPN.fcmNotificationType merchantOperatingCityId
+    let notificationSound = NSC.defaultSound =<< notificationSoundFromConfig
+    let notificationData =
+          Notification.NotificationReq
+            { category = merchantPN.fcmNotificationType,
+              subCategory = Nothing,
+              showNotification = Notification.SHOW,
+              messagePriority = Nothing,
+              entity = Notification.Entity Notification.Product person.id.getId (),
+              body = body,
+              title = title,
+              dynamicParams = EmptyDynamicParam,
+              auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+              ttl = Nothing,
+              sound = notificationSound
+            }
+        title = buildTemplate dynamicTemplateParams entityData.title
+        body =
+          unwords
+            [ buildTemplate dynamicTemplateParams entityData.message
+            ]
+    notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
+buildTemplate :: [(Text, Text)] -> Text -> Text
+buildTemplate paramVars template =
+  foldl'
+    ( \msg (findKey, replaceVal) ->
+        T.replace (templateText findKey) replaceVal msg
+    )
+    template
+    paramVars
 
 notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
 notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
