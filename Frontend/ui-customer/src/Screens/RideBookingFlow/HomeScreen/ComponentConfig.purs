@@ -75,7 +75,7 @@ import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig, filterContactsBasedOnShareOptions)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -1055,17 +1055,19 @@ messagingViewConfig state =
     DT.Tuple safetyCheckStartSeconds safetyCheckEndSeconds = case state.props.safetySettings of
       Just (API.GetEmergencySettingsRes safetySettings) -> DT.Tuple safetySettings.safetyCheckStartTime safetySettings.safetyCheckEndTime
       Nothing -> DT.Tuple Nothing Nothing
-    primaryContact = DA.head $ DA.filter (\item -> (item.enableForShareRide || SU.checkRideShareOptionConstraint item.shareTripWithEmergencyContactOption.key safetyCheckStartSeconds safetyCheckEndSeconds Nothing) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
+    primaryContact = DA.head $ DA.filter (\item -> (isJust item.contactPersonId)) $ fromMaybe [] state.data.contactList
 
     messagingViewConfig' =
       config
         { userConfig
           { userName =
-            if state.props.isChatWithEMEnabled then case primaryContact of
-              Nothing -> state.data.driverInfoCardState.driverName
-              Just contact -> contact.name
-            else
-              state.data.driverInfoCardState.driverName
+            if state.props.isChatWithEMEnabled 
+              then 
+                case primaryContact of
+                  Nothing -> state.data.driverInfoCardState.driverName
+                  Just contact -> contact.name
+              else
+                state.data.driverInfoCardState.driverName
           , receiver =
             if state.props.isChatWithEMEnabled then case primaryContact of
               Nothing -> "Driver"
@@ -2538,13 +2540,13 @@ getChatDetails state contacts = do
                               , number : item.number
                               , uuid : state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" item.contactPersonId)
                               , recipient : CMC.USER
-                              , enableForFollowing : item.enableForFollowing
                               , enableForShareRide : item.enableForShareRide
                               , contactPersonId : item.contactPersonId
                               , notifiedViaFCM : item.notifiedViaFCM
+                              , shareTripWithEmergencyContactOption : item.shareTripWithEmergencyContactOption.key
                               }]
                           else acc
-          ) [] (filterContactsBasedOnShareOptions contacts)
+          ) [] contacts
   multiChatContacts <> (if state.props.stageBeforeChatScreen == ST.RideStarted && state.data.fareProductType /= FPT.RENTAL then []
                         else 
                         [
@@ -2552,9 +2554,9 @@ getChatDetails state contacts = do
                           , number : ""
                           , uuid : state.data.driverInfoCardState.bppRideId
                           , recipient : CMC.DRIVER
-                          , enableForFollowing : false
                           , enableForShareRide : false
                           , contactPersonId : Nothing
                           , notifiedViaFCM : Nothing
+                          , shareTripWithEmergencyContactOption : API.NEVER_SHARE
                           }
                         ])

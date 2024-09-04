@@ -75,6 +75,8 @@ import Helpers.SpecialZoneAndHotSpots (zoneLabelIcon)
 import Screens.Types as ST
 import Components.Safety.SafetyActionTileView as SafetyActionTileView
 import Components.Safety.Utils as SU
+import Components.MessagingView.Controller as CMC
+import Services.API as API
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput
 screen initialState globalState =
@@ -95,17 +97,16 @@ screen initialState globalState =
                   $ [ { key : "BookingId", value : unsafeToForeign $ currentFollower.bookingId},
                       { key : "FollowerId", value : unsafeToForeign $ getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys }
                     ]
-                when (currentFollower.priority == 0 && not initialState.props.chatCallbackInitiated) $ do
+                when (not initialState.props.chatCallbackInitiated) $ do
                   case initialState.data.driverInfoCardState of
                     Nothing -> pure unit
                     Just ride -> do
-                      when (initialState.props.isRideStarted && not initialState.props.currentUserOnRide) $ do
-                          void $ clearChatMessages
-                          void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
-                          void $ storeCallBackOpenChatScreen push OpenChatScreen
-                          void $ startChatListenerService
-                          void $ scrollOnResume push ScrollToBottom
-                          push InitializeChat
+                        void $ clearChatMessages
+                        void $ storeCallBackMessageUpdated push (ride.rideId <> "$" <> getValueToLocalStore CUSTOMER_ID) (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
+                        void $ storeCallBackOpenChatScreen push OpenChatScreen
+                        void $ startChatListenerService
+                        void $ scrollOnResume push ScrollToBottom
+                        push InitializeChat
                 when tracking.shouldPush $ void $ launchAff $ flowRunner globalState $ driverLocationTracking push UpdateStatus 2000.0 tracking.id "trip"
             pure $ pure unit
         )
@@ -386,7 +387,7 @@ getMessageNotificationViewConfig state =
       driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
       currentFollower = getCurrentFollower state.data.currentFollower
       name = fromMaybe currentFollower.mobileNumber currentFollower.name
-      removeNotification = if state.props.isRideStarted && not state.props.currentUserOnRide && currentFollower.priority == 0 
+      removeNotification = if state.props.isRideStarted 
                               then state.props.removeNotification 
                               else true
       toChatComponent { message, sentBy, timeStamp, type: type_, delay } = 
@@ -695,7 +696,7 @@ headerView push state =
           ]
       ]
   where 
-    isChatEnabled currentFollower = state.data.config.feature.enableChat && (currentFollower.priority == 0) && state.props.isRideStarted && not state.props.currentUserOnRide && not currentFollower.isManualFollower
+    isChatEnabled currentFollower = state.data.config.feature.enableChat && not currentFollower.isManualFollower
 
 emergencyActionsView ::
   forall w.
@@ -1054,6 +1055,16 @@ messagingViewConfig state = let
   , peekHeight = getChatHeight state
   , otp = driverInfoCard.otp
   , suggestionKey = emChatSuggestion
+  , currentChatRecipient = 
+    { name : name
+    , number : currentFollower.mobileNumber
+    , uuid : driverInfoCard.rideId <> "$" <> getValueToLocalStore CUSTOMER_ID
+    , recipient : CMC.USER
+    , enableForShareRide : false
+    , contactPersonId : Nothing
+    , notifiedViaFCM : Nothing
+    , shareTripWithEmergencyContactOption : API.NEVER_SHARE
+    }
   }
 
 getChatHeight :: FollowRideScreenState -> Int
