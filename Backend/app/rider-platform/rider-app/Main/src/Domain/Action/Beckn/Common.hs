@@ -419,12 +419,15 @@ rideAssignedReqHandler req = do
       when (booking.tripCategory == Just (Trip.Delivery Trip.OneWayOnDemandDynamicOffer)) $ do
         deliveryInitiatedAs <- fromMaybeM (InternalError "DeliveryInitiatedBy not found") booking.initiatedBy
         when (deliveryInitiatedAs /= Trip.DeliveryParty Trip.Sender) $
-          fork "Sending Delivery Details SMS to Sender" $ do
+          fork "Sending Delivery Details SMS to Sender And Receiver" $ do
             riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
             mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
             senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
+            receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
             senderPerson <- QP.findById senderParty.partyId >>= fromMaybeM (PersonDoesNotExist senderParty.partyId.getId)
+            receiverPerson <- QP.findById receiverParty.partyId >>= fromMaybeM (PersonDoesNotExist receiverParty.partyId.getId)
             encSenderMobileNumber <- senderPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            encReceiverMobileNumber <- receiverPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
             let exophoneNumber =
                   maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExoPhone
             let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
@@ -433,16 +436,23 @@ rideAssignedReqHandler req = do
                     { MessageBuilder.driverName = ride.driverName,
                       MessageBuilder.driverNumber = exophoneNumber,
                       MessageBuilder.appUrl = riderConfig.appUrl,
+                      MessageBuilder.senderName = senderParty.partyName,
+                      MessageBuilder.receiverName = receiverParty.partyName,
                       MessageBuilder.trackingUrl = trackLink,
                       MessageBuilder.otp = ride.otp,
                       MessageBuilder.hasEnded = False,
+                      MessageBuilder.pickedUp = False,
                       MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
                     }
-            buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderSmsReq
+                receiverSmsReq = senderSmsReq {MessageBuilder.deliveryMessageType = MessageBuilder.ReceiverReq}
+            sbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId senderSmsReq
+            rbuildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
             senderMobileNumber <- decrypt encSenderMobileNumber
-            let countryCode = fromMaybe "+91" senderPerson.mobileCountryCode
-            let phoneNumber = countryCode <> senderMobileNumber
-            Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
+            receiverMobileNumber <- decrypt encReceiverMobileNumber
+            let sphoneNumber = (fromMaybe "+91" senderPerson.mobileCountryCode) <> senderMobileNumber
+                rphoneNumber = (fromMaybe "+91" receiverPerson.mobileCountryCode) <> receiverMobileNumber
+            Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (sbuildSmsReq sphoneNumber) >>= Sms.checkSmsResult
+            Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (rbuildSmsReq rphoneNumber) >>= Sms.checkSmsResult
 
 rideStartedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -496,6 +506,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
     sendDeliveryDetailsToReceiver = fork "Sending Delivery Details SMS to Receiver" $ do
       riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+      senderParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> booking.id.getId)
       receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty booking.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> booking.id.getId)
       receiverPerson <- QP.findById receiverParty.partyId >>= fromMaybeM (PersonDoesNotExist receiverParty.partyId.getId)
       receiverMobileNumber <- mapM decrypt receiverPerson.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
@@ -511,8 +522,11 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                 MessageBuilder.driverNumber = exophoneNumber,
                 MessageBuilder.trackingUrl = trackLink,
                 MessageBuilder.appUrl = riderConfig.appUrl,
+                MessageBuilder.senderName = senderParty.partyName,
+                MessageBuilder.receiverName = receiverParty.partyName,
                 MessageBuilder.otp = endOtp,
                 MessageBuilder.hasEnded = False,
+                MessageBuilder.pickedUp = True,
                 MessageBuilder.deliveryMessageType = MessageBuilder.ReceiverReq
               }
       buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage booking.merchantOperatingCityId receiverSmsReq
@@ -961,6 +975,7 @@ sendRideEndMessage ::
 sendRideEndMessage bk = case bk.tripCategory of
   Just (Trip.Delivery _) -> do
     senderParty <- QBPL.findOneActiveByBookingIdAndTripParty bk.id (Trip.DeliveryParty Trip.Sender) >>= fromMaybeM (InternalError $ "Sender booking party not found for " <> bk.id.getId)
+    receiverParty <- QBPL.findOneActiveByBookingIdAndTripParty bk.id (Trip.DeliveryParty Trip.Receiver) >>= fromMaybeM (InternalError $ "Receiver booking party not found for " <> bk.id.getId)
     senderPerson <- QP.findById senderParty.partyId >>= fromMaybeM (PersonDoesNotExist senderParty.partyId.getId)
     senderMobileNumber <- mapM decrypt senderPerson.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
     fork "Sending end delivery message to sender" $ do
@@ -972,8 +987,11 @@ sendRideEndMessage bk = case bk.tripCategory of
                 MessageBuilder.driverNumber = "",
                 MessageBuilder.trackingUrl = "",
                 MessageBuilder.appUrl = "",
+                MessageBuilder.senderName = senderParty.partyName,
+                MessageBuilder.receiverName = receiverParty.partyName,
                 MessageBuilder.otp = "",
                 MessageBuilder.hasEnded = True,
+                MessageBuilder.pickedUp = True,
                 MessageBuilder.deliveryMessageType = MessageBuilder.SenderReq
               }
       buildSmsReq <- MessageBuilder.buildDeliveryDetailsMessage bk.merchantOperatingCityId senderSmsReq

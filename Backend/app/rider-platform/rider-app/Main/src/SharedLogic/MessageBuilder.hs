@@ -241,9 +241,12 @@ data BuildDeliveryMessageReq = BuildDeliveryMessageReq
   { driverName :: Text,
     driverNumber :: Text,
     trackingUrl :: Text,
+    senderName :: Text,
+    receiverName :: Text,
     appUrl :: Text,
     otp :: Text,
     hasEnded :: Bool,
+    pickedUp :: Bool,
     deliveryMessageType :: DeliveryMessageRequestType
   }
 
@@ -251,7 +254,7 @@ buildDeliveryDetailsMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperating
 buildDeliveryDetailsMessage merchantOperatingCityId req = do
   let merchantMessageKey = case req.deliveryMessageType of
         SenderReq -> bool DMM.SMS_DELIVERY_DETAILS_SENDER DMM.POST_DELIVERY_SENDER req.hasEnded
-        ReceiverReq -> DMM.SMS_DELIVERY_DETAILS_RECEIVER
+        ReceiverReq -> bool DMM.PRE_PICKUP_DELIVERY_RECEIVER DMM.SMS_DELIVERY_DETAILS_RECEIVER req.pickedUp
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
@@ -260,6 +263,8 @@ buildDeliveryDetailsMessage merchantOperatingCityId req = do
     [ ("driverName", req.driverName),
       ("driverNumber", req.driverNumber),
       ("trackingUrl", req.trackingUrl),
+      ("senderName", req.senderName),
+      ("receiverName", req.receiverName),
       ("appUrl", req.appUrl),
       ("otp", req.otp)
     ]
