@@ -15,7 +15,8 @@
 module Domain.Action.UI.DriverCoin where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins hiding (CoinStatus)
-import Data.OpenApi hiding (title)
+import Data.OpenApi hiding (description, title, value)
+import qualified Data.Text as Text
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Merchant as DM
@@ -26,6 +27,7 @@ import Domain.Types.TransporterConfig ()
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Types (Language (..))
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -36,11 +38,13 @@ import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoi
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.Queries.Coins.CoinHistory as CHistory
+import Storage.Queries.Coins.CoinsConfig as SQCC
 import Storage.Queries.DailyStatsExtra as DS
 import Storage.Queries.DriverPlan as DPlan
 import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
+import Storage.Queries.TranslationsExtra as SQT
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
@@ -99,6 +103,17 @@ data ConvertCoinToCashReq = ConvertCoinToCashReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 type AccumulationResult = [(Text, Int, CoinStatus)]
+
+newtype CoinInfoRes = CoinInfoRes [CoinInfo]
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data CoinInfo = CoinInfo
+  { coins :: Int,
+    key :: Text,
+    title :: Text,
+    description :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getCoinEventSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> UTCTime -> Flow CoinTransactionRes
 getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
@@ -271,3 +286,37 @@ getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
         [] -> False
         _ -> length dailyRideSummary >= transporterConfig.pastDaysRideCounter && all (\res -> res.numRides > transporterConfig.pastDaysRideCounter) dailyRideSummary
   pure $ RideStatusPastDaysRes {rideCountPopupValue = ridesExceedThreshold}
+
+getCoinsInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow CoinInfoRes
+getCoinsInfo (driverId, merchantId_, merchantOpCityId) = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  unless (transporterConfig.coinFeature) $ throwError $ CoinServiceUnavailable merchantId_.getId
+  driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let language = fromMaybe ENGLISH (driver.language)
+  activeConfigs <- SQCC.getConfigBasedOnMerchantAndCity merchantId_ merchantOpCityId
+  coinConfigRes <-
+    mapM
+      ( \activeConfg -> do
+          let id = activeConfg.eventName <> "_" <> (show activeConfg.eventFunction)
+          translation <- SQT.findByErrorAndLanguage id language >>= fromMaybeM (CoinInfoTranslationNotFound id (show language))
+          case Text.splitOn " | " translation.message of
+            [title, description] ->
+              pure $
+                CoinInfo
+                  { coins = activeConfg.coins,
+                    key = id,
+                    title = title,
+                    description = description
+                  }
+            [title] ->
+              pure $
+                CoinInfo
+                  { coins = activeConfg.coins,
+                    key = id,
+                    title = title,
+                    description = ""
+                  }
+            _ -> throwError $ CoinInfoTranslationNotFound id (show language)
+      )
+      activeConfigs
+  pure $ CoinInfoRes coinConfigRes

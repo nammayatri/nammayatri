@@ -45,6 +45,9 @@ type API =
            :<|> "rideStatusPastDays"
              :> TokenAuth
              :> Get '[JSON] Domain.RideStatusPastDaysRes
+           :<|> "info"
+             :> TokenAuth
+             :> Get '[JSON] Domain.CoinInfoRes
        )
 
 handler :: FlowServer API
@@ -53,6 +56,7 @@ handler =
     :<|> getCoinUsageSummary
     :<|> useCoinsHandler
     :<|> getRideStatusPastDays
+    :<|> getCoinsInfo
 
 getCoinEventSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> UTCTime -> FlowHandler Domain.CoinTransactionRes
 getCoinEventSummary (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Domain.getCoinEventSummary (personId, merchantId, merchantOpCityId)
@@ -65,3 +69,6 @@ useCoinsHandler (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . 
 
 getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Domain.RideStatusPastDaysRes
 getRideStatusPastDays (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ Domain.getRideStatusPastDays (personId, merchantId, merchantOpCityId)
+
+getCoinsInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler Domain.CoinInfoRes
+getCoinsInfo (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ Domain.getCoinsInfo (personId, merchantId, merchantOpCityId)

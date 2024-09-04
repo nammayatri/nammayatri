@@ -37,7 +37,8 @@ data CoinHistoryT f = CoinHistoryT
     expirationAt :: B.C f (Maybe UTCTime),
     status :: B.C f Domain.CoinStatus,
     coinsUsed :: B.C f Int,
-    bulkUploadTitle :: B.C f (Maybe DCoins.Translations)
+    bulkUploadTitle :: B.C f (Maybe DCoins.Translations),
+    entityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
