@@ -26,7 +26,7 @@ findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id D
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
-findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
+findByStationCode code = do listToMaybe <$> findAllWithKV [Se.Is Beam.code $ Se.Eq code]
 
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
