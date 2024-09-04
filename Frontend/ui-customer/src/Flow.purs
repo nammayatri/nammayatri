@@ -287,7 +287,7 @@ nammaSafetyFlow = do
         TrustedContacts _ -> do
           let emergencyContactLength = Arr.length updatedState.data.emergencyContactsList 
           modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { data{ selectedContacts = updatedState.data.emergencyContactsList },props { showDropDown = false, fromNewSafetyFlow= true, saveEmergencyContacts = true, getDefaultContacts = emergencyContactLength > 0 } })
-          emergencyScreenFlow --dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ TrustedContacts []) 0
+          emergencyScreenFlow
         SafetyCheckIn _ -> do
           if not navigationConfig.isCompleted
             then 
@@ -5617,7 +5617,7 @@ activateSafetyScreenFlow = do
           modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { data{ emergencyContactsList = state.data.emergencyContactsList }, props { showDropDown = false, fromNewSafetyFlow= true, saveEmergencyContacts = true, getDefaultContacts = length state.data.emergencyContactsList > 1 } })
           emergencyScreenFlow
         else do
-          modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
+          modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.emergencyContactsList } })
           dataFetchScreenFlow (DataExplainWithFetchSD.stageData $ EmergencyActions []) 1
 
 safetySettingsFlow :: FlowBT String Unit
