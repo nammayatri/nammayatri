@@ -102,7 +102,11 @@ eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state =
   continueWithCmd state [pure GoBack]
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = 
-  exit $ GoToHomeScreen state
+  let (API.DeliveryDetails deliveryDetailsInfo) = state.data.deliveryDetailsInfo
+  in 
+    case state.data.currentStage of
+      ST.FINAL_DETAILS -> exit $ GoToConfirmgDelivery $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } } 
+      _ -> continue state
 
 eval (ParcelDeliveryInstructionAC (ParcelDeliveryInstructionController.PrimaryButtonAC PrimaryButtonController.OnClick)) state = 
   exit $ GoToSelectLocation state
@@ -158,7 +162,6 @@ eval (DeliveryDetailAction (PopUpModalController.OnButton2Click)) state = do
   if state.data.currentStage == ST.SENDER_DETAILS then
     continue $ state { props { editDetails = deliveryDetailsInfo.receiverDetails}, data { currentStage = ST.RECEIVER_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { senderDetails = state.props.editDetails } } }
   else
-    -- exit $ GoToConfirmgDelivery $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
     continue $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
 
 eval _ state = update state

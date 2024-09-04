@@ -13,7 +13,7 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PopUpModal as PopUpModal
 import Components.SelectListModal as CancelRidePopUpConfig
 import ConfigProvider
-import Data.Maybe (Maybe(..), maybe, fromMaybe)
+import Data.Maybe (Maybe(..), isJust, maybe, fromMaybe)
 import Font.Style (Style(..))
 import Helpers.Utils as HU
 import Language.Strings (getString)
@@ -30,14 +30,14 @@ primaryButtonConfig state =
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-          { text = "Book For" 
+          { text = "Book For " <> state.data.parcelQuoteList.price
           , color = Color.yellow900
           , height = V 40
           }
       , gravity = CENTER
       , margin = (MarginHorizontal 16 16)
       , isClickable = true -- state.data.bookingId /= ""
-      -- , alpha = if state.data.bookingId == "" then 0.5 else 1.0
+      -- , alpha = if isJust state.data.selectedQuote then 1.0 else 0.5
       , id = "GoHomeButton"
       , enableRipple = true
       , rippleColor = Color.rippleShade
@@ -222,7 +222,6 @@ chooseVehicleConfig state =
       , nightChargeTill = selectedParcelEstimate.nightChargeTill
       , nightChargeFrom = selectedParcelEstimate.nightChargeFrom
       , driverAdditions = selectedParcelEstimate.driverAdditions
-      , showEditButton = true
       -- , editBtnText = getString CHANGE
       , validTill = selectedParcelEstimate.validTill
       , hasTollCharges = selectedParcelEstimate.hasTollCharges

@@ -29,10 +29,12 @@ import JBridge as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
+import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..) ,background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout, onBackPressed, alignParentBottom, singleLine, accessibilityHint,accessibility,accessibilityHint, Accessiblity(..), id, afterRender, layoutGravity, rippleColor, maxLines, ellipsize, onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
-import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants
 import Resources.Localizable.EN (getEN)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval)
@@ -59,10 +61,10 @@ parcelDeliveryScreen initialState =
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
-view push state = deliveryDetailsView push state
-  -- case state.data.currentStage of
-  --   ST.DELIVERY_INSTRUCTIONS -> deliveryInstructionView push state
-  --   _ -> deliveryDetailsView push state
+view push state = 
+  case state.data.currentStage of
+    ST.DELIVERY_INSTRUCTIONS -> deliveryInstructionView push state
+    _ -> deliveryDetailsView push state
   
 
 deliveryInstructionView :: forall w . (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
@@ -81,17 +83,10 @@ deliveryDetailsView push state =
     , orientation VERTICAL
     , background Color.white900
     , onBackPressed push $ const GoBack
-    -- , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+    , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     , onClick push $ const NoAction
-    ]
-    [ 
-      -- if state.data.currentStage == ST.SENDER_DETAILS
-      --   then deliveryDetailPopupView push state
-      --   else linearLayout[height WRAP_CONTENT, width WRAP_CONTENT, visibility GONE][],
-      -- if state.data.currentStage == ST.RECEIVER_DETAILS
-      --   then deliveryDetailPopupView push state
-      --   else linearLayout[height WRAP_CONTENT, width WRAP_CONTENT, visibility GONE][],
-      linearLayout
+    ] $
+    [ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -123,28 +118,33 @@ deliveryDetailsView push state =
       , gravity BOTTOM
       , margin (MarginBottom 24)
       , alignParentBottom "true,-1"
+      , stroke ("1,"<> Color.grey900)
+      , cornerRadii (Corners 16.0 true true false false)
       ]
       [ ChooseVehicle.view (push <<< ChooseVehicleAC) $ chooseVehicleConfig state
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
       ]
-    ]
+    ] <>
+    ( case state.data.currentStage of 
+        ST.SENDER_DETAILS -> [deliveryDetailPopupView push state]
+        ST.RECEIVER_DETAILS -> [deliveryDetailPopupView push state]
+        _ -> [] )
 
 mapViewLayout :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
 mapViewLayout push state = 
-  PrestoAnim.animationSet[Anim.fadeInWithDelay 250 true] $
   relativeLayout
-    [ height $ V $ JB.getHeightFromPercent 20
-    , width MATCH_PARENT
-    , cornerRadius 24.0
-    , margin $ MarginTop 16
-    , id $ EHC.getNewIDWithTag idTag
-    , onAnimationEnd (\action ->
-                        if isNotInstructionsPage
-                          then void $ JB.showMap (EHC.getNewIDWithTag idTag) false "satellite" zoomLevel state.data.sourceLat state.data.sourceLong push MapViewLoaded
-                          else pure unit
-                      ) $ const NoAction
-    , visibility $ boolToVisibility isNotInstructionsPage
-    ] []
+  [ height $ V $ JB.getHeightFromPercent 20
+  , width MATCH_PARENT
+  , cornerRadius 24.0
+  , margin $ MarginTop 16
+  , id $ EHC.getNewIDWithTag idTag
+  , afterRender (\action ->
+                      if isNotInstructionsPage
+                        then void $ JB.showMap (EHC.getNewIDWithTag idTag) false "satellite" zoomLevel state.data.sourceLat state.data.sourceLong push MapViewLoaded
+                        else pure unit
+                    ) $ const NoAction
+  , visibility $ boolToVisibility isNotInstructionsPage
+  ] []
   where
     idTag :: String
     idTag = "ParcelDetailsMapView"
