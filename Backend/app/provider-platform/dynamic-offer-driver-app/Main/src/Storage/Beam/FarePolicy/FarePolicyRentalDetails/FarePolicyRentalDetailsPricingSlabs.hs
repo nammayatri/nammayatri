@@ -18,8 +18,7 @@ import qualified Kernel.Types.Id as KTI
 import Tools.Beam.UtilsTH
 
 data FarePolicyRentalDetailsPricingSlabsT f = FarePolicyRentalDetailsPricingSlabsT
-  { id :: B.C f (Maybe Int),
-    farePolicyId :: B.C f Text,
+  { farePolicyId :: B.C f Text,
     timePercentage :: B.C f Int,
     distancePercentage :: B.C f Int,
     farePercentage :: B.C f Int,
@@ -30,15 +29,15 @@ data FarePolicyRentalDetailsPricingSlabsT f = FarePolicyRentalDetailsPricingSlab
 
 instance B.Table FarePolicyRentalDetailsPricingSlabsT where
   data PrimaryKey FarePolicyRentalDetailsPricingSlabsT f
-    = Id (B.C f (Maybe Int))
+    = FarePolicyRentalDetailsPricingSlabsKey (B.C f Text) (B.C f Int) (B.C f Int)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . id
+  primaryKey FarePolicyRentalDetailsPricingSlabsT {..} = FarePolicyRentalDetailsPricingSlabsKey farePolicyId timePercentage distancePercentage
 
 type FarePolicyRentalDetailsPricingSlabs = FarePolicyRentalDetailsPricingSlabsT Identity
 
 type FullFarePolicyRentalDetailsPricingSlabs = (KTI.Id Domain.FarePolicy, Domain.FPRentalDetailsPricingSlabs)
 
-$(enableKVPG ''FarePolicyRentalDetailsPricingSlabsT ['id] [['farePolicyId]])
+$(enableKVPG ''FarePolicyRentalDetailsPricingSlabsT ['farePolicyId, 'timePercentage, 'distancePercentage] [['farePolicyId]])
 
 $(mkTableInstances ''FarePolicyRentalDetailsPricingSlabsT "fare_policy_rental_details_pricing_slabs")
 $(mkCacParseInstanceList ''FarePolicyRentalDetailsPricingSlabs)

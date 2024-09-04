@@ -43,4 +43,4 @@ instance FromTType' BeamFPRDPS.FarePolicyRentalDetailsPricingSlabs BeamFPRDPS.Fu
 
 instance ToTType' BeamFPRDPS.FarePolicyRentalDetailsPricingSlabs BeamFPRDPS.FullFarePolicyRentalDetailsPricingSlabs where
   toTType' (KTI.Id farePolicyId, DFP.FPRentalDetailsPricingSlabs {..}) =
-    BeamFPRDPS.FarePolicyRentalDetailsPricingSlabsT {id = Nothing, ..}
+    BeamFPRDPS.FarePolicyRentalDetailsPricingSlabsT {..}
