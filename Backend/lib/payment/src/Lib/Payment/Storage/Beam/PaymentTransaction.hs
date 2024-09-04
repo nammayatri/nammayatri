@@ -49,6 +49,7 @@ data PaymentTransactionT f = PaymentTransactionT
     mandateMaxAmount :: B.C f (Maybe HighPrecMoney), -- FIXME Kernel.Types.Common.Price
     bankErrorCode :: B.C f (Maybe Text),
     bankErrorMessage :: B.C f (Maybe Text),
+    splitSettlementResponse :: B.C f (Maybe Value),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

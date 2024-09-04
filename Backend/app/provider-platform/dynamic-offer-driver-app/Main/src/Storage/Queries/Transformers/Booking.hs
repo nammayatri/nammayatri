@@ -56,7 +56,7 @@ getBookingTypeFromTripCategory tripCategory =
     Rental RideOtp -> Domain.Types.Booking.SpecialZoneBooking
     InterCity OneWayRideOtp _ -> Domain.Types.Booking.SpecialZoneBooking
     CrossCity OneWayRideOtp _ -> Domain.Types.Booking.SpecialZoneBooking
-    Delivery OneWayRideOtp _ -> Domain.Types.Booking.SpecialZoneBooking
+    Delivery OneWayRideOtp -> Domain.Types.Booking.SpecialZoneBooking
     _ -> Domain.Types.Booking.NormalBooking
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

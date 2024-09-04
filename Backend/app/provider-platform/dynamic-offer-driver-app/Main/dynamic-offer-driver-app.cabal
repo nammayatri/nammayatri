@@ -732,6 +732,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.SplitDetails
       Domain.Types.SubscriptionConfig
       Domain.Types.SurgePricing
       Domain.Types.Toll
@@ -846,6 +847,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
+      Storage.Beam.SplitDetails
       Storage.Beam.SubscriptionConfig
       Storage.Beam.SurgePricing
       Storage.Beam.Toll
@@ -1021,6 +1023,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.SplitDetails
       Storage.Queries.SubscriptionConfig
       Storage.Queries.SurgePricing
       Storage.Queries.Toll

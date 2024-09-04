@@ -1,0 +1,22 @@
+imports:
+  UTCTime: Kernel.Prelude
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+
+SplitDetails:
+  tableName: split_details
+
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  fields:
+    id : Id SplitDetails
+    serviceName : Domain.Types.Plan.ServiceNames
+    amountPercentage : Double
+    fixedAmount : Maybe Double
+    vendorId : Text
+
+  queries :
+    findSplitDetailsByMerchantOpCityIdAndServiceName:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, serviceName]

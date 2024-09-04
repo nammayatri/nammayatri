@@ -253,7 +253,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing
+            metadataGatewayReferenceId = Nothing,
+            splitSettlementDetails = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_

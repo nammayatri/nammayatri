@@ -15,7 +15,9 @@
 
 module Lib.Payment.Storage.Queries.PaymentTransaction where
 
+import qualified Data.Aeson as A
 import Kernel.Beam.Functions
+import qualified Kernel.External.Payment.Interface.Types as KPayment
 import Kernel.External.Payment.Juspay.Types
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -50,6 +52,7 @@ updateMultiple transaction = do
       Se.Set BeamPT.mandateFrequency transaction.mandateFrequency,
       Se.Set BeamPT.mandateMaxAmount transaction.mandateMaxAmount,
       Se.Set BeamPT.txnId transaction.txnId,
+      Se.Set BeamPT.splitSettlementResponse (toJSON <$> transaction.splitSettlementResponse),
       Se.Set BeamPT.updatedAt now
     ]
     [Se.Is BeamPT.id $ Se.Eq $ getId transaction.id]
@@ -128,6 +131,7 @@ instance FromTType' BeamPT.PaymentTransaction PaymentTransaction where
             merchantId = Id merchantId,
             applicationFeeAmount = fromMaybe (HighPrecMoney 0.0) applicationFeeAmount,
             retryCount = fromMaybe 0 retryCount,
+            splitSettlementResponse = eitherValue =<< splitSettlementResponse,
             ..
           }
 
@@ -139,5 +143,11 @@ instance ToTType' BeamPT.PaymentTransaction PaymentTransaction where
         merchantId = merchantId.getId,
         applicationFeeAmount = Just applicationFeeAmount,
         retryCount = Just retryCount,
+        splitSettlementResponse = toJSON <$> splitSettlementResponse,
         ..
       }
+
+eitherValue :: FromJSON KPayment.SplitSettlementResponse => A.Value -> Maybe KPayment.SplitSettlementResponse
+eitherValue value = case A.fromJSON value of
+  A.Success a -> Just a
+  A.Error _ -> Nothing -- error?

@@ -23,6 +23,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as DP
+import Domain.Types.SplitDetails as SD
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
@@ -74,9 +75,10 @@ createOrder ::
   Maybe MandateOrder ->
   INV.InvoicePaymentMode ->
   Maybe (Id INV.Invoice, Text) ->
+  [SD.SplitDetails] ->
   Maybe DeepLinkData ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice mbDeepLinkData = do
+createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice splitDetails mbDeepLinkData = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
@@ -89,6 +91,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> roundToHalf pendingFees.currency (pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
+      splitSettlementDetails = if null splitDetails then Nothing else mkSplitSettlementDetails splitDetails amount
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
@@ -108,7 +111,8 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             mandateStartDate = mbMandateOrder <&> (.mandateStartDate),
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
-            metadataGatewayReferenceId = Nothing --- assigned in shared kernel
+            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            splitSettlementDetails = splitSettlementDetails
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
@@ -118,7 +122,30 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing mbDeepLinkData -- call same function with no existing order
+      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing [] mbDeepLinkData -- call same function with no existing order
+
+mkSplitSettlementDetails :: [SD.SplitDetails] -> HighPrecMoney -> Maybe SplitSettlementDetails
+mkSplitSettlementDetails splitDetails totalAmount = do
+  let vendorSplits =
+        [ Split
+            { amount = case sd.fixedAmount of
+                Just fixed -> HighPrecMoney (toRational fixed)
+                Nothing -> HighPrecMoney $ roundToTwoDecimalPlaces (totalAmount.getHighPrecMoney * toRational (sd.amountPercentage / 100)),
+              merchantCommission = 0,
+              subMid = sd.vendorId
+            }
+          | sd <- splitDetails
+        ]
+      totalVendorAmount = sum $ map (amount :: Split -> HighPrecMoney) vendorSplits
+      marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+  Just $
+    SplitSettlementDetails
+      { marketplace = Marketplace marketplaceAmount,
+        mdrBorneBy = ALL,
+        vendor = Vendor vendorSplits
+      }
+  where
+    roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> INV.InvoicePaymentMode -> DriverFee -> INV.Invoice
 mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee =

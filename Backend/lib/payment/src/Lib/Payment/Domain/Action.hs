@@ -40,6 +40,7 @@ import qualified Data.Time as Time
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Types as PInterface
 import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Interface as PT
@@ -264,6 +265,7 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
             bankErrorCode = Nothing,
             mandateFrequency = Nothing,
             mandateMaxAmount = Nothing,
+            splitSettlementResponse = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -497,6 +499,7 @@ orderStatusService personId orderId orderStatusCall = do
                 isRetried = Nothing,
                 isRetargeted = Nothing,
                 retargetLink = Nothing,
+                splitSettlementResponse = Nothing,
                 ..
               }
       maybe
@@ -560,7 +563,8 @@ data OrderTxn = OrderTxn
     mandateMaxAmount :: Maybe HighPrecMoney,
     isRetried :: Maybe Bool,
     isRetargeted :: Maybe Bool,
-    retargetLink :: Maybe Text
+    retargetLink :: Maybe Text,
+    splitSettlementResponse :: Maybe PInterface.SplitSettlementResponse
   }
 
 updateOrderTransaction ::
@@ -604,7 +608,8 @@ updateOrderTransaction order resp respDump = do
                         mandateFrequency = resp.mandateFrequency,
                         mandateMaxAmount = resp.mandateMaxAmount,
                         juspayResponse = respDump,
-                        txnId = resp.txnId
+                        txnId = resp.txnId,
+                        splitSettlementResponse = resp.splitSettlementResponse
                        }
 
       -- Avoid updating status if already in CHARGED state to handle race conditions
@@ -657,6 +662,7 @@ juspayWebhookService resp respDump = do
                 isRetried = Nothing,
                 isRetargeted = Nothing,
                 retargetLink = Nothing,
+                splitSettlementResponse = Nothing,
                 ..
               }
       maybe

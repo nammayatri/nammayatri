@@ -1710,13 +1710,13 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName mbDeepLinkData = d
   let paymentService = subscriptionConfig.paymentServiceName
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
   case sortedInvoices of
-    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing mbDeepLinkData
+    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing [] mbDeepLinkData
     (invoice_ : restinvoices) -> do
       mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
       (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ dueDriverFees
       let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
       let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
-      mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice mbDeepLinkData
+      mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice [] mbDeepLinkData
   where
     validateExistingInvoice invoice driverFees = do
       invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
@@ -2193,13 +2193,13 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
   resp <- do
     case sortedInvoices of
-      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing mbDeepLinkData
+      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing [] mbDeepLinkData
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
         (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ driverFee
         let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) driverFee
         let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) driverFee
-        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice mbDeepLinkData
+        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice [] mbDeepLinkData
   let mbPaymentLink = resp.orderResp.payment_links
       payload = resp.orderResp.sdk_payload.payload
       mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney

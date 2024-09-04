@@ -427,7 +427,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 mandateStartDate = Nothing,
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
-                metadataGatewayReferenceId = Nothing --- assigned in shared kernel
+                metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+                splitSettlementDetails = Nothing
               }
       DPayment.createOrderService commonMerchantId commonPersonId createOrderReq (createOrderCall merchantOperatingCityId)
 

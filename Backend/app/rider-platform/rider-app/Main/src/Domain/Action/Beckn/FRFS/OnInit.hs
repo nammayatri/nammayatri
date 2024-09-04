@@ -109,7 +109,8 @@ onInit onInitReq merchant booking_ = do
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing --- assigned in shared kernel
+            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            splitSettlementDetails = Nothing
           }
   let mocId = booking.merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchant.id
